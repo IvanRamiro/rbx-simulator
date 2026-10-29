@@ -760,7 +760,10 @@ local MESH_LOOKS = {
     VoltFox = { Eyes = Color3.fromRGB(70, 45, 20), Effect = "Sparks", Glow = Color3.fromRGB(255, 235, 110), Length = 2.91 },
     GoldenKirin = { Eyes = Color3.fromRGB(20, 110, 100), Effect = "Glitter", Gems = true, Glow = Color3.fromRGB(255, 215, 110), Length = 2.99 },
     AstralWhale = { Eyes = Color3.fromRGB(20, 25, 70), Effect = "Stars", Glow = Color3.fromRGB(130, 125, 255), Length = 3.42 },
-    OriginSerpent = { Eyes = Color3.fromRGB(60, 215, 185), GlowEyes = true, Effect = "Motes", Orb = true, Glow = Color3.fromRGB(60, 215, 185), Length = 3.1 },
+    OriginSerpent = { Eyes = Color3.fromRGB(60, 200, 255), GlowEyes = true, Effect = "Stars", Glow = Color3.fromRGB(80, 190, 255), Length = 2.9 },
+    -- Length below its real 5.37 (wings spread, long tail) so it isn't far bigger than the other pets
+    BonefireDragon = { Eyes = Color3.fromRGB(255, 120, 40), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(255, 110, 30), Length = 4 },
+    DreadfangCerberus = { Eyes = Color3.fromRGB(150, 40, 255), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(155, 55, 255), Length = 3.6 },
 }
 
 local TEXTURES = {

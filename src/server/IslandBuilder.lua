@@ -355,17 +355,20 @@ end
 -- (ServerStorage.EggMeshes.<EggId>, from assets/eggs/<EggId>.fbx, made in
 -- tools/blender/Eggs.blend), otherwise a glowing egg-shaped placeholder.
 -- Every egg shares one shell size, so one scale fits all: higher-tier eggs
--- just add a band, crown and halo on top. `bottom` is where the egg starts.
+-- just add a band, crown and halo on top. `bottom` is where the egg starts;
+-- its front (emblem) turns towards `facing`.
 -- "<Name>_Glow_<rrggbb>" parts of a model glow as Neon in that colour.
 local EGG_STUDS_PER_UNIT = 1.3 -- Blender units to studs (the shell is 2.7 units tall)
 
-local function buildEgg(stand, settings, bottom)
+local function buildEgg(stand, settings, bottom, facing)
     local folder = ServerStorage:FindFirstChild("EggMeshes")
     local template = folder and folder:FindFirstChild(settings.EggId)
     if template and template:IsA("Model") then
         local boxCFrame, boxSize = template:GetBoundingBox()
         local scale = EGG_STUDS_PER_UNIT
         local center = bottom + Vector3.new(0, boxSize.Y * scale / 2, 0)
+        local look = Vector3.new(facing.X, center.Y, facing.Z)
+        local placement = if (look - center).Magnitude > 0.1 then CFrame.lookAt(center, look) else CFrame.new(center)
         local primary
         for _, source in template:GetDescendants() do
             if source:IsA("BasePart") then
@@ -385,7 +388,7 @@ local function buildEgg(stand, settings, bottom)
                 end
                 local relative = boxCFrame:ToObjectSpace(source.CFrame)
                 part.Size = source.Size * scale
-                part.CFrame = CFrame.new(center) * (relative.Rotation + relative.Position * scale)
+                part.CFrame = placement * (relative.Rotation + relative.Position * scale)
                 part.Anchored = true
                 part.CanCollide = false
                 part.CanQuery = false
@@ -437,7 +440,7 @@ local function buildEggStand(island, config, settings)
     local pedestal = createCylinder(stand, "Pedestal", 3, 3, pedestalCenter, stone.BaseMaterial, stone.BaseColor)
 
     -- The egg floats just above the pedestal
-    local egg = buildEgg(stand, settings, pedestalCenter + Vector3.new(0, 2.2, 0))
+    local egg = buildEgg(stand, settings, pedestalCenter + Vector3.new(0, 2.2, 0), config.Center)
     createLight(egg, settings.GlowColor, 12, 1.2)
 
     local sparkles = Instance.new("ParticleEmitter")

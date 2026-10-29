@@ -1,2 +1,4 @@
 # Blender backup copies
 *.blend1
+# Texture folders Studio's 3D Importer extracts next to FBX files
+*.fbm/
