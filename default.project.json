@@ -5,6 +5,10 @@
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
       "$path": "src/shared",
+      "AuraMeshes": {
+        "$className": "Folder",
+        "$ignoreUnknownInstances": true
+      },
       "PetMeshes": {
         "$className": "Folder",
         "$ignoreUnknownInstances": true
@@ -15,7 +19,11 @@
       "$path": "src/server"
     },
     "ServerStorage": {
-      "$className": "ServerStorage"
+      "$className": "ServerStorage",
+      "EggMeshes": {
+        "$className": "Folder",
+        "$ignoreUnknownInstances": true
+      }
     },
     "StarterPlayer": {
       "$className": "StarterPlayer",

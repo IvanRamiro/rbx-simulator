@@ -1,6 +1,7 @@
 
 -- Settings for the floating islands, all in one place: the starting island
--- (the top-level settings) and the outer sky islands (OuterIslands below).
+-- (the top-level settings) and the outer sky islands (OuterIslands below),
+-- each with three pet eggs.
 -- Islands are built when the server starts (see IslandService), so changes
 -- here show up the next time you press Play.
 
@@ -48,17 +49,18 @@ local IslandConfig = {
         LanternColor = Color3.fromRGB(170, 235, 255),
     },
 
-    -- Pet egg stand. EggId picks the egg from GameConfig.Eggs, which has its
-    -- pets, chances, cooldown and required rank.
-    EggStand = {
-        EggId = "BeginnerQiEgg",
-        ModelName = "BeginnerQiEgg",
-        Distance = 55, -- Studs from the island centre
-        AngleDegrees = 210, -- Direction from the centre (0 = towards +X)
-        ClearRadius = 16, -- Hills and decorations stay this far away
-        PromptDistance = 10,
-        GlowColor = Color3.fromRGB(170, 140, 255),
-        EggColor = Color3.fromRGB(255, 240, 210),
+    -- Pet egg stands, three per island. EggId picks the egg from
+    -- GameConfig.Eggs (its pets, chances, cooldown and required rank). Distance
+    -- (studs) and AngleDegrees (0 = towards +X) place it from the island
+    -- centre; hills and decorations stay ClearRadius studs away. The egg's
+    -- Blender model comes from ServerStorage.EggMeshes (see IslandBuilder).
+    EggStands = {
+        { EggId = "BeginnerQiEgg", ModelName = "BeginnerQiEgg", Distance = 55, AngleDegrees = 210, ClearRadius = 16, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(120, 220, 255), EggColor = Color3.fromRGB(240, 248, 255) },
+        { EggId = "SpiritBreezeEgg", ModelName = "SpiritBreezeEgg", Distance = 55, AngleDegrees = 175, ClearRadius = 16, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(150, 255, 220), EggColor = Color3.fromRGB(230, 255, 245) },
+        { EggId = "ElementalCoreEgg", ModelName = "ElementalCoreEgg", Distance = 55, AngleDegrees = 245, ClearRadius = 16, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(180, 140, 255), EggColor = Color3.fromRGB(230, 220, 255) },
     },
 
     -- Qi Spring training station (its Qi bonus and radius are in GameConfig.TrainingStation)
@@ -201,15 +203,13 @@ IslandConfig.OuterIslands = {
             RockColor = Color3.fromRGB(95, 105, 110),
             GrassColor = Color3.fromRGB(70, 150, 95),
         },
-        EggStand = {
-            EggId = "JadeSpiritEgg",
-            ModelName = "JadeSpiritEgg",
-            Distance = 24,
-            AngleDegrees = 330,
-            ClearRadius = 10,
-            PromptDistance = 10,
-            GlowColor = Color3.fromRGB(90, 230, 150),
-            EggColor = Color3.fromRGB(190, 255, 210),
+        EggStands = {
+        { EggId = "JadeSpiritEgg", ModelName = "JadeSpiritEgg", Distance = 24, AngleDegrees = 330, ClearRadius = 10, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(90, 230, 150), EggColor = Color3.fromRGB(190, 255, 210) },
+        { EggId = "BloomwoodEgg", ModelName = "BloomwoodEgg", Distance = 24, AngleDegrees = 30, ClearRadius = 10, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(255, 170, 230), EggColor = Color3.fromRGB(255, 225, 245) },
+        { EggId = "AncientGroveEgg", ModelName = "AncientGroveEgg", Distance = 26, AngleDegrees = 75, ClearRadius = 10, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(200, 255, 120), EggColor = Color3.fromRGB(225, 245, 200) },
         },
         RelicColor = Color3.fromRGB(110, 240, 160),
         Relics = {
@@ -258,15 +258,13 @@ IslandConfig.OuterIslands = {
             RockColor = Color3.fromRGB(60, 55, 62),
             GrassColor = Color3.fromRGB(85, 70, 70), -- Ash
         },
-        EggStand = {
-            EggId = "InfernoEgg",
-            ModelName = "InfernoEgg",
-            Distance = 22,
-            AngleDegrees = 220,
-            ClearRadius = 10,
-            PromptDistance = 10,
-            GlowColor = Color3.fromRGB(255, 110, 40),
-            EggColor = Color3.fromRGB(255, 190, 120),
+        EggStands = {
+        { EggId = "InfernoEgg", ModelName = "InfernoEgg", Distance = 22, AngleDegrees = 220, ClearRadius = 10, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(255, 110, 40), EggColor = Color3.fromRGB(255, 190, 120) },
+        { EggId = "MagmaHeartEgg", ModelName = "MagmaHeartEgg", Distance = 22, AngleDegrees = 160, ClearRadius = 10, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(255, 170, 60), EggColor = Color3.fromRGB(255, 215, 150) },
+        { EggId = "PhoenixAshEgg", ModelName = "PhoenixAshEgg", Distance = 22, AngleDegrees = 280, ClearRadius = 10, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(255, 80, 120), EggColor = Color3.fromRGB(255, 180, 190) },
         },
         RelicColor = Color3.fromRGB(255, 140, 60),
         Relics = {
@@ -322,10 +320,73 @@ IslandConfig.OuterIslands = {
             RockColor = Color3.fromRGB(180, 182, 200),
             GrassColor = Color3.fromRGB(230, 232, 245),
         },
+        EggStands = {
+        { EggId = "CelestialEgg", ModelName = "CelestialEgg", Distance = 19, AngleDegrees = 0, ClearRadius = 8, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(150, 200, 255), EggColor = Color3.fromRGB(240, 245, 255) },
+        { EggId = "AstralSanctumEgg", ModelName = "AstralSanctumEgg", Distance = 18, AngleDegrees = 60, ClearRadius = 8, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(190, 150, 255), EggColor = Color3.fromRGB(235, 225, 255) },
+        { EggId = "HeavenlyThroneEgg", ModelName = "HeavenlyThroneEgg", Distance = 18, AngleDegrees = 300, ClearRadius = 8, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(255, 215, 120), EggColor = Color3.fromRGB(255, 248, 225) },
+        },
         RelicColor = Color3.fromRGB(205, 185, 255),
         Relics = {
             { Id = "MoonMirror", AngleDegrees = 0, Distance = 0 },
             { Id = "StarWell", AngleDegrees = 180, Distance = 20 },
+        },
+    },
+
+    -- The hidden endgame island: dark, far out and below the others, with
+    -- void-purple crystals, glowing rifts and broken floating ruins
+    {
+        ModelName = "OriginAbyss",
+        Seed = 71,
+        Center = Vector3.new(-420, 150, -430),
+        Radius = 42,
+        GrassDepth = 5,
+        SoilDepth = 6,
+        UndersideDepth = 45,
+        UndersideLayers = 7,
+        Materials = {
+            Surface = Enum.Material.Slate,
+            Soil = Enum.Material.CrackedLava,
+            Underside = { Enum.Material.Basalt, Enum.Material.Rock },
+        },
+        TerrainColors = {
+            [Enum.Material.Slate] = Color3.fromRGB(48, 38, 66),
+            [Enum.Material.CrackedLava] = Color3.fromRGB(150, 70, 255),
+        },
+        Hills = { Count = 3, MinRadius = 8, MaxRadius = 13 },
+        DecorationClearRadius = 6,
+        EdgeMargin = 6,
+        DecorationSpacing = 8,
+        Rocks = { Count = 10, Material = Enum.Material.Basalt, Color = Color3.fromRGB(40, 34, 55) },
+        Crystals = {
+            Count = 8,
+            Colors = { Color3.fromRGB(170, 90, 255), Color3.fromRGB(255, 90, 210), Color3.fromRGB(120, 70, 255) },
+            LightRange = 14,
+        },
+        LavaPools = { Count = 3, MinDiameter = 5, MaxDiameter = 8, Color = Color3.fromRGB(140, 60, 255) }, -- Void rifts
+        FloatingFragments = {
+            Count = 9,
+            MinDistance = 10,
+            MaxDistance = 32,
+            MinHeight = -25,
+            MaxHeight = 22,
+            RockColor = Color3.fromRGB(45, 40, 60),
+            GrassColor = Color3.fromRGB(70, 50, 100),
+        },
+        EggStands = {
+        { EggId = "ForbiddenOriginEgg", ModelName = "ForbiddenOriginEgg", Distance = 22, AngleDegrees = 30, ClearRadius = 10, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(180, 90, 255), EggColor = Color3.fromRGB(70, 50, 110) },
+        { EggId = "VoidRiftEgg", ModelName = "VoidRiftEgg", Distance = 22, AngleDegrees = 150, ClearRadius = 10, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(120, 70, 255), EggColor = Color3.fromRGB(50, 40, 90) },
+        { EggId = "PrimordialAbyssEgg", ModelName = "PrimordialAbyssEgg", Distance = 22, AngleDegrees = 270, ClearRadius = 10, PromptDistance = 10,
+            GlowColor = Color3.fromRGB(255, 90, 200), EggColor = Color3.fromRGB(80, 40, 90) },
+        },
+        RelicColor = Color3.fromRGB(190, 120, 255),
+        Relics = {
+            { Id = "OriginAltar", AngleDegrees = 0, Distance = 0 },
+            { Id = "VoidShard", Offset = Vector3.new(0, 28, 0) }, -- Floating high above the altar
         },
     },
 }
@@ -337,10 +398,15 @@ do
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 
+    local standCount = {}
     for _, island in { IslandConfig, table.unpack(IslandConfig.OuterIslands) } do
-        if island.EggStand then
-            assert(GameConfig.Eggs[island.EggStand.EggId], "IslandConfig has an egg stand with an unknown EggId: " .. tostring(island.EggStand.EggId))
+        for _, stand in island.EggStands or {} do
+            assert(GameConfig.Eggs[stand.EggId], "IslandConfig has an egg stand with an unknown EggId: " .. tostring(stand.EggId))
+            standCount[stand.EggId] = (standCount[stand.EggId] or 0) + 1
         end
+    end
+    for eggId in GameConfig.Eggs do
+        assert(standCount[eggId] == 1, "Egg " .. eggId .. " must stand on exactly one island in IslandConfig")
     end
 
     local placed = {}

@@ -647,6 +647,18 @@ PetModels.Pets = {
     DawnPhoenix = dawnPhoenix(),
 }
 
+-- Every other pet is built procedurally from its spec (PetArchetypes) until
+-- it gets a hand-made design or a Blender model
+do
+    local PetArchetypes = require(script.Parent:WaitForChild("PetArchetypes"))
+    for petId, spec in PetArchetypes.Specs do
+        if not PetModels.Pets[petId] then
+            local pet = GameConfig.Pets[petId]
+            PetModels.Pets[petId] = PetArchetypes.build(spec, pet and pet.Rarity)
+        end
+    end
+end
+
 -- Building ----------------------------------------------------------------------
 
 local PART_SHAPES = {

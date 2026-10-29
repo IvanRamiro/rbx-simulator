@@ -154,13 +154,17 @@ local function awardCultivationQi(player)
         player:SetAttribute("AtTrainingStation", atStation)
     end
 
-    -- Reward = base reward plus the pets' and Qi Spring's bonus percent, rounded down.
-    -- Example: base 10 with +35% from pets and +50% from the spring = floor(10 * 185 / 100) = 18 Qi
+    -- Reward = base reward times the rank's cultivation power, plus the pets'
+    -- and Qi Spring's bonus percent, rounded down. Example: base 10 at x2 with
+    -- +35% from pets and +50% from the spring = floor(10 * 2 * 185 / 100) = 37 Qi
     local bonusPercent = PetInventory.getQiBonusPercent(player)
     if atStation then
         bonusPercent += GameConfig.TrainingStation.QiBonusPercent
     end
-    qi.Value += math.floor(GameConfig.CultivationQiReward * (100 + bonusPercent) / 100)
+    local leaderstats = player:FindFirstChild("leaderstats")
+    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
+    local multiplier = Ranks.getQiMultiplier(rankValue and rankValue.Value)
+    qi.Value += math.floor(GameConfig.CultivationQiReward * multiplier * (100 + bonusPercent) / 100)
 end
 
 Players.PlayerAdded:Connect(setupPlayer)

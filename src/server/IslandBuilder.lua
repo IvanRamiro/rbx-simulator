@@ -5,6 +5,7 @@
 
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 
@@ -122,11 +123,15 @@ end
 
 local RELIC_CLEAR_RADIUS = 7
 
--- Areas kept clear for the egg stand, the training station and relics that
+-- Areas kept clear for the egg stands, the training station and relics that
 -- stand on the ground (whichever this island has), each widened by `margin`
 local function getFeatureAreas(config, margin)
     local areas = {}
-    for _, settings in { config.EggStand, config.TrainingStation } do
+    local features = { config.TrainingStation }
+    for _, stand in config.EggStands or {} do
+        table.insert(features, stand)
+    end
+    for _, settings in features do
         table.insert(areas, { Position = getFeatureSpot(config, settings), Radius = settings.ClearRadius + margin })
     end
     for _, relic in config.Relics or {} do
@@ -346,11 +351,71 @@ end
 
 -- Pet eggs -------------------------------------------------------------------
 
+-- The egg itself: the Blender model for this egg if it has been imported
+-- (ServerStorage.EggMeshes.<EggId>, from assets/eggs/<EggId>.fbx, made in
+-- tools/blender/Eggs.blend), otherwise a glowing egg-shaped placeholder.
+-- Every egg shares one shell size, so one scale fits all: higher-tier eggs
+-- just add a band, crown and halo on top. `bottom` is where the egg starts.
+-- "<Name>_Glow_<rrggbb>" parts of a model glow as Neon in that colour.
+local EGG_STUDS_PER_UNIT = 1.3 -- Blender units to studs (the shell is 2.7 units tall)
+
+local function buildEgg(stand, settings, bottom)
+    local folder = ServerStorage:FindFirstChild("EggMeshes")
+    local template = folder and folder:FindFirstChild(settings.EggId)
+    if template and template:IsA("Model") then
+        local boxCFrame, boxSize = template:GetBoundingBox()
+        local scale = EGG_STUDS_PER_UNIT
+        local center = bottom + Vector3.new(0, boxSize.Y * scale / 2, 0)
+        local primary
+        for _, source in template:GetDescendants() do
+            if source:IsA("BasePart") then
+                local part = source:Clone()
+                local hex = string.match(source.Name, "_Glow_(%x%x%x%x%x%x)$")
+                for _, child in part:GetChildren() do
+                    if hex or not child:IsA("SurfaceAppearance") then
+                        child:Destroy()
+                    end
+                end
+                if hex then
+                    part.Color = Color3.fromHex(hex)
+                    part.Material = Enum.Material.Neon
+                    if part:IsA("MeshPart") then
+                        part.TextureID = ""
+                    end
+                end
+                local relative = boxCFrame:ToObjectSpace(source.CFrame)
+                part.Size = source.Size * scale
+                part.CFrame = CFrame.new(center) * (relative.Rotation + relative.Position * scale)
+                part.Anchored = true
+                part.CanCollide = false
+                part.CanQuery = false
+                part.CanTouch = false
+                part.CastShadow = false
+                part.Parent = stand
+                if not hex and not primary then
+                    primary = part
+                end
+            end
+        end
+        if primary then
+            primary.Name = "Egg"
+            return primary
+        end
+    end
+
+    -- Placeholder until the egg's model is imported: a built-in sphere mesh
+    -- stretches the part into an egg shape
+    local egg = createPart(stand, "Egg", Vector3.new(2.4, 3.2, 2.4), CFrame.new(bottom + Vector3.new(0, 1.6, 0)), Enum.Material.Neon, settings.EggColor)
+    local eggMesh = Instance.new("SpecialMesh")
+    eggMesh.MeshType = Enum.MeshType.Sphere
+    eggMesh.Parent = egg
+    return egg
+end
+
 -- A small stone stand with a glowing egg. It's tagged (GameConfig.EggTag) with
 -- an "EggId" attribute; PetService listens to its ProximityPrompt and decides
 -- which pet (if any) hatches.
-local function buildEggStand(island, config)
-    local settings = config.EggStand
+local function buildEggStand(island, config, settings)
     local eggConfig = GameConfig.Eggs[settings.EggId]
     local stone = config.Platform or DEFAULT_STONE
     local spot = getFeatureSpot(config, settings)
@@ -371,13 +436,8 @@ local function buildEggStand(island, config)
     local pedestalCenter = Vector3.new(ground.X, floorTopY + 1.5, ground.Z)
     local pedestal = createCylinder(stand, "Pedestal", 3, 3, pedestalCenter, stone.BaseMaterial, stone.BaseColor)
 
-    -- The egg floats just above the pedestal. A built-in sphere mesh stretches
-    -- the part into an egg shape (no uploaded asset needed).
-    local eggCFrame = CFrame.new(pedestalCenter + Vector3.new(0, 3.6, 0))
-    local egg = createPart(stand, "BeginnerQiEgg", Vector3.new(2.4, 3.2, 2.4), eggCFrame, Enum.Material.Neon, settings.EggColor)
-    local eggMesh = Instance.new("SpecialMesh")
-    eggMesh.MeshType = Enum.MeshType.Sphere
-    eggMesh.Parent = egg
+    -- The egg floats just above the pedestal
+    local egg = buildEgg(stand, settings, pedestalCenter + Vector3.new(0, 2.2, 0))
     createLight(egg, settings.GlowColor, 12, 1.2)
 
     local sparkles = Instance.new("ParticleEmitter")
@@ -601,7 +661,7 @@ local function buildRelic(island, config, placement)
     model.Parent = island
 end
 
--- Builds an island once and returns its model. If it already exists (for
+-- Builds an island once and returns its model (yields for a frame). If it already exists (for
 -- example, if this is called twice), the existing island is returned instead.
 -- Features the config leaves out (platform, egg, decorations...) are skipped.
 function IslandBuilder.build(config)
@@ -618,11 +678,15 @@ function IslandBuilder.build(config)
     if config.Hills then
         buildHills(config, random)
     end
+    -- Terrain filled this frame can't be hit by raycasts until the next one,
+    -- so wait before placing things on the ground (checked in Studio: without
+    -- this, every tree, rock, crystal and lava pool found no ground and was skipped)
+    task.wait()
     if config.Platform then
         buildPlatform(island, config)
     end
-    if config.EggStand then
-        buildEggStand(island, config)
+    for _, settings in config.EggStands or {} do
+        buildEggStand(island, config, settings)
     end
     if config.TrainingStation then
         buildTrainingStation(island, config)

@@ -10,6 +10,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent:WaitForChild("HudScale"))
 
@@ -196,13 +197,15 @@ local qiValue = leaderstats:WaitForChild("Qi")
 local rankValue = leaderstats:WaitForChild("Rank")
 
 local function updateQiLabel()
-    qiLabel.Text = "Qi: " .. qiValue.Value
+    qiLabel.Text = "Qi: " .. NumberFormat.compact(qiValue.Value)
 end
 
 local function updateRankDisplay()
     local rank = Ranks.getRank(rankValue.Value)
+    -- From Spirit Soul on, each realm multiplies Qi; show the current power
+    local power = if rank and rank.QiMultiplier > 1 then "  |  Qi x" .. rank.QiMultiplier else ""
     rankLabel.Text = if rank
-        then rank.Name .. "  |  " .. rank.Realm .. " " .. rank.Level .. "/5"
+        then rank.Name .. "  |  " .. rank.Realm .. " " .. rank.Level .. "/5" .. power
         else "Rank: " .. rankValue.Value
 
     local nextRank = Ranks.getNextRank(rankValue.Value)
@@ -214,9 +217,9 @@ local function updateRankDisplay()
 
     -- Reaching a new realm is a bigger step, so call it out
     if rank and nextRank.Realm ~= rank.Realm then
-        nextRankLabel.Text = "Next realm: " .. nextRank.Realm .. " at " .. nextRank.QiRequired .. " Qi"
+        nextRankLabel.Text = "Next realm: " .. nextRank.Realm .. " at " .. NumberFormat.compact(nextRank.QiRequired) .. " Qi"
     else
-        nextRankLabel.Text = "Next: " .. nextRank.Name .. " at " .. nextRank.QiRequired .. " Qi"
+        nextRankLabel.Text = "Next: " .. nextRank.Name .. " at " .. NumberFormat.compact(nextRank.QiRequired) .. " Qi"
     end
     rankUpButton.Visible = true
 
@@ -225,7 +228,7 @@ local function updateRankDisplay()
 
     rankUpButton.BackgroundColor3 = if canRankUp then RANK_UP_READY_COLOR else COOLDOWN_COLOR
     rankUpButton.AutoButtonColor = canRankUp
-    rankUpButton.Text = if canRankUp then "Rank Up!" else "Rank Up (" .. qiNeeded .. " more Qi)"
+    rankUpButton.Text = if canRankUp then "Rank Up!" else "Rank Up (" .. NumberFormat.compact(qiNeeded) .. " more Qi)"
 end
 
 local function requestRankUp()

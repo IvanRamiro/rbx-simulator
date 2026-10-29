@@ -1,8 +1,8 @@
 
 -- Shows the cultivation aura around every player who is cultivating
--- (including other players). The selected aura pet sets the element and the
--- rank sets how strong it is; see AuraStyles and AuraBuilder. Elements
--- without a rebuilt aura yet show none.
+-- (including other players): the anime aura in CharacterAura, coloured by the
+-- selected aura pet's element, stronger at higher ranks. (Pets get their own
+-- auras from PetCompanionController.)
 --
 -- Everything is created only on this client, in a local "CultivationAuras"
 -- folder, so nothing is sent to the server. State comes from values the
@@ -18,7 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
-local AuraBuilder = require(script.Parent:WaitForChild("AuraBuilder"))
+local CharacterAura = require(script.Parent:WaitForChild("CharacterAura"))
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local BreakthroughEffect = require(script.Parent:WaitForChild("BreakthroughEffect"))
 
@@ -51,7 +51,7 @@ local function destroyAura(aura)
     if activeAuras[aura.player] == aura then
         activeAuras[aura.player] = nil
     end
-    AuraBuilder.destroy(aura)
+    CharacterAura.destroy(aura)
 
     if next(liveAuras) == nil and updateConnection then
         updateConnection:Disconnect()
@@ -70,8 +70,8 @@ local function removeAura(aura)
         return
     end
 
-    AuraBuilder.hide(aura)
-    task.delay(AuraBuilder.REMOVE_DELAY, destroyAura, aura)
+    CharacterAura.hide(aura)
+    task.delay(CharacterAura.REMOVE_DELAY, destroyAura, aura)
 end
 
 -- Runs every frame while any aura is on screen
@@ -81,7 +81,7 @@ local function updateAuras()
 
     for aura in liveAuras do
         if aura.rootPart:IsDescendantOf(workspace) and aura.model.Parent then
-            AuraBuilder.update(aura, now, parts, cframes)
+            CharacterAura.update(aura, now, parts, cframes)
         elseif activeAuras[aura.player] == aura then
             -- An active aura lost its character or was removed by something
             -- else. Clean it up and rebuild if the player is still cultivating.
@@ -159,14 +159,13 @@ function refreshAura(player)
         removeAura(current)
     end
 
-    -- Auras are being rebuilt one element at a time; some have none yet
-    local aura = shouldShow and AuraBuilder.build(player, character, rootPart, petId, rankId)
+    local aura = shouldShow and CharacterAura.build(player, character, rootPart, petId, rankId)
     if aura then
         aura.lookKey = lookKey
         aura.model.Parent = container
         activeAuras[player] = aura
         liveAuras[aura] = true
-        AuraBuilder.show(aura)
+        CharacterAura.show(aura)
 
         if not updateConnection then
             updateConnection = RunService.RenderStepped:Connect(updateAuras)
@@ -238,10 +237,10 @@ local function playBreakthrough(player)
     end)
     activeBreakthroughs[player] = effect
 
-    -- The aura itself just glows brighter for a moment; it isn't rebuilt
+    -- The aura itself surges; it isn't rebuilt
     local aura = activeAuras[player]
     if aura then
-        AuraBuilder.pulse(aura, 1.5)
+        CharacterAura.pulse(aura)
     end
 
     if PRINT_BUILD_SUMMARY then

@@ -65,6 +65,13 @@ function Ranks.getFlightSpeed(rankName)
     return speed, nil
 end
 
+-- Cultivation power for a rank: every Qi reward is multiplied by this
+-- (1 for unknown ranks)
+function Ranks.getQiMultiplier(rankName)
+    local rank = Ranks.getRank(rankName)
+    return if rank and rank.QiMultiplier then rank.QiMultiplier else 1
+end
+
 -- Whether rankName is rankId's rank or higher (false for unknown ranks)
 function Ranks.isAtLeast(rankName, rankId)
     local index = Ranks.getIndex(rankName)
@@ -86,6 +93,7 @@ for _, rank in GameConfig.Ranks do
     assert(not seenRankNames[rank.Name], "Every rank needs a unique Name: " .. rank.Name)
     assert(typeof(rank.Realm) == "string", "Every rank needs a Realm: " .. rank.Name)
     assert(table.find({ 1, 2, 3, 4, 5 }, rank.Level), "Rank Level must be 1 to 5: " .. rank.Name)
+    assert(typeof(rank.QiMultiplier) == "number" and rank.QiMultiplier >= 1, "Rank QiMultiplier must be 1 or more: " .. rank.Name)
     seenRankIds[rank.Id] = true
     seenRankNames[rank.Name] = true
 end

@@ -6,10 +6,9 @@ Reads the ranks, pet bonuses, Qi Spring bonus, relic rewards, egg chances and fl
 straight from src/shared/GameConfig.lua, so it always matches the game.
 Times are minutes of cultivating (Qi only comes from cultivation).
 
-The "typical" player follows the pets they would usually own by then:
-an Aqua Wisp in Qi Awakening, Aqua Wisp + Ember Wyrm + Lunar Hopper in Qi
-Foundation, and Golden Kirin + Volt Fox + Ember Wyrm in Spirit Core, always
-cultivating in the Qi Spring.
+The "typical" player follows the pets they would usually own by then (see
+TYPICAL_PETS), always cultivating in the Qi Spring. From Spirit Soul on, each
+realm's QiMultiplier multiplies every reward.
 """
 
 import os
@@ -22,6 +21,15 @@ TYPICAL_PETS = {
     "Qi Awakening": ["AquaWisp"],
     "Qi Foundation": ["AquaWisp", "EmberWyrm", "LunarHopper"],
     "Spirit Core": ["GoldenKirin", "VoltFox", "EmberWyrm"],
+    "Spirit Soul": ["ThunderclawDrake", "LanternWarden", "GoldenManeLion"],
+    "Ascendant Realm": ["NebulaOwl", "CelestialSnowLeopard", "NinefoldSpiritSerpent"],
+    "Immortal Realm": ["CometStag", "EclipseCat", "CelestialSnowLeopard"],
+    "Divine Realm": ["TimekeeperTortoise", "CometStag", "EclipseCat"],
+    "Cosmic Realm": ["RuneSphinx", "TimekeeperTortoise", "DreadfangCerberus"],
+    "Void Realm": ["RuneSphinx", "CelestialPearlDragon", "TimekeeperTortoise"],
+    "Heavenly Dao": ["HeavenbreakerApe", "RuneSphinx", "CelestialPearlDragon"],
+    "Primordial Realm": ["HeavenbreakerApe", "RuneSphinx", "GalaxyManta"],
+    "Eternal Transcendence": ["HeavenbreakerApe", "ThousandYearDreamEater", "GalaxyManta"],
 }
 
 
@@ -36,9 +44,11 @@ def read_config():
     }
 
     config["ranks"] = [
-        {"id": m[0], "name": m[1], "realm": m[2], "level": int(m[3]), "qi": int(m[4])}
+        {"id": m[0], "name": m[1], "realm": m[2], "level": int(m[3]), "qi": int(m[4]), "multiplier": float(m[5])}
         for m in re.findall(
-            r'\{ Id = "(\w+)", Name = "([^"]+)", Realm = "([^"]+)", Level = (\d), QiRequired = (\d+)', text
+            r'\{ Id = "(\w+)", Name = "([^"]+)", Realm = "([^"]+)", Level = (\d), QiRequired = (\d+), '
+            r'AuraTier = \d, QiMultiplier = ([\d.]+)',
+            text,
         )
     ]
     config["pets"] = {
@@ -67,12 +77,12 @@ def read_config():
     return config
 
 
-def qi_per_second(config, pet_ids, in_spring=True):
+def qi_per_second(config, pet_ids, in_spring=True, multiplier=1):
     bonus = sum(config["pets"][pet]["bonus"] for pet in pet_ids)
     if in_spring:
         bonus += config["spring_bonus"]
-    # Matches QiService: floor(base * (100 + bonus) / 100) per interval
-    return (config["base_reward"] * (100 + bonus) // 100) / config["interval"]
+    # Matches QiService: floor(base * multiplier * (100 + bonus) / 100) per interval
+    return (config["base_reward"] * multiplier * (100 + bonus) // 100) / config["interval"]
 
 
 def main():
@@ -80,18 +90,20 @@ def main():
     ranks = config["ranks"]
 
     print("Rank progression (minutes of cultivating in the Qi Spring)")
-    print(f"{'Rank':<22}{'Realm':<16}{'Qi needed':>10}{'Qi/s':>7}{'Step':>8}{'Total':>8}{'Flight':>8}")
+    print(f"{'Rank':<22}{'Realm':<23}{'Qi needed':>12}{'x':>5}{'Qi/s':>9}{'Step':>8}{'Total h':>9}{'Flight':>8}")
     flight_by_rank = dict(config["flight"])
     total_seconds = 0
     flight_speed = 0
     for previous, rank in zip([None] + ranks[:-1], ranks):
-        rate = qi_per_second(config, TYPICAL_PETS.get(rank["realm"], []))
+        # Qi for this rank is earned at the previous rank's power, with its realm's pets
+        earning = previous or rank
+        rate = qi_per_second(config, TYPICAL_PETS.get(earning["realm"], []), multiplier=earning["multiplier"])
         step = 0 if previous is None else (rank["qi"] - previous["qi"]) / rate
         total_seconds += step
         flight_speed = flight_by_rank.get(rank["id"], flight_speed)
         print(
-            f"{rank['name']:<22}{rank['realm']:<16}{rank['qi']:>10}{rate:>7.1f}"
-            f"{step / 60:>8.1f}{total_seconds / 60:>8.1f}{flight_speed or '-':>8}"
+            f"{rank['name']:<22}{rank['realm']:<23}{rank['qi']:>12}{rank['multiplier']:>5.0f}{rate:>9.1f}"
+            f"{step / 60:>8.1f}{total_seconds / 3600:>9.2f}{flight_speed or '-':>8}"
         )
 
     print()
