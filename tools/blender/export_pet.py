@@ -1,7 +1,7 @@
 """Exports a hand-built pet (tools/blender/<PetId>.blend) for the game.
 
     /Applications/Blender.app/Contents/MacOS/Blender -b tools/blender/<PetId>.blend \
-        -P tools/blender/export_pet.py -- <PetId>
+        -P tools/blender/export_pet.py -- <PetId> [--out assets/aura/<name>]
 
 The pet is every mesh in the collection named <PetId>, built facing -Y with
 Z up, each part coloured with plain materials (Principled BSDF base colour).
@@ -26,7 +26,13 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUTPUT_DIR = os.path.join(ROOT, "assets", "pets")
 SWATCH = 8  # Pixels per palette swatch
 
-PET_ID = sys.argv[sys.argv.index("--") + 1]
+ARGS = sys.argv[sys.argv.index("--") + 1:]
+PET_ID = ARGS[0]
+# Aura pieces and other non-pet models: --out DIR writes the FBX there instead
+# of assets/pets, and skips the pet mesh data (src/shared/PetMeshData)
+if "--out" in ARGS:
+    OUTPUT_DIR = os.path.join(ROOT, ARGS[ARGS.index("--out") + 1])
+WRITE_MESH_DATA = "--out" not in ARGS
 
 
 def to_srgb(channel):
@@ -155,7 +161,8 @@ def main():
     low = [min(v.co[i] for obj in exported for v in obj.data.vertices) for i in range(3)]
     high = [max(v.co[i] for obj in exported for v in obj.data.vertices) for i in range(3)]
     size = [h - l for h, l in zip(high, low)]
-    write_luau(exported, colors, [(h + l) / 2 for h, l in zip(high, low)])
+    if WRITE_MESH_DATA:
+        write_luau(exported, colors, [(h + l) / 2 for h, l in zip(high, low)])
     print("EXPORTED", PET_ID, [obj.name for obj in exported],
           "faces", sum(len(obj.data.polygons) for obj in exported),
           "size", [round(s, 2) for s in size], "longest", round(max(size), 2))

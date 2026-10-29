@@ -74,7 +74,7 @@ local GameConfig = {
     --               bigger breakthrough effect, as does reaching a new realm.
     --   QiRequired  Qi a player must have to rank up into this rank (Qi is not
     --               spent). Players move up one rank at a time.
-    --   AuraTier    1 to 5: how powerful the aura looks (AuraStyles.Tiers)
+    --   AuraTier    1 to 5: how strong the aura looks (AuraStyles.getBoost)
     -- Balanced for roughly 4 minutes of cultivating to finish Qi Awakening,
     -- 25 minutes for Qi Foundation and 80 minutes for Spirit Core (see
     -- tools/balance_report.py, which prints the timings for these numbers).

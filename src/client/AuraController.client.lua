@@ -1,7 +1,8 @@
 
 -- Shows the cultivation aura around every player who is cultivating
 -- (including other players). The selected aura pet sets the element and the
--- rank sets how powerful it looks; see AuraStyles and AuraBuilder.
+-- rank sets how strong it is; see AuraStyles and AuraBuilder. Elements
+-- without a rebuilt aura yet show none.
 --
 -- Everything is created only on this client, in a local "CultivationAuras"
 -- folder, so nothing is sent to the server. State comes from values the
@@ -98,43 +99,19 @@ end
 
 local function printSummary(aura, petId, rankId)
     local counts = {}
-    local function count(instance)
-        for _, descendant in instance:GetDescendants() do
-            counts[descendant.ClassName] = (counts[descendant.ClassName] or 0) + 1
-        end
+    for _, descendant in aura.model:GetDescendants() do
+        counts[descendant.ClassName] = (counts[descendant.ClassName] or 0) + 1
     end
-    count(aura.model)
-    for _, point in aura.limbAttachments do
-        count(point) -- Hand effects live inside the character
-    end
-
-    local used = {
-        Beams = counts.Beam or 0,
-        ParticleEmitters = counts.ParticleEmitter or 0,
-        Trails = counts.Trail or 0,
-        MovingParts = #aura.movers,
-        FrameUpdates = aura.frameUpdates,
-        Lights = counts.PointLight or 0,
-    }
-
     print(string.format(
-        "[Aura] %s: %s / %s - %d beams, %d particle emitters, %d trails, %d moving parts, %d per-frame updates, ground sigil: %s",
+        "[Aura] %s: %s / %s - %d moving parts, %d trails, %d particle emitters, %d lights",
         aura.player.Name,
         petId or "Neutral",
-        rankId,
-        used.Beams,
-        used.ParticleEmitters,
-        used.Trails,
-        used.MovingParts,
-        used.FrameUpdates,
-        if aura.sigil then "yes" else "no ground found below"
+        tostring(rankId),
+        (counts.Part or 0),
+        counts.Trail or 0,
+        counts.ParticleEmitter or 0,
+        counts.PointLight or 0
     ))
-
-    for name, limit in AuraStyles.Budget do
-        if used[name] > limit then
-            warn(string.format("[Aura] %s / %s uses %d %s, over the budget of %d", petId or "Neutral", rankId, used[name], name, limit))
-        end
-    end
 end
 
 -- State --------------------------------------------------------------------
@@ -182,8 +159,9 @@ function refreshAura(player)
         removeAura(current)
     end
 
-    if shouldShow then
-        local aura = AuraBuilder.build(player, character, rootPart, petId, rankId)
+    -- Auras are being rebuilt one element at a time; some have none yet
+    local aura = shouldShow and AuraBuilder.build(player, character, rootPart, petId, rankId)
+    if aura then
         aura.lookKey = lookKey
         aura.model.Parent = container
         activeAuras[player] = aura

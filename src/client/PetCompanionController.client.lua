@@ -8,11 +8,17 @@
 --
 -- Each pet is welded to an invisible root part, so one per-frame update moves
 -- every companion by moving just their roots, in a single BulkMoveTo.
+--
+-- While a player cultivates, each of their pets also shows the aura of its
+-- own element (AuraBuilder), if that element's aura has been made.
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local PetModels = require(script.Parent:WaitForChild("PetModels"))
+local AuraBuilder = require(script.Parent:WaitForChild("AuraBuilder"))
 
 local FOLLOW_SPACING = 4.8 -- Studs between pets side by side
 local FOLLOW_DISTANCE = 5.5 -- Studs behind the player
@@ -32,15 +38,56 @@ container.Parent = workspace
 -- companions[player] = {
 --     key = "AquaWisp,VoltFox", rootPart = the root part the pets follow,
 --     version = PetModels.Version the pets were built with,
---     pets = { { model, rootPart, cframe } },
+--     pets = { { model, rootPart, cframe, petId, aura } },
 -- }
 local companions = {}
 
 local function clearPets(entry)
     for _, pet in entry.pets do
+        for _, aura in { pet.aura, pet.fading } do
+            if not aura.destroyed then
+                AuraBuilder.destroy(aura)
+            end
+        end
         pet.model:Destroy()
     end
     entry.pets = {}
+end
+
+local function getRankId(player)
+    local leaderstats = player:FindFirstChild("leaderstats")
+    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
+    local rank = rankValue and Ranks.getRank(rankValue.Value)
+    return rank and rank.Id
+end
+
+-- Gives the pet its element's aura while its owner cultivates, and fades it
+-- away afterwards. Elements without an aura yet are skipped.
+local function syncPetAura(player, pet, cultivating)
+    if cultivating and not pet.aura and not pet.noAura then
+        local aura = AuraBuilder.build(player, pet.model, pet.rootPart, pet.petId, getRankId(player), true)
+        if aura then
+            aura.model.Parent = container
+            AuraBuilder.show(aura)
+            pet.aura = aura
+        else
+            pet.noAura = true -- Nothing to show for this element; don't try every frame
+        end
+    elseif not cultivating and pet.aura then
+        -- Keeps following the pet while it fades, then goes
+        local aura = pet.aura
+        pet.aura = nil
+        pet.fading = aura
+        AuraBuilder.hide(aura)
+        task.delay(AuraBuilder.REMOVE_DELAY, function()
+            if pet.fading == aura then
+                pet.fading = nil
+            end
+            if not aura.destroyed then
+                AuraBuilder.destroy(aura)
+            end
+        end)
+    end
 end
 
 -- Rebuilds a player's pets when their equipped pets or character change
@@ -71,7 +118,7 @@ local function syncPets(player, entry)
             model.Parent = container
             -- Start at the player; the first frames glide them into place
             petRoot.CFrame = rootPart.CFrame
-            table.insert(entry.pets, { model = model, rootPart = petRoot, cframe = rootPart.CFrame })
+            table.insert(entry.pets, { model = model, rootPart = petRoot, cframe = rootPart.CFrame, petId = petId })
         end
     end
 end
@@ -130,6 +177,21 @@ local function updateCompanions(deltaTime)
 
     if #parts > 0 then
         workspace:BulkMoveTo(parts, cframes, Enum.BulkMoveMode.FireCFrameChanged)
+    end
+
+    -- Pet auras, placed around the pets' new positions
+    local auraParts, auraCFrames = {}, {}
+    for player, entry in companions do
+        local cultivating = player:GetAttribute("IsCultivating") == true
+        for _, pet in entry.pets do
+            syncPetAura(player, pet, cultivating)
+            for _, aura in { pet.aura, pet.fading } do
+                AuraBuilder.update(aura, now, auraParts, auraCFrames)
+            end
+        end
+    end
+    if #auraParts > 0 then
+        workspace:BulkMoveTo(auraParts, auraCFrames, Enum.BulkMoveMode.FireCFrameChanged)
     end
 end
 
