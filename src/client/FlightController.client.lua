@@ -34,8 +34,10 @@ local LOCKED_COLOR = Color3.fromRGB(90, 90, 90)
 
 local CLIMB_SPEED_FACTOR = 0.7 -- Climbing and descending speed compared with flight speed
 local TAKE_OFF_BOOST = 12 -- Upward speed when taking off, in studs per second
-local MAX_TILT = math.rad(25) -- How far the body leans forward at full speed
+local MAX_TILT = math.rad(70) -- How far the body leans forward at full speed (stretched out, see PoseController)
 local MIN_HEIGHT_ABOVE_VOID = 60 -- Never dive closer than this to where Roblox removes fallen parts
+local PITCH_DEADZONE = math.rad(25) -- Camera pitch that still flies level
+local GROUND_CLEARANCE = 4 -- Studs above the ground where diving stops (land with Q instead)
 
 local flight = GameConfig.Flight
 local lastToggleRequestTime = 0
@@ -157,16 +159,38 @@ end)
 
 -- Flying movement ------------------------------------------------------------
 
--- The default PlayerModule's controls give the movement input on every device
-local controls = nil
-task.spawn(function()
-    local ok, playerModule = pcall(function()
-        return require(player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule", 10))
-    end)
-    if ok and playerModule then
-        controls = playerModule:GetControls()
+-- Turns the humanoid's MoveDirection into a 3D flying direction that follows
+-- the camera, so looking up or down while moving forward climbs or dives.
+-- MoveDirection is filled in by Roblox's own controls on every device
+-- (keyboard, gamepad and the touch joystick) and keeps updating while
+-- PlatformStand is on. (Reading the controls through PlayerModule doesn't
+-- work everywhere: in current Studio it isn't in PlayerScripts, so flight got
+-- no input at all and players could only float. Checked in Studio.)
+local function getFlyDirection(humanoid, camera)
+    local moveDirection = humanoid.MoveDirection
+    if moveDirection.Magnitude < 0.01 then
+        return Vector3.zero
     end
-end)
+
+    -- How much of the input is "forward" and "right" relative to the camera
+    local flatLook = Vector3.new(camera.LookVector.X, 0, camera.LookVector.Z)
+    local flatRight = Vector3.new(camera.RightVector.X, 0, camera.RightVector.Z)
+    if flatLook.Magnitude < 0.01 or flatRight.Magnitude < 0.01 then
+        return moveDirection -- Looking straight up or down: just move flat
+    end
+    local forward = moveDirection:Dot(flatLook.Unit)
+    local right = moveDirection:Dot(flatRight.Unit)
+
+    -- The usual third-person camera looks a little down at the character, so
+    -- small camera pitches fly level; only looking clearly up or down climbs
+    -- or dives. (Without this, flying forward kept sinking into the ground.)
+    local pitch = math.asin(math.clamp(camera.LookVector.Y, -1, 1))
+    local steer = math.max(math.abs(pitch) - PITCH_DEADZONE, 0) / (math.pi / 2 - PITCH_DEADZONE) * math.pi / 2
+    local look = flatLook.Unit * math.cos(steer) + Vector3.new(0, math.sign(pitch) * math.sin(steer), 0)
+
+    local direction = look * forward + flatRight.Unit * right
+    return if direction.Magnitude > 1 then direction.Unit else direction
+end
 
 -- State while flying; nil on the ground
 local active = nil -- { humanoid, rootPart, attachment, mover, aligner, velocity }
@@ -240,6 +264,15 @@ local function isDown(keyCodes, gamepadButton)
     return UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, gamepadButton)
 end
 
+-- Diving stops just above the ground, so you don't scrape along it lying flat
+local function isNearGround(state)
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = { state.rootPart.Parent }
+    params.IgnoreWater = false
+    return workspace:Raycast(state.rootPart.Position, Vector3.new(0, -GROUND_CLEARANCE, 0), params) ~= nil
+end
+
 local function updateFlight(deltaTime)
     local state = active
     if not state then
@@ -259,12 +292,7 @@ local function updateFlight(deltaTime)
     local speed = getFlightSpeed()
     local camera = workspace.CurrentCamera.CFrame
 
-    -- Move input is relative to the camera: X is right, -Z is forward
-    local moveInput = if controls then controls:GetMoveVector() else Vector3.zero
-    if moveInput.Magnitude > 1 then
-        moveInput = moveInput.Unit
-    end
-    local direction = camera.RightVector * moveInput.X + camera.LookVector * -moveInput.Z
+    local direction = getFlyDirection(state.humanoid, camera)
 
     local climb = 0
     if UserInputService:GetFocusedTextBox() == nil then
@@ -277,7 +305,8 @@ local function updateFlight(deltaTime)
     end
 
     local target = direction * speed + Vector3.new(0, climb * speed * CLIMB_SPEED_FACTOR, 0)
-    if state.rootPart.Position.Y < workspace.FallenPartsDestroyHeight + MIN_HEIGHT_ABOVE_VOID and target.Y < 0 then
+    if target.Y < 0 and (state.rootPart.Position.Y < workspace.FallenPartsDestroyHeight + MIN_HEIGHT_ABOVE_VOID
+        or isNearGround(state)) then
         target = Vector3.new(target.X, 0, target.Z)
     end
 

@@ -1,11 +1,14 @@
-
 {
   "name": "Qi Aura Simulator",
   "tree": {
     "$className": "DataModel",
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
-      "$path": "src/shared"
+      "$path": "src/shared",
+      "PetMeshes": {
+        "$className": "Folder",
+        "$ignoreUnknownInstances": true
+      }
     },
     "ServerScriptService": {
       "$className": "ServerScriptService",

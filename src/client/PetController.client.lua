@@ -3,10 +3,12 @@
 -- The server owns the inventory: this script only displays the copy the
 -- server sends and asks for changes, which the server validates.
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent:WaitForChild("HudScale"))
 
@@ -288,8 +290,13 @@ local function onHatchResult(result)
         return
     end
 
+    local egg = GameConfig.Eggs[result.EggId]
+    local eggName = if egg then egg.DisplayName else "The egg"
+
     if result.Reason == "Cooldown" then
-        showMessage("The egg is gathering Qi. Try again in " .. tostring(result.SecondsLeft) .. "s.", Color3.new(1, 1, 1))
+        showMessage(eggName .. " is gathering Qi. Try again in " .. tostring(result.SecondsLeft) .. "s.", Color3.new(1, 1, 1))
+    elseif result.Reason == "Locked" then
+        showMessage(eggName .. " needs " .. tostring(result.RequiredRank) .. " to hatch.", Color3.new(1, 1, 1))
     elseif result.Reason == "InventoryFull" then
         showMessage("Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets).", Color3.new(1, 1, 1))
     else
@@ -304,3 +311,40 @@ local function onHatchResult(result)
 end
 
 RemoteEvents.EggHatchResultEvent.OnClientEvent:Connect(onHatchResult)
+
+-- Egg prompts --------------------------------------------------------------
+
+-- Shows "Hatch" on eggs you can open and the rank needed on the others
+-- (only on this client; the server checks the rank itself)
+local function getRankName()
+    local leaderstats = player:FindFirstChild("leaderstats")
+    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
+    return if rankValue then rankValue.Value else ""
+end
+
+local function updateEggPrompt(stand)
+    local egg = GameConfig.Eggs[stand:GetAttribute("EggId")]
+    local prompt = stand:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if not (egg and prompt) then
+        return
+    end
+
+    prompt.ActionText = if Ranks.isAtLeast(getRankName(), egg.RequiredRank)
+        then "Hatch"
+        else "Needs " .. Ranks.getRankById(egg.RequiredRank).Name
+end
+
+local function updateAllEggPrompts()
+    for _, stand in CollectionService:GetTagged(GameConfig.EggTag) do
+        updateEggPrompt(stand)
+    end
+end
+
+-- Egg stands stream in as you fly closer, so update each one when it arrives
+CollectionService:GetInstanceAddedSignal(GameConfig.EggTag):Connect(updateEggPrompt)
+
+task.spawn(function()
+    local rankValue = player:WaitForChild("leaderstats"):WaitForChild("Rank")
+    rankValue.Changed:Connect(updateAllEggPrompts)
+    updateAllEggPrompts()
+end)

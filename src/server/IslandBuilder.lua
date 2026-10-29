@@ -1,13 +1,18 @@
 
--- Builds the starting floating island from terrain and simple anchored parts.
--- Everything uses a fixed random seed, so the island looks the same on every
--- server. All settings live in IslandConfig.
+-- Builds floating islands from terrain and simple anchored parts. Everything
+-- uses a fixed random seed, so the islands look the same on every server.
+-- All settings live in IslandConfig.
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 
 local IslandBuilder = {}
+
+-- Every Spirit Relic model gets this tag (and a "RelicId" attribute), so
+-- DiscoveryService and the clients can find them wherever they are
+IslandBuilder.RELIC_TAG = GameConfig.RelicTag
 
 local terrain = workspace.Terrain
 
@@ -115,11 +120,19 @@ local function getFeatureSpot(config, settings)
     return config.Center + Vector3.new(math.cos(angle) * settings.Distance, 0, math.sin(angle) * settings.Distance)
 end
 
--- Areas kept clear for the egg stand and the training station, each widened by `margin`
+local RELIC_CLEAR_RADIUS = 7
+
+-- Areas kept clear for the egg stand, the training station and relics that
+-- stand on the ground (whichever this island has), each widened by `margin`
 local function getFeatureAreas(config, margin)
     local areas = {}
-    for _, settings in { config.BeginnerEgg, config.TrainingStation } do
+    for _, settings in { config.EggStand, config.TrainingStation } do
         table.insert(areas, { Position = getFeatureSpot(config, settings), Radius = settings.ClearRadius + margin })
+    end
+    for _, relic in config.Relics or {} do
+        if not relic.Offset then
+            table.insert(areas, { Position = getFeatureSpot(config, relic), Radius = RELIC_CLEAR_RADIUS + margin })
+        end
     end
     return areas
 end
@@ -149,12 +162,15 @@ local function buildBody(config, random)
         terrain:SetMaterialColor(material, color)
     end
 
-    -- Grass on top, with its upper surface at Center.Y, and soil underneath
+    local materials = config.Materials
+
+    -- The top layer (grass on the starting island), with its upper surface at
+    -- Center.Y, and soil underneath
     local grassMiddle = center - Vector3.new(0, config.GrassDepth / 2, 0)
-    terrain:FillCylinder(CFrame.new(grassMiddle), config.GrassDepth, radius, Enum.Material.Grass)
+    terrain:FillCylinder(CFrame.new(grassMiddle), config.GrassDepth, radius, materials.Surface)
 
     local soilMiddle = center - Vector3.new(0, config.GrassDepth + config.SoilDepth / 2, 0)
-    terrain:FillCylinder(CFrame.new(soilMiddle), config.SoilDepth, radius - 2, Enum.Material.Ground)
+    terrain:FillCylinder(CFrame.new(soilMiddle), config.SoilDepth, radius - 2, materials.Soil)
 
     -- Rocky underside: rings of rock that shrink as they go down, with
     -- boulders around each ring so the edge looks uneven and natural
@@ -165,7 +181,7 @@ local function buildBody(config, random)
         local progress = layer / config.UndersideLayers -- Near 0 at the top, 1 at the bottom
         local layerRadius = math.max(4, (radius - 4) * (1 - progress) ^ 0.7)
         local layerY = undersideTop - progress * config.UndersideDepth
-        local material = if layer % 2 == 0 then Enum.Material.Slate else Enum.Material.Rock
+        local material = materials.Underside[(layer - 1) % #materials.Underside + 1]
 
         terrain:FillCylinder(CFrame.new(center.X, layerY, center.Z), layerHeight + 2, layerRadius, material)
 
@@ -187,7 +203,7 @@ local function buildBody(config, random)
     local bottomY = undersideTop - config.UndersideDepth
     for step = 1, 3 do
         local position = Vector3.new(center.X, bottomY - step * 4, center.Z)
-        terrain:FillBall(position, 6 - step * 1.2, Enum.Material.Rock)
+        terrain:FillBall(position, 6 - step * 1.2, materials.Underside[1])
     end
 end
 
@@ -203,7 +219,7 @@ local function buildHills(config, random)
         if spot then
             local hillRadius = random:NextNumber(settings.MinRadius, settings.MaxRadius)
             -- Mostly buried, so only a low bump shows above the surface
-            terrain:FillBall(spot - Vector3.new(0, hillRadius * 0.75, 0), hillRadius, Enum.Material.Grass)
+            terrain:FillBall(spot - Vector3.new(0, hillRadius * 0.75, 0), hillRadius, config.Materials.Surface)
         end
     end
 end
@@ -252,6 +268,14 @@ local function buildPlatform(island, config)
     spawnLocation.Parent = folder
 end
 
+-- Stone for islands without a platform to match
+local DEFAULT_STONE = {
+    BaseMaterial = Enum.Material.Slate,
+    BaseColor = Color3.fromRGB(70, 78, 95),
+    FloorMaterial = Enum.Material.Marble,
+    FloorColor = Color3.fromRGB(225, 228, 235),
+}
+
 -- Qi Spring training station -------------------------------------------------
 
 -- A round pool of glowing spring water in a stone basin, ringed by four
@@ -260,6 +284,7 @@ end
 local function buildTrainingStation(island, config)
     local settings = config.TrainingStation
     local stationRules = GameConfig.TrainingStation
+    local stone = config.Platform or DEFAULT_STONE
     local spot = getFeatureSpot(config, settings)
     local ground = findGround(spot) or spot
     local waterDiameter = stationRules.Radius * 2
@@ -269,7 +294,7 @@ local function buildTrainingStation(island, config)
 
     -- Stone basin with the water just inside its rim, both walkable
     local baseCenter = ground + Vector3.new(0, 0.25, 0)
-    createCylinder(station, "Basin", waterDiameter + 4, 1.5, baseCenter, config.Platform.BaseMaterial, config.Platform.BaseColor)
+    createCylinder(station, "Basin", waterDiameter + 4, 1.5, baseCenter, stone.BaseMaterial, stone.BaseColor)
     local water = createCylinder(station, "SpringWater", waterDiameter, 1.6, baseCenter, Enum.Material.Neon, settings.WaterColor)
     water.Transparency = 0.15
     createLight(water, settings.GlowColor, 18, 1)
@@ -292,7 +317,7 @@ local function buildTrainingStation(island, config)
     for pillar = 1, 4 do
         local angle = (pillar - 0.5) / 4 * FULL_TURN
         local base = ground + Vector3.new(math.cos(angle) * pillarDistance, 1, math.sin(angle) * pillarDistance)
-        createPart(station, "Pillar", Vector3.new(1.4, 5, 1.4), CFrame.new(base + Vector3.new(0, 2.5, 0)), config.Platform.BaseMaterial, config.Platform.BaseColor)
+        createPart(station, "Pillar", Vector3.new(1.4, 5, 1.4), CFrame.new(base + Vector3.new(0, 2.5, 0)), stone.BaseMaterial, stone.BaseColor)
         local capCFrame = CFrame.new(base + Vector3.new(0, 5.6, 0)) * CFrame.Angles(math.rad(45), math.rad(45), 0)
         createPart(station, "PillarCap", Vector3.new(1, 1, 1), capCFrame, Enum.Material.Neon, settings.GlowColor)
     end
@@ -319,27 +344,32 @@ local function buildTrainingStation(island, config)
     station.Parent = island
 end
 
--- Beginner Qi Egg -----------------------------------------------------------
+-- Pet eggs -------------------------------------------------------------------
 
--- A small stone stand with the glowing Beginner Qi Egg. PetService listens to
--- its ProximityPrompt and decides which pet (if any) hatches.
+-- A small stone stand with a glowing egg. It's tagged (GameConfig.EggTag) with
+-- an "EggId" attribute; PetService listens to its ProximityPrompt and decides
+-- which pet (if any) hatches.
 local function buildEggStand(island, config)
-    local settings = config.BeginnerEgg
+    local settings = config.EggStand
+    local eggConfig = GameConfig.Eggs[settings.EggId]
+    local stone = config.Platform or DEFAULT_STONE
     local spot = getFeatureSpot(config, settings)
     local ground = findGround(spot) or spot
 
     local stand = Instance.new("Model")
     stand.Name = settings.ModelName
+    stand:SetAttribute("EggId", settings.EggId)
+    stand.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- Clients get the whole stand at once
 
     -- Stone base with a glowing ring, like a small version of the platform
     local baseCenter = ground + Vector3.new(0, 0.25, 0)
-    createCylinder(stand, "Base", 12, 1.5, baseCenter, config.Platform.BaseMaterial, config.Platform.BaseColor)
+    createCylinder(stand, "Base", 12, 1.5, baseCenter, stone.BaseMaterial, stone.BaseColor)
     createCylinder(stand, "GlowRing", 10, 1.6, baseCenter, Enum.Material.Neon, settings.GlowColor)
-    createCylinder(stand, "Floor", 9, 1.7, baseCenter, config.Platform.FloorMaterial, config.Platform.FloorColor)
+    createCylinder(stand, "Floor", 9, 1.7, baseCenter, stone.FloorMaterial, stone.FloorColor)
     local floorTopY = baseCenter.Y + 1.7 / 2
 
     local pedestalCenter = Vector3.new(ground.X, floorTopY + 1.5, ground.Z)
-    local pedestal = createCylinder(stand, "Pedestal", 3, 3, pedestalCenter, config.Platform.BaseMaterial, config.Platform.BaseColor)
+    local pedestal = createCylinder(stand, "Pedestal", 3, 3, pedestalCenter, stone.BaseMaterial, stone.BaseColor)
 
     -- The egg floats just above the pedestal. A built-in sphere mesh stretches
     -- the part into an egg shape (no uploaded asset needed).
@@ -373,13 +403,14 @@ local function buildEggStand(island, config)
 
     local prompt = Instance.new("ProximityPrompt")
     prompt.ActionText = "Hatch"
-    prompt.ObjectText = "Beginner Qi Egg"
+    prompt.ObjectText = eggConfig.DisplayName
     prompt.KeyboardKeyCode = Enum.KeyCode.F -- E is used for cultivating
     prompt.HoldDuration = 1
     prompt.MaxActivationDistance = settings.PromptDistance
     prompt.RequiresLineOfSight = false
     prompt.Parent = pedestal
 
+    CollectionService:AddTag(stand, GameConfig.EggTag)
     stand.Parent = island
 end
 
@@ -494,8 +525,85 @@ local function buildFloatingFragments(island, config, random)
     end
 end
 
--- Builds the island once and returns its model. If it already exists (for
+-- Glowing lava pools set into the ground (decoration only, they don't hurt)
+local function buildLavaPools(island, config, random, taken)
+    local settings = config.LavaPools
+    local folder = createFolder(island, "LavaPools")
+
+    for _ = 1, settings.Count do
+        local ground = pickGroundSpot(random, config, taken)
+        if ground then
+            local diameter = random:NextNumber(settings.MinDiameter, settings.MaxDiameter)
+            local pool = createCylinder(folder, "LavaPool", diameter, 0.6, ground + Vector3.new(0, 0.1, 0), Enum.Material.Neon, settings.Color)
+            createLight(pool, settings.Color, diameter * 1.5, 1)
+        end
+    end
+end
+
+-- Spirit Relics ----------------------------------------------------------------
+
+-- A glowing crystal floating over a small stone plinth (or on its own, for
+-- relics that float in the air). DiscoveryService listens to its prompt and
+-- decides whether the player gets the reward; each player's client dims the
+-- relics they have already found.
+local function buildRelic(island, config, placement)
+    local relicConfig = nil
+    for _, relic in GameConfig.Relics do
+        if relic.Id == placement.Id then
+            relicConfig = relic
+        end
+    end
+
+    local model = Instance.new("Model")
+    model.Name = "Relic_" .. placement.Id
+
+    local crystalPosition
+    if placement.Offset then
+        crystalPosition = config.Center + placement.Offset
+    else
+        local spot = getFeatureSpot(config, placement)
+        local ground = findGround(spot) or spot
+        createCylinder(model, "Plinth", 3, 2, ground + Vector3.new(0, 0.5, 0), Enum.Material.Slate, Color3.fromRGB(70, 78, 95))
+        createCylinder(model, "PlinthGlow", 3.4, 0.4, ground + Vector3.new(0, 1.5, 0), Enum.Material.Neon, config.RelicColor)
+        crystalPosition = ground + Vector3.new(0, 4, 0)
+    end
+
+    local crystalCFrame = CFrame.new(crystalPosition) * CFrame.Angles(0, math.rad(45), math.rad(45))
+    local crystal = createPart(model, "RelicCrystal", Vector3.new(1.6, 1.6, 1.6), crystalCFrame, Enum.Material.Neon, config.RelicColor)
+    crystal.CanCollide = false
+    createLight(crystal, config.RelicColor, 14, 1.5)
+
+    local glow = Instance.new("ParticleEmitter")
+    glow.Name = "RelicSparkles"
+    glow.Color = ColorSequence.new(config.RelicColor)
+    glow.LightEmission = 0.5
+    glow.LightInfluence = 0
+    glow.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 0) })
+    glow.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+    glow.Lifetime = NumberRange.new(1, 1.6)
+    glow.Speed = NumberRange.new(0.5, 1.5)
+    glow.SpreadAngle = Vector2.new(180, 180)
+    glow.Rate = 6
+    glow.Parent = crystal
+
+    local prompt = Instance.new("ProximityPrompt")
+    prompt.ActionText = "Attune"
+    prompt.ObjectText = relicConfig.DisplayName
+    prompt.KeyboardKeyCode = Enum.KeyCode.F -- E is used for cultivating
+    prompt.HoldDuration = 1
+    prompt.MaxActivationDistance = 12
+    prompt.RequiresLineOfSight = false
+    prompt.Parent = crystal
+
+    model:SetAttribute("RelicId", placement.Id)
+    model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- Clients get the whole relic at once
+    CollectionService:AddTag(model, IslandBuilder.RELIC_TAG)
+    model.Parent = island
+end
+
+-- Builds an island once and returns its model. If it already exists (for
 -- example, if this is called twice), the existing island is returned instead.
+-- Features the config leaves out (platform, egg, decorations...) are skipped.
 function IslandBuilder.build(config)
     local existing = workspace:FindFirstChild(config.ModelName)
     if existing then
@@ -507,17 +615,40 @@ function IslandBuilder.build(config)
     island.Name = config.ModelName
 
     buildBody(config, random)
-    buildHills(config, random)
-    buildPlatform(island, config)
-    buildEggStand(island, config)
-    buildTrainingStation(island, config)
+    if config.Hills then
+        buildHills(config, random)
+    end
+    if config.Platform then
+        buildPlatform(island, config)
+    end
+    if config.EggStand then
+        buildEggStand(island, config)
+    end
+    if config.TrainingStation then
+        buildTrainingStation(island, config)
+    end
 
-    -- Trees, rocks and crystals share one list so they never overlap
+    -- Trees, rocks, crystals and lava pools share one list so they never overlap
     local decorationSpots = {}
-    buildTrees(island, config, random, decorationSpots)
-    buildRocks(island, config, random, decorationSpots)
-    buildCrystals(island, config, random, decorationSpots)
-    buildFloatingFragments(island, config, random)
+    if config.Trees then
+        buildTrees(island, config, random, decorationSpots)
+    end
+    if config.Rocks then
+        buildRocks(island, config, random, decorationSpots)
+    end
+    if config.Crystals then
+        buildCrystals(island, config, random, decorationSpots)
+    end
+    if config.LavaPools then
+        buildLavaPools(island, config, random, decorationSpots)
+    end
+    if config.FloatingFragments then
+        buildFloatingFragments(island, config, random)
+    end
+
+    for _, placement in config.Relics or {} do
+        buildRelic(island, config, placement)
+    end
 
     island.Parent = workspace
     return island

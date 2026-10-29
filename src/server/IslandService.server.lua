@@ -28,6 +28,23 @@ end
 
 local island = IslandBuilder.build(IslandConfig)
 local spawnLocation = island:FindFirstChild("IslandSpawn", true)
+
+-- The outer sky islands share the starting island's settings unless they set their own
+for _, outerIsland in IslandConfig.OuterIslands do
+    local settings = table.clone(IslandConfig)
+    settings.Platform = nil
+    settings.EggStand = nil
+    settings.TrainingStation = nil
+    settings.Lighting = nil
+    for key, value in outerIsland do
+        settings[key] = value
+    end
+    -- Decorations it doesn't list are skipped, not copied from the starting island
+    for _, key in { "Trees", "Rocks", "Crystals", "LavaPools", "FloatingFragments", "Hills", "EggStand" } do
+        settings[key] = outerIsland[key]
+    end
+    IslandBuilder.build(settings)
+end
 local spawnCFrame = spawnLocation.CFrame + Vector3.new(0, 4, 0)
 local fallResetY = IslandConfig.Center.Y - IslandConfig.Safety.FallResetDepth
 

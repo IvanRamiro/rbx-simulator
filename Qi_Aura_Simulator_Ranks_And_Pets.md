@@ -488,27 +488,43 @@ What is in the game today. All values live in `src/shared/GameConfig.lua`.
     about 4 minutes, Qi Foundation at about 24, Spirit Core at about 82.
     Run `python3 tools/balance_report.py` to see the timings for the
     current numbers after any change.
--   **Pets:** The six starter pets, each with its own aura element and a
-    small companion model:
+-   **Pets:** Fifteen pets, each with its own aura element and a small
+    companion model. The Beginner Qi Egg's seven follow the concept art
+    sheet (faceted crystal look, big glossy eyes, glowing accents):
 
-| Pet | Rarity | Qi bonus | Aura |
+| Pet | Rarity | Qi bonus | Egg | Aura |
+|---|---|---|---|---|
+| Aqua Wisp | Common | +10% | Beginner Qi | Cyan water ribbons, droplets, dripping hands |
+| Ember Wyrm | Uncommon | +20% | Beginner Qi, Inferno | Orange flame tongues, embers, flames in the hands |
+| Lunar Hopper | Rare | +35% | Beginner Qi | Lavender spirals, star motes, crescent halo |
+| Volt Fox | Epic | +50% | Beginner Qi | Fast yellow shards, crackling arcs of electricity |
+| Golden Kirin | Legendary | +60% | Beginner Qi, Jade Spirit | Jade crystal shards, jade-and-gold hexagonal rings |
+| Astral Whale | Mythical | +100% | Beginner Qi | Deep blue-violet currents, wide ribbons, star motes |
+| Origin Serpent | Secret | +150% | Beginner Qi | Silver-white coils with teal energy, octagonal rings |
+| Nine-Tail Moonfox | Mythical | +100% | None (retired) | Lilac sweeping tails, crescent halo, motes |
+| Moss Golem | Common | +10% | Jade Spirit | Blunt stone-and-moss slabs, pentagon rings |
+| Mycelium Sprite | Uncommon | +20% | Jade Spirit | Teal mushroom glow, swaying ribbons, spores |
+| Jade Spirit Panda | Rare | +35% | Jade Spirit | Jade spirals with ink-green edges, crystal glints |
+| Jade Antler Deer | Epic | +50% | Jade Spirit | Leaf-lime spirals, tall antler-like shards |
+| Magma Cub | Common | +10% | Inferno | Low, heavy molten flames, slow embers |
+| Sunscale Dragon | Rare | +35% | Inferno | Golden sun rays, 12-sided rings, rising sparks |
+| Dawn Phoenix | Legendary | +60% | Inferno | Crimson-gold flames sweeping up like wings |
+
+-   **Eggs:** Free to hatch, each with its own 45-second cooldown. Chances
+    follow the guide's rarities; an egg without a pet of some rarity
+    gives its share to the next rarer pet it has.
+
+| Egg | Where | Needs | Chances |
 |---|---|---|---|
-| Aqua Wisp | Common | +10% | Cyan water ribbons, droplets, dripping hands |
-| Ember Wyrm | Uncommon | +20% | Orange flame tongues, embers, flames in the hands |
-| Volt Fox | Rare | +35% | Fast yellow shards, crackling arcs of electricity |
-| Golden Kirin | Legendary | +60% | Jade crystal shards, jade-and-gold hexagonal rings |
-| Nine-Tail Moonfox | Mythical | +100% | Lilac sweeping tails, crescent halo, motes |
-| Origin Serpent | Secret | +150% | Violet coils with amber cores, octagonal rings |
+| Beginner Qi Egg | Starting island | Any rank | Aqua Wisp 45%, Ember Wyrm 27%, Lunar Hopper 15%, Volt Fox 8%, Golden Kirin 4%, Astral Whale 0.9%, Origin Serpent 0.1% |
+| Jade Spirit Egg | Jade Grove | Qi Gatherer | Moss Golem 45%, Mycelium Sprite 27%, Jade Spirit Panda 15%, Jade Antler Deer 8%, Golden Kirin 5% |
+| Inferno Egg | Ember Peak | Qi Awakener | Magma Cub 45%, Ember Wyrm 27%, Sunscale Dragon 23%, Dawn Phoenix 5% |
 
--   **Beginner Qi Egg:** On the starting island (replaces the old pet
-    shrine). Free to hatch with a 45-second cooldown. Chances: Aqua Wisp
-    45%, Ember Wyrm 27%, Volt Fox 23% (holds the Epic share until an Epic
-    pet exists), Golden Kirin 4%, Nine-Tail Moonfox 0.9%, Origin Serpent
-    0.1%. On average that is a Golden Kirin every 19 minutes of hatching
-    and a Nine-Tail Moonfox every 83.
 -   **Pet companions:** Every equipped pet appears as a small original
-    model (built from simple shapes) that floats behind its owner and
-    circles them while they cultivate. Everyone sees everyone's pets.
+    low-poly model (faceted octagonal bodies, wedge ears, wings and tails,
+    built from parts in code, no uploaded meshes) that floats behind its
+    owner and circles them while they cultivate. Everyone sees everyone's
+    pets.
 -   **Qi Spring (training station):** A glowing pool on the starting island,
     across from the egg. Cultivating while standing in it adds +50% Qi on
     top of pet bonuses; the HUD shows when the bonus is active.
@@ -518,6 +534,18 @@ What is in the game today. All values live in `src/shared/GameConfig.lua`.
     up makes flight faster: 28 studs/s at Qi Gatherer, then 34, 40, 50, 58
     and 70 at Golden Spirit Core (walking is 16). Taking off ends
     cultivating, and players must land to cultivate.
+-   **Sky islands:** Three islands to fly to around the starting island:
+    Jade Grove (forest, east), Ember Peak (volcanic with lava pools,
+    south-west) and Moonlit Isle (pale and celestial, the highest).
+-   **Spirit Relics:** Nine glowing relics to find, one hidden under the
+    starting island and the rest on the sky islands (one floats high above
+    Ember Peak). Attuning to each gives a one-time Qi reward, 13,200 Qi in
+    total: 300 under the starting island, 800 each on Jade Grove (from Qi
+    Gatherer), 1,500 each on Ember Peak (from Qi Awakener) and 3,000 each
+    on Moonlit Isle (from Foundation Initiate). The HUD counts found
+    relics, found ones fade for that player, and finds are saved.
+-   **Nine-Tail Moonfox** no longer hatches (Astral Whale took its place in
+    the Beginner Qi Egg); players who own one keep it.
 -   **New players** start with an Aqua Wisp.
 -   **Older saves** are upgraded automatically. Each old rank becomes the
     highest new rank that needs no more Qi than it did (Qi is kept, so

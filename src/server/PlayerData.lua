@@ -3,7 +3,7 @@
 --
 -- One saved record per player, key "Player_<UserId>":
 -- {
---     SchemaVersion = 2,
+--     SchemaVersion = 5,
 --     Session = { Id = "...", Time = os.time() } or nil, -- which server is using this data
 --     Progress = {
 --         Qi = 1234,
@@ -11,6 +11,7 @@
 --         Pets = { { InstanceId = "...", PetId = "AquaWisp" }, ... },
 --         EquippedPetIds = { "...", ... },
 --         AuraPetInstanceId = "..." or nil,
+--         Relics = { "GroveHeart", ... }, -- Spirit Relics found
 --     } or nil, -- nil until the first save, which means "new player"
 -- }
 --
@@ -25,10 +26,11 @@ local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local Discoveries = require(script.Parent:WaitForChild("Discoveries"))
 local PetInventory = require(script.Parent:WaitForChild("PetInventory"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 2
+local SCHEMA_VERSION = 5
 
 local LOAD_ATTEMPTS = 4 -- The last attempt takes over data another server still claims
 local LOAD_RETRY_DELAY = 5 -- Seconds between load attempts
@@ -78,6 +80,25 @@ MIGRATIONS[1] = function(progress)
     return progress
 end
 
+-- Version 2 -> 3: Spirit Relics were added; older saves haven't found any
+MIGRATIONS[2] = function(progress)
+    progress.Relics = progress.Relics or {}
+    return progress
+end
+
+-- Version 3 -> 4: new pets (Jade Spirit and Inferno eggs). Nothing to change;
+-- the version bump stops older servers, which don't know these pets, from
+-- loading (and dropping them from) newer saves.
+MIGRATIONS[3] = function(progress)
+    return progress
+end
+
+-- Version 4 -> 5: new pets (Lunar Hopper and Astral Whale). Like version 4,
+-- the bump only stops older servers from dropping them.
+MIGRATIONS[4] = function(progress)
+    return progress
+end
+
 local store = nil
 local storeOk, storeResult = pcall(function()
     return DataStoreService:GetDataStore(DATASTORE_NAME)
@@ -111,6 +132,7 @@ local function sanitizeProgress(raw)
         Pets = {},
         EquippedPetIds = {},
         AuraPetInstanceId = nil,
+        Relics = {},
     }
 
     if typeof(raw) ~= "table" then
@@ -174,6 +196,15 @@ local function sanitizeProgress(raw)
         progress.AuraPetInstanceId = raw.AuraPetInstanceId
     end
 
+    -- Relics: known relic Ids only, each once
+    if typeof(raw.Relics) == "table" then
+        for _, relicId in raw.Relics do
+            if typeof(relicId) == "string" and Discoveries.getRelic(relicId) and not table.find(progress.Relics, relicId) then
+                table.insert(progress.Relics, relicId)
+            end
+        end
+    end
+
     return progress
 end
 
@@ -195,7 +226,8 @@ local function captureProgress(player)
     local qi = leaderstats and leaderstats:FindFirstChild("Qi")
     local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
     local pets = PetInventory.exportData(player)
-    if not (qi and rankValue and pets) then
+    local relics = Discoveries.exportData(player)
+    if not (qi and rankValue and pets and relics) then
         return nil
     end
 
@@ -207,6 +239,7 @@ local function captureProgress(player)
         Pets = pets.Pets,
         EquippedPetIds = pets.EquippedPetIds,
         AuraPetInstanceId = pets.AuraPetInstanceId,
+        Relics = relics,
     }
 end
 
@@ -443,8 +476,9 @@ function PlayerData.release(player)
     -- Take the final snapshot right away, before other scripts clean up
     local finalProgress = if profile and profile.status == "Loaded" then captureProgress(player) else nil
 
-    -- Pet data is removed here (not in PetService) so it's always captured first
+    -- Pet and relic data are removed here (not in their services) so they're always captured first
     PetInventory.removePlayer(player)
+    Discoveries.removePlayer(player)
 
     if not profile then
         return

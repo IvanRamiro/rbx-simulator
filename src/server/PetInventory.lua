@@ -231,9 +231,11 @@ for petId, definition in GameConfig.Pets do
     assert(GameConfig.PetRarityColors[definition.Rarity], "Pet " .. petId .. " has an unknown Rarity: " .. tostring(definition.Rarity))
 end
 
-for _, entry in GameConfig.BeginnerEgg.Pool do
-    assert(GameConfig.Pets[entry.PetId], "Unknown pet ID in GameConfig.BeginnerEgg.Pool: " .. tostring(entry.PetId))
-    assert(entry.Weight > 0, "GameConfig.BeginnerEgg.Pool weights must be greater than 0")
+for eggId, egg in GameConfig.Eggs do
+    for _, entry in egg.Pool do
+        assert(GameConfig.Pets[entry.PetId], "Unknown pet ID in GameConfig.Eggs." .. eggId .. ".Pool: " .. tostring(entry.PetId))
+        assert(entry.Weight > 0, "GameConfig.Eggs." .. eggId .. ".Pool weights must be greater than 0")
+    end
 end
 
 return PetInventory

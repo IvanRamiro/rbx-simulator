@@ -65,6 +65,13 @@ function Ranks.getFlightSpeed(rankName)
     return speed, nil
 end
 
+-- Whether rankName is rankId's rank or higher (false for unknown ranks)
+function Ranks.isAtLeast(rankName, rankId)
+    local index = Ranks.getIndex(rankName)
+    local required = Ranks.getRankById(rankId)
+    return index ~= nil and required ~= nil and index >= Ranks.getIndex(required.Name)
+end
+
 -- Catch config mistakes as soon as the game starts
 assert(
     Ranks.getIndex(GameConfig.StartingRank) == 1,
@@ -81,6 +88,13 @@ for _, rank in GameConfig.Ranks do
     assert(table.find({ 1, 2, 3, 4, 5 }, rank.Level), "Rank Level must be 1 to 5: " .. rank.Name)
     seenRankIds[rank.Id] = true
     seenRankNames[rank.Name] = true
+end
+
+local seenRelicIds = {}
+for _, relic in GameConfig.Relics do
+    assert(typeof(relic.Id) == "string" and not seenRelicIds[relic.Id], "Every relic needs a unique Id: " .. tostring(relic.Id))
+    assert(Ranks.getRankById(relic.RequiredRank), "Relic " .. relic.Id .. " has an unknown RequiredRank")
+    seenRelicIds[relic.Id] = true
 end
 
 local previousFlightLevel = nil

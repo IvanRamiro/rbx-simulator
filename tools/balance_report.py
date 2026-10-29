@@ -2,12 +2,12 @@
 
     python3 tools/balance_report.py
 
-Reads the ranks, pet bonuses, Qi Spring bonus, egg chances and flight speeds
+Reads the ranks, pet bonuses, Qi Spring bonus, relic rewards, egg chances and flight speeds
 straight from src/shared/GameConfig.lua, so it always matches the game.
 Times are minutes of cultivating (Qi only comes from cultivation).
 
 The "typical" player follows the pets they would usually own by then:
-an Aqua Wisp in Qi Awakening, Aqua Wisp + Ember Wyrm + Volt Fox in Qi
+an Aqua Wisp in Qi Awakening, Aqua Wisp + Ember Wyrm + Lunar Hopper in Qi
 Foundation, and Golden Kirin + Volt Fox + Ember Wyrm in Spirit Core, always
 cultivating in the Qi Spring.
 """
@@ -20,7 +20,7 @@ CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "
 # Pets a typical player has equipped in each realm (see the docstring)
 TYPICAL_PETS = {
     "Qi Awakening": ["AquaWisp"],
-    "Qi Foundation": ["AquaWisp", "EmberWyrm", "VoltFox"],
+    "Qi Foundation": ["AquaWisp", "EmberWyrm", "LunarHopper"],
     "Spirit Core": ["GoldenKirin", "VoltFox", "EmberWyrm"],
 }
 
@@ -34,7 +34,6 @@ def read_config():
         "interval": number(r"CultivationInterval = ([\d.]+)"),
         "spring_bonus": number(r"TrainingStation = \{[^}]*QiBonusPercent = ([\d.]+)"),
     }
-    config["egg_cooldown"] = float(re.search(r"BeginnerEgg = \{.*?Cooldown = ([\d.]+)", text, re.S).group(1))
 
     config["ranks"] = [
         {"id": m[0], "name": m[1], "realm": m[2], "level": int(m[3]), "qi": int(m[4])}
@@ -46,8 +45,23 @@ def read_config():
         m[0]: {"name": m[1], "rarity": m[2], "bonus": int(m[3])}
         for m in re.findall(r'(\w+) = \{ DisplayName = "([^"]+)", Rarity = "(\w+)",[^\n]*QiBonusPercent = (\d+)', text)
     }
-    pool_text = re.search(r"BeginnerEgg = \{.*?Pool = \{(.*?)\n        \},", text, re.S).group(1)
-    config["egg_pool"] = [(m[0], float(m[1])) for m in re.findall(r'PetId = "(\w+)", Weight = ([\d.]+)', pool_text)]
+    config["eggs"] = [
+        {
+            "name": m[0],
+            "rank": m[1],
+            "cooldown": float(m[2]),
+            "pool": [(p[0], float(p[1])) for p in re.findall(r'PetId = "(\w+)", Weight = ([\d.]+)', m[3])],
+        }
+        for m in re.findall(
+            r'DisplayName = "([^"]+)",\s*RequiredRank = "(\w+)",\s*Cooldown = ([\d.]+),\s*Pool = \{(.*?)\n            \},',
+            text,
+            re.S,
+        )
+    ]
+    config["relics"] = [
+        (m[0], int(m[1]), m[2])
+        for m in re.findall(r'DisplayName = "([^"]+)", QiReward = (\d+), RequiredRank = "(\w+)"', text)
+    ]
     flight_text = re.search(r"SpeedLevels = \{(.*?)\n        \},", text, re.S).group(1)
     config["flight"] = [(m[0], int(m[1])) for m in re.findall(r'RankId = "(\w+)", Speed = (\d+)', flight_text)]
     return config
@@ -92,16 +106,24 @@ def main():
         print(f"  {label:<24}{qi_per_second(config, pets):>6.1f} / {qi_per_second(config, pets, False):>5.1f}")
 
     print()
-    total_weight = sum(weight for _, weight in config["egg_pool"])
-    cooldown = config["egg_cooldown"]
-    print(f"Beginner Qi Egg ({cooldown:.0f}s cooldown): chance and average time to hatch one")
-    for pet_id, weight in config["egg_pool"]:
-        chance = weight / total_weight
-        hatches = 1 / chance
-        print(
-            f"  {config['pets'][pet_id]['name']:<20}{chance * 100:>6.1f}%"
-            f"   1 in {hatches:>6.0f} hatches   ~{hatches * cooldown / 60:>7.1f} min"
-        )
+    relic_total = sum(reward for _, reward, _ in config["relics"])
+    print(f"Spirit Relics: {len(config['relics'])} relics, {relic_total} Qi in total (one-time rewards)")
+    for name, reward, required in config["relics"]:
+        print(f"  {name:<22}{reward:>6} Qi   needs {required}")
+
+    for egg in config["eggs"]:
+        print()
+        total_weight = sum(weight for _, weight in egg["pool"])
+        cooldown = egg["cooldown"]
+        print(f"{egg['name']} (needs {egg['rank']}, {cooldown:.0f}s cooldown): chance and average time to hatch one")
+        for pet_id, weight in egg["pool"]:
+            chance = weight / total_weight
+            hatches = 1 / chance
+            pet = config["pets"][pet_id]
+            print(
+                f"  {pet['name']:<20}{pet['rarity']:<11}+{pet['bonus']:<4}{chance * 100:>6.1f}%"
+                f"   1 in {hatches:>6.0f} hatches   ~{hatches * cooldown / 60:>7.1f} min"
+            )
 
 
 if __name__ == "__main__":

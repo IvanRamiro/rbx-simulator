@@ -19,6 +19,7 @@ local EVENT_NAMES = {
     "SetAuraPetEvent",
     "PetInventoryUpdatedEvent", -- Server to client only
     "EggHatchResultEvent", -- Server to client only
+    "RelicResultEvent", -- Server to client only
 }
 
 local RemoteEvents = {}

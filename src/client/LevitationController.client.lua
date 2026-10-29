@@ -18,6 +18,7 @@ local player = Players.LocalPlayer
 local RISE_INFO = TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
 local DESCEND_INFO = TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
 -- Repeats forever (-1) and reverses, giving a slow up-and-down bob
+local LOTUS_HIP_HEIGHT = 0.6 -- Share of the normal hip height left with crossed legs
 local BOB_INFO = TweenInfo.new(GameConfig.LevitationBobTime, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
 
 -- State for the current character. Reset on every respawn.
@@ -59,7 +60,12 @@ local function startLevitating()
     humanoid.WalkSpeed = 0
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
 
-    local hoverHeight = normalHipHeight + GameConfig.LevitationHeight
+    -- In the lotus pose (PoseController) the folded legs no longer reach down,
+    -- so less hip height keeps the hover at the same height above the ground
+    local legs = if humanoid.RigType == Enum.HumanoidRigType.R15 and GameConfig.MeditationAnimationId == 0
+        then normalHipHeight * LOTUS_HIP_HEIGHT
+        else normalHipHeight
+    local hoverHeight = legs + GameConfig.LevitationHeight
     tweenHipHeight(hoverHeight, RISE_INFO).Completed:Connect(function(playbackState)
         -- Start bobbing only if the rise finished (not cancelled by stopping)
         if playbackState == Enum.PlaybackState.Completed and isLevitating then

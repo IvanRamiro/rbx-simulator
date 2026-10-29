@@ -6,22 +6,23 @@
 -- The server says which pets are equipped through the replicated
 -- "EquippedPetIds" attribute (e.g. "AquaWisp,VoltFox"); models come from PetModels.
 --
--- One per-frame update moves every companion's parts in a single BulkMoveTo.
+-- Each pet is welded to an invisible root part, so one per-frame update moves
+-- every companion by moving just their roots, in a single BulkMoveTo.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local PetModels = require(script.Parent:WaitForChild("PetModels"))
 
-local FOLLOW_SPACING = 2.4 -- Studs between pets side by side
-local FOLLOW_DISTANCE = 3 -- Studs behind the player
-local FOLLOW_HEIGHT = 0.6 -- Studs above the player's root part
+local FOLLOW_SPACING = 4.8 -- Studs between pets side by side
+local FOLLOW_DISTANCE = 5.5 -- Studs behind the player
+local FOLLOW_HEIGHT = 0.9 -- Studs above the player's root part
 local FOLLOW_SHARPNESS = 6 -- Higher = pets catch up faster
 local SNAP_DISTANCE = 40 -- Pets this far away (e.g. after a respawn) jump straight to their spot
 local BOB_HEIGHT = 0.25
 local BOB_SPEED = 2
-local ORBIT_RADIUS = 3.4 -- While cultivating
-local ORBIT_HEIGHT = 1.4
+local ORBIT_RADIUS = 6.5 -- While cultivating
+local ORBIT_HEIGHT = 1.6
 local ORBIT_SPEED = 0.6 -- Radians per second
 
 local container = Instance.new("Folder")
@@ -30,7 +31,8 @@ container.Parent = workspace
 
 -- companions[player] = {
 --     key = "AquaWisp,VoltFox", rootPart = the root part the pets follow,
---     pets = { { model, parts = { { Part, Offset } }, cframe } },
+--     version = PetModels.Version the pets were built with,
+--     pets = { { model, rootPart, cframe } },
 -- }
 local companions = {}
 
@@ -48,23 +50,28 @@ local function syncPets(player, entry)
     local key = player:GetAttribute("EquippedPetIds")
     key = if typeof(key) == "string" and rootPart then key else ""
 
-    if key == entry.key and rootPart == entry.rootPart then
+    -- Also rebuild when a pet's Blender mesh finishes loading (PetModels.Version)
+    if key == entry.key and rootPart == entry.rootPart and entry.version == PetModels.Version then
         return
     end
 
     clearPets(entry)
     entry.key = key
     entry.rootPart = rootPart
+    entry.version = PetModels.Version
     if key == "" then
         return
     end
 
     for _, petId in string.split(key, ",") do
-        local model, parts = PetModels.build(petId)
+        local model, petRoot = PetModels.build(petId)
         if model then
+            -- Parent first: the welds lock in each piece's offset from the root
+            -- when they activate, so the root may only move after that
             model.Parent = container
             -- Start at the player; the first frames glide them into place
-            table.insert(entry.pets, { model = model, parts = parts, cframe = rootPart.CFrame })
+            petRoot.CFrame = rootPart.CFrame
+            table.insert(entry.pets, { model = model, rootPart = petRoot, cframe = rootPart.CFrame })
         end
     end
 end
@@ -116,10 +123,8 @@ local function updateCompanions(deltaTime)
                 pet.cframe = pet.cframe:Lerp(target, blend)
             end
 
-            for _, piece in pet.parts do
-                table.insert(parts, piece.Part)
-                table.insert(cframes, pet.cframe * piece.Offset)
-            end
+            table.insert(parts, pet.rootPart)
+            table.insert(cframes, pet.cframe)
         end
     end
 
@@ -129,7 +134,7 @@ local function updateCompanions(deltaTime)
 end
 
 local function watchPlayer(player)
-    companions[player] = { key = "", rootPart = nil, pets = {} }
+    companions[player] = { key = "", rootPart = nil, version = 0, pets = {} }
 end
 
 local function unwatchPlayer(player)

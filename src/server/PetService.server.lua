@@ -1,10 +1,11 @@
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
-local IslandConfig = require(script.Parent:WaitForChild("IslandConfig"))
 local PetInventory = require(script.Parent:WaitForChild("PetInventory"))
 local PlayerData = require(script.Parent:WaitForChild("PlayerData"))
 
@@ -13,7 +14,7 @@ local PROMPT_DISTANCE_TOLERANCE = 6
 
 local random = Random.new()
 
--- Last successful hatch time for each player, keyed by Player
+-- Last successful hatch time of each egg, per player: lastHatchTime[player][eggId]
 local lastHatchTime = {}
 
 local function sendInventory(player)
@@ -66,12 +67,12 @@ local function handleRequest(remoteEvent, action)
     end)
 end
 
--- Beginner Qi Egg ----------------------------------------------------------
+-- Pet eggs -------------------------------------------------------------------
 
--- Picks a pet from GameConfig.BeginnerEgg.Pool using the weights.
+-- Picks a pet from an egg's pool using the weights.
 -- Returns the pet ID and its chance (0 to 1).
-local function rollEggPet()
-    local pool = GameConfig.BeginnerEgg.Pool
+local function rollEggPet(egg)
+    local pool = egg.Pool
 
     local totalWeight = 0
     for _, entry in pool do
@@ -104,55 +105,72 @@ local function isAliveAndNear(player, part, maxDistance)
     return (rootPart.Position - part.Position).Magnitude <= maxDistance
 end
 
-local function onEggTriggered(player, eggPart, maxDistance)
-    if player.Parent ~= Players or not isAliveAndNear(player, eggPart, maxDistance) then
+local function onEggTriggered(player, eggId, eggPart, maxDistance)
+    local egg = GameConfig.Eggs[eggId]
+    if not egg or player.Parent ~= Players or not isAliveAndNear(player, eggPart, maxDistance) then
         return
     end
 
+    local leaderstats = player:FindFirstChild("leaderstats")
+    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
+    if not (rankValue and Ranks.isAtLeast(rankValue.Value, egg.RequiredRank)) then
+        RemoteEvents.EggHatchResultEvent:FireClient(player, {
+            EggId = eggId,
+            Reason = "Locked",
+            RequiredRank = Ranks.getRankById(egg.RequiredRank).Name,
+        })
+        return
+    end
+
+    -- Each egg has its own cooldown
     local now = os.clock()
-    local lastTime = lastHatchTime[player]
-    if lastTime and now - lastTime < GameConfig.BeginnerEgg.Cooldown then
-        local secondsLeft = math.ceil(GameConfig.BeginnerEgg.Cooldown - (now - lastTime))
-        RemoteEvents.EggHatchResultEvent:FireClient(player, { Reason = "Cooldown", SecondsLeft = secondsLeft })
+    local playerHatchTimes = lastHatchTime[player] or {}
+    lastHatchTime[player] = playerHatchTimes
+    local lastTime = playerHatchTimes[eggId]
+    if lastTime and now - lastTime < egg.Cooldown then
+        local secondsLeft = math.ceil(egg.Cooldown - (now - lastTime))
+        RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "Cooldown", SecondsLeft = secondsLeft })
         return
     end
 
     if PetInventory.isFull(player) then
-        RemoteEvents.EggHatchResultEvent:FireClient(player, { Reason = "InventoryFull" })
+        RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "InventoryFull" })
         return
     end
 
-    local petId, chance = rollEggPet()
+    local petId, chance = rollEggPet(egg)
     if not PetInventory.grantPet(player, petId) then
         return
     end
 
-    lastHatchTime[player] = now
+    playerHatchTimes[eggId] = now
     sendInventory(player)
     PlayerData.saveSoon(player)
     RemoteEvents.EggHatchResultEvent:FireClient(player, {
+        EggId = eggId,
         PetId = petId,
         ChancePercent = math.round(chance * 1000) / 10, -- e.g. 0.27 -> 27
     })
 end
 
--- The egg is built by IslandService, which may still be running, so wait
--- for it in the background instead of delaying the rest of this script
-local function connectEgg()
-    local island = workspace:WaitForChild(IslandConfig.ModelName)
-    local eggStand = island:WaitForChild(IslandConfig.BeginnerEgg.ModelName)
-    local prompt = eggStand:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if not prompt then
-        warn("PetService: the Beginner Qi Egg has no ProximityPrompt")
+local connectedStands = {}
+
+-- Egg stands are built by IslandService and tagged, so this finds every one,
+-- on any island, whenever it's built
+local function connectEggStand(stand)
+    local eggId = stand:GetAttribute("EggId")
+    local prompt = stand:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if connectedStands[stand] or not (typeof(eggId) == "string" and GameConfig.Eggs[eggId] and prompt) then
         return
     end
+    connectedStands[stand] = true
 
     local eggPart = prompt.Parent
     local maxDistance = prompt.MaxActivationDistance + PROMPT_DISTANCE_TOLERANCE
 
     -- Triggered fires on the server, after the player has held the prompt
     prompt.Triggered:Connect(function(player)
-        onEggTriggered(player, eggPart, maxDistance)
+        onEggTriggered(player, eggId, eggPart, maxDistance)
     end)
 end
 
@@ -171,4 +189,7 @@ for _, player in Players:GetPlayers() do
     task.spawn(setupPlayer, player)
 end
 
-task.spawn(connectEgg)
+CollectionService:GetInstanceAddedSignal(GameConfig.EggTag):Connect(connectEggStand)
+for _, stand in CollectionService:GetTagged(GameConfig.EggTag) do
+    connectEggStand(stand)
+end

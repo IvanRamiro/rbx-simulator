@@ -38,6 +38,24 @@ local GameConfig = {
         },
     },
 
+    -- Spirit Relics hidden around the sky islands (their positions are in
+    -- IslandConfig). Each player can attune to each relic once, for a
+    -- one-time Qi reward. Players below RequiredRank can't attune it yet.
+    -- Ids are used in saved data; never change one.
+    RelicTag = "SpiritRelic", -- CollectionService tag on every relic model
+    EggTag = "PetEggStand", -- CollectionService tag on every egg stand model
+    Relics = {
+        { Id = "IslandRoot", DisplayName = "Root of the Island", QiReward = 300, RequiredRank = "QiInitiate" },
+        { Id = "GroveHeart", DisplayName = "Grove Heart", QiReward = 800, RequiredRank = "QiGatherer" },
+        { Id = "JadeSeed", DisplayName = "Jade Seed", QiReward = 800, RequiredRank = "QiGatherer" },
+        { Id = "WhisperingSpring", DisplayName = "Whispering Spring", QiReward = 800, RequiredRank = "QiGatherer" },
+        { Id = "EmberHeart", DisplayName = "Ember Heart", QiReward = 1500, RequiredRank = "QiAwakener" },
+        { Id = "AshenSigil", DisplayName = "Ashen Sigil", QiReward = 1500, RequiredRank = "QiAwakener" },
+        { Id = "CalderaCrown", DisplayName = "Caldera Crown", QiReward = 1500, RequiredRank = "QiAwakener" },
+        { Id = "MoonMirror", DisplayName = "Moon Mirror", QiReward = 3000, RequiredRank = "FoundationInitiate" },
+        { Id = "StarWell", DisplayName = "Star Well", QiReward = 3000, RequiredRank = "FoundationInitiate" },
+    },
+
     -- Levitation while cultivating (visual only)
     LevitationHeight = 1.5, -- Studs the character rises above its normal height
     LevitationBobHeight = 0.3, -- Studs of gentle up-and-down motion while hovering
@@ -94,10 +112,24 @@ local GameConfig = {
     Pets = {
         AquaWisp = { DisplayName = "Aqua Wisp", Rarity = "Common", Theme = "Water", QiBonusPercent = 10 },
         EmberWyrm = { DisplayName = "Ember Wyrm", Rarity = "Uncommon", Theme = "Fire", QiBonusPercent = 20 },
-        VoltFox = { DisplayName = "Volt Fox", Rarity = "Rare", Theme = "Lightning", QiBonusPercent = 35 },
+        LunarHopper = { DisplayName = "Lunar Hopper", Rarity = "Rare", Theme = "Moonlight", QiBonusPercent = 35 },
+        VoltFox = { DisplayName = "Volt Fox", Rarity = "Epic", Theme = "Lightning", QiBonusPercent = 50 },
         GoldenKirin = { DisplayName = "Golden Kirin", Rarity = "Legendary", Theme = "Nature", QiBonusPercent = 60 },
+        AstralWhale = { DisplayName = "Astral Whale", Rarity = "Mythical", Theme = "Cosmic", QiBonusPercent = 100 },
+        -- No longer in any egg (replaced by Astral Whale); kept for players who own one
         NineTailMoonfox = { DisplayName = "Nine-Tail Moonfox", Rarity = "Mythical", Theme = "Moon", QiBonusPercent = 100 },
         OriginSerpent = { DisplayName = "Origin Serpent", Rarity = "Secret", Theme = "Primordial", QiBonusPercent = 150 },
+
+        -- From the Jade Spirit Egg (Jade Grove)
+        MossGolem = { DisplayName = "Moss Golem", Rarity = "Common", Theme = "Earth", QiBonusPercent = 10 },
+        MyceliumSprite = { DisplayName = "Mycelium Sprite", Rarity = "Uncommon", Theme = "Forest", QiBonusPercent = 20 },
+        JadeSpiritPanda = { DisplayName = "Jade Spirit Panda", Rarity = "Rare", Theme = "Nature", QiBonusPercent = 35 },
+        JadeAntlerDeer = { DisplayName = "Jade Antler Deer", Rarity = "Epic", Theme = "Nature", QiBonusPercent = 50 },
+
+        -- From the Inferno Egg (Ember Peak)
+        MagmaCub = { DisplayName = "Magma Cub", Rarity = "Common", Theme = "Lava", QiBonusPercent = 10 },
+        SunscaleDragon = { DisplayName = "Sunscale Dragon", Rarity = "Rare", Theme = "Solar", QiBonusPercent = 35 },
+        DawnPhoenix = { DisplayName = "Dawn Phoenix", Rarity = "Legendary", Theme = "Fire", QiBonusPercent = 60 },
     },
 
     -- Rarities from most to least common, with the colour used in the UI
@@ -121,24 +153,51 @@ local GameConfig = {
     GrantDevTestPets = false,
     DevTestPetIds = { "EmberWyrm", "VoltFox", "GoldenKirin", "NineTailMoonfox", "OriginSerpent" },
 
-    -- Beginner Qi Egg on the starting island. The server rolls the pet; each
-    -- pet's chance is its Weight divided by the total of all weights. These
-    -- follow the design guide's rarity chances (Common 45%, Uncommon 27%,
-    -- Rare 15%, Epic 8%, Legendary 4%, Mythical 0.9%, Secret 0.1%). There is
-    -- no Epic pet yet, so Volt Fox (Rare) also has the Epic share for now.
-    BeginnerEgg = {
-        DisplayName = "Beginner Qi Egg",
-        -- Seconds between hatches for each player. Hatching is free, so this
-        -- sets how fast players find rare pets (about 1 Legendary per 19
-        -- minutes of hatching on average).
-        Cooldown = 45,
-        Pool = {
-            { PetId = "AquaWisp", Weight = 45 },
-            { PetId = "EmberWyrm", Weight = 27 },
-            { PetId = "VoltFox", Weight = 23 },
-            { PetId = "GoldenKirin", Weight = 4 },
-            { PetId = "NineTailMoonfox", Weight = 0.9 },
-            { PetId = "OriginSerpent", Weight = 0.1 },
+    -- Pet eggs, keyed by stable egg ID. Each stands on an island (see
+    -- IslandConfig). The server rolls the pet; each pet's chance is its Weight
+    -- divided by the total of all weights. Hatching is free, so Cooldown (the
+    -- seconds between hatches of that egg, per player) sets how fast players
+    -- find rare pets. Players below RequiredRank can't hatch that egg yet.
+    -- Chances follow the design guide's rarities (Common 45%, Uncommon 27%,
+    -- Rare 15%, Epic 8%, Legendary 4%, Mythical 0.9%, Secret 0.1%); when an
+    -- egg has no pet of some rarity, the next rarer pet it has takes its share.
+    Eggs = {
+        BeginnerQiEgg = {
+            DisplayName = "Beginner Qi Egg",
+            RequiredRank = "QiInitiate",
+            Cooldown = 45,
+            Pool = {
+                { PetId = "AquaWisp", Weight = 45 },
+                { PetId = "EmberWyrm", Weight = 27 },
+                { PetId = "LunarHopper", Weight = 15 },
+                { PetId = "VoltFox", Weight = 8 },
+                { PetId = "GoldenKirin", Weight = 4 },
+                { PetId = "AstralWhale", Weight = 0.9 },
+                { PetId = "OriginSerpent", Weight = 0.1 },
+            },
+        },
+        JadeSpiritEgg = {
+            DisplayName = "Jade Spirit Egg",
+            RequiredRank = "QiGatherer",
+            Cooldown = 45,
+            Pool = {
+                { PetId = "MossGolem", Weight = 45 },
+                { PetId = "MyceliumSprite", Weight = 27 },
+                { PetId = "JadeSpiritPanda", Weight = 15 },
+                { PetId = "JadeAntlerDeer", Weight = 8 },
+                { PetId = "GoldenKirin", Weight = 5 }, -- Legendary, plus the Mythical and Secret shares
+            },
+        },
+        InfernoEgg = {
+            DisplayName = "Inferno Egg",
+            RequiredRank = "QiAwakener",
+            Cooldown = 45,
+            Pool = {
+                { PetId = "MagmaCub", Weight = 45 },
+                { PetId = "EmberWyrm", Weight = 27 },
+                { PetId = "SunscaleDragon", Weight = 23 }, -- Rare, plus the Epic share
+                { PetId = "DawnPhoenix", Weight = 5 }, -- Legendary, plus the Mythical and Secret shares
+            },
         },
     },
 }
