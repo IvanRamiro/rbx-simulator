@@ -1,24 +1,29 @@
 
--- Shows the player's Qi and lets them train with a button or keybind.
--- The client only *asks* to train; the server decides whether it counts
--- and how much Qi to award.
+-- Shows the player's Qi and cultivation rank, and lets them start/stop
+-- cultivating (button or keybind) and rank up. The client only *asks*; the
+-- server decides whether cultivation starts, how much Qi to award, and
+-- whether a rank-up is allowed.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
-local TrainingEvent = require(ReplicatedStorage:WaitForChild("TrainingEvent"))
+local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
+local applyHudScale = require(script.Parent:WaitForChild("HudScale"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local HUD_NAME = "QiHud"
 local READY_COLOR = Color3.fromRGB(70, 160, 110)
+local CULTIVATING_COLOR = Color3.fromRGB(120, 90, 190)
 local COOLDOWN_COLOR = Color3.fromRGB(90, 90, 90)
+local RANK_UP_READY_COLOR = Color3.fromRGB(200, 155, 50)
 
-local keyName = GameConfig.TrainingKeybind.Name
-local isOnCooldown = false
+local keyName = GameConfig.CultivationKeybind.Name
+local lastToggleRequestTime = 0
 
 -- Build the HUD ------------------------------------------------------------
 
@@ -36,10 +41,11 @@ local panel = Instance.new("Frame")
 panel.Name = "Panel"
 panel.AnchorPoint = Vector2.new(0.5, 1)
 panel.Position = UDim2.new(0.5, 0, 1, -24)
-panel.Size = UDim2.fromOffset(240, 110)
+panel.Size = UDim2.fromOffset(260, 200)
 panel.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 panel.BackgroundTransparency = 0.25
 panel.Parent = hud
+applyHudScale(panel)
 
 local panelCorner = Instance.new("UICorner")
 panelCorner.CornerRadius = UDim.new(0, 12)
@@ -56,48 +62,110 @@ qiLabel.TextColor3 = Color3.fromRGB(150, 230, 255)
 qiLabel.Text = "Qi: ..."
 qiLabel.Parent = panel
 
-local trainButton = Instance.new("TextButton")
-trainButton.Name = "TrainButton"
-trainButton.Position = UDim2.fromOffset(10, 52)
-trainButton.Size = UDim2.new(1, -20, 0, 48)
-trainButton.BackgroundColor3 = READY_COLOR
-trainButton.AutoButtonColor = true
-trainButton.Font = Enum.Font.GothamBold
-trainButton.TextScaled = true
-trainButton.TextColor3 = Color3.new(1, 1, 1)
-trainButton.Text = "Train [" .. keyName .. "]"
-trainButton.Parent = panel
+local rankLabel = Instance.new("TextLabel")
+rankLabel.Name = "RankLabel"
+rankLabel.Position = UDim2.fromOffset(10, 46)
+rankLabel.Size = UDim2.new(1, -20, 0, 24)
+rankLabel.BackgroundTransparency = 1
+rankLabel.Font = Enum.Font.GothamBold
+rankLabel.TextScaled = true
+rankLabel.TextColor3 = Color3.fromRGB(255, 215, 120)
+rankLabel.Text = "Rank: ..."
+rankLabel.Parent = panel
 
-local buttonCorner = Instance.new("UICorner")
-buttonCorner.CornerRadius = UDim.new(0, 10)
-buttonCorner.Parent = trainButton
+local nextRankLabel = Instance.new("TextLabel")
+nextRankLabel.Name = "NextRankLabel"
+nextRankLabel.Position = UDim2.fromOffset(10, 72)
+nextRankLabel.Size = UDim2.new(1, -20, 0, 18)
+nextRankLabel.BackgroundTransparency = 1
+nextRankLabel.Font = Enum.Font.Gotham
+nextRankLabel.TextScaled = true
+nextRankLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
+nextRankLabel.Text = ""
+nextRankLabel.Parent = panel
+
+local cultivateButton = Instance.new("TextButton")
+cultivateButton.Name = "CultivateButton"
+cultivateButton.Position = UDim2.fromOffset(10, 98)
+cultivateButton.Size = UDim2.new(1, -20, 0, 48)
+cultivateButton.BackgroundColor3 = READY_COLOR
+cultivateButton.AutoButtonColor = true
+cultivateButton.Font = Enum.Font.GothamBold
+cultivateButton.TextScaled = true
+cultivateButton.TextColor3 = Color3.new(1, 1, 1)
+cultivateButton.Text = "Cultivate [" .. keyName .. "]"
+cultivateButton.Parent = panel
+
+local cultivateCorner = Instance.new("UICorner")
+cultivateCorner.CornerRadius = UDim.new(0, 10)
+cultivateCorner.Parent = cultivateButton
+
+local rankUpButton = Instance.new("TextButton")
+rankUpButton.Name = "RankUpButton"
+rankUpButton.Position = UDim2.fromOffset(10, 154)
+rankUpButton.Size = UDim2.new(1, -20, 0, 36)
+rankUpButton.BackgroundColor3 = COOLDOWN_COLOR
+rankUpButton.AutoButtonColor = false
+rankUpButton.Font = Enum.Font.GothamBold
+rankUpButton.TextScaled = true
+rankUpButton.TextColor3 = Color3.new(1, 1, 1)
+rankUpButton.Text = "Rank Up"
+rankUpButton.Parent = panel
+
+local rankUpCorner = Instance.new("UICorner")
+rankUpCorner.CornerRadius = UDim.new(0, 10)
+rankUpCorner.Parent = rankUpButton
+
+-- Shown just above the panel while the server is giving the Qi Spring bonus
+local stationLabel = Instance.new("TextLabel")
+stationLabel.Name = "StationLabel"
+stationLabel.AnchorPoint = Vector2.new(0.5, 1)
+stationLabel.Position = UDim2.new(0.5, 0, 0, -6)
+stationLabel.Size = UDim2.new(1, 0, 0, 26)
+stationLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+stationLabel.BackgroundTransparency = 0.25
+stationLabel.Font = Enum.Font.GothamBold
+stationLabel.TextScaled = true
+stationLabel.TextColor3 = Color3.fromRGB(150, 240, 255)
+stationLabel.Text = GameConfig.TrainingStation.DisplayName .. ": +" .. GameConfig.TrainingStation.QiBonusPercent .. "% Qi"
+stationLabel.Visible = false
+stationLabel.Parent = panel
+
+local stationCorner = Instance.new("UICorner")
+stationCorner.CornerRadius = UDim.new(0, 8)
+stationCorner.Parent = stationLabel
 
 hud.Parent = playerGui
 
--- Training -----------------------------------------------------------------
+-- Cultivation --------------------------------------------------------------
 
-local function setButtonReady(isReady)
-    trainButton.BackgroundColor3 = if isReady then READY_COLOR else COOLDOWN_COLOR
-    trainButton.Text = if isReady then "Train [" .. keyName .. "]" else "Meditating..."
+-- The server sets this attribute; the button always shows the server's state
+local function isCultivating()
+    return player:GetAttribute("IsCultivating") == true
 end
 
-local function requestTraining()
-    -- Local cooldown only avoids spamming the server; the server enforces the real one
-    if isOnCooldown then
+local function updateCultivateButton()
+    if isCultivating() then
+        cultivateButton.BackgroundColor3 = CULTIVATING_COLOR
+        cultivateButton.Text = "Cultivating... Stop [" .. keyName .. "]"
+    else
+        cultivateButton.BackgroundColor3 = READY_COLOR
+        cultivateButton.Text = "Cultivate [" .. keyName .. "]"
+    end
+end
+
+local function requestToggleCultivation()
+    -- Local cooldown only avoids spamming the server; the server checks too
+    local now = os.clock()
+    if now - lastToggleRequestTime < GameConfig.CultivationToggleCooldown then
         return
     end
+    lastToggleRequestTime = now
 
-    isOnCooldown = true
-    setButtonReady(false)
-    TrainingEvent:FireServer()
-
-    task.delay(GameConfig.TrainingCooldown, function()
-        isOnCooldown = false
-        setButtonReady(true)
-    end)
+    RemoteEvents.CultivationEvent:FireServer(not isCultivating())
 end
 
-trainButton.Activated:Connect(requestTraining)
+cultivateButton.Activated:Connect(requestToggleCultivation)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     -- gameProcessedEvent is true while typing in chat or a text box
@@ -105,18 +173,76 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
         return
     end
 
-    if input.KeyCode == GameConfig.TrainingKeybind then
-        requestTraining()
+    if input.KeyCode == GameConfig.CultivationKeybind then
+        requestToggleCultivation()
     end
 end)
 
--- Qi display ---------------------------------------------------------------
+player:GetAttributeChangedSignal("IsCultivating"):Connect(updateCultivateButton)
+updateCultivateButton()
 
-local qiValue = player:WaitForChild("leaderstats"):WaitForChild("Qi")
+local function updateStationLabel()
+    stationLabel.Visible = player:GetAttribute("AtTrainingStation") == true
+end
+
+player:GetAttributeChangedSignal("AtTrainingStation"):Connect(updateStationLabel)
+updateStationLabel()
+
+-- Qi and rank display ------------------------------------------------------
+
+-- Both values are created by the server (QiService)
+local leaderstats = player:WaitForChild("leaderstats")
+local qiValue = leaderstats:WaitForChild("Qi")
+local rankValue = leaderstats:WaitForChild("Rank")
 
 local function updateQiLabel()
     qiLabel.Text = "Qi: " .. qiValue.Value
 end
 
-qiValue.Changed:Connect(updateQiLabel)
+local function updateRankDisplay()
+    local rank = Ranks.getRank(rankValue.Value)
+    rankLabel.Text = if rank
+        then rank.Name .. "  |  " .. rank.Realm .. " " .. rank.Level .. "/5"
+        else "Rank: " .. rankValue.Value
+
+    local nextRank = Ranks.getNextRank(rankValue.Value)
+    if not nextRank then
+        nextRankLabel.Text = "Highest rank reached"
+        rankUpButton.Visible = false
+        return
+    end
+
+    -- Reaching a new realm is a bigger step, so call it out
+    if rank and nextRank.Realm ~= rank.Realm then
+        nextRankLabel.Text = "Next realm: " .. nextRank.Realm .. " at " .. nextRank.QiRequired .. " Qi"
+    else
+        nextRankLabel.Text = "Next: " .. nextRank.Name .. " at " .. nextRank.QiRequired .. " Qi"
+    end
+    rankUpButton.Visible = true
+
+    local canRankUp = qiValue.Value >= nextRank.QiRequired
+    local qiNeeded = nextRank.QiRequired - qiValue.Value
+
+    rankUpButton.BackgroundColor3 = if canRankUp then RANK_UP_READY_COLOR else COOLDOWN_COLOR
+    rankUpButton.AutoButtonColor = canRankUp
+    rankUpButton.Text = if canRankUp then "Rank Up!" else "Rank Up (" .. qiNeeded .. " more Qi)"
+end
+
+local function requestRankUp()
+    -- This check only skips pointless requests; the server checks again
+    local nextRank = Ranks.getNextRank(rankValue.Value)
+    if nextRank and qiValue.Value >= nextRank.QiRequired then
+        RemoteEvents.RankUpEvent:FireServer()
+    end
+end
+
+rankUpButton.Activated:Connect(requestRankUp)
+
+qiValue.Changed:Connect(function()
+    updateQiLabel()
+    updateRankDisplay()
+end)
+rankValue.Changed:Connect(updateRankDisplay)
+
 updateQiLabel()
+updateRankDisplay()
