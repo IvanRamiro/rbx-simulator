@@ -1,29 +1,3 @@
--- Builds, animates and removes one PET aura (see PetCompanionController).
--- Cultivating characters get a different, anime aura: see CharacterAura.
---
--- Auras are being rebuilt one element at a time. AuraBuilder.build returns
--- nil for an element that has no aura yet (no entry in AuraStyles.Auras).
---
--- Each equipped pet of a cultivating player gets the aura of its own element
--- (PetCompanionController builds them with isPet = true).
---
--- Each element has its own builder and per-frame animation (ELEMENTS below).
---
--- Aqua Wisp: six glowing water droplets orbit the body at different heights,
--- so together they trace a slowly turning spiral, each leaving a short
--- teardrop trail. Sparkling water motes and tiny bubbles drift up around the
--- body, and a soft cyan light and faint body glow make it look magical.
--- Textures were rendered in Blender (tools/blender/AquaWispAura.blend).
---
--- Golden Kirin: an ornate golden ring turns around the waist, emerald and
--- gold leaves spiral up the body, golden diamond motes hover around it and a
--- small crown floats over the head, with jade-gold glints and a warm glow.
--- The pieces were modelled in Blender (tools/blender/GoldenKirinVFX.blend) and
--- imported into ReplicatedStorage.AuraMeshes; missing pieces are skipped.
---
--- Moving pieces are anchored parts outside the character, placed relative to
--- it every frame (see AuraBuilder.update), so they can't affect movement.
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
@@ -31,14 +5,12 @@ local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 
 local AuraBuilder = {}
 
-AuraBuilder.REMOVE_DELAY = 3 -- Seconds after fading out before removal, so particles and trails can finish
+AuraBuilder.REMOVE_DELAY = 3
 
 local FADE_IN = TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
 local FADE_OUT = TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
-local TRAIL_START_DELAY = 0.2 -- Trails start once the droplets are in place, so no streak flies in
+local TRAIL_START_DELAY = 0.2
 local FULL_TURN = 2 * math.pi
-
--- Helpers --------------------------------------------------------------------
 
 local function numberSequence(points)
     local keypoints = {}
@@ -48,14 +20,11 @@ local function numberSequence(points)
     return NumberSequence.new(keypoints)
 end
 
--- Records a property that tweens between hidden and visible as the aura
--- appears and disappears. It starts hidden.
 local function addFade(aura, instance, property, visibleValue, hiddenValue)
     instance[property] = hiddenValue
     table.insert(aura.fades, { Instance = instance, Property = property, Visible = visibleValue, Hidden = hiddenValue })
 end
 
--- An endless tween going back and forth, cancelled on removal
 local function addLoop(aura, instance, seconds, goal)
     local tween = TweenService:Create(instance, TweenInfo.new(seconds, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), goal)
     tween:Play()
@@ -73,14 +42,11 @@ local function newPart(aura, name, shape, size)
     part.CanTouch = false
     part.CastShadow = false
     part.Transparency = 1
-    part.CFrame = aura.rootPart.CFrame -- Start in place so nothing streaks in from far away
+    part.CFrame = aura.rootPart.CFrame
     part.Parent = aura.model
     return part
 end
 
--- How big the body is, relative to its root part: where the bottom is, how
--- tall it is (feet to head top for characters) and how far it reaches out
--- sideways (for pets, which are long rather than tall)
 local function measureBody(model, rootPart)
     local rootCFrame = rootPart.CFrame
     local boxCFrame, boxSize = model:GetBoundingBox()
@@ -93,14 +59,11 @@ local function measureBody(model, rootPart)
     return { FeetY = feetY, Height = height, Reach = math.max(boxSize.X, boxSize.Z) / 2 }
 end
 
--- Aqua Wisp --------------------------------------------------------------------
-
--- One droplet: a glowing core with a soft halo and a teardrop trail
 local function createDroplet(aura, style, index)
     local textures = style.Textures
     local part = newPart(aura, "Droplet" .. index, Enum.PartType.Ball, Vector3.one * style.DropletSize)
     part.Material = Enum.Material.Neon
-    part.Color = style.Main:Lerp(style.Core, 0.3) -- Neon brightens a lot, so the core starts from the cyan
+    part.Color = style.Main:Lerp(style.Core, 0.3)
     addFade(aura, part, "Transparency", 0, 1)
 
     local halo = Instance.new("BillboardGui")
@@ -117,14 +80,12 @@ local function createDroplet(aura, style, index)
     image.ImageColor3 = style.Main
     image.Parent = halo
     addFade(aura, image, "ImageTransparency", 0.05, 1)
-    -- A gentle shimmer, out of step with the other droplets
     task.delay(index * 0.37, function()
         if not aura.destroyed then
             addLoop(aura, halo, 1.4 + index * 0.07, { Size = UDim2.fromScale(style.GlowSize * 1.25, style.GlowSize * 1.25) })
         end
     end)
 
-    -- The trail spans the droplet's width and tapers to a point: a teardrop
     local half = style.DropletSize * 0.5
     local top = Instance.new("Attachment")
     top.Position = Vector3.new(0, half, 0)
@@ -157,7 +118,7 @@ local function createDroplet(aura, style, index)
     return part
 end
 
-local addSoftGlow -- Defined below
+local addSoftGlow
 
 local function buildAquaWisp(aura, style)
     local body = aura.body
@@ -179,7 +140,7 @@ local function buildAquaWisp(aura, style)
     sparkles.LightInfluence = 0
     sparkles.LightEmission = 0.6
     sparkles.Brightness = 3
-    sparkles.Size = numberSequence({ { 0, 0 }, { 0.25, 0.7 }, { 0.5, 0.25 }, { 0.75, 0.6 }, { 1, 0 } }) -- Twinkles twice
+    sparkles.Size = numberSequence({ { 0, 0 }, { 0.25, 0.7 }, { 0.5, 0.25 }, { 0.75, 0.6 }, { 1, 0 } })
     sparkles.Lifetime = NumberRange.new(1.2, 2)
     sparkles.Speed = NumberRange.new(0.15, 0.5)
     sparkles.SpreadAngle = Vector2.new(180, 180)
@@ -211,8 +172,6 @@ local function buildAquaWisp(aura, style)
     addSoftGlow(aura, style)
 end
 
--- Soft glow in the element's colour: a light on the body and a faint tint
--- over the character
 addSoftGlow = function(aura, style)
     local light = Instance.new("PointLight")
     light.Color = style.Main
@@ -223,7 +182,6 @@ addSoftGlow = function(aura, style)
     aura.light = light
     aura.lightBrightness = style.LightBrightness * aura.boost * aura.amount
 
-    -- Characters only: a client can show at most 31 Highlights at once
     if aura.isPet then
         return
     end
@@ -245,9 +203,7 @@ local function animateAquaWisp(aura, now, rootCFrame, parts, cframes)
     local spin = aura.phase + now / style.OrbitSeconds * FULL_TURN
 
     for index, droplet in aura.droplets do
-        local share = (index - 1) / math.max(count - 1, 1) -- 0 for the lowest droplet, 1 for the highest
-        -- Evenly spaced around the circle and stepped up in height: a spiral
-        -- staircase that turns as a whole, each droplet bobbing gently
+        local share = (index - 1) / math.max(count - 1, 1)
         local angle = spin + (index - 1) / count * FULL_TURN
         local height = body.FeetY + body.Height * (0.18 + 0.62 * share)
             + math.sin(now * 0.9 + index * 1.3) * style.SpiralTurn * body.Height
@@ -257,13 +213,6 @@ local function animateAquaWisp(aura, now, rootCFrame, parts, cframes)
     end
 end
 
--- Golden Kirin -------------------------------------------------------------------
-
--- A piece modelled in Blender (tools/blender/GoldenKirinVFX.blend), imported
--- into ReplicatedStorage.AuraMeshes. Its parts are welded to an invisible
--- anchored root, so moving the root moves the whole piece. `longest` is its
--- size in studs. "<Name>_Glow_<rrggbb>" parts glow as Neon in that colour.
--- Returns nil if the piece hasn't been imported.
 local function meshPiece(aura, name, longest, fades)
     local folder = ReplicatedStorage:FindFirstChild("AuraMeshes")
     local template = folder and folder:FindFirstChild(name)
@@ -318,18 +267,12 @@ local function buildGoldenKirin(aura, style)
     local body, height = aura.body, aura.body.Height
     local random = Random.new(aura.player.UserId + (if aura.isPet then 7 else 0))
 
-    -- The ornate ring circling the waist; around a pet, just clear of its body
-    -- (a pet is long, so sizing it like a character's would make it huge)
     local ringDiameter = if aura.isPet then (body.Reach + 0.4) * 2 else aura.orbitRadius * 2 * style.RingSize
     aura.ring = meshPiece(aura, "KirinVFX_Ring", ringDiameter, true)
 
-    -- A crown ornament hovering over the head: spires for characters, a leaf
-    -- crown for pets
     aura.crown = meshPiece(aura, if aura.isPet then "KirinVFX_CrownLeaf" else "KirinVFX_CrownSpire",
         style.CrownSize * height, true)
 
-    -- Emerald and gold leaves spiralling up around the body (they fade at the
-    -- ends of the climb themselves, see animateGoldenKirin)
     aura.leaves = {}
     local leafCount = math.max(3, math.round(style.Leaves * aura.amount))
     for index = 1, leafCount do
@@ -345,7 +288,6 @@ local function buildGoldenKirin(aura, style)
         end
     end
 
-    -- Golden diamond motes hovering in place around the body
     aura.motes = {}
     local moteCount = math.max(3, math.round(style.Motes * aura.amount))
     for index = 1, moteCount do
@@ -359,7 +301,6 @@ local function buildGoldenKirin(aura, style)
         end
     end
 
-    -- Jade-gold glints twinkling around the body
     local glints = Instance.new("ParticleEmitter")
     glints.Name = "Glints"
     glints.Texture = style.Textures.Glint
@@ -387,7 +328,6 @@ local function animateGoldenKirin(aura, now, rootCFrame, parts, cframes)
     local fade = aura.fader.Value
 
     if aura.ring then
-        -- Turning slowly, its tilt wandering gently so it catches the light
         local tilt = CFrame.Angles(math.rad(6) * math.sin(now * 0.5), 0, math.rad(6) * math.cos(now * 0.4))
         table.insert(parts, aura.ring.Root)
         table.insert(cframes, rootCFrame * CFrame.new(0, feetY + height * style.RingHeight, 0) * tilt * CFrame.Angles(0, spin, 0))
@@ -400,8 +340,6 @@ local function animateGoldenKirin(aura, now, rootCFrame, parts, cframes)
             * CFrame.Angles(0, -spin * 0.6, 0))
     end
 
-    -- Leaves climb in a spiral from the feet to above the head, tumbling,
-    -- fading in at the bottom and out at the top
     for _, leaf in aura.leaves do
         local progress = (now / style.LeafRiseSeconds + leaf.Offset) % 1
         local angle = aura.phase + leaf.Offset * FULL_TURN + progress * style.LeafTurns * FULL_TURN
@@ -412,7 +350,6 @@ local function animateGoldenKirin(aura, now, rootCFrame, parts, cframes)
         for _, part in leaf.Parts do
             part.Transparency = transparency
         end
-        -- Facing along the orbit, pitched up and rolling as it tumbles
         local tumble = leaf.Tumble + now * 1.7
         table.insert(parts, leaf.Root)
         table.insert(cframes, rootCFrame * CFrame.new(position) * CFrame.Angles(0, -angle, 0)
@@ -429,19 +366,11 @@ local function animateGoldenKirin(aura, now, rootCFrame, parts, cframes)
     end
 end
 
--- Each element's builder and per-frame animation, keyed by pet ID
 local ELEMENTS = {
     AquaWisp = { Build = buildAquaWisp, Animate = animateAquaWisp },
     GoldenKirin = { Build = buildGoldenKirin, Animate = animateGoldenKirin },
 }
 
--- Public API ---------------------------------------------------------------
-
--- Builds a (still invisible) aura around a character or a pet companion, or
--- returns nil when the element has no aura yet. petId selects the element,
--- rankId (the owner's rank) how strong it is. For pets, pass isPet = true:
--- the aura is measured around the pet model, a little lighter, without the
--- body tint.
 function AuraBuilder.build(player, character, rootPart, petId, rankId, isPet)
     local style = AuraStyles.Auras[petId or "Neutral"]
     if not style or not ELEMENTS[petId] then
@@ -460,12 +389,11 @@ function AuraBuilder.build(player, character, rootPart, petId, rankId, isPet)
         style = style,
         body = body,
         isPet = isPet == true,
-        amount = if isPet then 0.6 else 1, -- Particles and light, so a whole group isn't overwhelming
-        -- Orbiting pieces stay clear of the body: pets are often longer than they are tall
+        amount = if isPet then 0.6 else 1,
         orbitRadius = math.max(style.OrbitRadius * body.Height, body.Reach + 0.8),
         boost = AuraStyles.getBoost(rankId),
-        fades = {}, -- Properties that tween as the aura appears and disappears
-        loops = {}, -- Endless tweens, cancelled on removal
+        fades = {},
+        loops = {},
         trails = {},
         droplets = {},
         phase = math.random() * FULL_TURN,
@@ -473,14 +401,12 @@ function AuraBuilder.build(player, character, rootPart, petId, rankId, isPet)
         destroyed = false,
     }
 
-    -- Drives the fade of what is set every frame (the light)
     local fader = Instance.new("NumberValue")
     fader.Name = "Fader"
     fader.Parent = model
     aura.fader = fader
     addFade(aura, fader, "Value", 1, 0)
 
-    -- An invisible box around the body: particles drift out of it and the light sits in it
     local width = math.max(body.Height * 0.8, body.Reach * 2)
     aura.volume = newPart(aura, "Volume", Enum.PartType.Block, Vector3.new(width, body.Height * 0.9, width))
 
@@ -509,13 +435,11 @@ function AuraBuilder.show(aura)
     end)
 end
 
--- Fades the aura out. The controller removes it after REMOVE_DELAY.
 function AuraBuilder.hide(aura)
     aura.hiding = true
     playFades(aura, false)
 end
 
--- Briefly brightens the aura (used by breakthroughs)
 function AuraBuilder.pulse(aura, seconds)
     aura.pulseSeconds = seconds
     aura.pulseEnd = os.clock() + seconds
@@ -530,8 +454,6 @@ function AuraBuilder.destroy(aura)
     aura.model:Destroy()
 end
 
--- Called every frame. Adds this aura's moving parts to parts/cframes (moved
--- in one BulkMoveTo call by the controller) and updates the light.
 function AuraBuilder.update(aura, now, parts, cframes)
     local body = aura.body
     local rootCFrame = aura.rootPart.CFrame
@@ -540,7 +462,6 @@ function AuraBuilder.update(aura, now, parts, cframes)
     table.insert(parts, aura.volume)
     table.insert(cframes, rootCFrame * CFrame.new(0, body.FeetY + body.Height * 0.5, 0))
 
-    -- A slow, breathing glow, briefly brighter after a breakthrough
     local brightness = aura.lightBrightness * aura.fader.Value * (0.85 + 0.15 * math.sin(now * 1.6))
     if aura.pulseEnd then
         local remaining = (aura.pulseEnd - now) / aura.pulseSeconds

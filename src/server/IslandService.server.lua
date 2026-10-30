@@ -1,7 +1,3 @@
-
--- Builds the starting island once when the server starts, makes players
--- spawn on its platform, and brings back anyone who falls off.
-
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 
@@ -14,7 +10,6 @@ local function applyLighting(settings)
     Lighting.Ambient = settings.Ambient
     Lighting.OutdoorAmbient = settings.OutdoorAmbient
 
-    -- Reuse the place's Atmosphere if it has one, so there's never two
     local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
     for property, value in settings.Atmosphere do
         atmosphere[property] = value
@@ -29,7 +24,6 @@ end
 local island = IslandBuilder.build(IslandConfig)
 local spawnLocation = island:FindFirstChild("IslandSpawn", true)
 
--- The outer sky islands share the starting island's settings unless they set their own
 for _, outerIsland in IslandConfig.OuterIslands do
     local settings = table.clone(IslandConfig)
     settings.Platform = nil
@@ -39,7 +33,6 @@ for _, outerIsland in IslandConfig.OuterIslands do
     for key, value in outerIsland do
         settings[key] = value
     end
-    -- Decorations it doesn't list are skipped, not copied from the starting island
     for _, key in { "Trees", "Rocks", "Crystals", "LavaPools", "FloatingFragments", "Hills", "EggStands" } do
         settings[key] = outerIsland[key]
     end
@@ -58,7 +51,6 @@ local function returnToSpawn(character)
     character:PivotTo(spawnCFrame)
 end
 
--- Players always (re)spawn on the island, even if the place has other SpawnLocations
 local function useIslandSpawn(player)
     player.RespawnLocation = spawnLocation
 end
@@ -68,21 +60,17 @@ Players.PlayerAdded:Connect(useIslandSpawn)
 for _, player in Players:GetPlayers() do
     useIslandSpawn(player)
 
-    -- This player may have spawned before the island existed
     if player.Character then
         returnToSpawn(player.Character)
     end
 end
 
--- Safety net: anyone who falls well below the island is brought back.
--- A short timed check (not every frame) is plenty for this.
 while true do
     task.wait(IslandConfig.Safety.CheckInterval)
 
     for _, player in Players:GetPlayers() do
         local character = player.Character
         local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-        -- Flying players may explore below the island; they're caught if they fall after landing
         if rootPart and rootPart.Position.Y < fallResetY and player:GetAttribute("IsFlying") ~= true then
             returnToSpawn(character)
         end

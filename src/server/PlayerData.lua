@@ -1,23 +1,3 @@
-
--- Saves and loads each player's progress with DataStoreService (server only).
---
--- One saved record per player, key "Player_<UserId>":
--- {
---     SchemaVersion = 5,
---     Session = { Id = "...", Time = os.time() } or nil, -- which server is using this data
---     Progress = {
---         Qi = 1234,
---         RankId = "QiCondenser",
---         Pets = { { InstanceId = "...", PetId = "AquaWisp" }, ... },
---         EquippedPetIds = { "...", ... },
---         AuraPetInstanceId = "..." or nil,
---         Relics = { "GroveHeart", ... }, -- Spirit Relics found
---     } or nil, -- nil until the first save, which means "new player"
--- }
---
--- Only progress is saved. Cultivation, characters, auras, cooldowns and UI
--- are never saved, so every session starts with cultivation off.
-
 local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -32,38 +12,30 @@ local PetInventory = require(script.Parent:WaitForChild("PetInventory"))
 local DATASTORE_NAME = "PlayerProgress"
 local SCHEMA_VERSION = 5
 
-local LOAD_ATTEMPTS = 4 -- The last attempt takes over data another server still claims
-local LOAD_RETRY_DELAY = 5 -- Seconds between load attempts
+local LOAD_ATTEMPTS = 4
+local LOAD_RETRY_DELAY = 5
 local FINAL_SAVE_ATTEMPTS = 3
-local SESSION_LOCK_TIMEOUT = 300 -- A claim older than this many seconds counts as abandoned
-local MIN_SECONDS_BETWEEN_SAVES = 10 -- For quick saves after important changes
-local WRITE_COOLDOWN = 6 -- Roblox allows one write per key about every 6 seconds
-local MAX_QI = 1e15 -- Loaded Qi is clamped between 0 and this
+local SESSION_LOCK_TIMEOUT = 300
+local MIN_SECONDS_BETWEEN_SAVES = 10
+local WRITE_COOLDOWN = 6
+local MAX_QI = 1e15
 
 local PlayerData = {}
 PlayerData.AUTOSAVE_INTERVAL = 60
 
--- MIGRATIONS[n] upgrades saved Progress from schema version n to n + 1.
--- Anything a migration doesn't recognise is cleaned up by sanitizeProgress.
 local MIGRATIONS = {}
 
--- Version 1 -> 2: the cultivation ranks and starter pets were replaced with
--- the ones from the design guide.
--- Each old rank becomes the highest new rank needing no more Qi than it did,
--- so nobody is placed above what they earned (Qi is kept, so players can rank
--- straight back up). Each old pet becomes the new pet of the same rarity;
--- instance IDs are kept, so equipped pets and the aura pet stay selected.
 local V1_RANKS = {
-    Mortal = "QiInitiate", -- Needed 0 Qi; Qi Initiate needs 0
-    QiSensing = "QiInitiate", -- Needed 250 Qi; Qi Gatherer needs 300
-    QiGathering = "QiGatherer", -- Needed 750 Qi; Qi Gatherer needs 300
-    FlowingMeridians = "QiAdept", -- Needed 2000 Qi; Qi Adept needs 2000
-    AwakenedAura = "QiAwakener", -- Needed 5000 Qi; Qi Awakener needs 4000
+    Mortal = "QiInitiate",
+    QiSensing = "QiInitiate",
+    QiGathering = "QiGatherer",
+    FlowingMeridians = "QiAdept",
+    AwakenedAura = "QiAwakener",
 }
 local V1_PETS = {
-    EmberWisp = "AquaWisp", -- Common
-    MoonKoi = "EmberWyrm", -- Uncommon
-    JadeTortoise = "VoltFox", -- Rare
+    EmberWisp = "AquaWisp",
+    MoonKoi = "EmberWyrm",
+    JadeTortoise = "VoltFox",
 }
 
 MIGRATIONS[1] = function(progress)
@@ -80,21 +52,15 @@ MIGRATIONS[1] = function(progress)
     return progress
 end
 
--- Version 2 -> 3: Spirit Relics were added; older saves haven't found any
 MIGRATIONS[2] = function(progress)
     progress.Relics = progress.Relics or {}
     return progress
 end
 
--- Version 3 -> 4: new pets (Jade Spirit and Inferno eggs). Nothing to change;
--- the version bump stops older servers, which don't know these pets, from
--- loading (and dropping them from) newer saves.
 MIGRATIONS[3] = function(progress)
     return progress
 end
 
--- Version 4 -> 5: new pets (Lunar Hopper and Astral Whale). Like version 4,
--- the bump only stops older servers from dropping them.
 MIGRATIONS[4] = function(progress)
     return progress
 end
@@ -111,20 +77,8 @@ end
 
 local startingRank = Ranks.getRank(GameConfig.StartingRank)
 
--- profiles[player] = {
---     key, sessionId,
---     status = "Loading" | "Loaded" | "Failed",
---     progress, isNew,  -- validated loaded data, for the gameplay scripts
---     canSave,          -- false until loaded, and forever if loading failed
---     isSaving, isReleasing, quickSaveScheduled, lastSaveTime,
---     loaded = BindableEvent, -- fires once when loading finishes
--- }
 local profiles = {}
 
--- Validation ---------------------------------------------------------------
-
--- Turns loaded (possibly old or damaged) progress into safe, valid progress.
--- Anything invalid is dropped or replaced with a safe value.
 local function sanitizeProgress(raw)
     local progress = {
         Qi = GameConfig.StartingQi,
@@ -139,12 +93,10 @@ local function sanitizeProgress(raw)
         return progress
     end
 
-    -- Qi: a whole number from 0 to MAX_QI (raw.Qi == raw.Qi rules out NaN)
     if typeof(raw.Qi) == "number" and raw.Qi == raw.Qi then
         progress.Qi = math.clamp(math.floor(raw.Qi), 0, MAX_QI)
     end
 
-    -- Rank: must be a known rank, and the player must have enough Qi for it
     local rankIndex = 1
     for index, rank in GameConfig.Ranks do
         if rank.Id == raw.RankId then
@@ -156,7 +108,6 @@ local function sanitizeProgress(raw)
     end
     progress.RankId = GameConfig.Ranks[rankIndex].Id
 
-    -- Pets: known catalogue pets only, no duplicate instance IDs, within the limit
     local ownedIds = {}
     if typeof(raw.Pets) == "table" then
         for _, pet in raw.Pets do
@@ -178,7 +129,6 @@ local function sanitizeProgress(raw)
         end
     end
 
-    -- Equipped: owned pets only, no duplicates, at most MaxEquippedPets
     if typeof(raw.EquippedPetIds) == "table" then
         for _, instanceId in raw.EquippedPetIds do
             if #progress.EquippedPetIds >= GameConfig.MaxEquippedPets then
@@ -191,12 +141,10 @@ local function sanitizeProgress(raw)
         end
     end
 
-    -- Aura pet: must be one of the equipped pets
     if typeof(raw.AuraPetInstanceId) == "string" and table.find(progress.EquippedPetIds, raw.AuraPetInstanceId) then
         progress.AuraPetInstanceId = raw.AuraPetInstanceId
     end
 
-    -- Relics: known relic Ids only, each once
     if typeof(raw.Relics) == "table" then
         for _, relicId in raw.Relics do
             if typeof(relicId) == "string" and Discoveries.getRelic(relicId) and not table.find(progress.Relics, relicId) then
@@ -219,8 +167,6 @@ local function migrate(progress, fromVersion)
     return progress
 end
 
--- Reads the player's current progress from the gameplay systems. Returns nil
--- if they aren't fully set up, so partial or default data is never saved.
 local function captureProgress(player)
     local leaderstats = player:FindFirstChild("leaderstats")
     local qi = leaderstats and leaderstats:FindFirstChild("Qi")
@@ -243,9 +189,6 @@ local function captureProgress(player)
     }
 end
 
--- DataStore access ---------------------------------------------------------
-
--- Errors that retrying won't fix (mostly Studio setup problems)
 local function isPermanentError(message)
     message = tostring(message)
     return string.find(message, "StudioAccessToApisNotAllowed") ~= nil
@@ -253,9 +196,6 @@ local function isPermanentError(message)
         or string.find(message, "unavailable") ~= nil
 end
 
--- Runs inside UpdateAsync while loading. Claims the record for this session
--- unless another server is still actively using it.
--- Returns "Loaded" plus the record to write, or "Locked" / "Corrupt" / "TooNew".
 local function claimSession(stored, sessionId, takeOver)
     stored = if stored == nil then {} else stored
 
@@ -263,7 +203,6 @@ local function claimSession(stored, sessionId, takeOver)
         return "Corrupt", nil
     end
 
-    -- Saved by a newer version of the game; this server can't safely use it
     if typeof(stored.SchemaVersion) == "number" and stored.SchemaVersion > SCHEMA_VERSION then
         return "TooNew", nil
     end
@@ -281,10 +220,6 @@ local function claimSession(stored, sessionId, takeOver)
     return "Loaded", stored
 end
 
--- Writes progress with UpdateAsync. The write only happens while this
--- session still owns the record; if another server has taken over, its data
--- is newer, so it's left alone and this session stops saving.
--- progress = nil keeps the stored progress (used to just release the claim).
 local function writeRecord(profile, progress, releaseClaim)
     local accepted = false
 
@@ -292,7 +227,7 @@ local function writeRecord(profile, progress, releaseClaim)
         store:UpdateAsync(profile.key, function(stored)
             accepted = false
             if typeof(stored) ~= "table" or typeof(stored.Session) ~= "table" or stored.Session.Id ~= profile.sessionId then
-                return nil -- Cancel the write
+                return nil
             end
 
             accepted = true
@@ -357,8 +292,6 @@ local function loadProfile(player, profile)
         profile.canSave = true
         profile.status = "Loaded"
     elseif RunService:IsStudio() then
-        -- Usually Studio without API access or an unpublished place. Play with
-        -- fresh data but never save it, so nothing real can be overwritten.
         warn("PlayerData: couldn't load data (" .. result .. "). This Studio session will NOT be saved.")
         profile.isNew = true
         profile.progress = sanitizeProgress(nil)
@@ -374,9 +307,6 @@ local function loadProfile(player, profile)
     profile.loaded:Fire()
 end
 
--- Public API ---------------------------------------------------------------
-
--- Starts loading a player's data (only once). Called when they join.
 function PlayerData.startLoading(player)
     if profiles[player] then
         return profiles[player]
@@ -405,9 +335,6 @@ function PlayerData.startLoading(player)
     return profile
 end
 
--- Waits until the player's data has loaded. Returns the validated progress
--- and whether they are a brand-new player, or nil if it couldn't be loaded
--- or the player left. Gameplay scripts must not set the player up until then.
 function PlayerData.waitForData(player)
     local profile = PlayerData.startLoading(player)
     if not profile then
@@ -425,8 +352,6 @@ function PlayerData.waitForData(player)
     return profile.progress, profile.isNew
 end
 
--- Saves the player's current progress. Skips if a save is already running
--- (the next autosave catches up), so saves for one player never overlap.
 function PlayerData.save(player)
     local profile = profiles[player]
     if not profile or not profile.canSave or profile.isReleasing or profile.isSaving then
@@ -434,7 +359,7 @@ function PlayerData.save(player)
     end
 
     if os.clock() - profile.lastSaveTime < WRITE_COOLDOWN then
-        return -- Saved moments ago; the next autosave will catch up
+        return
     end
 
     local progress = captureProgress(player)
@@ -448,8 +373,6 @@ function PlayerData.save(player)
     profile.isSaving = false
 end
 
--- Call after important progress (rank-ups, new pets). Saves soon, but never
--- more often than MIN_SECONDS_BETWEEN_SAVES, and only one is ever queued.
 function PlayerData.saveSoon(player)
     local profile = profiles[player]
     if not profile or profile.quickSaveScheduled then
@@ -465,18 +388,14 @@ function PlayerData.saveSoon(player)
     end)
 end
 
--- Final save when a player leaves (or the server closes). Releases this
--- session's claim so their next server can load the data straight away.
 function PlayerData.release(player)
     local profile = profiles[player]
     if profile and profile.isReleasing then
         return
     end
 
-    -- Take the final snapshot right away, before other scripts clean up
     local finalProgress = if profile and profile.status == "Loaded" then captureProgress(player) else nil
 
-    -- Pet and relic data are removed here (not in their services) so they're always captured first
     PetInventory.removePlayer(player)
     Discoveries.removePlayer(player)
 
@@ -508,8 +427,6 @@ function PlayerData.release(player)
     profile.loaded:Destroy()
 end
 
--- For BindToClose: saves everyone and waits (up to about 25 seconds)
--- until every final save has finished
 function PlayerData.releaseAll()
     for _, player in Players:GetPlayers() do
         task.spawn(PlayerData.release, player)

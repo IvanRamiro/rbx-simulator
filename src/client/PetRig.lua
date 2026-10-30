@@ -1,16 +1,3 @@
--- Animated pets: a pet exported from Blender with --rig (tools/blender/export_pet.py)
--- arrives as separate parts plus tiny marker meshes:
---   <PetId>_<Part>                a rig part (palette textured)
---   <PetId>_<Part>_Glow_<hex>     that part's glowing pieces (Neon); a part may be glow only
---   <PetId>_Pivot_<Part>          where the part's joint sits
---   <PetId>_Point_<Owner>_<Name>  an effect attachment on the Owner part
--- PetRig.build joins the parts with Motor6Ds at the pivots and adds the pet's
--- effects. Each species moves in its own way: its profile's Animate poses the
--- joints every frame from code, so no uploaded animations are needed. The
--- model also gets an AnimationController with an Animator, so uploaded
--- keyframe animations can drive the same Motor6Ds later.
--- Purely visual and client-side, like the rest of the pets.
-
 local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
 
@@ -29,41 +16,31 @@ local function smoothstep(edge0, edge1, x)
     return t * t * (3 - 2 * t)
 end
 
--- Sunscale Dragon, the Solar Ouroboros: a legless dragon coiled around its own
--- small sun, ringed by a corona of ray-blades instead of wings.
 local function animateOuroboros(rig, s, moving, fly, nova)
     local m, u, t = rig.motors, rig.unit, s.time
     local axis = rig.axis
 
-    -- The coil leans into its travel, bobs and slowly rocks; it rises for the Nova
     pose(m.Body, CFrame.new(0, (0.05 * math.sin(t * 1.3) + 0.25 * nova) * u, 0)
         * CFrame.Angles(-0.14 * moving - 0.3 * fly + 0.03 * math.sin(t * 0.9), 0, 0.05 * math.sin(t * 0.7)))
 
-    -- The sun turns slowly inside the coil
     pose(m.Sun, CFrame.fromAxisAngle(axis, t * 0.8))
 
-    -- The head looks about and rears back for the Nova
     pose(m.Head, CFrame.Angles(
         0.08 * math.sin(t * 1.1) - 0.1 * fly + 0.5 * nova,
         0.22 * math.sin(t * 0.6) * (1 - nova),
         0.06 * math.sin(t * 0.8)))
 
-    -- The tail flicks
     pose(m.Tail, CFrame.Angles(0.1 * math.sin(t * 1.7), 0.3 * math.sin(t * 2.1), 0))
 
-    -- The corona spins, faster when moving and fastest in the Nova
     s.spin = (s.spin or 0) + rig.deltaTime * (0.5 + 1.2 * moving + 1.6 * fly + 5 * nova)
     pose(m.Corona, CFrame.fromAxisAngle(axis, s.spin))
 
-    -- Each ray breathes; they sweep back in flight and open forward like a sunflower in the Nova
     for index, ray in rig.rays do
         local angle = 0.08 * math.sin(t * 1.5 + index * 0.7) + 0.45 * fly - 0.95 * nova
         pose(ray.motor, CFrame.fromAxisAngle(ray.tangent, angle))
     end
 end
 
--- Ember Wyrm, the Magma Bead Wyrm: floating beads of lava rock held together by
--- their own heat. A swimming wave rolls through the beads, the flame gills flutter.
 local WYRM_CHAIN = { "Head", "Heart", "Seg1", "Seg2", "Seg3", "Seg4", "Seg5", "Seg6" }
 local function animateBeadWyrm(rig, s, moving, fly, nova)
     local m, u, t = rig.motors, rig.unit, s.time
@@ -72,7 +49,6 @@ local function animateBeadWyrm(rig, s, moving, fly, nova)
     local sway = (0.035 + 0.06 * moving) * u
     for index, name in WYRM_CHAIN do
         local wave = s.phase - (index - 1) * 0.75
-        -- the beads drift apart for the Heart Flare, then pull back together
         local spread = (index - 1) * 0.07 * u * nova
         local offset = Vector3.new(sway * math.sin(wave * 0.8 + 1), rise * math.sin(wave), spread)
         local pitch = -0.28 * math.cos(wave) * (rise / u) * 10
@@ -83,7 +59,6 @@ local function animateBeadWyrm(rig, s, moving, fly, nova)
             pose(m[name], CFrame.new(offset) * CFrame.Angles(pitch, 0.12 * math.sin(wave * 0.8), 0))
         end
     end
-    -- flame gills flutter like fire, and flare wide for the Heart Flare
     for name, side in rig.sides do
         if string.sub(name, 1, 4) == "Gill" then
             local k = tonumber(string.sub(name, -1)) or 1
@@ -91,20 +66,15 @@ local function animateBeadWyrm(rig, s, moving, fly, nova)
             pose(m[name], CFrame.Angles(0.1 * math.sin(t * 5 + k), side * (0.15 * flutter + 0.35 * nova), side * (flutter + 0.25 * fly)))
         end
     end
-    -- the tail flame flicks
     pose(m.Tail, CFrame.Angles(0.15 * math.sin(t * 4), 0.35 * math.sin(t * 3.1), 0))
 end
 
--- Bonefire Dragon, the Lantern Ossuary: a floating dragon skeleton with its soul
--- burning inside the ribcage like a lantern. It sways as if hung on a chain, its
--- skull cocks eerily and its jaw chatters; its ghost appears for the Soul Lantern.
 local function animateOssuary(rig, s, moving, fly, nova)
     local m, u, t = rig.motors, rig.unit, s.time
 
     pose(m.Ribs, CFrame.new(0, (0.06 * math.sin(t * 1.1) + 0.2 * nova) * u, 0)
         * CFrame.Angles(-0.1 * moving - 0.18 * fly + 0.04 * math.sin(t * 0.8), 0, 0.09 * math.sin(t * 0.9) * (1 - 0.5 * moving)))
 
-    -- The soul flickers, turns slowly, and rises out of the ribcage for the Soul Lantern
     pose(m.Soul, CFrame.new(0.02 * u * math.sin(t * 9), (0.03 * math.sin(t * 6.3) + 0.35 * nova) * u, 0)
         * CFrame.Angles(0.06 * math.sin(t * 7.1), t * 1.5, 0.06 * math.sin(t * 8.3)))
 
@@ -114,11 +84,9 @@ local function animateOssuary(rig, s, moving, fly, nova)
         0.15 * math.sin(t * 0.45) * (1 - nova),
         0.18 * math.sin(t * 0.35) * (1 - nova)))
 
-    -- The jaw chatters every few seconds, and gapes for the Soul Lantern
     local chatter = math.max(0, math.sin(t * 0.8)) ^ 8 * (0.5 + 0.5 * math.sin(t * 30))
     pose(m.Jaw, CFrame.Angles(-(0.14 * chatter + 0.6 * nova + 0.05 * fly), 0, 0))
 
-    -- Slow, ghostly half-beats; folded when moving, spread wide for the Soul Lantern
     for _, name in { "WingL", "WingR" } do
         local side = rig.sides[name]
         local raise = 0.12 * math.sin(t * 1.3) * (1 - fly) - 0.25 * moving + (0.1 + 0.5 * math.sin(t * 3.2)) * fly + 0.5 * nova
@@ -126,7 +94,6 @@ local function animateOssuary(rig, s, moving, fly, nova)
         pose(m[name], CFrame.Angles(0, side * sweep, side * raise))
     end
 
-    -- The chained vertebrae of the tail sway, each lagging the last
     for index = 1, 5 do
         pose(m["Tail" .. index], CFrame.Angles(
             0.06 * math.sin(t * 1.2 - index * 0.7) + 0.08 * fly,
@@ -134,16 +101,12 @@ local function animateOssuary(rig, s, moving, fly, nova)
             0))
     end
 
-    -- Its ghost, the living dragon it once was, shows only during the Soul Lantern
     local ghost = rig.parts.Ghost
     if ghost then
         ghost.Transparency = 1 - 0.62 * nova
     end
 end
 
--- Dreadfang Cerberus: a hulking three-headed hellhound with cyan-cracked hide. It trots, gallops through the air
--- when flying, and its three heads each have a mind of their own: sniffing,
--- looking about, snapping. All three rear up to breathe hellfire for the special.
 local HOUND_HEADS = { C = 0, L = 2.1, R = 4.2 }
 local function animateHellhound(rig, s, moving, fly, nova)
     local m, u, t = rig.motors, rig.unit, s.time
@@ -153,7 +116,6 @@ local function animateHellhound(rig, s, moving, fly, nova)
     pose(m.Body, CFrame.new(0, (0.02 * math.sin(t * 1.8) + 0.04 * math.abs(math.sin(stride)) * moving + 0.06 * math.sin(stride) * fly) * u, 0)
         * CFrame.Angles(0.06 * math.sin(stride) * fly - 0.05 * moving + 0.08 * nova, 0, 0.03 * math.sin(stride * 0.5) * moving))
 
-    -- Trot in diagonal pairs on the ground; a stretched gallop in the air
     for _, name in { "LegFL", "LegFR", "LegBL", "LegBR" } do
         local front = string.sub(name, 4, 4) == "F"
         local left = string.sub(name, 5, 5) == "L"
@@ -173,17 +135,11 @@ local function animateHellhound(rig, s, moving, fly, nova)
         pose(m["Jaw" .. tag], CFrame.Angles(-(0.5 * snap + 0.7 * nova + growl + 0.08 * fly), 0, 0))
     end
 
-    -- The tail wags slowly, lashes when running
     local wag = math.sin(t * (2.2 + 4 * moving + 4 * fly))
     pose(m.Tail1, CFrame.Angles(0.1 * math.sin(t * 1.1) - 0.15 * fly, (0.22 + 0.15 * moving) * wag, 0))
     pose(m.Tail2, CFrame.Angles(0.1 * math.sin(t * 1.1 - 0.8), (0.3 + 0.2 * moving) * math.sin(t * (2.2 + 4 * moving + 4 * fly) - 0.9), 0))
 end
 
--- Which parts each animated pet has, how they hang together, and how it moves.
---   Joints      part -> the part it hangs from ("Root" is the pet's root part)
---   Attached    parts welded to another part without a joint
---   SeeThrough  part or glow names -> transparency
---   Effects     which parts and points carry the shared effects
 PetRig.Profiles = {
     SunscaleDragon = {
         Joints = {
@@ -193,7 +149,6 @@ PetRig.Profiles = {
             Tail = "Body",
             Corona = "Body",
         },
-        -- Ray01..Ray12 hang from the corona (added below)
         RayPrefix = "Ray",
         RayParent = "Corona",
         Attached = {},
@@ -223,7 +178,6 @@ for index = 1, 12 do
 end
 
 PetRig.Profiles.EmberWyrm = {
-    -- Every bead floats on its own, hung straight from the root; the gills hang from the head
     Joints = {
         Head = "Root",
         Heart = "Root",
@@ -252,7 +206,6 @@ PetRig.Profiles.EmberWyrm = {
         Trail = "Tail_Tip",
         Blast = "Eruption",
     },
-    -- Fire colours under the shared names the effects use
     Colors = {
         Gold = Color3.fromRGB(255, 120, 30),
         Amber = Color3.fromRGB(170, 30, 8),
@@ -281,7 +234,6 @@ PetRig.Profiles.BonefireDragon = {
     },
     Attached = {},
     SeeThrough = {},
-    -- Glow pieces by colour: the ghost starts hidden, the wing banners are faint
     SeeThroughGlow = { ["95bcff"] = 1, ["61a0ff"] = 0.3 },
     Effects = {
         Motes = "Soul",
@@ -292,7 +244,6 @@ PetRig.Profiles.BonefireDragon = {
         Trail = "Tail5_Tip",
         Blast = "SoulLantern",
     },
-    -- Spectral blue under the shared names the effects use
     Colors = {
         Gold = Color3.fromRGB(120, 190, 255),
         Amber = Color3.fromRGB(40, 80, 220),
@@ -330,7 +281,6 @@ PetRig.Profiles.DreadfangCerberus = {
         Trail = "Tail2_Tip",
         Blast = "HellBreath",
     },
-    -- Cyan hellfire under the shared names the effects use
     Colors = {
         Gold = Color3.fromRGB(40, 215, 255),
         Amber = Color3.fromRGB(20, 70, 160),
@@ -341,11 +291,9 @@ PetRig.Profiles.DreadfangCerberus = {
     Animate = animateHellhound,
 }
 
-PetRig.NOVA_TIME = 2.6 -- Seconds the special ability lasts
-local NOVA_BURST_AT = 0.42 -- Fraction of the way through when the blast goes off
+PetRig.NOVA_TIME = 2.6
+local NOVA_BURST_AT = 0.42
 
--- A pet is animated when it has a profile and its imported model carries joint pivots
--- (an older, single-mesh import of the same pet is built the plain way)
 function PetRig.isRigged(petId, template)
     local profile = PetRig.Profiles[petId]
     if not profile then
@@ -394,8 +342,6 @@ local function attachmentAt(part, position, name)
     return attachment
 end
 
--- Shared effects, placed by the profile: drifting motes, sparks at points, a
--- pulsing light, a burst emitter for the special and a trail while flying.
 local function addEffects(rig)
     local profile = rig.profile
     local effects, colors, u = profile.Effects, profile.Colors, rig.unit
@@ -485,9 +431,6 @@ local function addEffects(rig)
     end
 end
 
--- Builds the rigged pet into `model`. `place(piece)` gives each imported
--- piece's CFrame and size in pet space (the same placement unrigged pets use),
--- `unit` the studs per Blender unit. Returns the rig, which PetRig.update drives.
 function PetRig.build(model, rootPart, template, petId, place, unit)
     local profile = PetRig.Profiles[petId]
     local prefix = petId .. "_"
@@ -498,7 +441,7 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
         unit = unit,
         parts = {},
         motors = {},
-        sides = {}, -- joint -> 1 (pet's +X side), -1 (-X side) or 0 (centre line)
+        sides = {},
         points = {},
         pointPositions = {},
         pulseGlow = {},
@@ -507,7 +450,6 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
         state = { walk = 0, fly = 0, time = math.random() * 10 },
     }
 
-    -- Clone every piece into place, sorting out parts, glows and markers
     local pivots, glows = {}, {}
     for _, piece in template:GetDescendants() do
         if not piece:IsA("BasePart") or string.sub(piece.Name, 1, #prefix) ~= prefix then
@@ -553,7 +495,6 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
         part.Parent = model
     end
 
-    -- A part made only of glow pieces (like a sun) is carried by its first piece
     for _, glow in glows do
         if not rig.parts[glow.owner] then
             rig.parts[glow.owner] = glow.part
@@ -561,7 +502,6 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
         end
     end
 
-    -- Joints at the pivots
     local function partFor(name)
         return if name == "Root" then rootPart else rig.parts[name]
     end
@@ -605,7 +545,6 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
         end
     end
 
-    -- The spin axis (from the centre pivot to the axis point) and each ray's hinge
     local axisPoint = profile.Effects.Axis and rig.pointPositions[profile.Effects.Axis]
     local center = profile.RayParent and pivots[profile.RayParent]
     if axisPoint and center then
@@ -628,15 +567,11 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
     return rig
 end
 
--- Each species' special-ability blast. They share a temporary folder of
--- anchored Neon pieces (`fx.neon`), cleaned up a moment after the blast.
 local Blasts = {}
 
--- Solar Nova: a ring of light racing outward, sun rays bursting up, a white flash
 function Blasts.Sunburst(rig, fx)
     local colors, u, origin, facing, neon = rig.profile.Colors, rig.unit, fx.origin, fx.facing, fx.neon
 
-    -- The expanding ring: segments flying outward in a flat circle
     local ringInfo = TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     for index = 1, 20 do
         local angle = index / 20 * 2 * math.pi
@@ -650,7 +585,6 @@ function Blasts.Sunburst(rig, fx)
         }):Play()
     end
 
-    -- Rays bursting out and up
     local rayInfo = TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     for index = 1, 10 do
         local angle = index / 10 * 2 * math.pi
@@ -664,7 +598,6 @@ function Blasts.Sunburst(rig, fx)
         }):Play()
     end
 
-    -- A flash of light and a spray of sparks
     local flash = neon(Vector3.one * 0.6 * u, CFrame.new(origin), colors.Ivory)
     flash.Shape = Enum.PartType.Ball
     TweenService:Create(flash, ringInfo, { Size = Vector3.one * 5 * u, Transparency = 1 }):Play()
@@ -679,12 +612,9 @@ function Blasts.Sunburst(rig, fx)
     end
 end
 
--- Heart Flare: the molten heart erupts. Lava droplets arc up and rain back down,
--- a low ripple of heat rolls across the ground and a deep red glow throbs.
 function Blasts.Eruption(rig, fx)
     local colors, u, origin, facing, neon = rig.profile.Colors, rig.unit, fx.origin, fx.facing, fx.neon
 
-    -- Lava droplets thrown up in arcs: each rises, then falls and fades
     for index = 1, 14 do
         local angle = index / 14 * 2 * math.pi + math.random() * 0.4
         local out = facing:VectorToWorldSpace(Vector3.new(math.cos(angle), 0, math.sin(angle)))
@@ -704,7 +634,6 @@ function Blasts.Eruption(rig, fx)
         up:Play()
     end
 
-    -- A low ripple of heat: a few flat slabs sliding outward just below the pet
     local rippleInfo = TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
     for index = 1, 12 do
         local angle = index / 12 * 2 * math.pi
@@ -715,7 +644,6 @@ function Blasts.Eruption(rig, fx)
         TweenService:Create(slab, rippleInfo, { CFrame = start + out * 4 * u, Size = Vector3.new(1.4 * u, 0.03 * u, 0.3 * u), Transparency = 1 }):Play()
     end
 
-    -- A deep red throb of light, no flash
     local glow = neon(Vector3.one * 0.4 * u, CFrame.new(origin), colors.Orange)
     glow.Shape = Enum.PartType.Ball
     glow.Transparency = 0.4
@@ -732,12 +660,9 @@ function Blasts.Eruption(rig, fx)
     end
 end
 
--- Soul Lantern: the soul breaks free. Blue-white wisps spiral up around a
--- rising pillar of pale light, and a cold light floods out.
 function Blasts.SoulLantern(rig, fx)
     local colors, u, origin, neon = rig.profile.Colors, rig.unit, fx.origin, fx.neon
 
-    -- Wisps spiralling upward: each climbs in two turns of a widening helix
     for index = 1, 16 do
         local angle = index / 16 * 2 * math.pi
         local radius = (0.5 + (index % 3) * 0.25) * u
@@ -759,7 +684,6 @@ function Blasts.SoulLantern(rig, fx)
         first:Play()
     end
 
-    -- A pillar of pale light rising out of the ribcage
     local pillar = neon(Vector3.new(0.2 * u, 0.5 * u, 0.5 * u), CFrame.new(origin) * CFrame.Angles(0, 0, math.pi / 2), colors.Ivory)
     pillar.Shape = Enum.PartType.Cylinder
     pillar.Transparency = 0.3
@@ -780,8 +704,6 @@ function Blasts.SoulLantern(rig, fx)
     end
 end
 
--- Hellfire Breath: a jet of cyan fire roars out of every mouth, along the way
--- each head faces, swelling and fading as it goes.
 function Blasts.HellBreath(rig, fx)
     local colors, u, neon = rig.profile.Colors, rig.unit, fx.neon
     for name, mouth in rig.points do
@@ -820,7 +742,6 @@ function Blasts.HellBreath(rig, fx)
     end
 end
 
--- Plays the profile's blast (Effects.Blast) around the pet
 local function burst(rig)
     local profile = rig.profile
     local folder = Instance.new("Folder")
@@ -849,15 +770,12 @@ local function burst(rig)
     Debris:AddItem(folder, 1.4)
 end
 
--- Starts the pet's special ability (for Sunscale Dragon, the Solar Nova)
 function PetRig.nova(rig)
     if rig.nova == nil then
         rig.nova = { start = rig.state.time, fired = false }
     end
 end
 
--- Poses the rig for this frame. `state`: speed (studs/s the pet moves),
--- flying (its owner is flying).
 function PetRig.update(rig, deltaTime, state)
     local s = rig.state
     s.time += deltaTime
@@ -867,7 +785,6 @@ function PetRig.update(rig, deltaTime, state)
     s.walk += (walkTarget - s.walk) * blend
     s.fly += ((if state.flying then 1 else 0) - s.fly) * blend
 
-    -- The special ability's envelope (0 when not playing)
     local nova = 0
     if rig.nova then
         local progress = (s.time - rig.nova.start) / PetRig.NOVA_TIME
@@ -883,7 +800,6 @@ function PetRig.update(rig, deltaTime, state)
 
     rig.profile.Animate(rig, s, s.walk, s.fly, nova)
 
-    -- The glowing heart pulses, and blazes during the special
     local pulse = 0.5 + 0.5 * math.sin(s.time * 2.2)
     if rig.light then
         rig.light.Brightness = 1.1 + 0.8 * pulse + 9 * nova

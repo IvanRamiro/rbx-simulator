@@ -1,18 +1,3 @@
--- Free flight for your own character, plus its HUD button.
---
--- The server decides whether you may fly and how fast (the "FlightSpeed" and
--- "IsFlying" attributes, see FlightService); this script only asks to take
--- off or land and then moves the character while "IsFlying" is true.
---
--- Controls: Q (or gamepad Y, or the Fly button) takes off and lands. While
--- flying you move with the normal movement controls (WASD, thumbstick or the
--- touch joystick) in the direction the camera faces, so looking up or down
--- climbs or dives. Space / gamepad A also climb, Ctrl or C / gamepad B descend.
---
--- Flying uses a LinearVelocity (movement) and an AlignOrientation (keeps the
--- body level and facing the way you fly) on the root part, with the humanoid
--- in PlatformStand so it doesn't fight them.
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -32,17 +17,15 @@ local FLY_COLOR = Color3.fromRGB(70, 130, 200)
 local LAND_COLOR = Color3.fromRGB(200, 120, 60)
 local LOCKED_COLOR = Color3.fromRGB(90, 90, 90)
 
-local CLIMB_SPEED_FACTOR = 0.7 -- Climbing and descending speed compared with flight speed
-local TAKE_OFF_BOOST = 12 -- Upward speed when taking off, in studs per second
-local MAX_TILT = math.rad(70) -- How far the body leans forward at full speed (stretched out, see PoseController)
-local MIN_HEIGHT_ABOVE_VOID = 60 -- Never dive closer than this to where Roblox removes fallen parts
-local PITCH_DEADZONE = math.rad(25) -- Camera pitch that still flies level
-local GROUND_CLEARANCE = 4 -- Studs above the ground where diving stops (land with Q instead)
+local CLIMB_SPEED_FACTOR = 0.7
+local TAKE_OFF_BOOST = 12
+local MAX_TILT = math.rad(70)
+local MIN_HEIGHT_ABOVE_VOID = 60
+local PITCH_DEADZONE = math.rad(25)
+local GROUND_CLEARANCE = 4
 
 local flight = GameConfig.Flight
 local lastToggleRequestTime = 0
-
--- Build the HUD ------------------------------------------------------------
 
 local oldHud = playerGui:FindFirstChild(HUD_NAME)
 if oldHud then
@@ -53,7 +36,6 @@ local hud = Instance.new("ScreenGui")
 hud.Name = HUD_NAME
 hud.ResetOnSpawn = false
 
--- Right side, middle of the screen (clear of the mobile jump button)
 local panel = Instance.new("Frame")
 panel.Name = "Panel"
 panel.AnchorPoint = Vector2.new(1, 0.5)
@@ -135,7 +117,6 @@ local function updateHud()
 end
 
 local function requestToggleFlight()
-    -- Local cooldown only avoids spamming the server; the server checks too
     local now = os.clock()
     if now - lastToggleRequestTime < flight.ToggleCooldown or getFlightSpeed() <= 0 then
         return
@@ -149,7 +130,7 @@ flyButton.Activated:Connect(requestToggleFlight)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if gameProcessedEvent then
-        return -- Typing in chat
+        return
     end
 
     if input.KeyCode == flight.Keybind or input.KeyCode == flight.GamepadButton then
@@ -157,33 +138,20 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     end
 end)
 
--- Flying movement ------------------------------------------------------------
-
--- Turns the humanoid's MoveDirection into a 3D flying direction that follows
--- the camera, so looking up or down while moving forward climbs or dives.
--- MoveDirection is filled in by Roblox's own controls on every device
--- (keyboard, gamepad and the touch joystick) and keeps updating while
--- PlatformStand is on. (Reading the controls through PlayerModule doesn't
--- work everywhere: in current Studio it isn't in PlayerScripts, so flight got
--- no input at all and players could only float. Checked in Studio.)
 local function getFlyDirection(humanoid, camera)
     local moveDirection = humanoid.MoveDirection
     if moveDirection.Magnitude < 0.01 then
         return Vector3.zero
     end
 
-    -- How much of the input is "forward" and "right" relative to the camera
     local flatLook = Vector3.new(camera.LookVector.X, 0, camera.LookVector.Z)
     local flatRight = Vector3.new(camera.RightVector.X, 0, camera.RightVector.Z)
     if flatLook.Magnitude < 0.01 or flatRight.Magnitude < 0.01 then
-        return moveDirection -- Looking straight up or down: just move flat
+        return moveDirection
     end
     local forward = moveDirection:Dot(flatLook.Unit)
     local right = moveDirection:Dot(flatRight.Unit)
 
-    -- The usual third-person camera looks a little down at the character, so
-    -- small camera pitches fly level; only looking clearly up or down climbs
-    -- or dives. (Without this, flying forward kept sinking into the ground.)
     local pitch = math.asin(math.clamp(camera.LookVector.Y, -1, 1))
     local steer = math.max(math.abs(pitch) - PITCH_DEADZONE, 0) / (math.pi / 2 - PITCH_DEADZONE) * math.pi / 2
     local look = flatLook.Unit * math.cos(steer) + Vector3.new(0, math.sign(pitch) * math.sin(steer), 0)
@@ -192,8 +160,7 @@ local function getFlyDirection(humanoid, camera)
     return if direction.Magnitude > 1 then direction.Unit else direction
 end
 
--- State while flying; nil on the ground
-local active = nil -- { humanoid, rootPart, attachment, mover, aligner, velocity }
+local active = nil
 
 local function stopFlying()
     if not active then
@@ -202,7 +169,7 @@ local function stopFlying()
 
     local state = active
     active = nil
-    state.attachment:Destroy() -- Also removes the mover and aligner parented to it
+    state.attachment:Destroy()
     if state.humanoid.Parent then
         state.humanoid.PlatformStand = false
         state.humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
@@ -264,7 +231,6 @@ local function isDown(keyCodes, gamepadButton)
     return UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, gamepadButton)
 end
 
--- Diving stops just above the ground, so you don't scrape along it lying flat
 local function isNearGround(state)
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
@@ -284,7 +250,6 @@ local function updateFlight(deltaTime)
         return
     end
 
-    -- Jumping can switch PlatformStand off; keep it on while flying
     if not state.humanoid.PlatformStand then
         state.humanoid.PlatformStand = true
     end
@@ -313,8 +278,6 @@ local function updateFlight(deltaTime)
     state.velocity = state.velocity:Lerp(target, 1 - math.exp(-flight.Acceleration * deltaTime))
     state.mover.VectorVelocity = state.velocity
 
-    -- Face the way you fly (or the camera's way while hovering), leaning
-    -- forward a little more the faster you go
     local horizontal = Vector3.new(state.velocity.X, 0, state.velocity.Z)
     local facing = if horizontal.Magnitude > 2 then horizontal else Vector3.new(camera.LookVector.X, 0, camera.LookVector.Z)
     if facing.Magnitude > 0.01 then
@@ -337,12 +300,10 @@ end
 player:GetAttributeChangedSignal("IsFlying"):Connect(updateFlightState)
 player:GetAttributeChangedSignal("FlightSpeed"):Connect(updateHud)
 player.CharacterAdded:Connect(function()
-    -- The old character's flight objects went with it
     active = nil
     updateFlightState()
 end)
 
--- The next speed level depends on the rank, which arrives with leaderstats
 task.spawn(function()
     local rankValue = player:WaitForChild("leaderstats"):WaitForChild("Rank")
     rankValue.Changed:Connect(updateHud)

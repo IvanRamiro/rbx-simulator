@@ -1,14 +1,3 @@
-
--- The breakthrough (rank-up) effect: a short, layered burst of energy around
--- a character. The selected aura pet's element sets its colours and accents
--- (AuraStyles.Elements); the rank being reached sets how big and elaborate it
--- is (AuraStyles.Breakthroughs).
---
--- Timeline: a flash and particle burst at the centre, a column of light, rings
--- of energy expanding around the body, streaks shooting upward and shockwaves
--- spreading across the ground. Everything is driven by tweens (no per-frame
--- code) and removed after the effect's Duration, or straight away by stop().
-
 local TweenService = game:GetService("TweenService")
 
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
@@ -19,11 +8,9 @@ local SPARK_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
 local FIRE_TEXTURE = "rbxasset://textures/particles/fire_main.dds"
 local SPARKS_TEXTURE = "rbxasset://textures/particles/fire_sparks_main.dds"
 local FULL_TURN = 2 * math.pi
-local QUARTER_ARC_HANDLE = 0.5523 -- Curve handle (per stud of radius) for drawing a circle from quarter-arcs
+local QUARTER_ARC_HANDLE = 0.5523
 local SHOCKWAVE_PIXELS_PER_STUD = 16
-local GROUND_SEARCH = 14 -- How far below the body to look for the ground
-
--- Helpers ------------------------------------------------------------------
+local GROUND_SEARCH = 14
 
 local function numberSequence(points)
     local keypoints = {}
@@ -41,7 +28,6 @@ local function colorSequence(points)
     return ColorSequence.new(keypoints)
 end
 
--- Plays a tween and remembers it so stop() can cancel it
 local function tween(effect, instance, tweenInfo, goal)
     local created = TweenService:Create(instance, tweenInfo, goal)
     created:Play()
@@ -49,7 +35,6 @@ local function tween(effect, instance, tweenInfo, goal)
     return created
 end
 
--- Runs `step` after `delay` seconds, unless the effect has been stopped
 local function later(effect, delay, step)
     task.delay(delay, function()
         if not effect.stopped then
@@ -75,7 +60,7 @@ end
 
 local function createEmitter(parent, properties)
     local emitter = Instance.new("ParticleEmitter")
-    emitter.Rate = 0 -- Only bursts, released with :Emit()
+    emitter.Rate = 0
     emitter.LightInfluence = 0
     emitter.Texture = SPARK_TEXTURE
     for property, value in properties do
@@ -85,9 +70,6 @@ local function createEmitter(parent, properties)
     return emitter
 end
 
--- Layers ---------------------------------------------------------------------
-
--- A brief flash of light at the centre
 local function addFlash(effect, anchor, look)
     local light = Instance.new("PointLight")
     light.Color = look.Element.Main
@@ -103,8 +85,6 @@ local function addFlash(effect, anchor, look)
     end)
 end
 
--- Particles released at the moment of breakthrough: a radiating burst plus
--- the element's own accent
 local function addBursts(effect, anchor, look)
     local element, scale = look.Element, look.Breakthrough.Scale
 
@@ -121,7 +101,6 @@ local function addBursts(effect, anchor, look)
     burst:Emit(look.Breakthrough.Burst)
 
     if element.Particles == "Ember" then
-        -- Flames bursting upward
         createEmitter(anchor, {
             Texture = FIRE_TEXTURE,
             Color = colorSequence({ { 0, element.Core }, { 0.4, element.Main }, { 1, element.Deep } }),
@@ -136,7 +115,6 @@ local function addBursts(effect, anchor, look)
             RotSpeed = NumberRange.new(-120, 120),
         }):Emit(math.floor(10 * scale))
     elseif element.Particles == "Droplet" then
-        -- A splash of droplets that arcs up and falls back
         createEmitter(anchor, {
             Color = ColorSequence.new(element.Core, element.Main),
             LightEmission = 0.8,
@@ -149,7 +127,6 @@ local function addBursts(effect, anchor, look)
             Drag = 0.5,
         }):Emit(math.floor(18 * scale))
     elseif element.Particles == "Crystal" then
-        -- Large crystal shards flashing outward, held at a diamond angle
         createEmitter(anchor, {
             Color = ColorSequence.new(element.Core, element.Main),
             LightEmission = 0.9,
@@ -162,7 +139,6 @@ local function addBursts(effect, anchor, look)
             Rotation = NumberRange.new(45),
         }):Emit(math.floor(8 * scale))
     elseif element.Particles == "Spark" then
-        -- Arcs of electricity snapping outward in every direction
         createEmitter(anchor, {
             Texture = SPARKS_TEXTURE,
             Color = ColorSequence.new(element.Core, element.Main),
@@ -176,7 +152,6 @@ local function addBursts(effect, anchor, look)
             Drag = 6,
         }):Emit(math.floor(24 * scale))
     else
-        -- Soft motes drifting up and away
         createEmitter(anchor, {
             Color = ColorSequence.new(element.Core, element.Main),
             LightEmission = 1,
@@ -191,7 +166,6 @@ local function addBursts(effect, anchor, look)
     end
 end
 
--- A column of light from the ground that flares and fades (higher ranks)
 local function addPillar(effect, anchor, look, groundOffset)
     local height = look.Breakthrough.PillarHeight
     if height <= 0 then
@@ -237,8 +211,6 @@ local function addPillar(effect, anchor, look, groundOffset)
     end
 end
 
--- A ring of energy that expands outward around the body while its line thins
--- away. Circle (four curved arcs) or the element's polygon.
 local function addExpandingRing(effect, anchor, look, height, endRadius, tilt)
     local element = look.Element
     local sides = if element.RingShape == "Polygon" then element.RingSides else nil
@@ -257,7 +229,6 @@ local function addExpandingRing(effect, anchor, look, height, endRadius, tilt)
         local point = Instance.new("Attachment")
         point.CFrame = CFrame.fromMatrix(center + outward * startRadius, tangent, tangent:Cross(outward).Unit)
         point.Parent = anchor
-        -- Moving straight outward keeps the attachment's direction, so the arcs stay round
         tween(effect, point, info, { Position = center + outward * endRadius })
         table.insert(points, point)
     end
@@ -285,7 +256,6 @@ local function addExpandingRing(effect, anchor, look, height, endRadius, tilt)
     end
 end
 
--- Fast streaks of light shooting upward around the body
 local function addStreak(effect, anchor, look, angle, radius, groundOffset)
     local element, scale = look.Element, look.Breakthrough.Scale
     local start = Vector3.new(math.cos(angle) * radius, groundOffset, math.sin(angle) * radius)
@@ -316,9 +286,6 @@ local function addStreak(effect, anchor, look, angle, radius, groundOffset)
     tween(effect, below, info, { Position = start - halfWidth + rise })
 end
 
--- A shockwave spreading across the ground: a bright ring with a faint fill.
--- Created hidden at the start (so its surface is ready to draw), then played
--- when its turn comes.
 local function prepareShockwave(effect, groundPosition, look, layer)
     local element = look.Element
     local part = Instance.new("Part")
@@ -368,15 +335,10 @@ local function prepareShockwave(effect, groundPosition, look, layer)
     end
 end
 
--- Public API -------------------------------------------------------------------
-
 local groundParams = RaycastParams.new()
 groundParams.FilterType = Enum.RaycastFilterType.Exclude
 groundParams.IgnoreWater = true
 
--- Plays a breakthrough around `rootPart`. petId selects the element (nil or
--- unknown = Neutral) and rankId the strength. Returns the effect, which can
--- be passed to stop(). `onFinished` (optional) runs once it has cleaned up.
 function BreakthroughEffect.play(container, character, rootPart, petId, rankId, onFinished)
     local element = AuraStyles.Elements[petId or "Neutral"] or AuraStyles.Elements.Neutral
     local breakthrough = AuraStyles.getBreakthrough(rankId)
@@ -395,7 +357,6 @@ function BreakthroughEffect.play(container, character, rootPart, petId, rankId, 
     local anchor = createAnchor(effect, center)
     local scale = breakthrough.Scale
 
-    -- Shockwave surfaces are made first and hidden, so they draw on their first frame
     local shockwaves = {}
     if hit then
         for layer = 1, breakthrough.Shockwaves do
@@ -405,7 +366,6 @@ function BreakthroughEffect.play(container, character, rootPart, petId, rankId, 
 
     folder.Parent = container
 
-    -- The moment of breakthrough
     addFlash(effect, anchor, look)
     addBursts(effect, anchor, look)
     addPillar(effect, anchor, look, groundOffset)
@@ -437,7 +397,6 @@ function BreakthroughEffect.play(container, character, rootPart, petId, rankId, 
     return effect
 end
 
--- Removes a breakthrough straight away (safe to call more than once)
 function BreakthroughEffect.stop(effect)
     if effect.stopped then
         return

@@ -1,14 +1,9 @@
-
--- Helpers for looking up the cultivation ranks defined in GameConfig.Ranks.
--- Used by the server (to validate rank-ups) and the client (to display them).
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 
 local Ranks = {}
 
--- Returns the position of a rank in GameConfig.Ranks, or nil if it doesn't exist
 function Ranks.getIndex(rankName)
     for index, rank in GameConfig.Ranks do
         if rank.Name == rankName then
@@ -19,13 +14,11 @@ function Ranks.getIndex(rankName)
     return nil
 end
 
--- Returns the rank's full definition from GameConfig.Ranks, or nil if it doesn't exist
 function Ranks.getRank(rankName)
     local index = Ranks.getIndex(rankName)
     return if index then GameConfig.Ranks[index] else nil
 end
 
--- Finds a rank by its stable Id (used in saved data), or nil if it doesn't exist
 function Ranks.getRankById(rankId)
     for _, rank in GameConfig.Ranks do
         if rank.Id == rankId then
@@ -36,7 +29,6 @@ function Ranks.getRankById(rankId)
     return nil
 end
 
--- Returns the rank after rankName, or nil if rankName is the highest (or unknown)
 function Ranks.getNextRank(rankName)
     local index = Ranks.getIndex(rankName)
     if not index then
@@ -46,9 +38,6 @@ function Ranks.getNextRank(rankName)
     return GameConfig.Ranks[index + 1]
 end
 
--- Flight speed for a rank (from GameConfig.Flight.SpeedLevels): returns the
--- speed (0 while flight is still locked) and the next speed level to reach,
--- as { RankId, Speed }, or nil when the fastest level is reached
 function Ranks.getFlightSpeed(rankName)
     local rankIndex = Ranks.getIndex(rankName) or 0
     local speed = 0
@@ -65,21 +54,17 @@ function Ranks.getFlightSpeed(rankName)
     return speed, nil
 end
 
--- Cultivation power for a rank: every Qi reward is multiplied by this
--- (1 for unknown ranks)
 function Ranks.getQiMultiplier(rankName)
     local rank = Ranks.getRank(rankName)
     return if rank and rank.QiMultiplier then rank.QiMultiplier else 1
 end
 
--- Whether rankName is rankId's rank or higher (false for unknown ranks)
 function Ranks.isAtLeast(rankName, rankId)
     local index = Ranks.getIndex(rankName)
     local required = Ranks.getRankById(rankId)
     return index ~= nil and required ~= nil and index >= Ranks.getIndex(required.Name)
 end
 
--- Catch config mistakes as soon as the game starts
 assert(
     Ranks.getIndex(GameConfig.StartingRank) == 1,
     "GameConfig.StartingRank must be the first entry in GameConfig.Ranks"
@@ -89,7 +74,6 @@ local seenRankIds = {}
 local seenRankNames = {}
 for _, rank in GameConfig.Ranks do
     assert(typeof(rank.Id) == "string" and not seenRankIds[rank.Id], "Every rank needs a unique Id: " .. rank.Name)
-    -- leaderstats shows the Name, and the game looks ranks up by it
     assert(not seenRankNames[rank.Name], "Every rank needs a unique Name: " .. rank.Name)
     assert(typeof(rank.Realm) == "string", "Every rank needs a Realm: " .. rank.Name)
     assert(table.find({ 1, 2, 3, 4, 5 }, rank.Level), "Rank Level must be 1 to 5: " .. rank.Name)

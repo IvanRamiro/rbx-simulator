@@ -1,25 +1,18 @@
-
--- Returns every RemoteEvent the game uses, e.g. RemoteEvents.CultivationEvent.
--- They live in ReplicatedStorage.Remotes so their names can't collide with
--- ModuleScripts in ReplicatedStorage.
--- Only the server creates them; clients wait for the replicated copies.
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local REMOTES_FOLDER_NAME = "Remotes"
 
--- To add a new RemoteEvent, add its name here
 local EVENT_NAMES = {
-    "CultivationEvent", -- Client sends true to start cultivating, false to stop
+    "CultivationEvent",
     "RankUpEvent",
-    "FlightEvent", -- Client sends true to take off, false to land
+    "FlightEvent",
     "EquipPetEvent",
     "UnequipPetEvent",
     "SetAuraPetEvent",
-    "PetInventoryUpdatedEvent", -- Server to client only
-    "EggHatchResultEvent", -- Server to client only
-    "RelicResultEvent", -- Server to client only
+    "PetInventoryUpdatedEvent",
+    "EggHatchResultEvent",
+    "RelicResultEvent",
 }
 
 local RemoteEvents = {}

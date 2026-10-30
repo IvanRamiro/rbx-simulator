@@ -1,20 +1,3 @@
--- Procedural low-poly pet models, for pets that don't have a hand-made design
--- in PetModels yet. Each pet is described by a short spec (Specs below,
--- generated from the design roster): a body type plus colours and features,
--- and PetArchetypes.build turns it into the same kind of part list PetModels
--- uses (faceted prisms, wedges and glowing accents). Replace a pet with a
--- Blender model later by giving it a mesh in PetMeshes; the mesh wins.
---
--- Kinds: "Beast" (four legs), "Bird", "Serpent" (dragons and snakes), "Blob"
--- (round little spirits), "Ray" (manta-like) and "Golem" (big upright body).
--- Features (all optional):
---   Ears "Pointed" / "Round" / "Long"       Horns "Horns" / "Single" / "Antlers" / "Curled"
---   Tail "Fluffy" / "Long" / "Flame" / "Fan" / "Stinger"
---   Wings "Feather" / "Bat" / "Insect"       Heads (2 or 3 for extra heads)
---   Mane, Shell, ShellSpiral, Spikes, Stripes, Puffs, Antennae, Tentacles,
---   Whiskers, Crest, Legs, Gems (floating diamonds), Halo, GlowEyes,
---   Translucent (see-through body)
-
 local PetArchetypes = {}
 
 local function at(x, y, z, rx, ry, rz)
@@ -46,7 +29,6 @@ local function diamond(x, y, z, size, color)
     return { Shape = "Block", Size = Vector3.one * size, At = at(x, y, z, 45, 0, 45), Color = color, Neon = true }
 end
 
--- Big glossy eyes facing forward (or glowing slits)
 local function addEyes(parts, spec, apart, y, z, size)
     local iris = spec.GlowEyes and spec.Glow or Color3.fromRGB(25, 30, 60)
     mirrored(parts, function(side)
@@ -78,7 +60,6 @@ local function addWings(parts, spec, x, y, z, span, chord)
         }
     end)
     if insect then
-        -- A smaller lower wing pair
         mirrored(parts, function(side)
             return {
                 Shape = "Wedge",
@@ -150,8 +131,6 @@ local function addExtras(parts, spec, topY)
         end
     end
 end
-
--- Kinds ------------------------------------------------------------------------
 
 local function beast(spec)
     local body, accent, belly = spec.Body, spec.Accent, spec.Belly
@@ -257,7 +236,6 @@ end
 local function serpent(spec)
     local body, accent, belly = spec.Body, spec.Accent, spec.Belly
     local parts = {}
-    -- A body curving back and up in an S
     local path = {
         { Vector3.new(0, 0, -0.35), 0.5 }, { Vector3.new(0, -0.12, 0.2), 0.48 }, { Vector3.new(0.25, -0.1, 0.65), 0.42 },
         { Vector3.new(0.05, 0.05, 1.05), 0.36 }, { Vector3.new(-0.2, 0.25, 1.35), 0.28 }, { Vector3.new(0, 0.5, 1.6), 0.2 },
@@ -412,16 +390,12 @@ end
 local KINDS = { Beast = beast, Bird = bird, Serpent = serpent, Blob = blob, Ray = ray, Golem = golem }
 local SCALE_BY_RARITY = { Common = 0.9, Uncommon = 0.95, Rare = 1, Epic = 1.05, Legendary = 1.15, Mythical = 1.2, Secret = 1.25 }
 
--- The design for a spec, in PetModels' format: { Scale, Parts }
 function PetArchetypes.build(spec, rarity)
     local build = KINDS[spec.Kind]
     assert(build, "PetArchetypes: unknown Kind " .. tostring(spec.Kind))
     return { Scale = SCALE_BY_RARITY[rarity] or 1, Parts = build(spec) }
 end
 
--- Specs ------------------------------------------------------------------------
--- Generated from the pet roster (Qi_Aura_Simulator_Design.md). Body, Accent,
--- Belly and Glow are the model's colours.
 local function rgb(r, g, b)
     return Color3.fromRGB(r, g, b)
 end

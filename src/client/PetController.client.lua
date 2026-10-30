@@ -1,8 +1,3 @@
-
--- Shows the player's pets and lets them equip, unequip and pick an aura pet.
--- The server owns the inventory: this script only displays the copy the
--- server sends and asks for changes, which the server validates.
-
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,9 +19,6 @@ local SET_AURA_COLOR = Color3.fromRGB(70, 110, 180)
 local AURA_COLOR = Color3.fromRGB(200, 155, 50)
 local DISABLED_COLOR = Color3.fromRGB(90, 90, 90)
 
--- Build the HUD ------------------------------------------------------------
-
--- Remove a leftover HUD if this script somehow runs twice
 local oldHud = playerGui:FindFirstChild(HUD_NAME)
 if oldHud then
     oldHud:Destroy()
@@ -34,9 +26,8 @@ end
 
 local hud = Instance.new("ScreenGui")
 hud.Name = HUD_NAME
-hud.ResetOnSpawn = false -- Keep the HUD (and its connections) when the character respawns
+hud.ResetOnSpawn = false
 
--- Holds the toggle button and the panel on the left side of the screen
 local root = Instance.new("Frame")
 root.Name = "Root"
 root.AnchorPoint = Vector2.new(0, 0.5)
@@ -101,7 +92,6 @@ listLayout.Padding = UDim.new(0, 6)
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Parent = petList
 
--- Short message at the top of the screen for egg hatch results
 local hatchMessage = Instance.new("TextLabel")
 hatchMessage.Name = "HatchMessage"
 hatchMessage.AnchorPoint = Vector2.new(0.5, 0)
@@ -132,8 +122,6 @@ hud.Parent = playerGui
 toggleButton.Activated:Connect(function()
     panel.Visible = not panel.Visible
 end)
-
--- Pet rows -----------------------------------------------------------------
 
 local function createRowButton(row, position, text, color, onClick)
     local button = Instance.new("TextButton")
@@ -198,7 +186,6 @@ local function createPetRow(pet, layoutOrder, equippedCount, auraPetInstanceId)
     rarityLabel.Parent = row
     nameLabel.Parent = row
 
-    -- Left button: equip / unequip. A nil click handler shows a disabled button.
     local leftPosition = UDim2.new(0, 8, 0, 30)
     if pet.Equipped then
         createRowButton(row, leftPosition, "Unequip", UNEQUIP_COLOR, function()
@@ -212,7 +199,6 @@ local function createPetRow(pet, layoutOrder, equippedCount, auraPetInstanceId)
         createRowButton(row, leftPosition, "Slots full", DISABLED_COLOR, nil)
     end
 
-    -- Right button: aura pet (only equipped pets can be the aura pet)
     local rightPosition = UDim2.new(0.5, 4, 0, 30)
     if isAuraPet then
         createRowButton(row, rightPosition, "Aura (on)", AURA_COLOR, function()
@@ -227,20 +213,17 @@ local function createPetRow(pet, layoutOrder, equippedCount, auraPetInstanceId)
     end
 end
 
--- Called whenever the server sends a new copy of the inventory
 local function renderInventory(snapshot)
     if not snapshot then
         return
     end
 
-    -- Destroying old rows also disconnects their button connections
     for _, child in petList:GetChildren() do
         if child:IsA("Frame") then
             child:Destroy()
         end
     end
 
-    -- Display only; the server calculates the real bonus while you cultivate
     local equippedCount = 0
     local bonusPercent = 0
     for _, pet in snapshot.Pets do
@@ -262,8 +245,6 @@ end
 
 RemoteEvents.PetInventoryUpdatedEvent.OnClientEvent:Connect(renderInventory)
 
--- Hatch messages -----------------------------------------------------------
-
 local MESSAGE_SECONDS = 3.5
 local messageCount = 0
 
@@ -276,15 +257,12 @@ local function showMessage(text, color)
     hatchMessage.Visible = true
 
     task.delay(MESSAGE_SECONDS, function()
-        -- Only hide if no newer message has replaced this one
         if messageCount == thisMessage then
             hatchMessage.Visible = false
         end
     end)
 end
 
--- The server sends this after a hatch attempt; the new pet itself arrives
--- through the normal inventory update above
 local function onHatchResult(result)
     if typeof(result) ~= "table" then
         return
@@ -312,10 +290,6 @@ end
 
 RemoteEvents.EggHatchResultEvent.OnClientEvent:Connect(onHatchResult)
 
--- Egg prompts --------------------------------------------------------------
-
--- Shows "Hatch" on eggs you can open and the rank needed on the others
--- (only on this client; the server checks the rank itself)
 local function getRankName()
     local leaderstats = player:FindFirstChild("leaderstats")
     local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
@@ -340,7 +314,6 @@ local function updateAllEggPrompts()
     end
 end
 
--- Egg stands stream in as you fly closer, so update each one when it arrives
 CollectionService:GetInstanceAddedSignal(GameConfig.EggTag):Connect(updateEggPrompt)
 
 task.spawn(function()

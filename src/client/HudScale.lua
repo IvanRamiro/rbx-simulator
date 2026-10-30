@@ -1,7 +1,3 @@
-
--- Shrinks a HUD panel on small screens (like phones) so panels don't overlap.
--- Panels are full size when the screen's shorter side is at least REFERENCE_SIZE pixels.
-
 local REFERENCE_SIZE = 600
 local MIN_SCALE = 0.6
 

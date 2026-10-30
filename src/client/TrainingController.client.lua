@@ -1,9 +1,3 @@
-
--- Shows the player's Qi and cultivation rank, and lets them start/stop
--- cultivating (button or keybind) and rank up. The client only *asks*; the
--- server decides whether cultivation starts, how much Qi to award, and
--- whether a rank-up is allowed.
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -26,9 +20,6 @@ local RANK_UP_READY_COLOR = Color3.fromRGB(200, 155, 50)
 local keyName = GameConfig.CultivationKeybind.Name
 local lastToggleRequestTime = 0
 
--- Build the HUD ------------------------------------------------------------
-
--- Remove a leftover HUD if this script somehow runs twice
 local oldHud = playerGui:FindFirstChild(HUD_NAME)
 if oldHud then
     oldHud:Destroy()
@@ -36,7 +27,7 @@ end
 
 local hud = Instance.new("ScreenGui")
 hud.Name = HUD_NAME
-hud.ResetOnSpawn = false -- Keep the HUD (and its connections) when the character respawns
+hud.ResetOnSpawn = false
 
 local panel = Instance.new("Frame")
 panel.Name = "Panel"
@@ -117,7 +108,6 @@ local rankUpCorner = Instance.new("UICorner")
 rankUpCorner.CornerRadius = UDim.new(0, 10)
 rankUpCorner.Parent = rankUpButton
 
--- Shown just above the panel while the server is giving the Qi Spring bonus
 local stationLabel = Instance.new("TextLabel")
 stationLabel.Name = "StationLabel"
 stationLabel.AnchorPoint = Vector2.new(0.5, 1)
@@ -138,9 +128,6 @@ stationCorner.Parent = stationLabel
 
 hud.Parent = playerGui
 
--- Cultivation --------------------------------------------------------------
-
--- The server sets this attribute; the button always shows the server's state
 local function isCultivating()
     return player:GetAttribute("IsCultivating") == true
 end
@@ -156,7 +143,6 @@ local function updateCultivateButton()
 end
 
 local function requestToggleCultivation()
-    -- Local cooldown only avoids spamming the server; the server checks too
     local now = os.clock()
     if now - lastToggleRequestTime < GameConfig.CultivationToggleCooldown then
         return
@@ -169,7 +155,6 @@ end
 cultivateButton.Activated:Connect(requestToggleCultivation)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-    -- gameProcessedEvent is true while typing in chat or a text box
     if gameProcessedEvent then
         return
     end
@@ -189,9 +174,6 @@ end
 player:GetAttributeChangedSignal("AtTrainingStation"):Connect(updateStationLabel)
 updateStationLabel()
 
--- Qi and rank display ------------------------------------------------------
-
--- Both values are created by the server (QiService)
 local leaderstats = player:WaitForChild("leaderstats")
 local qiValue = leaderstats:WaitForChild("Qi")
 local rankValue = leaderstats:WaitForChild("Rank")
@@ -202,7 +184,6 @@ end
 
 local function updateRankDisplay()
     local rank = Ranks.getRank(rankValue.Value)
-    -- From Spirit Soul on, each realm multiplies Qi; show the current power
     local power = if rank and rank.QiMultiplier > 1 then "  |  Qi x" .. rank.QiMultiplier else ""
     rankLabel.Text = if rank
         then rank.Name .. "  |  " .. rank.Realm .. " " .. rank.Level .. "/5" .. power
@@ -215,7 +196,6 @@ local function updateRankDisplay()
         return
     end
 
-    -- Reaching a new realm is a bigger step, so call it out
     if rank and nextRank.Realm ~= rank.Realm then
         nextRankLabel.Text = "Next realm: " .. nextRank.Realm .. " at " .. NumberFormat.compact(nextRank.QiRequired) .. " Qi"
     else
@@ -232,7 +212,6 @@ local function updateRankDisplay()
 end
 
 local function requestRankUp()
-    -- This check only skips pointless requests; the server checks again
     local nextRank = Ranks.getNextRank(rankValue.Value)
     if nextRank and qiValue.Value >= nextRank.QiRequired then
         RemoteEvents.RankUpEvent:FireServer()

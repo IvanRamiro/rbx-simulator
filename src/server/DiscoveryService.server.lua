@@ -1,13 +1,3 @@
--- Spirit Relics: hold the prompt at a relic to attune to it once, for a
--- one-time Qi reward (GameConfig.Relics). The relics are built by
--- IslandService and tagged, so this script finds them wherever they are.
---
--- The client never says which relic or how much Qi: the server uses the
--- relic whose prompt fired, checks the player is really there and has the
--- rank for it, and only rewards each relic once per player.
--- Found relics are shared with the player's client through the replicated
--- "FoundRelics" attribute (e.g. "GroveHeart,EmberHeart"), so it can dim them.
-
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,7 +8,6 @@ local Discoveries = require(script.Parent:WaitForChild("Discoveries"))
 local IslandBuilder = require(script.Parent:WaitForChild("IslandBuilder"))
 local PlayerData = require(script.Parent:WaitForChild("PlayerData"))
 
--- Extra distance allowed beyond the prompt's range, for network delay
 local PROMPT_DISTANCE_TOLERANCE = 6
 
 local function publishFound(player)
@@ -28,7 +17,6 @@ local function publishFound(player)
     end
 end
 
--- Uses the server's own view of the character's position
 local function isAliveAndNear(player, part, maxDistance)
     local character = player.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -88,13 +76,11 @@ local function connectRelic(model)
     connectedRelics[model] = true
 
     local maxDistance = prompt.MaxActivationDistance + PROMPT_DISTANCE_TOLERANCE
-    -- Triggered fires on the server, after the player has held the prompt
     prompt.Triggered:Connect(function(player)
         onRelicTriggered(player, relicId, crystal, maxDistance)
     end)
 end
 
--- Waits for saved data, then shares the player's found relics with their client
 local function setupPlayer(player)
     local progress = PlayerData.waitForData(player)
     if not progress then
@@ -112,7 +98,6 @@ end
 
 Players.PlayerAdded:Connect(setupPlayer)
 
--- Handle players who joined before this script finished loading
 for _, player in Players:GetPlayers() do
     task.spawn(setupPlayer, player)
 end

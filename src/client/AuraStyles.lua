@@ -1,11 +1,3 @@
--- How cultivation auras and breakthroughs look. Purely visual: nothing here
--- affects Qi or progression.
---
--- Auras are being rebuilt one element at a time (see AuraStyles.Auras and
--- AuraBuilder). An element without an entry in Auras shows no aura yet.
--- The old aura system is in git history (commit 0ca3d48) and the unfinished
--- Golden Kirin version in tools/aura_archive.
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
@@ -13,11 +5,6 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 
 local AuraStyles = {}
 
--- Each element's colours, keyed by pet ID ("Neutral" = no aura pet selected).
--- Breakthrough (rank-up) effects use these too.
---   Core / Main / Deep   Brightest, main and darkest colours
---   Particles            Breakthrough burst style: "Mote", "Ember", "Droplet", "Crystal" or "Spark"
---   RingShape            Breakthrough rings: "Circle", or "Polygon" with RingSides edges
 AuraStyles.Elements = {
     Neutral = { Core = Color3.fromRGB(235, 248, 255), Main = Color3.fromRGB(125, 200, 255), Deep = Color3.fromRGB(55, 120, 210), Particles = "Mote", RingShape = "Circle" },
     EmberWyrm = { Core = Color3.fromRGB(255, 205, 110), Main = Color3.fromRGB(255, 125, 35), Deep = Color3.fromRGB(215, 45, 20), Particles = "Ember", RingShape = "Circle" },
@@ -82,19 +69,6 @@ AuraStyles.Elements = {
     EternalClockworkDragon = { Core = Color3.fromRGB(235, 255, 255), Main = Color3.fromRGB(220, 190, 110), Deep = Color3.fromRGB(110, 80, 40), Particles = "Spark", RingShape = "Polygon", RingSides = 12 },
 }
 
--- The cultivation auras, keyed by pet ID. Textures were rendered in Blender
--- (tools/blender/<Pet>Aura.blend, PNGs in assets/aura/<pet>) and uploaded.
--- AquaWisp: six glowing droplets orbiting in a gentle spiral, sparkling
--- water motes and tiny bubbles drifting around the body, and a soft cyan glow.
---   Droplets          How many droplets orbit
---   OrbitRadius       Orbit distance from the body's centre line, as a share of body height
---   OrbitSeconds      Seconds for one full orbit
---   SpiralTurn        How far each droplet's height drifts up and down (share of body height)
---   DropletSize       Glowing core diameter in studs; GlowSize the soft halo around it
---   TrailSeconds      How long each droplet's trail lingers
---   SparkleRate, BubbleRate   Particles per second (multiplied by the rank's AuraTier boost)
---   LightBrightness, LightRange   The soft cyan light on the body
---   BodyGlow          How strongly the body is tinted by the glow (0 = off, 1 = solid)
 AuraStyles.Auras = {
     AquaWisp = {
         Core = Color3.fromRGB(225, 250, 255),
@@ -119,13 +93,6 @@ AuraStyles.Auras = {
             Trail = "rbxassetid://85921257601970",
         },
     },
-    -- GoldenKirin: the ornate ring turning around the waist, emerald and gold
-    -- leaves spiralling up, hovering golden diamond motes and a floating crown
-    -- (Blender meshes in ReplicatedStorage.AuraMeshes), jade-gold glints and a warm glow.
-    --   RingSize, RingHeight, RingSeconds   Ring diameter (x the orbit), height (share of body) and seconds per turn
-    --   Leaves, LeafSize, LeafRiseSeconds, LeafTurns   How many, length (share of body height), climb time and turns per climb
-    --   Motes, MoteSize       How many diamond motes and their size (share of body height)
-    --   CrownSize, CrownLift  Crown width and how far above the head (shares of body height)
     GoldenKirin = {
         Core = Color3.fromRGB(255, 236, 170),
         Main = Color3.fromRGB(245, 190, 70),
@@ -147,32 +114,20 @@ AuraStyles.Auras = {
         LightRange = 11,
         BodyGlow = 0.1,
         Textures = {
-            Glint = "rbxassetid://93392043084285", -- Rendered in Blender (assets/aura/golden_kirin/glint.png)
+            Glint = "rbxassetid://93392043084285",
         },
     },
 }
 
--- The anime aura around a cultivating character (CharacterAura). Same for
--- every element; its colours come from the aura pet's element (Elements
--- above). Pets keep their own auras (Auras above, AuraBuilder).
--- Textures were rendered in Blender (tools/blender/CharacterAura.blend, PNGs in
--- assets/aura/character) and uploaded; they are white so any colour tints them.
---   ChargeSeconds   The charge-up when cultivation starts, before the aura bursts out
---   Stages          The aura grows the longer you cultivate: each stage starts After
---                   seconds, with a power surge. Power scales flames, particles and glow;
---                   PulseEvery spaces the ground shockwaves, LightningEvery the lightning
---                   arcs (nil = none), SurgeEvery repeating power surges (nil = none).
---                   Rocks lifts debris off the ground; Halo adds the ring over the head.
---   OtherPlayers    Particle amount for other players' auras (yours is always full)
 AuraStyles.CharacterAura = {
     Textures = {
-        Flame = "rbxassetid://125999209006478", -- 4x4 flipbook of anime flames
-        Streak = "rbxassetid://122993805328140", -- Flowing energy streaks (tiles along beams)
-        Ring = "rbxassetid://81408609196943", -- Rune ring
+        Flame = "rbxassetid://125999209006478",
+        Streak = "rbxassetid://122993805328140",
+        Ring = "rbxassetid://81408609196943",
         Shockwave = "rbxassetid://81927825399672",
         Glow = "rbxassetid://118436603702034",
-        Spark = "rbxassetid://112814194154292", -- Long streak for sparks flying along their path
-        Smoke = "rbxasset://textures/particles/smoke_main.dds", -- Built-in, for ground dust
+        Spark = "rbxassetid://112814194154292",
+        Smoke = "rbxasset://textures/particles/smoke_main.dds",
     },
     ChargeSeconds = 1.3,
     Stages = {
@@ -187,33 +142,18 @@ AuraStyles.CharacterAura = {
     OtherPlayers = 0.6,
 }
 
--- Rank boost: higher AuraTier ranks get a slightly denser, brighter aura
 function AuraStyles.getBoost(rankId)
     local rank = Ranks.getRankById(rankId)
     local tier = if rank then rank.AuraTier else 1
     return 1 + (tier - 1) * 0.15
 end
 
--- Breakthrough (rank-up) effect strength. AuraStyles.getBreakthrough picks
--- one from the rank being reached: Step for most levels, Milestone for each
--- realm's fifth level, NewRealm for the first level of a new realm.
--- The selected aura pet's element sets the colours and accents.
---   Duration      Seconds until everything is cleaned up
---   Scale         Overall size multiplier
---   Shockwaves    Ground shockwaves spreading outward, one after another
---   Rings         Expanding rings of energy around the body
---   Streaks       Fast streaks of light shooting upward
---   Burst         Particles released at the moment of breakthrough
---   PillarHeight  Height of the brief column of light in studs (0 = none)
---   Flash         Peak brightness of the brief flash of light
 AuraStyles.Breakthroughs = {
     Step = { Duration = 1.6, Scale = 1, Shockwaves = 1, Rings = 1, Streaks = 4, Burst = 14, PillarHeight = 0, Flash = 3 },
     Milestone = { Duration = 2.4, Scale = 1.3, Shockwaves = 2, Rings = 2, Streaks = 8, Burst = 26, PillarHeight = 18, Flash = 5 },
     NewRealm = { Duration = 3, Scale = 1.5, Shockwaves = 3, Rings = 3, Streaks = 10, Burst = 32, PillarHeight = 26, Flash = 6 },
 }
 
--- Per-breakthrough limits (for the biggest one). In Studio, AuraController
--- warns if a breakthrough goes over any of them.
 AuraStyles.BreakthroughBudget = {
     Beams = 24,
     ParticleEmitters = 3,
@@ -222,7 +162,6 @@ AuraStyles.BreakthroughBudget = {
     SurfaceGuis = 4,
 }
 
--- The breakthrough played when a player reaches this rank Id
 function AuraStyles.getBreakthrough(rankId)
     local rank = Ranks.getRankById(rankId)
     if rank and rank.Level == 1 then

@@ -1,17 +1,3 @@
--- Shows every player's equipped pets as small companions that float behind
--- them (including other players' pets). While a player cultivates, their
--- pets slowly circle around them instead.
---
--- Purely visual and only on this client, in a local "PetCompanions" folder.
--- The server says which pets are equipped through the replicated
--- "EquippedPetIds" attribute (e.g. "AquaWisp,VoltFox"); models come from PetModels.
---
--- Each pet is welded to an invisible root part, so one per-frame update moves
--- every companion by moving just their roots, in a single BulkMoveTo.
---
--- While a player cultivates, each of their pets also shows the aura of its
--- own element (AuraBuilder), if that element's aura has been made.
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -21,28 +7,22 @@ local PetModels = require(script.Parent:WaitForChild("PetModels"))
 local PetRig = require(script.Parent:WaitForChild("PetRig"))
 local AuraBuilder = require(script.Parent:WaitForChild("AuraBuilder"))
 
-local FOLLOW_SPACING = 4.8 -- Studs between pets side by side
-local FOLLOW_DISTANCE = 5.5 -- Studs behind the player
-local FOLLOW_HEIGHT = 0.9 -- Studs above the player's root part
-local FOLLOW_SHARPNESS = 6 -- Higher = pets catch up faster
-local SNAP_DISTANCE = 40 -- Pets this far away (e.g. after a respawn) jump straight to their spot
+local FOLLOW_SPACING = 4.8
+local FOLLOW_DISTANCE = 5.5
+local FOLLOW_HEIGHT = 0.9
+local FOLLOW_SHARPNESS = 6
+local SNAP_DISTANCE = 40
 local BOB_HEIGHT = 0.25
 local BOB_SPEED = 2
-local ORBIT_RADIUS = 6.5 -- While cultivating
+local ORBIT_RADIUS = 6.5
 local ORBIT_HEIGHT = 1.6
-local ORBIT_SPEED = 0.6 -- Radians per second
-local NOVA_INTERVAL = 25 -- Seconds between an animated pet's special ability while cultivating
+local ORBIT_SPEED = 0.6
+local NOVA_INTERVAL = 25
 
 local container = Instance.new("Folder")
 container.Name = "PetCompanions"
 container.Parent = workspace
 
--- companions[player] = {
---     key = "AquaWisp,VoltFox", rootPart = the root part the pets follow,
---     version = PetModels.Version the pets were built with,
---     pets = { { model, rootPart, cframe, petId, aura, rig, speed, nextNova } },
---     rank = the owner's rank number last frame (a rise sets off the pets' specials),
--- }
 local companions = {}
 
 local function clearPets(entry)
@@ -64,15 +44,12 @@ local function getRankId(player)
     return rank and rank.Id
 end
 
--- The owner's rank as a number (higher is better), or nil before it loads
 local function getRankNumber(player)
     local leaderstats = player:FindFirstChild("leaderstats")
     local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
     return rankValue and Ranks.getIndex(rankValue.Value)
 end
 
--- Gives the pet its element's aura while its owner cultivates, and fades it
--- away afterwards. Elements without an aura yet are skipped.
 local function syncPetAura(player, pet, cultivating)
     if cultivating and not pet.aura and not pet.noAura then
         local aura = AuraBuilder.build(player, pet.model, pet.rootPart, pet.petId, getRankId(player), true)
@@ -81,10 +58,9 @@ local function syncPetAura(player, pet, cultivating)
             AuraBuilder.show(aura)
             pet.aura = aura
         else
-            pet.noAura = true -- Nothing to show for this element; don't try every frame
+            pet.noAura = true
         end
     elseif not cultivating and pet.aura then
-        -- Keeps following the pet while it fades, then goes
         local aura = pet.aura
         pet.aura = nil
         pet.fading = aura
@@ -100,22 +76,19 @@ local function syncPetAura(player, pet, cultivating)
     end
 end
 
--- Rebuilds a player's pets when their equipped pets or character change
 local function syncPets(player, entry)
     local character = player.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
     local key = player:GetAttribute("EquippedPetIds")
     key = if typeof(key) == "string" and rootPart then key else ""
 
-    -- Also rebuild when a pet's Blender mesh finishes loading (PetModels.Version)
-    if key == entry.key and rootPart == entry.rootPart and entry.version == PetModels.Version then
+    if key == entry.key and rootPart == entry.rootPart then
         return
     end
 
     clearPets(entry)
     entry.key = key
     entry.rootPart = rootPart
-    entry.version = PetModels.Version
     if key == "" then
         return
     end
@@ -123,10 +96,7 @@ local function syncPets(player, entry)
     for _, petId in string.split(key, ",") do
         local model, petRoot = PetModels.build(petId)
         if model then
-            -- Parent first: the welds lock in each piece's offset from the root
-            -- when they activate, so the root may only move after that
             model.Parent = container
-            -- Start at the player; the first frames glide them into place
             petRoot.CFrame = rootPart.CFrame
             table.insert(entry.pets, {
                 model = model,
@@ -140,7 +110,6 @@ local function syncPets(player, entry)
     end
 end
 
--- The player's facing direction, kept level so pets don't tilt with the body
 local function levelFacing(rootPart)
     local look = rootPart.CFrame.LookVector
     local flatLook = Vector3.new(look.X, 0, look.Z)
@@ -151,12 +120,10 @@ local function levelFacing(rootPart)
     return CFrame.lookAt(position, position + flatLook.Unit)
 end
 
--- Where pet number `index` of `count` should be right now
 local function getTargetCFrame(player, rootPart, index, count, now)
     local bob = math.sin(now * BOB_SPEED + index * 1.7) * BOB_HEIGHT
 
     if player:GetAttribute("IsCultivating") == true then
-        -- Spread evenly around a slow circle, facing the way they travel
         local angle = now * ORBIT_SPEED + (index - 1) / count * 2 * math.pi
         local center = rootPart.Position + Vector3.new(0, ORBIT_HEIGHT + bob, 0)
         local position = center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * ORBIT_RADIUS
@@ -164,7 +131,6 @@ local function getTargetCFrame(player, rootPart, index, count, now)
         return CFrame.lookAt(position, position + heading)
     end
 
-    -- A row behind the player, the outer pets a little further back
     local side = index - (count + 1) / 2
     local offset = Vector3.new(side * FOLLOW_SPACING, FOLLOW_HEIGHT + bob, FOLLOW_DISTANCE + math.abs(side) * 0.6)
     return levelFacing(rootPart) * CFrame.new(offset)
@@ -199,8 +165,6 @@ local function updateCompanions(deltaTime)
         workspace:BulkMoveTo(parts, cframes, Enum.BulkMoveMode.FireCFrameChanged)
     end
 
-    -- Animated pets: pose their joints, and set off their special ability when
-    -- the owner ranks up and every so often while cultivating
     for player, entry in companions do
         local rank = getRankNumber(player)
         local rankedUp = entry.rank ~= nil and rank ~= nil and rank > entry.rank
@@ -228,7 +192,6 @@ local function updateCompanions(deltaTime)
         end
     end
 
-    -- Pet auras, placed around the pets' new positions
     local auraParts, auraCFrames = {}, {}
     for player, entry in companions do
         local cultivating = player:GetAttribute("IsCultivating") == true
@@ -245,7 +208,7 @@ local function updateCompanions(deltaTime)
 end
 
 local function watchPlayer(player)
-    companions[player] = { key = "", rootPart = nil, version = 0, pets = {} }
+    companions[player] = { key = "", rootPart = nil, pets = {} }
 end
 
 local function unwatchPlayer(player)

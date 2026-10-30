@@ -1,6 +1,3 @@
--- Short, readable numbers for the HUD: 950, 12.5K, 3.4M, 4.18B.
--- Qi reaches billions in the later realms, too long to show in full.
-
 local NumberFormat = {}
 
 local SUFFIXES = {
@@ -10,7 +7,6 @@ local SUFFIXES = {
     { Value = 1e3, Suffix = "K" },
 }
 
--- Three significant figures, trailing zeros dropped: 1234 -> "1.23K", 1200000 -> "1.2M"
 function NumberFormat.compact(number)
     local sign = if number < 0 then "-" else ""
     number = math.abs(number)

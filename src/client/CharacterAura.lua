@@ -1,33 +1,3 @@
--- The anime cultivation aura around a cultivating character. AuraController
--- decides when one should exist; this module builds, animates and removes it.
--- (Pets have their own, different auras: see AuraBuilder.)
---
--- Every element gets this aura, coloured by the aura pet's element
--- (AuraStyles.Elements). Settings and textures are in AuraStyles.CharacterAura;
--- the textures were made in Blender (tools/blender/CharacterAura.blend).
---
--- Layers, from the body outward:
---   Flames        Animated anime flames (a flipbook) rising around the body, a
---                 hot core from the chest and small flames from the hands
---   Tongues       Tall curved spikes of energy around the body, energy flowing
---                 up them, flickering and swaying
---   Ribbons       Light trails spiralling up the body
---   Rings         A rune ring turning at the waist, a ground sigil and, once
---                 awakened, a halo over the head
---   Ground        Shockwaves pulsing across the floor, dust, and rocks lifting
---                 off the ground once the aura is charged
---   Sparks, embers and lightning arcs cracking around the body
---   Glow          An outline glow and tint on the character and a pulsing light
---
--- Life cycle: energy rushes inward for a moment, then bursts into the aura.
--- The longer the player cultivates the stronger it gets (AuraStyles stages),
--- each new stage arriving with a power surge. When cultivation stops it
--- powers down smoothly. Breakthroughs trigger a surge (CharacterAura.pulse).
---
--- Performance: moving pieces are anchored parts placed by the controller in
--- one BulkMoveTo; everything else is particles, beams and trails. Other
--- players' auras use fewer particles (OtherPlayers).
-
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
@@ -35,7 +5,7 @@ local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 
 local CharacterAura = {}
 
-CharacterAura.REMOVE_DELAY = 2.2 -- Seconds after powering down before removal, so particles can finish
+CharacterAura.REMOVE_DELAY = 2.2
 
 local SETTINGS = AuraStyles.CharacterAura
 local TEXTURES = SETTINGS.Textures
@@ -46,8 +16,6 @@ local POP_IN = TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.O
 local POP_OUT = TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.In)
 local GROUND_CHECK_SECONDS = 0.3
 local MAX_GROUND_DROP = 14
-
--- Helpers ------------------------------------------------------------------
 
 local function numberSequence(points)
     local keypoints = {}
@@ -76,7 +44,7 @@ local function newPart(aura, name, size, shape)
     part.CanTouch = false
     part.CastShadow = false
     part.Transparency = 1
-    part.CFrame = aura.rootPart.CFrame -- Start in place so nothing streaks in from far away
+    part.CFrame = aura.rootPart.CFrame
     part.Parent = aura.model
     return part
 end
@@ -88,8 +56,6 @@ local function newAttachment(parent, position)
     return attachment
 end
 
--- A particle emitter whose rate follows the aura's power every frame.
--- `rate` is per second at full power; `minStage` holds it back until then.
 local function addEmitter(aura, parent, rate, properties, minStage)
     local emitter = Instance.new("ParticleEmitter")
     emitter.LightInfluence = 0
@@ -125,7 +91,6 @@ local function flameProperties(aura, size, colors, extra)
     return properties
 end
 
--- The character's height and where its feet are, relative to the root part
 local function measureBody(character, rootPart)
     local rootCFrame = rootPart.CFrame
     local boxCFrame, boxSize = character:GetBoundingBox()
@@ -147,7 +112,6 @@ local function bodyPart(character, names, fallback)
     return fallback
 end
 
--- A rune ring image on a flat invisible part, readable from above and below
 local function ringPart(aura, name, diameter, color, transparency, faces)
     local part = newPart(aura, name, Vector3.new(diameter, 0.05, diameter))
     local images = {}
@@ -177,17 +141,13 @@ local function ringPart(aura, name, diameter, color, transparency, faces)
     return part, images
 end
 
--- Layers -------------------------------------------------------------------
-
 local function buildFlames(aura)
     local body, colors, k = aura.body, aura.colors, aura.k
     local flameColors = colorSequence({ { 0, colors.Core }, { 0.35, colors.Main }, { 1, colors.Deep } })
 
-    -- Where the flames start: a wide, low box around the legs
     local base = newPart(aura, "FlameBase", Vector3.new(aura.width * 1.5, body.Height * 0.35, aura.width * 1.5))
     aura.flameBase = base
 
-    -- Main flames, drawn slightly behind the character so it stays readable
     aura.flames = addEmitter(aura, base, 26, flameProperties(aura, 4, flameColors, {
         Shape = Enum.ParticleEmitterShape.Box,
         ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
@@ -198,7 +158,6 @@ local function buildFlames(aura)
         Drag = 1,
         ZOffset = -1,
     }))
-    -- A few fainter flames in front, for depth
     aura.frontFlames = addEmitter(aura, base, 9, flameProperties(aura, 2.4, flameColors, {
         Shape = Enum.ParticleEmitterShape.Box,
         ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
@@ -210,8 +169,6 @@ local function buildFlames(aura)
         ZOffset = 0.6,
     }))
 
-    -- Flames licking off every major body part, so the aura hugs the
-    -- character's outline (drawn just behind each part)
     for _, names in { { "UpperTorso", "Torso" }, { "LowerTorso" }, { "LeftUpperArm", "Left Arm" }, { "RightUpperArm", "Right Arm" },
         { "LeftUpperLeg", "Left Leg" }, { "RightUpperLeg", "Right Leg" }, { "Head" } } do
         local part = bodyPart(aura.character, names, nil)
@@ -224,11 +181,10 @@ local function buildFlames(aura)
                 Transparency = numberSequence({ { 0, 1 }, { 0.15, 0.3 }, { 0.7, 0.5 }, { 1, 1 } }),
                 ZOffset = -0.8,
             }))
-            table.insert(aura.limbAttachments, emitter) -- Lives in the character: removed with the aura
+            table.insert(aura.limbAttachments, emitter)
         end
     end
 
-    -- A hot core rising from the chest, following the rig
     local torso = bodyPart(aura.character, { "UpperTorso", "Torso" }, aura.rootPart)
     local chest = newAttachment(torso)
     table.insert(aura.limbAttachments, chest)
@@ -242,7 +198,6 @@ local function buildFlames(aura)
         ZOffset = -0.3,
     }))
 
-    -- Small flames licking up from the hands
     for _, names in { { "RightHand", "Right Arm" }, { "LeftHand", "Left Arm" } } do
         local hand = bodyPart(aura.character, names, nil)
         if hand then
@@ -257,7 +212,6 @@ local function buildFlames(aura)
         end
     end
 
-    -- Sparks shooting up, streaking along their path
     aura.sparks = addEmitter(aura, base, 14, {
         Texture = TEXTURES.Spark,
         Orientation = Enum.ParticleOrientation.VelocityParallel,
@@ -274,7 +228,6 @@ local function buildFlames(aura)
         EmissionDirection = Enum.NormalId.Top,
     })
 
-    -- Embers drifting around the whole body
     addEmitter(aura, aura.volume, 12, {
         Texture = TEXTURES.Glow,
         Shape = Enum.ParticleEmitterShape.Box,
@@ -290,7 +243,6 @@ local function buildFlames(aura)
         Drag = 0.5,
     })
 
-    -- During the charge-up, energy rushes in from all around
     local gather = newPart(aura, "Gather", Vector3.one * body.Height * 1.7)
     aura.gatherPart = gather
     aura.gather = Instance.new("ParticleEmitter")
@@ -311,7 +263,6 @@ local function buildFlames(aura)
     gatherEmitter.Parent = gather
 end
 
--- Tall curved tongues of energy around the body, energy flowing up them
 local function buildTongues(aura)
     local body, colors, k = aura.body, aura.colors, aura.k
     local ring = newPart(aura, "Tongues", Vector3.one * 0.2)
@@ -325,11 +276,11 @@ local function buildTongues(aura)
         local tall = if index % 2 == 0 then 1.35 else 1.05
         local bottom = Instance.new("Attachment")
         bottom.CFrame = CFrame.lookAt(out * radius, out * radius + (out + Vector3.new(0, 2.2, 0)).Unit)
-            * CFrame.Angles(0, math.rad(90), 0) -- Turn the look direction into the attachment's Axis (X)
+            * CFrame.Angles(0, math.rad(90), 0)
         bottom.Parent = ring
         local topBase = out * radius * 0.55 + Vector3.new(0, body.Height * tall, 0)
         local top = Instance.new("Attachment")
-        top.CFrame = CFrame.new(topBase) * CFrame.Angles(0, 0, math.rad(90)) -- Axis pointing up
+        top.CFrame = CFrame.new(topBase) * CFrame.Angles(0, 0, math.rad(90))
         top.Parent = ring
 
         local beam = Instance.new("Beam")
@@ -356,7 +307,6 @@ local function buildTongues(aura)
     end
 end
 
--- Light trails spiralling up the body
 local function buildRibbons(aura)
     local colors, k = aura.colors, aura.k
     aura.ribbons = {}
@@ -388,7 +338,6 @@ local function buildRings(aura)
     local body, colors = aura.body, aura.colors
     local faces = { Enum.NormalId.Top, Enum.NormalId.Bottom }
     aura.waistRing, aura.waistImages = ringPart(aura, "WaistRing", aura.width * 2.1, colors.Main, 0.1, faces)
-    -- The awakened halo stands upright behind the head and shoulders
     aura.halo, aura.haloImages = ringPart(aura, "Halo", body.Height * 0.75, colors.Core, 0.05, faces)
     for _, list in { aura.waistImages, aura.haloImages } do
         for _, entry in list do
@@ -397,14 +346,12 @@ local function buildRings(aura)
     end
 end
 
--- The ground under the character: sigil, shockwaves, dust and lifting rocks
 local function buildGround(aura)
     local body, colors, k = aura.body, aura.colors, aura.k
     local diameter = math.min(body.Height * 2.4, 24)
     local ground, images = ringPart(aura, "Ground", diameter, colors.Main, 0.25, { Enum.NormalId.Top })
     aura.ground = ground
     aura.groundImages = images
-    -- A soft pool of light under the sigil, and a smaller ring turning the other way
     local gui = images[1].Image.Parent
     local pool = Instance.new("ImageLabel")
     pool.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -442,7 +389,6 @@ local function buildGround(aura)
     shock.Rate = 0
     shock.Parent = center
 
-    -- Dust pushed outward along the ground
     aura.dust = addEmitter(aura, center, 6, {
         Texture = TEXTURES.Smoke,
         Color = ColorSequence.new(colors.Deep:Lerp(Color3.new(0.75, 0.75, 0.78), 0.55)),
@@ -458,7 +404,6 @@ local function buildGround(aura)
         RotSpeed = NumberRange.new(-30, 30),
     })
 
-    -- Rocks that tear loose and float once the aura is charged
     aura.rocks = {}
     local random = Random.new(aura.player.UserId)
     for index = 1, SETTINGS.Rocks do
@@ -479,7 +424,6 @@ local function buildGround(aura)
     end
 end
 
--- Lightning: a few arcs, each a chain of beams between jittered points
 local function buildLightning(aura)
     local colors, k = aura.colors, aura.k
     aura.arcs = {}
@@ -531,12 +475,9 @@ local function buildGlow(aura)
     aura.highlight = glow
 end
 
--- Effects ------------------------------------------------------------------
-
 local function strikeArc(aura, arc, now)
     local body, width = aura.body, aura.width
     local random = aura.random
-    -- From near the body out into the air, in a random direction
     local angle = random:NextNumber(0, TAU)
     local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
     local start = out * width * 0.3 + Vector3.new(0, random:NextNumber(-0.3, 0.3) * body.Height, 0)
@@ -562,7 +503,6 @@ local function jagArc(aura, arc)
     end
 end
 
--- A burst of power: flames, sparks, a shockwave, lightning and a flash
 local function surge(aura, strength)
     if aura.destroyed or aura.hiding then
         return
@@ -593,10 +533,6 @@ local function surge(aura, strength)
     end
 end
 
--- Public API ---------------------------------------------------------------
-
--- Builds a (still invisible) aura for this character. petId picks the
--- colours (nil or unknown = Neutral); rankId how strong it is.
 function CharacterAura.build(player, character, rootPart, petId, rankId)
     local colors = AuraStyles.Elements[petId or "Neutral"] or AuraStyles.Elements.Neutral
     local model = Instance.new("Folder")
@@ -612,12 +548,12 @@ function CharacterAura.build(player, character, rootPart, petId, rankId)
         colors = colors,
         body = body,
         boost = boost,
-        k = body.Height / 5 * (1 + (boost - 1) * 0.35), -- Size: characters are about 5 studs tall
+        k = body.Height / 5 * (1 + (boost - 1) * 0.35),
         width = body.Height * 0.45,
         detail = if player == Players.LocalPlayer then 1 else SETTINGS.OtherPlayers,
         random = Random.new(),
         emitters = {},
-        limbAttachments = {}, -- Attachments and emitters inside the character, removed with the aura
+        limbAttachments = {},
         loops = {},
         stage = 0,
         power = 0,
@@ -654,7 +590,6 @@ function CharacterAura.build(player, character, rootPart, petId, rankId)
     return aura
 end
 
--- Starts the charge-up; the aura bursts out after ChargeSeconds
 function CharacterAura.show(aura)
     local now = os.clock()
     aura.shownAt = now
@@ -684,7 +619,6 @@ function CharacterAura.show(aura)
     end)
 end
 
--- Powers the aura down. The controller removes it after REMOVE_DELAY.
 function CharacterAura.hide(aura)
     if aura.hiding then
         return
@@ -701,11 +635,10 @@ function CharacterAura.hide(aura)
         ribbon.Trail.Enabled = false
     end
     if aura.stage > 0 then
-        aura.shockwave:Emit(1) -- A last ripple as the energy settles
+        aura.shockwave:Emit(1)
     end
 end
 
--- A power surge (used by breakthroughs)
 function CharacterAura.pulse(aura)
     surge(aura, 1)
 end
@@ -725,15 +658,12 @@ local groundParams = RaycastParams.new()
 groundParams.FilterType = Enum.RaycastFilterType.Exclude
 groundParams.IgnoreWater = true
 
--- Called every frame. Adds this aura's moving parts to parts/cframes (moved
--- in one BulkMoveTo call by the controller) and updates everything else.
 function CharacterAura.update(aura, now, parts, cframes)
     local body, width, k = aura.body, aura.width, aura.k
     local rootCFrame = aura.rootPart.CFrame
     local fade = aura.fader.Value
     local stageSettings = SETTINGS.Stages[math.max(aura.stage, 1)]
 
-    -- Stage: the aura grows the longer the player cultivates
     if aura.stage > 0 and not aura.hiding then
         local elapsed = now - aura.shownAt - SETTINGS.ChargeSeconds
         local nextStage = SETTINGS.Stages[aura.stage + 1]
@@ -760,7 +690,6 @@ function CharacterAura.update(aura, now, parts, cframes)
         end
     end
 
-    -- Power eases towards the stage's (low while charging up)
     local targetPower = if aura.stage == 0 then 0.15 else stageSettings.Power
     aura.power += (targetPower - aura.power) * 0.05
     local level = fade * aura.power
@@ -773,13 +702,11 @@ function CharacterAura.update(aura, now, parts, cframes)
         entry.Emitter.Rate = if aura.stage >= entry.MinStage then entry.Rate * level else 0
     end
 
-    -- Flames lean away from the way the character moves
     local velocity = aura.rootPart.AssemblyLinearVelocity
     local lean = Vector3.new(-velocity.X, 0, -velocity.Z) * 0.6
     aura.flames.Acceleration = Vector3.new(0, 5, 0) + lean
     aura.frontFlames.Acceleration = aura.flames.Acceleration
 
-    -- Moving pieces
     local feet = rootCFrame * CFrame.new(0, body.FeetY, 0)
     table.insert(parts, aura.volume)
     table.insert(cframes, rootCFrame * CFrame.new(0, body.FeetY + body.Height * 0.5, 0))
@@ -788,7 +715,6 @@ function CharacterAura.update(aura, now, parts, cframes)
     table.insert(parts, aura.gatherPart)
     table.insert(cframes, rootCFrame * CFrame.new(0, body.FeetY + body.Height * 0.5, 0))
 
-    -- Rings and tongues turn steadily, faster for a moment after a surge
     local deltaTime = math.min(now - (aura.lastUpdate or now), 0.1)
     aura.lastUpdate = now
     local spinBoost = if aura.spinBoostUntil and now < aura.spinBoostUntil then 3 else 1
@@ -811,7 +737,7 @@ function CharacterAura.update(aura, now, parts, cframes)
     for _, ribbon in aura.ribbons do
         local progress = (now / 2.4 + ribbon.Offset) % 1
         if progress < ribbon.Last then
-            ribbon.Trail.Enabled = false -- Back at the bottom: don't draw a line straight down
+            ribbon.Trail.Enabled = false
         elseif not ribbon.Trail.Enabled and aura.stage > 0 and not aura.hiding then
             ribbon.Trail.Enabled = true
         end
@@ -822,7 +748,6 @@ function CharacterAura.update(aura, now, parts, cframes)
         table.insert(cframes, feet * CFrame.new(math.cos(angle) * distance, body.Height * (0.05 + 1.15 * progress), math.sin(angle) * distance))
     end
 
-    -- Rings: the waist ring turns and rocks; the halo appears once awakened
     table.insert(parts, aura.waistRing)
     table.insert(cframes, feet * CFrame.new(0, body.Height * 0.42, 0)
         * CFrame.Angles(math.rad(18 + 5 * math.sin(now * 0.6)), 0, math.rad(8 * math.cos(now * 0.45)))
@@ -839,7 +764,6 @@ function CharacterAura.update(aura, now, parts, cframes)
         entry.Scale.Scale = aura.haloLevel
     end
 
-    -- Ground: follow the floor under the character (checked a few times a second)
     if now >= aura.nextGroundCheck then
         aura.nextGroundCheck = now + GROUND_CHECK_SECONDS
         groundParams.FilterDescendantsInstances = { aura.character, aura.model, aura.model.Parent, workspace:FindFirstChild("PetCompanions") }
@@ -848,7 +772,7 @@ function CharacterAura.update(aura, now, parts, cframes)
     end
     local hasGround = aura.groundY ~= nil
     if not hasGround then
-        aura.dust.Rate = 0 -- Nothing to kick up
+        aura.dust.Rate = 0
     end
     local groundCenter = Vector3.new(rootCFrame.Position.X, (aura.groundY or 0) + 0.06, rootCFrame.Position.Z)
     table.insert(parts, aura.ground)
@@ -868,7 +792,6 @@ function CharacterAura.update(aura, now, parts, cframes)
             * CFrame.Angles(rock.Spin.X * now * 0.6, rock.Spin.Y * now * 0.6, rock.Spin.Z * now * 0.6))
     end
 
-    -- Lightning: visible while striking, re-jagged twice so it flickers
     for _, arc in aura.arcs do
         local visible = now < arc.Ends and not aura.hiding
         if visible and now >= arc.Rejag then
@@ -884,7 +807,6 @@ function CharacterAura.update(aura, now, parts, cframes)
         end
     end
 
-    -- Glow: breathing light and outline, flaring with surges
     local breathe = 0.85 + 0.15 * math.sin(now * 2.2)
     aura.light.Brightness = (1.6 * level * breathe + 3 * flash) * fade
     aura.highlight.FillTransparency = 1 - math.min(0.9, (0.16 * level + 0.25 * flash) * fade)

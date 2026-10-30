@@ -1,7 +1,3 @@
--- Spirit Relics on this client: a "Relics 3/9" counter, a message when you
--- attune to one, and dimming the relics you've already found (only for you).
--- The server decides everything (see DiscoveryService); this script only shows it.
-
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,14 +14,12 @@ local HUD_NAME = "RelicHud"
 local PANEL_COLOR = Color3.fromRGB(20, 20, 30)
 local RELIC_COLOR = Color3.fromRGB(170, 235, 255)
 local MESSAGE_SECONDS = 4
-local FOUND_TRANSPARENCY = 0.7 -- How faded a relic you've found looks
+local FOUND_TRANSPARENCY = 0.7
 
 local relicsById = {}
 for _, relic in GameConfig.Relics do
     relicsById[relic.Id] = relic
 end
-
--- Build the HUD ------------------------------------------------------------
 
 local oldHud = playerGui:FindFirstChild(HUD_NAME)
 if oldHud then
@@ -36,7 +30,6 @@ local hud = Instance.new("ScreenGui")
 hud.Name = HUD_NAME
 hud.ResetOnSpawn = false
 
--- Top left, below Roblox's own menu buttons
 local counter = Instance.new("TextLabel")
 counter.Name = "RelicCounter"
 counter.Position = UDim2.fromOffset(16, 64)
@@ -59,7 +52,6 @@ counterPadding.PaddingTop = UDim.new(0, 4)
 counterPadding.PaddingBottom = UDim.new(0, 4)
 counterPadding.Parent = counter
 
--- Messages appear just below the pet hatch messages at the top centre
 local message = Instance.new("TextLabel")
 message.Name = "RelicMessage"
 message.AnchorPoint = Vector2.new(0.5, 0)
@@ -102,8 +94,6 @@ local function showMessage(text)
     end)
 end
 
--- Relics in the world -----------------------------------------------------------
-
 local function getFoundSet()
     local found = {}
     local value = player:GetAttribute("FoundRelics")
@@ -121,8 +111,6 @@ local function getRankName()
     return if rankValue then rankValue.Value else ""
 end
 
--- Dims a found relic and hides its prompt, or shows which rank a locked one
--- needs. Changes made here are only seen by this player.
 local function updateRelic(model, found, rankName)
     local relic = relicsById[model:GetAttribute("RelicId")]
     local crystal = model:FindFirstChild("RelicCrystal")
@@ -165,7 +153,6 @@ local function updateAll()
     end
 end
 
--- Relics stream in as you fly closer, so style each one when it arrives
 CollectionService:GetInstanceAddedSignal(GameConfig.RelicTag):Connect(function(model)
     updateRelic(model, getFoundSet(), getRankName())
 end)
@@ -179,8 +166,6 @@ task.spawn(function()
 end)
 
 updateAll()
-
--- Messages from the server -------------------------------------------------------
 
 RemoteEvents.RelicResultEvent.OnClientEvent:Connect(function(result)
     if typeof(result) ~= "table" then

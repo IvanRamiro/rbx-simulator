@@ -1,18 +1,3 @@
-
--- Shows the cultivation aura around every player who is cultivating
--- (including other players): the anime aura in CharacterAura, coloured by the
--- selected aura pet's element, stronger at higher ranks. (Pets get their own
--- auras from PetCompanionController.)
---
--- Everything is created only on this client, in a local "CultivationAuras"
--- folder, so nothing is sent to the server. State comes from values the
--- server already replicates: the "IsCultivating" and "AuraPetId" attributes
--- and leaderstats.Rank.
---
--- One per-frame update places every aura's moving pieces around its
--- character (in a single BulkMoveTo call). This keeps the effects attached
--- smoothly without any parts welded to characters.
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -22,25 +7,19 @@ local CharacterAura = require(script.Parent:WaitForChild("CharacterAura"))
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local BreakthroughEffect = require(script.Parent:WaitForChild("BreakthroughEffect"))
 
-local PRINT_BUILD_SUMMARY = RunService:IsStudio() -- Prints what each aura contains while testing
+local PRINT_BUILD_SUMMARY = RunService:IsStudio()
 
 local container = Instance.new("Folder")
 container.Name = "CultivationAuras"
 container.Parent = workspace
 
--- activeAuras[player] = the aura currently shown for that player
 local activeAuras = {}
--- liveAuras[aura] = true for every aura still on screen (shown or fading out)
 local liveAuras = {}
--- connections[player] = { ... } so they can be disconnected when the player leaves
 local connections = {}
--- activeBreakthroughs[player] = the rank-up effect playing for that player (at most one)
 local activeBreakthroughs = {}
 
 local updateConnection = nil
-local refreshAura -- Defined below
-
--- Lifecycle ----------------------------------------------------------------
+local refreshAura
 
 local function destroyAura(aura)
     if aura.destroyed then
@@ -59,14 +38,13 @@ local function destroyAura(aura)
     end
 end
 
--- Fades the aura out, lets its particles finish, then removes it
 local function removeAura(aura)
     if activeAuras[aura.player] == aura then
         activeAuras[aura.player] = nil
     end
 
     if not aura.rootPart:IsDescendantOf(workspace) then
-        destroyAura(aura) -- The character is already gone
+        destroyAura(aura)
         return
     end
 
@@ -74,7 +52,6 @@ local function removeAura(aura)
     task.delay(CharacterAura.REMOVE_DELAY, destroyAura, aura)
 end
 
--- Runs every frame while any aura is on screen
 local function updateAuras()
     local now = os.clock()
     local parts, cframes = {}, {}
@@ -83,12 +60,10 @@ local function updateAuras()
         if aura.rootPart:IsDescendantOf(workspace) and aura.model.Parent then
             CharacterAura.update(aura, now, parts, cframes)
         elseif activeAuras[aura.player] == aura then
-            -- An active aura lost its character or was removed by something
-            -- else. Clean it up and rebuild if the player is still cultivating.
             destroyAura(aura)
             task.defer(refreshAura, aura.player)
         else
-            destroyAura(aura) -- A fading aura whose character is gone
+            destroyAura(aura)
         end
     end
 
@@ -114,8 +89,6 @@ local function printSummary(aura, petId, rankId)
     ))
 end
 
--- State --------------------------------------------------------------------
-
 local function isAlive(character)
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     return humanoid ~= nil and humanoid.Health > 0
@@ -133,9 +106,6 @@ local function getAuraPetId(player)
     return if typeof(petId) == "string" then petId else nil
 end
 
--- Makes the shown aura match the player's current state. Safe to call often:
--- it only changes anything when cultivation, rank, aura pet or character
--- changed. On rank-up or pet change the old aura crossfades into the new one.
 function refreshAura(player)
     local character = player.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -146,13 +116,11 @@ function refreshAura(player)
         and rankId ~= nil
         and isAlive(character)
 
-    -- Ranks that share an aura tier look the same, so ranking up within a
-    -- tier keeps the current aura (the breakthrough still plays)
     local rank = rankId and Ranks.getRankById(rankId)
     local lookKey = tostring(rank and rank.AuraTier) .. "/" .. tostring(petId)
     local current = activeAuras[player]
     if current and shouldShow and current.rootPart == rootPart and current.lookKey == lookKey then
-        return -- Already showing the right aura
+        return
     end
 
     if current then
@@ -177,8 +145,6 @@ function refreshAura(player)
     end
 end
 
--- Breakthroughs (rank-up effects) -------------------------------------------
-
 local function stopBreakthrough(player)
     local effect = activeBreakthroughs[player]
     if effect then
@@ -194,7 +160,6 @@ local function printBreakthroughSummary(player, effect, petId, rankId)
     end
     print(string.format("[Breakthrough] %s: %s / %s", player.Name, petId or "Neutral", rankId))
 
-    -- Rings and streaks are added over the first second, so check the totals then
     task.delay(1.2, function()
         if effect.stopped then
             return
@@ -218,8 +183,6 @@ local function printBreakthroughSummary(player, effect, petId, rankId)
     end)
 end
 
--- Plays the rank-up effect around the player's character. A new rank-up
--- replaces any breakthrough still playing, so effects never stack.
 local function playBreakthrough(player)
     local character = player.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -237,7 +200,6 @@ local function playBreakthrough(player)
     end)
     activeBreakthroughs[player] = effect
 
-    -- The aura itself surges; it isn't rebuilt
     local aura = activeAuras[player]
     if aura then
         CharacterAura.pulse(aura)
@@ -248,14 +210,9 @@ local function playBreakthrough(player)
     end
 end
 
--- Watching players ---------------------------------------------------------
-
 local function watchCharacter(player, character)
-    -- A new character never keeps the previous character's breakthrough
     stopBreakthrough(player)
 
-    -- The root part can arrive later (or stream back in), so refresh when it does.
-    -- These connections are cleaned up automatically when the character is destroyed.
     character.ChildAdded:Connect(function(child)
         if child.Name == "HumanoidRootPart" then
             refreshAura(player)
@@ -268,7 +225,6 @@ local function watchCharacter(player, character)
             return
         end
 
-        -- Remove instantly on death; the server also stops cultivation
         humanoid.Died:Connect(function()
             local aura = activeAuras[player]
             if aura and aura.character == character then
@@ -299,23 +255,19 @@ local function watchPlayer(player)
         watchCharacter(player, player.Character)
     end
 
-    -- leaderstats is created by the server and may not have replicated yet
     task.spawn(function()
         local rankValue = player:WaitForChild("leaderstats"):WaitForChild("Rank")
         if connections[player] ~= playerConnections then
-            return -- The player left while we were waiting
+            return
         end
 
-        -- The rank only changes after a server-approved rank-up (saved ranks are
-        -- set before leaderstats replicates), so a rise here is a real breakthrough.
-        -- Comparing positions also ignores any change that isn't an increase.
         local lastRankIndex = Ranks.getIndex(rankValue.Value)
         table.insert(playerConnections, rankValue.Changed:Connect(function()
             local newRankIndex = Ranks.getIndex(rankValue.Value)
             local rose = newRankIndex ~= nil and lastRankIndex ~= nil and newRankIndex > lastRankIndex
             lastRankIndex = newRankIndex or lastRankIndex
 
-            refresh() -- Crossfade the aura to the new rank's look
+            refresh()
             if rose then
                 playBreakthrough(player)
             end
