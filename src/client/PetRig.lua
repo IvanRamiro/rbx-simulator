@@ -141,6 +141,44 @@ local function animateOssuary(rig, s, moving, fly, nova)
     end
 end
 
+-- Dreadfang Cerberus: a hulking three-headed hellhound with cyan-cracked hide. It trots, gallops through the air
+-- when flying, and its three heads each have a mind of their own: sniffing,
+-- looking about, snapping. All three rear up to breathe hellfire for the special.
+local HOUND_HEADS = { C = 0, L = 2.1, R = 4.2 }
+local function animateHellhound(rig, s, moving, fly, nova)
+    local m, u, t = rig.motors, rig.unit, s.time
+    s.stride = (s.stride or 0) + rig.deltaTime * (7 * moving + 9 * fly)
+    local stride = s.stride
+
+    pose(m.Body, CFrame.new(0, (0.02 * math.sin(t * 1.8) + 0.04 * math.abs(math.sin(stride)) * moving + 0.06 * math.sin(stride) * fly) * u, 0)
+        * CFrame.Angles(0.06 * math.sin(stride) * fly - 0.05 * moving + 0.08 * nova, 0, 0.03 * math.sin(stride * 0.5) * moving))
+
+    -- Trot in diagonal pairs on the ground; a stretched gallop in the air
+    for _, name in { "LegFL", "LegFR", "LegBL", "LegBR" } do
+        local front = string.sub(name, 4, 4) == "F"
+        local left = string.sub(name, 5, 5) == "L"
+        local trot = 0.45 * math.sin(stride + (if front == left then 0 else math.pi)) * moving
+        local gallop = (0.65 * math.sin(stride + (if front then 0 else math.pi) + (if left then 0.3 else 0)) + (if front then 0.25 else -0.25)) * fly
+        pose(m[name], CFrame.Angles(trot + gallop, 0, 0))
+    end
+
+    for tag, phase in HOUND_HEADS do
+        local side = rig.sides["Head" .. tag] or 0
+        local sniff = 0.04 * math.sin(t * 9 + phase) * math.max(0, math.sin(t * 0.7 + phase)) ^ 4
+        local snap = math.max(0, math.sin(t * 0.45 + phase)) ^ 14
+        local yaw = (0.32 * math.sin(t * 0.55 + phase) + side * 0.08) * (1 - 0.5 * moving) * (1 - nova)
+        local pitch = 0.08 * math.sin(t * 0.8 + phase) + sniff - 0.1 * fly + 0.6 * nova - 0.15 * snap
+        pose(m["Head" .. tag], CFrame.new(0, 0, -0.08 * u * snap) * CFrame.Angles(pitch, yaw, 0.08 * math.sin(t * 0.6 + phase)))
+        local growl = 0.05 * (0.5 + 0.5 * math.sin(t * 13 + phase)) * math.max(0, math.sin(t * 0.3 + phase))
+        pose(m["Jaw" .. tag], CFrame.Angles(-(0.5 * snap + 0.7 * nova + growl + 0.08 * fly), 0, 0))
+    end
+
+    -- The tail wags slowly, lashes when running
+    local wag = math.sin(t * (2.2 + 4 * moving + 4 * fly))
+    pose(m.Tail1, CFrame.Angles(0.1 * math.sin(t * 1.1) - 0.15 * fly, (0.22 + 0.15 * moving) * wag, 0))
+    pose(m.Tail2, CFrame.Angles(0.1 * math.sin(t * 1.1 - 0.8), (0.3 + 0.2 * moving) * math.sin(t * (2.2 + 4 * moving + 4 * fly) - 0.9), 0))
+end
+
 -- Which parts each animated pet has, how they hang together, and how it moves.
 --   Joints      part -> the part it hangs from ("Root" is the pet's root part)
 --   Attached    parts welded to another part without a joint
@@ -263,6 +301,44 @@ PetRig.Profiles.BonefireDragon = {
         Ivory = Color3.fromRGB(235, 245, 255),
     },
     Animate = animateOssuary,
+}
+
+PetRig.Profiles.DreadfangCerberus = {
+    Joints = {
+        Body = "Root",
+        HeadC = "Body",
+        HeadL = "Body",
+        HeadR = "Body",
+        JawC = "HeadC",
+        JawL = "HeadL",
+        JawR = "HeadR",
+        LegFL = "Body",
+        LegFR = "Body",
+        LegBL = "Body",
+        LegBR = "Body",
+        Tail1 = "Body",
+        Tail2 = "Tail1",
+    },
+    Attached = {},
+    SeeThrough = {},
+    Effects = {
+        Motes = "Body",
+        Light = "Body",
+        Pulse = "Body",
+        Burst = "Body",
+        Sparks = { "HeadC_Eye", "HeadL_Eye", "HeadR_Eye" },
+        Trail = "Tail2_Tip",
+        Blast = "HellBreath",
+    },
+    -- Cyan hellfire under the shared names the effects use
+    Colors = {
+        Gold = Color3.fromRGB(40, 215, 255),
+        Amber = Color3.fromRGB(20, 70, 160),
+        Orange = Color3.fromRGB(30, 150, 255),
+        Sun = Color3.fromRGB(190, 250, 255),
+        Ivory = Color3.fromRGB(225, 250, 255),
+    },
+    Animate = animateHellhound,
 }
 
 PetRig.NOVA_TIME = 2.6 -- Seconds the special ability lasts
@@ -701,6 +777,46 @@ function Blasts.SoulLantern(rig, fx)
     TweenService:Create(light, TweenInfo.new(0.9), { Brightness = 0 }):Play()
     if rig.burst then
         rig.burst:Emit(30)
+    end
+end
+
+-- Hellfire Breath: a jet of cyan fire roars out of every mouth, along the way
+-- each head faces, swelling and fading as it goes.
+function Blasts.HellBreath(rig, fx)
+    local colors, u, neon = rig.profile.Colors, rig.unit, fx.neon
+    for name, mouth in rig.points do
+        local tag = string.match(name, "^Head(%a)_Mouth$")
+        local head = tag and rig.parts["Head" .. tag]
+        if not head then
+            continue
+        end
+        local from = mouth.WorldPosition
+        local direction = (from - head.Position)
+        direction = Vector3.new(direction.X, direction.Y * 0.3, direction.Z).Unit
+        for index = 1, 9 do
+            task.delay(index * 0.045, function()
+                local reach = (1.4 + index * 0.28) * u
+                local ball = neon(Vector3.one * 0.14 * u, CFrame.new(from), if index % 3 == 0 then colors.Sun else colors.Gold)
+                ball.Shape = Enum.PartType.Ball
+                local spread = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 0.35 * u
+                TweenService:Create(ball, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    CFrame = CFrame.new(from + direction * reach + spread),
+                    Size = Vector3.one * (0.45 + index * 0.04) * u,
+                    Transparency = 1,
+                    Color = colors.Amber,
+                }):Play()
+            end)
+        end
+        local light = Instance.new("PointLight")
+        light.Color = colors.Gold
+        light.Range = 8 * u
+        light.Brightness = 4
+        light.Parent = head
+        TweenService:Create(light, TweenInfo.new(0.9), { Brightness = 0 }):Play()
+        Debris:AddItem(light, 1)
+    end
+    if rig.burst then
+        rig.burst:Emit(25)
     end
 end
 

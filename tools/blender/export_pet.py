@@ -20,6 +20,10 @@ Each part becomes "<PetId>_<Part>" plus "<PetId>_<Part>_Glow_<rrggbb>", and
 marker objects (custom property "marker") become tiny meshes the game reads
 positions from: "Pivot_<Part>" -> "<PetId>_Pivot_<Part>" (the part's joint),
 "Point_<Name>" -> "<PetId>_Point_<Name>" (an effect attachment).
+
+Sculpted pets: --baked (implies --rig) keeps each part's own baked texture
+material instead of the palette, and writes <PetId>_color.png and
+<PetId>_normal.png next to the FBX.
 """
 
 import os
@@ -39,7 +43,9 @@ PET_ID = ARGS[0]
 # of assets/pets, and skips the pet mesh data (src/shared/PetMeshData)
 if "--out" in ARGS:
     OUTPUT_DIR = os.path.join(ROOT, ARGS[ARGS.index("--out") + 1])
-RIG = "--rig" in ARGS
+RIG = "--rig" in ARGS or "--baked" in ARGS
+# Pets with a hand-baked texture (sculpted detail): keep their materials, skip the palette
+BAKED = "--baked" in ARGS
 # The runtime mesh data describes one body, so rigged pets skip it
 WRITE_MESH_DATA = "--out" not in ARGS and not RIG
 
@@ -111,6 +117,48 @@ def export_rig_parts(copies, is_glow):
     return exported
 
 
+def export_fbx(exported):
+    bpy.ops.object.select_all(action="DESELECT")
+    for obj in exported:
+        obj.select_set(True)
+    bpy.ops.export_scene.fbx(
+        filepath=os.path.join(OUTPUT_DIR, PET_ID + ".fbx"),
+        use_selection=True,
+        object_types={"MESH"},
+        axis_forward="-Z",
+        axis_up="Y",
+        apply_scale_options="FBX_SCALE_UNITS",
+        path_mode="COPY",
+        embed_textures=True,
+        mesh_smooth_type="FACE",
+    )
+
+
+def export_baked(copies, is_glow):
+    """--baked: the solid parts keep their baked texture material (colour map,
+    plus a normal map) and smooth shading; glow parts become flat Neon pieces.
+    The textures are also written as <PetId>_color.png / _normal.png."""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    for image in bpy.data.images:
+        for suffix in ("_Color", "_Normal"):
+            if image.name == PET_ID + suffix:
+                image.filepath_raw = os.path.join(OUTPUT_DIR, PET_ID + suffix.lower() + ".png")
+                image.file_format = "PNG"
+                image.save()
+    exported = export_rig_parts(copies, is_glow)
+    for obj in exported:
+        if is_glow(obj):
+            for polygon in obj.data.polygons:
+                polygon.use_smooth = False
+    export_fbx(exported)
+    low = [min(v.co[i] for obj in exported for v in obj.data.vertices) for i in range(3)]
+    high = [max(v.co[i] for obj in exported for v in obj.data.vertices) for i in range(3)]
+    size = [h - l for h, l in zip(high, low)]
+    print("EXPORTED", PET_ID, [obj.name for obj in exported],
+          "tris", sum(len(p.vertices) - 2 for obj in exported for p in obj.data.polygons),
+          "size", [round(s, 2) for s in size], "longest", round(max(size), 2))
+
+
 def main():
     collection = bpy.data.collections[PET_ID]
     sources = [obj for obj in collection.all_objects if obj.type == "MESH" and not obj.hide_render]
@@ -134,6 +182,10 @@ def main():
     for obj in copies:
         if is_glow(obj):
             glow_groups.setdefault(base_color(obj.material_slots[0].material), []).append(obj)
+
+    if BAKED:
+        export_baked(copies, is_glow)
+        return
 
     # Palette: one swatch per body colour
     colors = []

@@ -785,7 +785,8 @@ local MESH_LOOKS = {
     -- Length below its real 4.81 (wingspan) so the wings don't make it far bigger than the other pets
     EternalClockworkDragon = { Eyes = Color3.fromRGB(80, 220, 255), GlowEyes = true, Effect = "Sparks", Glow = Color3.fromRGB(255, 200, 90), Length = 4.3 },
     HeavenbreakerApe = { Eyes = Color3.fromRGB(255, 190, 40), GlowEyes = true, Effect = "Sparks", Glow = Color3.fromRGB(255, 215, 110), Length = 3.4 },
-    DreadfangCerberus = { Eyes = Color3.fromRGB(150, 40, 255), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(155, 55, 255), Length = 3.6 },
+    -- Animated (PetRig): a three-headed hellhound
+    DreadfangCerberus = { Eyes = Color3.fromRGB(40, 215, 255), GlowEyes = true, Glow = Color3.fromRGB(40, 200, 255), Length = 3.4 },
 }
 
 local TEXTURES = {

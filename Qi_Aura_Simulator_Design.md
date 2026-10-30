@@ -126,7 +126,10 @@ with flame gills) is animated the same way; its special, **Heart Flare**, spread
 its beads apart while its molten heart blazes. Bonefire Dragon (a floating
 dragon skeleton with a blue soul flame burning in its ribcage) is animated too;
 its special, **Soul Lantern**, makes the soul rise out of the ribs while the
-ghost of the living dragon appears around the bones. Specials are visual only.
+ghost of the living dragon appears around the bones. Dreadfang Cerberus (a
+hulking three-headed hellhound, its dark hide split by glowing cyan cracks) trots
+on the ground, gallops in the air and moves each head on its own; its special,
+**Hellfire Breath**, rears all three heads and blasts cyan fire from every mouth. Specials are visual only.
 
 
 **First found in the Beginner Qi Egg (starting island)**
