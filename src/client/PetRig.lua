@@ -95,6 +95,52 @@ local function animateBeadWyrm(rig, s, moving, fly, nova)
     pose(m.Tail, CFrame.Angles(0.15 * math.sin(t * 4), 0.35 * math.sin(t * 3.1), 0))
 end
 
+-- Bonefire Dragon, the Lantern Ossuary: a floating dragon skeleton with its soul
+-- burning inside the ribcage like a lantern. It sways as if hung on a chain, its
+-- skull cocks eerily and its jaw chatters; its ghost appears for the Soul Lantern.
+local function animateOssuary(rig, s, moving, fly, nova)
+    local m, u, t = rig.motors, rig.unit, s.time
+
+    pose(m.Ribs, CFrame.new(0, (0.06 * math.sin(t * 1.1) + 0.2 * nova) * u, 0)
+        * CFrame.Angles(-0.1 * moving - 0.18 * fly + 0.04 * math.sin(t * 0.8), 0, 0.09 * math.sin(t * 0.9) * (1 - 0.5 * moving)))
+
+    -- The soul flickers, turns slowly, and rises out of the ribcage for the Soul Lantern
+    pose(m.Soul, CFrame.new(0.02 * u * math.sin(t * 9), (0.03 * math.sin(t * 6.3) + 0.35 * nova) * u, 0)
+        * CFrame.Angles(0.06 * math.sin(t * 7.1), t * 1.5, 0.06 * math.sin(t * 8.3)))
+
+    pose(m.Neck, CFrame.Angles(0.05 * math.sin(t * 0.9) - 0.08 * fly + 0.2 * nova, 0.1 * math.sin(t * 0.5), 0))
+    pose(m.Skull, CFrame.Angles(
+        0.08 * math.sin(t * 0.7) + 0.25 * nova,
+        0.15 * math.sin(t * 0.45) * (1 - nova),
+        0.18 * math.sin(t * 0.35) * (1 - nova)))
+
+    -- The jaw chatters every few seconds, and gapes for the Soul Lantern
+    local chatter = math.max(0, math.sin(t * 0.8)) ^ 8 * (0.5 + 0.5 * math.sin(t * 30))
+    pose(m.Jaw, CFrame.Angles(-(0.14 * chatter + 0.6 * nova + 0.05 * fly), 0, 0))
+
+    -- Slow, ghostly half-beats; folded when moving, spread wide for the Soul Lantern
+    for _, name in { "WingL", "WingR" } do
+        local side = rig.sides[name]
+        local raise = 0.12 * math.sin(t * 1.3) * (1 - fly) - 0.25 * moving + (0.1 + 0.5 * math.sin(t * 3.2)) * fly + 0.5 * nova
+        local sweep = -0.15 * moving + 0.3 * nova
+        pose(m[name], CFrame.Angles(0, side * sweep, side * raise))
+    end
+
+    -- The chained vertebrae of the tail sway, each lagging the last
+    for index = 1, 5 do
+        pose(m["Tail" .. index], CFrame.Angles(
+            0.06 * math.sin(t * 1.2 - index * 0.7) + 0.08 * fly,
+            0.18 * math.sin(t * 1.0 - index * 0.6) * (1 + moving),
+            0))
+    end
+
+    -- Its ghost, the living dragon it once was, shows only during the Soul Lantern
+    local ghost = rig.parts.Ghost
+    if ghost then
+        ghost.Transparency = 1 - 0.62 * nova
+    end
+end
+
 -- Which parts each animated pet has, how they hang together, and how it moves.
 --   Joints      part -> the part it hangs from ("Root" is the pet's root part)
 --   Attached    parts welded to another part without a joint
@@ -177,6 +223,46 @@ PetRig.Profiles.EmberWyrm = {
         Ivory = Color3.fromRGB(255, 200, 140),
     },
     Animate = animateBeadWyrm,
+}
+
+PetRig.Profiles.BonefireDragon = {
+    Joints = {
+        Ribs = "Root",
+        Soul = "Ribs",
+        Ghost = "Ribs",
+        Neck = "Ribs",
+        Skull = "Neck",
+        Jaw = "Skull",
+        WingL = "Ribs",
+        WingR = "Ribs",
+        Tail1 = "Ribs",
+        Tail2 = "Tail1",
+        Tail3 = "Tail2",
+        Tail4 = "Tail3",
+        Tail5 = "Tail4",
+    },
+    Attached = {},
+    SeeThrough = {},
+    -- Glow pieces by colour: the ghost starts hidden, the wing banners are faint
+    SeeThroughGlow = { ["95bcff"] = 1, ["61a0ff"] = 0.3 },
+    Effects = {
+        Motes = "Soul",
+        Light = "Soul",
+        Pulse = "Soul",
+        Burst = "Soul",
+        Sparks = { "Skull_EyeL", "Skull_EyeR" },
+        Trail = "Tail5_Tip",
+        Blast = "SoulLantern",
+    },
+    -- Spectral blue under the shared names the effects use
+    Colors = {
+        Gold = Color3.fromRGB(120, 190, 255),
+        Amber = Color3.fromRGB(40, 80, 220),
+        Orange = Color3.fromRGB(70, 130, 255),
+        Sun = Color3.fromRGB(210, 235, 255),
+        Ivory = Color3.fromRGB(235, 245, 255),
+    },
+    Animate = animateOssuary,
 }
 
 PetRig.NOVA_TIME = 2.6 -- Seconds the special ability lasts
@@ -372,9 +458,11 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
         part.Name = name
         part.Size = size
         part.CFrame = cframe
-        part.Transparency = profile.SeeThrough[name] or 0
-        prepare(part)
         local owner, hex = string.match(name, "^(.+)_Glow_(%x%x%x%x%x%x)$")
+        part.Transparency = profile.SeeThrough[name]
+            or (hex and profile.SeeThroughGlow and profile.SeeThroughGlow[string.lower(hex)])
+            or 0
+        prepare(part)
         if hex then
             part.Color = Color3.fromHex(hex)
             part.Material = Enum.Material.Neon
@@ -563,6 +651,54 @@ function Blasts.Eruption(rig, fx)
     light.Brightness = 5
     light.Parent = glow
     TweenService:Create(light, throb, { Brightness = 0 }):Play()
+    if rig.burst then
+        rig.burst:Emit(30)
+    end
+end
+
+-- Soul Lantern: the soul breaks free. Blue-white wisps spiral up around a
+-- rising pillar of pale light, and a cold light floods out.
+function Blasts.SoulLantern(rig, fx)
+    local colors, u, origin, neon = rig.profile.Colors, rig.unit, fx.origin, fx.neon
+
+    -- Wisps spiralling upward: each climbs in two turns of a widening helix
+    for index = 1, 16 do
+        local angle = index / 16 * 2 * math.pi
+        local radius = (0.5 + (index % 3) * 0.25) * u
+        local wisp = neon(Vector3.one * 0.14 * u, CFrame.new(origin), if index % 2 == 0 then colors.Sun else colors.Gold)
+        wisp.Shape = Enum.PartType.Ball
+        local function at(turn, height, r)
+            local a = angle + turn
+            return CFrame.new(origin + Vector3.new(math.cos(a) * r, height, math.sin(a) * r))
+        end
+        local first = TweenService:Create(wisp, TweenInfo.new(0.45, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+            { CFrame = at(2.2, 1.2 * u, radius) })
+        first.Completed:Once(function()
+            TweenService:Create(wisp, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {
+                CFrame = at(4.4, 3.4 * u, radius * 1.6),
+                Size = Vector3.one * 0.04 * u,
+                Transparency = 1,
+            }):Play()
+        end)
+        first:Play()
+    end
+
+    -- A pillar of pale light rising out of the ribcage
+    local pillar = neon(Vector3.new(0.2 * u, 0.5 * u, 0.5 * u), CFrame.new(origin) * CFrame.Angles(0, 0, math.pi / 2), colors.Ivory)
+    pillar.Shape = Enum.PartType.Cylinder
+    pillar.Transparency = 0.3
+    TweenService:Create(pillar, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = Vector3.new(7 * u, 0.15 * u, 0.15 * u),
+        CFrame = CFrame.new(origin + Vector3.new(0, 3.5 * u, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+        Transparency = 1,
+    }):Play()
+
+    local light = Instance.new("PointLight")
+    light.Color = colors.Gold
+    light.Range = 14 * u
+    light.Brightness = 5
+    light.Parent = pillar
+    TweenService:Create(light, TweenInfo.new(0.9), { Brightness = 0 }):Play()
     if rig.burst then
         rig.burst:Emit(30)
     end

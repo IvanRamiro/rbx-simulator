@@ -774,8 +774,8 @@ local MESH_LOOKS = {
     OriginSerpent = { Eyes = Color3.fromRGB(60, 200, 255), GlowEyes = true, Effect = "Stars", Glow = Color3.fromRGB(80, 190, 255), Length = 2.9 },
     -- Animated (PetRig): the coil and its corona of rays
     SunscaleDragon = { Eyes = Color3.fromRGB(255, 176, 32), GlowEyes = true, Glow = Color3.fromRGB(255, 212, 71), Length = 3.3 },
-    -- Length below its real 5.37 (wings spread, long tail) so it isn't far bigger than the other pets
-    BonefireDragon = { Eyes = Color3.fromRGB(255, 120, 40), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(255, 110, 30), Length = 4 },
+    -- Animated (PetRig): the Lantern Ossuary, a floating skeleton with a soul flame inside
+    BonefireDragon = { Eyes = Color3.fromRGB(120, 190, 255), GlowEyes = true, Glow = Color3.fromRGB(100, 170, 255), Length = 3.4 },
     -- Length below its real 5.42 (wingspan) so the wings don't make it far bigger than the other pets
     PrismaticPhoenix = { Eyes = Color3.fromRGB(255, 150, 30), GlowEyes = true, Effect = "Glitter", Glow = Color3.fromRGB(255, 175, 130), Length = 4.2 },
     RuneSphinx = { Eyes = Color3.fromRGB(20, 140, 255), GlowEyes = true, Effect = "Stars", Glow = Color3.fromRGB(90, 200, 255), Length = 3.6 },

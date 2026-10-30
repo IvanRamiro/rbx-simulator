@@ -123,7 +123,10 @@ Its special, **Solar Nova**, plays when its owner ranks up and every 25 seconds
 while cultivating: the coil rises, its corona of rays opens like a sunflower and
 a ring of sunlight bursts outward. Ember Wyrm (floating beads of lava rock
 with flame gills) is animated the same way; its special, **Heart Flare**, spreads
-its beads apart while its molten heart blazes. Specials are visual only.
+its beads apart while its molten heart blazes. Bonefire Dragon (a floating
+dragon skeleton with a blue soul flame burning in its ribcage) is animated too;
+its special, **Soul Lantern**, makes the soul rise out of the ribs while the
+ghost of the living dragon appears around the bones. Specials are visual only.
 
 
 **First found in the Beginner Qi Egg (starting island)**
