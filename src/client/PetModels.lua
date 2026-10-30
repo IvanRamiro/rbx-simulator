@@ -766,6 +766,12 @@ local MESH_LOOKS = {
     -- Length below its real 5.42 (wingspan) so the wings don't make it far bigger than the other pets
     PrismaticPhoenix = { Eyes = Color3.fromRGB(255, 150, 30), GlowEyes = true, Effect = "Glitter", Glow = Color3.fromRGB(255, 175, 130), Length = 4.2 },
     RuneSphinx = { Eyes = Color3.fromRGB(20, 140, 255), GlowEyes = true, Effect = "Stars", Glow = Color3.fromRGB(90, 200, 255), Length = 3.6 },
+    WorldrootColossus = { Eyes = Color3.fromRGB(110, 255, 90), GlowEyes = true, Effect = "Glitter", Glow = Color3.fromRGB(90, 235, 120), Length = 3.6 },
+    -- Length below its real 4.02 (long wispy tail) so it isn't far bigger than the other pets
+    ThousandYearDreamEater = { Eyes = Color3.fromRGB(40, 160, 255), GlowEyes = true, Effect = "Stars", Glow = Color3.fromRGB(170, 120, 255), Length = 3.7 },
+    -- Length below its real 4.81 (wingspan) so the wings don't make it far bigger than the other pets
+    EternalClockworkDragon = { Eyes = Color3.fromRGB(80, 220, 255), GlowEyes = true, Effect = "Sparks", Glow = Color3.fromRGB(255, 200, 90), Length = 4.3 },
+    HeavenbreakerApe = { Eyes = Color3.fromRGB(255, 190, 40), GlowEyes = true, Effect = "Sparks", Glow = Color3.fromRGB(255, 215, 110), Length = 3.4 },
     DreadfangCerberus = { Eyes = Color3.fromRGB(150, 40, 255), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(155, 55, 255), Length = 3.6 },
 }
 
