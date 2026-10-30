@@ -113,6 +113,16 @@ All 60 pets from the original concept roster are in the game, plus the retired N
 procedural low-poly models (`src/client/PetArchetypes.lua`) until they get their
 own Blender model.
 
+Every pet is its own species with its own anatomy, silhouette and face; no two
+share a body plan or head design.
+
+**Animated pets.** Sunscale Dragon is the first pet built as separate jointed
+parts (exported with `export_pet.py --rig`) and animated in code by
+`src/client/PetRig.lua`: idle, moving and flying poses, plus a special ability.
+Its special, **Solar Nova**, plays when its owner ranks up and every 25 seconds
+while cultivating: the coil rises, its corona of rays opens like a sunflower and
+a ring of sunlight bursts outward. Specials are visual only.
+
 
 **First found in the Beginner Qi Egg (starting island)**
 
@@ -140,7 +150,7 @@ own Blender model.
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
 | Magma Cub | Common | Lava | +10% |
-| Sunscale Dragon | Rare | Solar | +35% |
+| Sunscale Dragon ★ | Legendary | Solar | +60% |
 | Dawn Phoenix | Legendary | Fire | +60% |
 
 **First found in the Spirit Breeze Egg (starting island)**
@@ -183,7 +193,7 @@ own Blender model.
 | Moonfang Tiger | Rare | Moonlight | +55% |
 | Thousand-Eyed Guardian | Epic | Mysticism | +80% |
 | Ninefold Spirit Serpent | Legendary | Spiritual energy | +95% |
-| Worldroot Colossus | Mythical | Ancient nature | +160% |
+| Worldroot Colossus ★ | Mythical | Ancient nature | +160% |
 
 **First found in the Magma Heart Egg (Ember Peak)**
 
@@ -193,14 +203,14 @@ own Blender model.
 | Solar Butterfly | Uncommon | Solar energy | +30% |
 | Obsidian Guardian | Rare | Darkness and crystal | +55% |
 | Golden Mane Lion | Epic | Solar energy | +75% |
-| Bonefire Dragon | Legendary | Spectral fire | +90% |
+| Bonefire Dragon ★ | Legendary | Spectral fire | +90% |
 
 **First found in the Phoenix Ash Egg (Ember Peak)**
 
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
-| Dreadfang Cerberus | Epic | Shadow | +85% |
-| Prismatic Phoenix | Mythical | Rainbow energy | +170% |
+| Dreadfang Cerberus ★ | Epic | Shadow | +85% |
+| Prismatic Phoenix ★ | Mythical | Rainbow energy | +170% |
 
 **First found in the Celestial Egg (Moonlit Isle)**
 
@@ -226,22 +236,22 @@ own Blender model.
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
 | Shadowcoil | Rare | Shadow | +100% |
-| Rune Sphinx | Legendary | Ancient magic | +170% |
-| Thousand-Year Dream Eater | Mythical | Dreams | +280% |
+| Rune Sphinx ★ | Legendary | Ancient magic | +170% |
+| Thousand-Year Dream Eater ★ | Mythical | Dreams | +280% |
 | The Nameless One | Secret | Unknown cosmic energy | +420% |
 
 **First found in the Void Rift Egg (Origin Abyss)**
 
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
-| Heavenbreaker Ape | Legendary | Heavenly power | +205% |
+| Heavenbreaker Ape ★ | Legendary | Heavenly power | +205% |
 | Voidscale Hydra | Mythical | Void | +340% |
 
 **First found in the Primordial Abyss Egg (Origin Abyss)**
 
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
-| Eternal Clockwork Dragon | Secret | Time | +600% |
+| Eternal Clockwork Dragon ★ | Secret | Time | +600% |
 
 Nine-Tail Moonfox (Mythical) no longer hatches; players who own one keep it.
 
@@ -263,9 +273,9 @@ goes to the next pet that has one, so later eggs give rarer pets far more often.
 | Jade Grove | Jade Spirit Egg | Qi Gatherer | Moss Golem 45%, Mycelium Sprite 27%, Jade Spirit Panda 15%, Jade Antler Deer 8%, Golden Kirin 5% |
 | Jade Grove | Bloomwood Egg | Foundation Adept | Dream Moth 45%, Crystal Snail 27%, Prism Armadillo 15%, Lantern Warden 8%, Jade Wyrm Turtle 5% |
 | Jade Grove | Ancient Grove Egg | Core Initiate | Echo Bat 45%, Qi Clockwork Finch 27%, Moonfang Tiger 15%, Thousand-Eyed Guardian 8%, Ninefold Spirit Serpent 4%, Worldroot Colossus 1% |
-| Ember Peak | Inferno Egg | Qi Awakener | Magma Cub 45%, Ember Wyrm 27%, Sunscale Dragon 23%, Dawn Phoenix 5% |
+| Ember Peak | Inferno Egg | Qi Awakener | Magma Cub 45%, Ember Wyrm 50%, Sunscale Dragon 2.5%, Dawn Phoenix 2.5% |
 | Ember Peak | Magma Heart Egg | Perfect Foundation | Sand Phantom 45%, Solar Butterfly 27%, Obsidian Guardian 15%, Golden Mane Lion 8%, Bonefire Dragon 5% |
-| Ember Peak | Phoenix Ash Egg | Core Adept | Magma Cub 45%, Ember Wyrm 27%, Sunscale Dragon 15%, Dreadfang Cerberus 8%, Bonefire Dragon 4%, Prismatic Phoenix 1% |
+| Ember Peak | Phoenix Ash Egg | Core Adept | Magma Cub 45%, Ember Wyrm 42%, Dreadfang Cerberus 8%, Sunscale Dragon 2%, Bonefire Dragon 2%, Prismatic Phoenix 1% |
 | Moonlit Isle | Celestial Egg | Soul Awakening | Starfall Fox 45%, Cosmic Jellyfish 27%, Nebula Owl 15%, Celestial Snow Leopard 8%, Comet Stag 4%, Celestial Pearl Dragon 1% |
 | Moonlit Isle | Astral Sanctum Egg | Ascendant Initiate | Starfall Fox 45%, Cosmic Jellyfish 27%, Nebula Owl 15%, Eclipse Cat 8%, Timekeeper Tortoise 4%, Galaxy Manta 1% |
 | Moonlit Isle | Heavenly Throne Egg | Lesser Immortal | Celestial Snow Leopard 47.5%, Eclipse Cat 47.5%, Comet Stag 2%, Timekeeper Tortoise 2%, Celestial Pearl Dragon 0.5%, Galaxy Manta 0.5% |

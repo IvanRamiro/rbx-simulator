@@ -13,6 +13,13 @@ Writes (assets/pets):
                            "<PetId>_Glow_<rrggbb>" object per glow colour
     <PetId>_palette.png    The palette (also embedded in the FBX)
 The working file is left untouched (nothing is saved).
+
+Animated pets: --rig keeps each rig part separate instead of one body. Every
+object carries a custom property "rig" naming its part (Body, Head, WingL...).
+Each part becomes "<PetId>_<Part>" plus "<PetId>_<Part>_Glow_<rrggbb>", and
+marker objects (custom property "marker") become tiny meshes the game reads
+positions from: "Pivot_<Part>" -> "<PetId>_Pivot_<Part>" (the part's joint),
+"Point_<Name>" -> "<PetId>_Point_<Name>" (an effect attachment).
 """
 
 import os
@@ -32,7 +39,9 @@ PET_ID = ARGS[0]
 # of assets/pets, and skips the pet mesh data (src/shared/PetMeshData)
 if "--out" in ARGS:
     OUTPUT_DIR = os.path.join(ROOT, ARGS[ARGS.index("--out") + 1])
-WRITE_MESH_DATA = "--out" not in ARGS
+RIG = "--rig" in ARGS
+# The runtime mesh data describes one body, so rigged pets skip it
+WRITE_MESH_DATA = "--out" not in ARGS and not RIG
 
 
 def to_srgb(channel):
@@ -73,6 +82,33 @@ def join(objects, name):
     joined.name = name
     joined.data.name = name
     return joined
+
+
+def export_rig_parts(copies, is_glow):
+    """Joins each rig part on its own (body and per-colour glow), and names the
+    joint and effect markers so the game can find them."""
+    exported = []
+    parts = {}
+    for obj in copies:
+        kind = obj.get("marker")
+        if kind:
+            # Pivot_<Part> / Point_<Name>, as built; the copy may have gained a suffix
+            label = obj.name.split(".")[0]
+            exported.append(join([obj], PET_ID + "_" + label))
+            continue
+        parts.setdefault(obj.get("rig", "Body"), []).append(obj)
+    for part, objects in parts.items():
+        # Sort before joining: a join deletes all but one of the objects it merges
+        solid = [obj for obj in objects if not is_glow(obj)]
+        glow_groups = {}
+        for obj in objects:
+            if is_glow(obj):
+                glow_groups.setdefault(base_color(obj.material_slots[0].material), []).append(obj)
+        if solid:
+            exported.append(join(solid, PET_ID + "_" + part))
+        for color, group in glow_groups.items():
+            exported.append(join(group, PET_ID + "_" + part + "_Glow_%02x%02x%02x" % color))
+    return exported
 
 
 def main():
@@ -136,9 +172,12 @@ def main():
     for obj in body_parts:
         obj.data.materials.clear()
         obj.data.materials.append(palette)
-    exported = [join(body_parts, PET_ID + "_Body")]
-    for color, objects in glow_groups.items():
-        exported.append(join(objects, PET_ID + "_Glow_%02x%02x%02x" % color))
+    if RIG:
+        exported = export_rig_parts(copies, is_glow)
+    else:
+        exported = [join(body_parts, PET_ID + "_Body")]
+        for color, objects in glow_groups.items():
+            exported.append(join(objects, PET_ID + "_Glow_%02x%02x%02x" % color))
     for obj in exported:
         for polygon in obj.data.polygons:
             polygon.use_smooth = False

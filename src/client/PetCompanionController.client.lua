@@ -18,6 +18,7 @@ local RunService = game:GetService("RunService")
 
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local PetModels = require(script.Parent:WaitForChild("PetModels"))
+local PetRig = require(script.Parent:WaitForChild("PetRig"))
 local AuraBuilder = require(script.Parent:WaitForChild("AuraBuilder"))
 
 local FOLLOW_SPACING = 4.8 -- Studs between pets side by side
@@ -30,6 +31,7 @@ local BOB_SPEED = 2
 local ORBIT_RADIUS = 6.5 -- While cultivating
 local ORBIT_HEIGHT = 1.6
 local ORBIT_SPEED = 0.6 -- Radians per second
+local NOVA_INTERVAL = 25 -- Seconds between an animated pet's special ability while cultivating
 
 local container = Instance.new("Folder")
 container.Name = "PetCompanions"
@@ -38,7 +40,8 @@ container.Parent = workspace
 -- companions[player] = {
 --     key = "AquaWisp,VoltFox", rootPart = the root part the pets follow,
 --     version = PetModels.Version the pets were built with,
---     pets = { { model, rootPart, cframe, petId, aura } },
+--     pets = { { model, rootPart, cframe, petId, aura, rig, speed, nextNova } },
+--     rank = the owner's rank number last frame (a rise sets off the pets' specials),
 -- }
 local companions = {}
 
@@ -59,6 +62,13 @@ local function getRankId(player)
     local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
     local rank = rankValue and Ranks.getRank(rankValue.Value)
     return rank and rank.Id
+end
+
+-- The owner's rank as a number (higher is better), or nil before it loads
+local function getRankNumber(player)
+    local leaderstats = player:FindFirstChild("leaderstats")
+    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
+    return rankValue and Ranks.getIndex(rankValue.Value)
 end
 
 -- Gives the pet its element's aura while its owner cultivates, and fades it
@@ -118,7 +128,14 @@ local function syncPets(player, entry)
             model.Parent = container
             -- Start at the player; the first frames glide them into place
             petRoot.CFrame = rootPart.CFrame
-            table.insert(entry.pets, { model = model, rootPart = petRoot, cframe = rootPart.CFrame, petId = petId })
+            table.insert(entry.pets, {
+                model = model,
+                rootPart = petRoot,
+                cframe = rootPart.CFrame,
+                petId = petId,
+                rig = PetModels.getRig(model),
+                speed = 0,
+            })
         end
     end
 end
@@ -164,11 +181,14 @@ local function updateCompanions(deltaTime)
         local rootPart = entry.rootPart
         for index, pet in entry.pets do
             local target = getTargetCFrame(player, rootPart, index, #entry.pets, now)
+            local previous = pet.cframe.Position
             if (pet.cframe.Position - target.Position).Magnitude > SNAP_DISTANCE then
                 pet.cframe = target
             else
                 pet.cframe = pet.cframe:Lerp(target, blend)
             end
+            local moved = (pet.cframe.Position - previous).Magnitude / math.max(deltaTime, 1e-3)
+            pet.speed += (math.min(moved, 60) - pet.speed) * math.min(1, deltaTime * 8)
 
             table.insert(parts, pet.rootPart)
             table.insert(cframes, pet.cframe)
@@ -177,6 +197,35 @@ local function updateCompanions(deltaTime)
 
     if #parts > 0 then
         workspace:BulkMoveTo(parts, cframes, Enum.BulkMoveMode.FireCFrameChanged)
+    end
+
+    -- Animated pets: pose their joints, and set off their special ability when
+    -- the owner ranks up and every so often while cultivating
+    for player, entry in companions do
+        local rank = getRankNumber(player)
+        local rankedUp = entry.rank ~= nil and rank ~= nil and rank > entry.rank
+        entry.rank = rank
+        local flying = player:GetAttribute("IsFlying") == true
+        local cultivating = player:GetAttribute("IsCultivating") == true
+        for _, pet in entry.pets do
+            local rig = pet.rig
+            if not rig then
+                continue
+            end
+            if cultivating then
+                pet.nextNova = pet.nextNova or now + 6
+                if now >= pet.nextNova then
+                    pet.nextNova = now + NOVA_INTERVAL
+                    PetRig.nova(rig)
+                end
+            else
+                pet.nextNova = nil
+            end
+            if rankedUp then
+                PetRig.nova(rig)
+            end
+            PetRig.update(rig, deltaTime, { speed = pet.speed, flying = flying })
+        end
     end
 
     -- Pet auras, placed around the pets' new positions

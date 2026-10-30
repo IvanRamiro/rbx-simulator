@@ -205,7 +205,7 @@ local GameConfig = {
 
         -- From the Inferno Egg (Ember Peak)
         MagmaCub = { DisplayName = "Magma Cub", Rarity = "Common", Theme = "Lava", QiBonusPercent = 10 },
-        SunscaleDragon = { DisplayName = "Sunscale Dragon", Rarity = "Rare", Theme = "Solar", QiBonusPercent = 35 },
+        SunscaleDragon = { DisplayName = "Sunscale Dragon", Rarity = "Legendary", Theme = "Solar", QiBonusPercent = 60 },
         DawnPhoenix = { DisplayName = "Dawn Phoenix", Rarity = "Legendary", Theme = "Fire", QiBonusPercent = 60 },
         -- First found in the Spirit Breeze Egg (starting island)
         WindSprite = { DisplayName = "Wind Sprite", Rarity = "Common", Theme = "Wind", QiBonusPercent = 10 },
@@ -339,9 +339,10 @@ local GameConfig = {
             Cooldown = 45,
             Pool = {
                 { PetId = "MagmaCub", Weight = 45 },
-                { PetId = "EmberWyrm", Weight = 27 },
-                { PetId = "SunscaleDragon", Weight = 23 }, -- Rare, plus the Epic share
-                { PetId = "DawnPhoenix", Weight = 5 }, -- Legendary, plus the Mythical and Secret shares
+                { PetId = "EmberWyrm", Weight = 50 }, -- Uncommon, plus the Rare and Epic shares
+                -- The two Legendaries share the Legendary, Mythical and Secret shares
+                { PetId = "SunscaleDragon", Weight = 2.5 },
+                { PetId = "DawnPhoenix", Weight = 2.5 },
             },
         },
 
@@ -419,10 +420,11 @@ local GameConfig = {
             Cooldown = 45,
             Pool = {
                 { PetId = "MagmaCub", Weight = 45 },
-                { PetId = "EmberWyrm", Weight = 27 },
-                { PetId = "SunscaleDragon", Weight = 15 },
+                { PetId = "EmberWyrm", Weight = 42 }, -- Uncommon, plus the Rare share
                 { PetId = "DreadfangCerberus", Weight = 8 },
-                { PetId = "BonefireDragon", Weight = 4 },
+                -- The two Legendaries share the Legendary share
+                { PetId = "SunscaleDragon", Weight = 2 },
+                { PetId = "BonefireDragon", Weight = 2 },
                 { PetId = "PrismaticPhoenix", Weight = 1 },
             },
         },
