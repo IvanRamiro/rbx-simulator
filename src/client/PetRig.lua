@@ -62,6 +62,39 @@ local function animateOuroboros(rig, s, moving, fly, nova)
     end
 end
 
+-- Ember Wyrm, the Magma Bead Wyrm: floating beads of lava rock held together by
+-- their own heat. A swimming wave rolls through the beads, the flame gills flutter.
+local WYRM_CHAIN = { "Head", "Heart", "Seg1", "Seg2", "Seg3", "Seg4", "Seg5", "Seg6" }
+local function animateBeadWyrm(rig, s, moving, fly, nova)
+    local m, u, t = rig.motors, rig.unit, s.time
+    s.phase = (s.phase or 0) + rig.deltaTime * (2.2 + 3 * moving + 4 * fly)
+    local rise = (0.035 + 0.05 * moving + 0.02 * fly) * u
+    local sway = (0.035 + 0.06 * moving) * u
+    for index, name in WYRM_CHAIN do
+        local wave = s.phase - (index - 1) * 0.75
+        -- the beads drift apart for the Heart Flare, then pull back together
+        local spread = (index - 1) * 0.07 * u * nova
+        local offset = Vector3.new(sway * math.sin(wave * 0.8 + 1), rise * math.sin(wave), spread)
+        local pitch = -0.28 * math.cos(wave) * (rise / u) * 10
+        if name == "Head" then
+            pitch += 0.06 * math.sin(t * 1.3) + 0.45 * nova
+            pose(m.Head, CFrame.new(offset) * CFrame.Angles(pitch, 0.18 * math.sin(t * 0.7) * (1 - nova), 0))
+        else
+            pose(m[name], CFrame.new(offset) * CFrame.Angles(pitch, 0.12 * math.sin(wave * 0.8), 0))
+        end
+    end
+    -- flame gills flutter like fire, and flare wide for the Heart Flare
+    for name, side in rig.sides do
+        if string.sub(name, 1, 4) == "Gill" then
+            local k = tonumber(string.sub(name, -1)) or 1
+            local flutter = 0.18 * math.sin(t * 7 + k * 1.3) + 0.1 * math.sin(t * 11 + k)
+            pose(m[name], CFrame.Angles(0.1 * math.sin(t * 5 + k), side * (0.15 * flutter + 0.35 * nova), side * (flutter + 0.25 * fly)))
+        end
+    end
+    -- the tail flame flicks
+    pose(m.Tail, CFrame.Angles(0.15 * math.sin(t * 4), 0.35 * math.sin(t * 3.1), 0))
+end
+
 -- Which parts each animated pet has, how they hang together, and how it moves.
 --   Joints      part -> the part it hangs from ("Root" is the pet's root part)
 --   Attached    parts welded to another part without a joint
@@ -89,6 +122,7 @@ PetRig.Profiles = {
             Sparks = { "Head_Eye" },
             Trail = "Tail_Tip",
             Axis = "Corona_Axis",
+            Blast = "Sunburst",
         },
         Colors = {
             Gold = Color3.fromHex("FFD447"),
@@ -104,11 +138,63 @@ for index = 1, 12 do
     PetRig.Profiles.SunscaleDragon.Joints[string.format("Ray%02d", index)] = "Corona"
 end
 
+PetRig.Profiles.EmberWyrm = {
+    -- Every bead floats on its own, hung straight from the root; the gills hang from the head
+    Joints = {
+        Head = "Root",
+        Heart = "Root",
+        Seg1 = "Root",
+        Seg2 = "Root",
+        Seg3 = "Root",
+        Seg4 = "Root",
+        Seg5 = "Root",
+        Seg6 = "Root",
+        Tail = "Seg6",
+        GillL1 = "Head",
+        GillL2 = "Head",
+        GillL3 = "Head",
+        GillR1 = "Head",
+        GillR2 = "Head",
+        GillR3 = "Head",
+    },
+    Attached = {},
+    SeeThrough = {},
+    Effects = {
+        Motes = "Heart",
+        Light = "Heart",
+        Pulse = "Heart",
+        Burst = "Heart",
+        Sparks = { "GillL1_Tip", "GillR1_Tip" },
+        Trail = "Tail_Tip",
+        Blast = "Eruption",
+    },
+    -- Fire colours under the shared names the effects use
+    Colors = {
+        Gold = Color3.fromRGB(255, 120, 30),
+        Amber = Color3.fromRGB(170, 30, 8),
+        Orange = Color3.fromRGB(255, 70, 15),
+        Sun = Color3.fromRGB(255, 180, 60),
+        Ivory = Color3.fromRGB(255, 200, 140),
+    },
+    Animate = animateBeadWyrm,
+}
+
 PetRig.NOVA_TIME = 2.6 -- Seconds the special ability lasts
 local NOVA_BURST_AT = 0.42 -- Fraction of the way through when the blast goes off
 
+-- A pet is animated when it has a profile and its imported model carries joint pivots
+-- (an older, single-mesh import of the same pet is built the plain way)
 function PetRig.isRigged(petId, template)
-    return PetRig.Profiles[petId] ~= nil and template:FindFirstChild(petId .. "_Pivot_Body", true) ~= nil
+    local profile = PetRig.Profiles[petId]
+    if not profile then
+        return false
+    end
+    for name in profile.Joints do
+        if template:FindFirstChild(petId .. "_Pivot_" .. name, true) then
+            return true
+        end
+    end
+    return false
 end
 
 local function prepare(part)
@@ -250,6 +336,7 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
         unit = unit,
         parts = {},
         motors = {},
+        sides = {}, -- joint -> 1 (pet's +X side), -1 (-X side) or 0 (centre line)
         points = {},
         pointPositions = {},
         pulseGlow = {},
@@ -325,6 +412,7 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
             motor.C1 = part.CFrame:Inverse() * CFrame.new(pivot)
             motor.Parent = part
             rig.motors[name] = motor
+            rig.sides[name] = if pivot.X > 0.01 then 1 elseif pivot.X < -0.01 then -1 else 0
         else
             warn(string.format("PetRig: %s is missing the part, parent or pivot for %s", petId, tostring(name)))
         end
@@ -376,32 +464,13 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
     return rig
 end
 
--- The special ability's blast: a ring of light racing outward, rays and sparks.
-local function burst(rig)
-    local profile = rig.profile
-    local origin = (rig.parts[profile.Effects.Burst] or rig.rootPart).Position
-    local colors = profile.Colors
-    local u = rig.unit
-    local facing = rig.rootPart.CFrame - rig.rootPart.Position
+-- Each species' special-ability blast. They share a temporary folder of
+-- anchored Neon pieces (`fx.neon`), cleaned up a moment after the blast.
+local Blasts = {}
 
-    local folder = Instance.new("Folder")
-    folder.Name = "PetSpecial"
-    folder.Parent = rig.model.Parent or workspace
-
-    local function neon(size, cframe, color)
-        local part = Instance.new("Part")
-        part.Anchored = true
-        part.CanCollide = false
-        part.CanTouch = false
-        part.CanQuery = false
-        part.CastShadow = false
-        part.Material = Enum.Material.Neon
-        part.Color = color
-        part.Size = size
-        part.CFrame = cframe
-        part.Parent = folder
-        return part
-    end
+-- Solar Nova: a ring of light racing outward, sun rays bursting up, a white flash
+function Blasts.Sunburst(rig, fx)
+    local colors, u, origin, facing, neon = rig.profile.Colors, rig.unit, fx.origin, fx.facing, fx.neon
 
     -- The expanding ring: segments flying outward in a flat circle
     local ringInfo = TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -444,8 +513,88 @@ local function burst(rig)
     if rig.burst then
         rig.burst:Emit(45)
     end
+end
 
-    Debris:AddItem(folder, 1.2)
+-- Heart Flare: the molten heart erupts. Lava droplets arc up and rain back down,
+-- a low ripple of heat rolls across the ground and a deep red glow throbs.
+function Blasts.Eruption(rig, fx)
+    local colors, u, origin, facing, neon = rig.profile.Colors, rig.unit, fx.origin, fx.facing, fx.neon
+
+    -- Lava droplets thrown up in arcs: each rises, then falls and fades
+    for index = 1, 14 do
+        local angle = index / 14 * 2 * math.pi + math.random() * 0.4
+        local out = facing:VectorToWorldSpace(Vector3.new(math.cos(angle), 0, math.sin(angle)))
+        local reach = (1.6 + math.random() * 1.8) * u
+        local height = (1.2 + math.random() * 1.4) * u
+        local size = (0.12 + math.random() * 0.12) * u
+        local drop = neon(Vector3.one * size, CFrame.new(origin), if index % 3 == 0 then colors.Sun else colors.Orange)
+        drop.Shape = Enum.PartType.Ball
+        local peak = origin + out * reach * 0.55 + Vector3.new(0, height, 0)
+        local land = origin + out * reach - Vector3.new(0, 1.2 * u, 0)
+        local rise = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local fall = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        local up = TweenService:Create(drop, rise, { CFrame = CFrame.new(peak) })
+        up.Completed:Once(function()
+            TweenService:Create(drop, fall, { CFrame = CFrame.new(land), Size = Vector3.one * size * 0.4, Transparency = 1, Color = colors.Amber }):Play()
+        end)
+        up:Play()
+    end
+
+    -- A low ripple of heat: a few flat slabs sliding outward just below the pet
+    local rippleInfo = TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+    for index = 1, 12 do
+        local angle = index / 12 * 2 * math.pi
+        local out = facing:VectorToWorldSpace(Vector3.new(math.cos(angle), 0, math.sin(angle)))
+        local base = origin - Vector3.new(0, 0.6 * u, 0)
+        local start = CFrame.lookAt(base + out * 0.4 * u, base + out * 2 * u)
+        local slab = neon(Vector3.new(0.5 * u, 0.06 * u, 0.5 * u), start, colors.Amber)
+        TweenService:Create(slab, rippleInfo, { CFrame = start + out * 4 * u, Size = Vector3.new(1.4 * u, 0.03 * u, 0.3 * u), Transparency = 1 }):Play()
+    end
+
+    -- A deep red throb of light, no flash
+    local glow = neon(Vector3.one * 0.4 * u, CFrame.new(origin), colors.Orange)
+    glow.Shape = Enum.PartType.Ball
+    glow.Transparency = 0.4
+    local throb = TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+    TweenService:Create(glow, throb, { Size = Vector3.one * 2.2 * u, Transparency = 1 }):Play()
+    local light = Instance.new("PointLight")
+    light.Color = colors.Amber
+    light.Range = 12 * u
+    light.Brightness = 5
+    light.Parent = glow
+    TweenService:Create(light, throb, { Brightness = 0 }):Play()
+    if rig.burst then
+        rig.burst:Emit(30)
+    end
+end
+
+-- Plays the profile's blast (Effects.Blast) around the pet
+local function burst(rig)
+    local profile = rig.profile
+    local folder = Instance.new("Folder")
+    folder.Name = "PetSpecial"
+    folder.Parent = rig.model.Parent or workspace
+
+    local fx = {
+        origin = (rig.parts[profile.Effects.Burst] or rig.rootPart).Position,
+        facing = rig.rootPart.CFrame - rig.rootPart.Position,
+        neon = function(size, cframe, color)
+            local part = Instance.new("Part")
+            part.Anchored = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part.CastShadow = false
+            part.Material = Enum.Material.Neon
+            part.Color = color
+            part.Size = size
+            part.CFrame = cframe
+            part.Parent = folder
+            return part
+        end,
+    }
+    Blasts[profile.Effects.Blast or "Sunburst"](rig, fx)
+    Debris:AddItem(folder, 1.4)
 end
 
 -- Starts the pet's special ability (for Sunscale Dragon, the Solar Nova)

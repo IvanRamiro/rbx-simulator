@@ -121,7 +121,9 @@ parts (exported with `export_pet.py --rig`) and animated in code by
 `src/client/PetRig.lua`: idle, moving and flying poses, plus a special ability.
 Its special, **Solar Nova**, plays when its owner ranks up and every 25 seconds
 while cultivating: the coil rises, its corona of rays opens like a sunflower and
-a ring of sunlight bursts outward. Specials are visual only.
+a ring of sunlight bursts outward. Ember Wyrm (floating beads of lava rock
+with flame gills) is animated the same way; its special, **Heart Flare**, spreads
+its beads apart while its molten heart blazes. Specials are visual only.
 
 
 **First found in the Beginner Qi Egg (starting island)**

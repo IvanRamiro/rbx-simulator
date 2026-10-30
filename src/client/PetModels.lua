@@ -764,7 +764,8 @@ end
 local NAVY = Color3.fromRGB(25, 35, 90)
 local MESH_LOOKS = {
     AquaWisp = { Eyes = NAVY, Effect = "Bubbles", Glow = Color3.fromRGB(110, 205, 255), Length = 3.12 },
-    EmberWyrm = { Eyes = Color3.fromRGB(255, 120, 40), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(255, 115, 35), Length = 3.31 },
+    -- Animated (PetRig): floating beads of lava rock
+    EmberWyrm = { Eyes = Color3.fromRGB(255, 120, 40), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(255, 115, 35), Length = 2.9 },
     LunarHopper = { Eyes = NAVY, Effect = "Stars", Glow = Color3.fromRGB(150, 160, 255), Length = 2.58 },
     VoltFox = { Eyes = Color3.fromRGB(70, 45, 20), Effect = "Sparks", Glow = Color3.fromRGB(255, 235, 110), Length = 2.91 },
     GoldenKirin = { Eyes = Color3.fromRGB(20, 110, 100), Effect = "Glitter", Gems = true, Glow = Color3.fromRGB(255, 215, 110), Length = 2.99 },
