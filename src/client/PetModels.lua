@@ -637,7 +637,7 @@ local MESH_LOOKS = {
     EmberWyrm = { Eyes = Color3.fromRGB(255, 120, 40), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(255, 115, 35), Length = 2.9 },
     LunarHopper = { Eyes = NAVY, Effect = "Stars", Glow = Color3.fromRGB(150, 160, 255), Length = 2.58 },
     VoltFox = { Eyes = Color3.fromRGB(70, 45, 20), Effect = "Sparks", Glow = Color3.fromRGB(255, 235, 110), Length = 2.91 },
-    GoldenKirin = { Eyes = Color3.fromRGB(20, 110, 100), Effect = "Glitter", Gems = true, Glow = Color3.fromRGB(255, 215, 110), Length = 2.99 },
+    GoldenKirin = { Eyes = Color3.fromRGB(255, 190, 60), GlowEyes = true, Glow = Color3.fromRGB(70, 235, 195), Length = 3.6 },
     AstralWhale = { Eyes = Color3.fromRGB(20, 25, 70), Effect = "Stars", Glow = Color3.fromRGB(130, 125, 255), Length = 4.0 },
     OriginSerpent = { Eyes = Color3.fromRGB(60, 200, 255), GlowEyes = true, Effect = "Stars", Glow = Color3.fromRGB(80, 190, 255), Length = 2.9 },
     SunscaleDragon = { Eyes = Color3.fromRGB(255, 176, 32), GlowEyes = true, Glow = Color3.fromRGB(255, 212, 71), Length = 3.3 },

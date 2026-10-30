@@ -140,6 +140,35 @@ local function animateHellhound(rig, s, moving, fly, nova)
     pose(m.Tail2, CFrame.Angles(0.1 * math.sin(t * 1.1 - 0.8), (0.3 + 0.2 * moving) * math.sin(t * (2.2 + 4 * moving + 4 * fly) - 0.9), 0))
 end
 
+local QILIN_LEGS = { LegFL = 0, LegFR = 0.35, LegBL = math.pi, LegBR = math.pi + 0.35 }
+local function animateQilin(rig, s, moving, fly, nova)
+    local m, u, t = rig.motors, rig.unit, s.time
+    local pace = math.max(moving, fly)
+    s.stride = (s.stride or 0) + rig.deltaTime * (1.6 + 6.5 * pace)
+    local stride = s.stride
+    local reach = 0.18 + 0.4 * pace
+
+    pose(m.Body, CFrame.new(0, (0.06 * math.sin(t * 1.3) + 0.07 * math.sin(stride) * pace) * u, 0)
+        * CFrame.Angles(0.07 * math.sin(stride + 0.6) * pace - 0.42 * nova, 0, 0.04 * math.sin(t * 0.7)))
+
+    for name, phase in QILIN_LEGS do
+        local front = string.sub(name, 4, 4) == "F"
+        local swing = math.sin(stride + phase)
+        local fold = math.max(0, math.sin(stride + phase + 1.3))
+        local rear = if front then 0.7 * nova else -0.25 * nova
+        pose(m[name], CFrame.Angles(reach * swing + (if front then 0.12 else -0.12) * fly + rear, 0, 0))
+        pose(m[name .. "2"], CFrame.Angles((if front then -1 else 1) * ((0.25 + 0.55 * pace) * fold + 0.5 * nova), 0, 0))
+    end
+
+    local look = 0.3 * math.sin(t * 0.4) * (1 - pace)
+    pose(m.Neck, CFrame.Angles(0.05 * math.sin(t * 1.3 - 0.5) - 0.06 * math.sin(stride) * pace + 0.25 * nova, look * 0.5, 0))
+    pose(m.Head, CFrame.Angles(0.06 * math.sin(t * 0.9) + 0.35 * nova, look * 0.6, 0.06 * math.sin(t * 0.5)))
+
+    local sway = math.sin(t * (1.4 + 2 * pace))
+    pose(m.Tail1, CFrame.Angles(0.12 * math.sin(t * 1.2) - 0.1 * pace + 0.3 * nova, 0.25 * sway, 0))
+    pose(m.Tail2, CFrame.Angles(0.15 * math.sin(t * 1.2 - 0.9) + 0.2 * nova, 0.35 * math.sin(t * (1.4 + 2 * pace) - 1.1), 0))
+end
+
 PetRig.Profiles = {
     SunscaleDragon = {
         Joints = {
@@ -289,6 +318,43 @@ PetRig.Profiles.DreadfangCerberus = {
         Ivory = Color3.fromRGB(225, 250, 255),
     },
     Animate = animateHellhound,
+}
+
+PetRig.Profiles.GoldenKirin = {
+    Joints = {
+        Body = "Root",
+        Neck = "Body",
+        Head = "Neck",
+        LegFL = "Body",
+        LegFR = "Body",
+        LegBL = "Body",
+        LegBR = "Body",
+        LegFL2 = "LegFL",
+        LegFR2 = "LegFR",
+        LegBL2 = "LegBL",
+        LegBR2 = "LegBR",
+        Tail1 = "Body",
+        Tail2 = "Tail1",
+    },
+    Attached = {},
+    SeeThrough = {},
+    Effects = {
+        Motes = "Body",
+        Light = "Body",
+        Pulse = "Head",
+        Burst = "Body",
+        Sparks = { "Head_EyeL", "Head_EyeR" },
+        Trail = "Tail2_Tip",
+        Blast = "AuspiciousClouds",
+    },
+    Colors = {
+        Gold = Color3.fromRGB(70, 235, 195),
+        Amber = Color3.fromRGB(70, 90, 230),
+        Orange = Color3.fromRGB(255, 150, 60),
+        Sun = Color3.fromRGB(255, 220, 140),
+        Ivory = Color3.fromRGB(235, 255, 248),
+    },
+    Animate = animateQilin,
 }
 
 PetRig.NOVA_TIME = 2.6
@@ -739,6 +805,55 @@ function Blasts.HellBreath(rig, fx)
     end
     if rig.burst then
         rig.burst:Emit(25)
+    end
+end
+
+function Blasts.AuspiciousClouds(rig, fx)
+    local colors, u, origin, facing, neon = rig.profile.Colors, rig.unit, fx.origin, fx.facing, fx.neon
+
+    for index = 1, 14 do
+        local angle = index / 14 * 2 * math.pi
+        local out = facing:VectorToWorldSpace(Vector3.new(math.cos(angle), 0, math.sin(angle)))
+        local size = (0.35 + (index % 3) * 0.12) * u
+        local puff = neon(Vector3.one * size, CFrame.new(origin + out * 0.5 * u), if index % 2 == 0 then colors.Gold else colors.Amber)
+        puff.Shape = Enum.PartType.Ball
+        puff.Transparency = 0.25
+        local swirl = facing:VectorToWorldSpace(Vector3.new(math.cos(angle + 0.9), 0, math.sin(angle + 0.9)))
+        TweenService:Create(puff, TweenInfo.new(1.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            CFrame = CFrame.new(origin + swirl * 4.2 * u + Vector3.new(0, (0.6 + (index % 4) * 0.35) * u, 0)),
+            Size = Vector3.one * size * 2.4,
+            Transparency = 1,
+        }):Play()
+    end
+
+    for index = 1, 9 do
+        local angle = index / 9 * 2 * math.pi + 0.3
+        local out = facing:VectorToWorldSpace(Vector3.new(math.cos(angle), 0, math.sin(angle)))
+        local base = origin + out * 1.2 * u - Vector3.new(0, 0.8 * u, 0)
+        local flame = neon(Vector3.new(0.12 * u, 0.5 * u, 0.12 * u), CFrame.new(base), if index % 3 == 0 then colors.Sun else colors.Orange)
+        TweenService:Create(flame, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            CFrame = CFrame.new(base + Vector3.new(0, 3.2 * u, 0) + out * 0.8 * u) * CFrame.Angles(0, angle * 2, 0.4),
+            Size = Vector3.new(0.04 * u, 1.6 * u, 0.04 * u),
+            Transparency = 1,
+        }):Play()
+    end
+
+    local ring = neon(Vector3.new(0.1 * u, 1 * u, 1 * u), CFrame.new(origin - Vector3.new(0, 0.9 * u, 0)) * CFrame.Angles(0, 0, math.pi / 2), colors.Gold)
+    ring.Shape = Enum.PartType.Cylinder
+    ring.Transparency = 0.35
+    TweenService:Create(ring, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = Vector3.new(0.04 * u, 9 * u, 9 * u),
+        Transparency = 1,
+    }):Play()
+
+    local light = Instance.new("PointLight")
+    light.Color = colors.Gold
+    light.Range = 14 * u
+    light.Brightness = 5
+    light.Parent = ring
+    TweenService:Create(light, TweenInfo.new(1), { Brightness = 0 }):Play()
+    if rig.burst then
+        rig.burst:Emit(35)
     end
 end
 

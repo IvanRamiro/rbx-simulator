@@ -129,7 +129,11 @@ its special, **Soul Lantern**, makes the soul rise out of the ribs while the
 ghost of the living dragon appears around the bones. Dreadfang Cerberus (a
 hulking three-headed hellhound, its dark hide split by glowing cyan cracks) trots
 on the ground, gallops in the air and moves each head on its own; its special,
-**Hellfire Breath**, rears all three heads and blasts cyan fire from every mouth. Specials are visual only.
+**Hellfire Breath**, rears all three heads and blasts cyan fire from every mouth.
+Golden Kirin (a white-furred qilin with branching antlers, a mane of teal cloud
+curls and teal-scaled legs) treads the air on cloud steps and gallops when it
+moves; its special, **Auspicious Clouds**, rears it up and throws off a ring of
+cloud puffs and rising orange flames. Specials are visual only.
 
 
 **First found in the Beginner Qi Egg (starting island)**
