@@ -765,6 +765,7 @@ local MESH_LOOKS = {
     BonefireDragon = { Eyes = Color3.fromRGB(255, 120, 40), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(255, 110, 30), Length = 4 },
     -- Length below its real 5.42 (wingspan) so the wings don't make it far bigger than the other pets
     PrismaticPhoenix = { Eyes = Color3.fromRGB(255, 150, 30), GlowEyes = true, Effect = "Glitter", Glow = Color3.fromRGB(255, 175, 130), Length = 4.2 },
+    RuneSphinx = { Eyes = Color3.fromRGB(20, 140, 255), GlowEyes = true, Effect = "Stars", Glow = Color3.fromRGB(90, 200, 255), Length = 3.6 },
     DreadfangCerberus = { Eyes = Color3.fromRGB(150, 40, 255), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(155, 55, 255), Length = 3.6 },
 }
 

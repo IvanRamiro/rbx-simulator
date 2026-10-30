@@ -2,3 +2,6 @@
 *.blend1
 # Texture folders Studio's 3D Importer extracts next to FBX files
 *.fbm/
+
+# Blender working file (each pet is saved to tools/blender/<PetId>.blend)
+Untitled.blend
