@@ -120,9 +120,13 @@ share a body plan or head design.
 **Animated pets.** Sunscale Dragon is the first pet built as separate jointed
 parts (exported with `export_pet.py --rig`) and animated in code by
 `src/client/PetRig.lua`: idle, moving and flying poses, plus a special ability.
-Its special, **Solar Nova**, plays when its owner ranks up and every 25 seconds
-while cultivating: the coil rises, its corona of rays opens like a sunflower and
-a ring of sunlight bursts outward. Ember Wyrm (floating beads of lava rock
+Specials play when the owner ranks up and every 25 seconds while cultivating.
+Sunscale Dragon (a winged solar dragon in bronze, copper and gold scale armour,
+a corona frill of gold blades behind its skull and a sun-fan at its tail tip)
+walks on four legs, breathes its raised wings at rest and beats them in flight;
+its special, **Solar Corona**, flares its wings and lifts its head as a sun forms
+before it, throwing out a ring of rays, golden scale shards and a ground wave of
+sunlight. Ember Wyrm (floating beads of lava rock
 with flame gills) is animated the same way; its special, **Heart Flare**, spreads
 its beads apart while its molten heart blazes. Bonefire Dragon (a floating
 dragon skeleton with a blue soul flame burning in its ribcage) is animated too;
@@ -137,7 +141,23 @@ moves; its special, **Auspicious Clouds**, rears it up and throws off a ring of
 cloud puffs and rising orange flames. Moss Golem (a hunched stone guardian grown over
 with moss, ferns and a sapling, one boulder fist and one root claw) lumbers and
 breathes; its special, **Groundbreaker**, slams both arms down, bursting a ring
-of stone shards and an emerald shockwave from the ground. Specials are visual only.
+of stone shards and an emerald shockwave from the ground. Mycelium Sprite (a
+glowing mushroom spirit with a dripping cap and a lattice skirt) drifts and waves
+its spore puffs; its special, **Spore Bloom**, scatters spores and a ring of glowing
+mushrooms. Jade Spirit Panda (a stout jade guardian with leaf ears, dark-jade eye
+patches and a crystal cluster on its back) ambles heavily; its special, **Jade
+Lotus**, rears up and slams down, opening rings of jade lotus petals. Jade Antler
+Deer (a slender celadon deer with branching jade antlers, a jade-leaf crest and
+a jade breastplate) walks with a four-beat gait; its special, **Sacred Grove**,
+rears it up and grows a ring of glowing jade branches from the ground. Dawn Phoenix
+(an upright sunrise firebird with raised crimson-to-gold wings, a sunburst crest
+and curling flame tail feathers) breathes its wings at rest, flaps in flight and
+trails gold from both wingtips; its special, **Sunrise Rebirth**, flares its wings
+and bursts a rising sun with rays and spiralling flame plumes. Rune Sphinx (a
+charcoal feline guardian with a stone-blade mane, an obsidian horn crown and
+glowing runes of one forgotten alphabet carved across its body) prowls with a slow,
+judging gaze; its special, **Rune Seal**, raises its chest and opens a spinning
+seal of rising rune glyphs and amber pillars. Specials are visual only.
 
 
 **First found in the Beginner Qi Egg (starting island)**

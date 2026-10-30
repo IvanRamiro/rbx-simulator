@@ -61,7 +61,7 @@ AuraStyles.Elements = {
     TimekeeperTortoise = { Core = Color3.fromRGB(255, 245, 210), Main = Color3.fromRGB(230, 200, 120), Deep = Color3.fromRGB(110, 100, 70), Particles = "Mote", RingShape = "Polygon", RingSides = 12 },
     GalaxyManta = { Core = Color3.fromRGB(240, 225, 255), Main = Color3.fromRGB(150, 110, 255), Deep = Color3.fromRGB(50, 40, 150), Particles = "Mote", RingShape = "Circle" },
     Shadowcoil = { Core = Color3.fromRGB(220, 190, 255), Main = Color3.fromRGB(130, 70, 230), Deep = Color3.fromRGB(40, 20, 80), Particles = "Mote", RingShape = "Circle" },
-    RuneSphinx = { Core = Color3.fromRGB(220, 245, 255), Main = Color3.fromRGB(220, 180, 110), Deep = Color3.fromRGB(110, 80, 50), Particles = "Mote", RingShape = "Polygon", RingSides = 4 },
+    RuneSphinx = { Core = Color3.fromRGB(255, 240, 200), Main = Color3.fromRGB(255, 180, 80), Deep = Color3.fromRGB(60, 45, 30), Particles = "Mote", RingShape = "Polygon", RingSides = 4 },
     ThousandYearDreamEater = { Core = Color3.fromRGB(255, 230, 250), Main = Color3.fromRGB(200, 140, 255), Deep = Color3.fromRGB(90, 50, 160), Particles = "Mote", RingShape = "Circle" },
     HeavenbreakerApe = { Core = Color3.fromRGB(255, 245, 200), Main = Color3.fromRGB(255, 180, 70), Deep = Color3.fromRGB(150, 70, 30), Particles = "Ember", RingShape = "Circle" },
     VoidscaleHydra = { Core = Color3.fromRGB(220, 190, 255), Main = Color3.fromRGB(120, 60, 240), Deep = Color3.fromRGB(30, 10, 80), Particles = "Mote", RingShape = "Circle" },
