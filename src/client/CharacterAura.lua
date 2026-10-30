@@ -2,12 +2,16 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
+local TidecallerAura = require(script.Parent:WaitForChild("TidecallerAura"))
 
 local CharacterAura = {}
 
 CharacterAura.REMOVE_DELAY = 2.2
 
 local SETTINGS = AuraStyles.CharacterAura
+local DESIGNS = {
+    AquaWisp = TidecallerAura,
+}
 local TEXTURES = SETTINGS.Textures
 local TAU = 2 * math.pi
 local FADE_IN = TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
@@ -534,6 +538,14 @@ local function surge(aura, strength)
 end
 
 function CharacterAura.build(player, character, rootPart, petId, rankId)
+    local design = DESIGNS[petId]
+    if design then
+        local designed = design.build(player, character, rootPart, petId, rankId)
+        if designed then
+            designed.design = design
+            return designed
+        end
+    end
     local colors = AuraStyles.Elements[petId or "Neutral"] or AuraStyles.Elements.Neutral
     local model = Instance.new("Folder")
     model.Name = player.Name .. "_Aura"
@@ -591,6 +603,9 @@ function CharacterAura.build(player, character, rootPart, petId, rankId)
 end
 
 function CharacterAura.show(aura)
+    if aura.design then
+        return aura.design.show(aura)
+    end
     local now = os.clock()
     aura.shownAt = now
     aura.nextPulse = now + SETTINGS.ChargeSeconds
@@ -620,6 +635,9 @@ function CharacterAura.show(aura)
 end
 
 function CharacterAura.hide(aura)
+    if aura.design then
+        return aura.design.hide(aura)
+    end
     if aura.hiding then
         return
     end
@@ -640,10 +658,16 @@ function CharacterAura.hide(aura)
 end
 
 function CharacterAura.pulse(aura)
+    if aura.design then
+        return aura.design.pulse(aura)
+    end
     surge(aura, 1)
 end
 
 function CharacterAura.destroy(aura)
+    if aura.design then
+        return aura.design.destroy(aura)
+    end
     aura.destroyed = true
     for _, tween in aura.loops do
         tween:Cancel()
@@ -659,6 +683,9 @@ groundParams.FilterType = Enum.RaycastFilterType.Exclude
 groundParams.IgnoreWater = true
 
 function CharacterAura.update(aura, now, parts, cframes)
+    if aura.design then
+        return aura.design.update(aura, now, parts, cframes)
+    end
     local body, width, k = aura.body, aura.width, aura.k
     local rootCFrame = aura.rootPart.CFrame
     local fade = aura.fader.Value

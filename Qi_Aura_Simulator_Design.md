@@ -338,7 +338,11 @@ The **Qi Spring** on the starting island adds +50% Qi while cultivating in it.
 - **Character aura:** an anime aura (flames, energy tongues, rings, ground
   shockwaves, lightning, floating rocks) that charges up, then grows from idle
   to charged to awakened the longer the player cultivates. Coloured by the aura
-  pet's element (`src/client/CharacterAura.lua`).
+  pet's element (`src/client/CharacterAura.lua`). Aqua Wisp has its own aura,
+  **Tidecaller Sanctum** (`src/client/TidecallerAura.lua`): the player meditates
+  on a blooming water lotus inside a tidal vortex over a pool of caustic light;
+  spirit koi join at the charged stage, and a breaking-wave crown and four water
+  spouts rise when awakened.
 - **Pet auras:** each equipped pet of a cultivating player shows its own
   element's aura (`src/client/AuraBuilder.lua`); Aqua Wisp and Golden Kirin are
   done so far.

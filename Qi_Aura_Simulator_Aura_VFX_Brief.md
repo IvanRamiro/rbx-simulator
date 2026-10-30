@@ -1,6 +1,15 @@
 # Aura VFX Brief — Sol's RNG-Quality Auras
 
-Status: **saved for later, not started.**
+Status: **in progress, one element at a time.**
+
+| Pet | Aura | Module |
+| --- | --- | --- |
+| Aqua Wisp | **Tidecaller Sanctum** (done): a water lotus seat, tidal vortex ribbons, orbiting droplets, spirit koi, a breaking-wave crown, water spouts and a caustic pool | `src/client/TidecallerAura.lua` |
+
+Each finished aura is its own module with the `CharacterAura` interface (build, show, hide, pulse,
+update, destroy), registered in `DESIGNS` in `src/client/CharacterAura.lua`. Its settings live in
+`AuraStyles`, and its meshes in `ReplicatedStorage.AuraMeshes`; without the meshes the pet falls
+back to the flame aura.
 
 ## Direction notes
 
