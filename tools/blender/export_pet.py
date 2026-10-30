@@ -1,6 +1,6 @@
-"""Exports a hand-built pet (tools/blender/<PetId>.blend) for the game.
+"""Exports a hand-built pet (tools/blender/pets/<EggId>/<PetId>.blend) for the game.
 
-    /Applications/Blender.app/Contents/MacOS/Blender -b tools/blender/<PetId>.blend \
+    /Applications/Blender.app/Contents/MacOS/Blender -b tools/blender/pets/<EggId>/<PetId>.blend \
         -P tools/blender/export_pet.py -- <PetId> [--out assets/aura/<name>]
 
 The pet is every mesh in the collection named <PetId>, built facing -Y with
@@ -8,7 +8,7 @@ Z up, each part coloured with plain materials (Principled BSDF base colour).
 Materials with the custom property "glow" become glowing Neon in the game;
 everything else is baked into one palette texture.
 
-Writes (assets/pets):
+Writes (assets/pets/<EggId>, the first egg in GameConfig that drops the pet):
     <PetId>.fbx            "<PetId>_Body" (palette textured) and one
                            "<PetId>_Glow_<rrggbb>" object per glow colour
     <PetId>_palette.png    The palette (also embedded in the FBX)
@@ -27,6 +27,7 @@ material instead of the palette, and writes <PetId>_color.png and
 """
 
 import os
+import re
 import struct
 import sys
 import zlib
@@ -39,7 +40,23 @@ SWATCH = 8  # Pixels per palette swatch
 
 ARGS = sys.argv[sys.argv.index("--") + 1:]
 PET_ID = ARGS[0]
-# Aura pieces and other non-pet models: --out DIR writes the FBX there instead of assets/pets
+
+
+def home_egg(pet_id):
+    """The first egg in GameConfig whose pool drops the pet."""
+    with open(os.path.join(ROOT, "src", "shared", "GameConfig.lua")) as file:
+        source = file.read()
+    eggs = source[source.index("    Eggs = {"):]
+    for match in re.finditer(r"\n        (\w+Egg) = \{(.*?)\n        \},", eggs, re.S):
+        if '"%s"' % pet_id in match.group(2):
+            return match.group(1)
+    return None
+
+
+EGG = home_egg(PET_ID)
+if EGG:
+    OUTPUT_DIR = os.path.join(OUTPUT_DIR, EGG)
+# Aura pieces and other non-pet models: --out DIR writes the FBX there instead of the egg folder
 if "--out" in ARGS:
     OUTPUT_DIR = os.path.join(ROOT, ARGS[ARGS.index("--out") + 1])
 RIG = "--rig" in ARGS or "--baked" in ARGS

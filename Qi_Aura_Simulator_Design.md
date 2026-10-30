@@ -109,7 +109,8 @@ stronger too (about +6% per rank of the egg's required rank), so every new egg
 is worth hatching.
 
 All 60 pets from the original concept roster are in the game, plus the retired Nine-Tail Moonfox.
-★ = hand-modelled in Blender (`tools/blender/<PetId>.blend`). The others use
+★ = hand-modelled in Blender (`tools/blender/pets/<EggId>/<PetId>.blend`, exported to
+`assets/pets/<EggId>/`; a pet sits under the first egg that drops it). The others use
 procedural low-poly models (`src/client/PetArchetypes.lua`) until they get their
 own Blender model.
 
@@ -133,7 +134,10 @@ on the ground, gallops in the air and moves each head on its own; its special,
 Golden Kirin (a white-furred qilin with branching antlers, a mane of teal cloud
 curls and teal-scaled legs) treads the air on cloud steps and gallops when it
 moves; its special, **Auspicious Clouds**, rears it up and throws off a ring of
-cloud puffs and rising orange flames. Specials are visual only.
+cloud puffs and rising orange flames. Moss Golem (a hunched stone guardian grown over
+with moss, ferns and a sapling, one boulder fist and one root claw) lumbers and
+breathes; its special, **Groundbreaker**, slams both arms down, bursting a ring
+of stone shards and an emerald shockwave from the ground. Specials are visual only.
 
 
 **First found in the Beginner Qi Egg (starting island)**
@@ -297,8 +301,8 @@ goes to the next pet that has one, so later eggs give rarer pets far more often.
 
 ### Egg designs
 
-Modelled in Blender (`tools/blender/Eggs.blend`, preview
-`tools/blender/Eggs_preview.png`) after the concept art, exported to
+Modelled in Blender (`tools/blender/eggs/Eggs.blend`, preview
+`tools/blender/eggs/Eggs_preview.png`) after the concept art, exported to
 `assets/eggs/<EggId>.fbx`. Each island has one design family; the second egg
 adds a jewelled gold band and the third a crown and floating halo.
 
@@ -364,8 +368,8 @@ Roblox Studio + Rojo 7.7.1 (VS Code, Git). Rojo maps `src/shared` to
 ReplicatedStorage, `src/server` to ServerScriptService and `src/client` to
 StarterPlayerScripts. Blender 5.2 models pets, eggs and VFX pieces;
 `tools/blender/export_pet.py` exports them as FBX for Studio's 3D Importer
-(imported models live in `ReplicatedStorage.PetMeshes`, `ReplicatedStorage.AuraMeshes`
-and `ServerStorage.EggMeshes`).
+(imported models live in `ReplicatedStorage.PetMeshes/<EggId>`, `ReplicatedStorage.AuraMeshes`
+and `ServerStorage.EggMeshes`). Aura sources are in `tools/blender/auras`.
 
 **Server** owns Qi rewards, rank-ups, hatching, inventory, relics, flight
 permission and saving. **Clients** handle UI, auras, effects, pet companions,

@@ -169,6 +169,72 @@ local function animateQilin(rig, s, moving, fly, nova)
     pose(m.Tail2, CFrame.Angles(0.15 * math.sin(t * 1.2 - 0.9) + 0.2 * nova, 0.35 * math.sin(t * (1.4 + 2 * pace) - 1.1), 0))
 end
 
+local function animateSprite(rig, s, moving, fly, nova)
+    local m, u, t = rig.motors, rig.unit, s.time
+    local pace = math.max(moving, fly)
+    local bloom = math.sin(math.min(nova * 1.3, 1) * math.pi / 2)
+    local drift = math.sin(t * 1.4)
+
+    pose(m.Body, CFrame.new(0, (0.12 * drift + 0.25 * bloom) * u, 0)
+        * CFrame.Angles(-0.18 * pace + 0.05 * math.sin(t * 0.9), 0.15 * math.sin(t * 0.4), 0.06 * math.sin(t * 0.7)))
+    pose(m.Cap, CFrame.Angles(0.08 * math.sin(t * 1.4 + 0.6) + 0.12 * pace - 0.25 * bloom, t * 0.4 % (2 * math.pi), 0.08 * math.sin(t * 1.1)))
+    for _, name in { "ArmL", "ArmR" } do
+        local side = rig.sides[name] or 0
+        local wave = math.sin(t * 1.8 + side)
+        pose(m[name], CFrame.Angles(0.25 * wave * (1 - pace) - 0.3 * pace - 0.6 * bloom, 0, side * (0.15 * math.sin(t * 1.2 + side) - 0.7 * bloom)))
+    end
+    pose(m.Threads, CFrame.Angles(0.25 * math.sin(t * 2.1) + 0.45 * pace, 0.3 * math.sin(t * 1.3), 0.2 * math.sin(t * 1.7 + 1)))
+end
+
+local function animateGolem(rig, s, moving, fly, nova)
+    local m, u, t = rig.motors, rig.unit, s.time
+    local pace = math.max(moving, fly)
+    s.stride = (s.stride or 0) + rig.deltaTime * (1.2 + 4.5 * pace)
+    local stride = s.stride
+    local breathe = math.sin(t * 0.9)
+    local slam = math.sin(math.min(nova * 1.4, 1) * math.pi / 2)
+
+    pose(m.Body, CFrame.new(0, (0.025 * breathe + 0.06 * math.abs(math.sin(stride)) * pace - 0.12 * slam) * u, 0)
+        * CFrame.Angles(0.04 * breathe - 0.08 * pace + 0.25 * slam, 0, 0.07 * math.sin(stride) * pace))
+    pose(m.Head, CFrame.Angles(0.05 * math.sin(t * 0.6) - 0.2 * slam, 0.18 * math.sin(t * 0.35) * (1 - pace), 0.04 * math.sin(t * 0.5)))
+
+    for _, name in { "LegL", "LegR" } do
+        local side = if name == "LegL" then 0 else math.pi
+        pose(m[name], CFrame.Angles(0.32 * math.sin(stride + side) * pace - 0.15 * slam, 0, 0))
+    end
+    for _, name in { "ArmL", "ArmR" } do
+        local side = if name == "ArmL" then math.pi else 0
+        local heavy = name == "ArmR"
+        local lift = (if heavy then 1.6 else 1.2) * slam
+        pose(m[name], CFrame.Angles(0.3 * math.sin(stride + side) * pace + 0.05 * breathe - lift, 0, (if heavy then -0.05 else 0.05) * breathe))
+        pose(m[name .. "2"], CFrame.Angles(-0.12 * math.max(0, math.sin(stride + side)) * pace - 0.25 * slam, 0, 0))
+    end
+end
+
+local PANDA_LEGS = { LegFL = 0, LegBR = 0.3, LegFR = math.pi, LegBL = math.pi + 0.3 }
+local function animatePanda(rig, s, moving, fly, nova)
+    local m, u, t = rig.motors, rig.unit, s.time
+    local pace = math.max(moving, fly)
+    s.stride = (s.stride or 0) + rig.deltaTime * (1 + 5 * pace)
+    local stride = s.stride
+    local breathe = math.sin(t * 1.1)
+    s.lotus = if rig.nova then (s.lotus or 0) + rig.deltaTime else 0
+    local rear = smoothstep(0, 0.75, s.lotus) * (1 - smoothstep(0.88, 1.06, s.lotus)) * math.min(1, nova * 3)
+    local impact = smoothstep(0.95, 1.1, s.lotus) * (1 - smoothstep(1.2, 1.9, s.lotus))
+
+    pose(m.Body, CFrame.new(0, (0.02 * breathe + 0.04 * math.abs(math.sin(stride)) * pace + 0.32 * rear - 0.06 * impact) * u, 0)
+        * CFrame.Angles(0.03 * breathe - 0.6 * rear + 0.14 * impact, 0, 0.06 * math.sin(stride) * pace))
+    pose(m.Head, CFrame.Angles(0.05 * math.sin(t * 0.7) + 0.04 * math.sin(stride * 2) * pace + 0.3 * rear - 0.12 * impact,
+        0.25 * math.sin(t * 0.35) * (1 - pace) * (1 - rear), 0.05 * math.sin(t * 0.5) + 0.04 * math.sin(stride) * pace))
+
+    for name, phase in PANDA_LEGS do
+        local front = string.sub(name, 4, 4) == "F"
+        local swing = 0.35 * math.sin(stride + phase) * pace
+        local lift = if front then -0.75 * rear + 0.3 * impact else 0.6 * rear - 0.1 * impact
+        pose(m[name], CFrame.Angles(swing + lift, 0, 0))
+    end
+end
+
 PetRig.Profiles = {
     SunscaleDragon = {
         Joints = {
@@ -355,6 +421,99 @@ PetRig.Profiles.GoldenKirin = {
         Ivory = Color3.fromRGB(235, 255, 248),
     },
     Animate = animateQilin,
+}
+
+PetRig.Profiles.MyceliumSprite = {
+    Joints = {
+        Body = "Root",
+        Cap = "Body",
+        ArmL = "Body",
+        ArmR = "Body",
+        Threads = "Body",
+    },
+    Attached = {},
+    SeeThrough = {},
+    Effects = {
+        Motes = "Cap",
+        Light = "Body",
+        Pulse = "Cap",
+        Burst = "Body",
+        Sparks = { "ArmL_Puff", "ArmR_Puff" },
+        Trail = "Threads_Tip",
+        Blast = "SporeBloom",
+        NovaLight = 4,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(90, 245, 215),
+        Amber = Color3.fromRGB(70, 60, 190),
+        Orange = Color3.fromRGB(150, 110, 255),
+        Sun = Color3.fromRGB(200, 255, 245),
+        Ivory = Color3.fromRGB(230, 240, 255),
+    },
+    Animate = animateSprite,
+}
+
+PetRig.Profiles.MossGolem = {
+    Joints = {
+        Body = "Root",
+        Head = "Body",
+        ArmL = "Body",
+        ArmR = "Body",
+        ArmL2 = "ArmL",
+        ArmR2 = "ArmR",
+        LegL = "Body",
+        LegR = "Body",
+    },
+    Attached = {},
+    SeeThrough = {},
+    Effects = {
+        Motes = "Body",
+        Light = "Body",
+        Pulse = "Body",
+        Burst = "Body",
+        Sparks = { "Body_Core" },
+        Blast = "Groundbreaker",
+        NovaLight = 2,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(110, 255, 140),
+        Amber = Color3.fromRGB(105, 102, 94),
+        Orange = Color3.fromRGB(120, 200, 70),
+        Sun = Color3.fromRGB(200, 255, 190),
+        Ivory = Color3.fromRGB(225, 255, 220),
+    },
+    Animate = animateGolem,
+}
+
+PetRig.Profiles.JadeSpiritPanda = {
+    Joints = {
+        Body = "Root",
+        Head = "Body",
+        LegFL = "Body",
+        LegFR = "Body",
+        LegBL = "Body",
+        LegBR = "Body",
+    },
+    Attached = {},
+    SeeThrough = {},
+    SeeThroughGlow = { ["89edbc"] = 0.3 },
+    Effects = {
+        Motes = "Body",
+        Light = "Body",
+        Pulse = "Body",
+        Burst = "Body",
+        Sparks = { "Head_Gem", "Body_Crystal" },
+        Blast = "JadeLotus",
+        NovaLight = 3,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(60, 225, 130),
+        Amber = Color3.fromRGB(20, 70, 45),
+        Orange = Color3.fromRGB(80, 235, 205),
+        Sun = Color3.fromRGB(195, 255, 220),
+        Ivory = Color3.fromRGB(230, 250, 235),
+    },
+    Animate = animatePanda,
 }
 
 PetRig.NOVA_TIME = 2.6
@@ -857,6 +1016,199 @@ function Blasts.AuspiciousClouds(rig, fx)
     end
 end
 
+function Blasts.SporeBloom(rig, fx)
+    local colors, u, origin, facing, neon = rig.profile.Colors, rig.unit, fx.origin, fx.facing, fx.neon
+
+    for index = 1, 22 do
+        local dir = Vector3.new(math.random() - 0.5, math.random() * 0.8 - 0.1, math.random() - 0.5).Unit
+        local size = (0.08 + math.random() * 0.12) * u
+        local spore = neon(Vector3.one * size, CFrame.new(origin), if index % 3 == 0 then colors.Orange else colors.Gold)
+        spore.Shape = Enum.PartType.Ball
+        spore.Transparency = 0.1
+        TweenService:Create(spore, TweenInfo.new(1.1 + math.random() * 0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            CFrame = CFrame.new(origin + dir * (2 + math.random() * 2.5) * u + Vector3.new(0, 1 * u, 0)),
+            Size = Vector3.one * size * 0.4,
+            Transparency = 1,
+        }):Play()
+    end
+
+    local ground = origin - Vector3.new(0, 1.6 * u, 0)
+    for index = 1, 9 do
+        local angle = index / 9 * 2 * math.pi + math.random() * 0.3
+        local spot = ground + facing:VectorToWorldSpace(Vector3.new(math.cos(angle), 0, math.sin(angle))) * (1.6 + math.random() * 1.2) * u
+        local height = (0.35 + math.random() * 0.35) * u
+        local stem = neon(Vector3.new(0.08 * u, 0.02, 0.08 * u), CFrame.new(spot), colors.Ivory)
+        stem.Shape = Enum.PartType.Cylinder
+        stem.CFrame = CFrame.new(spot) * CFrame.Angles(0, 0, math.pi / 2)
+        stem.Size = Vector3.new(0.02, 0.08 * u, 0.08 * u)
+        local cap = neon(Vector3.new(0.02, 0.02, 0.02), CFrame.new(spot), if index % 2 == 0 then colors.Gold else colors.Orange)
+        cap.Shape = Enum.PartType.Ball
+        local grow = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        TweenService:Create(stem, grow, {
+            Size = Vector3.new(height, 0.08 * u, 0.08 * u),
+            CFrame = CFrame.new(spot + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+        }):Play()
+        local pop = TweenService:Create(cap, grow, {
+            Size = Vector3.new(0.4, 0.18, 0.4) * u,
+            CFrame = CFrame.new(spot + Vector3.new(0, height, 0)),
+        })
+        pop.Completed:Once(function()
+            local fade = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+            TweenService:Create(cap, fade, { Transparency = 1 }):Play()
+            TweenService:Create(stem, fade, { Transparency = 1 }):Play()
+        end)
+        pop:Play()
+    end
+
+    local glow = neon(Vector3.one * 0.5 * u, CFrame.new(origin), colors.Sun)
+    glow.Shape = Enum.PartType.Ball
+    glow.Transparency = 0.4
+    TweenService:Create(glow, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * 3.5 * u, Transparency = 1 }):Play()
+    if rig.burst then
+        rig.burst:Emit(30)
+    end
+end
+
+function Blasts.Groundbreaker(rig, fx)
+    local colors, u, origin, facing, neon = rig.profile.Colors, rig.unit, fx.origin, fx.facing, fx.neon
+    local ground = origin - Vector3.new(0, 1.3 * u, 0)
+
+    local ring = neon(Vector3.new(0.1 * u, 1.2 * u, 1.2 * u), CFrame.new(ground) * CFrame.Angles(0, 0, math.pi / 2), colors.Gold)
+    ring.Shape = Enum.PartType.Cylinder
+    ring.Transparency = 0.25
+    TweenService:Create(ring, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = Vector3.new(0.04 * u, 9 * u, 9 * u),
+        Transparency = 1,
+    }):Play()
+
+    for index = 1, 10 do
+        local angle = index / 10 * 2 * math.pi + math.random() * 0.3
+        local out = facing:VectorToWorldSpace(Vector3.new(math.cos(angle), 0, math.sin(angle)))
+        local base = ground + out * (1.2 + math.random() * 1.6) * u
+        local size = Vector3.new(0.45 + math.random() * 0.25, 1 + math.random() * 0.9, 0.5 + math.random() * 0.3) * u
+        local spike = Instance.new("WedgePart")
+        spike.Anchored = true
+        spike.CanCollide = false
+        spike.CanQuery = false
+        spike.CanTouch = false
+        spike.CastShadow = false
+        spike.Material = Enum.Material.Slate
+        spike.Color = colors.Amber
+        spike.Size = size
+        spike.CFrame = CFrame.new(base - Vector3.new(0, size.Y, 0)) * CFrame.Angles(0, angle + math.pi / 2, 0)
+            * CFrame.Angles(-0.35 - math.random() * 0.25, 0, math.random() * 0.4 - 0.2)
+        spike.Parent = ring.Parent
+        local up = TweenService:Create(spike, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            CFrame = spike.CFrame + Vector3.new(0, size.Y * 0.9, 0),
+        })
+        up.Completed:Once(function()
+            TweenService:Create(spike, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                CFrame = spike.CFrame - Vector3.new(0, size.Y, 0),
+                Transparency = 1,
+            }):Play()
+        end)
+        up:Play()
+
+        local leaf = neon(Vector3.new(0.18, 0.04, 0.3) * u, CFrame.new(base), if index % 2 == 0 then colors.Gold else colors.Orange)
+        TweenService:Create(leaf, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            CFrame = CFrame.new(base + out * 1.5 * u + Vector3.new(0, 2.5 * u, 0)) * CFrame.Angles(math.random() * 6, math.random() * 6, 0),
+            Transparency = 1,
+        }):Play()
+    end
+
+    local light = Instance.new("PointLight")
+    light.Color = colors.Gold
+    light.Range = 9 * u
+    light.Brightness = 1.6
+    light.Parent = ring
+    TweenService:Create(light, TweenInfo.new(0.9), { Brightness = 0 }):Play()
+    if rig.burst then
+        rig.burst:Emit(25)
+    end
+end
+
+function Blasts.JadeLotus(rig, fx)
+    local colors, u, origin, neon = rig.profile.Colors, rig.unit, fx.origin, fx.neon
+    local ground = origin - Vector3.new(0, 1.2 * u, 0)
+
+    local function oval(size, cframe, color)
+        local part = neon(size, cframe, color)
+        local mesh = Instance.new("SpecialMesh")
+        mesh.MeshType = Enum.MeshType.Sphere
+        mesh.Parent = part
+        return part
+    end
+
+    local ring = neon(Vector3.new(0.1 * u, 1.5 * u, 1.5 * u), CFrame.new(ground) * CFrame.Angles(0, 0, math.pi / 2), colors.Orange)
+    ring.Shape = Enum.PartType.Cylinder
+    ring.Transparency = 0.3
+    TweenService:Create(ring, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = Vector3.new(0.04 * u, 8 * u, 8 * u),
+        Transparency = 1,
+    }):Play()
+
+    for layer, spec in { { count = 8, radius = 0.9, length = 1.6, tilt = 1.15, color = colors.Gold }, { count = 6, radius = 0.45, length = 1.2, tilt = 0.6, color = colors.Sun } } do
+        for index = 1, spec.count do
+            local angle = (index + layer * 0.5) / spec.count * 2 * math.pi
+            local base = CFrame.new(ground + Vector3.new(math.sin(angle), 0, math.cos(angle)) * spec.radius * u) * CFrame.Angles(0, angle, 0)
+            local size = Vector3.new(0.55, spec.length, 0.12) * u
+            local petal = oval(size * 0.4, base * CFrame.new(0, size.Y * 0.2, 0), spec.color)
+            petal.Transparency = 0.15
+            TweenService:Create(petal, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = size,
+                CFrame = base * CFrame.Angles(spec.tilt, 0, 0) * CFrame.new(0, size.Y / 2, 0),
+            }):Play()
+            TweenService:Create(petal, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.6), {
+                Transparency = 1,
+            }):Play()
+        end
+    end
+
+    for index = 1, 7 do
+        local angle = index / 7 * 2 * math.pi
+        local out = Vector3.new(math.sin(angle), 0, math.cos(angle))
+        local shard = Instance.new("WedgePart")
+        shard.Anchored = true
+        shard.CanCollide = false
+        shard.CanQuery = false
+        shard.CanTouch = false
+        shard.CastShadow = false
+        shard.Material = Enum.Material.Glass
+        shard.Transparency = 0.2
+        shard.Color = colors.Gold
+        shard.Size = Vector3.new(0.18, 0.55, 0.3) * u
+        shard.CFrame = CFrame.new(ground + out * 0.6 * u) * CFrame.Angles(0, angle, 0)
+        shard.Parent = ring.Parent
+        local swirl = angle + 0.9
+        TweenService:Create(shard, TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            CFrame = CFrame.new(ground + Vector3.new(math.sin(swirl), 0, math.cos(swirl)) * 2.6 * u + Vector3.new(0, 2.2 * u, 0))
+                * CFrame.Angles(math.random() * 6, swirl, math.random() * 6),
+            Transparency = 1,
+        }):Play()
+    end
+
+    for index = 1, 10 do
+        local angle = math.random() * 2 * math.pi
+        local start = ground + Vector3.new(math.sin(angle), 0, math.cos(angle)) * (0.4 + math.random()) * u + Vector3.new(0, 0.3 * u, 0)
+        local leaf = oval(Vector3.new(0.12, 0.03, 0.36) * u, CFrame.new(start) * CFrame.Angles(0, angle, 0), if index % 3 == 0 then colors.Sun else colors.Gold)
+        TweenService:Create(leaf, TweenInfo.new(1.3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+            CFrame = CFrame.new(start + Vector3.new(math.sin(angle), 0, math.cos(angle)) * 1.4 * u + Vector3.new(0, (1.8 + math.random()) * u, 0))
+                * CFrame.Angles(math.random() * 3, angle + 2, math.random() * 3),
+            Transparency = 1,
+        }):Play()
+    end
+
+    local light = Instance.new("PointLight")
+    light.Color = colors.Gold
+    light.Range = 10 * u
+    light.Brightness = 1.8
+    light.Parent = ring
+    TweenService:Create(light, TweenInfo.new(1.1), { Brightness = 0 }):Play()
+    if rig.burst then
+        rig.burst:Emit(25)
+    end
+end
+
 local function burst(rig)
     local profile = rig.profile
     local folder = Instance.new("Folder")
@@ -917,7 +1269,7 @@ function PetRig.update(rig, deltaTime, state)
 
     local pulse = 0.5 + 0.5 * math.sin(s.time * 2.2)
     if rig.light then
-        rig.light.Brightness = 1.1 + 0.8 * pulse + 9 * nova
+        rig.light.Brightness = 1.1 + 0.8 * pulse + (rig.profile.Effects.NovaLight or 9) * nova
     end
     for _, glow in rig.pulseGlow do
         glow.part.Color = glow.color:Lerp(Color3.new(1, 1, 1), 0.2 * pulse + 0.7 * nova)

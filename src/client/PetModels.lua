@@ -633,6 +633,9 @@ end
 
 local NAVY = Color3.fromRGB(25, 35, 90)
 local MESH_LOOKS = {
+    MyceliumSprite = { Eyes = Color3.fromRGB(39, 225, 206), GlowEyes = true, Glow = Color3.fromRGB(90, 245, 215), Length = 2.6 },
+    MossGolem = { Eyes = Color3.fromRGB(231, 173, 63), GlowEyes = true, Glow = Color3.fromRGB(110, 255, 140), Length = 3.4 },
+    JadeSpiritPanda = { Eyes = Color3.fromRGB(50, 200, 115), GlowEyes = true, Glow = Color3.fromRGB(60, 225, 130), Length = 3.3 },
     AquaWisp = { Eyes = NAVY, Effect = "Bubbles", Glow = Color3.fromRGB(110, 205, 255), Length = 3.12 },
     EmberWyrm = { Eyes = Color3.fromRGB(255, 120, 40), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(255, 115, 35), Length = 2.9 },
     LunarHopper = { Eyes = NAVY, Effect = "Stars", Glow = Color3.fromRGB(150, 160, 255), Length = 2.58 },
@@ -855,7 +858,7 @@ function PetModels.build(petId)
     rootPart.Parent = model
     model.PrimaryPart = rootPart
 
-    local imported = meshFolder and meshFolder:FindFirstChild(petId)
+    local imported = meshFolder and meshFolder:FindFirstChild(petId, true)
     if imported and imported:IsA("Model") then
         addImported(model, rootPart, imported, design, petId)
         return model, rootPart
