@@ -4,6 +4,7 @@ local TweenService = game:GetService("TweenService")
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local TidecallerAura = require(script.Parent:WaitForChild("TidecallerAura"))
 local EmberCrucibleAura = require(script.Parent:WaitForChild("EmberCrucibleAura"))
+local VerdantGaleAura = require(script.Parent:WaitForChild("VerdantGaleAura"))
 
 local CharacterAura = {}
 
@@ -540,7 +541,7 @@ local function surge(aura, strength)
 end
 
 function CharacterAura.build(player, character, rootPart, petId, rankId)
-    local design = DESIGNS[petId]
+    local design = if petId then DESIGNS[petId] else VerdantGaleAura
     if design then
         local designed = design.build(player, character, rootPart, petId, rankId)
         if designed then

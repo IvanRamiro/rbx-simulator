@@ -195,6 +195,7 @@ AuraStyles.EmberCrucible = {
         Rise = "rbxassetid://94003912127391",
         Glow = "rbxassetid://135169457468310",
         Trail = "rbxassetid://85921257601970",
+        Ring = "rbxassetid://12386390257",
     },
     Materials = {
         Rock = { Material = Enum.Material.Basalt, Color = Color3.fromRGB(48, 36, 36), Transparency = 0 },
@@ -221,7 +222,23 @@ AuraStyles.EmberCrucible = {
         { Radius = 3.9, Height = 3.3, Speed = 2.2, Rise = 1.4, Phase = 5.2 },
     },
     Wyrm = { Beads = 16, Bead = 0.95, Head = 2.1, Radius = 4.8, Gap = 0.78 },
-    Halo = { Diameter = 6.2, Lift = 1, Back = 1.6, RingPoints = 24, Corona = 10 },
+    Halo = { Diameter = 6.2, Lift = 1, Back = 1.6, RingFill = 1.3 },
+}
+
+AuraStyles.VerdantGale = {
+    Colors = {
+        White = Color3.fromRGB(230, 255, 220),
+        Pale = Color3.fromRGB(190, 255, 120),
+        Lime = Color3.fromRGB(150, 255, 60),
+        Deep = Color3.fromRGB(60, 220, 20),
+    },
+    Textures = {
+        Swirl = "rbxassetid://135407417004177",
+        Slash = "rbxassetid://100518308037097",
+        Streak = "rbxassetid://124605526627411",
+        Wisp = "rbxassetid://12191903502",
+        Fog = "rbxasset://textures/particles/smoke_main.dds",
+    },
 }
 
 AuraStyles.CharacterAura = {

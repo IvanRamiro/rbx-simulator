@@ -14,8 +14,6 @@ local meshPart = AuraKit.meshPart
 local addEmitter = AuraKit.addEmitter
 local showPart = AuraKit.showPart
 local MESHES = { "BeadShell", "WyrmHead", "WyrmGlow", "HaloRing" }
-local RING_FADE = { { 0, 0.05 }, { 1, 0.05 } }
-local CORONA_FADE = { { 0, 0.1 }, { 0.6, 0.35 }, { 1, 1 } }
 local VORTEX_FADE = { { 0, 1 }, { 0.12, 0.1 }, { 0.7, 0.35 }, { 1, 1 } }
 
 local function template(name)
@@ -317,82 +315,45 @@ end
 
 local function buildHalo(aura)
     local s = aura.k
+    local c = STYLE.Colors
     local settings = STYLE.Halo
     local scale = fit("HaloRing", settings.Diameter * s)
     aura.halo = meshPart(aura, "HaloRing", scale, "Rock")
     aura.haloGlow = meshPart(aura, "HaloRing", scale * 1.04, "HaloGlow")
     aura.haloSize = { aura.halo.Size, aura.haloGlow.Size }
-    aura.haloRadius = settings.Diameter * s / 2 / 1.29
 
     aura.haloAnchor = newPart(aura, "HaloAnchor", Vector3.one * 0.2)
-    aura.ringPoints = {}
-    for index = 1, settings.RingPoints do
-        table.insert(aura.ringPoints, { Attachment = AuraKit.attachment(aura.haloAnchor), Angle = (index - 1) / settings.RingPoints * TAU })
-    end
-    aura.ringBeams = {}
-    local quarter = #aura.ringPoints / 4
-    for arc = 0, 3 do
-        local from = aura.ringPoints[arc * quarter + 1].Attachment
-        local to = aura.ringPoints[((arc + 1) % 4) * quarter + 1].Attachment
-        local flow = AuraKit.beam(aura.haloAnchor, from, to, {
-            Texture = STYLE.Textures.Flow,
-            TextureLength = 3.2 * s,
-            TextureSpeed = 1.1,
-            LightEmission = 0.65,
-            Brightness = 2.2,
-            Segments = 24,
-        })
-        local core = AuraKit.beam(aura.haloAnchor, from, to, {
-            Texture = STYLE.Textures.Rise,
-            TextureLength = 3 * s,
-            TextureSpeed = -2.2,
-            LightEmission = 0.8,
-            Brightness = 3,
-            Color = ColorSequence.new(STYLE.Colors.Core),
-            Segments = 24,
-            ZOffset = 0.4,
-        })
-        table.insert(aura.ringBeams, { Flow = flow, Core = core, FlowFade = AuraKit.fader(flow, RING_FADE), CoreFade = AuraKit.fader(core, RING_FADE) })
-    end
-
-    aura.corona = {}
-    for index = 1, settings.Corona do
-        local point = aura.ringPoints[math.floor((index - 1) * #aura.ringPoints / settings.Corona) + 1]
-        local tip = AuraKit.attachment(aura.haloAnchor)
-        local beam = AuraKit.beam(aura.haloAnchor, point.Attachment, tip, {
-            Texture = STYLE.Textures.Rise,
-            TextureLength = 2.2 * s,
-            TextureSpeed = aura.random:NextNumber(1.5, 2.2),
-            LightEmission = 0.6,
-            Brightness = 2.4,
-            Segments = 8,
-        })
-        table.insert(aura.corona, { Beam = beam, Point = point, Tip = tip, Phase = index * 2.7, Reach = aura.random:NextNumber(1.4, 2.6) * s, Fade = AuraKit.fader(beam, CORONA_FADE) })
-    end
-
-    for index = 1, #aura.ringPoints, 2 do
-        fireEmitter(aura, aura.ringPoints[index].Attachment, 6, {
-            Size = numberSequence({ { 0, 1.1 * s }, { 0.4, 2.6 * s }, { 1, 0.8 * s } }),
-            Transparency = numberSequence({ { 0, 1 }, { 0.1, 0.1 }, { 0.7, 0.4 }, { 1, 1 } }),
-            Lifetime = NumberRange.new(0.5, 0.8),
-            Speed = NumberRange.new(2 * s, 4 * s),
-            SpreadAngle = Vector2.new(20, 20),
-            Acceleration = Vector3.new(0, 4 * s, 0),
-            EmissionDirection = Enum.NormalId.Top,
-        }, 3)
-        addEmitter(aura, aura.ringPoints[index].Attachment, 3, {
-            Texture = STYLE.Textures.Ember,
-            Color = ColorSequence.new(STYLE.Colors.Core, STYLE.Colors.Deep),
+    local ringSize = settings.Diameter / settings.RingFill * s
+    local function ring(rate, properties)
+        local preset = {
+            Texture = STYLE.Textures.Ring,
+            Orientation = Enum.ParticleOrientation.VelocityPerpendicular,
+            EmissionDirection = Enum.NormalId.Back,
+            Speed = NumberRange.new(0.01),
+            LockedToPart = true,
+            Rotation = NumberRange.new(0, 360),
             LightEmission = 1,
-            Brightness = 4,
-            Size = numberSequence({ { 0, 0.3 * s }, { 1, 0 } }),
-            Lifetime = NumberRange.new(0.8, 1.4),
-            Speed = NumberRange.new(3 * s, 6 * s),
-            SpreadAngle = Vector2.new(35, 35),
-            Acceleration = Vector3.new(0, 2 * s, 0),
-            EmissionDirection = Enum.NormalId.Top,
-        }, 3)
+        }
+        for property, value in properties do
+            preset[property] = value
+        end
+        return addEmitter(aura, aura.haloAnchor, rate, preset, 3)
     end
+    ring(2.4, {
+        Lifetime = NumberRange.new(1.2), RotSpeed = NumberRange.new(25, 35),
+        Size = NumberSequence.new(ringSize), Transparency = numberSequence({ { 0, 1 }, { 0.25, 0 }, { 0.75, 0 }, { 1, 1 } }),
+        Color = colors({ { 0, c.Gold }, { 1, c.Main } }), Brightness = 1.4, ZOffset = 0.2,
+    })
+    ring(1.6, {
+        Lifetime = NumberRange.new(1.6), RotSpeed = NumberRange.new(-45, -35),
+        Size = NumberSequence.new(ringSize * 1.12), Transparency = numberSequence({ { 0, 1 }, { 0.3, 0.55 }, { 0.7, 0.6 }, { 1, 1 } }),
+        Color = colors({ { 0, c.Main }, { 1, c.Deep } }), Brightness = 1,
+    })
+    ring(1, {
+        Lifetime = NumberRange.new(1), RotSpeed = NumberRange.new(-15, 15),
+        Size = numberSequence({ { 0, ringSize * 0.95 }, { 1, ringSize * 1.3 } }), Transparency = numberSequence({ { 0, 0.6 }, { 1, 1 } }),
+        Color = colors({ { 0, c.Core }, { 1, c.Gold } }), Brightness = 1.5, ZOffset = 0.3,
+    })
 end
 
 local function onSurge(aura, strength)
@@ -527,30 +488,6 @@ function EmberCrucibleAura.update(aura, now, parts, cframes)
     place(aura.haloAnchor, haloCF * turn)
     showPart(aura.halo, 0, crown)
     showPart(aura.haloGlow, STYLE.Materials.HaloGlow.Transparency, crown * (0.8 + 0.2 * flicker))
-    local ringRadius = aura.haloRadius * grow
-    for _, point in aura.ringPoints do
-        point.Attachment.CFrame = CFrame.new(math.cos(point.Angle) * ringRadius, math.sin(point.Angle) * ringRadius, 0)
-            * CFrame.Angles(0, 0, point.Angle - math.pi / 2)
-    end
-    local bend = -0.5523 * ringRadius
-    for _, ring in aura.ringBeams do
-        local width = (1.5 + 0.25 * flicker) * s * grow
-        ring.Flow.Width0, ring.Flow.Width1 = width, width
-        ring.Core.Width0, ring.Core.Width1 = 0.45 * s * grow, 0.45 * s * grow
-        ring.Flow.CurveSize0, ring.Flow.CurveSize1 = bend, bend
-        ring.Core.CurveSize0, ring.Core.CurveSize1 = bend, bend
-        AuraKit.fadeBeam(ring.FlowFade, crown)
-        AuraKit.fadeBeam(ring.CoreFade, crown)
-    end
-    for _, flare in aura.corona do
-        local lick = (0.7 + 0.45 * math.noise(now * 2.4, flare.Phase) + 0.5 * surge) * grow
-        local angle = flare.Point.Angle + 0.25 * math.noise(now * 1.3, flare.Phase, 2)
-        local reach = ringRadius + flare.Reach * math.max(lick, 0.05)
-        flare.Tip.Position = Vector3.new(math.cos(angle) * reach, math.sin(angle) * reach, 0)
-        flare.Beam.Width0 = 0.75 * s * grow
-        flare.Beam.Width1 = 0.1 * s
-        AuraKit.fadeBeam(flare.Fade, crown)
-    end
 
     AuraKit.finishGlow(aura, frame, 1.6 * flicker, 0.06, 0.35)
 end
