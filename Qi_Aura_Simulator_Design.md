@@ -161,8 +161,25 @@ seal of rising rune glyphs and amber pillars. Magma Cub (a young volcanic beast 
 huge basalt forearms, its molten core glowing through cracked chest plates and
 molten seams across its shoulders and arms) knuckle-walks and tilts its head
 curiously; its special, **Magma Pop**, winds up, slams both fists down and hops,
-bursting basalt spikes and lava blobs out of a molten pool. Specials are visual
-only.
+bursting basalt spikes and lava blobs out of a molten pool. Azure Sky Dragon (a lean
+upright wyvern in satin sapphire, with silver crest blades, crystal-studded arched
+wings ending in crescent tips and translucent wind ribbons, and a layered fin fan on
+its long tail) strides on two legs and beats its wings in flight, trailing wind from
+both tips; its special, **Skyburst**, spreads its wings and throws up three rising
+wind spirals, gust rings and sky-crystal shards. Spirit Crane (a tall
+pearl-and-silver celestial crane with misty slate flight feathers, a crest of three
+pearl plumes rising from a turquoise lotus crown, gold eyes ringed in turquoise and
+two spiralling tail streamers) walks with a slow head-bob, tilts its head and
+settles its folded wings, and trails pearl light from both wingtips in flight; its
+special, **Halo Ascension**, lifts its neck skyward and unfolds its wings while
+three luminous rings rise from its feet to its crown and burst into drifting pearl
+feathers. Cloud Sheep (a satin-coated celestial sheep wearing a mantle of wind-swept
+scroll-curl clouds on its back, a breaking-wave forelock, banded ivory-to-sky ribbon
+horns, heavy-lidded sky-blue eyes and pearl cloven hooves, with a soft cyan core
+glowing between its neck curls) hovers just above the ground, paddles its hooves,
+flicks its ears and tilts its head; its special, **Cloud Bloom**, lifts it with its
+legs tucked and blooms a ring of cloud puffs outward while luminous droplets rain
+onto a widening sky ring. Specials are visual only.
 
 
 **First found in the Beginner Qi Egg (starting island)**

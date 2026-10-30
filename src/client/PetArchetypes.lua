@@ -402,9 +402,9 @@ end
 
 PetArchetypes.Specs = {
     WindSprite = { Kind = "Blob", Body = rgb(175, 235, 220), Accent = rgb(110, 210, 190), Belly = rgb(230, 250, 245), Glow = rgb(150, 255, 220), Core = rgb(220, 255, 245), Wings = "Insect", Antennae = true },
-    CloudSheep = { Kind = "Beast", Body = rgb(245, 245, 250), Accent = rgb(190, 200, 225), Belly = rgb(255, 255, 255), Glow = rgb(200, 220, 255), Core = rgb(255, 255, 255), Ears = "Round", Horns = "Curled", Puffs = true, Tail = "Fluffy" },
-    SpiritCrane = { Kind = "Bird", Body = rgb(240, 240, 245), Accent = rgb(40, 45, 60), Belly = rgb(255, 255, 255), Glow = rgb(255, 90, 90), Core = rgb(255, 240, 240), Wings = "Feather", Crest = true, Tail = "Long", Legs = true },
-    AzureSkyDragon = { Kind = "Serpent", Body = rgb(70, 150, 240), Accent = rgb(220, 240, 255), Belly = rgb(190, 225, 255), Glow = rgb(150, 220, 255), Core = rgb(220, 245, 255), Horns = "Antlers", Wings = "Feather", Whiskers = true },
+    CloudSheep = { Kind = "Beast", Body = rgb(232, 232, 240), Accent = rgb(170, 175, 215), Belly = rgb(215, 212, 210), Glow = rgb(120, 215, 245), Core = rgb(240, 248, 255), Ears = "Round", Horns = "Curled", Puffs = true, Tail = "Fluffy" },
+    SpiritCrane = { Kind = "Bird", Body = rgb(240, 240, 232), Accent = rgb(60, 90, 100), Belly = rgb(250, 250, 245), Glow = rgb(40, 210, 200), Core = rgb(225, 245, 245), Wings = "Feather", Crest = true, Tail = "Long", Legs = true },
+    AzureSkyDragon = { Kind = "Serpent", Body = rgb(30, 80, 190), Accent = rgb(160, 190, 230), Belly = rgb(150, 175, 215), Glow = rgb(70, 170, 255), Core = rgb(210, 240, 255), Horns = "Horns", Wings = "Bat" },
     StormhornKirin = { Kind = "Beast", Body = rgb(90, 95, 140), Accent = rgb(255, 230, 90), Belly = rgb(190, 195, 230), Glow = rgb(255, 240, 120), Core = rgb(255, 250, 200), Horns = "Single", Mane = true, Tail = "Long", Gems = true },
     GlacierPuff = { Kind = "Blob", Body = rgb(200, 235, 255), Accent = rgb(150, 210, 255), Belly = rgb(240, 250, 255), Glow = rgb(170, 235, 255), Core = rgb(240, 252, 255), Puffs = true, Spikes = true },
     ThunderJelly = { Kind = "Blob", Body = rgb(255, 230, 110), Accent = rgb(190, 140, 255), Belly = rgb(255, 245, 190), Glow = rgb(255, 240, 120), Core = rgb(255, 250, 200), Tentacles = true, Translucent = true },
