@@ -342,7 +342,11 @@ The **Qi Spring** on the starting island adds +50% Qi while cultivating in it.
   **Tidecaller Sanctum** (`src/client/TidecallerAura.lua`): the player meditates
   on a blooming water lotus inside a tidal vortex over a pool of caustic light;
   spirit koi join at the charged stage, and a breaking-wave crown and four water
-  spouts rise when awakened.
+  spouts rise when awakened. Ember Wyrm has **Ember Crucible**
+  (`src/client/EmberCrucibleAura.lua`): ember slashes and cloud spin under the
+  player while debris, sparkles, energy beams and body flames rise around them;
+  the spirit bead wyrm and orbit trails join at the charged stage, and a molten
+  fire halo forms behind the head when awakened.
 - **Pet auras:** each equipped pet of a cultivating player shows its own
   element's aura (`src/client/AuraBuilder.lua`); Aqua Wisp and Golden Kirin are
   done so far.

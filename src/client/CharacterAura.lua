@@ -3,6 +3,7 @@ local TweenService = game:GetService("TweenService")
 
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local TidecallerAura = require(script.Parent:WaitForChild("TidecallerAura"))
+local EmberCrucibleAura = require(script.Parent:WaitForChild("EmberCrucibleAura"))
 
 local CharacterAura = {}
 
@@ -11,6 +12,7 @@ CharacterAura.REMOVE_DELAY = 2.2
 local SETTINGS = AuraStyles.CharacterAura
 local DESIGNS = {
     AquaWisp = TidecallerAura,
+    EmberWyrm = EmberCrucibleAura,
 }
 local TEXTURES = SETTINGS.Textures
 local TAU = 2 * math.pi

@@ -5,9 +5,11 @@ Status: **in progress, one element at a time.**
 | Pet | Aura | Module |
 | --- | --- | --- |
 | Aqua Wisp | **Tidecaller Sanctum** (done): a water lotus seat, tidal vortex ribbons, orbiting droplets, spirit koi, a breaking-wave crown, water spouts and a caustic pool | `src/client/TidecallerAura.lua` |
+| Ember Wyrm | **Ember Crucible** (rebuilt): fast-spinning ground slashes and ember cloud, rising debris and sparkles, a twin vortex of energy beams, ember body flames, orbit trails, the spirit bead wyrm and the molten fire halo | `src/client/EmberCrucibleAura.lua` |
 
 Each finished aura is its own module with the `CharacterAura` interface (build, show, hide, pulse,
-update, destroy), registered in `DESIGNS` in `src/client/CharacterAura.lua`. Its settings live in
+update, destroy), built on the shared helpers in `src/client/AuraKit.lua` and registered in `DESIGNS`
+in `src/client/CharacterAura.lua`. Its settings live in
 `AuraStyles`, and its meshes in `ReplicatedStorage.AuraMeshes`; without the meshes the pet falls
 back to the flame aura.
 
