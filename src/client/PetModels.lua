@@ -637,6 +637,7 @@ local MESH_LOOKS = {
     MossGolem = { Eyes = Color3.fromRGB(231, 173, 63), GlowEyes = true, Glow = Color3.fromRGB(110, 255, 140), Length = 3.4 },
     JadeSpiritPanda = { Eyes = Color3.fromRGB(50, 200, 115), GlowEyes = true, Glow = Color3.fromRGB(60, 225, 130), Length = 3.3 },
     JadeAntlerDeer = { Eyes = Color3.fromRGB(56, 221, 153), GlowEyes = true, Glow = Color3.fromRGB(60, 225, 140), Length = 4.2 },
+    MagmaCub = { Eyes = Color3.fromRGB(255, 110, 0), GlowEyes = true, Glow = Color3.fromRGB(255, 120, 30), Length = 2.6 },
     DawnPhoenix = { Eyes = Color3.fromRGB(255, 173, 48), GlowEyes = true, Glow = Color3.fromRGB(255, 170, 70), Length = 4.6 },
     AquaWisp = { Eyes = NAVY, Effect = "Bubbles", Glow = Color3.fromRGB(110, 205, 255), Length = 3.12 },
     EmberWyrm = { Eyes = Color3.fromRGB(255, 120, 40), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(255, 115, 35), Length = 2.9 },

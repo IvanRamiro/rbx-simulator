@@ -157,7 +157,12 @@ and bursts a rising sun with rays and spiralling flame plumes. Rune Sphinx (a
 charcoal feline guardian with a stone-blade mane, an obsidian horn crown and
 glowing runes of one forgotten alphabet carved across its body) prowls with a slow,
 judging gaze; its special, **Rune Seal**, raises its chest and opens a spinning
-seal of rising rune glyphs and amber pillars. Specials are visual only.
+seal of rising rune glyphs and amber pillars. Magma Cub (a young volcanic beast on
+huge basalt forearms, its molten core glowing through cracked chest plates and
+molten seams across its shoulders and arms) knuckle-walks and tilts its head
+curiously; its special, **Magma Pop**, winds up, slams both fists down and hops,
+bursting basalt spikes and lava blobs out of a molten pool. Specials are visual
+only.
 
 
 **First found in the Beginner Qi Egg (starting island)**

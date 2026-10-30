@@ -327,6 +327,37 @@ local function animateSphinx(rig, s, moving, fly, nova)
     pose(m.Tail2, CFrame.Angles(0.12 * math.sin(t * 0.6 - 0.7) - 0.3 * rise, 0.35 * math.sin(t * 0.8 - 0.9), 0))
 end
 
+local function animateCub(rig, s, moving, fly, nova)
+    local m, u, t = rig.motors, rig.unit, s.time
+    local pace = math.max(moving, fly)
+    s.stride = (s.stride or 0) + rig.deltaTime * (1.4 + 6.5 * pace)
+    local stride = s.stride
+    local breathe = math.sin(t * 1.6)
+    local tilt = math.sin(t * 0.45) ^ 3 * (1 - pace)
+    local wind = math.sin(math.min(nova * 1.6, 1) * math.pi / 2)
+    s.erupt = if rig.nova then (s.erupt or 0) + rig.deltaTime else 0
+    local hop = smoothstep(0.55, 0.85, s.erupt) * (1 - smoothstep(0.95, 1.25, s.erupt))
+
+    pose(m.Body, CFrame.new(0, (0.02 * breathe + 0.05 * math.abs(math.sin(stride)) * pace - 0.06 * wind + 0.3 * hop) * u, 0)
+        * CFrame.Angles(0.04 * breathe - 0.1 * pace + 0.25 * wind - 0.15 * hop, 0, 0.07 * math.sin(stride) * pace))
+    pose(m.Head, CFrame.Angles(0.06 * math.sin(t * 0.9) - 0.15 * wind + 0.3 * hop, 0.25 * math.sin(t * 0.37) * (1 - pace), 0.3 * tilt))
+
+    for _, side in { "L", "R" } do
+        local phase = if side == "L" then 0 else math.pi
+        local arm = m["Arm" .. side]
+        local leg = m["Leg" .. side]
+        local slam = (if side == "L" then 1.4 else 1.1) * wind
+        if arm then
+            pose(arm, CFrame.Angles(0.45 * math.sin(stride + phase) * pace - slam + 0.6 * hop, 0, 0))
+        end
+        if leg then
+            pose(leg, CFrame.Angles(0.4 * math.sin(stride + phase + math.pi) * pace - 0.3 * hop, 0, 0))
+        end
+    end
+
+    pose(m.Tail, CFrame.Angles(0.08 * math.sin(t * 2.2) + 0.25 * hop, 0.3 * math.sin(t * 1.7 + 0.5) + 0.2 * math.sin(stride) * pace, 0))
+end
+
 PetRig.Profiles = {
     SunscaleDragon = {
         Joints = {
@@ -744,6 +775,44 @@ PetRig.Profiles.RuneSphinx = {
         Ivory = Color3.fromRGB(255, 250, 235),
     },
     Animate = animateSphinx,
+}
+
+PetRig.Profiles.MagmaCub = {
+    Joints = {
+        Body = "Root",
+        Head = "Body",
+        ArmL = "Body",
+        ArmR = "Body",
+        LegL = "Body",
+        LegR = "Body",
+        Tail = "Body",
+    },
+    Attached = {},
+    SeeThrough = {},
+    GlowColors = {
+        ffce61 = Color3.fromRGB(255, 150, 20),
+        ff9b30 = Color3.fromRGB(255, 85, 0),
+        ffad27 = Color3.fromRGB(255, 110, 0),
+        ffda61 = Color3.fromRGB(255, 175, 30),
+        ed6119 = Color3.fromRGB(220, 50, 0),
+    },
+    Effects = {
+        Motes = "Body",
+        Light = "Body",
+        Pulse = "Body",
+        Burst = "Body",
+        Sparks = { "ArmL_Paw", "ArmR_Paw", "Head_Vent" },
+        Blast = "MagmaPop",
+        NovaLight = 3,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(255, 140, 30),
+        Amber = Color3.fromRGB(40, 30, 28),
+        Orange = Color3.fromRGB(255, 80, 10),
+        Sun = Color3.fromRGB(255, 200, 90),
+        Ivory = Color3.fromRGB(255, 235, 200),
+    },
+    Animate = animateCub,
 }
 
 PetRig.NOVA_TIME = 2.6
@@ -1711,6 +1780,75 @@ function Blasts.SolarCorona(rig, fx)
     TweenService:Create(light, TweenInfo.new(1.2), { Brightness = 0 }):Play()
     if rig.burst then
         rig.burst:Emit(35)
+    end
+end
+
+function Blasts.MagmaPop(rig, fx)
+    local colors, u, origin, neon = rig.profile.Colors, rig.unit, fx.origin, fx.neon
+    local ground = origin - Vector3.new(0, 0.6 * u, 0) + fx.facing.LookVector * 0.5 * u
+
+    local pool = neon(Vector3.new(0.08 * u, 0.6 * u, 0.6 * u), CFrame.new(ground) * CFrame.Angles(0, 0, math.pi / 2), colors.Orange)
+    pool.Shape = Enum.PartType.Cylinder
+    pool.Transparency = 0.15
+    TweenService:Create(pool, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.new(0.06 * u, 2.6 * u, 2.6 * u) }):Play()
+    TweenService:Create(pool, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.5), {
+        Size = Vector3.new(0.02 * u, 3.4 * u, 3.4 * u),
+        Transparency = 1,
+    }):Play()
+
+    for index = 1, 9 do
+        local angle = index / 9 * 2 * math.pi + math.random() * 0.4
+        local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
+        local size = Vector3.new(0.3 + math.random() * 0.2, 0.5 + math.random() * 0.5, 0.3 + math.random() * 0.2) * u
+        local spike = Instance.new("WedgePart")
+        spike.Anchored = true
+        spike.CanCollide = false
+        spike.CanQuery = false
+        spike.CanTouch = false
+        spike.CastShadow = false
+        spike.Material = Enum.Material.Basalt
+        spike.Color = colors.Amber
+        spike.Size = size
+        local base = ground + out * (0.8 + math.random() * 0.6) * u
+        spike.CFrame = CFrame.new(base - Vector3.new(0, size.Y, 0)) * CFrame.Angles(0, angle + math.pi / 2, 0) * CFrame.Angles(-0.3, 0, 0)
+        spike.Parent = pool.Parent
+        local up = TweenService:Create(spike, TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            CFrame = spike.CFrame + Vector3.new(0, size.Y * 0.85, 0),
+        })
+        up.Completed:Once(function()
+            TweenService:Create(spike, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.25), {
+                CFrame = spike.CFrame - Vector3.new(0, size.Y, 0),
+                Transparency = 1,
+            }):Play()
+        end)
+        up:Play()
+    end
+
+    for index = 1, 12 do
+        local angle = math.random() * 2 * math.pi
+        local blob = neon(Vector3.one * (0.12 + math.random() * 0.1) * u, CFrame.new(ground + Vector3.new(0, 0.2 * u, 0)), if index % 3 == 0 then colors.Sun else colors.Gold)
+        blob.Shape = Enum.PartType.Ball
+        local peak = ground + Vector3.new(math.cos(angle), 0, math.sin(angle)) * (0.8 + math.random()) * u + Vector3.new(0, (1.4 + math.random()) * u, 0)
+        local land = peak + Vector3.new(math.cos(angle), 0, math.sin(angle)) * 0.6 * u - Vector3.new(0, (1.8 + math.random()) * u, 0)
+        local rise = TweenService:Create(blob, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = CFrame.new(peak) })
+        rise.Completed:Once(function()
+            TweenService:Create(blob, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                CFrame = CFrame.new(land),
+                Color = colors.Amber,
+                Transparency = 1,
+            }):Play()
+        end)
+        rise:Play()
+    end
+
+    local light = Instance.new("PointLight")
+    light.Color = colors.Orange
+    light.Range = 9 * u
+    light.Brightness = 2
+    light.Parent = pool
+    TweenService:Create(light, TweenInfo.new(1), { Brightness = 0 }):Play()
+    if rig.burst then
+        rig.burst:Emit(30)
     end
 end
 
