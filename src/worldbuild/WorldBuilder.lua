@@ -235,6 +235,13 @@ WorldBuilder.Collision = {
     { Prefix = "OA_RuinFragment", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "OA_ShardFloor", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "OA_RouteStone", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "OA_ThornCrown", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "OA_Colossus", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "OA_EggPedestal", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "OA_RuinPillar", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "OA_FallenDrums", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "OA_VoidCrystals", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "OA_SlateRock", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "JG_", Fidelity = Enum.CollisionFidelity.Default },
     { Prefix = "SI_", Fidelity = Enum.CollisionFidelity.Default },
 }
@@ -302,6 +309,11 @@ WorldBuilder.Appearance = {
     OA_ShardCore = table.clone(GLOW),
     OA_ShardChains = { CanCollide = false },
     OA_VoidFlame = table.clone(GLOW),
+    OA_EggGlowRing = table.clone(GLOW),
+    OA_ColossusEyes = table.clone(GLOW),
+    -- void crystals: dark glass around a glowing core
+    OA_VoidCrystals = { Material = Enum.Material.Glass, Transparency = 0.35, Reflectance = 0.15, CastShadow = false },
+    OA_VoidCrystalGlow = table.clone(GLOW),
 }
 WorldBuilder.Appearance.SI_QiCompassGlow.Color = Color3.fromRGB(40, 210, 235)
 WorldBuilder.Appearance.SI_LanternLight.Color = Color3.fromRGB(255, 150, 60)
@@ -332,6 +344,9 @@ WorldBuilder.Appearance.OA_VoidShard.Color = Color3.fromRGB(40, 18, 72)
 WorldBuilder.Appearance.OA_ShardCore.Color = Color3.fromRGB(165, 50, 255)
 WorldBuilder.Appearance.OA_VoidFlame.Color = Color3.fromRGB(160, 50, 255)
 WorldBuilder.Appearance.OA_VoidFlame.Transparency = 0.35
+WorldBuilder.Appearance.OA_ColossusEyes.Color = Color3.fromRGB(115, 40, 255) -- bluer violet: redder ones bloom pink
+WorldBuilder.Appearance.OA_VoidCrystals.Color = Color3.fromRGB(55, 22, 100)
+WorldBuilder.Appearance.OA_VoidCrystalGlow.Color = Color3.fromRGB(160, 55, 255)
 
 -- Kit pieces that carry a PointLight (lights take the piece's colour).
 WorldBuilder.Lights = {
@@ -342,6 +357,7 @@ WorldBuilder.Lights = {
     EP_ForgeCoals = { Range = 18, Brightness = 1.5 },
     MI_StarLanternCore = { Range = 14, Brightness = 0.9 },
     OA_VoidFlame = { Range = 18, Brightness = 1.2 },
+    OA_ColossusEyes = { Range = 16, Brightness = 1.4 },
 }
 
 -- Kit pieces that throw off particles (one or more presets each).
@@ -351,6 +367,8 @@ WorldBuilder.Emitters = {
     EP_ForgeCoals = { "EmberSparks" },
     EP_VentGlow = { "EmberSparks" },
     OA_VoidFlame = { "VoidFlames", "VoidMotes" },
+    OA_ColossusEyes = { "VoidWisps" },
+    OA_VoidCrystalGlow = { "VoidMotes" },
 }
 
 local function addEmitterPreset(part, preset)
@@ -424,6 +442,28 @@ local function addEmitterPreset(part, preset)
         motes.EmissionDirection = Enum.NormalId.Top
         motes.Rate = 5
         motes.Parent = part
+    elseif preset == "VoidWisps" then
+        -- thin tall wisps of void light seeping up out of the colossus's face, slow and few
+        local wisps = Instance.new("ParticleEmitter")
+        wisps.Name = "VoidWisps"
+        wisps.Texture = "rbxasset://textures/particles/smoke_main.dds"
+        wisps.Orientation = Enum.ParticleOrientation.FacingCameraWorldUp
+        wisps.Color = ColorSequence.new(Color3.fromRGB(175, 80, 255), Color3.fromRGB(40, 0, 90))
+        wisps.LightEmission = 0.7
+        wisps.LightInfluence = 0
+        wisps.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(0.5, 0.9), NumberSequenceKeypoint.new(1, 1.3) })
+        wisps.Squash = NumberSequence.new(1.4) -- tall and thin
+        wisps.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.55),
+            NumberSequenceKeypoint.new(1, 1) })
+        wisps.Lifetime = NumberRange.new(2.5, 3.5)
+        wisps.Speed = NumberRange.new(1.2, 2.2)
+        wisps.SpreadAngle = Vector2.new(12, 12)
+        wisps.Acceleration = Vector3.new(0, 0.6, 0)
+        wisps.Rotation = NumberRange.new(-10, 10)
+        wisps.RotSpeed = NumberRange.new(-8, 8)
+        wisps.EmissionDirection = Enum.NormalId.Top
+        wisps.Rate = 4
+        wisps.Parent = part
     end
 end
 
@@ -666,6 +706,10 @@ WorldBuilder.EggGlow = {
     JadeSpiritEgg = Color3.fromRGB(40, 225, 120),
     BloomwoodEgg = Color3.fromRGB(255, 80, 180),
     AncientGroveEgg = Color3.fromRGB(170, 240, 40),
+    -- the Origin Abyss eggs' own glow colours (their meshes' _Glow_ parts)
+    ForbiddenOriginEgg = Color3.fromHex("b04fff"),
+    VoidRiftEgg = Color3.fromHex("646eff"),
+    PrimordialAbyssEgg = Color3.fromHex("ff44bf"),
 }
 
 local EGG_STUDS_PER_UNIT = 1.3

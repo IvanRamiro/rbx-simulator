@@ -45,9 +45,9 @@ def void(u, v):
 
 
 def bronze(u, v):
-    if _n(u, v, 12, 205) > 0.38:
-        return (0.24, 0.42, 0.36)   # verdigris
-    return _ramp((0.24, 0.15, 0.07), (0.62, 0.44, 0.22), v, _n(u, v, 7, 206), 0.05)
+    if _n(u, v, 12, 205) > 0.45:
+        return (0.14, 0.24, 0.2)    # verdigris, rare and dark
+    return _ramp((0.12, 0.08, 0.04), (0.38, 0.26, 0.13), v, _n(u, v, 7, 206), 0.04)   # old, dark bronze
 
 
 def ruin(u, v):
@@ -195,6 +195,29 @@ def void_core(coll, mat, bands):
     return mb.object("OA_VoidCore", coll, mat)
 
 
+def chain_link(mb, centre, axis, side, half_len, half_w, r, band, segs=8, sides=4):
+    """One closed oval link: a tube of radius r round an oval in the plane of axis and side. The
+    oval's tightest bend (half_w^2 / half_len) must stay wider than r, or the tube folds."""
+    assert half_w * half_w / half_len > r, "chain link too thick for its bend"
+    normal = axis.cross(side).normalized()
+    stations = []
+    for i in range(segs):
+        ang = TAU * i / segs
+        p = centre + axis * math.cos(ang) * half_len + side * math.sin(ang) * half_w
+        tangent = (-axis * math.sin(ang) * half_len + side * math.cos(ang) * half_w).normalized()
+        out = tangent.cross(normal).normalized()
+        if out.dot(p - centre) < 0:
+            out = -out
+        dirs = [out * math.cos(TAU * k / sides) + normal * math.sin(TAU * k / sides) for k in range(sides)]
+        stations.append((p, dirs))
+    for i in range(segs):
+        (p0, d0), (p1, d1) = stations[i], stations[(i + 1) % segs]
+        for k in range(sides):
+            j = (k + 1) % sides
+            quad = [tuple(p0 + d0[k] * r), tuple(p0 + d0[j] * r), tuple(p1 + d1[j] * r), tuple(p1 + d1[k] * r)]
+            oriented(mb, quad, tuple(d0[k] + d0[j] + d1[k] + d1[j]), band, (k + 0.5) / sides, [0.9 if (d0[k] + d0[j]).y > 0 else 0.55] * 4)
+
+
 def chain_links(mb, a, b, link_len, link_w, band, sag=0.0):
     """A chain of alternating links between points a and b (Roblox space), sagging in the middle."""
     a, b = W.Vector(a), W.Vector(b)
@@ -204,14 +227,12 @@ def chain_links(mb, a, b, link_len, link_w, band, sag=0.0):
         t0, t1 = k / n, (k + 1) / n
         p0 = a + d * t0 + W.Vector((0, -sag * 4 * t0 * (1 - t0), 0))
         p1 = a + d * t1 + W.Vector((0, -sag * 4 * t1 * (1 - t1), 0))
-        mid = (p0 + p1) / 2
         axis = (p1 - p0).normalized()
-        side = axis.cross(W.Vector((0, 1, 0))).normalized() if k % 2 == 0 else W.Vector((0, 1, 0))
-        pts = []
-        for i in range(8):  # an elongated ring around the link's long axis (kept low-poly: these are seen from afar)
-            ang = TAU * i / 8
-            pts.append(tuple(mid + axis * math.cos(ang) * link_len * 0.55 + side * math.sin(ang) * link_w))
-        W.mb_tube(mb, pts + [pts[0]], lambda t: link_w * 0.3, 4, band, per=1)
+        flat = axis.cross(W.Vector((0, 1, 0)))
+        if flat.length < 1e-3:   # a vertical chain: any horizontal side will do
+            flat = axis.cross(W.Vector((1, 0, 0)))
+        side = flat.normalized() if k % 2 == 0 else axis.cross(flat).normalized()   # alternate links turn 90 degrees
+        chain_link(mb, (p0 + p1) / 2, axis, side, link_len * 0.55, link_w, link_w * 0.3, band)
 
 
 def rift_chains(coll, mat, bands):
@@ -512,23 +533,34 @@ def shard_core(coll, mat, bands):
 
 def torn_underside(mb, poly, rnd, bands, depth):
     """Rock torn away beneath a floating slab: jittered rings narrowing to an off-centre point."""
-    rings = []
+    # Each deeper ring is the slab's outline scaled down as a whole and drifted off-centre, with only
+    # a small wobble per corner: jittering corners independently twists the faces between rings.
+    rings, centres = [], []
     for s, y in ((1.0, -1.2), (0.75, -1.2 - depth * 0.35), (0.45, -1.2 - depth * 0.7)):
-        ox, oz = rnd.uniform(-3, 3) * (1 - s), rnd.uniform(-3, 3) * (1 - s)   # deeper rings drift off-centre
-        rings.append([(x * s * rnd.uniform(0.8, 1.15) + ox, y + (rnd.uniform(-0.8, 0.8) if s < 1 else 0),
-                       z * s * rnd.uniform(0.8, 1.15) + oz) for x, z in poly])
+        if s < 1:
+            s *= rnd.uniform(0.9, 1.1)
+        ox, oz = (rnd.uniform(-1.5, 1.5) * (1 - s), rnd.uniform(-1.5, 1.5) * (1 - s)) if s < 1 else (0.0, 0.0)
+        wob = (lambda: rnd.uniform(0.95, 1.05)) if s < 1 else (lambda: 1.0)
+        rings.append([(x * s * wob() + ox, y + (rnd.uniform(-0.6, 0.6) if s < 1 else 0), z * s * wob() + oz) for x, z in poly])
+        centres.append(W.Vector((ox, y, oz)))
     n = len(poly)
     for k in range(len(rings) - 1):
+        c = (centres[k] + centres[k + 1]) / 2
         for i in range(n):
             j = (i + 1) % n
-            mid = ((rings[k][i][0] + rings[k][j][0]) / 2, 0, (rings[k][i][2] + rings[k][j][2]) / 2)
-            oriented(mb, [rings[k][i], rings[k][j], rings[k + 1][j], rings[k + 1][i]], (mid[0], -0.4, mid[2]), bands[FRACTURE],
-                     rnd.random(), [0.8 - 0.25 * k] * 4)
-    tip = (rnd.uniform(-1.5, 1.5), -1.2 - depth, rnd.uniform(-1.5, 1.5))
+            q = [rings[k][i], rings[k][j], rings[k + 1][j], rings[k + 1][i]]
+            mid = W.Vector([sum(p[m] for p in q) / 4 for m in range(3)])
+            out = mid - c
+            out.y = -0.3   # sides of the torn rock: outward from the rings' centres, a little down
+            oriented(mb, q, tuple(out), bands[FRACTURE], rnd.random(), [0.8 - 0.25 * k] * 4)
+    tip = W.Vector((centres[-1].x + rnd.uniform(-0.8, 0.8), -1.2 - depth, centres[-1].z + rnd.uniform(-0.8, 0.8)))
     for i in range(n):
         j = (i + 1) % n
-        mid = ((rings[-1][i][0] + rings[-1][j][0]) / 2, 0, (rings[-1][i][2] + rings[-1][j][2]) / 2)
-        oriented(mb, [rings[-1][i], rings[-1][j], tip], (mid[0], -1.0, mid[2]), bands[FRACTURE], rnd.random(), [0.25] * 3)
+        tri = [rings[-1][i], rings[-1][j], tuple(tip)]
+        mid = W.Vector([sum(p[m] for p in tri) / 3 for m in range(3)])
+        out = mid - centres[-1]
+        out.y = -0.6
+        oriented(mb, tri, tuple(out), bands[FRACTURE], rnd.random(), [0.25] * 3)
 
 
 def fragment_poly(rnd, size):
@@ -737,5 +769,6 @@ def export():
     out = W.REPO + "/assets/world/OriginAbyss/"
     W.export_batch(island, out + "OriginAbyss_Island.fbx", image=img, anchor_name="OA_Anchor")
     W.export_batch(kit, out + "OriginAbyss_Kit.fbx", anchor_name="OA_KitAnchor")
-    write_placements()
+    import origin_props   # the set pieces add their kit entries and egg stands to the same placements file
+    origin_props.write_all()
     return island + kit

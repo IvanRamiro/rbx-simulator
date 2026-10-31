@@ -2,8 +2,17 @@
 -- Island-local Roblox studs. Kit entries place each piece's authored origin.
 return {
     Kit = {
+        OA_Colossus = {
+            { Position = Vector3.new(54.00, 0.21, -4.00), Yaw = -1.0304 },
+        },
+        OA_ColossusEyes = {
+            { Position = Vector3.new(54.00, 0.21, -4.00), Yaw = -1.0304 },
+        },
         OA_DescentLedge = {
             { Position = Vector3.new(90.00, 105.00, 110.00), Yaw = -0.0997 },
+        },
+        OA_FallenDrums = {
+            { Position = Vector3.new(21.45, -0.41, 19.21), Yaw = 2.8966 },
         },
         OA_GateOfDescent = {
             { Position = Vector3.new(40.00, 0.20, 44.00), Yaw = -2.6224 },
@@ -17,12 +26,71 @@ return {
             { Position = Vector3.new(-14.19, 56.00, -16.45), Yaw = -0.6000 },
             { Position = Vector3.new(-55.70, 105.00, -19.74), Yaw = -2.7000 },
         },
+        OA_RuinPillar = {
+            { Position = Vector3.new(27.69, 0.34, 35.53), Yaw = 4.8640, Scale = 0.749 },
+            { Position = Vector3.new(36.37, -0.36, 30.57), Yaw = 3.6385, Scale = 0.816 },
+            { Position = Vector3.new(19.03, 0.22, 28.91), Yaw = 1.0553, Scale = 0.591 },
+            { Position = Vector3.new(6.63, -0.22, 14.24), Yaw = 1.4541, Scale = 0.801 },
+        },
         OA_ShardFloor = {
             { Position = Vector3.new(-34.00, 154.00, -30.00), Yaw = 0.0000 },
+        },
+        OA_SlateRock = {
+            { Position = Vector3.new(-72.16, 10.46, -16.86), Yaw = 5.5348, Scale = 0.855 },
+            { Position = Vector3.new(-60.74, 10.23, -20.31), Yaw = 0.2809, Scale = 0.852 },
+            { Position = Vector3.new(3.89, -0.59, 72.67), Yaw = 2.6069, Scale = 1.189 },
+            { Position = Vector3.new(-52.40, 6.92, 5.60), Yaw = 1.9667, Scale = 1.115 },
+            { Position = Vector3.new(-8.57, 7.25, -68.68), Yaw = 3.4813, Scale = 1.075 },
+            { Position = Vector3.new(-26.75, 7.06, -49.16), Yaw = 2.3705, Scale = 1.144 },
+            { Position = Vector3.new(-55.17, 6.83, 29.91), Yaw = 1.2059, Scale = 1.243 },
+            { Position = Vector3.new(32.99, -0.95, -16.88), Yaw = 1.6079, Scale = 1.308 },
+            { Position = Vector3.new(-25.17, -3.10, 35.68), Yaw = 2.3460, Scale = 1.002 },
+            { Position = Vector3.new(63.58, -1.18, 22.21), Yaw = 4.1761, Scale = 0.981 },
+        },
+        OA_ThornCrown = {
+            { Position = Vector3.new(0.00, 0.00, 0.00), Yaw = 0.0000 },
+        },
+        OA_VoidCrystalGlow = {
+            { Position = Vector3.new(17.67, -2.06, -10.70), Yaw = 4.4476, Scale = 1.090 },
+            { Position = Vector3.new(19.51, 5.59, -60.33), Yaw = 0.4970, Scale = 1.597 },
+            { Position = Vector3.new(-6.19, -2.27, 28.90), Yaw = 5.1486, Scale = 1.558 },
+            { Position = Vector3.new(-6.43, 5.96, -28.16), Yaw = 5.4309, Scale = 1.405 },
+            { Position = Vector3.new(1.74, 5.68, -39.56), Yaw = 1.4028, Scale = 1.008 },
+            { Position = Vector3.new(41.91, -1.50, -39.73), Yaw = 4.0184, Scale = 1.458 },
+            { Position = Vector3.new(-44.45, 3.04, 34.26), Yaw = 1.2142, Scale = 1.149 },
+            { Position = Vector3.new(47.89, -2.11, -48.33), Yaw = 4.3061, Scale = 1.459 },
+            { Position = Vector3.new(-28.78, 5.89, 7.88), Yaw = 4.5499, Scale = 0.956 },
+            { Position = Vector3.new(-56.87, 4.57, 43.06), Yaw = 2.0878, Scale = 1.146 },
+            { Position = Vector3.new(6.63, 6.77, -61.41), Yaw = 2.4314, Scale = 0.887 },
+            { Position = Vector3.new(61.45, -0.76, 49.55), Yaw = 3.3705, Scale = 0.967 },
+            { Position = Vector3.new(-69.47, 9.79, -30.92), Yaw = 2.4862, Scale = 0.777 },
+            { Position = Vector3.new(-8.84, 0.39, 66.15), Yaw = 2.6121, Scale = 0.879 },
+        },
+        OA_VoidCrystals = {
+            { Position = Vector3.new(17.67, -2.06, -10.70), Yaw = 4.4476, Scale = 1.090 },
+            { Position = Vector3.new(19.51, 5.59, -60.33), Yaw = 0.4970, Scale = 1.597 },
+            { Position = Vector3.new(-6.19, -2.27, 28.90), Yaw = 5.1486, Scale = 1.558 },
+            { Position = Vector3.new(-6.43, 5.96, -28.16), Yaw = 5.4309, Scale = 1.405 },
+            { Position = Vector3.new(1.74, 5.68, -39.56), Yaw = 1.4028, Scale = 1.008 },
+            { Position = Vector3.new(41.91, -1.50, -39.73), Yaw = 4.0184, Scale = 1.458 },
+            { Position = Vector3.new(-44.45, 3.04, 34.26), Yaw = 1.2142, Scale = 1.149 },
+            { Position = Vector3.new(47.89, -2.11, -48.33), Yaw = 4.3061, Scale = 1.459 },
+            { Position = Vector3.new(-28.78, 5.89, 7.88), Yaw = 4.5499, Scale = 0.956 },
+            { Position = Vector3.new(-56.87, 4.57, 43.06), Yaw = 2.0878, Scale = 1.146 },
+            { Position = Vector3.new(6.63, 6.77, -61.41), Yaw = 2.4314, Scale = 0.887 },
+            { Position = Vector3.new(61.45, -0.76, 49.55), Yaw = 3.3705, Scale = 0.967 },
+            { Position = Vector3.new(-69.47, 9.79, -30.92), Yaw = 2.4862, Scale = 0.777 },
+            { Position = Vector3.new(-8.84, 0.39, 66.15), Yaw = 2.6121, Scale = 0.879 },
         },
         OA_VoidFlame = {
             { Position = Vector3.new(90.00, 105.00, 110.00), Yaw = -0.0997 },
         },
+    },
+    EggStandPieces = { Pedestal = "OA_EggPedestal", GlowRing = "OA_EggGlowRing" },
+    EggStands = {
+        { EggId = "ForbiddenOriginEgg", Position = Vector3.new(12.15, 0.80, 54.79), Yaw = -2.9020, EggRest = 2.20 },
+        { EggId = "VoidRiftEgg", Position = Vector3.new(6.42, 0.80, 56.74), Yaw = 2.8198, EggRest = 2.20 },
+        { EggId = "PrimordialAbyssEgg", Position = Vector3.new(3.01, 0.80, 51.75), Yaw = 2.2585, EggRest = 2.20 },
     },
     Checkpoint = Vector3.new(40.00, 1.00, 50.00),
     Relics = {

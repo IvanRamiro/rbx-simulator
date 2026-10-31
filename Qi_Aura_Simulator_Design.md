@@ -518,9 +518,19 @@ Seen from above, the island is a crescent moon: a full disc with a larger offset
 - **Underside and cliffs:** marble cliffs with a gold band under the lip step inward into a belt of soft cloud. Moonstone geode crystals hang beneath, some of them glowing.
 - **Dressing:** hovering porcelain star lanterns, glowing frost lilies, moonstone shards, lunar rocks and spires on the horns.
 
-### Origin Abyss
+### Origin Abyss (built)
 
-To be built with the same pipeline, with its own terrain materials, underside, landmarks, egg shrine, relic sites and themed route stones.
+The hidden endgame island, torn in two by a void rift that zig-zags across it from north-east to south-west, pinching and gaping as it goes. The north-west half stands higher and tilts up toward its far edge.
+
+- **Arrival and route:** the Origin Route ends at the Descent Ledge, a broken temple landing high above the island with steps that end in the air and a violet void fire. Players glide down from it. Each route stone is a floating obsidian shard.
+- **Gate of Descent:** two carved pillars, one snapped. The lintel has fallen onto the stump. A ruined avenue lined with snapped columns and fallen column drums leads from the gate to the rift.
+- **Broken bridge:** an ancient stone bridge crosses the rift at its narrowest point. Its middle has fallen away, leaving one block hanging in the gap to jump across.
+- **Origin Altar:** on the north-west half, a ring of nine leaning obsidian slabs carved with glowing seal-script glyphs (one snapped, its top fallen outside the ring) around a stepped dais with a glowing spiral sigil. The **Origin Altar** relic floats above it.
+- **Void Shard:** a great obsidian-glass crystal with a glowing core, chained to a floating temple floor about 150 studs above the altar. Floating temple fragments climb to it, each rising 49 studs, so Void Walker clears every stage and Divine Initiate falls short. The **Void Shard** relic floats on the top floor.
+- **Egg shrine:** three obsidian plinths cracked with void light, each cradled by thorny bronze branches, after the Origin Abyss egg design. They hold the Forbidden Origin, Void Rift and Primordial Abyss eggs, and each stand glows in its egg's own colour. The Thorn Crown, seven great bronze branches rooted behind the shrine, arches over them.
+- **Fallen colossus:** a giant carved stone head sunk into the ground, its face turned toward the path. Void light shows in its eyes and through a crack across its face.
+- **Underside:** separate angular chunks with gaps between them, void light glowing through. Iron chains bind the halves beneath the rift, a glowing veil hangs deep in the rift, and broken-off debris drifts below.
+- **Dressing:** void crystals of dark glass around glowing cores (most along the rift's lips, with rising motes), slate rocks, and hewn paving on the temple terraces with stones missing toward the edges.
 
 ### How islands are built
 
@@ -532,6 +542,7 @@ To be built with the same pipeline, with its own terrain materials, underside, l
   - Jade Grove: LeafyGrass, Mud and Sandstone.
   - Ember Peak: Basalt, CrackedLava, Asphalt (ash) and Sand (paths).
   - Moonlit Isle: Limestone, Snow (frost), Salt (paths) and Pavement.
+  - Origin Abyss: Slate, Concrete (paths) and Glacier (void-crystal crust). Brick is not used: Studio snaps Brick terrain to the 4-stud voxel grid, so paving is built from meshes.
 - **Meshes:** each island has one texture atlas and reusable kits, and every piece gets its own collision setting.
 
 ---
