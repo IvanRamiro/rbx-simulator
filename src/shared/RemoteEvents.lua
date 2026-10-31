@@ -12,6 +12,7 @@ local EVENT_NAMES = {
     "PetInventoryUpdatedEvent",
     "EggHatchResultEvent",
     "RelicResultEvent",
+    "QinggongFxEvent",
 }
 
 local RemoteEvents = {}

@@ -1,5 +1,7 @@
 -- Qinggong movement: jump, leap again in mid-air (up to the rank's air leaps), and hold jump
 -- while falling to glide. Leaps refill on landing. Works with keyboard, gamepad and touch.
+-- Each takeoff, leap, glide and landing plays its effect here at once (QinggongFx) and is sent
+-- to the server, which relays it so other players see it too.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -7,7 +9,9 @@ local UserInputService = game:GetService("UserInputService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent:WaitForChild("HudScale"))
+local QinggongFx = require(script.Parent:WaitForChild("QinggongFx"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -18,6 +22,8 @@ local PIP_READY = Color3.fromRGB(150, 235, 255)
 local PIP_SPENT = Color3.fromRGB(60, 70, 85)
 local GLIDE_COLOR = Color3.fromRGB(190, 255, 220)
 local NEW_PRESS_GAP = 0.18 -- jump requests closer than this are one held press
+local HARD_LANDING_SPEED = 25 -- a fall faster than this lands with an impact even without Qinggong
+local FULL_IMPACT_SPEED = 110 -- the fall speed of a full-strength landing
 local MAX_PIPS = GameConfig.Qinggong.Levels[#GameConfig.Qinggong.Levels].AirLeaps
 
 local oldHud = playerGui:FindFirstChild(HUD_NAME)
@@ -129,29 +135,9 @@ local function isAirborne(humanoid)
     return state == Enum.HumanoidStateType.Freefall or state == Enum.HumanoidStateType.Jumping
 end
 
-local burst = nil
-local function getBurst(rootPart)
-    if burst and burst.Parent and burst.Parent.Parent == rootPart then
-        return burst
-    end
-    local attachment = Instance.new("Attachment")
-    attachment.Name = "QinggongFeet"
-    attachment.Position = Vector3.new(0, -2.8, 0)
-    attachment.Parent = rootPart
-    burst = Instance.new("ParticleEmitter")
-    burst.Name = "LeapBurst"
-    burst.Enabled = false
-    burst.Color = ColorSequence.new(PIP_READY)
-    burst.LightEmission = 0.6
-    burst.LightInfluence = 0
-    burst.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 0) })
-    burst.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
-    burst.Lifetime = NumberRange.new(0.3, 0.45)
-    burst.Speed = NumberRange.new(8, 12)
-    burst.SpreadAngle = Vector2.new(80, 80)
-    burst.EmissionDirection = Enum.NormalId.Bottom
-    burst.Parent = attachment
-    return burst
+local function playFx(kind, value)
+    QinggongFx.play(player, kind, value)
+    RemoteEvents.QinggongFxEvent:FireServer(kind, value)
 end
 
 local function airLeap(humanoid, rootPart)
@@ -162,7 +148,7 @@ local function airLeap(humanoid, rootPart)
         then direction.Unit * qinggong.LeapForwardSpeed
         else rootPart.AssemblyLinearVelocity * Vector3.new(0.5, 0, 0.5)
     rootPart.AssemblyLinearVelocity = horizontal + Vector3.new(0, qinggong.LeapUpSpeed, 0)
-    getBurst(rootPart):Emit(14)
+    playFx("Leap", leapsUsed)
     updateHud()
 end
 
@@ -207,13 +193,40 @@ local function isJumpHeld(humanoid)
     return jumpKeyHeld or (UserInputService.TouchEnabled and humanoid.Jump)
 end
 
+-- the flight since the feet last left the ground, for the landing effect
+local airborne = false
+local fastestFall = 0
+local usedQinggong = false
+
+local function land()
+    if os.clock() - lastLeapTime < 0.15 then
+        return -- a leap fired on the frame the feet touched down: it carries on upward, so no landing
+    end
+    local strength = math.clamp((fastestFall - HARD_LANDING_SPEED) / (FULL_IMPACT_SPEED - HARD_LANDING_SPEED), 0, 1)
+    if usedQinggong or strength > 0 then
+        playFx("Land", if usedQinggong then math.max(strength, 0.3) else strength)
+    end
+end
+
 RunService.Heartbeat:Connect(function(deltaTime)
     local humanoid, rootPart = getCharacterParts()
     local wasGliding = gliding
     gliding = false
 
     if humanoid then
-        if not isAirborne(humanoid) then
+        local inAir = isAirborne(humanoid)
+        if inAir then
+            fastestFall = math.max(fastestFall, -rootPart.AssemblyLinearVelocity.Y)
+            usedQinggong = usedQinggong or leapsUsed > 0 or wasGliding
+        elseif airborne then
+            land()
+        end
+        if inAir ~= airborne then
+            airborne = inAir
+            fastestFall = 0
+            usedQinggong = false
+        end
+        if not inAir then
             if leapsUsed ~= 0 then
                 leapsUsed = 0
                 updateHud()
@@ -234,13 +247,34 @@ RunService.Heartbeat:Connect(function(deltaTime)
 
     if gliding ~= wasGliding then
         updateHud()
+        playFx("Glide", if gliding then 1 else 0)
+    end
+end)
+
+-- a jump from the ground: the formation blooms where the feet leave it
+local function watchJumps(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.StateChanged:Connect(function(_, new)
+        if new == Enum.HumanoidStateType.Jumping and player:GetAttribute("IsCultivating") ~= true then
+            playFx("Takeoff", 0)
+        end
+    end)
+end
+if player.Character then
+    task.spawn(watchJumps, player.Character)
+end
+player.CharacterAdded:Connect(watchJumps)
+
+RemoteEvents.QinggongFxEvent.OnClientEvent:Connect(function(source, kind, value)
+    if typeof(source) == "Instance" and source:IsA("Player") and source ~= player then
+        QinggongFx.play(source, kind, value)
     end
 end)
 
 player:GetAttributeChangedSignal("QinggongAirLeaps"):Connect(updateHud)
 player.CharacterAdded:Connect(function()
     leapsUsed = 0
-    burst = nil
+    airborne = false
     updateHud()
 end)
 task.spawn(function()

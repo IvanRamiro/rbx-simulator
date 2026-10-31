@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local QinggongFx = require(script.Parent:WaitForChild("QinggongFx"))
 
 local BLEND_SPEED = 6
 local FLYING_MOVE_SPEED = 4
@@ -71,6 +72,65 @@ local HOVERING = symmetric({
     RightAnkle = deg(-25, 0, 0),
 })
 
+-- The same pose for the other side of the body: every Right joint becomes the mirrored Left one
+-- and every Left joint the mirrored Right one.
+local function flipSides(pose)
+    local flipped = {}
+    for name, cframe in pose do
+        local other = if string.match(name, "^Right") then string.gsub(name, "^Right", "Left")
+            elseif string.match(name, "^Left") then string.gsub(name, "^Left", "Right")
+            else name
+        flipped[other] = mirror(cframe)
+    end
+    return flipped
+end
+
+-- Qinggong leaps alternate legs, like climbing steps in the air. Each starts with a stride, the
+-- driving knee thrust up and forward while the other leg pushes off down and back, the arms
+-- swinging opposite to the legs; then both knees draw up into a tuck, the driving one higher.
+local QINGGONG_STEP_RIGHT = {
+    RightHip = pointLimb(Vector3.new(0.1, -0.22, -0.97)),
+    RightKnee = deg(-118, 0, 0),
+    RightAnkle = deg(-15, 0, 0),
+    LeftHip = pointLimb(Vector3.new(-0.06, -0.92, 0.38)),
+    LeftKnee = deg(-18, 0, 0),
+    LeftAnkle = deg(-40, 0, 0),
+    RightShoulder = pointLimb(Vector3.new(0.3, -0.72, 0.62)),
+    RightElbow = deg(35, 0, 0),
+    LeftShoulder = pointLimb(Vector3.new(-0.18, -0.4, -0.9)),
+    LeftElbow = deg(30, 0, 0),
+}
+local QINGGONG_TUCK_RIGHT = {
+    RightHip = pointLimb(Vector3.new(0.12, -0.35, -0.93)),
+    RightKnee = deg(-120, 0, 0),
+    LeftHip = pointLimb(Vector3.new(-0.1, -0.7, -0.45)),
+    LeftKnee = deg(-95, 0, 0),
+    RightShoulder = pointLimb(Vector3.new(0.6, -0.45, 0.65)),
+    RightElbow = deg(20, 0, 0),
+    LeftShoulder = pointLimb(Vector3.new(-0.6, -0.45, 0.65)),
+    LeftElbow = deg(20, 0, 0),
+}
+-- The glide is a crane stance: one leg trailing straight, the other knee raised, arms spread
+-- back like wings.
+local QINGGONG_GLIDE = symmetric({
+    RightHip = pointLimb(Vector3.new(0.05, -0.72, 0.69)),
+    RightKnee = deg(-15, 0, 0),
+    RightAnkle = deg(-35, 0, 0),
+    LeftHip = pointLimb(Vector3.new(-0.08, -0.35, -0.93)),
+    LeftKnee = deg(-95, 0, 0),
+    RightShoulder = pointLimb(Vector3.new(0.92, -0.15, 0.36)),
+    RightElbow = deg(10, 0, 0),
+    RightWrist = deg(-15, 0, 0),
+})
+local QINGGONG_POSES = {
+    Glide = QINGGONG_GLIDE,
+    StepRight = QINGGONG_STEP_RIGHT,
+    StepLeft = flipSides(QINGGONG_STEP_RIGHT),
+    TuckRight = QINGGONG_TUCK_RIGHT,
+    TuckLeft = flipSides(QINGGONG_TUCK_RIGHT),
+}
+local QINGGONG_BLEND_SPEED = 16 -- the leap poses snap in: a stride lasts only a fifth of a second
+
 local useLotus = GameConfig.MeditationAnimationId == 0
 
 local rigs = {}
@@ -94,11 +154,20 @@ local function choosePose(player, character)
         local speed = if rootPart then rootPart.AssemblyLinearVelocity.Magnitude else 0
         return if speed > FLYING_MOVE_SPEED then FLYING else HOVERING
     end
-    return nil
+    local qinggong = QinggongFx.pose(player)
+    return qinggong and QINGGONG_POSES[qinggong]
+end
+
+local QUICK_POSES = {}
+for name, pose in QINGGONG_POSES do
+    if name ~= "Glide" then
+        QUICK_POSES[pose] = true
+    end
 end
 
 local function updatePoses(deltaTime)
-    local step = 1 - math.exp(-BLEND_SPEED * deltaTime)
+    local normalStep = 1 - math.exp(-BLEND_SPEED * deltaTime)
+    local quickStep = 1 - math.exp(-QINGGONG_BLEND_SPEED * deltaTime)
     for _, player in Players:GetPlayers() do
         local character = player.Character
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -120,6 +189,8 @@ local function updatePoses(deltaTime)
             rig.weights[wanted] = 0
         end
         for pose, weight in rig.weights do
+            -- a leap pose blends in and out quickly; any other change at the usual pace
+            local step = if QUICK_POSES[pose] or (wanted and QUICK_POSES[wanted]) then quickStep else normalStep
             weight += ((if pose == wanted then 1 else 0) - weight) * step
             rig.weights[pose] = if pose ~= wanted and weight < 0.01 then nil else weight
         end

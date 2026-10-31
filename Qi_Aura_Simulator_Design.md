@@ -125,6 +125,21 @@ Measured reach with Roblox gravity:
 
 Every route gap is reachable with its rank's leaps and out of reach with one leap fewer. `layout.py` checks this.
 
+**Leap effects** (`src/client/QinggongFx.lua`): the cultivator rides a current of Qi rather than simply jumping.
+
+| Moment | Effect |
+|---|---|
+| Takeoff (jump from the ground) | A Qi formation blooms over a turning vortex under the feet, with rising wind streaks and puffs of auspicious cloud |
+| Air leap | The foot steps on the void: a small formation, a vortex and a ripple ring open, clouds burst from the step and linger, streaks shoot downward |
+| Rising after a leap | Energy trails from the feet, a silk ribbon from the shoulders, a current of Qi spiralling round the body. The legs stride like climbing steps in the air: the driving knee thrusts up while the other leg pushes off, arms swinging opposite, then both knees tuck. The legs alternate: the ground jump drives the right knee, the first air leap the left, the second the right, and so on |
+| Glide | Riding a cloud: clouds held under the feet, small wisps shed behind, wind lines rushing past; crane-stance glide pose |
+| Landing | A starburst flare, a formation flash, two shockwave rings, sharp Qi spikes, rolling cloud and glittering Qi mist, scaled by impact speed |
+
+- The colour follows the realm: azure (Qi Awakening, Qi Foundation), jade (Spirit Core, Spirit Soul), gold (Ascendant, Immortal), violet (Divine and above).
+- Textures (formation, shockwave, cloud sheet, spike, streak, ribbon) are drawn by `tools/blender/vfx/qinggong_textures.py`. The cloud sheet holds four auspicious-cloud shapes; each particle picks one.
+- From the PDS' Particles & Models Kit: a soft fog puff gives every cloud burst and the riding cloud their volume (the line-drawn clouds ride on a bank of it), plus a vortex under the formations, a starburst flare and glittering Qi mist at landing.
+- Effects play at once for the player and are relayed by the server to everyone else (cosmetic only, rate-limited); other players' effects are skipped beyond 250 studs and use fewer particles.
+
 **Planned:** directional dashes and Qinggong stamina; sword flight (section 0).
 
 ---
