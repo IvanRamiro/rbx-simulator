@@ -48,6 +48,10 @@ WorldBuilder.MaterialColors = {
     Snow = Color3.fromRGB(226, 233, 248),
     Salt = Color3.fromRGB(176, 178, 196),
     Pavement = Color3.fromRGB(168, 172, 192),
+    -- Origin Abyss
+    Slate = Color3.fromRGB(46, 44, 56),
+    Concrete = Color3.fromRGB(78, 76, 88),
+    Glacier = Color3.fromRGB(92, 52, 160), -- void-crystal crust along the rift's lip
 }
 
 -- Per-island terrain settings: how deep the terrain shell reaches below the island centre (the
@@ -60,6 +64,8 @@ WorldBuilder.TerrainSettings = {
     EmberPeak = { ShellDepth = 13, SubMaterial = "Basalt", KeepThrough = { CrackedLava = true } },
     -- deep enough for the Star Well's shaft (floor -18)
     MoonlitIsle = { ShellDepth = 22, SubMaterial = "Limestone", KeepThrough = { Pavement = true } },
+    -- the void crust is only the lip's top layer; the rift walls below are dark slate
+    OriginAbyss = { ShellDepth = 14, SubMaterial = "Slate", KeepThrough = {} },
 }
 
 local function terrainData(island)
@@ -220,6 +226,15 @@ WorldBuilder.Collision = {
     { Prefix = "MI_EggPedestal", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "MI_MoonstoneShards", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "MI_LunarRock", Fidelity = Enum.CollisionFidelity.Hull },
+    -- Origin Abyss: the bridge's gap, the walk through the gate, the altar ring and the ruins on
+    -- each climb fragment must keep their shape (a hull would roof them over)
+    { Prefix = "OA_BrokenBridge", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "OA_GateOfDescent", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "OA_Altar", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "OA_DescentLedge", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "OA_RuinFragment", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "OA_ShardFloor", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "OA_RouteStone", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "JG_", Fidelity = Enum.CollisionFidelity.Default },
     { Prefix = "SI_", Fidelity = Enum.CollisionFidelity.Default },
 }
@@ -276,6 +291,17 @@ WorldBuilder.Appearance = {
     MI_FrostLilies = { CanCollide = false },
     MI_LilyGlow = table.clone(GLOW),
     MI_EggGlowRing = table.clone(GLOW),
+    -- Origin Abyss: void light glows through the shattered underside, the rift and the shard
+    OA_UnderChunks = { CanCollide = false },
+    OA_VoidCore = table.clone(GLOW),
+    OA_RiftChains = { CanCollide = false },
+    OA_RiftVeil = table.clone(GLOW),
+    OA_AltarRunes = table.clone(GLOW),
+    OA_TemplePaving = { CanCollide = false }, -- thin slabs over flat terrain, which carries the player
+    OA_VoidShard = { Material = Enum.Material.Glass, Transparency = 0.3, Reflectance = 0.2, CanCollide = false, CastShadow = false },
+    OA_ShardCore = table.clone(GLOW),
+    OA_ShardChains = { CanCollide = false },
+    OA_VoidFlame = table.clone(GLOW),
 }
 WorldBuilder.Appearance.SI_QiCompassGlow.Color = Color3.fromRGB(40, 210, 235)
 WorldBuilder.Appearance.SI_LanternLight.Color = Color3.fromRGB(255, 150, 60)
@@ -298,6 +324,14 @@ WorldBuilder.Appearance.MI_MirrorPool.Color = Color3.fromRGB(28, 36, 82)
 WorldBuilder.Appearance.MI_GeodeGlow.Color = Color3.fromRGB(90, 140, 255)
 WorldBuilder.Appearance.MI_StarLanternCore.Color = Color3.fromRGB(255, 210, 90)
 WorldBuilder.Appearance.MI_LilyGlow.Color = Color3.fromRGB(110, 160, 255)
+WorldBuilder.Appearance.OA_VoidCore.Color = Color3.fromRGB(140, 40, 255)
+WorldBuilder.Appearance.OA_RiftVeil.Color = Color3.fromRGB(120, 30, 255)
+WorldBuilder.Appearance.OA_RiftVeil.Transparency = 0.6
+WorldBuilder.Appearance.OA_AltarRunes.Color = Color3.fromRGB(140, 55, 255)
+WorldBuilder.Appearance.OA_VoidShard.Color = Color3.fromRGB(40, 18, 72)
+WorldBuilder.Appearance.OA_ShardCore.Color = Color3.fromRGB(165, 50, 255)
+WorldBuilder.Appearance.OA_VoidFlame.Color = Color3.fromRGB(160, 50, 255)
+WorldBuilder.Appearance.OA_VoidFlame.Transparency = 0.35
 
 -- Kit pieces that carry a PointLight (lights take the piece's colour).
 WorldBuilder.Lights = {
@@ -307,6 +341,7 @@ WorldBuilder.Lights = {
     EP_BrazierFire = { Range = 14, Brightness = 0.9 },
     EP_ForgeCoals = { Range = 18, Brightness = 1.5 },
     MI_StarLanternCore = { Range = 14, Brightness = 0.9 },
+    OA_VoidFlame = { Range = 18, Brightness = 1.2 },
 }
 
 -- Kit pieces that throw off particles (one or more presets each).
@@ -315,6 +350,7 @@ WorldBuilder.Emitters = {
     EP_BrazierFire = { "Flames", "EmberSparks" },
     EP_ForgeCoals = { "EmberSparks" },
     EP_VentGlow = { "EmberSparks" },
+    OA_VoidFlame = { "VoidFlames", "VoidMotes" },
 }
 
 local function addEmitterPreset(part, preset)
@@ -351,6 +387,43 @@ local function addEmitterPreset(part, preset)
         sparks.EmissionDirection = Enum.NormalId.Top
         sparks.Rate = 6
         sparks.Parent = part
+    elseif preset == "VoidFlames" then
+        -- violet fire that burns down to black at its tips
+        local flames = Instance.new("ParticleEmitter")
+        flames.Name = "VoidFlames"
+        flames.Texture = "rbxasset://textures/particles/fire_main.dds"
+        flames.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(230, 170, 255)),
+            ColorSequenceKeypoint.new(0.4, Color3.fromRGB(150, 40, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 0, 60)) })
+        flames.LightEmission = 0.8
+        flames.LightInfluence = 0
+        flames.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.3), NumberSequenceKeypoint.new(1, 0.3) })
+        flames.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(1, 1) })
+        flames.Lifetime = NumberRange.new(0.8, 1.3)
+        flames.Speed = NumberRange.new(2, 3.5)
+        flames.SpreadAngle = Vector2.new(6, 6)
+        flames.Rotation = NumberRange.new(-20, 20)
+        flames.EmissionDirection = Enum.NormalId.Top
+        flames.Rate = 18
+        flames.Parent = part
+    elseif preset == "VoidMotes" then
+        -- slow motes of void light drifting up
+        local motes = Instance.new("ParticleEmitter")
+        motes.Name = "VoidMotes"
+        motes.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+        motes.Color = ColorSequence.new(Color3.fromRGB(200, 120, 255), Color3.fromRGB(90, 30, 220))
+        motes.LightEmission = 1
+        motes.LightInfluence = 0
+        motes.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.35), NumberSequenceKeypoint.new(1, 0) })
+        motes.Transparency = NumberSequence.new(0.1, 1)
+        motes.Lifetime = NumberRange.new(2.5, 4)
+        motes.Speed = NumberRange.new(1, 2.5)
+        motes.SpreadAngle = Vector2.new(30, 30)
+        motes.Rotation = NumberRange.new(0, 360)
+        motes.RotSpeed = NumberRange.new(-40, 40)
+        motes.Drag = 0.4
+        motes.EmissionDirection = Enum.NormalId.Top
+        motes.Rate = 5
+        motes.Parent = part
     end
 end
 
@@ -972,6 +1045,8 @@ WorldBuilder.Relics = {
     AshenSigil = { Color = Color3.fromRGB(255, 200, 120) },
     MoonMirror = { Color = Color3.fromRGB(150, 175, 255) },
     StarWell = { Color = Color3.fromRGB(255, 225, 120) },
+    OriginAltar = { Color = Color3.fromRGB(185, 60, 255) },
+    VoidShard = { Color = Color3.fromRGB(120, 60, 255) },
 }
 
 -- The Star Well brims with starlight: a glowing surface just under its gold lip, with starlight
