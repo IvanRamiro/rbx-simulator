@@ -982,70 +982,95 @@ RECIPES.InfernoEgg = function(aura)
     light(aura, LAVA, 12, 0.55)
 end
 
--- Magma Heart Egg: a forge heart. The whole aura beats with a double thump. A fire swirl races
--- round the base on two planes, crimson crystal shards orbit, the forge's draught streams up off
--- the crown crystal throwing sparks, two molten ribbons circle low shedding embers, and a crystal
--- forge sigil turns beneath over a bloom of heat.
+-- Magma Heart Egg: a living forge-heart. No rings, no sigil: the egg hangs in a cage of seven
+-- crimson arteries that swell with every heartbeat while molten blood runs down them. On each
+-- beat its crystal shards are flung outward trailing molten light and drift back, the egg throbs
+-- (a Highlight in its tint), a shockwave of heat pools out across the column, and, near it, the
+-- player's own screen pulses red (ColorCorrection and Bloom). While a hatch gathers the heart
+-- races, the shards slam into the egg and the arteries draw tight; on the burst the screen flashes
+-- white-hot and everything is flung out.
 RECIPES.MagmaHeartEgg = function(aura)
     local CRIMSON, MOLTEN, HOT = rgb(230, 30, 40), rgb(255, 90, 20), rgb(255, 170, 50)
     local C = 2.6                                    -- it stands 5.25 studs
-    aura.model:SetAttribute("Gather", 1.5)
-    aura.model:SetAttribute("Tint", rgb(255, 50, 40))
-    set(aura.model, nil, { Breath = 0.22, BreathPeriod = 1.3, BreathShape = "Heartbeat" })
-    formation(aura, "Formation", T.CrystalForge, 2.6, rgb(255, 40, 45), -8, 3)
-    formation(aura, "Bloom", T.BloomLight, 1.8, MOLTEN, 14, 2, 0.1)
-    ring(aura, "SwirlLow", aura.rim + 0.5, tilt(-8, 6), T.WindArc, 4.8, HOT, 170, 2.6, nil, { 8, 3 })
-    ring(aura, "SwirlHigh", aura.rim + 1.2, tilt(-16, -12), T.WindArc, 4.2, MOLTEN, -140, 2.4, nil, { 10, 4, 90 })
-    for k, o in { { 26, 2.5, C + 1.2, 16, 0.4, 3.0, 1.2 }, { -20, 2.8, C - 0.2, -12, 0.5, 3.6, 0.95 }, { 32, 2.3, C + 0.5, 22, 0.35, 2.6, 0.85 },
-                  { -28, 2.7, C + 1.9, -6, 0.45, 4.2, 1.0 }, { 18, 2.9, C - 0.9, 8, 0.3, 3.3, 0.8 } } do
-        crystal(aura, "Shard" .. k, { Orbit = o[1], Radius = o[2], Height = o[3], Tilt = Vector3.new(o[4], 0, 0), Phase = (k - 1) * 72,
-            Bob = o[5], BobPeriod = o[6] }, o[7], rgb(255, 70, 70), 1.6, T.Crystal, 20, CRIMSON)
-    end
-    -- the forge's draught off the crown crystal
+    set(aura.model, nil, { Gather = 1.6, Tint = rgb(255, 50, 40), Breath = 0.22, BreathPeriod = 1.3, BreathShape = "Heartbeat",
+        BeatHighlight = true, BeatScreen = 26 })
+    -- the arteries: from the column's rim, bowing out round the egg, up into one point over its crown
     local tip = anchor(aura, "CrownTip", Vector3.new(0.041, 2.02, 0.234))
-    local above = attachment(aura, "Draught", CFrame.new(tip.Position + Vector3.new(0, 3.2, 0)))
-    local beam = Instance.new("Beam")
-    beam.Name = "Draught"
-    beam.Attachment0, beam.Attachment1 = tip, above
-    set(beam, {
-        Texture = T.Stream, TextureMode = Enum.TextureMode.Wrap, TextureLength = 1.6, TextureSpeed = 2, Width0 = 0.55, Width1 = 0.05,
+    local apex = attachment(aura, "Apex", CFrame.fromMatrix(tip.Position + Vector3.new(0, 0.55, 0), Vector3.yAxis, Vector3.xAxis))
+    for k = 1, 7 do
+        local ang = (k - 1) * math.pi * 2 / 7 + 0.65   -- this offset leaves the egg's front (-Z) open
+        local out = Vector3.new(math.cos(ang), 0, math.sin(ang))
+        local axis = (out * 0.8 + Vector3.yAxis * 0.6).Unit
+        local base = attachment(aura, "ArteryRoot" .. k, CFrame.fromMatrix(out * 1.95 + Vector3.new(0, aura.rim + 0.05, 0), axis, axis:Cross(out).Unit))
+        local beam = Instance.new("Beam")
+        beam.Name = "Artery" .. k
+        beam.Attachment0, beam.Attachment1 = base, apex
+        set(beam, {
+            -- the solid lava tile with little light emission: veins of molten blood that hold their
+            -- crimson in daylight (the braided stream read as thin pale pink lines)
+            Texture = T.Lava, TextureMode = Enum.TextureMode.Wrap, TextureLength = 1.1, TextureSpeed = -1.1 - 0.15 * (k % 3),
+            CurveSize0 = 4.2, CurveSize1 = 2.4, Width0 = 0.5, Width1 = 0.16, Segments = 20, FaceCamera = true,
+            LightEmission = 0.15, LightInfluence = 0, Brightness = 2.6,
+            Color = colors({ { 0, rgb(150, 10, 15) }, { 0.5, rgb(255, 50, 40) }, { 0.85, rgb(255, 120, 40) }, { 1, rgb(255, 200, 90) } }),
+            Transparency = seq({ { 0, 0.5 }, { 0.06, 0 }, { 0.92, 0 }, { 1, 0.4 } }),
+        }, { BeatWidth = 1.4 })
+        beam.Parent = aura.root
+    end
+    -- the heart's flash on every beat, inside the cage
+    finish(emitter("BeatFlash", {
+        Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.45), Rate = 0, Rotation = NumberRange.new(0, 360),
+        Size = seq({ { 0, 3 }, { 0.3, 5.5 }, { 1, 6.5 } }), Color = ColorSequence.new(rgb(255, 60, 50)),
+        Transparency = seq({ { 0, 0.55 }, { 1, 1 } }), Brightness = 2, ZOffset = -1.5,
+    }, { BeatEmit = 1, HatchEmit = 2 }), attachment(aura, "Heart", CFrame.new(0, C, 0)))
+    -- crystal shards hanging round it, flung out on each beat trailing molten light
+    for k, o in { { 9, 2.7, C + 1.3, 0.35, 3.2, 1.5 }, { -7, 3.0, C - 0.1, 0.45, 3.8, 1.235 }, { 11, 2.6, C + 0.6, 0.3, 2.7, 1.105 },
+                  { -10, 2.9, C + 2.0, 0.4, 4.3, 1.3 }, { 8, 3.1, C - 0.9, 0.3, 3.4, 1.04 }, { -12, 2.8, C + 0.2, 0.35, 2.9, 1.17 } } do
+        local orbit = { Orbit = o[1], Radius = o[2], Height = o[3], Phase = (k - 1) * 60 + 15, Bob = o[4], BobPeriod = o[5],
+            BeatReach = 0.9, GatherPull = 0.75 }
+        local head = crystal(aura, "Shard" .. k, orbit, o[6], rgb(255, 70, 70), 1.6, T.Crystal, 20, CRIMSON)
+        local tailOrbit = table.clone(orbit)
+        tailOrbit.Height -= 0.22
+        local tail = attachment(aura, "Shard" .. k .. "Tail", CFrame.new(0, tailOrbit.Height, tailOrbit.Radius))
+        set(tail, nil, tailOrbit)
+        local trail = Instance.new("Trail")
+        trail.Name = "Shard" .. k .. "Trail"
+        trail.Attachment0, trail.Attachment1 = head, tail
+        set(trail, {
+            Texture = T.Ribbon, TextureMode = Enum.TextureMode.Stretch, Lifetime = 0.35, FaceCamera = true, LightEmission = 0.6,
+            LightInfluence = 0, Brightness = 3, Color = colors({ { 0, HOT }, { 0.5, MOLTEN }, { 1, CRIMSON } }),
+            Transparency = seq({ { 0, 0.05 }, { 1, 1 } }), WidthScale = seq({ { 0, 1 }, { 1, 0 } }),
+        })
+        trail.Parent = aura.root
+    end
+    -- the forge's draught off the crown crystal, spitting sparks on each beat
+    local above = attachment(aura, "Draught", CFrame.new(apex.Position + Vector3.new(0, 2.8, 0)))
+    local draught = Instance.new("Beam")
+    draught.Name = "Draught"
+    draught.Attachment0, draught.Attachment1 = apex, above
+    set(draught, {
+        Texture = T.Stream, TextureMode = Enum.TextureMode.Wrap, TextureLength = 1.6, TextureSpeed = 2, Width0 = 0.5, Width1 = 0.05,
         FaceCamera = true, LightEmission = 0.4, LightInfluence = 0, Brightness = 2.5, Segments = 8,
         Color = colors({ { 0, HOT }, { 0.5, MOLTEN }, { 1, CRIMSON } }), Transparency = seq({ { 0, 0.1 }, { 0.7, 0.4 }, { 1, 1 } }),
-    })
-    beam.Parent = aura.root
+    }, { BeatWidth = 0.8 })
+    draught.Parent = aura.root
     finish(emitter("TipSparks", {
-        Texture = T.Cross, Speed = NumberRange.new(1.5, 3), SpreadAngle = Vector2.new(25, 25), Drag = 0.8, Acceleration = Vector3.new(0, 1, 0),
-        Lifetime = NumberRange.new(0.6, 1), Rate = 8, Rotation = NumberRange.new(0, 90), RotSpeed = NumberRange.new(-120, 120),
+        Texture = T.Cross, Speed = NumberRange.new(1.5, 3.5), SpreadAngle = Vector2.new(35, 35), Drag = 0.8, Acceleration = Vector3.new(0, 1, 0),
+        Lifetime = NumberRange.new(0.6, 1), Rate = 4, Rotation = NumberRange.new(0, 90), RotSpeed = NumberRange.new(-120, 120),
         Size = seq({ { 0, 0.35 }, { 1, 0 } }), Color = ColorSequence.new(HOT, MOLTEN), Transparency = seq({ { 0, 0 }, { 1, 1 } }), Brightness = 3,
-    }, { HatchEmit = 20 }), tip)
-    -- two molten ribbons circling low, shedding embers
-    for k, c in { { 150, 2.3, 10, 0, 0.3, 2.2 }, { -120, 2.6, -14, 12, 0.4, 2.8 } } do
-        local _, head = arc(aura, "Molten" .. k, { Orbit = c[1], Radius = c[2], Height = aura.rim + 0.8, Tilt = Vector3.new(c[3], 0, c[4]),
-            Phase = (k - 1) * 180, Bob = c[5], BobPeriod = c[6] }, 0.16, {
-            Texture = T.Ribbon, TextureMode = Enum.TextureMode.Stretch, Lifetime = 0.8, Brightness = 3, LightEmission = 0.5,
-            Color = colors({ { 0, HOT }, { 0.5, MOLTEN }, { 1, CRIMSON } }), Transparency = seq({ { 0, 0.05 }, { 0.6, 0.4 }, { 1, 1 } }),
-            WidthScale = seq({ { 0, 0.5 }, { 0.1, 1 }, { 1, 0 } }),
-        })
-        finish(emitter("Embers", {
-            Texture = T.Dot, Speed = NumberRange.new(0.2, 0.6), SpreadAngle = Vector2.new(180, 180), Drag = 1.2, Acceleration = Vector3.new(0, 1.4, 0),
-            Lifetime = NumberRange.new(0.8, 1.4), Rate = 10, Size = seq({ { 0, 0.18 }, { 1, 0 } }), Color = ColorSequence.new(HOT, MOLTEN),
-            Transparency = seq({ { 0, 0 }, { 1, 1 } }), Brightness = 3,
-        }, { HatchEmit = 10 }), head)
-    end
-    local sparks = part(aura, "SparkArea", CFrame.new(0, C, 0), Vector3.new(3.4, 4.6, 3.4))
-    finish(emitter("Sparks", {
-        Texture = T.Cross, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
-        Speed = NumberRange.new(0.6, 1.8), SpreadAngle = Vector2.new(180, 180), Lifetime = NumberRange.new(0.3, 0.5), Rate = 5,
-        Rotation = NumberRange.new(0, 90), Size = seq({ { 0, 0 }, { 0.3, 0.6 }, { 1, 0 } }), Color = ColorSequence.new(rgb(255, 200, 150), CRIMSON),
-        Transparency = NumberSequence.new(0), Brightness = 3,
-    }, { HatchEmit = 30 }), sparks)
+    }, { BeatEmit = 6, HatchEmit = 20 }), apex)
     local area = part(aura, "EmberArea", CFrame.new(0, aura.rim + 0.2, 0), Vector3.new(3.6, 0.2, 3.6))
-    embers(area, 6, colors({ { 0, HOT }, { 0.5, MOLTEN }, { 1, CRIMSON } }), 2)
-    halo(aura, CRIMSON, 7, 0.88)
+    embers(area, 5, colors({ { 0, HOT }, { 0.5, MOLTEN }, { 1, CRIMSON } }), 2)
+    -- each beat pools a shockwave of heat out across the column
+    local pool = ripple(aura, rgb(255, 60, 40), 6.5, 3)
+    pool:SetAttribute("BeatEmit", 1)
+    pool:SetAttribute("Ripple", 0.8)
     drawIn(aura, T.Cross, rgb(255, 120, 90), 0.6, 50)
     burst(aura, rgb(255, 120, 90), 10)
-    ripple(aura, CRIMSON, 7, 2)
-    light(aura, CRIMSON, 13, 0.55)
+    finish(emitter("Rupture", {
+        Texture = T.Fireburst, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.6), Rate = 0, Rotation = NumberRange.new(0, 360),
+        Size = seq({ { 0, 2 }, { 0.3, 9 }, { 1, 10 } }), Transparency = seq({ { 0, 0 }, { 0.6, 0.3 }, { 1, 1 } }), Brightness = 2,
+    }, { HatchEmit = 2 }), attachment(aura, "RuptureCore", CFrame.new(0, C, 0)))
+    light(aura, CRIMSON, 13, 0.7)
 end
 
 -- Phoenix Ash Egg: rebirth. Two phoenix flights circle it on crossing planes, rising and falling,

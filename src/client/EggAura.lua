@@ -14,7 +14,15 @@
 --     with HatchEmit fire, the rings fling outward and the egg flashes.
 -- The aura breathes (model attributes Breath, a fraction, and BreathPeriod, in
 -- seconds): its speed, glow and ring size swell and ease back in a slow rhythm. BreathShape
--- "Heartbeat" makes it beat instead: a double thump, then a rest.
+-- "Heartbeat" makes it beat instead: a double thump, then a rest. The rhythm runs faster as the
+-- aura speeds up, so a heart races while a hatch gathers. On the beat (0 to 1, the breath's peak):
+--   * beams with BeatWidth swell their width and brightness by that fraction (pulsing arteries);
+--   * orbiting attachments with BeatReach are flung that many studs further out, and with
+--     GatherPull drawn in by that fraction while a hatch gathers (and flung out on the burst);
+--   * emitters and ripples with BeatEmit fire that many on each first thump;
+--   * a model with BeatHighlight throbs a Highlight on its egg in its Tint;
+--   * a model with BeatScreen (studs) pulses the player's screen, ColorCorrection and Bloom, in
+--     its Tint when the camera is within that distance, and flashes it white-hot on the burst.
 -- Auras run at full rate near the camera, half rate further out, and switch off beyond that.
 local CollectionService = game:GetService("CollectionService")
 local ContentProvider = game:GetService("ContentProvider")
@@ -62,7 +70,7 @@ local function index(model)
         movers = {}, spinners = {}, ripples = {}, waves = {}, sways = {}, emitters = {}, trails = {}, lights = {}, guis = {},
         speed = 1, glow = 1, swell = 0, level = 2,
         gather = model:GetAttribute("Gather") or 1.2,
-        breathPhase = math.random() * TAU,
+        breathT = math.random(), beat = 0, beatBeams = {}, screenFlash = 0, distance = math.huge,
     }
     state.modelAttrs = watched(model)
     for _, d in model:GetDescendants() do
@@ -84,6 +92,9 @@ local function index(model)
             table.insert(state.emitters, { Emitter = d, Rate = d.Rate, Enabled = d.Enabled })
         elseif d:IsA("Trail") or d:IsA("Beam") then
             table.insert(state.trails, d)
+            if d:IsA("Beam") and d:GetAttribute("BeatWidth") then
+                table.insert(state.beatBeams, { Beam = d, W0 = d.Width0, W1 = d.Width1, B = d.Brightness, K = d:GetAttribute("BeatWidth") })
+            end
         elseif d:IsA("Light") then
             table.insert(state.lights, { Light = d, Brightness = d.Brightness })
         elseif d:IsA("SurfaceGui") or d:IsA("BillboardGui") then
@@ -122,11 +133,14 @@ local function setLevel(state, level)
     for _, g in state.guis do
         g.Gui.Enabled = on
     end
+    if state.beatHighlight then
+        state.beatHighlight.Enabled = on
+    end
 end
 
 -- Where an orbiting attachment is at `angle` degrees round its orbit (relative to the Root).
-local function moverPosition(a, angle, now)
-    local radius = a.Radius or 2.5
+local function moverPosition(a, angle, now, radius)
+    radius = radius or a.Radius or 2.5
     local tilt = a.Tilt or Vector3.zero
     local r = math.rad(angle)
     local p = CFrame.Angles(math.rad(tilt.X), 0, math.rad(tilt.Z)):VectorToWorldSpace(Vector3.new(math.cos(r) * radius, 0, math.sin(r) * radius))
@@ -202,29 +216,78 @@ local function emitAll(state, attribute)
     end
 end
 
--- The breath at time `now`, from -1 to 1: a smooth swell, or with BreathShape "Heartbeat" a
--- double thump (lub-dub) and a rest.
-local function breathAt(ma, now, phase)
-    local t = now / (ma.BreathPeriod or 4) + phase / TAU
+-- The rhythm `t` cycles in: the beat from 0 to 1 (a smooth swell, or with BreathShape "Heartbeat"
+-- a double thump, lub-dub, then a rest), and the breath from -1 to 1.
+local function beatAt(ma, t)
+    local p = t % 1
     if ma.BreathShape == "Heartbeat" then
-        local p = t % 1
         local beat = math.exp(-((p - 0.08) / 0.05) ^ 2) + 0.65 * math.exp(-((p - 0.26) / 0.05) ^ 2)
-        return beat * 2 - 0.5
+        return beat, beat * 2 - 0.5
     end
-    return math.sin(t * TAU)
+    local b = math.sin(p * TAU)
+    return (b + 1) / 2, b
 end
+
+-- The egg on the aura's stand (FloatingIslands.<Island>.EggStands.<EggId>.Egg), if streamed in.
+local function eggOf(state)
+    local island = state.model.Parent and state.model.Parent.Parent
+    local stands = island and island:FindFirstChild("EggStands")
+    local stand = stands and stands:FindFirstChild(state.eggId)
+    return stand and stand:FindFirstChild("Egg")
+end
+
+local THUMB = 0.08 -- where in the cycle the first thump peaks
 
 local function step(state, dt, now)
     updateSurge(state, now)
     local ma = state.modelAttrs.A
-    local breath = (ma.Breath or 0) * breathAt(ma, now, state.breathPhase)
+    local before = state.breathT % 1
+    state.breathT += dt * state.speed / (ma.BreathPeriod or 4)
+    local after = state.breathT % 1
+    if (before < THUMB and after >= THUMB) or (after < before and after >= THUMB) then
+        emitAll(state, "BeatEmit")
+    end
+    local beat, b = beatAt(ma, state.breathT)
+    state.beat = beat
+    local breath = (ma.Breath or 0) * b
     local speed = state.speed * (1 + breath)
     local glow = state.glow * (1 + breath * 0.6)
     local swell = state.swell + breath * 2
     for _, m in state.movers do
         m.Angle += (m.A.Orbit or 0) * dt * speed
-        m.Instance.Position = moverPosition(m.A, m.Angle, now)
+        local radius = (m.A.Radius or 2.5) + (m.A.BeatReach or 0) * (beat + math.max(state.swell, 0) * 1.5)
+        if state.swell < 0 then
+            radius *= 1 + state.swell * (m.A.GatherPull or 0)
+        end
+        m.Instance.Position = moverPosition(m.A, m.Angle, now, radius)
     end
+    for _, a in state.beatBeams do
+        local k = 1 + a.K * (beat + math.max(state.swell, 0))
+        a.Beam.Width0, a.Beam.Width1 = a.W0 * k, a.W1 * k
+        a.Beam.Brightness = a.B * k * state.glow
+    end
+    if ma.BeatHighlight then
+        local h = state.beatHighlight
+        if not h then
+            local egg = eggOf(state)
+            if egg then
+                h = Instance.new("Highlight")
+                h.Name = "Heartbeat"
+                h.Adornee = egg
+                h.DepthMode = Enum.HighlightDepthMode.Occluded
+                h.FillColor = state.tint or Color3.new(1, 1, 1)
+                h.OutlineColor = (state.tint or Color3.new(1, 1, 1)):Lerp(Color3.new(1, 1, 1), 0.4)
+                h.Parent = state.model
+                state.beatHighlight = h
+            end
+        end
+        if h then
+            h.Enabled = not state.hatching and state.level > 0
+            h.FillTransparency = 1 - 0.4 * beat -- stronger, it flattens the egg's own detail
+            h.OutlineTransparency = 1 - 0.8 * beat
+        end
+    end
+    state.screenFlash = math.max(0, state.screenFlash - dt * 1.4)
     for _, s in state.spinners do
         s.Angle += (s.A.Spin or 0) * dt * speed
         local base = s.Base
@@ -280,6 +343,54 @@ for _, model in CollectionService:GetTagged(TAG) do
     track(model)
 end
 
+-- The heartbeat on the player's screen (client-only effects, made when first needed).
+local screen
+local function screenEffects()
+    if not screen then
+        local Lighting = game:GetService("Lighting")
+        local cc = Instance.new("ColorCorrectionEffect")
+        cc.Name = "EggAuraHeartbeat"
+        cc.Enabled = false
+        cc.Parent = Lighting
+        local bloom = Instance.new("BloomEffect")
+        bloom.Name = "EggAuraHeartbeatBloom"
+        bloom.Size = 30
+        bloom.Threshold = 0.95
+        bloom.Enabled = false
+        bloom.Parent = Lighting
+        screen = { cc = cc, bloom = bloom }
+    end
+    return screen
+end
+
+local function updateScreen()
+    local weight, flash, tint = 0, 0, nil
+    for _, state in auras do
+        local radius = state and state.level > 0 and state.modelAttrs.A.BeatScreen
+        if radius then
+            local near = math.clamp(1 - state.distance / radius, 0, 1)
+            local w = smooth(near) * (0.2 + 0.8 * state.beat)
+            if w + state.screenFlash > weight + flash then
+                weight, flash, tint = w, state.screenFlash * smooth(near), state.tint
+            end
+        end
+    end
+    if weight + flash <= 0.002 then
+        if screen then
+            screen.cc.Enabled, screen.bloom.Enabled = false, false
+        end
+        return
+    end
+    local fx = screenEffects()
+    local white = Color3.new(1, 1, 1)
+    fx.cc.Enabled, fx.bloom.Enabled = true, true
+    fx.cc.TintColor = white:Lerp(tint or white, 0.22 * weight * (1 - flash))
+    fx.cc.Brightness = 0.03 * weight + 0.35 * flash
+    fx.cc.Contrast = 0.12 * weight
+    fx.cc.Saturation = 0.18 * weight - 0.3 * flash
+    fx.bloom.Intensity = 0.7 * weight + 1.5 * flash
+end
+
 RunService.RenderStepped:Connect(function(dt)
     local camera = Workspace.CurrentCamera
     if not camera then
@@ -297,21 +408,15 @@ RunService.RenderStepped:Connect(function(dt)
             continue
         end
         local distance = (state.root.Position - eye).Magnitude
+        state.distance = distance
         setLevel(state, distance < NEAR and 2 or distance < FAR and 1 or 0)
         if state.level == 0 then
             continue
         end
         step(state, dt, now)
     end
+    updateScreen()
 end)
-
--- The egg on the aura's stand (FloatingIslands.<Island>.EggStands.<EggId>.Egg), if streamed in.
-local function eggOf(state)
-    local island = state.model.Parent and state.model.Parent.Parent
-    local stands = island and island:FindFirstChild("EggStands")
-    local stand = stands and stands:FindFirstChild(state.eggId)
-    return stand and stand:FindFirstChild("Egg")
-end
 
 -- The egg brightens in the aura's tint while the hatch gathers, flashes on the burst, then fades.
 local function brighten(state)
@@ -385,6 +490,9 @@ function EggAura.hatch(eggId)
         if state.model.Parent then
             emitAll(state, "HatchEmit")
             surge(state, 2.5, 3.2, 2, 0.12, 1.6)
+            if state.modelAttrs.A.BeatScreen then
+                state.screenFlash = 1
+            end
         end
         flash(highlight)
         task.delay(1.8, function()
