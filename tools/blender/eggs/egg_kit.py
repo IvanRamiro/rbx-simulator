@@ -307,13 +307,30 @@ def tube(mb, pts, radius_fn, sides, band, per=4, closed=False):
     n = len(curve)
     rings = []
     ref = V((0, 1, 0))
+    # the tube carries its frame along the curve (parallel transport), so it never flips where the
+    # curve turns near vertical and cannot twist through itself
+    if closed:
+        tangents = [(curve[(i + 1) % n] - curve[i - 1]).normalized() for i in range(n)]
+    else:
+        tangents = [(curve[min(i + 1, n - 1)] - curve[max(i - 1, 0)]).normalized() for i in range(n)]
+    r0 = ref if abs(tangents[0].dot(ref)) < 0.9 else V((1, 0, 0))
+    carried = tangents[0].cross(r0).normalized()
+    frames = []
+    for T in tangents:
+        carried = (carried - T * carried.dot(T)).normalized()
+        frames.append(carried)
+    twist = 0.0
+    if closed:
+        # carried once round, the frame comes back turned: spread that turn along the loop so
+        # the tube meets itself without a kink
+        back = (frames[-1] - tangents[0] * frames[-1].dot(tangents[0])).normalized()
+        twist = math.atan2(frames[0].cross(back).dot(tangents[0]), frames[0].dot(back))
     for i, c in enumerate(curve):
-        if closed:
-            T = (curve[(i + 1) % n] - curve[i - 1]).normalized()
-        else:
-            T = (curve[min(i + 1, n - 1)] - curve[max(i - 1, 0)]).normalized()
-        r0 = ref if abs(T.dot(ref)) < 0.95 else V((1, 0, 0))
-        s = T.cross(r0).normalized()
+        T = tangents[i]
+        s = frames[i]
+        if twist:
+            a = -twist * i / n
+            s = (s * math.cos(a) + T.cross(s) * math.sin(a)).normalized()
         up = s.cross(T).normalized()
         r = radius_fn(i / (n - 1))
         rings.append((c, [c + (s * math.cos(TAU * k / sides) + up * math.sin(TAU * k / sides)) * r for k in range(sides)]))
@@ -473,6 +490,7 @@ def join(objects, name, coll):
             p.material_index += offset
         bm.from_mesh(me)
         bpy.data.meshes.remove(me)
+    bmesh.ops.dissolve_degenerate(bm, dist=1e-6, edges=bm.edges)   # zero-area faces at points and poles
     me = bpy.data.meshes.new(name)
     bm.to_mesh(me)
     bm.free()

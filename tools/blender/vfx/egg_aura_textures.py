@@ -7,6 +7,21 @@ Ground formations, one per egg:
 - SigilWuxing (Elemental Core): the five-element cycle: five element rings joined by the
   generating pentagon and the overcoming star, round a diamond core.
 
+Jade Grove formations:
+- SigilJadeLeaf (Jade Spirit): a vine ring sprouting leaves round a six-leaf rosette of jade, its
+  leaves joined by a fine inner ring.
+- SigilBlossom (Bloomwood): a blossom mandala: five broad petals round a small five-petal heart,
+  a ring of petal-tip beads between two fine rings.
+- SigilTreeRings (Ancient Grove): the growth rings of an ancient tree, uneven and slightly off
+  centre, crossed by roots that branch outward through them.
+
+- AuraVortex (Ancient Grove): a soft vortex of five thin arms of Qi, fading as they sweep out
+  from a still eye.
+- AuraBloomLight (Bloomwood): a bloom of light: soft rays fanning out in petal-shaped lobes round a
+  bright heart.
+  (VFX Studio's swirl vortex and radial burst have no alpha, only white on black, so they cannot
+  sit on a SurfaceGui plane: these replace them.)
+
 Rings:
 - AuraQiRing (Beginner Qi): a bold band of Qi with a fine inner thread strung with Qi beads, and six comet streaks
   riding just outside it, so the ring visibly flows as it turns (bold enough to read in daylight,
@@ -19,6 +34,10 @@ Beams:
 - AuraStream (Elemental Core): an element stream that tiles along its length: a bright core
   with two filaments braiding round it and packets of energy riding along it (scrolled by the
   beam's TextureSpeed).
+
+Particles and floating objects (Jade Grove):
+- AuraPetal: one blossom petal, notched at its tip, with a faint midrib.
+- AuraBlossom: a five-petal blossom with a stamen ring, for floating billboards.
 
 Particles and floating objects:
 - AuraFeather: a soft feather with its vane lines.
@@ -139,6 +158,178 @@ def stream(w=512, h=128):
     return save("AuraStream", np.clip(a + halo * 0.5, 0, 1) * (1 - smoothstep(0.85, 1, np.abs(y))))
 
 
+def sigil_jade_leaf(size=768):
+    x, y = grid(size)
+    r, th = np.hypot(x, y), np.arctan2(y, x)
+    px = 2.0 / size
+    # the vine ring, wavering as it goes round
+    wav = 0.83 + 0.015 * np.sin(th * 9)
+    a = line(r - wav, 0.022, 3 * px)
+    a = np.maximum(a, line(r - 0.95, 0.008, 2 * px))
+    # leaves sprouting from the vine, alternating in and out
+    for k in range(18):
+        ang = k * math.tau / 18
+        out = 1 if k % 2 else -1
+        bx, by = 0.83 * math.cos(ang), 0.83 * math.sin(ang)
+        d_ang = ang + out * 0.0 + 0.5            # each leaf leans along the vine
+        dx, dy = math.cos(ang) * out * 0.55 + math.cos(d_ang + math.pi / 2) * 0.45, math.sin(ang) * out * 0.55 + math.sin(d_ang + math.pi / 2) * 0.45
+        L = math.hypot(dx, dy); dx, dy = dx / L, dy / L
+        # leaf as a lens: distance along and across its axis
+        u = (x - bx) * dx + (y - by) * dy
+        v = -(x - bx) * dy + (y - by) * dx
+        length = 0.1
+        t = np.clip(u / length, 0, 1)
+        half = 0.034 * np.sin(np.pi * t) ** 0.8
+        inside = (u > 0) * (u < length) * (np.abs(v) < half)
+        a = np.maximum(a, inside * 0.85)
+        a = np.maximum(a, line(v, 0.004, px) * (u > 0) * (u < length * 0.9))
+    # the six-leaf rosette
+    for k in range(6):
+        ang = k * math.tau / 6 + math.pi / 2
+        dx, dy = math.cos(ang), math.sin(ang)
+        u = x * dx + y * dy
+        v = -x * dy + y * dx
+        t = np.clip((u - 0.12) / 0.46, 0, 1)
+        half = 0.13 * np.sin(np.pi * t) ** 0.9
+        edge = line(np.abs(v) - half, 0.014, 2 * px) * (u > 0.12) * (u < 0.58)
+        a = np.maximum(a, edge)
+        a = np.maximum(a, line(v, 0.008, 2 * px) * (u > 0.12) * (u < 0.55))           # midrib
+        for vk in (0.25, 0.45, 0.65):                                                      # side veins
+            c = 0.12 + 0.46 * vk
+            a = np.maximum(a, line(np.abs(v) - (u - c) * 0.9, 0.005, px) * (u > c) * (np.abs(v) < half) * 0.8)
+    a = np.maximum(a, line(r - 0.6, 0.008, 2 * px) * 0.7)
+    a = np.maximum(a, 1 - smoothstep(0.05, 0.08, r))
+    a *= 1 - smoothstep(0.96, 0.99, r)
+    return save("SigilJadeLeaf", np.clip(a + glow(a, 5) * 0.5, 0, 1))
+
+
+def sigil_blossom(size=768):
+    x, y = grid(size)
+    r, th = np.hypot(x, y), np.arctan2(y, x)
+    px = 2.0 / size
+    a = np.maximum(line(r - 0.94, 0.01, 2 * px), line(r - 0.8, 0.008, 2 * px))
+    # beads between the rings, one per petal tip and between
+    for k in range(20):
+        ang = k * math.tau / 20 + math.pi / 2
+        d = np.hypot(x - 0.87 * math.cos(ang), y - 0.87 * math.sin(ang))
+        a = np.maximum(a, 1 - smoothstep(0.014, 0.022, d) if k % 4 == 0 else line(d - 0.016, 0.006, px))
+    # five broad petals, each notched at its tip, with veins fanning from the base
+    for k in range(5):
+        ang = k * math.tau / 5 + math.pi / 2
+        dx, dy = math.cos(ang), math.sin(ang)
+        u = x * dx + y * dy
+        v = -x * dy + y * dx
+        t = np.clip((u - 0.16) / 0.6, 0, 1)
+        half = 0.3 * np.sin(np.pi * np.clip(t * 0.85 + 0.08, 0, 1)) ** 0.7
+        notch = 0.06 * np.exp(-(v / 0.05) ** 2) * (t > 0.85)
+        outline = line(np.maximum(np.abs(v) - half, u - 0.76 + notch), 0.014, 2 * px) * (u > 0.16)
+        a = np.maximum(a, outline)
+        for fan in (-0.5, -0.25, 0.0, 0.25, 0.5):
+            a = np.maximum(a, line(v - fan * (u - 0.2), 0.004, px) * (u > 0.22) * (u < 0.66) * (np.abs(v) < half * 0.9) * 0.7)
+    # the heart: a small five-petal flower with a stamen ring
+    for k in range(5):
+        ang = k * math.tau / 5 + math.pi / 2 + math.pi / 5
+        d = np.hypot(x - 0.1 * math.cos(ang), y - 0.1 * math.sin(ang))
+        a = np.maximum(a, line(d - 0.06, 0.01, 2 * px))
+    a = np.maximum(a, 1 - smoothstep(0.03, 0.045, r))
+    a *= 1 - smoothstep(0.96, 0.99, r)
+    return save("SigilBlossom", np.clip(a + glow(a, 5) * 0.5, 0, 1))
+
+
+def sigil_tree_rings(size=768):
+    x, y = grid(size)
+    r, th = np.hypot(x, y), np.arctan2(y, x)
+    px = 2.0 / size
+    # growth rings: uneven, wider on one side, drifting off centre as the tree grew
+    a = np.zeros_like(x)
+    for k in range(9):
+        rr = 0.1 + 0.095 * k
+        cx, cy = 0.03 * math.sin(k * 0.7), -0.025 * k / 9
+        rk = np.hypot(x - cx, y - cy)
+        thk = np.arctan2(y - cy, x - cx)
+        wob = rr * (1 + 0.05 * np.sin(thk * 3 + k) + 0.03 * np.sin(thk * 7 - k * 2))
+        a = np.maximum(a, line(rk - wob, 0.007 if k % 3 else 0.014, 2 * px) * (0.6 + 0.4 * (k % 3 == 0)))
+    # roots: from the heart out through the rings, each branching once
+    rng = np.random.default_rng(81)
+    for k in range(7):
+        ang = k * math.tau / 7 + rng.uniform(-0.2, 0.2)
+        pts = [(0.12 * math.cos(ang), 0.12 * math.sin(ang))]
+        a_ = ang
+        for i in range(8):
+            a_ += rng.uniform(-0.3, 0.3)
+            px_, py_ = pts[-1]
+            pts.append((px_ + 0.1 * math.cos(a_), py_ + 0.1 * math.sin(a_)))
+        for i, ((ax, ay), (bx, by)) in enumerate(zip(pts, pts[1:])):
+            a = np.maximum(a, line(segment(x, y, ax, ay, bx, by), 0.026 * (1 - i / 9) + 0.004, 2 * px))
+        bx0, by0 = pts[4]
+        b_ = a_ + rng.choice([-0.8, 0.8])
+        prev = (bx0, by0)
+        for i in range(3):
+            nxt = (prev[0] + 0.09 * math.cos(b_), prev[1] + 0.09 * math.sin(b_))
+            a = np.maximum(a, line(segment(x, y, prev[0], prev[1], nxt[0], nxt[1]), 0.012 * (1 - i / 4), 2 * px))
+            prev = nxt
+            b_ += rng.uniform(-0.3, 0.3)
+    a = np.maximum(a, line(r - 0.95, 0.012, 2 * px))
+    a = np.maximum(a, 1 - smoothstep(0.04, 0.06, r))
+    a *= 1 - smoothstep(0.96, 0.99, r)
+    return save("SigilTreeRings", np.clip(a + glow(a, 5) * 0.5, 0, 1))
+
+
+def vortex(size=768):
+    x, y = grid(size)
+    r = np.hypot(x, y)
+    px = 2.0 / size
+    a = np.zeros_like(x)
+    for k in range(5):
+        d, t = spiral_distance(x, y, 0, 0, 0.1, 0.95, 0.6, k * math.tau / 5)
+        a = np.maximum(a, line(d, 0.032 * (1 - t) + 0.006, 3 * px) * (1 - t) ** 0.9 * (r > 0.08))
+    a = np.maximum(a, line(r - 0.1, 0.014, 2 * px) * 0.8)
+    a *= 1 - smoothstep(0.85, 0.98, r)
+    return save("AuraVortex", np.clip(a + glow(a, 6) * 0.5, 0, 1))
+
+
+def bloom_light(size=768):
+    x, y = grid(size)
+    r, th = np.hypot(x, y), np.arctan2(y, x)
+    lobes = 0.5 + 0.5 * np.cos(5 * (th - math.pi / 2))
+    reach = 0.45 + 0.45 * lobes ** 1.5
+    petals = (1 - smoothstep(reach * 0.5, reach, r)) * (0.35 + 0.65 * lobes)
+    rays = (0.5 + 0.5 * np.cos(40 * th)) ** 6 * (1 - smoothstep(0.2, 0.92, r)) * 0.45
+    heart = 1 - smoothstep(0.05, 0.2, r)
+    a = np.maximum(np.maximum(petals * 0.55, rays), heart)
+    a *= 1 - smoothstep(0.9, 0.99, r)
+    return save("AuraBloomLight", np.clip(a + glow(a, 6) * 0.3, 0, 1))
+
+
+def petal(size=256):
+    x, y = grid(size)
+    t = np.clip((y + 0.92) / 1.84, 0, 1)                        # base near the bottom, tip near the top
+    half = 0.5 * t ** 0.75 * (1 - t ** 4) ** 0.45                 # a teardrop: narrow base, broad near the tip
+    notch = 0.14 * np.exp(-(x / 0.1) ** 2)
+    body = (1 - smoothstep(half - 0.03, half, np.abs(x))) * (1 - smoothstep(0.93 - notch, 0.97 - notch, t)) * (y > -0.92)
+    a = body * (0.65 + 0.35 * t)                                 # paler (more opaque) toward the tip
+    a = a * (1 - 0.15 * line(x, 0.015, 0.02) * (t < 0.75))       # a faint midrib
+    return save("AuraPetal", np.clip(a + glow(a, 2) * 0.2, 0, 1))
+
+
+def blossom(size=256):
+    x, y = grid(size)
+    r, th = np.hypot(x, y), np.arctan2(y, x)
+    px = 2.0 / size
+    lobe = 0.5 + 0.5 * np.cos(5 * (th - math.pi / 2))
+    rim = 0.55 + 0.37 * lobe ** 0.6
+    notch = 0.1 * np.exp(-(((th - math.pi / 2) * 5 / math.tau + 0.5) % 1.0 - 0.5) ** 2 / 0.0015)
+    body = 1 - smoothstep(rim - notch - 0.012, rim - notch, r)
+    a = body * 0.8
+    a = np.maximum(a, line(r - 0.22, 0.03, 2 * px))                      # the stamen ring
+    for k in range(10):
+        ang = k * math.tau / 10
+        d = np.hypot(x - 0.3 * math.cos(ang), y - 0.3 * math.sin(ang))
+        a = np.maximum(a, 1 - smoothstep(0.025, 0.04, d))
+    a = a * (1 - 0.35 * (1 - smoothstep(0.08, 0.16, r)))                 # a softer heart
+    return save("AuraBlossom", np.clip(a + glow(a, 3) * 0.35, 0, 1))
+
+
 def feather(size=256):
     x, y = grid(size)
     t = (y + 1) / 2
@@ -193,4 +384,4 @@ def crystal(size=512):
 
 
 def build_all():
-    return [sigil_wind_rose(), sigil_wuxing(), qi_ring(), element_band(), stream(), feather(), cloud(), crystal()]
+    return [sigil_wind_rose(), sigil_wuxing(), sigil_jade_leaf(), sigil_blossom(), sigil_tree_rings(), petal(), blossom(), vortex(), bloom_light(), qi_ring(), element_band(), stream(), feather(), cloud(), crystal()]

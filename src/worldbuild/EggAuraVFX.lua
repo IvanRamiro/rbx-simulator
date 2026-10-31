@@ -57,6 +57,18 @@ local T = {
     QiRing = "rbxassetid://136096136498575",     -- QA: bold Qi ring with comet streaks
     ElementBand = "rbxassetid://76030932893410", -- QA: gyroscope band with five element nodes
     Stream = "rbxassetid://129943358163696",     -- QA: braided element stream (tiles along a beam)
+    -- Jade Grove
+    Leaf = "rbxassetid://6475162564",            -- VS: a single veined leaf
+    GlowRing = "rbxassetid://12386390257",       -- VS: glowing ring with a soft corona
+    JadeLeaf = "rbxassetid://123839325562421",   -- QA: vine ring round a six-leaf jade rosette
+    BlossomSigil = "rbxassetid://104690771337528", -- QA: blossom mandala
+    TreeRings = "rbxassetid://97314964323991",   -- QA: an ancient tree's growth rings crossed by roots
+    Petal = "rbxassetid://122668143134554",      -- QA: one blossom petal
+    Blossom = "rbxassetid://100572808754853",    -- QA: five-petal blossom
+    Vortex = "rbxassetid://82549101989057",      -- QA: a soft vortex of five thin arms of Qi
+    BloomLight = "rbxassetid://80600586960187",  -- QA: a bloom of light, rays in petal-shaped lobes
+    -- (VFX Studio's swirl vortex and radial burst are white on black, with no alpha: they show as
+    -- black squares on a SurfaceGui plane, so ours replace them)
 }
 
 local function rgb(r, g, b)
@@ -258,10 +270,10 @@ local function ripple(aura, color, reach, hatch)
     return p
 end
 
--- A crystal shard floating round the egg on `orbit` (mover attributes): a billboard of the
--- AuraCrystal sprite (a faceted crystal modelled and rendered in Blender) on a soft glow, rocking
--- gently as it goes round.
-local function crystal(aura, name, orbit, size, color, brightness)
+-- A sprite floating round the egg on `orbit` (mover attributes): a billboard of `texture` (the
+-- AuraCrystal shard by default, a faceted crystal modelled and rendered in Blender) on a soft
+-- glow, rocking `sway` degrees as it goes round.
+local function crystal(aura, name, orbit, size, color, brightness, texture, sway, glowColor)
     local a = attachment(aura, name, CFrame.new(0, orbit.Height, orbit.Radius))
     set(a, nil, orbit)
     local gui = Instance.new("BillboardGui")
@@ -275,7 +287,7 @@ local function crystal(aura, name, orbit, size, color, brightness)
     glow.Size = UDim2.fromScale(1, 1)
     glow.BackgroundTransparency = 1
     glow.Image = T.SoftGlow
-    glow.ImageColor3 = color
+    glow.ImageColor3 = glowColor or color
     glow.ImageTransparency = 0.55
     glow.Parent = gui
     local shard = Instance.new("ImageLabel")
@@ -284,10 +296,10 @@ local function crystal(aura, name, orbit, size, color, brightness)
     shard.Position = UDim2.fromScale(0.5, 0.5)
     shard.Size = UDim2.fromScale(0.72, 0.72)
     shard.BackgroundTransparency = 1
-    shard.Image = T.Crystal
+    shard.Image = texture or T.Crystal
     shard.ImageColor3 = color
     shard.ZIndex = 2
-    set(shard, nil, { Sway = 18, SwayPeriod = orbit.BobPeriod or 3, Phase = orbit.Phase or 0 })
+    set(shard, nil, { Sway = sway or 18, SwayPeriod = orbit.BobPeriod or 3, Phase = orbit.Phase or 0 })
     shard.Parent = gui
     return a
 end
@@ -528,6 +540,331 @@ RECIPES.ElementalCoreEgg = function(aura)
     light(aura, CORE, 14, 1.4)
 end
 
+
+-- ---------- fitting an aura to its egg model ----------
+-- A point on the egg model, given as an offset from the centre of its body's bounding box in the
+-- egg's Blender build (Roblox axes, egg units, measured in egg_bake's output), in the Root's
+-- space. Studio's importer turns models half round, so x and z flip.
+local function modelPoint(aura, offset)
+    local world = aura.egg.CFrame:PointToWorldSpace(Vector3.new(-offset.X, offset.Y, -offset.Z) * 1.3)
+    return aura.root.CFrame:PointToObjectSpace(world)
+end
+
+local function anchor(aura, name, offset)
+    local a = Instance.new("Attachment")
+    a.Name = name
+    a.Position = modelPoint(aura, offset)
+    a.Parent = aura.root
+    return a
+end
+
+-- Raises everything that orbits or turns round the egg by `dy` studs, for an egg taller than the
+-- recipe's measures (the detailed eggs). The ground formations stay on the rim.
+local function lift(aura, dy)
+    for _, d in aura.model:GetDescendants() do
+        if d:IsA("Attachment") and d:GetAttribute("Orbit") and d.Parent == aura.root then
+            d:SetAttribute("Height", d:GetAttribute("Height") + dy)
+            if d.CFrame.Rotation == CFrame.identity then
+                d.Position += Vector3.new(0, dy, 0)
+            end
+        elseif d:IsA("Attachment") and (d.Name == "Halo" or d.Name == "Light" or d.Name == "Burst") then
+            d.Position += Vector3.new(0, dy, 0)
+        elseif d:IsA("BasePart") and d:GetAttribute("Spin") and d.Name ~= "Formation" and d.Name ~= "Bloom" and d.Name ~= "Vortex" then
+            d.CFrame += Vector3.new(0, dy, 0)
+        elseif d:IsA("BasePart") and (d.Name == "GlintArea" or d.Name == "DrawIn" or d.Name == "SparkArea") then
+            d.CFrame += Vector3.new(0, dy, 0)
+        end
+    end
+    aura.model:SetAttribute("Lifted", dy)
+end
+
+-- ---------- Jade Grove ----------
+-- Things that shed from an orbiting head (leaves, petals): they hang where they were shed,
+-- tumbling and fading, so the head leaves a spiral wake round the egg.
+local function shed(head, name, texture, color, rate, size, fall) -- size: { born, full, at death }
+    return finish(emitter(name, {
+        Texture = texture, Rate = rate, Lifetime = NumberRange.new(1.4, 2.2), Speed = NumberRange.new(0.2, 0.6),
+        SpreadAngle = Vector2.new(180, 180), Drag = 1.6, Acceleration = Vector3.new(0, -fall, 0),
+        Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-150, 150),
+        Size = seq({ { 0, size[1] }, { 0.15, size[2] }, { 1, size[3] } }), Color = color,
+        Transparency = seq({ { 0, 0.6 }, { 0.12, 0.05 }, { 0.7, 0.2 }, { 1, 1 } }), LightEmission = 0.15, Brightness = 1.6, -- solid, not glowing: they read in daylight
+    }, { HatchEmit = 4 }), head)
+end
+
+-- A vine of light twining up round the egg: a beam from a point sweeping round the rim to a point
+-- circling above the crown at another speed, so the vine twists as the two drift apart.
+local function tendril(aura, name, base, top, properties)
+    local a0 = attachment(aura, name .. "Base", CFrame.new(0, base.Height, base.Radius) * UP_AXIS)
+    set(a0, nil, base)
+    local a1 = attachment(aura, name .. "Top", CFrame.new(0, top.Height, top.Radius) * UP_AXIS)
+    set(a1, nil, top)
+    local beam = Instance.new("Beam")
+    beam.Name = name
+    beam.Attachment0, beam.Attachment1 = a0, a1
+    beam.FaceCamera = true
+    beam.LightInfluence = 0
+    beam.Segments = 20
+    set(beam, properties)
+    beam.Parent = aura.root
+    return beam
+end
+
+-- Jade Spirit Egg: living jade. A vine-and-leaf formation turning beneath; a jade ring and a
+-- swooshing crescent of Qi crossing round the egg; three vines of light twining up from the rim to
+-- the crown, each at its own pace; three currents of Qi racing round on their own planes, shedding
+-- leaves that tumble in their wake; three broad leaves drifting round, rocking; jade motes rising.
+RECIPES.JadeSpiritEgg = function(aura)
+    local JADE, MINT, DEEP = rgb(40, 220, 110), rgb(170, 255, 200), rgb(10, 140, 70)
+    aura.model:SetAttribute("Gather", 1.3)
+    aura.model:SetAttribute("Tint", rgb(70, 235, 130))
+    set(aura.model, nil, { Breath = 0.18, BreathPeriod = 4.5 }) -- a green, growing breath
+    -- the stands here are 7.5 studs apart: everything stays within about 3.3 studs of the egg
+    formation(aura, "Formation", T.JadeLeaf, 3.2, rgb(60, 230, 120), 10, 3)
+    ring(aura, "JadeRing", EGG_CENTRE + 0.2, tilt(-24, 10), T.GlowRing, 6.2, JADE, 28, 2.4, nil, { 10, 6 })
+    ring(aura, "Swoosh", EGG_CENTRE - 0.2, tilt(-14, -28), T.WindArc, 6.4, MINT, -130, 2.6, nil, { 14, 4.5, 140 })
+    -- vines of light twining up round the egg
+    for k = 1, 3 do
+        tendril(aura, "Vine" .. k,
+            { Orbit = 14, Radius = 2.2, Height = aura.rim + 0.15, Phase = (k - 1) * 120 },
+            { Orbit = 14 + 22 * k, Radius = 0.9, Height = 4.2, Phase = (k - 1) * 120 + 150, Bob = 0.2, BobPeriod = 3 + k }, {
+            -- the braided stream reads as twining vine; low light emission keeps it green in daylight
+            Texture = T.Stream, TextureMode = Enum.TextureMode.Wrap, TextureLength = 2, TextureSpeed = 0.6,
+            CurveSize0 = 1.8, CurveSize1 = 1.4, Width0 = 0.5, Width1 = 0.16, LightEmission = 0.25, Brightness = 2,
+            Color = colors({ { 0, rgb(20, 150, 60) }, { 0.6, JADE }, { 1, rgb(150, 255, 190) } }),
+            Transparency = seq({ { 0, 1 }, { 0.1, 0.05 }, { 0.85, 0.1 }, { 1, 1 } }),
+        })
+    end
+    -- three currents of Qi on their own planes and speeds, each shedding leaves
+    for k, c in { { 120, 2.3, 22, 0, 0.4, 2.8 }, { -95, 2.8, -18, 14, 0.6, 3.6 }, { 140, 3.1, 8, -20, 0.5, 2.3 } } do
+        local _, head = arc(aura, "Current" .. k, { Orbit = c[1], Radius = c[2], Height = EGG_CENTRE, Tilt = Vector3.new(c[3], 0, c[4]),
+            Phase = (k - 1) * 120, Bob = c[5], BobPeriod = c[6] }, 0.2, {
+            Texture = T.Ribbon, TextureMode = Enum.TextureMode.Stretch, Lifetime = 0.9, Brightness = 3, LightEmission = 0.35,
+            Color = colors({ { 0, rgb(150, 255, 190) }, { 0.5, JADE }, { 1, DEEP } }), Transparency = seq({ { 0, 0.05 }, { 0.6, 0.4 }, { 1, 1 } }),
+            WidthScale = seq({ { 0, 0.4 }, { 0.1, 1 }, { 1, 0 } }),
+        })
+        shed(head, "Leaves", T.Leaf, ColorSequence.new(rgb(90, 220, 90), rgb(20, 150, 70)), 4, { 0.35, 0.6, 0.5 }, 0.25)
+    end
+    -- three broad leaves drifting round, rocking like leaves on water
+    for k, l in { { 12, 3.0, 3.0, 0.45, 3.4, 1.3 }, { -9, 3.3, 1.4, 0.35, 4.1, 1.05 }, { 16, 2.8, 2.2, 0.5, 3.0, 1.15 } } do
+        crystal(aura, "FloatLeaf" .. k, { Orbit = l[1], Radius = l[2], Height = l[3], Phase = (k - 1) * 120 + 60, Bob = l[4], BobPeriod = l[5] },
+            l[6], rgb(110, 230, 130), 1.4, T.Leaf, 32, rgb(60, 220, 110))
+    end
+    local motes = part(aura, "MoteArea", CFrame.new(0, aura.rim + 0.15, 0), Vector3.new(5.5, 0.2, 5.5))
+    finish(emitter("Motes", {
+        Texture = T.Dot, Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(0.8, 1.6), SpreadAngle = Vector2.new(25, 25),
+        Acceleration = Vector3.new(0, 0.5, 0), Drag = 0.6, Lifetime = NumberRange.new(2.2, 3.2), Rate = 8,
+        Size = seq({ { 0, 0 }, { 0.15, 0.35 }, { 0.6, 0.22 }, { 1, 0 } }), Brightness = 2,
+        Color = colors({ { 0, MINT }, { 1, JADE } }), Transparency = seq({ { 0, 0.1 }, { 1, 1 } }),
+    }, { HatchEmit = 25 }), motes)
+    local glints = part(aura, "GlintArea", CFrame.new(0, EGG_CENTRE + 0.4, 0), Vector3.new(6, 4.5, 6))
+    finish(emitter("Glints", {
+        Texture = T.Star4, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        Speed = NumberRange.new(0.3, 0.7), SpreadAngle = Vector2.new(180, 180), Lifetime = NumberRange.new(0.8, 1.2), Rate = 3,
+        Rotation = NumberRange.new(0, 45), Size = seq({ { 0, 0 }, { 0.5, 0.55 }, { 1, 0 } }), Color = ColorSequence.new(MINT),
+        Transparency = NumberSequence.new(0.1), Brightness = 2,
+    }, { HatchEmit = 14 }), glints)
+    halo(aura, JADE, 6.5, 0.72)
+    column(aura, DEEP, MINT, 0.5, 4)
+    mist(motes, JADE, MINT, 3, 0.9)
+    ripple(aura, rgb(90, 240, 150), 9.5, 2)
+    drawIn(aura, T.Leaf, rgb(140, 240, 150), 0.6, 40)
+    burst(aura, rgb(150, 255, 190), 9)
+    light(aura, JADE, 13, 1.2)
+    -- fitted to the detailed egg (4.3 studs tall): everything rides 0.3 higher, the vines of light
+    -- reach over its crown, and Qi breathes out of the jade-leaf gem in its front
+    lift(aura, 0.3)
+    for k = 1, 3 do
+        local top = aura.root["Vine" .. k .. "Top"]
+        set(top, nil, { Height = 5, Radius = 0.8 })
+        top.Position = Vector3.new(0, 5, 0.8)
+    end
+    local gem = anchor(aura, "Gem", Vector3.new(-0.06, -0.277, 1.385))
+    finish(emitter("GemBreath", {
+        Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(2.2, 2.8), Rate = 1.2,
+        Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-15, 15), ZOffset = 0.4,
+        Size = seq({ { 0, 1.2 }, { 0.5, 2.3 }, { 1, 2.6 } }), Color = ColorSequence.new(rgb(60, 255, 150)),
+        Transparency = seq({ { 0, 1 }, { 0.35, 0.6 }, { 1, 1 } }), Brightness = 2,
+    }, { HatchEmit = 3 }), gem)
+    finish(emitter("GemQi", {
+        Texture = T.Dot, Speed = NumberRange.new(0.3, 0.7), SpreadAngle = Vector2.new(180, 180), Drag = 1.2,
+        Acceleration = Vector3.new(0, 0.7, 0), Lifetime = NumberRange.new(1.6, 2.4), Rate = 5,
+        Size = seq({ { 0, 0 }, { 0.2, 0.22 }, { 1, 0 } }), Color = ColorSequence.new(rgb(170, 255, 205), rgb(40, 220, 110)),
+        Transparency = seq({ { 0, 0.1 }, { 1, 1 } }), Brightness = 2.5,
+    }, { HatchEmit = 16 }), gem)
+end
+
+-- Bloomwood Egg: eternal blossom. A blossom mandala over a slow bloom of golden light beneath; a
+-- pink ring and a gold breeze crossing round the egg; two streams of blossom wind circling it,
+-- shedding petals; petals thrown up from the rim in a fountain, drifting back down; four blossoms
+-- floating round, rocking; golden pollen rising. Its breath is slow and dreamy.
+RECIPES.BloomwoodEgg = function(aura)
+    local PINK, BLUSH, GOLDEN = rgb(255, 110, 190), rgb(255, 200, 230), rgb(255, 205, 110)
+    aura.model:SetAttribute("Gather", 1.4)
+    aura.model:SetAttribute("Tint", rgb(255, 140, 205))
+    set(aura.model, nil, { Breath = 0.14, BreathPeriod = 6 }) -- dreamy
+    formation(aura, "Formation", T.BlossomSigil, 3.2, rgb(255, 120, 200), 6, 3)
+    formation(aura, "Bloom", T.BloomLight, 2.8, GOLDEN, -12, 1.6, 0.1)
+    ring(aura, "BlossomRing", EGG_CENTRE + 0.25, tilt(-20, 12), T.GlowRing, 6.2, PINK, 20, 2.3, nil, { 8, 8 })
+    ring(aura, "GoldBreeze", EGG_CENTRE - 0.3, tilt(-10, -24), T.BrokenRing, 6.4, GOLDEN, -35, 2, 0.15, { 10, 7, 160 })
+    -- two streams of blossom wind circling the egg, shedding petals
+    for k, c in { { 70, 2.5, 16, 0, 0.8, 3.4 }, { -55, 3.0, -12, 18, 0.6, 4.2 } } do
+        local _, head = arc(aura, "Breeze" .. k, { Orbit = c[1], Radius = c[2], Height = EGG_CENTRE + 0.2, Tilt = Vector3.new(c[3], 0, c[4]),
+            Phase = (k - 1) * 180, Bob = c[5], BobPeriod = c[6] }, 0.22, {
+            Texture = T.Ribbon, TextureMode = Enum.TextureMode.Stretch, Lifetime = 1.2, Brightness = 2.5, LightEmission = 0.3,
+            Color = colors({ { 0, rgb(255, 170, 215) }, { 0.5, rgb(255, 90, 170) }, { 1, rgb(190, 50, 150) } }), Transparency = seq({ { 0, 0.05 }, { 0.6, 0.45 }, { 1, 1 } }),
+            WidthScale = seq({ { 0, 0.4 }, { 0.1, 1 }, { 1, 0 } }),
+        })
+        shed(head, "Petals", T.Petal, ColorSequence.new(rgb(255, 140, 200), rgb(235, 80, 160)), 5, { 0.3, 0.48, 0.4 }, 0.4)
+    end
+    -- the petal fountain: petals thrown up off the rim, arcing out and drifting down
+    local rim = part(aura, "PetalRim", CFrame.new(0, aura.rim + 0.2, 0), Vector3.new(4.4, 0.2, 4.4))
+    finish(emitter("Fountain", {
+        Texture = T.Petal, Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
+        ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward, EmissionDirection = Enum.NormalId.Top,
+        Speed = NumberRange.new(2.2, 3.2), SpreadAngle = Vector2.new(22, 22), Acceleration = Vector3.new(0, -1.6, 0), Drag = 0.9,
+        Lifetime = NumberRange.new(2.6, 3.4), Rate = 5, Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-180, 180),
+        Size = seq({ { 0, 0.3 }, { 0.2, 0.48 }, { 1, 0.42 } }), Color = ColorSequence.new(rgb(255, 150, 205), rgb(235, 90, 165)),
+        Transparency = seq({ { 0, 0.5 }, { 0.1, 0.05 }, { 0.75, 0.2 }, { 1, 1 } }), LightEmission = 0.15, Brightness = 1.6,
+    }, { HatchEmit = 18 }), rim)
+    -- four blossoms floating round at different heights, rocking
+    for k, b in { { 10, 2.9, 3.3, 0.4, 3.6, 1.1 }, { -8, 3.2, 1.6, 0.35, 4.4, 0.9 }, { 13, 2.7, 2.4, 0.5, 3.1, 1.0 }, { -11, 3.3, 3.0, 0.3, 5.0, 0.8 } } do
+        local floater = crystal(aura, "FloatBlossom" .. k, { Orbit = b[1], Radius = b[2], Height = b[3], Phase = (k - 1) * 90 + 30, Bob = b[4], BobPeriod = b[5] },
+            b[6], rgb(255, 165, 215), 1.5, T.Blossom, 24, PINK)
+        floater.BillboardGui.Glow.ImageTransparency = 0.78
+    end
+    local pollen = part(aura, "PollenArea", CFrame.new(0, aura.rim + 0.15, 0), Vector3.new(5, 0.2, 5))
+    finish(emitter("Pollen", {
+        Texture = T.Dot, Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(0.6, 1.3), SpreadAngle = Vector2.new(30, 30),
+        Acceleration = Vector3.new(0, 0.4, 0), Drag = 0.7, Lifetime = NumberRange.new(2.4, 3.4), Rate = 7,
+        Size = seq({ { 0, 0 }, { 0.15, 0.28 }, { 0.6, 0.2 }, { 1, 0 } }), Brightness = 2.5,
+        Color = ColorSequence.new(rgb(255, 230, 150), GOLDEN), Transparency = seq({ { 0, 0.1 }, { 1, 1 } }),
+    }, { HatchEmit = 25 }), pollen)
+    local glints = part(aura, "GlintArea", CFrame.new(0, EGG_CENTRE + 0.4, 0), Vector3.new(6, 4.5, 6))
+    finish(emitter("Glints", {
+        Texture = T.Star4, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        Speed = NumberRange.new(0.3, 0.7), SpreadAngle = Vector2.new(180, 180), Lifetime = NumberRange.new(0.8, 1.2), Rate = 3,
+        Rotation = NumberRange.new(0, 45), Size = seq({ { 0, 0 }, { 0.5, 0.55 }, { 1, 0 } }), Color = ColorSequence.new(BLUSH),
+        Transparency = NumberSequence.new(0.1), Brightness = 2,
+    }, { HatchEmit = 14 }), glints)
+    -- no halo: on the pale crystal egg it reads as a milky veil
+    column(aura, rgb(255, 140, 200), BLUSH, 0.3, 4).Transparency = seq({ { 0, 1 }, { 0.2, 0.82 }, { 0.6, 0.88 }, { 1, 1 } })
+    mist(pollen, PINK, BLUSH, 3, 0.8)
+    ripple(aura, rgb(255, 150, 210), 9.5, 2)
+    drawIn(aura, T.Petal, BLUSH, 0.6, 40)
+    burst(aura, rgb(255, 200, 230), 9)
+    light(aura, rgb(255, 120, 190), 13, 0.5)
+    -- fitted to the detailed egg: 0.2 higher, golden pollen rising out of both lotus hearts, and a
+    -- soft glow round the emblem's heart
+    lift(aura, 0.2)
+    for name, offset in { LotusL = Vector3.new(-0.746, -1.032, 0.453), LotusR = Vector3.new(0.779, -1.032, 0.429) } do
+        local a = anchor(aura, name, offset)
+        finish(emitter("Pollen", {
+            Texture = T.Dot, Speed = NumberRange.new(0.3, 0.7), SpreadAngle = Vector2.new(35, 35), Drag = 0.8,
+            Acceleration = Vector3.new(0, 1, 0), Lifetime = NumberRange.new(1.8, 2.8), Rate = 6,
+            Size = seq({ { 0, 0 }, { 0.15, 0.24 }, { 1, 0 } }), Color = ColorSequence.new(rgb(255, 235, 150), rgb(255, 180, 70)),
+            Transparency = seq({ { 0, 0.05 }, { 1, 1 } }), Brightness = 2.5,
+        }, { HatchEmit = 12 }), a)
+        finish(emitter("LotusGlow", {
+            Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(1.8, 2.4), Rate = 1,
+            Size = seq({ { 0, 0.6 }, { 0.5, 1.1 }, { 1, 1.3 } }), Color = ColorSequence.new(rgb(255, 190, 80)),
+            Transparency = seq({ { 0, 1 }, { 0.4, 0.82 }, { 1, 1 } }), Brightness = 2,
+        }, { HatchEmit = 2 }), a)
+    end
+    finish(emitter("HeartGlow", {
+        Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(2.4, 3), Rate = 1,
+        Rotation = NumberRange.new(0, 360), ZOffset = 0.4,
+        Size = seq({ { 0, 0.7 }, { 0.5, 1.3 }, { 1, 1.5 } }), Color = ColorSequence.new(rgb(255, 60, 170)),
+        Transparency = seq({ { 0, 1 }, { 0.4, 0.8 }, { 1, 1 } }), Brightness = 2,
+    }, { HatchEmit = 3 }), anchor(aura, "Heart", Vector3.new(0.008, -0.244, 1.289)))
+end
+
+-- Ancient Grove Egg: the world tree's heartbeat. The growth rings of an ancient tree turning
+-- slowly beneath a counter-turning vortex of green Qi; five roots of light crawling in over the
+-- rim and up into the egg, drawing the grove's Qi in; a spiral of Qi climbing round the egg; four
+-- forest spirits wandering round it on their own slow, looping paths; leaves drifting down from the
+-- branches; a wide ring of old light. Its breath is deep and slow.
+RECIPES.AncientGroveEgg = function(aura)
+    local LEAFG, SPIRIT, AMBER, BARK = rgb(110, 240, 70), rgb(200, 255, 170), rgb(240, 200, 90), rgb(120, 200, 60)
+    aura.model:SetAttribute("Gather", 1.6)
+    aura.model:SetAttribute("Tint", rgb(130, 245, 90))
+    set(aura.model, nil, { Breath = 0.16, BreathPeriod = 7 }) -- deep and slow, an ancient pulse of life
+    formation(aura, "Formation", T.TreeRings, 3.4, rgb(150, 230, 80), 4, 2.8)
+    formation(aura, "Vortex", T.Vortex, 3.8, LEAFG, -28, 2.4, 0.1)        -- its arms sweep out past the rings
+    ring(aura, "OldLight", EGG_CENTRE + 0.6, tilt(-8, 6), T.GlowRing, 6.8, AMBER, 9, 1.8, nil, { 5, 11 })
+    -- roots of light rising from low on the pedestal (the Jade Grove pedestals are cones of golden
+    -- roots, about 2 studs below the egg 4 studs out) and climbing up into the egg's heart
+    local heart = attachment(aura, "Heart", CFrame.new(0, EGG_CENTRE * 0.8, 0) * UP_AXIS)
+    for k = 1, 5 do
+        stream(aura, "Root" .. k, { Orbit = 5, Radius = 3.9, Height = -2, Phase = (k - 1) * 72 + 20 }, heart, {
+            Texture = T.Stream, TextureMode = Enum.TextureMode.Wrap, TextureLength = 1.6, TextureSpeed = 0.9,
+            CurveSize0 = 2.2, CurveSize1 = -0.4, Width0 = 0.75, Width1 = 0.3, Brightness = 2.5, LightEmission = 0.2,
+            Color = colors({ { 0, rgb(230, 170, 40) }, { 0.5, rgb(120, 230, 50) }, { 1, rgb(190, 255, 140) } }),
+            Transparency = seq({ { 0, 1 }, { 0.08, 0.05 }, { 0.85, 0.1 }, { 1, 1 } }),
+        })
+    end
+    -- a spiral of Qi climbing round the egg: a fast-circling head bobbing up and down, its motes
+    -- rising as they fade
+    local spiralHead = attachment(aura, "SpiralHead", CFrame.new(0, EGG_CENTRE, 1.7))
+    set(spiralHead, nil, { Orbit = 200, Radius = 1.95, Height = EGG_CENTRE, Bob = 1.2, BobPeriod = 5 })
+    finish(emitter("Spiral", {
+        Texture = T.Dot, Rate = 22, Lifetime = NumberRange.new(1.2, 1.6), Speed = NumberRange.new(0.05),
+        Acceleration = Vector3.new(0, 0.9, 0), Size = seq({ { 0, 0.45 }, { 1, 0 } }), Brightness = 3,
+        Color = ColorSequence.new(rgb(140, 255, 90), rgb(60, 210, 40)), Transparency = seq({ { 0, 0 }, { 1, 1 } }),
+    }, { HatchEmit = 20 }), spiralHead)
+    -- forest spirits: soft orbs with trails wandering round on slow looping paths
+    for k, w in { { 38, 3.0, 2.6, 18, 1.2, 4.2 }, { -46, 3.4, 3.6, -14, 0.9, 5.1 }, { 52, 2.8, 1.6, 26, 1.0, 3.6 }, { -33, 3.6, 4.4, -8, 1.4, 6 } } do
+        local _, head = arc(aura, "Spirit" .. k, { Orbit = w[1], Radius = w[2], Height = w[3], Tilt = Vector3.new(w[4], 0, -w[4] * 0.5),
+            Phase = (k - 1) * 90 + 45, Bob = w[5], BobPeriod = w[6] }, 0.12, {
+            Texture = T.Ribbon, TextureMode = Enum.TextureMode.Stretch, Lifetime = 1.3, Brightness = 2.5, LightEmission = 0.8,
+            Color = colors({ { 0, SPIRIT }, { 1, LEAFG } }), Transparency = seq({ { 0, 0.1 }, { 0.5, 0.5 }, { 1, 1 } }),
+            WidthScale = seq({ { 0, 1 }, { 1, 0 } }),
+        })
+        finish(emitter("Orb", {
+            Texture = T.SmallGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.3), Rate = 14,
+            Size = seq({ { 0, 0.55 }, { 1, 0.3 } }), Color = ColorSequence.new(rgb(170, 255, 120)), Transparency = seq({ { 0, 0.1 }, { 1, 1 } }), Brightness = 3,
+        }), head)
+    end
+    local motes = part(aura, "MoteArea", CFrame.new(0, aura.rim + 0.15, 0), Vector3.new(7, 0.2, 7))
+    halo(aura, LEAFG, 7.5, 0.74)
+    column(aura, BARK, SPIRIT, 0.25, 5)
+    mist(motes, LEAFG, SPIRIT, 3, 0.7)
+    ripple(aura, rgb(150, 240, 110), 11, 3)
+    drawIn(aura, T.Leaf, rgb(170, 245, 120), 0.65, 45)
+    burst(aura, rgb(190, 255, 150), 11)
+    light(aura, LEAFG, 15, 1.2)
+    -- fitted to the detailed egg: 0.15 higher, and the egg's own five leaf crowns come alive: light
+    -- glowing inside each, fireflies drifting out of it, leaves falling from it (gold and green
+    -- by turns)
+    lift(aura, 0.15)
+    local CROWNS = { { Vector3.new(1.661, 0.284, 0.304), 0.422 }, { Vector3.new(-1.753, 0.757, 0.581), 0.344 },
+        { Vector3.new(0.644, 1.487, -0.358), 0.364 }, { Vector3.new(-1.627, 0.99, -0.374), 0.431 }, { Vector3.new(-0.262, 1.71, -0.244), 0.312 } }
+    for k, c in CROWNS do
+        local a = anchor(aura, "Crown" .. k, c[1])
+        local r = c[2] * 1.3
+        finish(emitter("Leaves", {
+            Texture = T.Leaf, Speed = NumberRange.new(0.2, 0.6), SpreadAngle = Vector2.new(180, 180), Drag = 0.6,
+            Acceleration = Vector3.new(0.3, -0.55, 0.12), Lifetime = NumberRange.new(3.5, 4.5), Rate = 1 + 0.3 * (k % 2),
+            Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-110, 110), LightEmission = 0.15, Brightness = 1.6,
+            Size = seq({ { 0, 0.3 }, { 0.1, 0.42 }, { 1, 0.38 } }),
+            Color = k % 2 == 0 and ColorSequence.new(rgb(215, 215, 80), rgb(150, 190, 60)) or ColorSequence.new(rgb(120, 225, 80), rgb(60, 170, 50)),
+            Transparency = seq({ { 0, 1 }, { 0.08, 0.05 }, { 0.8, 0.2 }, { 1, 1 } }),
+        }, { HatchEmit = 6 }), a)
+        finish(emitter("Glow", {   -- drawn in front of the leaves (ZOffset): light shining through the crown
+            Texture = T.SmallGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(1.6, 2.2), Rate = 1.2,
+            Size = seq({ { 0, r * 3 }, { 0.5, r * 3.8 }, { 1, r * 3.3 } }), Color = ColorSequence.new(rgb(140, 255, 90)),
+            Transparency = seq({ { 0, 1 }, { 0.45, 0.55 }, { 1, 1 } }), Brightness = 2, ZOffset = 1.2,
+        }, { HatchEmit = 2 }), a)
+        finish(emitter("Fireflies", {
+            Texture = T.Dot, Speed = NumberRange.new(0.3, 0.8), SpreadAngle = Vector2.new(180, 180), Drag = 1.4,
+            Acceleration = Vector3.new(0, 0.15, 0), Lifetime = NumberRange.new(1.8, 2.6), Rate = 3,
+            Size = seq({ { 0, 0 }, { 0.2, 0.26 }, { 0.6, 0.18 }, { 1, 0 } }), Color = ColorSequence.new(rgb(220, 255, 140)),
+            Transparency = seq({ { 0, 0 }, { 1, 1 } }), Brightness = 3, ZOffset = 1.5,
+        }, { HatchEmit = 8 }), a)
+    end
+end
+
 -- ---------- building ----------
 function EggAuraVFX.has(eggId)
     return RECIPES[eggId] ~= nil
@@ -584,7 +921,7 @@ function EggAuraVFX.build(island)
             root.CFrame = origin
             root.Parent = aura
             aura.PrimaryPart = root
-            RECIPES[eggId]({ model = aura, root = root, rim = rimHeight(stand, origin) })
+            RECIPES[eggId]({ model = aura, root = root, rim = rimHeight(stand, origin), egg = stand:FindFirstChild("Egg") })
             CollectionService:AddTag(aura, TAG)
             aura.Parent = folder
             table.insert(built, eggId)

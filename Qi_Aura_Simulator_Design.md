@@ -449,20 +449,28 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 ### Egg designs
 
 - **Source:** the 15-egg concept sheet. Each island's eggs are modelled in Blender by a script (`tools/blender/eggs/eggs_<island>.py`, shared helpers in `egg_kit.py`, preview renders by `egg_render.py`) and exported to `assets/eggs/<EggId>.fbx`. An export holds an `<EggId>_Body` mesh coloured by an atlas (`<EggId>_atlas.png`) and `<EggId>_Glow_<hex>` parts, which become Neon in that colour.
+- **Detailed eggs (Jade Grove onward), built like the sculpted pets:**
+  - High-detail pieces with procedural Cycles shaders (`egg_hi.py`): knotted bark with grain, veined leaves, marbled jade, gold-veined crystal, carved wood planks, leafy crowns.
+  - Baked by `egg_bake.py` onto one game mesh of about 14,000 triangles, with `<EggId>_color.png` (ambient occlusion included), `_normal.png`, `_roughness.png` and `_metalness.png`.
+  - Studio's importer turns the colour and normal maps into a SurfaceAppearance. Roughness and metalness are set on it in Studio.
+  - Glowing parts stay separate Neon pieces, and every open glow piece is wound to face outward, because Roblox culls back faces.
+  - Gold is 0.6 metallic, not 1: fully metallic gold shows black wherever it has nothing bright to reflect.
 - **In Studio:** an imported egg is stored with `WorldBuilder.storeEgg(model, eggId)` in `ServerStorage.EggMeshes.<EggId>`. `buildEggStands` places it at 1.3 studs per egg unit.
-- **Recreated so far:** the three Starting Island eggs. The other twelve keep the older family designs below until they are recreated from the sheet.
+- **Recreated so far:** the Starting Island and Jade Grove eggs. The other nine keep the older family designs below until they are recreated from the sheet.
 
 | Egg | Design |
 |---|---|
 | Beginner Qi Egg | Cut blue crystal: long irregular facets in six blues, from ice-white to cobalt, with Qi light glowing along the cuts from a core inside |
 | Spirit Breeze Egg | Sky-blue porcelain brushed with white wind bands, a gold crescent swirl on its shoulder holding a glowing breeze sigil, resting on a bed of gold-rimmed auspicious clouds |
 | Elemental Core Egg | Dark cracked stone in an angular gold cage (belt, raised plates, straps and a clawed crown), a large cyan core crystal set in its front, smaller gems round the belt, Qi light seeping through the cracks |
+| Jade Spirit Egg | Large cut facets of glossy marbled jade, Qi glowing in the seams between them, caged by thick knotted bark branches; leaves sprout along every branch, with twigs ending in leaf clusters. Two branches arch over a bark-bound glowing jade-leaf gem in the front, veined in bark |
+| Bloomwood Egg | Facets of blossom-pink crystal veined with gold, gold filigree branching down over the crown, two rows of broad veined leaves cupping the lower half, a three-layer leaf emblem in relief with a gold rim round a glowing heart, and a cupped lotus in bloom either side of its base |
+| Ancient Grove Egg | Carved wood planks in fourteen upright columns, each split at its own heights, every plank its own tone; dark bark in the grooves, pale heartwood showing at the crown. A mossy trunk behind it sends roots gripping the egg and branches spreading into lumpy crowns of leaves, and a spiral of Qi glows on its front |
 
 **Older family designs** (`tools/blender/eggs/Eggs.blend`, preview `Eggs_preview.png`): each island has one design family. The second egg adds a jewelled gold band, and the third a crown and floating halo.
 
 | Island | Design |
 |---|---|
-| Jade Grove | Faceted crystal egg held by golden roots with flowers, glowing leaf emblem |
 | Ember Peak | Dark volcanic plates with lava glowing through the cracks, flame emblem, crystals at the base |
 | Moonlit Isle | Porcelain egg with gold filigree, glowing star inlay, small wings and an orbiting gold ring |
 | Origin Abyss | Obsidian plates cracked with void light, spiral void core, thorny bronze branches |
@@ -479,7 +487,7 @@ Every egg on its stand has its own aura, built in the Workspace from particle em
   - Rings precess (`Wobble`) as they spin.
   - Ribbons shed dust or feathers from their heads, which leaves spiral wakes.
   - Mist and an updraft column give the aura volume.
-  - The whole aura breathes (`Breath`, `BreathPeriod`): speed, glow and ring size swell and ease back. The breath is calm on Beginner Qi (5 s), gusty on Spirit Breeze (3.5 s) and a quick thrum on Elemental Core (2.5 s).
+  - The whole aura breathes (`Breath`, `BreathPeriod`): speed, glow and ring size swell and ease back, at each egg's own pace (table below).
 - **Idle and hatch** (no periodic pulse: the owner judged it unnecessary):
   - Idle: everything turns, orbits, drifts and emits on its own timing.
   - Hatch, in two parts. First the aura gathers: everything speeds up and draws in, energy is pulled into the egg, and the egg glows in the aura's tint. Then it bursts: the rings fling outward, ripples run across the rim, and the egg flashes.
@@ -491,12 +499,20 @@ Every egg on its stand has its own aura, built in the Workspace from particle em
   - A ring must dip its front toward the viewer, or it goes edge-on from the usual camera height.
   - Additive beams (LightEmission 1) wash out to white in daylight, so the element streams use 0.35.
   - VFX Studio's hairline rings are too faint in daylight, so the rings use bolder textures of our own.
+  - Some VFX Studio textures (its swirl vortex and radial burst among them) are white on black with no alpha. They work on additive particles, but show as black squares on a SurfaceGui plane, so check a texture's alpha before putting it on a plane.
+  - Leaves, petals and ribbons that should read as colour, not light, use low light emission (about 0.15 to 0.35): fully additive, they wash out to pale streaks in daylight.
+  - On a pale egg (Spirit Breeze, Bloomwood) a strong halo and light blow the egg out to white, so those auras keep them faint.
+  - The Jade Grove stands are 7.5 studs apart (Starting Island's are 10), so its auras stay within about 3.3 studs of the egg.
+  - The detailed eggs are taller than the recipes' measures, so their auras are lifted (`lift` in `EggAuraVFX`). Effects that belong to a part of the model (a gem, a lotus, a leaf crown) are anchored to points measured on the model in Blender (`anchor`).
 
 | Egg | Breath | Aura |
 |---|---|---|
 | Beginner Qi | 5 s, calm | **Calm Qi.** A lotus mandala turns beneath. A bold Qi ring with comet streaks and a broken ring of breath cross on diagonals, and two silk Qi arcs glide round. Three blue crystal shards (modelled and rendered in Blender) drift round, rocking. Motes rise like breath, with star glints and a soft halo. |
 | Spirit Breeze | 3.5 s, gusty | **Wind.** A wind-rose sigil turns beneath. Light-blue and white wind rings (two crescent gusts and a broken ring of breeze) whirl on three planes. Three white wind trails spiral up and down, auspicious clouds drift off the rim, and feathers ride the updraught. |
 | Elemental Core | 2.5 s, a thrum | **Concentrated elements.** The five-element sigil and a gold mandala turn against each other beneath. Four element streams (cyan, gold, blue, amber) rise off the formation into a turning cage of light that meets above the crown. Round the egg are a gyroscope of three gold element bands, four element orbs racing round with trails, blue and gold motes, and sparks off the core. On the hatch the core gem flares. |
+| Jade Spirit | 4.5 s, growing | **Living jade.** A vine-and-leaf formation turns beneath. A jade ring and a swooshing crescent of Qi cross round the egg. Three vines of light twine up from the rim to the crown, each at its own pace. Three currents of Qi race round on their own planes, shedding leaves that tumble in their wake, and three broad leaves drift round, rocking. Qi breathes out of the jade-leaf gem in a soft green glow and rising motes. |
+| Bloomwood | 6 s, dreamy | **Eternal blossom.** A blossom mandala turns over a slow bloom of golden light. A pink ring and a gold breeze cross round the egg. Two streams of blossom wind circle it, shedding petals, and a fountain throws petals up off the rim to drift back down. Four blossoms float round, rocking. Golden pollen rises out of both lotus hearts, and a soft glow surrounds the emblem's heart. No halo: on the pale crystal egg it reads as a milky veil. |
+| Ancient Grove | 7 s, deep and slow | **The world tree's heartbeat.** An ancient tree's growth rings turn slowly beneath a counter-turning vortex of Qi. Five roots of light climb the stand's golden roots up into the egg. A spiral of Qi climbs round it, and four forest spirits wander round on slow looping paths. The egg's own five leaf crowns come alive: light glows inside each, fireflies drift out, and leaves fall from them, gold and green by turns. A wide ring of old light circles it. |
 
 **Egg stands today:** each island has a shrine with three stands where eggs are hatched directly. Under the planned guardian loop, eggs come from guardians instead; the stands' future role is an open question (section 9).
 

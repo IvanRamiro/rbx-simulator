@@ -1,7 +1,7 @@
 """Presentation renders for the eggs, in their own Blender scene ("EggLab") so the island scenes are
 never touched. Objects are linked into the scene's collection for the render and unlinked after.
 
-    render(objects, path, view="front" | "three_quarter", size=(900, 900), distance=None)
+    render(objects, path, view="front" | "three_quarter" | "back", size=(900, 900), distance=None, cycles=0)
     sheet(rows, path)   rows: [[objects of egg 1, objects of egg 2, ...], ...] laid out in a grid
 """
 import math
@@ -63,8 +63,15 @@ def _bloom(scene, on):
         pass
 
 
-def render(objects, path, view="front", size=(900, 900), centre=(0, 0, 1.4), distance=8.5):
+def render(objects, path, view="front", size=(900, 900), centre=(0, 0, 1.4), distance=8.5, cycles=0):
+    """cycles > 0 renders with Cycles at that many samples (the high-detail shaders need it: bevel,
+    ambient occlusion and per-facet variation are Cycles-only); otherwise EEVEE."""
     scene = lab()
+    engine = scene.render.engine
+    if cycles:
+        scene.render.engine = "CYCLES"
+        scene.cycles.samples = cycles
+        scene.cycles.use_denoising = True
     linked = []
     for o in objects:
         if o.name not in scene.collection.objects:
@@ -79,6 +86,7 @@ def render(objects, path, view="front", size=(900, 900), centre=(0, 0, 1.4), dis
         bpy.ops.render.render(write_still=True, scene=scene.name)
     finally:
         bpy.context.window.scene = window_scene
+        scene.render.engine = engine
         for o in linked:
             scene.collection.objects.unlink(o)
     return path
