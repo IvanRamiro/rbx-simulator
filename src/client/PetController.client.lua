@@ -6,6 +6,7 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent:WaitForChild("HudScale"))
+local Toast = require(script.Parent:WaitForChild("Toast"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -92,30 +93,7 @@ listLayout.Padding = UDim.new(0, 6)
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Parent = petList
 
-local hatchMessage = Instance.new("TextLabel")
-hatchMessage.Name = "HatchMessage"
-hatchMessage.AnchorPoint = Vector2.new(0.5, 0)
-hatchMessage.Position = UDim2.new(0.5, 0, 0, 12)
-hatchMessage.Size = UDim2.fromOffset(380, 44)
-hatchMessage.BackgroundColor3 = PANEL_COLOR
-hatchMessage.BackgroundTransparency = 0.25
-hatchMessage.Font = Enum.Font.GothamBold
-hatchMessage.TextScaled = true
-hatchMessage.TextColor3 = Color3.new(1, 1, 1)
-hatchMessage.Visible = false
-hatchMessage.Parent = hud
-applyHudScale(hatchMessage)
-
-local messageCorner = Instance.new("UICorner")
-messageCorner.CornerRadius = UDim.new(0, 10)
-messageCorner.Parent = hatchMessage
-
-local messagePadding = Instance.new("UIPadding")
-messagePadding.PaddingLeft = UDim.new(0, 10)
-messagePadding.PaddingRight = UDim.new(0, 10)
-messagePadding.PaddingTop = UDim.new(0, 6)
-messagePadding.PaddingBottom = UDim.new(0, 6)
-messagePadding.Parent = hatchMessage
+local hatchMessage = Toast.new(hud, "HatchMessage", 12, Color3.new(1, 1, 1), 3.5)
 
 hud.Parent = playerGui
 
@@ -245,22 +223,8 @@ end
 
 RemoteEvents.PetInventoryUpdatedEvent.OnClientEvent:Connect(renderInventory)
 
-local MESSAGE_SECONDS = 3.5
-local messageCount = 0
-
 local function showMessage(text, color)
-    messageCount += 1
-    local thisMessage = messageCount
-
-    hatchMessage.Text = text
-    hatchMessage.TextColor3 = color
-    hatchMessage.Visible = true
-
-    task.delay(MESSAGE_SECONDS, function()
-        if messageCount == thisMessage then
-            hatchMessage.Visible = false
-        end
-    end)
+    hatchMessage:show(text, color)
 end
 
 local function onHatchResult(result)
@@ -291,9 +255,7 @@ end
 RemoteEvents.EggHatchResultEvent.OnClientEvent:Connect(onHatchResult)
 
 local function getRankName()
-    local leaderstats = player:FindFirstChild("leaderstats")
-    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
-    return if rankValue then rankValue.Value else ""
+    return Ranks.getPlayerRankName(player)
 end
 
 local function updateEggPrompt(stand)

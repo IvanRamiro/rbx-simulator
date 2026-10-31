@@ -516,8 +516,6 @@ PetRig.Profiles = {
             Tail = "Body",
             Tail2 = "Tail",
         },
-        Attached = {},
-        SeeThrough = {},
         GlowColors = {
             ffdd81 = Color3.fromRGB(255, 175, 40),
             ffeaa6 = Color3.fromRGB(255, 195, 70),
@@ -565,8 +563,6 @@ PetRig.Profiles.EmberWyrm = {
         GillR2 = "Head",
         GillR3 = "Head",
     },
-    Attached = {},
-    SeeThrough = {},
     Effects = {
         Motes = "Heart",
         Light = "Heart",
@@ -602,8 +598,6 @@ PetRig.Profiles.BonefireDragon = {
         Tail4 = "Tail3",
         Tail5 = "Tail4",
     },
-    Attached = {},
-    SeeThrough = {},
     SeeThroughGlow = { ["95bcff"] = 1, ["61a0ff"] = 0.3 },
     Effects = {
         Motes = "Soul",
@@ -640,8 +634,6 @@ PetRig.Profiles.DreadfangCerberus = {
         Tail1 = "Body",
         Tail2 = "Tail1",
     },
-    Attached = {},
-    SeeThrough = {},
     Effects = {
         Motes = "Body",
         Light = "Body",
@@ -677,8 +669,6 @@ PetRig.Profiles.GoldenKirin = {
         Tail1 = "Body",
         Tail2 = "Tail1",
     },
-    Attached = {},
-    SeeThrough = {},
     Effects = {
         Motes = "Body",
         Light = "Body",
@@ -706,8 +696,6 @@ PetRig.Profiles.MyceliumSprite = {
         ArmR = "Body",
         Threads = "Body",
     },
-    Attached = {},
-    SeeThrough = {},
     Effects = {
         Motes = "Cap",
         Light = "Body",
@@ -739,8 +727,6 @@ PetRig.Profiles.MossGolem = {
         LegL = "Body",
         LegR = "Body",
     },
-    Attached = {},
-    SeeThrough = {},
     Effects = {
         Motes = "Body",
         Light = "Body",
@@ -769,8 +755,6 @@ PetRig.Profiles.JadeSpiritPanda = {
         LegBL = "Body",
         LegBR = "Body",
     },
-    Attached = {},
-    SeeThrough = {},
     SeeThroughGlow = { ["89edbc"] = 0.3 },
     Effects = {
         Motes = "Body",
@@ -805,8 +789,6 @@ PetRig.Profiles.JadeAntlerDeer = {
         LegBL2 = "LegBL",
         LegBR2 = "LegBR",
     },
-    Attached = {},
-    SeeThrough = {},
     SeeThroughGlow = { adedce = 0.4, ["89ffd3"] = 0.2 },
     GlowColors = {
         adedce = Color3.fromRGB(40, 200, 140),
@@ -847,8 +829,6 @@ PetRig.Profiles.DawnPhoenix = {
         LegL = "Body",
         LegR = "Body",
     },
-    Attached = {},
-    SeeThrough = {},
     SeeThroughGlow = { ffe195 = 0.25 },
     GlowColors = {
         ffe195 = Color3.fromRGB(255, 170, 40),
@@ -889,8 +869,6 @@ PetRig.Profiles.RuneSphinx = {
         Tail = "Body",
         Tail2 = "Tail",
     },
-    Attached = {},
-    SeeThrough = {},
     SeeThroughGlow = { ffad3f = 0.15 },
     GlowColors = {
         ffc555 = Color3.fromRGB(255, 140, 0),
@@ -928,8 +906,6 @@ PetRig.Profiles.MagmaCub = {
         LegR = "Body",
         Tail = "Body",
     },
-    Attached = {},
-    SeeThrough = {},
     GlowColors = {
         ffce61 = Color3.fromRGB(255, 150, 20),
         ff9b30 = Color3.fromRGB(255, 85, 0),
@@ -972,8 +948,6 @@ PetRig.Profiles.AzureSkyDragon = {
         Tail = "Body",
         Tail2 = "Tail",
     },
-    Attached = {},
-    SeeThrough = {},
     SeeThroughGlow = { ["95daff"] = 0.4, a0e7ff = 0.15 },
     GlowColors = {
         ["95daff"] = Color3.fromRGB(40, 150, 255),
@@ -1013,8 +987,6 @@ PetRig.Profiles.SpiritCrane = {
         LegR = "Body",
         Tail = "Body",
     },
-    Attached = {},
-    SeeThrough = {},
     GlowColors = {
         a0f3f1 = Color3.fromRGB(30, 215, 205),
         ["95eded"] = Color3.fromRGB(20, 195, 210),
@@ -1053,8 +1025,6 @@ PetRig.Profiles.CloudSheep = {
         LegBR = "Body",
         Tail = "Body",
     },
-    Attached = {},
-    SeeThrough = {},
     GlowColors = {
         ["59daf1"] = Color3.fromRGB(20, 190, 235),
         ["61cbf3"] = Color3.fromRGB(30, 150, 240),
@@ -1092,8 +1062,6 @@ PetRig.Profiles.GoldenManeLion = {
         Tail = "Body",
         Tail2 = "Tail",
     },
-    Attached = {},
-    SeeThrough = {},
     GlowColors = {
         ffce61 = Color3.fromRGB(255, 140, 10),
         ffce59 = Color3.fromRGB(255, 150, 20),
@@ -1236,7 +1204,6 @@ local function addEffects(rig)
         })
     end
 
-    rig.trails = {}
     local trailPoints = if type(effects.Trail) == "table" then effects.Trail else { effects.Trail }
     for _, pointName in trailPoints do
         local tip = rig.points[pointName]
@@ -1309,9 +1276,7 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
         part.Size = size
         part.CFrame = cframe
         local owner, hex = string.match(name, "^(.+)_Glow_(%x%x%x%x%x%x)$")
-        part.Transparency = profile.SeeThrough[name]
-            or (hex and profile.SeeThroughGlow and profile.SeeThroughGlow[string.lower(hex)])
-            or 0
+        part.Transparency = (hex and profile.SeeThroughGlow and profile.SeeThroughGlow[string.lower(hex)]) or 0
         prepare(part)
         if hex then
             part.Color = (profile.GlowColors and profile.GlowColors[string.lower(hex)]) or Color3.fromHex(hex)
@@ -1353,12 +1318,6 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
             warn(string.format("PetRig: %s is missing the part, parent or pivot for %s", petId, tostring(name)))
         end
     end
-    for name, ownerName in profile.Attached do
-        local part, owner = rig.parts[name], rig.parts[ownerName]
-        if part and owner then
-            weld(owner, part)
-        end
-    end
     local pulseName = profile.Effects.Pulse
     for _, glow in glows do
         local owner = rig.parts[glow.owner]
@@ -1387,48 +1346,6 @@ end
 
 local Blasts = {}
 
-function Blasts.Sunburst(rig, fx)
-    local colors, u, origin, facing, neon = rig.profile.Colors, rig.unit, fx.origin, fx.facing, fx.neon
-
-    local ringInfo = TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    for index = 1, 20 do
-        local angle = index / 20 * 2 * math.pi
-        local direction = facing:VectorToWorldSpace(Vector3.new(math.cos(angle), 0, math.sin(angle)))
-        local start = CFrame.lookAt(origin + direction * 0.8 * u, origin + direction * 2 * u)
-        local segment = neon(Vector3.new(0.9 * u, 0.12 * u, 0.25 * u), start, colors.Gold)
-        TweenService:Create(segment, ringInfo, {
-            CFrame = start + direction * 9 * u,
-            Size = Vector3.new(2.2 * u, 0.05 * u, 0.1 * u),
-            Transparency = 1,
-        }):Play()
-    end
-
-    local rayInfo = TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    for index = 1, 10 do
-        local angle = index / 10 * 2 * math.pi
-        local direction = facing:VectorToWorldSpace(Vector3.new(math.cos(angle), 0.55, math.sin(angle))).Unit
-        local base = CFrame.lookAt(origin, origin + direction)
-        local ray = neon(Vector3.new(0.12 * u, 0.12 * u, 0.4 * u), base * CFrame.new(0, 0, -0.4 * u), colors.Sun)
-        TweenService:Create(ray, rayInfo, {
-            Size = Vector3.new(0.04 * u, 0.04 * u, 5 * u),
-            CFrame = base * CFrame.new(0, 0, -2.8 * u),
-            Transparency = 1,
-        }):Play()
-    end
-
-    local flash = neon(Vector3.one * 0.6 * u, CFrame.new(origin), colors.Ivory)
-    flash.Shape = Enum.PartType.Ball
-    TweenService:Create(flash, ringInfo, { Size = Vector3.one * 5 * u, Transparency = 1 }):Play()
-    local light = Instance.new("PointLight")
-    light.Color = colors.Gold
-    light.Range = 16 * u
-    light.Brightness = 6
-    light.Parent = flash
-    TweenService:Create(light, ringInfo, { Brightness = 0 }):Play()
-    if rig.burst then
-        rig.burst:Emit(45)
-    end
-end
 
 function Blasts.Eruption(rig, fx)
     local colors, u, origin, facing, neon = rig.profile.Colors, rig.unit, fx.origin, fx.facing, fx.neon
@@ -2459,7 +2376,7 @@ local function burst(rig)
             return part
         end,
     }
-    Blasts[profile.Effects.Blast or "Sunburst"](rig, fx)
+    Blasts[profile.Effects.Blast](rig, fx)
     Debris:AddItem(folder, 1.4)
 end
 

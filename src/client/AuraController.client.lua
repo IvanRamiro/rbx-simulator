@@ -82,7 +82,7 @@ local function printSummary(aura, petId, rankId)
         aura.player.Name,
         petId or "Neutral",
         tostring(rankId),
-        (counts.Part or 0),
+        (counts.Part or 0) + (counts.MeshPart or 0),
         counts.Trail or 0,
         counts.ParticleEmitter or 0,
         counts.PointLight or 0
@@ -95,9 +95,7 @@ local function isAlive(character)
 end
 
 local function getRankId(player)
-    local leaderstats = player:FindFirstChild("leaderstats")
-    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
-    local rank = rankValue and Ranks.getRank(rankValue.Value)
+    local rank = Ranks.getRank(Ranks.getPlayerRankName(player))
     return rank and rank.Id
 end
 
@@ -154,10 +152,6 @@ local function stopBreakthrough(player)
 end
 
 local function printBreakthroughSummary(player, effect, petId, rankId)
-    local counts = {}
-    for _, descendant in effect.folder:GetDescendants() do
-        counts[descendant.ClassName] = (counts[descendant.ClassName] or 0) + 1
-    end
     print(string.format("[Breakthrough] %s: %s / %s", player.Name, petId or "Neutral", rankId))
 
     task.delay(1.2, function()
@@ -210,28 +204,40 @@ local function playBreakthrough(player)
     end
 end
 
+local characterConnections = {}
+
+local function disconnectCharacter(player)
+    for _, connection in characterConnections[player] or {} do
+        connection:Disconnect()
+    end
+    characterConnections[player] = nil
+end
+
 local function watchCharacter(player, character)
     stopBreakthrough(player)
+    disconnectCharacter(player) -- the previous character may not be destroyed on respawn
+    local watching = {}
+    characterConnections[player] = watching
 
-    character.ChildAdded:Connect(function(child)
+    table.insert(watching, character.ChildAdded:Connect(function(child)
         if child.Name == "HumanoidRootPart" then
             refreshAura(player)
         end
-    end)
+    end))
 
     task.spawn(function()
         local humanoid = character:WaitForChild("Humanoid", 10)
-        if not humanoid then
+        if not humanoid or characterConnections[player] ~= watching then
             return
         end
 
-        humanoid.Died:Connect(function()
+        table.insert(watching, humanoid.Died:Connect(function()
             local aura = activeAuras[player]
             if aura and aura.character == character then
                 destroyAura(aura)
             end
             stopBreakthrough(player)
-        end)
+        end))
     end)
 
     refreshAura(player)
@@ -284,6 +290,7 @@ local function unwatchPlayer(player)
         end
         connections[player] = nil
     end
+    disconnectCharacter(player)
 
     for aura in liveAuras do
         if aura.player == player then

@@ -7,8 +7,7 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local PetInventory = require(script.Parent:WaitForChild("PetInventory"))
 local PlayerData = require(script.Parent:WaitForChild("PlayerData"))
-
-local PROMPT_DISTANCE_TOLERANCE = 6
+local PromptRules = require(script.Parent:WaitForChild("PromptRules"))
 
 local random = Random.new()
 
@@ -77,25 +76,13 @@ local function rollEggPet(egg)
     return lastEntry.PetId, lastEntry.Weight / totalWeight
 end
 
-local function isAliveAndNear(player, part, maxDistance)
-    local character = player.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    if not (humanoid and rootPart) or humanoid.Health <= 0 then
-        return false
-    end
-
-    return (rootPart.Position - part.Position).Magnitude <= maxDistance
-end
-
 local function onEggTriggered(player, eggId, eggPart, maxDistance)
     local egg = GameConfig.Eggs[eggId]
-    if not egg or player.Parent ~= Players or not isAliveAndNear(player, eggPart, maxDistance) then
+    if not egg or player.Parent ~= Players or not PromptRules.isAliveAndNear(player, eggPart, maxDistance) then
         return
     end
 
-    local leaderstats = player:FindFirstChild("leaderstats")
-    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
+    local _, rankValue = PlayerData.getStats(player)
     if not (rankValue and Ranks.isAtLeast(rankValue.Value, egg.RequiredRank)) then
         RemoteEvents.EggHatchResultEvent:FireClient(player, {
             EggId = eggId,
@@ -146,7 +133,7 @@ local function connectEggStand(stand)
     connectedStands[stand] = true
 
     local eggPart = prompt.Parent
-    local maxDistance = prompt.MaxActivationDistance + PROMPT_DISTANCE_TOLERANCE
+    local maxDistance = PromptRules.maxDistance(prompt)
 
     prompt.Triggered:Connect(function(player)
         onEggTriggered(player, eggId, eggPart, maxDistance)

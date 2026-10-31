@@ -3,7 +3,7 @@
 # Texture folders Studio's 3D Importer extracts next to FBX files
 *.fbm/
 
-# Blender working file (each pet is saved to tools/blender/<PetId>.blend)
+# Blender scratch file (pets are saved to tools/blender/pets/<EggId>/<PetId>.blend, islands to tools/blender/world/)
 Untitled.blend
 
 # Python bytecode from the Blender world scripts

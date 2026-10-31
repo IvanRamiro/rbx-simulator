@@ -2,8 +2,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
+local AuraKit = require(script.Parent:WaitForChild("AuraKit"))
 
+-- Pet auras: each equipped pet of a cultivating player shows its own element's aura. (The
+-- player's own aura is CharacterAura.)
 local AuraBuilder = {}
+
+local PET_AMOUNT = 0.6 -- pet auras are a lighter version of the element's full aura
 
 AuraBuilder.REMOVE_DELAY = 3
 
@@ -12,13 +17,7 @@ local FADE_OUT = TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.
 local TRAIL_START_DELAY = 0.2
 local FULL_TURN = 2 * math.pi
 
-local function numberSequence(points)
-    local keypoints = {}
-    for _, point in points do
-        table.insert(keypoints, NumberSequenceKeypoint.new(point[1], point[2]))
-    end
-    return NumberSequence.new(keypoints)
-end
+local numberSequence = AuraKit.numberSequence
 
 local function addFade(aura, instance, property, visibleValue, hiddenValue)
     instance[property] = hiddenValue
@@ -121,7 +120,6 @@ end
 local addSoftGlow
 
 local function buildAquaWisp(aura, style)
-    local body = aura.body
     local boost = aura.boost
 
     for index = 1, style.Droplets do
@@ -181,19 +179,6 @@ addSoftGlow = function(aura, style)
     light.Parent = aura.volume
     aura.light = light
     aura.lightBrightness = style.LightBrightness * aura.boost * aura.amount
-
-    if aura.isPet then
-        return
-    end
-    local glow = Instance.new("Highlight")
-    glow.Name = "BodyGlow"
-    glow.Adornee = aura.character
-    glow.DepthMode = Enum.HighlightDepthMode.Occluded
-    glow.FillColor = style.Main
-    glow.OutlineColor = style.Core
-    glow.Parent = aura.model
-    addFade(aura, glow, "FillTransparency", 1 - style.BodyGlow, 1)
-    addFade(aura, glow, "OutlineTransparency", 0.7, 1)
 end
 
 local function animateAquaWisp(aura, now, rootCFrame, parts, cframes)
@@ -265,13 +250,10 @@ end
 
 local function buildGoldenKirin(aura, style)
     local body, height = aura.body, aura.body.Height
-    local random = Random.new(aura.player.UserId + (if aura.isPet then 7 else 0))
+    local random = Random.new(aura.player.UserId + 7)
 
-    local ringDiameter = if aura.isPet then (body.Reach + 0.4) * 2 else aura.orbitRadius * 2 * style.RingSize
-    aura.ring = meshPiece(aura, "KirinVFX_Ring", ringDiameter, true)
-
-    aura.crown = meshPiece(aura, if aura.isPet then "KirinVFX_CrownLeaf" else "KirinVFX_CrownSpire",
-        style.CrownSize * height, true)
+    aura.ring = meshPiece(aura, "KirinVFX_Ring", (body.Reach + 0.4) * 2, true)
+    aura.crown = meshPiece(aura, "KirinVFX_CrownLeaf", style.CrownSize * height, true)
 
     aura.leaves = {}
     local leafCount = math.max(3, math.round(style.Leaves * aura.amount))
@@ -371,8 +353,8 @@ local ELEMENTS = {
     GoldenKirin = { Build = buildGoldenKirin, Animate = animateGoldenKirin },
 }
 
-function AuraBuilder.build(player, character, rootPart, petId, rankId, isPet)
-    local style = AuraStyles.Auras[petId or "Neutral"]
+function AuraBuilder.build(player, character, rootPart, petId, rankId)
+    local style = AuraStyles.Auras[petId]
     if not style or not ELEMENTS[petId] then
         return nil
     end
@@ -383,13 +365,11 @@ function AuraBuilder.build(player, character, rootPart, petId, rankId, isPet)
     local body = measureBody(character, rootPart)
     local aura = {
         player = player,
-        character = character,
         rootPart = rootPart,
         model = model,
         style = style,
         body = body,
-        isPet = isPet == true,
-        amount = if isPet then 0.6 else 1,
+        amount = PET_AMOUNT,
         orbitRadius = math.max(style.OrbitRadius * body.Height, body.Reach + 0.8),
         boost = AuraStyles.getBoost(rankId),
         fades = {},
@@ -438,11 +418,9 @@ end
 function AuraBuilder.hide(aura)
     aura.hiding = true
     playFades(aura, false)
-end
-
-function AuraBuilder.pulse(aura, seconds)
-    aura.pulseSeconds = seconds
-    aura.pulseEnd = os.clock() + seconds
+    for _, trail in aura.trails do
+        trail.Enabled = false
+    end
 end
 
 function AuraBuilder.destroy(aura)
@@ -462,16 +440,7 @@ function AuraBuilder.update(aura, now, parts, cframes)
     table.insert(parts, aura.volume)
     table.insert(cframes, rootCFrame * CFrame.new(0, body.FeetY + body.Height * 0.5, 0))
 
-    local brightness = aura.lightBrightness * aura.fader.Value * (0.85 + 0.15 * math.sin(now * 1.6))
-    if aura.pulseEnd then
-        local remaining = (aura.pulseEnd - now) / aura.pulseSeconds
-        if remaining > 0 then
-            brightness *= 1 + 2.5 * remaining
-        else
-            aura.pulseEnd = nil
-        end
-    end
-    aura.light.Brightness = brightness
+    aura.light.Brightness = aura.lightBrightness * aura.fader.Value * (0.85 + 0.15 * math.sin(now * 1.6))
 end
 
 return AuraBuilder

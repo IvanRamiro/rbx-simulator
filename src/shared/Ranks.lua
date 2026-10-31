@@ -38,12 +38,17 @@ function Ranks.getNextRank(rankName)
     return GameConfig.Ranks[index + 1]
 end
 
--- The Qinggong level a rank has reached, and the next level (nil at the top).
+-- The Qinggong level a rank has reached, and the next level (nil at the top). An unknown rank
+-- (for example before the player's data has loaded) counts as the first level.
 function Ranks.getQinggong(rankName)
-    local rankIndex = Ranks.getIndex(rankName) or 0
-    local current = GameConfig.Qinggong.Levels[1]
+    local levels = GameConfig.Qinggong.Levels
+    local rankIndex = Ranks.getIndex(rankName)
+    if not rankIndex then
+        return levels[1], levels[2]
+    end
+    local current = levels[1]
 
-    for _, level in GameConfig.Qinggong.Levels do
+    for _, level in levels do
         local levelRank = Ranks.getRankById(level.RankId)
         if Ranks.getIndex(levelRank.Name) <= rankIndex then
             current = level
@@ -53,6 +58,13 @@ function Ranks.getQinggong(rankName)
     end
 
     return current, nil
+end
+
+-- The rank name in a player's leaderstats, or "" before their data has loaded.
+function Ranks.getPlayerRankName(player)
+    local leaderstats = player:FindFirstChild("leaderstats")
+    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
+    return if rankValue then rankValue.Value else ""
 end
 
 function Ranks.getQiMultiplier(rankName)

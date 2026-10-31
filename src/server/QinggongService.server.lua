@@ -1,5 +1,6 @@
--- Grants each player the Qinggong level of their rank: run speed (Humanoid.WalkSpeed) and the
--- number of mid-air leaps (the "QinggongAirLeaps" attribute the client controller reads).
+-- Grants each player the Qinggong level of their rank: the number of mid-air leaps and the run
+-- speed (the "QinggongAirLeaps" and "QinggongRunSpeed" attributes). WalkSpeed is set here except
+-- while the player meditates, when the client's hover holds it at 0 and restores the run speed.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -9,9 +10,10 @@ local PlayerData = require(script.Parent:WaitForChild("PlayerData"))
 local function applyLevel(player, rankValue)
     local level = Ranks.getQinggong(rankValue.Value)
     player:SetAttribute("QinggongAirLeaps", level.AirLeaps)
+    player:SetAttribute("QinggongRunSpeed", level.RunSpeed)
 
     local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
+    if humanoid and player:GetAttribute("IsCultivating") ~= true then
         humanoid.WalkSpeed = level.RunSpeed
     end
 end

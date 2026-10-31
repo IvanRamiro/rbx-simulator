@@ -2,7 +2,7 @@
 
     python3 tools/balance_report.py
 
-Reads the ranks, pet bonuses, Qi Spring bonus, relic rewards, egg chances and flight speeds
+Reads the ranks, pet bonuses, Qi Spring bonus, relic rewards, egg chances and Qinggong levels
 straight from src/shared/GameConfig.lua, so it always matches the game.
 Times are minutes of cultivating (Qi only comes from cultivation).
 
@@ -72,8 +72,9 @@ def read_config():
         (m[0], int(m[1]), m[2])
         for m in re.findall(r'DisplayName = "([^"]+)", QiReward = (\d+), RequiredRank = "(\w+)"', text)
     ]
-    flight_text = re.search(r"SpeedLevels = \{(.*?)\n        \},", text, re.S).group(1)
-    config["flight"] = [(m[0], int(m[1])) for m in re.findall(r'RankId = "(\w+)", Speed = (\d+)', flight_text)]
+    qinggong = re.search(r"Qinggong = \{.*?Levels = \{(.*?)\n        \},", text, re.S).group(1)
+    config["qinggong"] = [(m[0], int(m[1]), int(m[2]))
+                          for m in re.findall(r'RankId = "(\w+)", AirLeaps = (\d+), RunSpeed = (\d+)', qinggong)]
     return config
 
 
@@ -90,20 +91,20 @@ def main():
     ranks = config["ranks"]
 
     print("Rank progression (minutes of cultivating in the Qi Spring)")
-    print(f"{'Rank':<22}{'Realm':<23}{'Qi needed':>12}{'x':>5}{'Qi/s':>9}{'Step':>8}{'Total h':>9}{'Flight':>8}")
-    flight_by_rank = dict(config["flight"])
+    print(f"{'Rank':<22}{'Realm':<23}{'Qi needed':>12}{'x':>5}{'Qi/s':>9}{'Step':>8}{'Total h':>9}{'Leaps':>6}{'Run':>5}")
+    qinggong_by_rank = {rank_id: (leaps, run) for rank_id, leaps, run in config["qinggong"]}
     total_seconds = 0
-    flight_speed = 0
+    leaps, run = config["qinggong"][0][1:]
     for previous, rank in zip([None] + ranks[:-1], ranks):
         # Qi for this rank is earned at the previous rank's power, with its realm's pets
         earning = previous or rank
         rate = qi_per_second(config, TYPICAL_PETS.get(earning["realm"], []), multiplier=earning["multiplier"])
         step = 0 if previous is None else (rank["qi"] - previous["qi"]) / rate
         total_seconds += step
-        flight_speed = flight_by_rank.get(rank["id"], flight_speed)
+        leaps, run = qinggong_by_rank.get(rank["id"], (leaps, run))
         print(
             f"{rank['name']:<22}{rank['realm']:<23}{rank['qi']:>12}{rank['multiplier']:>5.0f}{rate:>9.1f}"
-            f"{step / 60:>8.1f}{total_seconds / 3600:>9.2f}{flight_speed or '-':>8}"
+            f"{step / 60:>8.1f}{total_seconds / 3600:>9.2f}{leaps:>6}{run:>5}"
         )
 
     print()

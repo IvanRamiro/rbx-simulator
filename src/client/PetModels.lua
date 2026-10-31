@@ -558,7 +558,6 @@ end
 local PART_SHAPES = {
     Block = Enum.PartType.Block,
     Wedge = Enum.PartType.Wedge,
-    CornerWedge = Enum.PartType.CornerWedge,
 }
 
 local PRISM_TURNS = {
@@ -611,7 +610,7 @@ local function createPart(model, rootPart, shape, size, cframe, spec, tone)
     part.Shape = PART_SHAPES[shape]
     part.Size = size
     part.CFrame = cframe
-    part.Color = if spec.Neon or spec.Flat then spec.Color else toneColor(spec.Color, tone or 0)
+    part.Color = if spec.Neon then spec.Color else toneColor(spec.Color, tone or 0)
     part.Material = if spec.Neon then Enum.Material.Neon elseif spec.Glass then Enum.Material.Glass else Enum.Material.SmoothPlastic
     part.Transparency = spec.Transparency or 0
     part.TopSurface = Enum.SurfaceType.Smooth
@@ -631,34 +630,33 @@ local function createPart(model, rootPart, shape, size, cframe, spec, tone)
     part.Parent = model
 end
 
-local NAVY = Color3.fromRGB(25, 35, 90)
 local MESH_LOOKS = {
-    MyceliumSprite = { Eyes = Color3.fromRGB(39, 225, 206), GlowEyes = true, Glow = Color3.fromRGB(90, 245, 215), Length = 2.6 },
-    MossGolem = { Eyes = Color3.fromRGB(231, 173, 63), GlowEyes = true, Glow = Color3.fromRGB(110, 255, 140), Length = 3.4 },
-    JadeSpiritPanda = { Eyes = Color3.fromRGB(50, 200, 115), GlowEyes = true, Glow = Color3.fromRGB(60, 225, 130), Length = 3.3 },
-    JadeAntlerDeer = { Eyes = Color3.fromRGB(56, 221, 153), GlowEyes = true, Glow = Color3.fromRGB(60, 225, 140), Length = 4.2 },
-    MagmaCub = { Eyes = Color3.fromRGB(255, 110, 0), GlowEyes = true, Glow = Color3.fromRGB(255, 120, 30), Length = 2.6 },
-    AzureSkyDragon = { Eyes = Color3.fromRGB(20, 60, 230), GlowEyes = true, Glow = Color3.fromRGB(70, 170, 255), Length = 4.4 },
-    SpiritCrane = { Eyes = Color3.fromRGB(235, 160, 30), GlowEyes = true, Glow = Color3.fromRGB(40, 210, 200), Length = 4.2 },
-    CloudSheep = { Eyes = Color3.fromRGB(20, 90, 200), GlowEyes = true, Glow = Color3.fromRGB(120, 215, 245), Length = 3.0 },
-    GoldenManeLion = { Eyes = Color3.fromRGB(255, 140, 20), GlowEyes = true, Glow = Color3.fromRGB(255, 180, 60), Length = 4.4 },
-    DawnPhoenix = { Eyes = Color3.fromRGB(255, 173, 48), GlowEyes = true, Glow = Color3.fromRGB(255, 170, 70), Length = 4.6 },
-    AquaWisp = { Eyes = NAVY, Effect = "Bubbles", Glow = Color3.fromRGB(110, 205, 255), Length = 3.12 },
-    EmberWyrm = { Eyes = Color3.fromRGB(255, 120, 40), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(255, 115, 35), Length = 2.9 },
-    LunarHopper = { Eyes = NAVY, Effect = "Stars", Glow = Color3.fromRGB(150, 160, 255), Length = 2.58 },
-    VoltFox = { Eyes = Color3.fromRGB(70, 45, 20), Effect = "Sparks", Glow = Color3.fromRGB(255, 235, 110), Length = 2.91 },
-    GoldenKirin = { Eyes = Color3.fromRGB(255, 190, 60), GlowEyes = true, Glow = Color3.fromRGB(70, 235, 195), Length = 3.6 },
-    AstralWhale = { Eyes = Color3.fromRGB(20, 25, 70), Effect = "Stars", Glow = Color3.fromRGB(130, 125, 255), Length = 4.0 },
-    OriginSerpent = { Eyes = Color3.fromRGB(60, 200, 255), GlowEyes = true, Effect = "Stars", Glow = Color3.fromRGB(80, 190, 255), Length = 2.9 },
-    SunscaleDragon = { Eyes = Color3.fromRGB(255, 188, 63), GlowEyes = true, Glow = Color3.fromRGB(255, 194, 74), Length = 4.6 },
-    BonefireDragon = { Eyes = Color3.fromRGB(120, 190, 255), GlowEyes = true, Glow = Color3.fromRGB(100, 170, 255), Length = 3.4 },
-    PrismaticPhoenix = { Eyes = Color3.fromRGB(255, 150, 30), GlowEyes = true, Effect = "Glitter", Glow = Color3.fromRGB(255, 175, 130), Length = 4.2 },
-    RuneSphinx = { Eyes = Color3.fromRGB(255, 218, 111), GlowEyes = true, Glow = Color3.fromRGB(255, 190, 90), Length = 4.0 },
-    WorldrootColossus = { Eyes = Color3.fromRGB(110, 255, 90), GlowEyes = true, Effect = "Glitter", Glow = Color3.fromRGB(90, 235, 120), Length = 3.6 },
-    ThousandYearDreamEater = { Eyes = Color3.fromRGB(40, 160, 255), GlowEyes = true, Effect = "Stars", Glow = Color3.fromRGB(170, 120, 255), Length = 3.7 },
-    EternalClockworkDragon = { Eyes = Color3.fromRGB(80, 220, 255), GlowEyes = true, Effect = "Sparks", Glow = Color3.fromRGB(255, 200, 90), Length = 4.3 },
-    HeavenbreakerApe = { Eyes = Color3.fromRGB(255, 190, 40), GlowEyes = true, Effect = "Sparks", Glow = Color3.fromRGB(255, 215, 110), Length = 3.4 },
-    DreadfangCerberus = { Eyes = Color3.fromRGB(40, 215, 255), GlowEyes = true, Glow = Color3.fromRGB(40, 200, 255), Length = 3.4 },
+    MyceliumSprite = { Glow = Color3.fromRGB(90, 245, 215), Length = 2.6 },
+    MossGolem = { Glow = Color3.fromRGB(110, 255, 140), Length = 3.4 },
+    JadeSpiritPanda = { Glow = Color3.fromRGB(60, 225, 130), Length = 3.3 },
+    JadeAntlerDeer = { Glow = Color3.fromRGB(60, 225, 140), Length = 4.2 },
+    MagmaCub = { Glow = Color3.fromRGB(255, 120, 30), Length = 2.6 },
+    AzureSkyDragon = { Glow = Color3.fromRGB(70, 170, 255), Length = 4.4 },
+    SpiritCrane = { Glow = Color3.fromRGB(40, 210, 200), Length = 4.2 },
+    CloudSheep = { Glow = Color3.fromRGB(120, 215, 245), Length = 3.0 },
+    GoldenManeLion = { Glow = Color3.fromRGB(255, 180, 60), Length = 4.4 },
+    DawnPhoenix = { Glow = Color3.fromRGB(255, 170, 70), Length = 4.6 },
+    AquaWisp = { Effect = "Bubbles", Glow = Color3.fromRGB(110, 205, 255), Length = 3.12 },
+    EmberWyrm = { Effect = "TailFlame", Glow = Color3.fromRGB(255, 115, 35), Length = 2.9 },
+    LunarHopper = { Effect = "Stars", Glow = Color3.fromRGB(150, 160, 255), Length = 2.58 },
+    VoltFox = { Effect = "Sparks", Glow = Color3.fromRGB(255, 235, 110), Length = 2.91 },
+    GoldenKirin = { Glow = Color3.fromRGB(70, 235, 195), Length = 3.6 },
+    AstralWhale = { Effect = "Stars", Glow = Color3.fromRGB(130, 125, 255), Length = 4.0 },
+    OriginSerpent = { Effect = "Stars", Glow = Color3.fromRGB(80, 190, 255), Length = 2.9 },
+    SunscaleDragon = { Glow = Color3.fromRGB(255, 194, 74), Length = 4.6 },
+    BonefireDragon = { Glow = Color3.fromRGB(100, 170, 255), Length = 3.4 },
+    PrismaticPhoenix = { Effect = "Glitter", Glow = Color3.fromRGB(255, 175, 130), Length = 4.2 },
+    RuneSphinx = { Glow = Color3.fromRGB(255, 190, 90), Length = 4.0 },
+    WorldrootColossus = { Effect = "Glitter", Glow = Color3.fromRGB(90, 235, 120), Length = 3.6 },
+    ThousandYearDreamEater = { Effect = "Stars", Glow = Color3.fromRGB(170, 120, 255), Length = 3.7 },
+    EternalClockworkDragon = { Effect = "Sparks", Glow = Color3.fromRGB(255, 200, 90), Length = 4.3 },
+    HeavenbreakerApe = { Effect = "Sparks", Glow = Color3.fromRGB(255, 215, 110), Length = 3.4 },
+    DreadfangCerberus = { Glow = Color3.fromRGB(40, 200, 255), Length = 3.4 },
 }
 
 local TEXTURES = {
@@ -738,13 +736,6 @@ local MESH_EFFECTS = {
             Texture = TEXTURES.Sparkle, Color = ColorSequence.new(Color3.fromRGB(255, 225, 120), glow), LightEmission = 0.6,
             Brightness = 2, Size = sizeCurve(0.25, k), Rate = 7, Lifetime = NumberRange.new(0.6, 1),
             Speed = NumberRange.new(0.2, 0.5), SpreadAngle = Vector2.new(180, 180), Acceleration = Vector3.new(0, 0.6, 0),
-        })
-    end,
-    Motes = function(body, tail, glow, k)
-        emitter(body, {
-            Texture = TEXTURES.Glow, Color = ColorSequence.new(glow), LightEmission = 0.5, Brightness = 2,
-            Size = sizeCurve(0.2, k), Rate = 6, Lifetime = NumberRange.new(1.2, 1.8),
-            Speed = NumberRange.new(0.2, 0.5), SpreadAngle = Vector2.new(180, 180), Acceleration = Vector3.new(0, 0.8, 0),
         })
     end,
 }

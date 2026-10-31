@@ -6,6 +6,7 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent:WaitForChild("HudScale"))
+local Toast = require(script.Parent:WaitForChild("Toast"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -52,46 +53,12 @@ counterPadding.PaddingTop = UDim.new(0, 4)
 counterPadding.PaddingBottom = UDim.new(0, 4)
 counterPadding.Parent = counter
 
-local message = Instance.new("TextLabel")
-message.Name = "RelicMessage"
-message.AnchorPoint = Vector2.new(0.5, 0)
-message.Position = UDim2.new(0.5, 0, 0, 64)
-message.Size = UDim2.fromOffset(380, 44)
-message.BackgroundColor3 = PANEL_COLOR
-message.BackgroundTransparency = 0.25
-message.Font = Enum.Font.GothamBold
-message.TextScaled = true
-message.TextColor3 = RELIC_COLOR
-message.Visible = false
-message.Parent = hud
-applyHudScale(message)
-
-local messageCorner = Instance.new("UICorner")
-messageCorner.CornerRadius = UDim.new(0, 10)
-messageCorner.Parent = message
-
-local messagePadding = Instance.new("UIPadding")
-messagePadding.PaddingLeft = UDim.new(0, 10)
-messagePadding.PaddingRight = UDim.new(0, 10)
-messagePadding.PaddingTop = UDim.new(0, 6)
-messagePadding.PaddingBottom = UDim.new(0, 6)
-messagePadding.Parent = message
+local message = Toast.new(hud, "RelicMessage", 64, RELIC_COLOR, MESSAGE_SECONDS)
 
 hud.Parent = playerGui
 
-local messageCount = 0
-
 local function showMessage(text)
-    messageCount += 1
-    local thisMessage = messageCount
-    message.Text = text
-    message.Visible = true
-
-    task.delay(MESSAGE_SECONDS, function()
-        if messageCount == thisMessage then
-            message.Visible = false
-        end
-    end)
+    message:show(text)
 end
 
 local function getFoundSet()
@@ -106,9 +73,7 @@ local function getFoundSet()
 end
 
 local function getRankName()
-    local leaderstats = player:FindFirstChild("leaderstats")
-    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
-    return if rankValue then rankValue.Value else ""
+    return Ranks.getPlayerRankName(player)
 end
 
 local function updateRelic(model, found, rankName)

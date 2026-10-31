@@ -7,19 +7,27 @@ local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local AuraKit = {}
 
 AuraKit.TAU = 2 * math.pi
-AuraKit.SETTINGS = AuraStyles.CharacterAura
-
-local SETTINGS = AuraKit.SETTINGS
+local SETTINGS = AuraStyles.CharacterAura
 local FADE_IN = TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
 local FADE_OUT = TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
 local MAX_GROUND_DROP = 14
 
+-- points: { { time, value, envelope? }, ... }
 function AuraKit.numberSequence(points)
     local keypoints = {}
     for _, point in points do
-        table.insert(keypoints, NumberSequenceKeypoint.new(point[1], point[2]))
+        table.insert(keypoints, NumberSequenceKeypoint.new(point[1], point[2], point[3] or 0))
     end
     return NumberSequence.new(keypoints)
+end
+
+-- points: { { time, Color3 }, ... }
+function AuraKit.colorSequence(points)
+    local keypoints = {}
+    for _, point in points do
+        table.insert(keypoints, ColorSequenceKeypoint.new(point[1], point[2]))
+    end
+    return ColorSequence.new(keypoints)
 end
 
 function AuraKit.smoothstep(edge0, edge1, x)
@@ -102,6 +110,23 @@ function AuraKit.addEmitter(aura, parent, rate, properties, minStage)
         table.insert(aura.emitters, { Emitter = emitter, Rate = rate * aura.detail * aura.boost, MinStage = minStage or 1 })
     end
     return emitter
+end
+
+-- An emitter whose particles lie flat on the ground and stay locked to their part (rings,
+-- slashes, swirls). `defaults` are the design's own base settings, `properties` the emitter's.
+function AuraKit.flatEmitter(aura, parent, rate, properties, defaults)
+    local preset = {
+        Orientation = Enum.ParticleOrientation.VelocityPerpendicular,
+        EmissionDirection = Enum.NormalId.Top,
+        Speed = NumberRange.new(0.01),
+        LockedToPart = true,
+    }
+    for _, overrides in { defaults or {}, properties } do
+        for property, value in overrides do
+            preset[property] = value
+        end
+    end
+    return AuraKit.addEmitter(aura, parent, rate, preset)
 end
 
 function AuraKit.surfaceGui(part, pixelsPerStud, brightness)
@@ -283,7 +308,6 @@ function AuraKit.hide(aura)
         return
     end
     aura.hiding = true
-    aura.hiddenAt = os.clock()
     TweenService:Create(aura.fader, FADE_OUT, { Value = 0 }):Play()
     if aura.onHide then
         aura.onHide(aura)
@@ -358,7 +382,6 @@ function AuraKit.step(aura, now)
         level = level,
         surge = surge,
         spin = aura.spin,
-        settings = settings,
         seat = seat,
         floor = Vector3.new(position.X, floorY + 0.06, position.Z),
         facing = CFrame.lookAt(Vector3.zero, Vector3.new(rootCFrame.LookVector.X, 0, rootCFrame.LookVector.Z)),

@@ -7,8 +7,7 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Discoveries = require(script.Parent:WaitForChild("Discoveries"))
 local PlayerData = require(script.Parent:WaitForChild("PlayerData"))
-
-local PROMPT_DISTANCE_TOLERANCE = 6
+local PromptRules = require(script.Parent:WaitForChild("PromptRules"))
 
 local function publishFound(player)
     local relicIds = Discoveries.exportData(player)
@@ -17,30 +16,17 @@ local function publishFound(player)
     end
 end
 
-local function isAliveAndNear(player, part, maxDistance)
-    local character = player.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    if not (humanoid and rootPart) or humanoid.Health <= 0 then
-        return false
-    end
-
-    return (rootPart.Position - part.Position).Magnitude <= maxDistance
-end
-
 local function onRelicTriggered(player, relicId, crystal, maxDistance)
     if player.Parent ~= Players or not Discoveries.isSetUp(player) then
         return
     end
 
     local relic = Discoveries.getRelic(relicId)
-    if not relic or Discoveries.hasFound(player, relicId) or not isAliveAndNear(player, crystal, maxDistance) then
+    if not relic or Discoveries.hasFound(player, relicId) or not PromptRules.isAliveAndNear(player, crystal, maxDistance) then
         return
     end
 
-    local leaderstats = player:FindFirstChild("leaderstats")
-    local qi = leaderstats and leaderstats:FindFirstChild("Qi")
-    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
+    local qi, rankValue = PlayerData.getStats(player)
     if not (qi and rankValue) then
         return
     end
@@ -75,7 +61,7 @@ local function connectRelic(model)
     end
     connectedRelics[model] = true
 
-    local maxDistance = prompt.MaxActivationDistance + PROMPT_DISTANCE_TOLERANCE
+    local maxDistance = PromptRules.maxDistance(prompt)
     prompt.Triggered:Connect(function(player)
         onRelicTriggered(player, relicId, crystal, maxDistance)
     end)

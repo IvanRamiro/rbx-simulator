@@ -47,7 +47,7 @@ local function addWings(parts, spec, x, y, z, span, chord)
         return
     end
     local insect = spec.Wings == "Insect"
-    local color = if spec.Wings == "Bat" then spec.Accent else spec.Accent
+    local color = spec.Accent
     mirrored(parts, function(side)
         local lift = if insect then 55 else 35
         return {

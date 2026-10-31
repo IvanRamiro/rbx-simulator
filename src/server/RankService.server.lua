@@ -10,9 +10,7 @@ local function tryRankUp(player)
         return
     end
 
-    local leaderstats = player:FindFirstChild("leaderstats")
-    local qi = leaderstats and leaderstats:FindFirstChild("Qi")
-    local rank = leaderstats and leaderstats:FindFirstChild("Rank")
+    local qi, rank = PlayerData.getStats(player)
     if not (qi and rank) then
         return
     end

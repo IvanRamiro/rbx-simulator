@@ -9,18 +9,10 @@ local newPart = AuraKit.newPart
 local addEmitter = AuraKit.addEmitter
 local BEAM_FADE = { { 0, 1 }, { 0.1, 0.15 }, { 0.8, 0.3 }, { 1, 1 } }
 
+local FLAT_DEFAULTS = { Rotation = NumberRange.new(-180, 180) }
+
 local function flatEmitter(aura, parent, rate, properties)
-    local preset = {
-        Orientation = Enum.ParticleOrientation.VelocityPerpendicular,
-        EmissionDirection = Enum.NormalId.Top,
-        Speed = NumberRange.new(0.01),
-        LockedToPart = true,
-        Rotation = NumberRange.new(-180, 180),
-    }
-    for property, value in properties do
-        preset[property] = value
-    end
-    return addEmitter(aura, parent, rate, preset)
+    return AuraKit.flatEmitter(aura, parent, rate, properties, FLAT_DEFAULTS)
 end
 
 local function buildGround(aura)

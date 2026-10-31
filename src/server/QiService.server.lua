@@ -15,8 +15,7 @@ local cultivatingPlayers = {}
 local lastToggleTime = {}
 
 local function getQiValue(player)
-    local leaderstats = player:FindFirstChild("leaderstats")
-    return leaderstats and leaderstats:FindFirstChild("Qi")
+    return (PlayerData.getStats(player))
 end
 
 local function hasAliveCharacter(player)
@@ -137,8 +136,7 @@ local function awardCultivationQi(player)
     if atStation then
         bonusPercent += GameConfig.TrainingStation.QiBonusPercent
     end
-    local leaderstats = player:FindFirstChild("leaderstats")
-    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
+    local _, rankValue = PlayerData.getStats(player)
     local multiplier = Ranks.getQiMultiplier(rankValue and rankValue.Value)
     qi.Value += math.floor(GameConfig.CultivationQiReward * multiplier * (100 + bonusPercent) / 100)
 end

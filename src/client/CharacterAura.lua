@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
+local AuraKit = require(script.Parent:WaitForChild("AuraKit"))
 local TidecallerAura = require(script.Parent:WaitForChild("TidecallerAura"))
 local EmberCrucibleAura = require(script.Parent:WaitForChild("EmberCrucibleAura"))
 local VerdantGaleAura = require(script.Parent:WaitForChild("VerdantGaleAura"))
@@ -24,37 +25,9 @@ local POP_OUT = TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.I
 local GROUND_CHECK_SECONDS = 0.3
 local MAX_GROUND_DROP = 14
 
-local function numberSequence(points)
-    local keypoints = {}
-    for _, point in points do
-        table.insert(keypoints, NumberSequenceKeypoint.new(point[1], point[2]))
-    end
-    return NumberSequence.new(keypoints)
-end
-
-local function colorSequence(points)
-    local keypoints = {}
-    for _, point in points do
-        table.insert(keypoints, ColorSequenceKeypoint.new(point[1], point[2]))
-    end
-    return ColorSequence.new(keypoints)
-end
-
-local function newPart(aura, name, size, shape)
-    local part = Instance.new("Part")
-    part.Name = name
-    part.Shape = shape or Enum.PartType.Block
-    part.Size = size
-    part.Anchored = true
-    part.CanCollide = false
-    part.CanQuery = false
-    part.CanTouch = false
-    part.CastShadow = false
-    part.Transparency = 1
-    part.CFrame = aura.rootPart.CFrame
-    part.Parent = aura.model
-    return part
-end
+local numberSequence = AuraKit.numberSequence
+local colorSequence = AuraKit.colorSequence
+local newPart = AuraKit.newPart
 
 local function newAttachment(parent, position)
     local attachment = Instance.new("Attachment")
@@ -63,17 +36,7 @@ local function newAttachment(parent, position)
     return attachment
 end
 
-local function addEmitter(aura, parent, rate, properties, minStage)
-    local emitter = Instance.new("ParticleEmitter")
-    emitter.LightInfluence = 0
-    emitter.Rate = 0
-    for property, value in properties do
-        emitter[property] = value
-    end
-    emitter.Parent = parent
-    table.insert(aura.emitters, { Emitter = emitter, Rate = rate * aura.detail * aura.boost, MinStage = minStage or 1 })
-    return emitter
-end
+local addEmitter = AuraKit.addEmitter
 
 local function flameProperties(aura, size, colors, extra)
     local k = aura.k
@@ -526,7 +489,12 @@ local function surge(aura, strength)
     end)
     for index, arc in aura.arcs do
         if index <= math.ceil(#aura.arcs * strength) then
-            strikeArc(aura, arc, now + (index - 1) * 0.05)
+            -- stagger the strikes 0.05 s apart
+            task.delay((index - 1) * 0.05, function()
+                if not aura.destroyed then
+                    strikeArc(aura, arc, os.clock())
+                end
+            end)
         end
     end
     aura.flashUntil = now + 0.7
@@ -569,7 +537,6 @@ function CharacterAura.build(player, character, rootPart, petId, rankId)
         random = Random.new(),
         emitters = {},
         limbAttachments = {},
-        loops = {},
         stage = 0,
         power = 0,
         nextPulse = math.huge,
@@ -672,9 +639,6 @@ function CharacterAura.destroy(aura)
         return aura.design.destroy(aura)
     end
     aura.destroyed = true
-    for _, tween in aura.loops do
-        tween:Cancel()
-    end
     for _, point in aura.limbAttachments do
         point:Destroy()
     end
@@ -720,8 +684,11 @@ function CharacterAura.update(aura, now, parts, cframes)
         end
     end
 
+    local deltaTime = math.min(now - (aura.lastUpdate or now), 0.1)
+    aura.lastUpdate = now
+
     local targetPower = if aura.stage == 0 then 0.15 else stageSettings.Power
-    aura.power += (targetPower - aura.power) * 0.05
+    aura.power = AuraKit.approach(aura.power, targetPower, 3.1, deltaTime)
     local level = fade * aura.power
     local flash = 0
     if aura.flashUntil and now < aura.flashUntil then
@@ -745,8 +712,6 @@ function CharacterAura.update(aura, now, parts, cframes)
     table.insert(parts, aura.gatherPart)
     table.insert(cframes, rootCFrame * CFrame.new(0, body.FeetY + body.Height * 0.5, 0))
 
-    local deltaTime = math.min(now - (aura.lastUpdate or now), 0.1)
-    aura.lastUpdate = now
     local spinBoost = if aura.spinBoostUntil and now < aura.spinBoostUntil then 3 else 1
     aura.spin = (aura.spin or aura.phase) + deltaTime * spinBoost
     local spin = aura.spin
@@ -782,7 +747,7 @@ function CharacterAura.update(aura, now, parts, cframes)
     table.insert(cframes, feet * CFrame.new(0, body.Height * 0.42, 0)
         * CFrame.Angles(math.rad(18 + 5 * math.sin(now * 0.6)), 0, math.rad(8 * math.cos(now * 0.45)))
         * CFrame.Angles(0, spin * 0.7, 0))
-    aura.haloLevel += ((if stageSettings.Halo and not aura.hiding then 1 else 0) - aura.haloLevel) * 0.04
+    aura.haloLevel = AuraKit.approach(aura.haloLevel, if stageSettings.Halo and not aura.hiding then 1 else 0, 2.45, deltaTime)
     table.insert(parts, aura.halo)
     table.insert(cframes, feet * CFrame.new(0, body.Height * (0.86 + 0.015 * math.sin(now * 1.4)), 0.45 * k)
         * CFrame.Angles(math.rad(90), 0, 0) * CFrame.Angles(0, -spin * 1.2, 0))
@@ -812,7 +777,7 @@ function CharacterAura.update(aura, now, parts, cframes)
     end
     aura.innerSigil.Rotation = math.deg(spin * 0.9) % 360
 
-    aura.rockLevel += ((if stageSettings.Rocks and hasGround and not aura.hiding then 1 else 0) - aura.rockLevel) * 0.02
+    aura.rockLevel = AuraKit.approach(aura.rockLevel, if stageSettings.Rocks and hasGround and not aura.hiding then 1 else 0, 1.2, deltaTime)
     for _, rock in aura.rocks do
         local lift = aura.rockLevel * (rock.Height + math.sin(now * 1.1 + rock.Phase) * 0.15 * body.Height)
         local angle = rock.Angle + spin * 0.15

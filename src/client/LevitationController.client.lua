@@ -72,7 +72,8 @@ local function stopLevitating()
     end
 
     tweenHipHeight(normalHipHeight, DESCEND_INFO)
-    humanoid.WalkSpeed = normalWalkSpeed
+    -- the rank may have changed while meditating, so prefer the current Qinggong run speed
+    humanoid.WalkSpeed = player:GetAttribute("QinggongRunSpeed") or normalWalkSpeed
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
 end
 

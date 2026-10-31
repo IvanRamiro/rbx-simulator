@@ -1,6 +1,7 @@
 local TweenService = game:GetService("TweenService")
 
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
+local AuraKit = require(script.Parent:WaitForChild("AuraKit"))
 
 local BreakthroughEffect = {}
 
@@ -12,21 +13,8 @@ local QUARTER_ARC_HANDLE = 0.5523
 local SHOCKWAVE_PIXELS_PER_STUD = 16
 local GROUND_SEARCH = 14
 
-local function numberSequence(points)
-    local keypoints = {}
-    for _, point in points do
-        table.insert(keypoints, NumberSequenceKeypoint.new(point[1], point[2], point[3] or 0))
-    end
-    return NumberSequence.new(keypoints)
-end
-
-local function colorSequence(points)
-    local keypoints = {}
-    for _, point in points do
-        table.insert(keypoints, ColorSequenceKeypoint.new(point[1], point[2]))
-    end
-    return ColorSequence.new(keypoints)
-end
+local numberSequence = AuraKit.numberSequence
+local colorSequence = AuraKit.colorSequence
 
 local function tween(effect, instance, tweenInfo, goal)
     local created = TweenService:Create(instance, tweenInfo, goal)

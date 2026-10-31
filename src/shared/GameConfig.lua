@@ -1,5 +1,4 @@
 local GameConfig = {
-    GameName = "Qi Aura Simulator",
 
     StartingQi = 0,
 

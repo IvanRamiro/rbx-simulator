@@ -106,9 +106,7 @@ local function updateHud()
         return
     end
     info.TextColor3 = Color3.fromRGB(200, 200, 210)
-    local leaderstats = player:FindFirstChild("leaderstats")
-    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
-    local _, nextLevel = Ranks.getQinggong(if rankValue then rankValue.Value else "")
+    local _, nextLevel = Ranks.getQinggong(Ranks.getPlayerRankName(player))
     local nextRank = nextLevel and Ranks.getRankById(nextLevel.RankId)
     info.Text = if nextRank then (nextLevel.AirLeaps .. " leaps at " .. nextRank.Name) else "Air leaps: " .. total
 end

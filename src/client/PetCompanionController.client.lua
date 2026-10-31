@@ -38,21 +38,17 @@ local function clearPets(entry)
 end
 
 local function getRankId(player)
-    local leaderstats = player:FindFirstChild("leaderstats")
-    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
-    local rank = rankValue and Ranks.getRank(rankValue.Value)
+    local rank = Ranks.getRank(Ranks.getPlayerRankName(player))
     return rank and rank.Id
 end
 
 local function getRankNumber(player)
-    local leaderstats = player:FindFirstChild("leaderstats")
-    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
-    return rankValue and Ranks.getIndex(rankValue.Value)
+    return Ranks.getIndex(Ranks.getPlayerRankName(player))
 end
 
 local function syncPetAura(player, pet, cultivating)
     if cultivating and not pet.aura and not pet.noAura then
-        local aura = AuraBuilder.build(player, pet.model, pet.rootPart, pet.petId, getRankId(player), true)
+        local aura = AuraBuilder.build(player, pet.model, pet.rootPart, pet.petId, getRankId(player))
         if aura then
             aura.model.Parent = container
             AuraBuilder.show(aura)
@@ -169,8 +165,8 @@ local function updateCompanions(deltaTime)
         local rank = getRankNumber(player)
         local rankedUp = entry.rank ~= nil and rank ~= nil and rank > entry.rank
         entry.rank = rank
-        -- Pets fly with their owner: during (future sword) flight, and once a Qinggong leap or
-        -- glide has kept the owner off the ground for a moment.
+        -- Pets fly with their owner: during (future sword) flight, and whenever the owner has been
+        -- off the ground for a moment (a Qinggong leap, a glide or a long fall).
         local ownerHumanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         local airborne = ownerHumanoid ~= nil and ownerHumanoid.FloorMaterial == Enum.Material.Air
         entry.airborneTime = if airborne then (entry.airborneTime or 0) + deltaTime else 0

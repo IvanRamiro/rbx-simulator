@@ -25,13 +25,7 @@ local function fit(name, length)
     return length / math.max(mesh.Size.X, mesh.Size.Y, mesh.Size.Z)
 end
 
-local function colors(points)
-    local keypoints = {}
-    for _, point in points do
-        table.insert(keypoints, ColorSequenceKeypoint.new(point[1], point[2]))
-    end
-    return ColorSequence.new(keypoints)
-end
+local colors = AuraKit.colorSequence
 
 local function fireEmitter(aura, parent, rate, properties, minStage)
     local preset = {
@@ -68,19 +62,10 @@ local function energyEmitter(aura, parent, rate, properties, minStage)
     return addEmitter(aura, parent, rate, preset, minStage)
 end
 
+local FLAT_DEFAULTS = { Rotation = NumberRange.new(0, 360), LightEmission = 1 }
+
 local function flatEmitter(aura, parent, rate, properties)
-    local preset = {
-        Orientation = Enum.ParticleOrientation.VelocityPerpendicular,
-        EmissionDirection = Enum.NormalId.Top,
-        Speed = NumberRange.new(0.01),
-        LockedToPart = true,
-        Rotation = NumberRange.new(0, 360),
-        LightEmission = 1,
-    }
-    for property, value in properties do
-        preset[property] = value
-    end
-    return addEmitter(aura, parent, rate, preset)
+    return AuraKit.flatEmitter(aura, parent, rate, properties, FLAT_DEFAULTS)
 end
 
 local function buildGround(aura)

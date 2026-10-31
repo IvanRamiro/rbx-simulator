@@ -56,14 +56,7 @@ MIGRATIONS[2] = function(progress)
     progress.Relics = progress.Relics or {}
     return progress
 end
-
-MIGRATIONS[3] = function(progress)
-    return progress
-end
-
-MIGRATIONS[4] = function(progress)
-    return progress
-end
+-- versions 3 and 4 changed no saved fields, so they have no migration
 
 local store = nil
 local storeOk, storeResult = pcall(function()
@@ -167,10 +160,14 @@ local function migrate(progress, fromVersion)
     return progress
 end
 
-local function captureProgress(player)
+-- The player's Qi and Rank leaderstats values (nil until their data has loaded).
+function PlayerData.getStats(player)
     local leaderstats = player:FindFirstChild("leaderstats")
-    local qi = leaderstats and leaderstats:FindFirstChild("Qi")
-    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
+    return leaderstats and leaderstats:FindFirstChild("Qi"), leaderstats and leaderstats:FindFirstChild("Rank")
+end
+
+local function captureProgress(player)
+    local qi, rankValue = PlayerData.getStats(player)
     local pets = PetInventory.exportData(player)
     local relics = Discoveries.exportData(player)
     if not (qi and rankValue and pets and relics) then
