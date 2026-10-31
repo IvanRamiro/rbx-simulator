@@ -169,7 +169,12 @@ local function updateCompanions(deltaTime)
         local rank = getRankNumber(player)
         local rankedUp = entry.rank ~= nil and rank ~= nil and rank > entry.rank
         entry.rank = rank
-        local flying = player:GetAttribute("IsFlying") == true
+        -- Pets fly with their owner: during (future sword) flight, and once a Qinggong leap or
+        -- glide has kept the owner off the ground for a moment.
+        local ownerHumanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        local airborne = ownerHumanoid ~= nil and ownerHumanoid.FloorMaterial == Enum.Material.Air
+        entry.airborneTime = if airborne then (entry.airborneTime or 0) + deltaTime else 0
+        local flying = player:GetAttribute("IsFlying") == true or entry.airborneTime > 0.35
         local cultivating = player:GetAttribute("IsCultivating") == true
         for _, pet in entry.pets do
             local rig = pet.rig

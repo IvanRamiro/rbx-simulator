@@ -1,0 +1,253 @@
+-- Qinggong movement: jump, leap again in mid-air (up to the rank's air leaps), and hold jump
+-- while falling to glide. Leaps refill on landing. Works with keyboard, gamepad and touch.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local applyHudScale = require(script.Parent:WaitForChild("HudScale"))
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local qinggong = GameConfig.Qinggong
+
+local HUD_NAME = "QinggongHud"
+local PIP_READY = Color3.fromRGB(150, 235, 255)
+local PIP_SPENT = Color3.fromRGB(60, 70, 85)
+local GLIDE_COLOR = Color3.fromRGB(190, 255, 220)
+local NEW_PRESS_GAP = 0.18 -- jump requests closer than this are one held press
+local MAX_PIPS = GameConfig.Qinggong.Levels[#GameConfig.Qinggong.Levels].AirLeaps
+
+local oldHud = playerGui:FindFirstChild(HUD_NAME)
+if oldHud then
+    oldHud:Destroy()
+end
+
+local hud = Instance.new("ScreenGui")
+hud.Name = HUD_NAME
+hud.ResetOnSpawn = false
+
+local panel = Instance.new("Frame")
+panel.Name = "Panel"
+panel.AnchorPoint = Vector2.new(1, 0.5)
+panel.Position = UDim2.new(1, -16, 0.5, 0)
+panel.Size = UDim2.fromOffset(200, 78)
+panel.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+panel.BackgroundTransparency = 0.25
+panel.Parent = hud
+applyHudScale(panel)
+Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
+
+local title = Instance.new("TextLabel")
+title.BackgroundTransparency = 1
+title.Position = UDim2.fromOffset(10, 6)
+title.Size = UDim2.new(1, -20, 0, 22)
+title.Font = Enum.Font.GothamBold
+title.TextScaled = true
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Text = "Qinggong"
+title.Parent = panel
+
+local pipRow = Instance.new("Frame")
+pipRow.BackgroundTransparency = 1
+pipRow.Position = UDim2.fromOffset(10, 32)
+pipRow.Size = UDim2.new(1, -20, 0, 14)
+pipRow.Parent = panel
+local pipLayout = Instance.new("UIListLayout")
+pipLayout.FillDirection = Enum.FillDirection.Horizontal
+pipLayout.Padding = UDim.new(0, 6)
+pipLayout.Parent = pipRow
+
+local pips = {}
+for index = 1, MAX_PIPS do
+    local pip = Instance.new("Frame")
+    pip.Size = UDim2.fromOffset(18, 14)
+    pip.BorderSizePixel = 0
+    pip.LayoutOrder = index
+    pip.Parent = pipRow
+    Instance.new("UICorner", pip).CornerRadius = UDim.new(0.5, 0)
+    pips[index] = pip
+end
+
+local info = Instance.new("TextLabel")
+info.BackgroundTransparency = 1
+info.Position = UDim2.fromOffset(10, 50)
+info.Size = UDim2.new(1, -20, 0, 20)
+info.Font = Enum.Font.Gotham
+info.TextScaled = true
+info.TextColor3 = Color3.fromRGB(200, 200, 210)
+info.TextXAlignment = Enum.TextXAlignment.Left
+info.Parent = panel
+
+hud.Parent = playerGui
+
+local leapsUsed = 0
+local lastJumpRequest = 0
+local lastLeapTime = 0
+local gliding = false
+
+local function maxLeaps()
+    local leaps = player:GetAttribute("QinggongAirLeaps")
+    return if typeof(leaps) == "number" then leaps else 0
+end
+
+local function updateHud()
+    local total = maxLeaps()
+    for index, pip in pips do
+        pip.Visible = index <= total
+        pip.BackgroundColor3 = if index <= total - leapsUsed then PIP_READY else PIP_SPENT
+    end
+    if gliding then
+        info.Text = "Gliding"
+        info.TextColor3 = GLIDE_COLOR
+        return
+    end
+    info.TextColor3 = Color3.fromRGB(200, 200, 210)
+    local leaderstats = player:FindFirstChild("leaderstats")
+    local rankValue = leaderstats and leaderstats:FindFirstChild("Rank")
+    local _, nextLevel = Ranks.getQinggong(if rankValue then rankValue.Value else "")
+    local nextRank = nextLevel and Ranks.getRankById(nextLevel.RankId)
+    info.Text = if nextRank then (nextLevel.AirLeaps .. " leaps at " .. nextRank.Name) else "Air leaps: " .. total
+end
+
+local function getCharacterParts()
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    if humanoid and rootPart and humanoid.Health > 0 then
+        return humanoid, rootPart
+    end
+    return nil
+end
+
+local function isAirborne(humanoid)
+    if humanoid.FloorMaterial ~= Enum.Material.Air then
+        return false
+    end
+    local state = humanoid:GetState()
+    return state == Enum.HumanoidStateType.Freefall or state == Enum.HumanoidStateType.Jumping
+end
+
+local burst = nil
+local function getBurst(rootPart)
+    if burst and burst.Parent and burst.Parent.Parent == rootPart then
+        return burst
+    end
+    local attachment = Instance.new("Attachment")
+    attachment.Name = "QinggongFeet"
+    attachment.Position = Vector3.new(0, -2.8, 0)
+    attachment.Parent = rootPart
+    burst = Instance.new("ParticleEmitter")
+    burst.Name = "LeapBurst"
+    burst.Enabled = false
+    burst.Color = ColorSequence.new(PIP_READY)
+    burst.LightEmission = 0.6
+    burst.LightInfluence = 0
+    burst.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 0) })
+    burst.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+    burst.Lifetime = NumberRange.new(0.3, 0.45)
+    burst.Speed = NumberRange.new(8, 12)
+    burst.SpreadAngle = Vector2.new(80, 80)
+    burst.EmissionDirection = Enum.NormalId.Bottom
+    burst.Parent = attachment
+    return burst
+end
+
+local function airLeap(humanoid, rootPart)
+    leapsUsed += 1
+    lastLeapTime = os.clock()
+    local direction = humanoid.MoveDirection
+    local horizontal = if direction.Magnitude > 0.05
+        then direction.Unit * qinggong.LeapForwardSpeed
+        else rootPart.AssemblyLinearVelocity * Vector3.new(0.5, 0, 0.5)
+    rootPart.AssemblyLinearVelocity = horizontal + Vector3.new(0, qinggong.LeapUpSpeed, 0)
+    getBurst(rootPart):Emit(14)
+    updateHud()
+end
+
+UserInputService.JumpRequest:Connect(function()
+    local now = os.clock()
+    local isNewPress = now - lastJumpRequest > NEW_PRESS_GAP
+    lastJumpRequest = now
+    if not isNewPress or now - lastLeapTime < qinggong.LeapCooldown then
+        return
+    end
+
+    local humanoid, rootPart = getCharacterParts()
+    if not humanoid or not isAirborne(humanoid) or leapsUsed >= maxLeaps() then
+        return
+    end
+    if player:GetAttribute("IsFlying") == true or player:GetAttribute("IsCultivating") == true then
+        return
+    end
+    airLeap(humanoid, rootPart)
+end)
+
+local jumpKeyHeld = false
+local function isJumpKey(input)
+    return input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.ButtonA
+end
+UserInputService.InputBegan:Connect(function(input)
+    if isJumpKey(input) and not UserInputService:GetFocusedTextBox() then
+        jumpKeyHeld = true
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if isJumpKey(input) then
+        jumpKeyHeld = false
+    end
+end)
+UserInputService.WindowFocusReleased:Connect(function()
+    jumpKeyHeld = false
+end)
+
+local function isJumpHeld(humanoid)
+    -- the touch jump button keeps Humanoid.Jump set while it is held
+    return jumpKeyHeld or (UserInputService.TouchEnabled and humanoid.Jump)
+end
+
+RunService.Heartbeat:Connect(function(deltaTime)
+    local humanoid, rootPart = getCharacterParts()
+    local wasGliding = gliding
+    gliding = false
+
+    if humanoid then
+        if not isAirborne(humanoid) then
+            if leapsUsed ~= 0 then
+                leapsUsed = 0
+                updateHud()
+            end
+        elseif player:GetAttribute("IsFlying") ~= true and isJumpHeld(humanoid) then
+            local velocity = rootPart.AssemblyLinearVelocity
+            if velocity.Y < -qinggong.GlideFallSpeed then
+                gliding = true
+                local direction = humanoid.MoveDirection
+                local horizontal = Vector3.new(velocity.X, 0, velocity.Z)
+                if direction.Magnitude > 0.05 then
+                    horizontal = horizontal:Lerp(direction.Unit * humanoid.WalkSpeed * qinggong.GlideSpeedFactor, math.min(1, deltaTime * 4))
+                end
+                rootPart.AssemblyLinearVelocity = horizontal + Vector3.new(0, -qinggong.GlideFallSpeed, 0)
+            end
+        end
+    end
+
+    if gliding ~= wasGliding then
+        updateHud()
+    end
+end)
+
+player:GetAttributeChangedSignal("QinggongAirLeaps"):Connect(updateHud)
+player.CharacterAdded:Connect(function()
+    leapsUsed = 0
+    burst = nil
+    updateHud()
+end)
+task.spawn(function()
+    local rankValue = player:WaitForChild("leaderstats"):WaitForChild("Rank")
+    rankValue.Changed:Connect(updateHud)
+    updateHud()
+end)
+updateHud()

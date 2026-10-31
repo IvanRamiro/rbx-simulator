@@ -6,7 +6,6 @@ local REMOTES_FOLDER_NAME = "Remotes"
 local EVENT_NAMES = {
     "CultivationEvent",
     "RankUpEvent",
-    "FlightEvent",
     "EquipPetEvent",
     "UnequipPetEvent",
     "SetAuraPetEvent",

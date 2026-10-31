@@ -14,27 +14,23 @@ local GameConfig = {
         Radius = 10,
     },
 
-    Flight = {
-        Keybind = Enum.KeyCode.Q,
-        GamepadButton = Enum.KeyCode.ButtonY,
-        ToggleCooldown = 0.3,
-        Acceleration = 4,
-        SpeedLevels = {
-            { RankId = "QiGatherer", Speed = 28 },
-            { RankId = "QiAwakener", Speed = 34 },
-            { RankId = "FoundationInitiate", Speed = 40 },
-            { RankId = "PerfectFoundation", Speed = 50 },
-            { RankId = "CoreInitiate", Speed = 58 },
-            { RankId = "GoldenSpiritCore", Speed = 70 },
-            { RankId = "SoulAwakening", Speed = 78 },
-            { RankId = "AscendantInitiate", Speed = 88 },
-            { RankId = "LesserImmortal", Speed = 98 },
-            { RankId = "DivineInitiate", Speed = 108 },
-            { RankId = "StarInitiate", Speed = 118 },
-            { RankId = "VoidWalker", Speed = 128 },
-            { RankId = "DaoSeeker", Speed = 138 },
-            { RankId = "PrimordialAwakening", Speed = 150 },
-            { RankId = "EternalInitiate", Speed = 165 },
+    -- Qinggong: jump, then leap again in mid-air (once per air leap), and hold jump while
+    -- falling to glide. Island routes are spaced so each island needs the air leaps of the
+    -- rank that unlocks it (see tools/blender/world/layout.py).
+    Qinggong = {
+        LeapUpSpeed = 52,
+        LeapForwardSpeed = 34,
+        LeapCooldown = 0.2,
+        GlideFallSpeed = 14,
+        GlideSpeedFactor = 1.1, -- glide horizontal speed, relative to run speed
+        Levels = {
+            { RankId = "QiInitiate", AirLeaps = 1, RunSpeed = 22 },
+            { RankId = "QiGatherer", AirLeaps = 2, RunSpeed = 24 },
+            { RankId = "QiAwakener", AirLeaps = 3, RunSpeed = 26 },
+            { RankId = "FoundationInitiate", AirLeaps = 4, RunSpeed = 28 },
+            { RankId = "PerfectFoundation", AirLeaps = 5, RunSpeed = 30 },
+            { RankId = "DivineInitiate", AirLeaps = 6, RunSpeed = 32 },
+            { RankId = "VoidWalker", AirLeaps = 7, RunSpeed = 34 },
         },
     },
 

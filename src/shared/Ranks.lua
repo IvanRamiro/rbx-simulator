@@ -38,20 +38,21 @@ function Ranks.getNextRank(rankName)
     return GameConfig.Ranks[index + 1]
 end
 
-function Ranks.getFlightSpeed(rankName)
+-- The Qinggong level a rank has reached, and the next level (nil at the top).
+function Ranks.getQinggong(rankName)
     local rankIndex = Ranks.getIndex(rankName) or 0
-    local speed = 0
+    local current = GameConfig.Qinggong.Levels[1]
 
-    for _, level in GameConfig.Flight.SpeedLevels do
+    for _, level in GameConfig.Qinggong.Levels do
         local levelRank = Ranks.getRankById(level.RankId)
         if Ranks.getIndex(levelRank.Name) <= rankIndex then
-            speed = level.Speed
+            current = level
         else
-            return speed, level
+            return current, level
         end
     end
 
-    return speed, nil
+    return current, nil
 end
 
 function Ranks.getQiMultiplier(rankName)
@@ -89,18 +90,20 @@ for _, relic in GameConfig.Relics do
     seenRelicIds[relic.Id] = true
 end
 
-local previousFlightLevel = nil
-for _, level in GameConfig.Flight.SpeedLevels do
+local previousQinggongLevel = nil
+for _, level in GameConfig.Qinggong.Levels do
     local levelRank = Ranks.getRankById(level.RankId)
-    assert(levelRank, "GameConfig.Flight.SpeedLevels has an unknown RankId: " .. tostring(level.RankId))
-    if previousFlightLevel then
+    assert(levelRank, "GameConfig.Qinggong.Levels has an unknown RankId: " .. tostring(level.RankId))
+    if previousQinggongLevel then
         assert(
-            Ranks.getIndex(levelRank.Name) > Ranks.getIndex(Ranks.getRankById(previousFlightLevel.RankId).Name)
-                and level.Speed > previousFlightLevel.Speed,
-            "GameConfig.Flight.SpeedLevels must go from lower to higher ranks and speeds"
+            Ranks.getIndex(levelRank.Name) > Ranks.getIndex(Ranks.getRankById(previousQinggongLevel.RankId).Name)
+                and level.AirLeaps > previousQinggongLevel.AirLeaps,
+            "GameConfig.Qinggong.Levels must go from lower to higher ranks and air leaps"
         )
+    else
+        assert(Ranks.getIndex(levelRank.Name) == 1, "GameConfig.Qinggong.Levels must start at the first rank")
     end
-    previousFlightLevel = level
+    previousQinggongLevel = level
 end
 
 for index = 2, #GameConfig.Ranks do
