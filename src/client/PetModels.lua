@@ -641,6 +641,7 @@ local MESH_LOOKS = {
     AzureSkyDragon = { Eyes = Color3.fromRGB(20, 60, 230), GlowEyes = true, Glow = Color3.fromRGB(70, 170, 255), Length = 4.4 },
     SpiritCrane = { Eyes = Color3.fromRGB(235, 160, 30), GlowEyes = true, Glow = Color3.fromRGB(40, 210, 200), Length = 4.2 },
     CloudSheep = { Eyes = Color3.fromRGB(20, 90, 200), GlowEyes = true, Glow = Color3.fromRGB(120, 215, 245), Length = 3.0 },
+    GoldenManeLion = { Eyes = Color3.fromRGB(255, 140, 20), GlowEyes = true, Glow = Color3.fromRGB(255, 180, 60), Length = 4.4 },
     DawnPhoenix = { Eyes = Color3.fromRGB(255, 173, 48), GlowEyes = true, Glow = Color3.fromRGB(255, 170, 70), Length = 4.6 },
     AquaWisp = { Eyes = NAVY, Effect = "Bubbles", Glow = Color3.fromRGB(110, 205, 255), Length = 3.12 },
     EmberWyrm = { Eyes = Color3.fromRGB(255, 120, 40), GlowEyes = true, Effect = "TailFlame", Glow = Color3.fromRGB(255, 115, 35), Length = 2.9 },

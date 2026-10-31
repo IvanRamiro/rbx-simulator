@@ -468,6 +468,37 @@ local function animateSheep(rig, s, moving, fly, nova)
     pose(m.Tail, CFrame.Angles(0.08 * math.sin(t * 0.9) + 0.15 * bloom, 0.18 * math.sin(t * 0.6), 0.06 * math.sin(t * 0.75)))
 end
 
+local LION_LEGS = { LegFL = 0, LegBR = 0.15, LegFR = math.pi, LegBL = math.pi + 0.15 }
+local function animateLion(rig, s, moving, fly, nova)
+    local m, u, t = rig.motors, rig.unit, s.time
+    local pace = math.max(moving, fly)
+    s.stride = (s.stride or 0) + rig.deltaTime * (0.9 + 4.6 * pace)
+    local stride = s.stride
+    local breathe = math.sin(t * 0.85)
+    s.roar = if rig.nova then (s.roar or 0) + rig.deltaTime else 0
+    local rise = smoothstep(0.0, 0.45, s.roar) * (1 - smoothstep(1.7, 2.4, s.roar))
+    local open = smoothstep(0.4, 0.75, s.roar) * (1 - smoothstep(1.5, 2.1, s.roar)) * math.min(1, nova * 3)
+
+    pose(m.Body, CFrame.new(0, (0.012 * breathe + 0.03 * math.abs(math.sin(stride)) * pace + 0.04 * rise) * u, 0)
+        * CFrame.Angles(0.012 * breathe - 0.08 * rise + 0.02 * math.sin(stride * 2) * pace, 0, 0.025 * math.sin(stride) * pace))
+    local gaze = 0.38 * math.sin(t * 0.17) ^ 3 * (1 - pace) * (1 - rise)
+    pose(m.Head, CFrame.Angles(0.03 * math.sin(t * 0.6 + 1) + 0.06 * math.sin(stride * 2) * pace - 0.3 * rise, gaze, 0.03 * math.sin(t * 0.31) * (1 - pace)))
+    if m.Jaw then
+        pose(m.Jaw, CFrame.Angles(0.012 * math.max(0, breathe) + 0.5 * open, 0, 0))
+    end
+
+    for name, phase in LION_LEGS do
+        local front = string.sub(name, 4, 4) == "F"
+        local swing = 0.42 * math.sin(stride + phase) * pace
+        local brace = if front then -0.12 * rise else 0.1 * rise
+        pose(m[name], CFrame.Angles(swing + brace + (if front then -0.5 else 0.6) * fly, 0, 0))
+    end
+
+    local flick = math.max(0, math.sin(t * 0.7)) ^ 10
+    pose(m.Tail, CFrame.Angles(0.06 * math.sin(t * 0.5) + 0.1 * pace - 0.15 * rise, 0.22 * math.sin(t * 0.42), 0))
+    pose(m.Tail2, CFrame.Angles(0.1 * math.sin(t * 0.5 - 0.8) + 0.3 * flick, 0.3 * math.sin(t * 0.42 - 1) + 0.25 * flick, 0.1 * math.sin(t * 0.9)))
+end
+
 PetRig.Profiles = {
     SunscaleDragon = {
         Joints = {
@@ -1047,6 +1078,44 @@ PetRig.Profiles.CloudSheep = {
         Ivory = Color3.fromRGB(250, 250, 255),
     },
     Animate = animateSheep,
+}
+
+PetRig.Profiles.GoldenManeLion = {
+    Joints = {
+        Body = "Root",
+        Head = "Body",
+        Jaw = "Head",
+        LegFL = "Body",
+        LegFR = "Body",
+        LegBL = "Body",
+        LegBR = "Body",
+        Tail = "Body",
+        Tail2 = "Tail",
+    },
+    Attached = {},
+    SeeThrough = {},
+    GlowColors = {
+        ffce61 = Color3.fromRGB(255, 140, 10),
+        ffce59 = Color3.fromRGB(255, 150, 20),
+    },
+    Effects = {
+        Motes = "Head",
+        Light = "Body",
+        Pulse = "Head",
+        Burst = "Head",
+        Sparks = { "LegFL_Paw", "LegFR_Paw", "Head_Crown" },
+        Trail = "Tail2_Tuft",
+        Blast = "SovereignRoar",
+        NovaLight = 3,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(255, 180, 50),
+        Amber = Color3.fromRGB(120, 60, 20),
+        Orange = Color3.fromRGB(255, 120, 20),
+        Sun = Color3.fromRGB(255, 225, 140),
+        Ivory = Color3.fromRGB(255, 240, 210),
+    },
+    Animate = animateLion,
 }
 
 PetRig.NOVA_TIME = 2.6
@@ -2289,6 +2358,80 @@ function Blasts.CloudBloom(rig, fx)
     TweenService:Create(light, TweenInfo.new(1.2), { Brightness = 0 }):Play()
     if rig.burst then
         rig.burst:Emit(20)
+    end
+end
+
+function Blasts.SovereignRoar(rig, fx)
+    local colors, u, origin, neon = rig.profile.Colors, rig.unit, fx.origin, fx.neon
+    local mouthPoint, crownPoint = rig.points.Jaw_Mouth, rig.points.Head_Crown
+    local mouth = if mouthPoint then mouthPoint.WorldPosition else origin
+    local crown = if crownPoint then crownPoint.WorldPosition else origin + Vector3.new(0, 0.3 * u, 0)
+    local body = rig.parts.Body and rig.parts.Body.Position or rig.rootPart.Position
+    local forward = (mouth - body) * Vector3.new(1, 0, 1)
+    forward = if forward.Magnitude > 1e-3 then forward.Unit else fx.facing.LookVector
+
+    for index, delay in { 0, 0.14, 0.28 } do
+        local ring = neon(Vector3.new(0.04 * u, 0.3 * u, 0.3 * u), CFrame.lookAt(mouth, mouth + forward) * CFrame.Angles(0, math.pi / 2, 0),
+            if index == 2 then colors.Sun else colors.Gold)
+        ring.Shape = Enum.PartType.Cylinder
+        ring.Transparency = 1
+        local finish = mouth + forward * (1.1 + 0.5 * index) * u
+        TweenService:Create(ring, TweenInfo.new(0.06, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, delay), { Transparency = 0.35 }):Play()
+        TweenService:Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, delay), {
+            CFrame = CFrame.lookAt(finish, finish + forward) * CFrame.Angles(0, math.pi / 2, 0),
+            Size = Vector3.new(0.02 * u, (1.6 + 0.5 * index) * u, (1.6 + 0.5 * index) * u),
+            Transparency = 1,
+        }):Play()
+    end
+
+    local behind = crown - forward * 0.12 * u
+    local right = forward:Cross(Vector3.yAxis).Unit
+    for index = 1, 12 do
+        local angle = (index - 0.5) / 12 * math.pi
+        local out = (right * math.cos(angle) + Vector3.yAxis * math.sin(angle)).Unit
+        local length = (if index % 2 == 0 then 0.55 else 0.4) * u
+        local base = behind + out * 0.18 * u
+        local ray = neon(Vector3.new(0.05 * u, 0.05 * u, 0.1 * u), CFrame.lookAt(base, base + out), if index % 2 == 0 then colors.Sun else colors.Gold)
+        ray.Transparency = 1
+        local tip = base + out * length * 0.5
+        TweenService:Create(ray, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0.05), { Transparency = 0.2 }):Play()
+        TweenService:Create(ray, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.05), {
+            CFrame = CFrame.lookAt(tip, tip + out),
+            Size = Vector3.new(0.025 * u, 0.025 * u, length),
+        }):Play()
+        TweenService:Create(ray, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.6), { Transparency = 1 }):Play()
+    end
+
+    local paws = {}
+    for _, name in { "LegFL_Paw", "LegFR_Paw", "LegBL_Paw", "LegBR_Paw" } do
+        if rig.points[name] then
+            table.insert(paws, rig.points[name].WorldPosition)
+        end
+    end
+    local ground = origin - Vector3.new(0, 0.8 * u, 0)
+    if #paws > 0 then
+        local sum = Vector3.zero
+        for _, position in paws do
+            sum += position
+        end
+        ground = sum / #paws
+    end
+    local stomp = neon(Vector3.new(0.04 * u, 0.5 * u, 0.5 * u), CFrame.new(ground + Vector3.new(0, 0.03 * u, 0)) * CFrame.Angles(0, 0, math.pi / 2), colors.Orange)
+    stomp.Shape = Enum.PartType.Cylinder
+    stomp.Transparency = 0.4
+    TweenService:Create(stomp, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = Vector3.new(0.02 * u, 3.6 * u, 3.6 * u),
+        Transparency = 1,
+    }):Play()
+
+    local light = Instance.new("PointLight")
+    light.Color = colors.Gold
+    light.Range = 12 * u
+    light.Brightness = 2.2
+    light.Parent = neon(Vector3.one * 0.05, CFrame.new(mouth), colors.Gold)
+    TweenService:Create(light, TweenInfo.new(1.1), { Brightness = 0 }):Play()
+    if rig.burst then
+        rig.burst:Emit(25)
     end
 end
 

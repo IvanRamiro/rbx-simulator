@@ -179,7 +179,14 @@ horns, heavy-lidded sky-blue eyes and pearl cloven hooves, with a soft cyan core
 glowing between its neck curls) hovers just above the ground, paddles its hooves,
 flicks its ears and tilts its head; its special, **Cloud Bloom**, lifts it with its
 legs tucked and blooms a ring of cloud puffs outward while luminous droplets rain
-onto a widening sky ring. Specials are visual only.
+onto a widening sky ring. Golden Mane Lion (a high-shouldered royal lion with a
+tiered mane of sculpted flame-tipped locks in bronze, burnished gold and champagne,
+a crest of five reddish-gold locks with dark bronze roots and faint solar seams
+sweeping back over its brow like a crown, deep-set amber eyes with radial irises,
+and a dark bronze tail tuft) breathes slowly, turns its head with deliberate calm
+and walks with a heavy stride; its special, **Sovereign Roar**, raises its head and
+opens its jaw as golden shockwave rings roll out from its mouth, solar rays flare
+behind its crest and a ring spreads beneath its paws. Specials are visual only.
 
 
 **First found in the Beginner Qi Egg (starting island)**
