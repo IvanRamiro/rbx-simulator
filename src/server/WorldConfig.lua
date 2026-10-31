@@ -13,6 +13,10 @@ local WorldConfig = {
         OriginAbyss = { Centre = Vector3.new(-560, 95, -540), Radius = 85 },
     },
 
+    -- parts tagged with this (Ember Peak's lava lake and river) send whoever touches them back
+    -- to their island's checkpoint
+    HazardTag = "LavaHazard",
+
     Safety = {
         CheckInterval = 0.25,
         -- a player this far below the island they last stood on is returned to its checkpoint

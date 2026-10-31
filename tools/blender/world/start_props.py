@@ -643,7 +643,7 @@ def write_placements(path=W.REPO + "/src/worldbuild/Placements/StartingIsland.lu
     lines.append("    Spawn = Vector3.new(0, %.2f, 0)," % (0.2 + 1.98))
     lines.append("    SpringCentre = Vector3.new(%.2f, %.2f, %.2f)," % (cx, S.POOL_WATER, cz))
     lines.append("    SpillEnd = Vector3.new(%.2f, %.2f, %.2f)," % (SPILL[-1][0], SPILL[-1][2] + 0.35, SPILL[-1][1]))
-    lines.append("    Relic = Vector3.new(%g, %g, %g)," % M.RELIC)
+    lines.append("    Relics = { IslandRoot = Vector3.new(%g, %g, %g) }," % M.RELIC)
     lines += ["}", ""]
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:

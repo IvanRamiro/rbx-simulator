@@ -4,18 +4,17 @@
 --
 --   local WB = require(game.ServerStorage.WorldBuild.WorldBuilder:Clone())
 --
--- Starting Island, from scratch (FBX files in assets/world/StartingIsland, imported by hand):
---   WB.clearTerrain("StartingIsland"); WB.buildTerrain("StartingIsland")
---   WB.seatImport("StartingIsland", workspace.StartingIsland_Underside, "SI_Anchor", "Underside")
---   WB.storeKit("StartingIsland", workspace.StartingIsland_Kit)
---   WB.storeKit("StartingIsland", workspace.StartingIsland_Props, "SI_PropsAnchor")
---   WB.storeKit("StartingIsland", workspace.StartingIsland_Nature, "SI_NatureAnchor")
---   -- each import uploads its own copy of an atlas; point every piece at one copy:
---   --   SI_RootShelf and SI_CradleFloor share the underside's texture (set TextureID by hand),
---   WB.shareTexture("StartingIsland", "SI_QiCompass", { nature piece names and "SI_SpringSpillway" })
---   WB.placeKit("StartingIsland"); WB.buildEggStands("StartingIsland"); WB.buildWaystones("StartingIsland")
---   WB.buildSpawn("StartingIsland"); WB.buildQiSpring("StartingIsland")
---   WB.buildRelic("StartingIsland", "IslandRoot", <Placements.StartingIsland.Relic>)
+-- Building an island from scratch (FBX files in assets/world/<Island>, imported by hand into
+-- Workspace; each export's anchor cube marks the island centre or the kit origin):
+--   WB.clearTerrain(island); WB.buildTerrain(island)
+--   WB.seatImport(island, <import of the island-specific meshes>, <anchor>, "Underside" or "Island")
+--   WB.storeKit(island, <each kit/props import>, <anchor>)
+--   -- every import uploads its own copy of the island atlas: point all pieces at one copy, either
+--   -- with WB.shareTexture or by setting TextureID on the templates and island meshes
+--   WB.placeKit(island); WB.buildEggStands(island); WB.buildRelics(island)
+-- then the island's own pieces:
+--   Starting Island: WB.buildWaystones, WB.buildSpawn, WB.buildQiSpring
+--   every other island: WB.buildCheckpoint(island)
 -- Collision fidelity applies asynchronously; confirm with WB.checkCollision in a later call.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -39,6 +38,16 @@ WorldBuilder.MaterialColors = {
     LeafyGrass = Color3.fromRGB(64, 116, 58),
     Mud = Color3.fromRGB(86, 68, 50),
     Sandstone = Color3.fromRGB(98, 124, 108),
+    -- Ember Peak
+    Basalt = Color3.fromRGB(46, 42, 44),
+    CrackedLava = Color3.fromRGB(255, 96, 24),
+    Asphalt = Color3.fromRGB(52, 48, 48), -- ash drifts; the Asphalt texture is bright, so keep this dark
+    Sand = Color3.fromRGB(70, 56, 48),
+    -- Moonlit Isle
+    Limestone = Color3.fromRGB(198, 200, 214),
+    Snow = Color3.fromRGB(226, 233, 248),
+    Salt = Color3.fromRGB(176, 178, 196),
+    Pavement = Color3.fromRGB(168, 172, 192),
 }
 
 -- Per-island terrain settings: how deep the terrain shell reaches below the island centre (the
@@ -47,6 +56,10 @@ WorldBuilder.TerrainSettings = {
     StartingIsland = { ShellDepth = 9, SubMaterial = "Ground", KeepThrough = { Rock = true } },
     -- deep enough for the Whispering Hollow (floor about -9)
     JadeGrove = { ShellDepth = 14, SubMaterial = "Mud", KeepThrough = { Sandstone = true } },
+    -- the lava river's channel reaches about -6 at the edge
+    EmberPeak = { ShellDepth = 13, SubMaterial = "Basalt", KeepThrough = { CrackedLava = true } },
+    -- deep enough for the Star Well's shaft (floor -18)
+    MoonlitIsle = { ShellDepth = 22, SubMaterial = "Limestone", KeepThrough = { Pavement = true } },
 }
 
 local function terrainData(island)
@@ -183,6 +196,30 @@ WorldBuilder.Collision = {
     { Prefix = "JG_JadeOutcrop", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "JG_FallenLog", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "JG_GladeFloor", Fidelity = Enum.CollisionFidelity.Box },
+    -- Ember Peak: the gate between its column bundles must stay passable
+    { Prefix = "EP_EmberGate", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "EP_BasaltStep", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "EP_RouteStone", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "EP_ForgeWalls", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "EP_AltarFloor", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "EP_EggPedestal", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "EP_Brazier", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "EP_ForgeHearth", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "EP_Anvil", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "EP_SigilMonolith", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "EP_FireCrystal", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "EP_EmberVent", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "EP_ObsidianShard", Fidelity = Enum.CollisionFidelity.Hull },
+    -- Moonlit Isle: the Star Well's shaft, the mirror's bridge and dais, and the arch stay open
+    { Prefix = "MI_StarWell", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "MI_MirrorRim", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "MI_CrescentArch", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "MI_MirrorPool", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "MI_MoonstoneSpire", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "MI_Pavilion", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "MI_EggPedestal", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "MI_MoonstoneShards", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "MI_LunarRock", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "JG_", Fidelity = Enum.CollisionFidelity.Default },
     { Prefix = "SI_", Fidelity = Enum.CollisionFidelity.Default },
 }
@@ -214,6 +251,31 @@ WorldBuilder.Appearance = {
     JG_Mushrooms = { CanCollide = false },
     JG_Fern = { CanCollide = false },
     JG_BambooClump = { CanCollide = false },
+    -- Ember Peak: lava glows; the lake and river burn (WorldService returns anyone touching them
+    -- to the island's checkpoint), so they stay touchable
+    EP_UnderColumns = { CanCollide = false },
+    EP_MagmaCore = table.clone(GLOW),
+    EP_LavaLake = { Material = Enum.Material.Neon, CanCollide = false, CanTouch = true, CastShadow = false, Tag = "LavaHazard" },
+    EP_LavaRiver = { Material = Enum.Material.Neon, CanCollide = false, CanTouch = true, CastShadow = false, Tag = "LavaHazard" },
+    EP_LavaCrust = { CanCollide = false },
+    EP_GateFire = table.clone(GLOW),
+    EP_BrazierFire = table.clone(GLOW),
+    EP_ForgeCoals = table.clone(GLOW),
+    EP_VentGlow = table.clone(GLOW),
+    EP_SigilGlow = table.clone(GLOW),
+    EP_EggGlowRing = table.clone(GLOW),
+    -- Moonlit Isle: the Moon Mirror is dark reflective glass you can walk on
+    MI_MirrorPool = { Material = Enum.Material.Glass, Transparency = 0.15, Reflectance = 0.55, CastShadow = false },
+    MI_CliffSkirt = { CanCollide = false },
+    MI_CloudBank = { CanCollide = false, CastShadow = false },
+    MI_Geode = { CanCollide = false },
+    MI_GeodeGlow = table.clone(GLOW),
+    MI_Armillary = { CanCollide = false },
+    MI_StarLantern = { CanCollide = false },
+    MI_StarLanternCore = table.clone(GLOW),
+    MI_FrostLilies = { CanCollide = false },
+    MI_LilyGlow = table.clone(GLOW),
+    MI_EggGlowRing = table.clone(GLOW),
 }
 WorldBuilder.Appearance.SI_QiCompassGlow.Color = Color3.fromRGB(40, 210, 235)
 WorldBuilder.Appearance.SI_LanternLight.Color = Color3.fromRGB(255, 150, 60)
@@ -221,12 +283,76 @@ WorldBuilder.Appearance.SI_SpringWater.Color = Color3.fromRGB(40, 165, 180)
 WorldBuilder.Appearance.JG_JadeLanternLight.Color = Color3.fromRGB(255, 175, 80) -- warm, so the forest isn't washed green
 WorldBuilder.Appearance.JG_MushroomCaps.Color = Color3.fromRGB(30, 230, 200)
 WorldBuilder.Appearance.JG_HollowWater.Color = Color3.fromRGB(35, 160, 130)
+WorldBuilder.Appearance.EP_MagmaCore.Color = Color3.fromRGB(255, 80, 15)
+WorldBuilder.Appearance.EP_LavaLake.Color = Color3.fromRGB(255, 105, 20)
+WorldBuilder.Appearance.EP_LavaRiver.Color = Color3.fromRGB(255, 120, 30)
+WorldBuilder.Appearance.EP_GateFire.Color = Color3.fromRGB(255, 120, 20)
+WorldBuilder.Appearance.EP_BrazierFire.Color = Color3.fromRGB(255, 120, 20)
+-- the flame meshes are a translucent core; flame particles give them their motion
+WorldBuilder.Appearance.EP_GateFire.Transparency = 0.35
+WorldBuilder.Appearance.EP_BrazierFire.Transparency = 0.35
+WorldBuilder.Appearance.EP_ForgeCoals.Color = Color3.fromRGB(255, 70, 10)
+WorldBuilder.Appearance.EP_VentGlow.Color = Color3.fromRGB(255, 70, 10)
+WorldBuilder.Appearance.EP_SigilGlow.Color = Color3.fromRGB(255, 165, 40)
+WorldBuilder.Appearance.MI_MirrorPool.Color = Color3.fromRGB(28, 36, 82)
+WorldBuilder.Appearance.MI_GeodeGlow.Color = Color3.fromRGB(90, 140, 255)
+WorldBuilder.Appearance.MI_StarLanternCore.Color = Color3.fromRGB(255, 210, 90)
+WorldBuilder.Appearance.MI_LilyGlow.Color = Color3.fromRGB(110, 160, 255)
 
 -- Kit pieces that carry a PointLight (lights take the piece's colour).
 WorldBuilder.Lights = {
     SI_LanternLight = { Range = 16, Brightness = 1.2 },
     JG_JadeLanternLight = { Range = 16, Brightness = 1.0 },
+    EP_GateFire = { Range = 18, Brightness = 1.1 },
+    EP_BrazierFire = { Range = 14, Brightness = 0.9 },
+    EP_ForgeCoals = { Range = 18, Brightness = 1.5 },
+    MI_StarLanternCore = { Range = 14, Brightness = 0.9 },
 }
+
+-- Kit pieces that throw off particles (one or more presets each).
+WorldBuilder.Emitters = {
+    EP_GateFire = { "Flames", "EmberSparks" },
+    EP_BrazierFire = { "Flames", "EmberSparks" },
+    EP_ForgeCoals = { "EmberSparks" },
+    EP_VentGlow = { "EmberSparks" },
+}
+
+local function addEmitterPreset(part, preset)
+    if preset == "Flames" then
+        local flames = Instance.new("ParticleEmitter")
+        flames.Name = "Flames"
+        flames.Texture = "rbxasset://textures/particles/fire_main.dds"
+        flames.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 220, 120)),
+            ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 120, 30)), ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 40, 10)) })
+        flames.LightEmission = 1
+        flames.LightInfluence = 0
+        flames.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.4), NumberSequenceKeypoint.new(1, 0.2) })
+        flames.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+        flames.Lifetime = NumberRange.new(0.6, 1)
+        flames.Speed = NumberRange.new(3, 5)
+        flames.SpreadAngle = Vector2.new(8, 8)
+        flames.Rotation = NumberRange.new(-20, 20)
+        flames.EmissionDirection = Enum.NormalId.Top
+        flames.Rate = 22
+        flames.Parent = part
+    elseif preset == "EmberSparks" then
+        local sparks = Instance.new("ParticleEmitter")
+        sparks.Name = "EmberSparks"
+        sparks.Color = ColorSequence.new(Color3.fromRGB(255, 200, 90), Color3.fromRGB(255, 70, 20))
+        sparks.LightEmission = 1
+        sparks.LightInfluence = 0
+        sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.18), NumberSequenceKeypoint.new(1, 0) })
+        sparks.Transparency = NumberSequence.new(0, 1)
+        sparks.Lifetime = NumberRange.new(1.2, 2.2)
+        sparks.Speed = NumberRange.new(2, 4.5)
+        sparks.SpreadAngle = Vector2.new(25, 25)
+        sparks.Acceleration = Vector3.new(0, 1.5, 0)
+        sparks.Drag = 0.6
+        sparks.EmissionDirection = Enum.NormalId.Top
+        sparks.Rate = 6
+        sparks.Parent = part
+    end
+end
 
 local function prepareMesh(part)
     part.Anchored = true
@@ -238,7 +364,11 @@ local function prepareMesh(part)
             part.TextureID = "" -- Neon and Glass pieces are coloured, not textured
         end
         for property, value in look do
-            part[property] = value
+            if property == "Tag" then
+                CollectionService:AddTag(part, value)
+            else
+                part[property] = value
+            end
         end
         if look.CanCollide == false then
             part.CanQuery = false
@@ -437,6 +567,9 @@ function WorldBuilder.placeKit(island)
             if light then
                 addLight(part, part.Color, light.Range, light.Brightness)
             end
+            for _, preset in WorldBuilder.Emitters[name] or {} do
+                addEmitterPreset(part, preset)
+            end
             placed += 1
         end
     end
@@ -451,6 +584,12 @@ WorldBuilder.EggGlow = {
     BeginnerQiEgg = Color3.fromRGB(50, 180, 255),
     SpiritBreezeEgg = Color3.fromRGB(30, 225, 165),
     ElementalCoreEgg = Color3.fromRGB(140, 80, 255),
+    CelestialEgg = Color3.fromRGB(60, 150, 255),
+    AstralSanctumEgg = Color3.fromRGB(150, 80, 255),
+    HeavenlyThroneEgg = Color3.fromRGB(255, 185, 40),
+    InfernoEgg = Color3.fromRGB(255, 85, 15),
+    MagmaHeartEgg = Color3.fromRGB(255, 160, 20),
+    PhoenixAshEgg = Color3.fromRGB(255, 40, 110),
     JadeSpiritEgg = Color3.fromRGB(40, 225, 120),
     BloomwoodEgg = Color3.fromRGB(255, 80, 180),
     AncientGroveEgg = Color3.fromRGB(170, 240, 40),
@@ -516,9 +655,9 @@ function WorldBuilder.buildEggStands(island)
         stand.Name = entry.EggId
         stand:SetAttribute("EggId", entry.EggId)
         stand.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
-        local pedestal = placeTemplate(island, pieces.Pedestal, frame, stand)
+        local pedestal = placeTemplate(island, pieces.Pedestal, frame, stand, entry.Scale)
         pedestal.Name = "Pedestal"
-        local ring = placeTemplate(island, pieces.GlowRing, frame, stand)
+        local ring = placeTemplate(island, pieces.GlowRing, frame, stand, entry.Scale)
         ring.Name = "GlowRing"
         ring.Color = glow
 
@@ -569,7 +708,7 @@ local function rankLine(rankId)
     return string.format("%s\n%d air leaps", rankName, leaps)
 end
 
-local function inscribe(parent, panel, title, subtitle, color)
+local function inscribe(panel, title, subtitle, color)
     local gui = Instance.new("SurfaceGui")
     gui.Face = Enum.NormalId.Back -- the panel part's +Z face, the stele's front
     gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
@@ -625,7 +764,7 @@ function WorldBuilder.buildWaystones(island)
         panel.CanQuery = false
         panel.CanTouch = false
         panel.Parent = model
-        inscribe(model, panel, info.Title, info.Subtitle or rankLine(info.RankId), info.Color)
+        inscribe(panel, info.Title, info.Subtitle or rankLine(info.RankId), info.Color)
         model.Parent = folder
     end
     WorldBuilder.applyCollision(folder)
@@ -723,7 +862,7 @@ function WorldBuilder.buildQiSpring(island)
     label.Text = stationRules.DisplayName .. "\nCultivate here: +" .. stationRules.QiBonusPercent .. "% Qi"
     label.Parent = sign
 
-    WorldBuilder.buildWaterfall(station, islandCentre(island) + placements.SpillEnd, centre)
+    WorldBuilder.buildWaterfall(station, islandCentre(island) + placements.SpillEnd, centre, WorldBuilder.Falls.Water)
     station.Parent = model
     return station
 end
@@ -733,9 +872,17 @@ WorldBuilder.WaterfallTexture = "rbxassetid://84166602047979"
 
 -- Water pouring off a lip: a short arc then a long fall that fades into the sky, with a wider
 -- faint sheen layer scrolling at a different speed for depth, and mist drifting off the fall.
-function WorldBuilder.buildWaterfall(parent, lip, from)
+-- Looks for a liquid pouring off an island's edge.
+WorldBuilder.Falls = {
+    Water = { Name = "Waterfall", Color = Color3.fromRGB(205, 240, 250), LightEmission = 0.25, Mist = Color3.fromRGB(225, 245, 255),
+        Spray = Color3.fromRGB(230, 250, 255), SprayEmission = 0.3 },
+    Lava = { Name = "Lavafall", Color = Color3.fromRGB(255, 130, 40), LightEmission = 1, Mist = Color3.fromRGB(90, 60, 55),
+        Spray = Color3.fromRGB(255, 170, 60), SprayEmission = 1 },
+}
+
+function WorldBuilder.buildWaterfall(parent, lip, from, look)
     local out = Vector3.new(lip.X - from.X, 0, lip.Z - from.Z).Unit
-    local holder = marker("Waterfall", Vector3.new(1, 1, 1), CFrame.new(lip), parent)
+    local holder = marker(look.Name, Vector3.new(1, 1, 1), CFrame.new(lip), parent)
     local function attach(name, offset)
         local a = Instance.new("Attachment")
         a.Name = name
@@ -758,8 +905,8 @@ function WorldBuilder.buildWaterfall(parent, lip, from)
         b.TextureLength = length
         b.TextureSpeed = speed
         b.Transparency = transparency
-        b.Color = ColorSequence.new(Color3.fromRGB(205, 240, 250))
-        b.LightEmission = 0.25
+        b.Color = ColorSequence.new(look.Color)
+        b.LightEmission = look.LightEmission
         b.LightInfluence = 0.7
         b.Segments = 12
         b.Parent = holder
@@ -773,7 +920,7 @@ function WorldBuilder.buildWaterfall(parent, lip, from)
     local mist = Instance.new("ParticleEmitter")
     mist.Name = "Mist"
     mist.Texture = "rbxasset://textures/particles/smoke_main.dds"
-    mist.Color = ColorSequence.new(Color3.fromRGB(225, 245, 255))
+    mist.Color = ColorSequence.new(look.Mist)
     mist.LightInfluence = 0.6
     mist.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2), NumberSequenceKeypoint.new(1, 7) })
     mist.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.82), NumberSequenceKeypoint.new(1, 1) })
@@ -788,8 +935,8 @@ function WorldBuilder.buildWaterfall(parent, lip, from)
 
     local spray = Instance.new("ParticleEmitter")
     spray.Name = "LipSpray"
-    spray.Color = ColorSequence.new(Color3.fromRGB(230, 250, 255))
-    spray.LightEmission = 0.3
+    spray.Color = ColorSequence.new(look.Spray)
+    spray.LightEmission = look.SprayEmission
     spray.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.18), NumberSequenceKeypoint.new(1, 0) })
     spray.Transparency = NumberSequence.new(0.2, 1)
     spray.Lifetime = NumberRange.new(0.5, 0.9)
@@ -801,12 +948,93 @@ function WorldBuilder.buildWaterfall(parent, lip, from)
     return holder
 end
 
+-- The lava river pouring off the island's edge (Placements.<island>.Lavafall).
+function WorldBuilder.buildLavafall(island)
+    local placements = placementsFor(island)
+    local model = WorldBuilder.islandFolder(island)
+    local old = model:FindFirstChild("Lavafall")
+    if old then
+        old:Destroy()
+    end
+    local centre = islandCentre(island)
+    local holder = WorldBuilder.buildWaterfall(model, centre + placements.Lavafall.Lip, centre + placements.Lavafall.From, WorldBuilder.Falls.Lava)
+    addLight(holder, Color3.fromRGB(255, 110, 30), 24, 1.4)
+    return holder
+end
+
 WorldBuilder.Relics = {
     IslandRoot = { Color = Color3.fromRGB(255, 165, 40) },
     GroveHeart = { Color = Color3.fromRGB(40, 230, 120) },
     JadeSeed = { Color = Color3.fromRGB(150, 255, 60) },
     WhisperingSpring = { Color = Color3.fromRGB(40, 220, 210) },
+    CalderaCrown = { Color = Color3.fromRGB(255, 70, 20) },
+    EmberHeart = { Color = Color3.fromRGB(255, 150, 30) },
+    AshenSigil = { Color = Color3.fromRGB(255, 200, 120) },
+    MoonMirror = { Color = Color3.fromRGB(150, 175, 255) },
+    StarWell = { Color = Color3.fromRGB(255, 225, 120) },
 }
+
+-- The Star Well brims with starlight: a glowing surface just under its gold lip, with starlight
+-- rising off it (Placements.<island>.StarWell). Terrain voxels are too coarse for an open shaft
+-- this narrow (smoothing caps a one-voxel hole), so the well is sealed by design.
+function WorldBuilder.buildStarWell(island)
+    local placements = placementsFor(island)
+    local model = WorldBuilder.islandFolder(island)
+    for _, name in { "StarWellLight", "StarFloor", "StarSurface" } do
+        local old = model:FindFirstChild(name)
+        if old then
+            old:Destroy()
+        end
+    end
+    local well = placements.StarWell
+    local centre = islandCentre(island)
+    local surface = Instance.new("Part")
+    surface.Name = "StarSurface"
+    surface.Shape = Enum.PartType.Cylinder
+    surface.Size = Vector3.new(0.4, (well.Radius + 0.3) * 2, (well.Radius + 0.3) * 2)
+    surface.CFrame = CFrame.new(centre + well.Mouth - Vector3.new(0, 0.45, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+    -- dark reflective glass that catches the sky, over a soft star-blue glow just beneath it
+    surface.Material = Enum.Material.Glass
+    surface.Color = Color3.fromRGB(18, 22, 64)
+    surface.Transparency = 0.25
+    surface.Reflectance = 0.35
+    surface.Anchored = true
+    surface.CanTouch = false
+    surface.CastShadow = false
+    surface.Parent = model
+    local depthGlow = surface:Clone()
+    depthGlow.Name = "Depth"
+    depthGlow.Material = Enum.Material.Neon
+    depthGlow.Color = Color3.fromRGB(50, 70, 210)
+    depthGlow.Transparency = 0.55
+    depthGlow.Reflectance = 0
+    depthGlow.CanCollide = false
+    depthGlow.CanQuery = false
+    depthGlow.Size = surface.Size * Vector3.new(1, 0.92, 0.92)
+    depthGlow.CFrame = surface.CFrame - Vector3.new(0, 1.2, 0)
+    depthGlow.Parent = surface
+
+    local stars = Instance.new("ParticleEmitter")
+    stars.Name = "Starlight"
+    stars.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    stars.EmissionDirection = Enum.NormalId.Right -- the cylinder's axis points up
+    stars.Shape = Enum.ParticleEmitterShape.Disc
+    stars.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+    stars.Color = ColorSequence.new(Color3.fromRGB(255, 235, 170), Color3.fromRGB(130, 160, 255))
+    stars.LightEmission = 1
+    stars.LightInfluence = 0
+    stars.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.45), NumberSequenceKeypoint.new(1, 0) })
+    stars.Transparency = NumberSequence.new(0.1, 1)
+    stars.Lifetime = NumberRange.new(2.5, 4)
+    stars.Speed = NumberRange.new(2, 4)
+    stars.SpreadAngle = Vector2.new(10, 10)
+    stars.Rotation = NumberRange.new(0, 360)
+    stars.RotSpeed = NumberRange.new(-60, 60)
+    stars.Rate = 14
+    stars.Parent = surface
+    addLight(surface, Color3.fromRGB(150, 170, 255), 18, 1.2)
+    return surface
+end
 
 -- Where WorldService returns a player who falls from this island (Placements.<island>.Checkpoint).
 function WorldBuilder.buildCheckpoint(island)

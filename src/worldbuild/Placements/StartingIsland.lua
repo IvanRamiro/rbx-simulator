@@ -180,5 +180,5 @@ return {
     Spawn = Vector3.new(0, 2.18, 0),
     SpringCentre = Vector3.new(44.85, 5.60, -40.50),
     SpillEnd = Vector3.new(66.00, 3.40, -55.80),
-    Relic = Vector3.new(12, -80, 6),
+    Relics = { IslandRoot = Vector3.new(12, -80, 6) },
 }

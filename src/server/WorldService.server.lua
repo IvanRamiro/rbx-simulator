@@ -1,6 +1,7 @@
 -- Spawning, fall safety and lighting for the floating-island world. Each island in
 -- Workspace.FloatingIslands provides a "Checkpoint" part (the Starting Island uses its
 -- "IslandSpawn"); a player who falls far below the island they last stood on returns there.
+local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 
@@ -49,15 +50,35 @@ end
 
 local function setupPlayer(player)
     lastIsland[player] = WorldConfig.StartIsland
-    player.RespawnLocation = checkpointOf(WorldConfig.StartIsland)
+    -- RespawnLocation needs the SpawnLocation itself, never a plain checkpoint part
+    player.RespawnLocation = islandsFolder[WorldConfig.StartIsland]:FindFirstChild("IslandSpawn")
 end
 
 applyLighting(WorldConfig.Lighting)
-assert(checkpointOf(WorldConfig.StartIsland), "Workspace." .. WorldConfig.FolderName .. "." .. WorldConfig.StartIsland .. " has no IslandSpawn")
+assert(islandsFolder:WaitForChild(WorldConfig.StartIsland):FindFirstChild("IslandSpawn"),
+    "Workspace." .. WorldConfig.FolderName .. "." .. WorldConfig.StartIsland .. " has no IslandSpawn")
+
+-- Lava and other hazards: touching one returns the player to their island's checkpoint.
+local lastBurn = {}
+local function watchHazard(part)
+    part.Touched:Connect(function(hit)
+        local character = hit.Parent
+        local player = character and Players:GetPlayerFromCharacter(character)
+        if player and os.clock() - (lastBurn[player] or 0) > 1 then
+            lastBurn[player] = os.clock()
+            returnToCheckpoint(character, lastIsland[player] or WorldConfig.StartIsland)
+        end
+    end)
+end
+CollectionService:GetInstanceAddedSignal(WorldConfig.HazardTag):Connect(watchHazard)
+for _, part in CollectionService:GetTagged(WorldConfig.HazardTag) do
+    watchHazard(part)
+end
 
 Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(function(player)
     lastIsland[player] = nil
+    lastBurn[player] = nil
 end)
 for _, player in Players:GetPlayers() do
     setupPlayer(player)

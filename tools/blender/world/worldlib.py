@@ -97,15 +97,17 @@ def export_heightfield(island, centre, cell, half_extent, sample, materials, pat
     The module holds Origin (world corner), Cell, Size, Heights (row-major, y offsets, 0 = none)
     and Materials (indices into the Materials list). Heights are stored relative to centre.Y.
     """
-    n = int(math.ceil(2 * half_extent / cell))
-    # Terrain:WriteVoxels needs the region on the world's 4-stud voxel grid
-    for corner in (centre[0] - half_extent, centre[2] - half_extent):
-        assert corner % 4 == 0, "grid corner %g is not on the 4-stud voxel grid; adjust half_extent" % corner
+    # Terrain:WriteVoxels needs the region on the world's 4-stud voxel grid, so each axis's grid
+    # corner is snapped down to it independently (the grid then covers the half extent and a bit)
+    corner_x = math.floor((centre[0] - half_extent) / cell) * cell
+    corner_z = math.floor((centre[2] - half_extent) / cell) * cell
+    n = int(math.ceil((centre[0] + half_extent - corner_x) / cell))
+    n = max(n, int(math.ceil((centre[2] + half_extent - corner_z) / cell)))
     heights, mats, waters = [], [], []
     for j in range(n):
         for i in range(n):
-            x = -half_extent + (i + 0.5) * cell
-            z = -half_extent + (j + 0.5) * cell
+            x = corner_x - centre[0] + (i + 0.5) * cell
+            z = corner_z - centre[2] + (j + 0.5) * cell
             h, m = sample(x, z)
             if h is not None and priority:
                 # a path or plaza that covers part of the cell wins over the base material,
@@ -133,7 +135,7 @@ def export_heightfield(island, centre, cell, half_extent, sample, materials, pat
         "return {",
         '    Island = "%s",' % island,
         "    Centre = Vector3.new(%g, %g, %g)," % centre,
-        "    Origin = Vector2.new(%g, %g), -- world X/Z of the grid's first corner" % (centre[0] - half_extent, centre[2] - half_extent),
+        "    Origin = Vector2.new(%g, %g), -- world X/Z of the grid's first corner" % (corner_x, corner_z),
         "    Cell = %d," % cell,
         "    Size = %d," % n,
         "    Materials = { %s }," % ", ".join('"%s"' % m for m in materials),
@@ -345,7 +347,17 @@ class MeshBuilder:
         return rings
 
     def object(self, name, coll, mat, smooth=False):
-        return mesh_object(name, self.verts, self.faces, coll, uvs=self.uvs, smooth=smooth, material=mat)
+        o = mesh_object(name, self.verts, self.faces, coll, uvs=self.uvs, smooth=smooth, material=mat)
+        if smooth:
+            # every face was built with its own corners; weld them so shading flows across faces
+            bm = bmesh.new()
+            bm.from_mesh(o.data)
+            bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.001)
+            bm.to_mesh(o.data)
+            bm.free()
+            for poly in o.data.polygons:
+                poly.use_smooth = True
+        return o
 
 
 TAU_ = 2 * math.pi
