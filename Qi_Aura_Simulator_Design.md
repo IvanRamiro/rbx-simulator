@@ -448,17 +448,55 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 
 ### Egg designs
 
-- **Source:** modelled in Blender after the concept art (`tools/blender/eggs/Eggs.blend`, preview `Eggs_preview.png`) and exported to `assets/eggs/<EggId>.fbx`.
-- **In Studio:** egg models are imported into `ServerStorage.EggMeshes`, named by egg ID.
-- **Families:** each island has one design family. The second egg adds a jewelled gold band, and the third a crown and floating halo.
+- **Source:** the 15-egg concept sheet. Each island's eggs are modelled in Blender by a script (`tools/blender/eggs/eggs_<island>.py`, shared helpers in `egg_kit.py`, preview renders by `egg_render.py`) and exported to `assets/eggs/<EggId>.fbx`. An export holds an `<EggId>_Body` mesh coloured by an atlas (`<EggId>_atlas.png`) and `<EggId>_Glow_<hex>` parts, which become Neon in that colour.
+- **In Studio:** an imported egg is stored with `WorldBuilder.storeEgg(model, eggId)` in `ServerStorage.EggMeshes.<EggId>`. `buildEggStands` places it at 1.3 studs per egg unit.
+- **Recreated so far:** the three Starting Island eggs. The other twelve keep the older family designs below until they are recreated from the sheet.
+
+| Egg | Design |
+|---|---|
+| Beginner Qi Egg | Cut blue crystal: long irregular facets in six blues, from ice-white to cobalt, with Qi light glowing along the cuts from a core inside |
+| Spirit Breeze Egg | Sky-blue porcelain brushed with white wind bands, a gold crescent swirl on its shoulder holding a glowing breeze sigil, resting on a bed of gold-rimmed auspicious clouds |
+| Elemental Core Egg | Dark cracked stone in an angular gold cage (belt, raised plates, straps and a clawed crown), a large cyan core crystal set in its front, smaller gems round the belt, Qi light seeping through the cracks |
+
+**Older family designs** (`tools/blender/eggs/Eggs.blend`, preview `Eggs_preview.png`): each island has one design family. The second egg adds a jewelled gold band, and the third a crown and floating halo.
 
 | Island | Design |
 |---|---|
-| Starting Island | Pearl egg wrapped in leafy vines, glowing Qi swirl on the front |
 | Jade Grove | Faceted crystal egg held by golden roots with flowers, glowing leaf emblem |
 | Ember Peak | Dark volcanic plates with lava glowing through the cracks, flame emblem, crystals at the base |
 | Moonlit Isle | Porcelain egg with gold filigree, glowing star inlay, small wings and an orbiting gold ring |
 | Origin Abyss | Obsidian plates cracked with void light, spiral void core, thorny bronze branches |
+
+### Egg auras
+
+Every egg on its stand has its own aura, built in the Workspace from particle emitters, trails, beams, billboards, glowing image planes and lights, with no meshes and no flipbooks, so it can be tuned in Studio and with VFX Studio.
+
+- **Built by** `src/worldbuild/EggAuraVFX.lua`, one recipe per egg: `VFX.build("<Island>")` rebuilds `FloatingIslands.<Island>.EggAuras`. Each aura is a Model tagged `EggAura` that streams in whole.
+- **Animated by** `src/client/EggAura.lua`, from attributes on the instances (listed in both modules' headers), so an aura tuned by hand keeps working.
+- **Tuning:** tune an aura on its instances in Studio, then copy the values into its recipe, so a rebuild keeps them.
+- **Depth and rhythm, never flat:**
+  - No two orbiting pieces share a speed, radius and plane. Some run the other way, and each bobs on its own period.
+  - Rings precess (`Wobble`) as they spin.
+  - Ribbons shed dust or feathers from their heads, which leaves spiral wakes.
+  - Mist and an updraft column give the aura volume.
+  - The whole aura breathes (`Breath`, `BreathPeriod`): speed, glow and ring size swell and ease back. The breath is calm on Beginner Qi (5 s), gusty on Spirit Breeze (3.5 s) and a quick thrum on Elemental Core (2.5 s).
+- **Idle and hatch** (no periodic pulse: the owner judged it unnecessary):
+  - Idle: everything turns, orbits, drifts and emits on its own timing.
+  - Hatch, in two parts. First the aura gathers: everything speeds up and draws in, energy is pulled into the egg, and the egg glows in the aura's tint. Then it bursts: the rings fling outward, ripples run across the rim, and the egg flashes.
+- **Hatch hook:** on a successful hatch, `PetController` calls `EggAura.hatch(eggId)`. It plays at the player's nearest stand of that egg.
+- **Cost:** full emission within 90 studs of the camera, half rates to 200, off beyond that. Each aura's textures are preloaded when it streams in.
+- **Textures:** VFX Studio's library, the PDS kit, and our own, drawn and rendered by `tools/blender/vfx/egg_aura_textures.py` into `assets/vfx/eggs/`.
+- **Measured in Play:**
+  - Flat (VelocityPerpendicular) particles do not render in these auras, so every flat element is a SurfaceGui image plane. Rings have the image on both faces.
+  - A ring must dip its front toward the viewer, or it goes edge-on from the usual camera height.
+  - Additive beams (LightEmission 1) wash out to white in daylight, so the element streams use 0.35.
+  - VFX Studio's hairline rings are too faint in daylight, so the rings use bolder textures of our own.
+
+| Egg | Breath | Aura |
+|---|---|---|
+| Beginner Qi | 5 s, calm | **Calm Qi.** A lotus mandala turns beneath. A bold Qi ring with comet streaks and a broken ring of breath cross on diagonals, and two silk Qi arcs glide round. Three blue crystal shards (modelled and rendered in Blender) drift round, rocking. Motes rise like breath, with star glints and a soft halo. |
+| Spirit Breeze | 3.5 s, gusty | **Wind.** A wind-rose sigil turns beneath. Light-blue and white wind rings (two crescent gusts and a broken ring of breeze) whirl on three planes. Three white wind trails spiral up and down, auspicious clouds drift off the rim, and feathers ride the updraught. |
+| Elemental Core | 2.5 s, a thrum | **Concentrated elements.** The five-element sigil and a gold mandala turn against each other beneath. Four element streams (cyan, gold, blue, amber) rise off the formation into a turning cage of light that meets above the crown. Round the egg are a gyroscope of three gold element bands, four element orbs racing round with trails, blue and gold motes, and sparks off the core. On the hatch the core gem flares. |
 
 **Egg stands today:** each island has a shrine with three stands where eggs are hatched directly. Under the planned guardian loop, eggs come from guardians instead; the stands' future role is an open question (section 9).
 

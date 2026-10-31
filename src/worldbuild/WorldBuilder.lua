@@ -12,6 +12,11 @@
 --   -- every import uploads its own copy of the island atlas: point all pieces at one copy, either
 --   -- with WB.shareTexture or by setting TextureID on the templates and island meshes
 --   WB.placeKit(island); WB.buildEggStands(island); WB.buildRelics(island)
+--
+-- Eggs (assets/eggs/<EggId>.fbx), imported by hand into Workspace:
+--   WB.storeEgg(<import>, eggId)       -- into ServerStorage.EggMeshes (replacing the old model)
+-- then rebuild the stands of the eggs' island with WB.buildEggStands(island), and their auras
+-- with require(game.ServerStorage.WorldBuild.EggAuraVFX:Clone()).build(island).
 -- then the island's own pieces:
 --   Starting Island: WB.buildWaystones, WB.buildSpawn, WB.buildQiSpring
 --   every other island: WB.buildCheckpoint(island)
@@ -22,6 +27,7 @@ local ServerStorage = game:GetService("ServerStorage")
 
 -- cloned so edits to GameConfig are never served from Studio's require cache
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"):Clone())
+local EggAuraVFX = require(ServerStorage:WaitForChild("WorldBuild"):WaitForChild("EggAuraVFX"):Clone())
 
 local WorldBuilder = {}
 
@@ -748,13 +754,35 @@ local function placeEgg(stand, eggId, bottom, facing)
             part.CanTouch = false
             part.CastShadow = false
             part.Parent = stand
-            if not hex and not primary then
-                primary = part
+            if not hex and (not primary or original.Name == eggId .. "_Body") then
+                primary = part   -- the egg's body is its main part; any other plain part is trim
             end
         end
     end
     primary.Name = "Egg"
     return primary
+end
+
+-- Replaces ServerStorage.EggMeshes.<eggId> with an imported egg model (its parts keep their
+-- names: <EggId>_Body and <EggId>_Glow_<hex>).
+function WorldBuilder.storeEgg(model, eggId)
+    assert(model:FindFirstChild(eggId .. "_Body", true), "the import has no " .. eggId .. "_Body")
+    local folder = ServerStorage:FindFirstChild("EggMeshes")
+    local old = folder:FindFirstChild(eggId)
+    if old then
+        old:Destroy()
+    end
+    local stored = Instance.new("Model")
+    stored.Name = eggId
+    for _, part in model:GetDescendants() do
+        if part:IsA("MeshPart") then
+            part.Anchored = true
+            part.Parent = stored
+        end
+    end
+    model:Destroy()
+    stored.Parent = folder
+    return #stored:GetChildren()
 end
 
 function WorldBuilder.buildEggStands(island)
@@ -778,9 +806,14 @@ function WorldBuilder.buildEggStands(island)
         ring.Name = "GlowRing"
         ring.Color = glow
 
-        local egg = placeEgg(stand, entry.EggId, frame.Position + Vector3.new(0, entry.EggRest, 0), frame.LookVector * -1)
+        local rest = frame.Position + Vector3.new(0, entry.EggRest, 0)
+        local egg = placeEgg(stand, entry.EggId, rest, frame.LookVector * -1)
         addLight(egg, glow, 12, 1.2)
-        addSparkles(egg, glow, 4)
+        -- the egg's aura is built round this point, facing the egg's front (EggAuraVFX)
+        stand:SetAttribute("AuraOrigin", CFrame.lookAt(rest, rest - frame.LookVector))
+        if not EggAuraVFX.has(entry.EggId) then
+            addSparkles(egg, glow, 4)   -- eggs without an aura of their own yet
+        end
 
         local prompt = Instance.new("ProximityPrompt")
         prompt.ActionText = "Hatch"

@@ -7,6 +7,7 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent:WaitForChild("HudScale"))
 local Toast = require(script.Parent:WaitForChild("Toast"))
+local EggAura = require(script.Parent:WaitForChild("EggAura")) -- also animates the egg auras
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -243,6 +244,7 @@ local function onHatchResult(result)
         showMessage("Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets).", Color3.new(1, 1, 1))
     else
         local definition = GameConfig.Pets[result.PetId]
+        EggAura.hatch(result.EggId)
         if definition then
             local rarityColor = GameConfig.PetRarityColors[definition.Rarity] or Color3.new(1, 1, 1)
             local text = "You hatched a " .. definition.DisplayName .. "! ("
