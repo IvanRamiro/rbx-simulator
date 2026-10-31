@@ -2,10 +2,10 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Discoveries = require(script.Parent:WaitForChild("Discoveries"))
-local IslandBuilder = require(script.Parent:WaitForChild("IslandBuilder"))
 local PlayerData = require(script.Parent:WaitForChild("PlayerData"))
 
 local PROMPT_DISTANCE_TOLERANCE = 6
@@ -91,8 +91,8 @@ local function setupPlayer(player)
     publishFound(player)
 end
 
-CollectionService:GetInstanceAddedSignal(IslandBuilder.RELIC_TAG):Connect(connectRelic)
-for _, model in CollectionService:GetTagged(IslandBuilder.RELIC_TAG) do
+CollectionService:GetInstanceAddedSignal(GameConfig.RelicTag):Connect(connectRelic)
+for _, model in CollectionService:GetTagged(GameConfig.RelicTag) do
     connectRelic(model)
 end
 

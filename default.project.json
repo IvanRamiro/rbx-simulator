@@ -23,6 +23,9 @@
       "EggMeshes": {
         "$className": "Folder",
         "$ignoreUnknownInstances": true
+      },
+      "WorldBuild": {
+        "$path": "src/worldbuild"
       }
     },
     "StarterPlayer": {

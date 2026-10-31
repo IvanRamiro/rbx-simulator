@@ -5,3 +5,6 @@
 
 # Blender working file (each pet is saved to tools/blender/<PetId>.blend)
 Untitled.blend
+
+# Python bytecode from the Blender world scripts
+__pycache__/

@@ -4,7 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
-local IslandConfig = require(script.Parent:WaitForChild("IslandConfig"))
+local WorldConfig = require(script.Parent:WaitForChild("WorldConfig"))
 local PetInventory = require(script.Parent:WaitForChild("PetInventory"))
 local PlayerData = require(script.Parent:WaitForChild("PlayerData"))
 
@@ -157,8 +157,8 @@ for _, player in Players:GetPlayers() do
 end
 
 task.spawn(function()
-    local island = workspace:WaitForChild(IslandConfig.ModelName)
-    local station = island:WaitForChild(IslandConfig.TrainingStation.ModelName)
+    local island = workspace:WaitForChild(WorldConfig.FolderName):WaitForChild(WorldConfig.StartIsland)
+    local station = island:WaitForChild("QiSpring")
     stationCenter = station:WaitForChild("SpringWater").Position
 end)
 
