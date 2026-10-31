@@ -177,6 +177,12 @@ def bake(egg_id, hi_objects, low, size=1024, small=512, samples=12, extrusion=0.
     scene.render.engine = "CYCLES"
     scene.cycles.samples = samples
     hi_mats = {m for o in hi_objects for m in o.data.materials if m}
+    # the game mesh sits on the high-detail surface: hidden from rays while baking (the shaders'
+    # ambient occlusion is local to each piece for the same reason, see egg_hi)
+    rays = ("visible_camera", "visible_diffuse", "visible_glossy", "visible_transmission", "visible_volume_scatter", "visible_shadow")
+    saved_rays = {r: getattr(low, r) for r in rays}
+    for r in rays:
+        setattr(low, r, False)
     passes = [("color", "DIFFUSE", None), ("normal", "NORMAL", None), ("roughness", "EMIT", "BAKE_ROUGH"), ("metalness", "EMIT", "BAKE_METAL")]
     try:
         for key, kind, route in passes:
@@ -200,6 +206,8 @@ def bake(egg_id, hi_objects, low, size=1024, small=512, samples=12, extrusion=0.
                     restore()
     finally:
         scene.render.engine = engine
+        for r, v in saved_rays.items():
+            setattr(low, r, v)
     wire_baked(mat)
     os.makedirs(EGG_DIR, exist_ok=True)
     for key, img in images.items():

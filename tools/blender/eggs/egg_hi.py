@@ -281,8 +281,9 @@ class _Graph:
         return nd.outputs[2]
 
     def ao(self, color, distance=0.12, floor=0.4):
-        """Darkens crevices: the ambient occlusion is baked into the colour map."""
-        a = self.n("ShaderNodeAmbientOcclusion", samples=16)
+        """Darkens crevices: the ambient occlusion is baked into the colour map. Local to each piece:
+        while baking, the game mesh lies on the surface and would occlude everything."""
+        a = self.n("ShaderNodeAmbientOcclusion", samples=16, only_local=True)
         a.inputs["Distance"].default_value = distance
         k = self.math("MULTIPLY_ADD", a.outputs["AO"], 1 - floor)
         k.node.inputs[2].default_value = floor
@@ -414,7 +415,7 @@ def mat_leaf(name="EggLeaf", base=(0.04, 0.24, 0.05), mid=(0.16, 0.52, 0.12), ti
     return g.finish(col, 0.5, 0.0, nrm)
 
 
-def mat_crystal(name="EggBlossomCrystal", stops=None, vein=(0.95, 0.68, 0.22)):
+def mat_crystal(name="EggBlossomCrystal", stops=None, vein=(0.95, 0.68, 0.22), crown=(1.0, 0.86, 0.93)):
     """Faceted blossom crystal (pink by default): a tone per facet, paler toward the crown,
     bevelled edges, and fine gold veins running through it like mended cracks (metallic)."""
     g = _Graph(name)
@@ -423,7 +424,7 @@ def mat_crystal(name="EggBlossomCrystal", stops=None, vein=(0.95, 0.68, 0.22)):
     col = g.ramp(geo.outputs["Random Per Island"], stops)
     co = g.coords()
     z = g.sep(co)[2]
-    col = g.mix(g.math("MULTIPLY", g.math("SUBTRACT", z, 1.4, clamp=True), 0.3), col, (1.0, 0.86, 0.93))
+    col = g.mix(g.math("MULTIPLY", g.math("SUBTRACT", z, 1.4, clamp=True), 0.3), col, crown)
     vn = g.n("ShaderNodeTexNoise", **{"Scale": 1.3, "Detail": 3.0, "Roughness": 0.45, "Distortion": 0.3})
     g.link(co, vn.inputs["Vector"])
     vmask = g.math("LESS_THAN", g.math("ABSOLUTE", g.math("SUBTRACT", vn.outputs["Fac"], 0.5)), 0.007)
@@ -520,3 +521,55 @@ def mat_gold(name="EggGold"):
     col = g.ao(col, 0.05, 0.35)
     # 0.6, not 1: fully metallic gold shows black wherever it has nothing bright to reflect
     return g.finish(col, 0.32, 0.6, g.bump(n.outputs["Fac"], 0.1, 0.004))
+
+
+def mat_obsidian(name="EggObsidian", tones=None, vein=(1.0, 0.3, 0.02), vein_hot=(1.0, 0.68, 0.12), heat=(0.85, 0.16, 0.02)):
+    """Volcanic rock plates: each plate its own dark tone (random per island), a faint glassy
+    sheen, thin branching veins of molten lava running across them (bright orange with a yellow
+    core), and the plates' edges and crevices heated red (ambient occlusion turned to heat)."""
+    g = _Graph(name)
+    geo = g.n("ShaderNodeNewGeometry")
+    tones = tones or [(0.0, (0.012, 0.008, 0.007)), (0.5, (0.028, 0.019, 0.016)), (1.0, (0.05, 0.034, 0.028))]
+    col = g.ramp(geo.outputs["Random Per Island"], tones)
+    co = g.coords()
+    mott = g.n("ShaderNodeTexNoise", **{"Scale": 9.0, "Detail": 6.0, "Roughness": 0.6})
+    g.link(co, mott.inputs["Vector"])
+    col = g.mix(g.math("MULTIPLY", mott.outputs["Fac"], 0.5), col, tuple(c * 2.2 + 0.01 for c in tones[-1][1]))
+    # lava veins: thin ridges of a distorted noise, branching across the plates
+    vn = g.n("ShaderNodeTexNoise", **{"Scale": 2.2, "Detail": 4.0, "Roughness": 0.5, "Distortion": 0.4})
+    g.link(co, vn.inputs["Vector"])
+    patch = g.n("ShaderNodeTexNoise", **{"Scale": 1.6, "Detail": 2.0})      # veins run only in patches
+    g.link(co, patch.inputs["Vector"])
+    on_patch = g.math("GREATER_THAN", patch.outputs["Fac"], 0.5)
+    d = g.math("ABSOLUTE", g.math("SUBTRACT", vn.outputs["Fac"], 0.5))
+    vein_m = g.math("MULTIPLY", g.math("LESS_THAN", d, 0.013), on_patch)
+    core_m = g.math("MULTIPLY", g.math("LESS_THAN", d, 0.005), on_patch)
+    col = g.mix(vein_m, col, vein)
+    col = g.mix(core_m, col, vein_hot)
+    # heat: crevices (where the plates meet the glowing core) glow red instead of going dark
+    ao = g.n("ShaderNodeAmbientOcclusion", samples=16, only_local=True)
+    ao.inputs["Distance"].default_value = 0.16
+    hot = g.math("POWER", g.math("SUBTRACT", 1.0, ao.outputs["AO"], clamp=True), 0.55)
+    col = g.mix(g.math("MINIMUM", g.math("MULTIPLY", hot, 1.4), 1.0), col, heat)
+    bevel = g.n("ShaderNodeBevel", samples=8)
+    bevel.inputs["Radius"].default_value = 0.02
+    nrm = g.bump(g.math("ADD", g.math("MULTIPLY", mott.outputs["Fac"], 0.6), g.math("MULTIPLY", vein_m, -0.5)), 0.4, 0.008, bevel.outputs["Normal"])
+    return g.finish(col, g.math("ADD", 0.3, g.math("MULTIPLY", mott.outputs["Fac"], 0.25)), 0.0, nrm)
+
+
+def mat_feather(name="EggFeather", base=(0.62, 0.04, 0.015), mid=(1.0, 0.3, 0.03), tip=(1.0, 0.68, 0.12)):
+    """A flame feather (UV u across, v along): fiery red at its root through orange to pale gold
+    at its tip, a pale shaft down the middle, fine barbs angled up from the shaft, the edges
+    darker."""
+    g = _Graph(name)
+    u, v, _ = g.sep(g.coords("UV"))
+    col = g.ramp(v, [(0.0, base), (0.4, mid), (0.85, tip), (1.0, tuple(min(1.0, c * 1.4 + 0.05) for c in tip))])
+    du = g.math("ABSOLUTE", g.math("SUBTRACT", u, 0.5))
+    shaft = g.math("LESS_THAN", du, 0.03)
+    barbs = g.math("LESS_THAN", g.math("MODULO", g.math("MULTIPLY", g.math("SUBTRACT", v, g.math("MULTIPLY", du, 0.9)), 30.0), 1.0), 0.28)
+    col = g.mix(g.math("MULTIPLY", barbs, 0.4), col, tuple(c * 0.45 for c in mid))
+    col = g.mix(g.math("MULTIPLY", shaft, 0.7), col, tuple(min(1.0, c * 1.2 + 0.05) for c in tip))
+    col = g.mix(g.math("MULTIPLY", g.math("GREATER_THAN", du, 0.42), 0.5), col, tuple(c * 0.6 for c in base))
+    col = g.ao(col, 0.05, 0.45)
+    nrm = g.bump(g.math("ADD", barbs, g.math("MULTIPLY", shaft, 2.0)), 0.3, 0.004)
+    return g.finish(col, 0.45, 0.0, nrm)

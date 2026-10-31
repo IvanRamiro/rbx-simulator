@@ -13,7 +13,8 @@
 --     with GatherRate pull energy in, the egg glows in the aura's Tint), then bursts: emitters
 --     with HatchEmit fire, the rings fling outward and the egg flashes.
 -- The aura breathes (model attributes Breath, a fraction, and BreathPeriod, in
--- seconds): its speed, glow and ring size swell and ease back in a slow rhythm.
+-- seconds): its speed, glow and ring size swell and ease back in a slow rhythm. BreathShape
+-- "Heartbeat" makes it beat instead: a double thump, then a rest.
 -- Auras run at full rate near the camera, half rate further out, and switch off beyond that.
 local CollectionService = game:GetService("CollectionService")
 local ContentProvider = game:GetService("ContentProvider")
@@ -201,10 +202,22 @@ local function emitAll(state, attribute)
     end
 end
 
+-- The breath at time `now`, from -1 to 1: a smooth swell, or with BreathShape "Heartbeat" a
+-- double thump (lub-dub) and a rest.
+local function breathAt(ma, now, phase)
+    local t = now / (ma.BreathPeriod or 4) + phase / TAU
+    if ma.BreathShape == "Heartbeat" then
+        local p = t % 1
+        local beat = math.exp(-((p - 0.08) / 0.05) ^ 2) + 0.65 * math.exp(-((p - 0.26) / 0.05) ^ 2)
+        return beat * 2 - 0.5
+    end
+    return math.sin(t * TAU)
+end
+
 local function step(state, dt, now)
     updateSurge(state, now)
     local ma = state.modelAttrs.A
-    local breath = (ma.Breath or 0) * math.sin(now * TAU / (ma.BreathPeriod or 4) + state.breathPhase)
+    local breath = (ma.Breath or 0) * breathAt(ma, now, state.breathPhase)
     local speed = state.speed * (1 + breath)
     local glow = state.glow * (1 + breath * 0.6)
     local swell = state.swell + breath * 2

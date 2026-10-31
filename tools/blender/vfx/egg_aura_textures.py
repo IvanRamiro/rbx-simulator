@@ -22,6 +22,16 @@ Jade Grove formations:
   (VFX Studio's swirl vortex and radial burst have no alpha, only white on black, so they cannot
   sit on a SurfaceGui plane: these replace them.)
 
+Ember Peak formations and particles:
+- SigilFissure (Inferno): a caldera: broken rings of crust round a molten eye, jagged fissures
+  branching out through them.
+- SigilCrystalForge (Magma Heart): six long crystal points round an inner hexagon, a ring of
+  forge ticks, and a molten heart.
+- SigilPhoenix (Phoenix Ash): a phoenix with spread wings of feathers and a long tail, inside a
+  ring of flame tongues licking outward.
+- AuraFlameTongue: one flame tongue, hot at its root, curling as it rises (single frame).
+- AuraRock: a chunk of obsidian with lava veins, modelled and rendered in Blender.
+
 Rings:
 - AuraQiRing (Beginner Qi): a bold band of Qi with a fine inner thread strung with Qi beads, and six comet streaks
   riding just outside it, so the ring visibly flows as it turns (bold enough to read in daylight,
@@ -301,6 +311,124 @@ def bloom_light(size=768):
     return save("AuraBloomLight", np.clip(a + glow(a, 6) * 0.3, 0, 1))
 
 
+def sigil_fissure(size=768):
+    x, y = grid(size)
+    r, th = np.hypot(x, y), np.arctan2(y, x)
+    px = 2.0 / size
+    rng = np.random.default_rng(111)
+    a = np.zeros_like(x)
+    # broken rings of crust: arcs with gaps, each ring at its own wobble
+    for k, (rr, gaps) in enumerate(((0.3, 5), (0.55, 7), (0.8, 9))):
+        wob = rr * (1 + 0.04 * np.sin(th * (3 + k) + k))
+        keep = (np.sin(th * gaps + k * 1.7) > -0.55)
+        a = np.maximum(a, line(r - wob, 0.016 - 0.003 * k, 2 * px) * keep)
+    a = np.maximum(a, line(r - 0.95, 0.01, 2 * px))
+    # jagged fissures branching outward from the eye
+    for k in range(9):
+        ang = k * math.tau / 9 + rng.uniform(-0.2, 0.2)
+        pts = [(0.12 * math.cos(ang), 0.12 * math.sin(ang))]
+        a_ = ang
+        for i in range(9):
+            a_ += rng.uniform(-0.55, 0.55)
+            px_, py_ = pts[-1]
+            pts.append((px_ + 0.095 * math.cos(a_), py_ + 0.095 * math.sin(a_)))
+        for i, ((ax, ay), (bx, by)) in enumerate(zip(pts, pts[1:])):
+            a = np.maximum(a, line(segment(x, y, ax, ay, bx, by), 0.024 * (1 - i / 10) + 0.004, 2 * px))
+        if k % 2 == 0:
+            bx0, by0 = pts[4]
+            b_ = a_ + rng.choice([-0.9, 0.9])
+            prev = (bx0, by0)
+            for i in range(3):
+                nxt = (prev[0] + 0.08 * math.cos(b_), prev[1] + 0.08 * math.sin(b_))
+                a = np.maximum(a, line(segment(x, y, prev[0], prev[1], nxt[0], nxt[1]), 0.012 * (1 - i / 4), 2 * px))
+                prev = nxt
+                b_ += rng.uniform(-0.4, 0.4)
+    a = np.maximum(a, 1 - smoothstep(0.07, 0.11, r))           # the molten eye
+    a *= 1 - smoothstep(0.96, 0.99, r)
+    return save("SigilFissure", np.clip(a + glow(a, 6) * 0.6, 0, 1))
+
+
+def sigil_crystal_forge(size=768):
+    x, y = grid(size)
+    r, th = np.hypot(x, y), np.arctan2(y, x)
+    px = 2.0 / size
+    a = np.maximum(line(r - 0.94, 0.012, 2 * px), line(r - 0.88, 0.006, 2 * px))
+    for k in range(36):                                          # forge ticks between the rings
+        ang = k * math.tau / 36
+        rel = np.abs(((th - ang + math.pi) % math.tau) - math.pi)
+        a = np.maximum(a, (rel < 0.012 + 0.008 * (k % 3 == 0)) * (r > 0.885) * (r < 0.935) * 1.0)
+    for k in range(6):                                           # six crystal points, faceted
+        ang = k * math.tau / 6 + math.pi / 2
+        dx, dy = math.cos(ang), math.sin(ang)
+        u = x * dx + y * dy
+        v = -x * dy + y * dx
+        t = (u - 0.24) / 0.6
+        half = 0.11 * (1 - np.abs(2 * t - 0.6) / 1.4).clip(0, 1) ** 0.9
+        inside = (t > 0) * (t < 1) * (np.abs(v) < half)
+        a = np.maximum(a, line(np.abs(v) - half, 0.012, 2 * px) * (t > 0) * (t < 1))
+        a = np.maximum(a, line(v, 0.006, px) * (t > 0.05) * (t < 0.95) * 0.8)      # the facet ridge
+        a = np.maximum(a, inside * 0.22)
+    hexd = np.maximum.reduce([np.abs(x * math.cos(k * math.pi / 3) + y * math.sin(k * math.pi / 3)) for k in range(3)])
+    a = np.maximum(a, line(hexd - 0.22, 0.012, 2 * px))
+    a = np.maximum(a, 1 - smoothstep(0.08, 0.12, r))
+    a *= 1 - smoothstep(0.96, 0.99, r)
+    return save("SigilCrystalForge", np.clip(a + glow(a, 5) * 0.55, 0, 1))
+
+
+def sigil_phoenix(size=768):
+    x, y = grid(size)
+    r, th = np.hypot(x, y), np.arctan2(y, x)
+    px = 2.0 / size
+    # a ring of flame tongues licking outward
+    tongues = 0.86 + 0.07 * np.abs(np.sin(th * 12)) ** 3
+    a = line(r - 0.78, 0.012, 2 * px)
+    a = np.maximum(a, line(r - tongues, 0.01, 2 * px) * (np.abs(np.sin(th * 12)) > 0.15))
+    a = np.maximum(a, (r > 0.78) * (r < tongues) * 0.18)
+    # the phoenix: body down the middle, head with a crest, two wings of feathers fanning up and out
+    body = (x / 0.075) ** 2 + ((y - 0.02) / 0.24) ** 2
+    a = np.maximum(a, 1 - smoothstep(0.85, 1.0, body))                                             # body
+    a = np.maximum(a, 1 - smoothstep(0.05, 0.065, np.hypot(x, y - 0.3)))                           # head
+    for k, ang in enumerate((1.4, 1.65, 1.9)):                                                    # crest
+        dx, dy = math.cos(ang), math.sin(ang)
+        u = x * dx + (y - 0.33) * dy
+        v = -x * dy + (y - 0.33) * dx
+        a = np.maximum(a, (1 - smoothstep(0.008, 0.016, np.abs(v) + 0.03 * np.clip(u / 0.16, 0, 1))) * (u > 0) * (u < 0.16))
+    for side in (1, -1):
+        for k in range(7):                                                                          # wing feathers
+            ang = math.radians(8 + 11 * k)                     # spread out sideways and up
+            dx, dy = side * math.cos(ang), math.sin(ang)
+            bx, by = side * 0.06, 0.1
+            u = (x - bx) * dx + (y - by) * dy
+            v = -(x - bx) * dy + (y - by) * dx
+            length = 0.34 + 0.3 * math.sin(math.pi * (k + 1) / 8)
+            t = np.clip(u / length, 0, 1)
+            half = 0.045 * np.sin(np.pi * t) ** 0.8
+            a = np.maximum(a, (1 - smoothstep(half * 0.7, half, np.abs(v))) * (u > 0) * (u < length) * 0.85)
+    for k in range(5):                                                                              # tail
+        ang = -math.pi / 2 + (k - 2) * 0.22
+        dx, dy = math.cos(ang), math.sin(ang)
+        u = x * dx + (y + 0.17) * dy
+        v = -x * dy + (y + 0.17) * dx
+        length = 0.42 - 0.06 * abs(k - 2)
+        t = np.clip(u / length, 0, 1)
+        half = 0.035 * np.sin(np.pi * t) ** 0.7
+        a = np.maximum(a, (1 - smoothstep(half * 0.7, half, np.abs(v))) * (u > 0) * (u < length) * 0.8)
+    a *= 1 - smoothstep(0.95, 0.99, r)
+    return save("SigilPhoenix", np.clip(a + glow(a, 5) * 0.5, 0, 1))
+
+
+def flame_tongue(size=256):
+    x, y = grid(size)
+    t = np.clip((y + 0.85) / 1.75, 0, 1)                             # 0 at its root, 1 at its tip
+    sway = 0.13 * np.sin(t * 5.0) * t ** 1.3
+    half = 0.36 * np.sqrt(np.sin(np.pi * np.clip(t * 0.92 + 0.08, 0, 1))) * (1 - 0.55 * t)
+    d = np.abs(x - sway)
+    body = (1 - smoothstep(half * 0.5, half + 0.02, d)) * (y > -0.85)
+    a = body * (1 - t) ** 0.6 * smoothstep(0.0, 0.1, t)             # hottest (most opaque) near the root
+    a = np.maximum(a, (1 - smoothstep(0.0, half * 0.45, d)) * (1 - t) ** 1.5 * smoothstep(0.0, 0.1, t))
+    return save("AuraFlameTongue", np.clip(a, 0, 1))
+
+
 def petal(size=256):
     x, y = grid(size)
     t = np.clip((y + 0.92) / 1.84, 0, 1)                        # base near the bottom, tip near the top
@@ -341,6 +469,33 @@ def feather(size=256):
     shaft = line(xs, 0.025, 0.01) * (t > 0.02)
     a = np.maximum(vane * barbs * (t > 0.08) * 0.85, shaft)
     return save("AuraFeather", np.clip(a + glow(a, 2) * 0.3, 0, 1))
+
+
+def rock(size=256):
+    """Renders a chunk of obsidian with lava veins (a real Blender mesh with the eggs' obsidian
+    shader) to a transparent PNG, for rock billboards and debris particles."""
+    import sys
+    sys.path.insert(0, os.path.join(Q.REPO, "tools", "blender", "eggs"))
+    import bpy
+    import egg_hi as Hm
+    import egg_render as R
+    import eggs_ember as E
+    coll = bpy.data.collections.get("VFXSprites") or bpy.data.collections.new("VFXSprites")
+    old = bpy.data.objects.get("AuraRockMesh")
+    if old:
+        bpy.data.objects.remove(old)
+    hi = Hm.Hi()
+    E.rock(hi, (0, 0.4, 0), 0.45, seed=7, stretch=(1.0, 0.8, 0.9), n=18)
+    obj = hi.object("AuraRockMesh", coll, [Hm.mat_obsidian("AuraRockMat")], smooth=False, weld=0)
+    scene = R.lab()
+    scene.render.film_transparent = True
+    path = os.path.join(OUT, "AuraRock.png")
+    from mathutils import Vector
+    corners = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
+    centre = sum(corners, Vector()) / 8
+    R.render([obj], path, view="three_quarter", size=(size, size), centre=tuple(centre), distance=2.3, cycles=32)
+    scene.render.film_transparent = False
+    return path
 
 
 def cloud(size=512):
@@ -384,4 +539,4 @@ def crystal(size=512):
 
 
 def build_all():
-    return [sigil_wind_rose(), sigil_wuxing(), sigil_jade_leaf(), sigil_blossom(), sigil_tree_rings(), petal(), blossom(), vortex(), bloom_light(), qi_ring(), element_band(), stream(), feather(), cloud(), crystal()]
+    return [sigil_wind_rose(), sigil_wuxing(), sigil_jade_leaf(), sigil_blossom(), sigil_tree_rings(), petal(), blossom(), vortex(), bloom_light(), sigil_fissure(), sigil_crystal_forge(), sigil_phoenix(), flame_tongue(), rock(), qi_ring(), element_band(), stream(), feather(), cloud(), crystal()]

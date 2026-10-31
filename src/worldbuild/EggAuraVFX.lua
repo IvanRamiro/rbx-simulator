@@ -69,6 +69,15 @@ local T = {
     BloomLight = "rbxassetid://80600586960187",  -- QA: a bloom of light, rays in petal-shaped lobes
     -- (VFX Studio's swirl vortex and radial burst are white on black, with no alpha: they show as
     -- black squares on a SurfaceGui plane, so ours replace them)
+    -- Ember Peak
+    Fireburst = "rbxassetid://15811794808",      -- VS: a fiery burst (single frame)
+    GoldFeather = "rbxassetid://7244584563",     -- VS: a golden flame feather
+    Lava = "rbxassetid://1112726928",            -- VS: molten lava (tiles along a beam)
+    Fissure = "rbxassetid://139285675827924",    -- QA: a caldera of broken crust and branching fissures
+    CrystalForge = "rbxassetid://113317746351445", -- QA: six crystal points round a forge hexagon
+    PhoenixSigil = "rbxassetid://114119118263415", -- QA: a phoenix with spread wings in a ring of flame
+    FlameTongue = "rbxassetid://86422452019290", -- QA: one flame tongue, hot at its root
+    Rock = "rbxassetid://137469228900771",       -- QA: an obsidian chunk with lava veins (Blender render)
 }
 
 local function rgb(r, g, b)
@@ -863,6 +872,247 @@ RECIPES.AncientGroveEgg = function(aura)
             Transparency = seq({ { 0, 0 }, { 1, 1 } }), Brightness = 3, ZOffset = 1.5,
         }, { HatchEmit = 8 }), a)
     end
+end
+
+
+-- ---------- Ember Peak ----------
+-- The Phoenix Altar's stands are basalt columns (their tops about 1.5, 2.1 and 2.6 studs across
+-- the radius, 5.9 studs apart): the auras live in the air round the columns' tops.
+
+-- Flame tongues licking up round a ring of the given diameter at `height`: eight attachments, each
+-- with its own emitter (an emitter on a part spreads over the part's whole box; on an unrotated
+-- attachment it rises straight up). `rate` is the whole ring's.
+local function flames(aura, height, diameter, rate, size, colorSeq)
+    for k = 1, 8 do
+        local a = (k - 0.5) * math.pi / 4
+        local at = attachment(aura, "Flame" .. k, CFrame.new(math.cos(a) * diameter / 2, height, math.sin(a) * diameter / 2))
+        finish(emitter("Flames", {
+            Texture = T.FlameTongue, Speed = NumberRange.new(1.2, 2.2), SpreadAngle = Vector2.new(10, 10),
+            Acceleration = Vector3.new(0, 1.5, 0), Drag = 0.8, Lifetime = NumberRange.new(0.55, 0.85), Rate = rate / 8,
+            Rotation = NumberRange.new(-12, 12), RotSpeed = NumberRange.new(-25, 25),
+            Size = seq({ { 0, size * 0.55 }, { 0.3, size }, { 1, size * 0.4 } }), Color = colorSeq,
+            Transparency = seq({ { 0, 1 }, { 0.1, 0 }, { 0.75, 0.25 }, { 1, 1 } }), LightEmission = 0.3, Brightness = 3,
+        }, { HatchEmit = 3 }), at)
+    end
+end
+
+-- Embers: small hot sparks rising off an area, drifting and winking out.
+local function embers(area, rate, colorSeq, rise)
+    return finish(emitter("Embers", {
+        Texture = T.Dot, Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(rise * 0.6, rise), SpreadAngle = Vector2.new(30, 30),
+        Acceleration = Vector3.new(0.3, 1.2, 0.2), Drag = 0.5, Lifetime = NumberRange.new(1.2, 2.2), Rate = rate,
+        Size = seq({ { 0, 0.22 }, { 0.5, 0.16 }, { 1, 0 } }), Color = colorSeq,
+        Transparency = seq({ { 0, 0 }, { 0.8, 0.2 }, { 1, 1 } }), Brightness = 3,
+    }, { HatchEmit = 30 }), area)
+end
+
+-- Inferno Egg: eruption. Lava wells out of the egg's seams and pours over the edge of its basalt
+-- column in three lavafalls. Rock chips crumble off its right shoulder where its chunks are
+-- breaking away, rocks tumble round it, flame tongues lick up round its base off a caldera of
+-- fissures, a molten ring and a crust ring cross round it, and embers rise. Its breath is a low
+-- simmering rumble.
+RECIPES.InfernoEgg = function(aura)
+    local LAVA, HOT, EMBER = rgb(255, 80, 20), rgb(255, 170, 40), rgb(255, 120, 30)
+    local C = 1.95                                   -- the egg's centre: it stands 3.8 studs
+    aura.model:SetAttribute("Gather", 1.3)
+    aura.model:SetAttribute("Tint", rgb(255, 110, 30))
+    set(aura.model, nil, { Breath = 0.2, BreathPeriod = 3 })
+    formation(aura, "Formation", T.Fissure, 2.4, rgb(255, 90, 20), 6, 3)
+    ring(aura, "MoltenRing", C + 0.2, tilt(-24, 10), T.QiRing, 5.2, rgb(255, 110, 30), 40, 2.4, nil, { 10, 5 })
+    ring(aura, "CrustRing", C - 0.4, tilt(-12, -26), T.BrokenRing, 5.8, rgb(200, 60, 20), -28, 1.8, 0.15, { 8, 7, 120 })
+    -- rocks tumbling round it on their own orbits (rendered obsidian, keeping their own colours)
+    for k, o in { { 30, 2.6, C + 1.0, 18, 0.35, 3.1, 1.0 }, { -22, 2.9, C - 0.2, -14, 0.45, 3.9, 0.8 }, { 38, 2.4, C + 0.5, 26, 0.3, 2.7, 0.65 },
+                  { -30, 2.8, C + 1.6, -8, 0.4, 4.4, 0.75 } } do
+        crystal(aura, "Rock" .. k, { Orbit = o[1], Radius = o[2], Height = o[3], Tilt = Vector3.new(o[4], 0, 0), Phase = (k - 1) * 90,
+            Bob = o[5], BobPeriod = o[6] }, o[7], rgb(255, 255, 255), 1.2, T.Rock, 45, rgb(255, 90, 20))
+    end
+    -- the egg crumbling: rock chips and sparks shed from its right shoulder, flung out and up the
+    -- way its chunks are flying
+    local shoulder = anchor(aura, "Shoulder", Vector3.new(0.3, 0.85, 0.15))
+    local fling = aura.root.CFrame:VectorToWorldSpace(Vector3.new(-1.6, 1.0, 0))
+    finish(emitter("Chips", {
+        Texture = T.Rock, Speed = NumberRange.new(0.3, 0.8), SpreadAngle = Vector2.new(60, 60), Drag = 0.6,
+        Acceleration = fling, Lifetime = NumberRange.new(1.4, 2), Rate = 3, Rotation = NumberRange.new(0, 360),
+        RotSpeed = NumberRange.new(-160, 160), LightEmission = 0, Brightness = 1,
+        Size = seq({ { 0, 0.18 }, { 0.2, 0.32 }, { 1, 0.22 } }), Transparency = seq({ { 0, 0.4 }, { 0.1, 0 }, { 0.8, 0 }, { 1, 1 } }),
+    }, { HatchEmit = 14 }), shoulder)
+    finish(emitter("Sparks", {
+        Texture = T.Dot, Speed = NumberRange.new(0.6, 1.6), SpreadAngle = Vector2.new(70, 70), Drag = 0.8,
+        Acceleration = fling * 1.4, Lifetime = NumberRange.new(0.8, 1.4), Rate = 10,
+        Size = seq({ { 0, 0.16 }, { 1, 0 } }), Color = ColorSequence.new(HOT, LAVA), Transparency = seq({ { 0, 0 }, { 1, 1 } }), Brightness = 3,
+    }, { HatchEmit = 25 }), shoulder)
+    -- lava welling out of three seams and pouring over the column's edge
+    for k, a in { -0.9, 2.2, -2.4 } do
+        -- a seam on the egg's flank (model units, from the centre of its bounding box, which the
+        -- chunks shift 0.525 to the right)
+        local seam = anchor(aura, "Seam" .. k, Vector3.new(0.92 * math.sin(a) - 0.525, -0.55, 0.92 * math.cos(a) - 0.018))
+        local out = Vector3.new(seam.Position.X, 0, seam.Position.Z).Unit
+        local lip = attachment(aura, "Lip" .. k, CFrame.new(out * 1.45 + Vector3.new(0, -0.02, 0)))
+        local fall = attachment(aura, "Fall" .. k, CFrame.new(out * 1.62 + Vector3.new(0, -3.6, 0)))
+        for _, pair in { { seam, lip, "Overflow" .. k, 0.32, 0.4 }, { lip, fall, "Lavafall" .. k, 0.4, 0.55 } } do
+            local beam = Instance.new("Beam")
+            beam.Name = pair[3]
+            beam.Attachment0, beam.Attachment1 = pair[1], pair[2]
+            set(beam, {
+                Texture = T.Lava, TextureMode = Enum.TextureMode.Wrap, TextureLength = 1.2, TextureSpeed = 0.9,
+                Width0 = pair[4], Width1 = pair[5], FaceCamera = true, LightEmission = 0.35, LightInfluence = 0, Brightness = 2.5,
+                Segments = 6, Color = ColorSequence.new(rgb(255, 200, 150)), Transparency = seq({ { 0, 0.15 }, { 0.9, 0.05 }, { 1, 0.4 } }),
+            })
+            beam.Parent = aura.root
+        end
+        finish(emitter("Splash", {
+            Texture = T.Dot, Speed = NumberRange.new(1, 2), SpreadAngle = Vector2.new(50, 50), Acceleration = Vector3.new(0, -6, 0),
+            Lifetime = NumberRange.new(0.4, 0.7), Rate = 6, Size = seq({ { 0, 0.18 }, { 1, 0 } }),
+            Color = ColorSequence.new(HOT, LAVA), Transparency = seq({ { 0, 0 }, { 1, 1 } }), Brightness = 3,
+        }), fall)
+    end
+    flames(aura, aura.rim + 0.1, 3.8, 24, 1.7, colors({ { 0, rgb(255, 220, 110) }, { 0.35, rgb(255, 120, 25) }, { 1, rgb(170, 25, 10) } }))
+    local area = part(aura, "EmberArea", CFrame.new(0, aura.rim + 0.2, 0), Vector3.new(3.4, 0.2, 3.4))
+    embers(area, 8, colors({ { 0, rgb(255, 230, 140) }, { 0.5, EMBER }, { 1, rgb(200, 40, 10) } }), 2.5)
+    column(aura, rgb(200, 60, 20), rgb(255, 150, 60), 0.6, 3.6)
+    halo(aura, LAVA, 6, 0.88)   -- faint, and a soft light: stronger, they wash the eggs and caps pink
+    drawIn(aura, T.Dot, HOT, 0.5, 50)
+    burst(aura, rgb(255, 170, 60), 9)
+    finish(emitter("Eruption", {
+        Texture = T.Fireburst, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.6), Rate = 0, Rotation = NumberRange.new(0, 360),
+        Size = seq({ { 0, 2 }, { 0.3, 8 }, { 1, 9.5 } }), Transparency = seq({ { 0, 0 }, { 0.6, 0.3 }, { 1, 1 } }), Brightness = 2,
+    }, { HatchEmit = 2 }), attachment(aura, "EruptionCore", CFrame.new(0, C, 0)))
+    ripple(aura, rgb(255, 110, 30), 6, 2)
+    light(aura, LAVA, 12, 0.55)
+end
+
+-- Magma Heart Egg: a forge heart. The whole aura beats with a double thump. A fire swirl races
+-- round the base on two planes, crimson crystal shards orbit, the forge's draught streams up off
+-- the crown crystal throwing sparks, two molten ribbons circle low shedding embers, and a crystal
+-- forge sigil turns beneath over a bloom of heat.
+RECIPES.MagmaHeartEgg = function(aura)
+    local CRIMSON, MOLTEN, HOT = rgb(230, 30, 40), rgb(255, 90, 20), rgb(255, 170, 50)
+    local C = 2.6                                    -- it stands 5.25 studs
+    aura.model:SetAttribute("Gather", 1.5)
+    aura.model:SetAttribute("Tint", rgb(255, 50, 40))
+    set(aura.model, nil, { Breath = 0.22, BreathPeriod = 1.3, BreathShape = "Heartbeat" })
+    formation(aura, "Formation", T.CrystalForge, 2.6, rgb(255, 40, 45), -8, 3)
+    formation(aura, "Bloom", T.BloomLight, 1.8, MOLTEN, 14, 2, 0.1)
+    ring(aura, "SwirlLow", aura.rim + 0.5, tilt(-8, 6), T.WindArc, 4.8, HOT, 170, 2.6, nil, { 8, 3 })
+    ring(aura, "SwirlHigh", aura.rim + 1.2, tilt(-16, -12), T.WindArc, 4.2, MOLTEN, -140, 2.4, nil, { 10, 4, 90 })
+    for k, o in { { 26, 2.5, C + 1.2, 16, 0.4, 3.0, 1.2 }, { -20, 2.8, C - 0.2, -12, 0.5, 3.6, 0.95 }, { 32, 2.3, C + 0.5, 22, 0.35, 2.6, 0.85 },
+                  { -28, 2.7, C + 1.9, -6, 0.45, 4.2, 1.0 }, { 18, 2.9, C - 0.9, 8, 0.3, 3.3, 0.8 } } do
+        crystal(aura, "Shard" .. k, { Orbit = o[1], Radius = o[2], Height = o[3], Tilt = Vector3.new(o[4], 0, 0), Phase = (k - 1) * 72,
+            Bob = o[5], BobPeriod = o[6] }, o[7], rgb(255, 70, 70), 1.6, T.Crystal, 20, CRIMSON)
+    end
+    -- the forge's draught off the crown crystal
+    local tip = anchor(aura, "CrownTip", Vector3.new(0.041, 2.02, 0.234))
+    local above = attachment(aura, "Draught", CFrame.new(tip.Position + Vector3.new(0, 3.2, 0)))
+    local beam = Instance.new("Beam")
+    beam.Name = "Draught"
+    beam.Attachment0, beam.Attachment1 = tip, above
+    set(beam, {
+        Texture = T.Stream, TextureMode = Enum.TextureMode.Wrap, TextureLength = 1.6, TextureSpeed = 2, Width0 = 0.55, Width1 = 0.05,
+        FaceCamera = true, LightEmission = 0.4, LightInfluence = 0, Brightness = 2.5, Segments = 8,
+        Color = colors({ { 0, HOT }, { 0.5, MOLTEN }, { 1, CRIMSON } }), Transparency = seq({ { 0, 0.1 }, { 0.7, 0.4 }, { 1, 1 } }),
+    })
+    beam.Parent = aura.root
+    finish(emitter("TipSparks", {
+        Texture = T.Cross, Speed = NumberRange.new(1.5, 3), SpreadAngle = Vector2.new(25, 25), Drag = 0.8, Acceleration = Vector3.new(0, 1, 0),
+        Lifetime = NumberRange.new(0.6, 1), Rate = 8, Rotation = NumberRange.new(0, 90), RotSpeed = NumberRange.new(-120, 120),
+        Size = seq({ { 0, 0.35 }, { 1, 0 } }), Color = ColorSequence.new(HOT, MOLTEN), Transparency = seq({ { 0, 0 }, { 1, 1 } }), Brightness = 3,
+    }, { HatchEmit = 20 }), tip)
+    -- two molten ribbons circling low, shedding embers
+    for k, c in { { 150, 2.3, 10, 0, 0.3, 2.2 }, { -120, 2.6, -14, 12, 0.4, 2.8 } } do
+        local _, head = arc(aura, "Molten" .. k, { Orbit = c[1], Radius = c[2], Height = aura.rim + 0.8, Tilt = Vector3.new(c[3], 0, c[4]),
+            Phase = (k - 1) * 180, Bob = c[5], BobPeriod = c[6] }, 0.16, {
+            Texture = T.Ribbon, TextureMode = Enum.TextureMode.Stretch, Lifetime = 0.8, Brightness = 3, LightEmission = 0.5,
+            Color = colors({ { 0, HOT }, { 0.5, MOLTEN }, { 1, CRIMSON } }), Transparency = seq({ { 0, 0.05 }, { 0.6, 0.4 }, { 1, 1 } }),
+            WidthScale = seq({ { 0, 0.5 }, { 0.1, 1 }, { 1, 0 } }),
+        })
+        finish(emitter("Embers", {
+            Texture = T.Dot, Speed = NumberRange.new(0.2, 0.6), SpreadAngle = Vector2.new(180, 180), Drag = 1.2, Acceleration = Vector3.new(0, 1.4, 0),
+            Lifetime = NumberRange.new(0.8, 1.4), Rate = 10, Size = seq({ { 0, 0.18 }, { 1, 0 } }), Color = ColorSequence.new(HOT, MOLTEN),
+            Transparency = seq({ { 0, 0 }, { 1, 1 } }), Brightness = 3,
+        }, { HatchEmit = 10 }), head)
+    end
+    local sparks = part(aura, "SparkArea", CFrame.new(0, C, 0), Vector3.new(3.4, 4.6, 3.4))
+    finish(emitter("Sparks", {
+        Texture = T.Cross, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
+        Speed = NumberRange.new(0.6, 1.8), SpreadAngle = Vector2.new(180, 180), Lifetime = NumberRange.new(0.3, 0.5), Rate = 5,
+        Rotation = NumberRange.new(0, 90), Size = seq({ { 0, 0 }, { 0.3, 0.6 }, { 1, 0 } }), Color = ColorSequence.new(rgb(255, 200, 150), CRIMSON),
+        Transparency = NumberSequence.new(0), Brightness = 3,
+    }, { HatchEmit = 30 }), sparks)
+    local area = part(aura, "EmberArea", CFrame.new(0, aura.rim + 0.2, 0), Vector3.new(3.6, 0.2, 3.6))
+    embers(area, 6, colors({ { 0, HOT }, { 0.5, MOLTEN }, { 1, CRIMSON } }), 2)
+    halo(aura, CRIMSON, 7, 0.88)
+    drawIn(aura, T.Cross, rgb(255, 120, 90), 0.6, 50)
+    burst(aura, rgb(255, 120, 90), 10)
+    ripple(aura, CRIMSON, 7, 2)
+    light(aura, CRIMSON, 13, 0.55)
+end
+
+-- Phoenix Ash Egg: rebirth. Two phoenix flights circle it on crossing planes, rising and falling,
+-- each shedding golden flame feathers and embers; its wing tips burn; a ring of flames rises round
+-- its base off the phoenix sigil; ash and embers drift up; its flame emblem breathes light.
+RECIPES.PhoenixAshEgg = function(aura)
+    local GOLD, FLAME, CRIMSON = rgb(255, 200, 70), rgb(255, 110, 25), rgb(220, 40, 20)
+    local C = 2.35                                   -- it stands 4.7 studs
+    aura.model:SetAttribute("Gather", 1.6)
+    aura.model:SetAttribute("Tint", rgb(255, 140, 40))
+    set(aura.model, nil, { Breath = 0.18, BreathPeriod = 4 })
+    formation(aura, "Formation", T.PhoenixSigil, 2.8, rgb(255, 150, 40), 5, 3)
+    ring(aura, "SunRing", C + 0.4, tilt(-20, 8), T.GlowRing, 5.6, GOLD, 22, 2.2, nil, { 8, 6 })
+    for k, c in { { 110, 2.7, 24, 0, 1.0, 3.4 }, { -95, 3.0, -20, 16, 1.2, 4.0 } } do
+        local _, head = arc(aura, "Flight" .. k, { Orbit = c[1], Radius = c[2], Height = C + 0.2, Tilt = Vector3.new(c[3], 0, c[4]),
+            Phase = (k - 1) * 180, Bob = c[5], BobPeriod = c[6] }, 0.3, {
+            Texture = T.Ribbon, TextureMode = Enum.TextureMode.Stretch, Lifetime = 1.1, Brightness = 3, LightEmission = 0.45,
+            Color = colors({ { 0, GOLD }, { 0.4, FLAME }, { 1, CRIMSON } }), Transparency = seq({ { 0, 0.05 }, { 0.6, 0.4 }, { 1, 1 } }),
+            WidthScale = seq({ { 0, 0.5 }, { 0.1, 1 }, { 1, 0 } }),
+        })
+        finish(emitter("Glow", {
+            Texture = T.SmallGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.3), Rate = 14,
+            Size = seq({ { 0, 1.1 }, { 1, 0.6 } }), Color = ColorSequence.new(GOLD), Transparency = seq({ { 0, 0.1 }, { 1, 1 } }), Brightness = 3,
+        }), head)
+        finish(emitter("Feathers", {
+            Texture = T.GoldFeather, Speed = NumberRange.new(0.2, 0.6), SpreadAngle = Vector2.new(180, 180), Drag = 1.4,
+            Acceleration = Vector3.new(0, 0.4, 0), Lifetime = NumberRange.new(1.4, 2.2), Rate = 4, Rotation = NumberRange.new(0, 360),
+            RotSpeed = NumberRange.new(-90, 90), Size = seq({ { 0, 0.3 }, { 0.15, 0.55 }, { 1, 0.45 } }),
+            Color = colors({ { 0, rgb(255, 230, 150) }, { 0.6, FLAME }, { 1, CRIMSON } }), LightEmission = 0.3, Brightness = 2,
+            Transparency = seq({ { 0, 0.5 }, { 0.12, 0 }, { 0.7, 0.2 }, { 1, 1 } }),
+        }, { HatchEmit = 8 }), head)
+    end
+    -- the wing tips burning
+    for name, offset in { WingR = Vector3.new(1.756, -0.36, 0.374), WingL = Vector3.new(-1.756, 0.1, 0.318) } do
+        finish(emitter("Burn", {
+            Texture = T.FlameTongue, Speed = NumberRange.new(0.6, 1.2), SpreadAngle = Vector2.new(15, 15), Acceleration = Vector3.new(0, 2, 0),
+            Lifetime = NumberRange.new(0.4, 0.6), Rate = 9, Rotation = NumberRange.new(-15, 15),
+            Size = seq({ { 0, 0.3 }, { 0.3, 0.6 }, { 1, 0.15 } }), Color = colors({ { 0, rgb(255, 230, 120) }, { 0.5, FLAME }, { 1, CRIMSON } }),
+            Transparency = seq({ { 0, 1 }, { 0.15, 0.1 }, { 1, 1 } }), Brightness = 2.5,
+        }, { HatchEmit = 8 }), anchor(aura, name, offset))
+    end
+    -- the emblem breathing light
+    finish(emitter("EmblemGlow", {
+        Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(2.2, 2.8), Rate = 1, Rotation = NumberRange.new(0, 360),
+        ZOffset = 0.4, Size = seq({ { 0, 0.8 }, { 0.5, 1.6 }, { 1, 1.8 } }), Color = ColorSequence.new(FLAME),
+        Transparency = seq({ { 0, 1 }, { 0.4, 0.7 }, { 1, 1 } }), Brightness = 2,
+    }, { HatchEmit = 3 }), anchor(aura, "Emblem", Vector3.new(0.009, -0.4, 1.34)))
+    flames(aura, aura.rim + 0.1, 4.4, 24, 2, colors({ { 0, rgb(255, 235, 150) }, { 0.35, rgb(255, 170, 40) }, { 0.7, rgb(255, 90, 20) }, { 1, rgb(190, 30, 15) } }))
+    local area = part(aura, "AshArea", CFrame.new(0, aura.rim + 0.2, 0), Vector3.new(4, 0.2, 4))
+    embers(area, 6, colors({ { 0, rgb(255, 230, 140) }, { 0.5, FLAME }, { 1, CRIMSON } }), 2.2)
+    finish(emitter("Ash", {
+        Texture = T.Dot, Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(0.5, 1), SpreadAngle = Vector2.new(30, 30),
+        Acceleration = Vector3.new(0.2, 0.5, 0.1), Drag = 0.8, Lifetime = NumberRange.new(2.5, 3.5), Rate = 5, LightEmission = 0, Brightness = 1,
+        Size = seq({ { 0, 0.12 }, { 0.5, 0.2 }, { 1, 0.1 } }), Color = ColorSequence.new(rgb(70, 60, 60), rgb(40, 35, 35)),
+        Transparency = seq({ { 0, 1 }, { 0.15, 0.2 }, { 1, 1 } }),
+    }, { HatchEmit = 15 }), area)
+    column(aura, rgb(220, 70, 20), rgb(255, 190, 80), 0.7, 4)
+    halo(aura, GOLD, 7, 0.88)
+    drawIn(aura, T.GoldFeather, GOLD, 0.6, 40)
+    burst(aura, rgb(255, 200, 90), 11)
+    finish(emitter("Rebirth", {
+        Texture = T.Fireburst, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.7), Rate = 0, Rotation = NumberRange.new(0, 360),
+        Size = seq({ { 0, 2 }, { 0.3, 9 }, { 1, 11 } }), Transparency = seq({ { 0, 0 }, { 0.6, 0.3 }, { 1, 1 } }), Brightness = 2,
+    }, { HatchEmit = 2 }), attachment(aura, "RebirthCore", CFrame.new(0, C, 0)))
+    ripple(aura, GOLD, 7, 3)
+    light(aura, FLAME, 13, 0.55)
 end
 
 -- ---------- building ----------
