@@ -1,5 +1,5 @@
 """The flying sword (run inside Blender): the sword a cultivator rides in sword flight
-(src/server/FlightService). Its idea is a blade whose cutting edge is Qi: an original design,
+(src/server/Qinggong/FlightService). Its idea is a blade whose cutting edge is Qi: an original design,
 built so its identity is in the shape, readable from above while it is ridden.
 
 - The spine: a narrow dark-gold blade down the middle, ridged, with cloud scrolls raised along it.

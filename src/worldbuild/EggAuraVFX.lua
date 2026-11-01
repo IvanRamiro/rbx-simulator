@@ -1,27 +1,19 @@
--- Build-time only: builds each egg stand's aura in the Workspace, out of particle emitters,
--- trails, beams, billboards, glowing image planes and lights (textures from VFX Studio's library,
--- the PDS kit and our own), so it
--- can be seen and tuned in Studio (VFX Studio works on the instances directly) and is saved in the
--- place. Require a clone, as with WorldBuilder:
+-- Build-time only: builds each egg stand's aura in the Workspace from particle emitters, trails,
+-- beams, glowing image planes and lights, so it can be tuned in Studio and saved in the place.
+-- Require a clone, as with WorldBuilder:
 --
 --   local VFX = require(game.ServerStorage.WorldBuild.EggAuraVFX:Clone())
---   VFX.build("StartingIsland")   -- (re)builds FloatingIslands.StartingIsland.EggAuras
+--   VFX.build("Yggdrasil")   -- (re)builds FloatingIslands.Yggdrasil.EggAuras
 --
 -- Each aura is a Model tagged "EggAura" (attribute EggId) whose Root part sits at the egg's resting
--- point, facing the front of the stand. The client (src/client/EggAura.lua) animates it from
--- attributes, so an aura tuned by hand keeps working:
---   Attachment  Orbit (deg/s), Radius, Height, Tilt (Vector3 degrees), Phase (deg),
---               Bob (studs), BobPeriod (s): moves round the egg (trails on it draw arcs)
---   Part        Spin (deg/s): turns about its own up axis (formations and rings);
---               Wobble (deg), WobblePeriod (s), Phase (deg): its tilt precesses like a top;
---               SwellScale, GatherScale: how far its image swells (as the aura breathes, and
---               further on the hatch burst) and draws in while a hatch gathers;
---               Ripple (s), HatchEmit: a ring that runs outward that many times on the hatch
---   ImageLabel  Sway (deg), SwayPeriod (s), Phase (deg): rocks to and fro (the crystals)
---   Emitter     HatchEmit (particles on the hatch burst),
---               GatherRate (its rate while a hatch gathers)
---   Model       Gather (s), Tint (the egg's glow while it hatches),
---               Breath (fraction), BreathPeriod (s): the slow swell of speed, glow and rings
+-- point, facing the front of the stand. The client (src/client/Auras/EggAura.lua) animates it from
+-- these attributes:
+--   Attachment  Orbit (deg/s), Radius, Height, Tilt (Vector3 deg), Phase (deg), Bob (studs), BobPeriod (s)
+--   Part        Spin (deg/s); Wobble (deg), WobblePeriod (s), Phase (deg); SwellScale, GatherScale;
+--               Ripple (s), HatchEmit (ripples on the hatch)
+--   ImageLabel  Sway (deg), SwayPeriod (s), Phase (deg)
+--   Emitter     HatchEmit (particles on the hatch burst), GatherRate (rate while a hatch gathers)
+--   Model       Gather (s), Tint (glow while hatching), Breath (fraction), BreathPeriod (s)
 -- Measures are studs, for eggs placed 1.3 studs per egg unit (about 3.5 studs tall, centred
 -- 1.75 above the Root).
 local CollectionService = game:GetService("CollectionService")
@@ -35,56 +27,56 @@ local EGG_CENTRE = 1.75
 
 -- textures: VFX Studio library (VS), PDS' Particles & Models Kit (PDS), ours (QA)
 local T = {
-    LotusMandala = "rbxassetid://12403102126",   -- VS: eight-petal lotus mandala
-    OrnateMandala = "rbxassetid://12402928708",  -- VS: ornate mandala
-    BrokenRing = "rbxassetid://14850595833",     -- VS: broken wind ring
-    SoftRing = "rbxassetid://16505105356",       -- VS: soft smoke ring
-    WindArc = "rbxassetid://13131393513",        -- VS: crescent wind arc
-    SoftGlow = "rbxassetid://187823474",         -- VS: soft round glow
-    SmallGlow = "rbxassetid://6673021984",       -- VS: small glow
-    Dot = "rbxassetid://11037546803",            -- VS: glowing dot
-    Star4 = "rbxassetid://5946093983",           -- VS: four-point star
-    Cross = "rbxassetid://6909741538",           -- VS: cross sparkle
-    Burst = "rbxassetid://15773612675",          -- VS: radial burst
-    Flare = "rbxassetid://14054628491",          -- PDS: starburst
-    Fog = "rbxassetid://14050223758",            -- PDS: fog
-    GlitterFog = "rbxassetid://14049414463",     -- PDS: glittering fog
-    Ribbon = "rbxassetid://99893839045856",      -- QA: Qi silk ribbon
-    WindRose = "rbxassetid://98026121929653",    -- QA: wind-rose sigil
-    Wuxing = "rbxassetid://84064944874395",      -- QA: five-element sigil
-    Cloud = "rbxassetid://133757754897450",      -- QA: auspicious cloud
-    Feather = "rbxassetid://131662968027624",    -- QA: feather
-    Crystal = "rbxassetid://91364093647932",     -- QA: faceted crystal shard (rendered in Blender)
-    QiRing = "rbxassetid://136096136498575",     -- QA: bold Qi ring with comet streaks
-    ElementBand = "rbxassetid://76030932893410", -- QA: gyroscope band with five element nodes
-    Stream = "rbxassetid://129943358163696",     -- QA: braided element stream (tiles along a beam)
+    LotusMandala = "rbxassetid://12403102126",   -- VS
+    OrnateMandala = "rbxassetid://12402928708",  -- VS
+    BrokenRing = "rbxassetid://14850595833",     -- VS
+    SoftRing = "rbxassetid://16505105356",       -- VS
+    WindArc = "rbxassetid://13131393513",        -- VS
+    SoftGlow = "rbxassetid://187823474",         -- VS
+    SmallGlow = "rbxassetid://6673021984",       -- VS
+    Dot = "rbxassetid://11037546803",            -- VS
+    Star4 = "rbxassetid://5946093983",           -- VS
+    Cross = "rbxassetid://6909741538",           -- VS
+    Burst = "rbxassetid://15773612675",          -- VS
+    Flare = "rbxassetid://14054628491",          -- PDS
+    Fog = "rbxassetid://14050223758",            -- PDS
+    GlitterFog = "rbxassetid://14049414463",     -- PDS
+    Ribbon = "rbxassetid://99893839045856",      -- QA
+    WindRose = "rbxassetid://98026121929653",    -- QA
+    Wuxing = "rbxassetid://84064944874395",      -- QA
+    Cloud = "rbxassetid://133757754897450",      -- QA
+    Feather = "rbxassetid://131662968027624",    -- QA
+    Crystal = "rbxassetid://91364093647932",     -- QA
+    QiRing = "rbxassetid://136096136498575",     -- QA
+    ElementBand = "rbxassetid://76030932893410", -- QA
+    Stream = "rbxassetid://129943358163696",     -- QA: tiles along a beam
     -- Jade Grove
-    Leaf = "rbxassetid://6475162564",            -- VS: a single veined leaf
-    GlowRing = "rbxassetid://12386390257",       -- VS: glowing ring with a soft corona
-    JadeLeaf = "rbxassetid://123839325562421",   -- QA: vine ring round a six-leaf jade rosette
-    BlossomSigil = "rbxassetid://104690771337528", -- QA: blossom mandala
-    TreeRings = "rbxassetid://97314964323991",   -- QA: an ancient tree's growth rings crossed by roots
-    Petal = "rbxassetid://122668143134554",      -- QA: one blossom petal
-    Blossom = "rbxassetid://100572808754853",    -- QA: five-petal blossom
-    Vortex = "rbxassetid://82549101989057",      -- QA: a soft vortex of five thin arms of Qi
-    BloomLight = "rbxassetid://80600586960187",  -- QA: a bloom of light, rays in petal-shaped lobes
-    -- (VFX Studio's swirl vortex and radial burst are white on black, with no alpha: they show as
-    -- black squares on a SurfaceGui plane, so ours replace them)
+    Leaf = "rbxassetid://6475162564",            -- VS
+    GlowRing = "rbxassetid://12386390257",       -- VS
+    JadeLeaf = "rbxassetid://123839325562421",   -- QA
+    BlossomSigil = "rbxassetid://104690771337528", -- QA
+    TreeRings = "rbxassetid://97314964323991",   -- QA
+    Petal = "rbxassetid://122668143134554",      -- QA
+    Blossom = "rbxassetid://100572808754853",    -- QA
+    Vortex = "rbxassetid://82549101989057",      -- QA
+    BloomLight = "rbxassetid://80600586960187",  -- QA
+    -- (VFX Studio's swirl vortex and radial burst have no alpha and show as black squares on a
+    -- SurfaceGui, so ours replace them)
     -- Ember Peak
-    Fireburst = "rbxassetid://15811794808",      -- VS: a fiery burst (single frame)
-    GoldFeather = "rbxassetid://7244584563",     -- VS: a golden flame feather
-    Lava = "rbxassetid://1112726928",            -- VS: molten lava (tiles along a beam)
-    Fissure = "rbxassetid://139285675827924",    -- QA: a caldera of broken crust and branching fissures
-    CrystalForge = "rbxassetid://113317746351445", -- QA: six crystal points round a forge hexagon
-    PhoenixSigil = "rbxassetid://114119118263415", -- QA: a phoenix with spread wings in a ring of flame
-    FlameTongue = "rbxassetid://86422452019290", -- QA: one flame tongue, hot at its root
-    Rock = "rbxassetid://137469228900771",       -- QA: an obsidian chunk with lava veins (Blender render)
-    Vessel = "rbxassetid://80498467493439",      -- QA: a molten artery, coloured: white-hot core, blood-red body, dark rim
-    CrustRing = "rbxassetid://125397922605343",  -- QA: dark basalt crust ring, molten in its breaks (coloured)
-    Ash = "rbxassetid://117440820612388",        -- QA: one flake of ash
-    FireMain = "rbxasset://textures/particles/fire_main.dds",          -- Roblox's built-in flame
-    FireSparks = "rbxasset://textures/particles/fire_sparks_main.dds", -- Roblox's built-in fire sparks
-    Spark = "rbxassetid://121337217386887",      -- QA: one spark, a hot drop with real alpha (keeps its colour on a bright sky)
+    Fireburst = "rbxassetid://15811794808",      -- VS
+    GoldFeather = "rbxassetid://7244584563",     -- VS
+    Lava = "rbxassetid://1112726928",            -- VS: tiles along a beam
+    Fissure = "rbxassetid://139285675827924",    -- QA
+    CrystalForge = "rbxassetid://113317746351445", -- QA
+    PhoenixSigil = "rbxassetid://114119118263415", -- QA
+    FlameTongue = "rbxassetid://86422452019290", -- QA
+    Rock = "rbxassetid://137469228900771",       -- QA
+    Vessel = "rbxassetid://80498467493439",      -- QA: coloured
+    CrustRing = "rbxassetid://125397922605343",  -- QA: coloured
+    Ash = "rbxassetid://117440820612388",        -- QA
+    FireMain = "rbxasset://textures/particles/fire_main.dds",
+    FireSparks = "rbxasset://textures/particles/fire_sparks_main.dds",
+    Spark = "rbxassetid://121337217386887",      -- QA: real alpha, keeps its colour on a bright sky
 }
 
 -- Maps Studio's importer does not read, set on the stored meshes' SurfaceAppearances (storeMeshes).
@@ -159,9 +151,8 @@ local function finish(e, parent)
     return e
 end
 
--- Flat elements (the Inferno's heat ripples) are glowing images on SurfaceGuis: flat
--- (VelocityPerpendicular) particles do not render in these auras (tested in Play). The image
--- fills 1/HEADROOM of its part, leaving room to swell as the aura breathes and on the hatch.
+-- Flat elements are glowing images on SurfaceGuis: flat (VelocityPerpendicular) particles do not
+-- render in these auras (tested in Play). The image fills 1/HEADROOM of its part, leaving room to swell.
 local HEADROOM = 1.5
 
 local function plane(aura, name, cframe, diameter, texture, color, brightness, attrs, bothFaces, transparency)
@@ -221,8 +212,7 @@ local function light(aura, color, range, brightness)
     return l
 end
 
--- A soft glow behind and round the egg: a few large faint sprites turning slowly, drawn behind
--- the egg (ZOffset) so they never veil its design.
+-- A soft glow round the egg, drawn behind it (ZOffset) so it never veils the egg's design.
 local function halo(aura, color, size, transparency)
     local a = attachment(aura, "Halo", CFrame.new(0, EGG_CENTRE, 0))
     return finish(emitter("Halo", {
@@ -267,9 +257,8 @@ local function ripple(aura, color, reach, hatch)
     return p
 end
 
--- An energy stream: a beam from a point sweeping round the rim on `orbit`, rising and arcing in
--- to meet the others at `apex` above the egg, its texture flowing upward. Both ends point their
--- axis up, so the beam leaves the rim straight up and reaches the apex from below.
+-- An energy stream: a beam from a point sweeping round the rim to `apex` above the egg. Both ends
+-- point their axis up, so the beam leaves the rim straight up and reaches the apex from below.
 local UP_AXIS = CFrame.Angles(0, 0, math.rad(90))
 local function stream(aura, name, orbit, apex, properties)
     local a = attachment(aura, name .. "Base", CFrame.new(0, orbit.Height, orbit.Radius) * UP_AXIS)
@@ -318,17 +307,15 @@ end
 -- ---------- the eggs ----------
 local RECIPES = {}
 
--- Beginner Qi Egg: calm, welcoming Qi, soft and slow (redone without flat sigils, rings or sprites):
--- two soft wisps of Qi glide round the egg shedding Qi dust, motes rise like breath, soft
--- twinkles of light, a soft halo and a gentle updraft.
+-- Beginner Qi Egg: calm, welcoming Qi, soft and slow. Two wisps of Qi glide round the egg shedding
+-- dust, motes rise like breath, soft twinkles, a soft halo and a gentle updraft.
 RECIPES.BeginnerQiEgg = function(aura)
     local QI, PALE, DEEP = rgb(80, 195, 255), rgb(200, 240, 255), rgb(40, 120, 255)
     aura.model:SetAttribute("Gather", 1.3)
     aura.model:SetAttribute("Tint", rgb(120, 210, 255))
-    set(aura.model, nil, { Breath = 0.15, BreathPeriod = 5 }) -- a calm breath
-    -- two soft wisps counter-rotating on different radii, weaving up and down, each shedding Qi dust
+    set(aura.model, nil, { Breath = 0.15, BreathPeriod = 5 })
     for k, arcOrbit in { { Orbit = 55, Radius = 2.4, Bob = 0.45, BobPeriod = 4.2 }, { Orbit = -40, Radius = 3.0, Bob = 0.6, BobPeriod = 5.4 } } do
-        arcOrbit.Height, arcOrbit.Phase = EGG_CENTRE + 0.8, (k - 1) * 180   -- lower, the stand's wide bowl hides them
+        arcOrbit.Height, arcOrbit.Phase = EGG_CENTRE + 0.8, (k - 1) * 180   -- any lower and the stand's wide bowl hides them
         arcOrbit.Tilt = Vector3.new(k == 1 and 20 or -26, 0, k == 1 and 0 or 12)
         local _, head = arc(aura, "QiArc" .. k, arcOrbit, 0.45, { -- the deep blue egg takes more light than the pale ones
             Texture = T.SoftGlow, TextureMode = Enum.TextureMode.Stretch, Lifetime = 1.8, Brightness = 3, LightEmission = 0.7,
@@ -350,7 +337,7 @@ RECIPES.BeginnerQiEgg = function(aura)
         Color = colors({ { 0, PALE }, { 1, QI } }), Transparency = seq({ { 0, 0.1 }, { 1, 1 } }),
     }, { HatchEmit = 30 }), motes)
     local glints = part(aura, "GlintArea", CFrame.new(0, EGG_CENTRE + 0.3, 0), Vector3.new(6, 4.5, 6))
-    finish(emitter("Glints", { -- soft twinkles: a round glow swelling and fading, no points
+    finish(emitter("Glints", {
         Texture = T.SoftGlow, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
         Speed = NumberRange.new(0.2, 0.5), SpreadAngle = Vector2.new(180, 180), Acceleration = Vector3.new(0, 0.3, 0),
         Lifetime = NumberRange.new(1.4, 2), Rate = 3, Size = seq({ { 0, 0 }, { 0.5, 0.45 }, { 1, 0 } }),
@@ -364,20 +351,17 @@ RECIPES.BeginnerQiEgg = function(aura)
     light(aura, QI, 13, 1.3)
 end
 
--- Spirit Breeze Egg: a soft breeze. No flat rings or sigils: three wisps of wind drift round it
--- on a slow helix of widening radii (a soft glow stretched along each trail, so no edge shows),
--- auspicious clouds billow off the bowl's lip, feathers ride a gentle updraught, under a faint
--- halo. Its breath is slow and easy.
+-- Spirit Breeze Egg: a soft breeze. Three wisps of wind drift round it on a slow helix, clouds
+-- billow off the bowl's lip and feathers ride a gentle updraught under a faint halo.
 RECIPES.SpiritBreezeEgg = function(aura)
     local SKY, WHITE = rgb(110, 215, 255), rgb(225, 245, 255)
     aura.model:SetAttribute("Gather", 1.2)
     aura.model:SetAttribute("Tint", rgb(170, 230, 255))
-    set(aura.model, nil, { Breath = 0.15, BreathPeriod = 5 }) -- an easy breeze
-    -- three wind trails on a slow helix of widening radii; feathers shed from the first one's head
+    set(aura.model, nil, { Breath = 0.15, BreathPeriod = 5 })
     for k = 1, 3 do
         local _, head = arc(aura, "Wind" .. k, { Orbit = 105 - k * 15, Radius = 1.5 + 0.6 * k, Height = EGG_CENTRE, Phase = (k - 1) * 120,
             Bob = 0.9 + 0.25 * k, BobPeriod = 3.2 + 0.7 * k }, 0.3, {
-            -- light emission over 0.3 or brightness over 2 washes the pale egg white as a wisp crosses it
+            -- LightEmission over 0.3 or Brightness over 2 washes the pale egg white as a wisp crosses it
             Texture = T.SoftGlow, TextureMode = Enum.TextureMode.Stretch, Lifetime = 1.6, Brightness = 2, LightEmission = 0.3,
             Color = colors({ { 0, rgb(240, 250, 255) }, { 0.35, rgb(130, 210, 255) }, { 1, rgb(70, 160, 240) } }),
             Transparency = seq({ { 0, 0.25 }, { 0.5, 0.4 }, { 1, 0.75 } }), WidthScale = seq({ { 0, 0.6 }, { 0.3, 1 }, { 1, 0.5 } }),
@@ -409,27 +393,24 @@ RECIPES.SpiritBreezeEgg = function(aura)
         Transparency = seq({ { 0, 1 }, { 0.15, 0.1 }, { 1, 1 } }),
     }, { HatchEmit = 20 }), base)
     halo(aura, rgb(150, 225, 255), 6, 0.86)
-    column(aura, rgb(150, 220, 255), rgb(235, 248, 255), 0.45, 4) -- a gentle updraft
+    column(aura, rgb(150, 220, 255), rgb(235, 248, 255), 0.45, 4)
     drawIn(aura, T.Feather, WHITE, 0.7, 30)
     burst(aura, rgb(200, 240, 255), 8, T.SoftGlow)
     light(aura, SKY, 12, 0.55) -- the pale egg washes out under a stronger light
 end
 
--- Elemental Core Egg: concentrated elements, soft and slow (redone without flat sigils, gyroscope
--- rings or pointed sparks): four element streams rise off the rim and meet above the crown, where
--- their power gathers in a soft glow; four element orbs (cyan, gold, blue, amber) glide round on
--- their own orbits with soft tails; blue and gold motes rise; soft light breathes off the core;
--- on the hatch the core gem flares.
+-- Elemental Core Egg: concentrated elements. Four element streams rise off the rim and meet in a
+-- glow above the crown, four element orbs glide round with soft tails, and on the hatch the core gem flares.
 local ELEMENTS = { rgb(40, 225, 255), rgb(255, 195, 60), rgb(70, 120, 255), rgb(255, 150, 40) }
 RECIPES.ElementalCoreEgg = function(aura)
     local CORE, GOLD = rgb(50, 215, 255), rgb(255, 205, 90)
     aura.model:SetAttribute("Gather", 1.4)
     aura.model:SetAttribute("Tint", rgb(90, 220, 255))
-    set(aura.model, nil, { Breath = 0.12, BreathPeriod = 4 }) -- a steady hum of power
+    set(aura.model, nil, { Breath = 0.12, BreathPeriod = 4 })
     local apex = attachment(aura, "Apex", CFrame.new(0, EGG_CENTRE + 2.6, 0) * UP_AXIS)
     for k, color in ELEMENTS do
         stream(aura, "Stream" .. k, { Orbit = 12, Radius = 3.5, Height = aura.rim + 0.5, Phase = 90 * (k - 1) + 45 }, apex, {
-            -- a soft glow stretched along the beam: the braided stream texture read as spiky fringes
+            -- soft glow: the braided stream texture read as spiky fringes
             Texture = T.SoftGlow, TextureMode = Enum.TextureMode.Stretch, CurveSize0 = 3, CurveSize1 = 1.5, Width0 = 0.9, Width1 = 0.3,
             Brightness = 2, LightEmission = 0.45,
             Color = colors({ { 0, color }, { 1, color:Lerp(rgb(255, 255, 255), 0.45) } }),
@@ -466,7 +447,7 @@ RECIPES.ElementalCoreEgg = function(aura)
         }, { HatchEmit = 15 }), motes)
     end
     local sparks = part(aura, "SparkArea", CFrame.new(0, EGG_CENTRE, 0), Vector3.new(3.2, 3.6, 3.2))
-    finish(emitter("Sparks", { -- soft light breathing off the core, not crackling points
+    finish(emitter("Sparks", {
         Texture = T.SoftGlow, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
         Speed = NumberRange.new(0.3, 0.6), SpreadAngle = Vector2.new(180, 180), Lifetime = NumberRange.new(1.2, 1.8), Rate = 4,
         Size = seq({ { 0, 0 }, { 0.4, 0.4 }, { 1, 0 } }), Color = colors({ { 0, rgb(200, 245, 255) }, { 1, CORE } }),
@@ -530,7 +511,7 @@ local function shed(head, name, texture, color, rate, size, fall) -- size: { bor
         SpreadAngle = Vector2.new(180, 180), Drag = 1.6, Acceleration = Vector3.new(0, -fall, 0),
         Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-150, 150),
         Size = seq({ { 0, size[1] }, { 0.15, size[2] }, { 1, size[3] } }), Color = color,
-        Transparency = seq({ { 0, 0.6 }, { 0.12, 0.05 }, { 0.7, 0.2 }, { 1, 1 } }), LightEmission = 0.15, Brightness = 1.6, -- solid, not glowing: they read in daylight
+        Transparency = seq({ { 0, 0.6 }, { 0.12, 0.05 }, { 0.7, 0.2 }, { 1, 1 } }), LightEmission = 0.15, Brightness = 1.6, -- solid, not glowing, so they read in daylight
     }, { HatchEmit = 4 }), head)
 end
 
@@ -552,30 +533,25 @@ local function tendril(aura, name, base, top, properties)
     return beam
 end
 
--- Jade Spirit Egg: living jade, soft and slow (redone without flat sigils, rings or leaf sprites):
--- three vines of light twining up from the rim to the crown, each at its own pace; three soft
--- currents of Qi drifting round on their own planes, shedding leaves that tumble slowly in their
--- wake; jade motes rising, soft twinkles.
+-- Jade Spirit Egg: living jade. Three vines of light twine up from the rim to the crown, three
+-- currents of Qi drift round shedding leaves, and jade motes rise among soft twinkles.
 RECIPES.JadeSpiritEgg = function(aura)
     local JADE, MINT, DEEP = rgb(40, 220, 110), rgb(170, 255, 200), rgb(10, 140, 70)
     aura.model:SetAttribute("Gather", 1.3)
     aura.model:SetAttribute("Tint", rgb(70, 235, 130))
-    set(aura.model, nil, { Breath = 0.18, BreathPeriod = 4.5 }) -- a green, growing breath
+    set(aura.model, nil, { Breath = 0.18, BreathPeriod = 4.5 })
     -- the stands here are 7.5 studs apart: everything stays within about 3.3 studs of the egg
-    -- vines of light twining up round the egg
     for k = 1, 3 do
         tendril(aura, "Vine" .. k,
             { Orbit = 14, Radius = 2.2, Height = aura.rim + 0.15, Phase = (k - 1) * 120 },
             { Orbit = 14 + 22 * k, Radius = 0.9, Height = 4.2, Phase = (k - 1) * 120 + 150, Bob = 0.2, BobPeriod = 3 + k }, {
-            -- a soft glow stretched along the beam (the braided stream read as spiky fringes); low light
-            -- emission keeps it green in daylight
+            -- soft glow (the braided stream read as spiky fringes); low emission keeps it green in daylight
             Texture = T.SoftGlow, TextureMode = Enum.TextureMode.Stretch,
             CurveSize0 = 1.8, CurveSize1 = 1.4, Width0 = 0.6, Width1 = 0.2, LightEmission = 0.35, Brightness = 2,
             Color = colors({ { 0, rgb(20, 150, 60) }, { 0.6, JADE }, { 1, rgb(150, 255, 190) } }),
             Transparency = seq({ { 0, 1 }, { 0.12, 0.2 }, { 0.85, 0.25 }, { 1, 1 } }),
         })
     end
-    -- three currents of Qi on their own planes and speeds, each shedding leaves
     for k, c in { { 60, 2.3, 22, 0, 0.4, 4.4 }, { -48, 2.8, -18, 14, 0.6, 5.6 }, { 70, 3.1, 8, -20, 0.5, 3.8 } } do
         local _, head = arc(aura, "Current" .. k, { Orbit = c[1], Radius = c[2], Height = EGG_CENTRE, Tilt = Vector3.new(c[3], 0, c[4]),
             Phase = (k - 1) * 120, Bob = c[5], BobPeriod = c[6] }, 0.3, {
@@ -584,7 +560,7 @@ RECIPES.JadeSpiritEgg = function(aura)
             WidthScale = seq({ { 0, 0.6 }, { 0.3, 1 }, { 1, 0.5 } }),
         })
         shed(head, "Leaves", T.Leaf, ColorSequence.new(rgb(90, 220, 90), rgb(20, 150, 70)), 3, { 0.35, 0.6, 0.5 }, 0.2).RotSpeed =
-            NumberRange.new(-60, 60) -- a slow tumble
+            NumberRange.new(-60, 60)
     end
     local motes = part(aura, "MoteArea", CFrame.new(0, aura.rim + 0.15, 0), Vector3.new(5.5, 0.2, 5.5))
     finish(emitter("Motes", {
@@ -595,7 +571,7 @@ RECIPES.JadeSpiritEgg = function(aura)
         Color = colors({ { 0, MINT }, { 1, JADE } }), Transparency = seq({ { 0, 0.1 }, { 1, 1 } }),
     }, { HatchEmit = 25 }), motes)
     local glints = part(aura, "GlintArea", CFrame.new(0, EGG_CENTRE + 0.4, 0), Vector3.new(6, 4.5, 6))
-    finish(emitter("Glints", { -- soft twinkles: a round glow swelling and fading, no points
+    finish(emitter("Glints", {
         Texture = T.SoftGlow, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
         Speed = NumberRange.new(0.2, 0.5), SpreadAngle = Vector2.new(180, 180), Lifetime = NumberRange.new(1.4, 2), Rate = 3,
         Size = seq({ { 0, 0 }, { 0.5, 0.45 }, { 1, 0 } }), Color = ColorSequence.new(MINT),
@@ -607,8 +583,7 @@ RECIPES.JadeSpiritEgg = function(aura)
     drawIn(aura, T.Leaf, rgb(140, 240, 150), 0.6, 40)
     burst(aura, rgb(150, 255, 190), 9, T.SoftGlow)
     light(aura, JADE, 13, 1.2)
-    -- fitted to the detailed egg (4.3 studs tall): everything rides 0.3 higher, the vines of light
-    -- reach over its crown, and Qi breathes out of the jade-leaf gem in its front
+    -- fitted to the detailed egg (4.3 studs tall)
     lift(aura, 0.3)
     for k = 1, 3 do
         local top = aura.root["Vine" .. k .. "Top"]
@@ -630,27 +605,24 @@ RECIPES.JadeSpiritEgg = function(aura)
     }, { HatchEmit = 16 }), gem)
 end
 
--- Bloomwood Egg: eternal blossom, soft and slow. No flat rings, sigils or blossom sprites: two
--- streams of blossom wind drift round it shedding petals; petals float up off the rim and drift
--- back down; golden pollen rises, with soft twinkles of light. Its breath is slow and dreamy.
+-- Bloomwood Egg: eternal blossom. Two streams of blossom wind drift round it shedding petals,
+-- petals float up off the rim and drift back down, and golden pollen rises.
 RECIPES.BloomwoodEgg = function(aura)
     local PINK, BLUSH, GOLDEN = rgb(255, 110, 190), rgb(255, 200, 230), rgb(255, 205, 110)
     aura.model:SetAttribute("Gather", 1.4)
     aura.model:SetAttribute("Tint", rgb(255, 140, 205))
-    set(aura.model, nil, { Breath = 0.14, BreathPeriod = 6 }) -- dreamy
-    -- two streams of blossom wind drifting round the egg, shedding petals
+    set(aura.model, nil, { Breath = 0.14, BreathPeriod = 6 })
     for k, c in { { 45, 2.5, 16, 0, 0.8, 4.4 }, { -36, 3.0, -12, 18, 0.6, 5.4 } } do
         local _, head = arc(aura, "Breeze" .. k, { Orbit = c[1], Radius = c[2], Height = EGG_CENTRE + 0.2, Tilt = Vector3.new(c[3], 0, c[4]),
             Phase = (k - 1) * 180, Bob = c[5], BobPeriod = c[6] }, 0.3, {
-            -- a soft glow stretched along the trail: the ribbon texture read as a blocky band with hard ends
+            -- soft glow: the ribbon texture read as a blocky band with hard ends
             Texture = T.SoftGlow, TextureMode = Enum.TextureMode.Stretch, Lifetime = 1.8, Brightness = 2, LightEmission = 0.3,
             Color = colors({ { 0, rgb(255, 170, 215) }, { 0.5, rgb(255, 90, 170) }, { 1, rgb(190, 50, 150) } }),
             Transparency = seq({ { 0, 0.2 }, { 0.5, 0.35 }, { 1, 0.75 } }), WidthScale = seq({ { 0, 0.6 }, { 0.3, 1 }, { 1, 0.5 } }),
         })
         shed(head, "Petals", T.Petal, ColorSequence.new(rgb(255, 140, 200), rgb(235, 80, 160)), 4, { 0.3, 0.48, 0.4 }, 0.3).RotSpeed =
-            NumberRange.new(-60, 60) -- a slow tumble
+            NumberRange.new(-60, 60)
     end
-    -- petals floating up off the rim, drifting out and slowly back down
     local rim = part(aura, "PetalRim", CFrame.new(0, aura.rim + 0.2, 0), Vector3.new(4.4, 0.2, 4.4))
     finish(emitter("Fountain", {
         Texture = T.Petal, Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
@@ -669,7 +641,7 @@ RECIPES.BloomwoodEgg = function(aura)
         Color = ColorSequence.new(rgb(255, 230, 150), GOLDEN), Transparency = seq({ { 0, 0.1 }, { 1, 1 } }),
     }, { HatchEmit = 25 }), pollen)
     local glints = part(aura, "GlintArea", CFrame.new(0, EGG_CENTRE + 0.4, 0), Vector3.new(6, 4.5, 6))
-    finish(emitter("Glints", { -- soft twinkles: a round glow swelling and fading, no points
+    finish(emitter("Glints", {
         Texture = T.SoftGlow, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
         Speed = NumberRange.new(0.2, 0.5), SpreadAngle = Vector2.new(180, 180), Lifetime = NumberRange.new(1.4, 2), Rate = 3,
         Size = seq({ { 0, 0 }, { 0.5, 0.45 }, { 1, 0 } }), Color = ColorSequence.new(BLUSH),
@@ -681,8 +653,7 @@ RECIPES.BloomwoodEgg = function(aura)
     drawIn(aura, T.Petal, BLUSH, 0.6, 40)
     burst(aura, rgb(255, 200, 230), 9, T.SoftGlow)
     light(aura, rgb(255, 120, 190), 13, 0.5)
-    -- fitted to the detailed egg: 0.2 higher, golden pollen rising out of both lotus hearts, and a
-    -- soft glow round the emblem's heart
+    -- fitted to the detailed egg
     lift(aura, 0.2)
     for name, offset in { LotusL = Vector3.new(-0.746, -1.032, 0.453), LotusR = Vector3.new(0.779, -1.032, 0.429) } do
         local a = anchor(aura, name, offset)
@@ -706,29 +677,23 @@ RECIPES.BloomwoodEgg = function(aura)
     }, { HatchEmit = 3 }), anchor(aura, "Heart", Vector3.new(0.008, -0.244, 1.289)))
 end
 
--- Ancient Grove Egg: the world tree's heartbeat, soft and slow (redone without flat sigils, the
--- ring of old light or ripples): five roots of light crawling in over the rim and up into the
--- egg, drawing the grove's Qi in; a slow spiral of Qi climbing round the egg; four forest spirits
--- wandering round it on their own slow, looping paths with soft tails; leaves drifting down from
--- the branches. Its breath is deep and slow.
+-- Ancient Grove Egg: the world tree's heartbeat. Five roots of light climb into the egg, a spiral
+-- of Qi climbs round it, four forest spirits wander on looping paths and leaves drift from its crowns.
 RECIPES.AncientGroveEgg = function(aura)
-    local LEAFG, SPIRIT, AMBER, BARK = rgb(110, 240, 70), rgb(200, 255, 170), rgb(240, 200, 90), rgb(120, 200, 60)
+    local LEAFG, SPIRIT, BARK = rgb(110, 240, 70), rgb(200, 255, 170), rgb(120, 200, 60)
     aura.model:SetAttribute("Gather", 1.6)
     aura.model:SetAttribute("Tint", rgb(130, 245, 90))
-    set(aura.model, nil, { Breath = 0.16, BreathPeriod = 7 }) -- deep and slow, an ancient pulse of life
-    -- roots of light rising from low on the pedestal (the Jade Grove pedestals are cones of golden
-    -- roots, about 2 studs below the egg 4 studs out) and climbing up into the egg's heart
+    set(aura.model, nil, { Breath = 0.16, BreathPeriod = 7 })
+    -- the Jade Grove pedestals are cones of roots, about 2 studs below the egg 4 studs out
     local heart = attachment(aura, "Heart", CFrame.new(0, EGG_CENTRE * 0.8, 0) * UP_AXIS)
     for k = 1, 5 do
         stream(aura, "Root" .. k, { Orbit = 5, Radius = 3.9, Height = -2, Phase = (k - 1) * 72 + 20 }, heart, {
-            Texture = T.SoftGlow, TextureMode = Enum.TextureMode.Stretch, -- soft: the braided stream read as spiky fringes
+            Texture = T.SoftGlow, TextureMode = Enum.TextureMode.Stretch, -- the braided stream read as spiky fringes
             CurveSize0 = 2.2, CurveSize1 = -0.4, Width0 = 0.85, Width1 = 0.35, Brightness = 2.5, LightEmission = 0.3,
             Color = colors({ { 0, rgb(230, 170, 40) }, { 0.5, rgb(120, 230, 50) }, { 1, rgb(190, 255, 140) } }),
             Transparency = seq({ { 0, 1 }, { 0.1, 0.2 }, { 0.85, 0.25 }, { 1, 1 } }),
         })
     end
-    -- a spiral of Qi climbing round the egg: a fast-circling head bobbing up and down, its motes
-    -- rising as they fade
     local spiralHead = attachment(aura, "SpiralHead", CFrame.new(0, EGG_CENTRE, 1.7))
     set(spiralHead, nil, { Orbit = 90, Radius = 1.95, Height = EGG_CENTRE, Bob = 1.2, BobPeriod = 7 })
     finish(emitter("Spiral", {
@@ -736,7 +701,6 @@ RECIPES.AncientGroveEgg = function(aura)
         Acceleration = Vector3.new(0, 0.6, 0), Size = seq({ { 0, 0.45 }, { 1, 0 } }), Brightness = 2,
         Color = ColorSequence.new(rgb(140, 255, 90), rgb(60, 210, 40)), Transparency = seq({ { 0, 0 }, { 1, 1 } }),
     }, { HatchEmit = 20 }), spiralHead)
-    -- forest spirits: soft orbs with trails wandering round on slow looping paths
     for k, w in { { 30, 3.0, 2.6, 18, 1.2, 5.4 }, { -36, 3.4, 3.6, -14, 0.9, 6.5 }, { 40, 2.8, 1.6, 26, 1.0, 4.8 }, { -26, 3.6, 4.4, -8, 1.4, 7.6 } } do
         local _, head = arc(aura, "Spirit" .. k, { Orbit = w[1], Radius = w[2], Height = w[3], Tilt = Vector3.new(w[4], 0, -w[4] * 0.5),
             Phase = (k - 1) * 90 + 45, Bob = w[5], BobPeriod = w[6] }, 0.16, {
@@ -757,9 +721,7 @@ RECIPES.AncientGroveEgg = function(aura)
     drawIn(aura, T.Leaf, rgb(170, 245, 120), 0.65, 45)
     burst(aura, rgb(190, 255, 150), 11, T.SoftGlow)
     light(aura, LEAFG, 15, 1.2)
-    -- fitted to the detailed egg: 0.15 higher, and the egg's own five leaf crowns come alive: light
-    -- glowing inside each, fireflies drifting out of it, leaves falling from it (gold and green
-    -- by turns)
+    -- fitted to the detailed egg: light, fireflies and leaves from its five leaf crowns
     lift(aura, 0.15)
     local CROWNS = { { Vector3.new(1.661, 0.284, 0.304), 0.422 }, { Vector3.new(-1.753, 0.757, 0.581), 0.344 },
         { Vector3.new(0.644, 1.487, -0.358), 0.364 }, { Vector3.new(-1.627, 0.99, -0.374), 0.431 }, { Vector3.new(-0.262, 1.71, -0.244), 0.312 } }
@@ -774,7 +736,7 @@ RECIPES.AncientGroveEgg = function(aura)
             Color = k % 2 == 0 and ColorSequence.new(rgb(215, 215, 80), rgb(150, 190, 60)) or ColorSequence.new(rgb(120, 225, 80), rgb(60, 170, 50)),
             Transparency = seq({ { 0, 1 }, { 0.08, 0.05 }, { 0.8, 0.2 }, { 1, 1 } }),
         }, { HatchEmit = 6 }), a)
-        finish(emitter("Glow", {   -- drawn in front of the leaves (ZOffset): light shining through the crown
+        finish(emitter("Glow", {
             Texture = T.SmallGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(1.6, 2.2), Rate = 1.2,
             Size = seq({ { 0, r * 3 }, { 0.5, r * 3.8 }, { 1, r * 3.3 } }), Color = ColorSequence.new(rgb(140, 255, 90)),
             Transparency = seq({ { 0, 1 }, { 0.45, 0.55 }, { 1, 1 } }), Brightness = 2, ZOffset = 1.2,
@@ -839,15 +801,9 @@ function EggAuraVFX.storeMeshes(model, name)
     return #stored:GetChildren()
 end
 
--- Magma Heart Egg: a blazing fire round the egg, the owner's test fire from the Starting Island
--- fitted to the egg. Roblox's own fire textures, no Fire object, no flipbook. Eight flame columns
--- stand in a ring just inside the egg's widest girth (one emitter per unrotated attachment: a single
--- emitter on a bed under the egg starts its flames inside the egg, and a ring-shaped one scatters
--- them into thin smoke), so the flames lick up every side of it. Each column is a small copy of the
--- test fire: flames from bright yellow through orange and red to dark red, flickering, with a faster
--- yellow core in every other column; embers drift up from a bed under the egg. Together the columns
--- emit what the test fire did (about 190 flames and 120 core flames a second). Half light emission,
--- not full: fully additive flames wash out to pale smoke against the day sky.
+-- Magma Heart Egg: the owner's test fire fitted to the egg, eight flame columns round its girth. One
+-- emitter per unrotated attachment: a bed emitter starts flames inside the egg, a ring one scatters
+-- them into smoke. Half light emission: fully additive flames wash out to pale smoke on the day sky.
 RECIPES.MagmaHeartEgg = function(aura)
     local size = aura.egg and aura.egg.Size or Vector3.new(3.8, 5.25, 3.95)
     local girth = math.max(size.X, size.Z)
@@ -886,35 +842,26 @@ RECIPES.MagmaHeartEgg = function(aura)
     }, { HatchEmit = 25 }), bed)
 end
 
--- Phoenix Ash Egg: the Ash Cycle, an egg that dies and is reborn every CYCLE seconds (its rarest pet
--- is the Prismatic Phoenix). Ash: it cools, its veins and emblem dim to a smoulder, grey ash falls
--- round it (the one aura on the altar where things fall) and a curl of dark smoke rises from its
--- crown. Kindling: embers wink awake in the ash, the glow climbs back. Rebirth: the ash turns and
--- rushes up catching fire gold, two wings of light sweep open from behind it shedding golden
--- feathers, a sunburst blooms over its crown, its rim flashes through the prism's colours and a
--- near player's screen flashes warm. Burning down: the wings fold, their feathers falling and
--- greying into ash, and the cycle begins again. A hatch's burst is a rebirth.
--- Its right side (+X) faces the Magma Heart 5.9 studs away: the wings open beside the egg, clear of it.
+-- Phoenix Ash Egg: an egg that dies and is reborn every CyclePeriod seconds. Ash falls and smoke curls
+-- while it lies cold, embers kindle, then at the rebirth the ash rushes up gold, wings of light sweep
+-- open and a sunburst blooms. Its right side (+X) faces the Magma Heart 5.9 studs away.
 RECIPES.PhoenixAshEgg = function(aura)
     local size = aura.egg and aura.egg.Size or Vector3.new(4.57, 4.67, 3.53)
-    local C = size.Y / 2                             -- the egg's centre above its resting point
+    local C = size.Y / 2
     local top = size.Y
     local GOLD, FLAME, EMBER = rgb(255, 215, 120), rgb(255, 140, 40), rgb(220, 60, 25)
     local R = 0.735                                  -- where in the cycle the rebirth bursts
     set(aura.model, nil, {
         Gather = 1.6, Tint = rgb(255, 170, 60), CyclePeriod = 15, CycleRebirth = R, CycleScreen = 22, CycleScreenFlash = 0.45,
-        -- the egg's glowing parts: smouldering through the ash, white-gold at the rebirth
         CycleEggGlow = seq({ { 0, 0.3 }, { 0.55, 0.3 }, { 0.72, 1 }, { R + 0.01, 1.8 }, { 0.8, 1.5 }, { 0.9, 0.8 }, { 1, 0.3 } }),
         CycleEggCold = rgb(45, 14, 8), CycleEggHot = rgb(255, 225, 130),
-        -- the rim: a dull ember, kindling, then the prism's colours racing round, then gold cooling to red
         CycleHighlight = colors({ { 0, rgb(120, 25, 15) }, { 0.6, rgb(150, 35, 15) }, { 0.72, rgb(255, 120, 40) },
             { R + 0.001, rgb(255, 70, 70) }, { 0.748, rgb(255, 170, 40) }, { 0.76, rgb(255, 240, 90) }, { 0.772, rgb(90, 255, 140) },
             { 0.784, rgb(80, 200, 255) }, { 0.796, rgb(190, 110, 255) }, { 0.81, rgb(255, 200, 120) }, { 0.88, rgb(255, 120, 40) },
             { 1, rgb(120, 25, 15) } }),
         CycleOutline = seq({ { 0, 0.85 }, { 0.6, 0.85 }, { 0.72, 0.5 }, { R + 0.005, 0.05 }, { 0.82, 0.15 }, { 0.92, 0.7 }, { 1, 0.85 } }),
-        CycleFill = seq({ { 0, 1 }, { 0.72, 1 }, { R + 0.01, 0.82 }, { 0.8, 0.9 }, { 0.86, 1 }, { 1, 1 } }),   -- a faint fill: more hides its feathers
+        CycleFill = seq({ { 0, 1 }, { 0.72, 1 }, { R + 0.01, 0.82 }, { 0.8, 0.9 }, { 0.86, 1 }, { 1, 1 } }),   -- more fill hides its feathers
     })
-    -- ash falling round it through the dormant phase; none while it burns
     local sky = part(aura, "AshSky", CFrame.new(0, top + 0.8, 0), Vector3.new(5.6, 0.4, 5.6))
     finish(emitter("AshFall", {
         Texture = T.Ash, Shape = Enum.ParticleEmitterShape.Box, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
@@ -924,7 +871,6 @@ RECIPES.PhoenixAshEgg = function(aura)
         Color = colors({ { 0, rgb(175, 168, 162) }, { 1, rgb(125, 118, 114) } }), LightEmission = 0, LightInfluence = 0.2,
         Transparency = seq({ { 0, 1 }, { 0.1, 0.15 }, { 0.85, 0.35 }, { 1, 1 } }),
     }, { CycleRate = seq({ { 0, 1 }, { 0.6, 1 }, { 0.725, 0.6 }, { R, 0 }, { 0.86, 0 }, { 1, 1 } }) }), sky)
-    -- the body of air round the egg: embers kindle in it, and the ash rushes up out of it at the rebirth
     local air = part(aura, "AshAir", CFrame.new(0, C, 0), Vector3.new(5.6, size.Y, 5.6))
     finish(emitter("Kindling", {
         Texture = T.Spark, Shape = Enum.ParticleEmitterShape.Box, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
@@ -940,7 +886,6 @@ RECIPES.PhoenixAshEgg = function(aura)
         Color = colors({ { 0, rgb(120, 110, 105) }, { 0.18, GOLD }, { 0.5, FLAME }, { 1, EMBER } }), LightEmission = 0.6, Brightness = 3,
         Transparency = seq({ { 0, 0.1 }, { 0.75, 0.25 }, { 1, 1 } }),
     }, { CycleRate = seq({ { 0, 0 }, { R - 0.002, 0 }, { R + 0.003, 1 }, { 0.78, 1 }, { 0.82, 0 }, { 1, 0 } }), HatchEmit = 60 }), air)
-    -- a thin curl of dark smoke from the crown while it lies in ash
     local crown = attachment(aura, "Crown", CFrame.new(0, top - 0.2, 0))
     finish(emitter("CrownSmoke", {
         Texture = T.Fog, EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(0.8, 1.2), SpreadAngle = Vector2.new(8, 8),
@@ -949,19 +894,14 @@ RECIPES.PhoenixAshEgg = function(aura)
         Color = colors({ { 0, rgb(80, 70, 66) }, { 1, rgb(70, 66, 66) } }), LightEmission = 0, LightInfluence = 0.2,
         Transparency = seq({ { 0, 1 }, { 0.15, 0.7 }, { 0.7, 0.82 }, { 1, 1 } }),
     }, { CycleRate = seq({ { 0, 1 }, { 0.6, 1 }, { 0.72, 0.3 }, { R, 0 }, { 0.9, 0 }, { 1, 1 } }) }), crown)
-    -- the sunburst over its crown at the rebirth
     finish(emitter("Sunburst", {
         Texture = T.Flare, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.7), Rate = 0, Rotation = NumberRange.new(0, 360),
         Size = seq({ { 0, 1 }, { 0.25, 7 }, { 1, 8.5 } }), Color = ColorSequence.new(rgb(255, 220, 140)),
         Transparency = seq({ { 0, 0.1 }, { 1, 1 } }), Brightness = 2,
     }, { CycleEmit = 1, CycleAt = R + 0.003, HatchEmit = 2 }), attachment(aura, "Sun", CFrame.new(0, top + 0.6, 0)))
 
-    -- the wings: on each side three feathers of light, each a trail between a still root inside the
-    -- egg's shoulder and a tip that sweeps up and out from low at its flank, so the trail fans open
-    -- like a wing; the tips fold back down as the wings burn out. The longest feather sheds golden
-    -- feathers that grey into ash as they fall. The sweep stays in the egg's XY plane, just behind its
-    -- middle: a sweep in depth collapses to a needle seen from the front. Swept by raycasts (the egg's
-    -- CanQuery switched on for it), the wings keep 1.76 studs clear of the Magma Heart's egg, 3.3 of its stand.
+    -- wings: trails from a still root to a sweeping tip, kept in the egg's XY plane (a sweep in depth
+    -- reads as a needle from the front). Checked by raycasts: 1.76 studs clear of the Magma Heart's egg.
     local sweep = seq({ { 0, 0 }, { R, 0 }, { 0.79, 1 }, { 0.86, 1 }, { 0.97, 0 }, { 1, 0 } })
     local wings = group(aura, "Wings")
     for _, side in { -1, 1 } do
@@ -976,8 +916,8 @@ RECIPES.PhoenixAshEgg = function(aura)
             trail.Name = (side < 0 and "WingL" or "WingR") .. k
             trail.Attachment0, trail.Attachment1 = root, tip
             set(trail, {
-                -- solid: a textured trail (ribbon, feather) leaves only thin flicks past the egg's own sculpted
-                -- wings. LightEmission over 0.15 washes it pale on the sky.
+                -- solid: a textured trail leaves only thin flicks past the egg's sculpted wings;
+                -- LightEmission over 0.15 washes it pale on the sky
                 Texture = "", Lifetime = f[3], FaceCamera = false, LightEmission = 0.15, LightInfluence = 0, Brightness = 2.4,
                 Color = colors({ { 0, rgb(255, 215, 110) }, { 0.35, rgb(255, 140, 35) }, { 0.7, rgb(230, 60, 20) }, { 1, rgb(150, 25, 15) } }),
                 Transparency = seq({ { 0, 0 }, { 0.5, 0.25 }, { 1, 1 } }),
@@ -995,7 +935,6 @@ RECIPES.PhoenixAshEgg = function(aura)
         end
     end
 
-    -- its light: a low red smoulder, a gold blaze at the rebirth
     local glow = light(aura, rgb(200, 50, 30), 12, 0.6)
     glow.Parent.Position = Vector3.new(0, C, 0)
     set(glow, nil, {
@@ -1004,7 +943,7 @@ RECIPES.PhoenixAshEgg = function(aura)
     })
     drawIn(aura, T.Spark, rgb(255, 190, 90), 0.4, 50)
     burst(aura, rgb(255, 200, 110), 9)
-    for _, d in aura.model:GetDescendants() do -- its whole hatch flare at the egg's height (the helpers assume a smaller egg)
+    for _, d in aura.model:GetDescendants() do -- the hatch flare at the egg's height: the helpers assume a smaller egg
         if d.Name == "Burst" and d:IsA("Attachment") then
             d.Position = Vector3.new(0, C, 0)
         elseif d.Name == "DrawIn" and d:IsA("BasePart") then
@@ -1013,25 +952,12 @@ RECIPES.PhoenixAshEgg = function(aura)
     end
 end
 
--- Inferno Egg: a miniature volcano with an unstable molten core. Six systems, each with its own
--- motion and timing, and every few seconds an energy pulse runs through them in turn:
---   A. spark comets: three hot heads racing round it on tilted paths at their own speeds, shedding
---      streams of sparks that sketch rings of sparks round the egg;
---   B. magma fragments: broken volcanic rocks (modelled and baked in Blender) with lava glowing in
---      their cracks, orbiting at their own distances and speeds, tumbling, shedding embers;
---   C. a flame vortex: four molten ribbons spiralling round the egg on their own paths, flames
---      licking off them, sparks rising;
---   D. beneath: ripples of heat and three vents that erupt in turn on each pulse;
---   E. sparks spitting out of the egg's cracks, embers rising, ash drifting, burning cinders
---      thrown up now and then, sparks on each pulse;
---   F. the core's light: the egg's own lava cracks heat toward white-gold on each pulse, and a low
---      warm light.
--- On a pulse the aura speeds up, the comets throw sprays of sparks, the rocks are thrown out, flames
--- surge and the vents erupt, each a little after the last. While a hatch gathers, the rocks are pushed out and
--- energy is drawn in; on the burst everything erupts.
+-- Inferno Egg: a miniature volcano with an unstable molten core: spark comets (A), magma fragments (B),
+-- a flame vortex (C), heat ripples and vents (D), sparks, embers and ash (E) and the core's light (F).
+-- Every few seconds a pulse runs through them in turn; on the hatch burst everything erupts.
 RECIPES.InfernoEgg = function(aura)
     local CRIMSON, MOLTEN, LAVA, GOLD = rgb(160, 22, 12), rgb(255, 90, 20), rgb(255, 175, 55), rgb(255, 215, 120)
-    local C = 1.9                                    -- the egg stands 3.8 studs; its broken chunks fly off to its right
+    local C = 1.9                                    -- the egg stands 3.8 studs
     set(aura.model, nil, {
         Gather = 1.8, Tint = rgb(255, 80, 20), Breath = 0.12, BreathPeriod = 3.2,
         PulseInterval = 6, PulseJitter = 1.5, PulseSpeed = 0.9, PulseGlow = 0.6, PulseEggGlow = rgb(255, 205, 110),
@@ -1040,12 +966,8 @@ RECIPES.InfernoEgg = function(aura)
     })
     local fire = colors({ { 0, LAVA }, { 0.45, MOLTEN }, { 1, CRIMSON } })
 
-    -- A. spark comets: three heads racing round the egg on tilted paths, each at its own speed and
-    -- direction, shedding a stream of hot sparks that hang back and fall, so the paths draw rings of
-    -- sparks rather than solid bands; each throws a spray on the pulse and is drawn in on a hatch.
-    -- (Attachments, so they sit on the Root.) The sparks use our spark texture, which has real alpha:
-    -- the library's dots are white on black, so they only work fully additive, and over a bright sky
-    -- additive orange turns pink and white. Camera-facing: motion-aligned particles do not render here.
+    -- A. spark comets. Our spark texture has real alpha: the library's dots only work fully additive,
+    -- which turns orange pink and white on a bright sky. Motion-aligned particles do not render here.
     local sparkColors = colors({ { 0, rgb(255, 215, 90) }, { 0.35, rgb(255, 130, 25) }, { 0.75, rgb(230, 50, 12) }, { 1, rgb(140, 18, 8) } })
     for k, o in { -- orbit deg/s, radius, height, tilt x, tilt z, phase, rate, pulse delay
         { 95, 2.65, C + 0.15, -16, 10, 0, 44, 0.1 },
@@ -1061,7 +983,7 @@ RECIPES.InfernoEgg = function(aura)
             Size = seq({ { 0, 0.3, 0.07 }, { 0.6, 0.2, 0.05 }, { 1, 0 } }), Color = sparkColors,
             Transparency = seq({ { 0, 0 }, { 0.7, 0.15 }, { 1, 1 } }), LightEmission = 0.35, Brightness = 2.2,
         }, { PulseEmit = 12, PulseDelay = o[8], HatchEmit = 16 }), head)
-        finish(emitter("Flare", { -- the comet's hot head
+        finish(emitter("Flare", {
             Texture = T.Spark, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.12, 0.18), Rate = 24,
             Size = seq({ { 0, 0.36, 0.06 }, { 1, 0.2 } }), Color = ColorSequence.new(rgb(255, 200, 80)),
             Transparency = seq({ { 0, 0.2 }, { 1, 1 } }), LightEmission = 0.5, Brightness = 2.5,
@@ -1073,9 +995,7 @@ RECIPES.InfernoEgg = function(aura)
     local source = meshes and meshes:FindFirstChild("InfernoFragments")
     if source then
         local rocks = group(aura, "MagmaFragments")
-        -- the nearest neighbouring egg (the Phoenix Altar's stands are 5.9 studs apart): the rocks pull in
-        -- as they pass it, so they never cut into it. Swept in Play over every angle, bob, pulse and hatch
-        -- push against both eggs' real surfaces: at least 0.33 studs clear of each.
+        -- the rocks pull in as they pass the nearest egg; swept in Play, they keep 0.33 studs clear of both
         local avoidAngle, nearest
         local stands = aura.egg and aura.egg.Parent.Parent
         for _, stand in stands and stands:GetChildren() or {} do
@@ -1125,7 +1045,7 @@ RECIPES.InfernoEgg = function(aura)
         warn("InfernoEgg aura: no ServerStorage.AuraMeshes.InfernoFragments yet (import assets/eggs/InfernoFragments.fbx, then EggAuraVFX.storeMeshes)")
     end
 
-    -- C. the flame vortex: four molten ribbons on their own spiralling paths
+    -- C. the flame vortex
     local vortex = group(aura, "FlameVortex")
     for k, o in { -- orbit deg/s, radius, height, bob, bob period, tilt x, tilt z, half width, pulse delay
         { 85, 2.2, C - 0.9, 1.1, 2.6, 8, -6, 0.14, 0.05 },
@@ -1154,14 +1074,13 @@ RECIPES.InfernoEgg = function(aura)
         }), aura.root[("Ribbon%dBottom"):format(k)])
     end
 
-    -- D. beneath it: ripples of heat and three vents (the caldera sigil, the crust ring and the glow
-    -- ring under the egg were removed at the owner's request)
+    -- D. heat ripples and three vents erupting in turn
     local ground = group(aura, "GroundFormation")
     local heat = ripple(aura, rgb(255, 110, 40), 7, 3)
     heat:SetAttribute("PulseEmit", 1)
     heat:SetAttribute("PulseDelay", 0.1)
     heat.Parent = ground
-    for k, ang in { 125, 245, 5 } do -- three vents round the seal, erupting in turn
+    for k, ang in { 125, 245, 5 } do
         local r = math.rad(ang)
         local vent = attachment(aura, "Vent" .. k, CFrame.new(math.cos(r) * 2.25, aura.rim + 0.15, math.sin(r) * 2.25))
         local delay = 0.35 + 0.2 * k
@@ -1177,8 +1096,6 @@ RECIPES.InfernoEgg = function(aura)
             Size = seq({ { 0, 0.25 }, { 0.35, 0.5, 0.1 }, { 1, 0.15 } }), Color = fire, LightEmission = 0.3, Brightness = 3,
             Transparency = seq({ { 0, 1 }, { 0.12, 0.1 }, { 0.75, 0.3 }, { 1, 1 } }),
         }, { PulseEmit = 4, PulseDelay = delay }), vent)
-        -- (dark smoke after each eruption was tried: it drifted up into a grey smudge beside the next
-        -- stand's egg and added nothing, so the contrast comes from the crust and the rocks)
     end
 
     -- E. embers, ash, cinders, pulse sparks
@@ -1191,7 +1108,7 @@ RECIPES.InfernoEgg = function(aura)
         Size = seq({ { 0, 0.2, 0.07 }, { 0.5, 0.14, 0.05 }, { 1, 0 } }), Color = colors({ { 0, GOLD }, { 0.5, MOLTEN }, { 1, CRIMSON } }),
         Transparency = seq({ { 0, 0 }, { 0.4, 0.15 }, { 0.6, 0.05 }, { 1, 1 } }), Brightness = 3,
     }, { HatchEmit = 30 }), area)
-    finish(emitter("Cinders", { -- burning fragments thrown up now and then
+    finish(emitter("Cinders", {
         Texture = T.Rock, Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
         EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(3.5, 5.5), SpreadAngle = Vector2.new(25, 25),
         Acceleration = Vector3.new(0, -8, 0), Lifetime = NumberRange.new(1, 1.4), Rate = 0.4, Rotation = NumberRange.new(0, 360),
@@ -1205,11 +1122,11 @@ RECIPES.InfernoEgg = function(aura)
         Speed = NumberRange.new(0.1, 0.4), SpreadAngle = Vector2.new(180, 180), Drag = 0.5, Acceleration = Vector3.new(0.18, 0.22, 0.06),
         Lifetime = NumberRange.new(3, 5), Rate = 4, Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-80, 80),
         Size = seq({ { 0, 0.12, 0.05 }, { 1, 0.1, 0.04 } }), Color = colors({ { 0, rgb(70, 62, 60) }, { 1, rgb(40, 36, 36) } }),
-        LightEmission = 0, LightInfluence = 0.2, -- lit by the sky any more and it reads as pale glass Transparency = seq({ { 0, 1 }, { 0.15, 0.25 }, { 0.8, 0.4 }, { 1, 1 } }),
+        LightEmission = 0, LightInfluence = 0.2, -- lit by the sky any more and it reads as pale glass
+        Transparency = seq({ { 0, 1 }, { 0.15, 0.25 }, { 0.8, 0.4 }, { 1, 1 } }),
     }), ashArea)
     ashArea.Parent = air
-    -- sparks spitting out of the egg's own cracks: from the surface of a sphere the size of the egg's
-    -- glowing core, outward, falling; a burst of them on each pulse
+    -- sparks spitting out of the egg's own cracks
     local glowCore
     for _, d in aura.egg and aura.egg.Parent:GetChildren() or {} do
         if d:IsA("BasePart") and d.Name:find("_Glow_") then
@@ -1235,14 +1152,11 @@ RECIPES.InfernoEgg = function(aura)
         Transparency = seq({ { 0, 0 }, { 1, 0.3 } }),
     }, { PulseEmit = 14, HatchEmit = 30 }), heart)
 
-    -- F. the core's light: the egg's own lava cracks (they heat on each pulse: PulseEggGlow) and a
-    -- low warm light on the Root. No glow halo behind the egg: the owner keeps the light to the
-    -- cracks. The stand already lights the egg, so this light stays low.
+    -- F. the core's light: kept low, as the stand already lights the egg
     light(aura, rgb(255, 120, 45), 12, 0.5)
 
-    -- the hatch: energy drawn in, then the eruption
     local gathering = drawIn(aura, T.Dot, rgb(255, 150, 70), 0.35, 60)
-    gathering.Parent.Parent = air -- its sphere part
+    gathering.Parent.Parent = air
     burst(aura, rgb(255, 160, 80), 10)
     finish(emitter("Eruption", {
         Texture = T.Fireburst, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.7), Rate = 0, Rotation = NumberRange.new(0, 360),
@@ -1250,14 +1164,11 @@ RECIPES.InfernoEgg = function(aura)
     }, { HatchEmit = 2 }), attachment(aura, "EruptionCore", CFrame.new(0, C, 0)))
 end
 
--- ---------- building ----------
 -- ---------- Moonlit Isle ----------
--- Soft and smooth, by the owner's direction: no rings, sigils, image planes or pointed sparkles,
--- only soft glows, gliding light and slow drift (T.SoftGlow throughout: T.SmallGlow's glow is a
--- speck in its image, invisible at mote sizes). The island is bright and white, so motes carry a
--- deeper colour at lower light emission. The stands are about 6 studs apart, so every
--- aura stays within about 2.9 studs of its egg. Points on the eggs are measured in eggs_moon.py's
--- build (offsets from the body's bounding-box centre, see modelPoint).
+-- Soft and smooth, by the owner's direction: only soft glows, gliding light and slow drift (T.SoftGlow:
+-- T.SmallGlow is a speck at mote sizes). The isle is bright, so motes carry deeper colour at lower
+-- light emission. Stands are about 6 studs apart: auras stay within about 2.9 studs of the egg.
+-- Points on the eggs are measured in eggs_moon.py's build (see modelPoint).
 
 -- Moves the egg-centred pieces (halo, light, the hatch's gathering and burst) to `c` studs above
 -- the Root, for an egg whose centre is not EGG_CENTRE.
@@ -1286,7 +1197,7 @@ end
 -- with a soft tail; the pearl on its crescent breathes a blue glow; a faint night-blue haze.
 RECIPES.CelestialEgg = function(aura)
     local NIGHT, STAR = rgb(70, 110, 255), rgb(225, 235, 255)
-    local C = modelPoint(aura, Vector3.new(0.101, 0.197, 0)).Y   -- the egg's centre (it lies in its crescent)
+    local C = modelPoint(aura, Vector3.new(0.101, 0.197, 0)).Y   -- the egg's centre, in its crescent
     set(aura.model, nil, { Gather = 1.4, Tint = rgb(120, 170, 255), Breath = 0.12, BreathPeriod = 6 })
     local sky = part(aura, "StarArea", CFrame.new(0, C + 0.3, 0), Vector3.new(5.2, 4.6, 5.2))
     finish(emitter("Starlight", {
@@ -1295,7 +1206,6 @@ RECIPES.CelestialEgg = function(aura)
         Lifetime = NumberRange.new(2.5, 4), Rate = 7, Size = seq({ { 0, 0 }, { 0.5, 0.45, 0.12 }, { 1, 0 } }),
         Color = ColorSequence.new(STAR, rgb(150, 190, 255)), Transparency = NumberSequence.new(0.2), Brightness = 2,
     }, { HatchEmit = 24 }), sky)
-    -- two shooting stars, each on its own tilt, radius and pace, one the other way round
     for k, c in { { 38, 2.5, 24, -10, 0.5, 5.5, 1.6 }, { -27, 2.85, -18, 22, 0.4, 7, 2 } } do
         local _, head = arc(aura, "Comet" .. k, { Orbit = c[1], Radius = c[2], Height = C + 0.2, Tilt = Vector3.new(c[3], 0, c[4]),
             Phase = (k - 1) * 170, Bob = c[5], BobPeriod = c[6] }, 0.16, {
@@ -1320,7 +1230,7 @@ end
 -- and up; three lantern spirits circle it slowly at their own heights and paces, each a soft glow
 -- leaving a fading tail of light; the orb on its spire breathes; a faint violet haze.
 RECIPES.AstralSanctumEgg = function(aura)
-    local VIOLET, LILAC = rgb(110, 60, 255), rgb(180, 145, 255)   -- a bluer violet: Neon and the bright isle push violet to pink
+    local VIOLET, LILAC = rgb(110, 60, 255), rgb(180, 145, 255)   -- bluer: Neon and the bright isle push violet to pink
     local C = modelPoint(aura, Vector3.new(0, -0.234, 0)).Y
     set(aura.model, nil, { Gather = 1.4, Tint = rgb(170, 120, 255), Breath = 0.14, BreathPeriod = 5.5 })
     -- born just inside the shell round the window band, so the light seems to come out through it
@@ -1335,7 +1245,7 @@ RECIPES.AstralSanctumEgg = function(aura)
     for k, l in { { 30, 2.3, 0.9, 0.35, 4.2 }, { -22, 2.6, -0.2, 0.3, 5.1 }, { 26, 2.8, 0.3, 0.4, 3.6 } } do
         local lantern = attachment(aura, "Lantern" .. k, CFrame.new(0, C + l[3], l[2]))
         set(lantern, nil, { Orbit = l[1], Radius = l[2], Height = C + l[3], Phase = (k - 1) * 120 + 20, Bob = l[4], BobPeriod = l[5] })
-        finish(emitter("Glow", { -- left behind as it moves: a soft fading tail
+        finish(emitter("Glow", {
             Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.9, 1.1), Rate = 14,
             Size = seq({ { 0, 0.85 }, { 1, 0 } }), Color = ColorSequence.new(rgb(185, 150, 255), VIOLET),
             Transparency = seq({ { 0, 0.25 }, { 1, 1 } }), Brightness = 2, LightEmission = 0.5,
@@ -1385,11 +1295,9 @@ RECIPES.HeavenlyThroneEgg = function(aura)
 end
 
 -- ---------- Origin Abyss ----------
--- The same soft direction as Moonlit Isle. The shrine's thorn branches curve up close round each
--- egg (about 1.6 studs from its axis low down, open above 3.3) and the stands are 6.2 studs apart,
--- so things that circle stay high or within about 2.6 studs. No PointLight of their own: the
--- stand's light is enough, and more coloured light paints the bronze thorns red. Points on the
--- eggs are measured in eggs_origin.py's build.
+-- The same soft direction as Moonlit Isle. The thorns curve close round each egg (about 1.6 studs
+-- from its axis low down) and stands are 6.2 studs apart, so circling things stay high or within 2.6
+-- studs. No PointLights: coloured light paints the bronze thorns red. Points from eggs_origin.py.
 
 -- Forbidden Origin Egg: the seal drinking light. Soft violet motes are drawn in toward the seal
 -- from all round it; every few seconds a slow soft swell of violet spreads from the seal and
@@ -1405,7 +1313,7 @@ RECIPES.ForbiddenOriginEgg = function(aura)
         Transparency = seq({ { 0, 1 }, { 0.15, 0.55 }, { 1, 1 } }), Brightness = 2, LightEmission = 0.5,
     }, { HatchEmit = 2 }), seal)
     local around = part(aura, "SealDraw", CFrame.new(seal.Position), Vector3.new(4.4, 4.4, 4.4))
-    finish(emitter("Drawn", { -- born on a sphere round the seal, drifting in to it
+    finish(emitter("Drawn", {
         Texture = T.SoftGlow, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
         ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward, Speed = NumberRange.new(0.6, 0.8), Lifetime = NumberRange.new(2.6, 3),
         Rate = 6, Size = seq({ { 0, 0 }, { 0.3, 0.42, 0.08 }, { 0.85, 0.2 }, { 1, 0 } }), Color = ColorSequence.new(LILAC, VIOLET),
@@ -1425,7 +1333,7 @@ RECIPES.VoidRiftEgg = function(aura)
     local C = modelPoint(aura, Vector3.new(0, 0, -0.059)).Y
     set(aura.model, nil, { Gather = 1.5, Tint = rgb(90, 130, 255), Breath = 0.14, BreathPeriod = 5 })
     local heart = modelPoint(aura, Vector3.new(0, 0, -0.159))
-    -- turned so its up axis points out of the egg's front (local -Z), through the tear
+    -- up axis out of the egg's front (local -Z), through the tear
     local seep = attachment(aura, "Seep", CFrame.new(heart) * CFrame.Angles(-math.pi / 2, 0, 0))
     finish(emitter("Seep", {
         Texture = T.SoftGlow, EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(0.5, 0.9), SpreadAngle = Vector2.new(18, 35),
@@ -1453,10 +1361,8 @@ RECIPES.VoidRiftEgg = function(aura)
     centreAt(aura, C)
 end
 
--- Primordial Abyss Egg: deep time. Three soft lights sweep slowly round it at three heights like a
--- clock's hands, each a third the speed of the one below it, each drawing a short arc of light;
--- the ammonite's mouth breathes magenta and faint pink motes drift out of its spiral; a faint
--- magenta haze. Its breath is the slowest on the island.
+-- Primordial Abyss Egg: deep time. Three soft lights sweep round it like a clock's hands, each a
+-- third the speed of the one below; the ammonite's mouth breathes magenta and pink motes drift out.
 RECIPES.PrimordialAbyssEgg = function(aura)
     local MAGENTA, ROSE, WARM = rgb(255, 60, 180), rgb(255, 160, 215), rgb(255, 200, 150)
     local C = modelPoint(aura, Vector3.new(0, 0, -0.051)).Y
@@ -1469,7 +1375,7 @@ RECIPES.PrimordialAbyssEgg = function(aura)
         })
         finish(emitter("Head", {
             Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.5), Rate = 12,
-            -- rose, not warm white: brighter, the heads bloom into white blobs
+            -- rose, not warm white: brighter heads bloom into white blobs
             Size = seq({ { 0, 0.38 }, { 1, 0.12 } }), Color = ColorSequence.new(rgb(255, 130, 200)), Transparency = seq({ { 0, 0.3 }, { 1, 1 } }),
             Brightness = 2, LightEmission = 0.35,
         }, { HatchEmit = 4 }), head)
@@ -1488,6 +1394,7 @@ RECIPES.PrimordialAbyssEgg = function(aura)
     centreAt(aura, C)
 end
 
+-- ---------- building ----------
 function EggAuraVFX.has(eggId)
     return RECIPES[eggId] ~= nil
 end
@@ -1530,7 +1437,7 @@ function EggAuraVFX.build(island)
             local aura = Instance.new("Model")
             aura.Name = eggId
             aura:SetAttribute("EggId", eggId)
-            aura.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- streams in whole, so the client sees it complete
+            aura.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- so the client sees it complete
             local root = Instance.new("Part")
             root.Name = "Root"
             root.Anchored = true

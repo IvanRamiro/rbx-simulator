@@ -9,8 +9,11 @@ with jade-stone outcrops on the steeper ground.
 """
 import math
 
+import layout as L
+
 NAME = "JadeGrove"
-CENTRE = (330, 206, -70)
+CENTRE = L.ISLANDS[NAME]["centre"]   # its place in the world, and its quarter turns (layout.py)
+TURNS = L.ISLANDS[NAME]["turns"]
 
 ARRIVAL = (-78, 18)            # where the Jade Route's last leap lands (layout.ROUTES["JadeRoute"]["to"])
 LANDING = (-68, 15, 11)        # terrace inside the rim: centre x, z, radius
@@ -121,4 +124,4 @@ def export_terrain(path=None):
     """Write src/worldbuild/Terrain/JadeGrove.lua for WorldBuilder.buildTerrain."""
     import worldlib as W
     path = path or W.REPO + "/src/worldbuild/Terrain/%s.lua" % NAME
-    return W.export_heightfield(NAME, CENTRE, 4, 102, height, MATERIALS, path, priority=[("Mud", 2)])
+    return W.export_heightfield(NAME, CENTRE, 4, 102, height, MATERIALS, path, priority=[("Mud", 2)], turns=TURNS)

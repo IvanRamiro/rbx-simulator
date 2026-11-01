@@ -1,31 +1,26 @@
 -- Build-time only: run from Studio (edit mode) to (re)build Workspace.FloatingIslands from the
--- data that tools/blender/world exports. Never required by game scripts. Require a clone so
--- Studio's module cache never serves an old copy:
+-- data tools/blender/world exports. Require a clone so Studio's module cache never serves an old copy:
 --
 --   local WB = require(game.ServerStorage.WorldBuild.WorldBuilder:Clone())
 --
--- Building an island from scratch (FBX files in assets/world/<Island>, imported by hand into
--- Workspace; each export's anchor cube marks the island centre or the kit origin):
+-- Building an island (FBX files in assets/world/<Island>, imported by hand into Workspace; each
+-- export's anchor cube marks the island centre or the kit origin):
 --   WB.clearTerrain(island); WB.buildTerrain(island)
---   WB.seatImport(island, <import of the island-specific meshes>, <anchor>, "Underside" or "Island")
+--   WB.seatImport(island, <island meshes import>, <anchor>, "Underside" or "Island")
 --   WB.storeKit(island, <each kit/props import>, <anchor>)
---   -- every import uploads its own copy of the island atlas: point all pieces at one copy, either
---   -- with WB.shareTexture or by setting TextureID on the templates and island meshes
+--   -- each import uploads its own atlas copy: point all pieces at one (WB.shareTexture or TextureID)
 --   WB.placeKit(island); WB.buildEggStands(island); WB.buildRelics(island)
---
--- Eggs (assets/eggs/<EggId>.fbx), imported by hand into Workspace:
---   WB.storeEgg(<import>, eggId)       -- into ServerStorage.EggMeshes (replacing the old model)
--- then rebuild the stands of the eggs' island with WB.buildEggStands(island), and their auras
--- with require(game.ServerStorage.WorldBuild.EggAuraVFX:Clone()).build(island).
--- then the island's own pieces:
---   Starting Island: WB.buildWaystones, WB.buildSpawn, WB.buildQiSpring
+--   Yggdrasil (the hub): WB.buildWaystones, WB.buildSpawn, WB.buildSpawnSlots, WB.buildPlots, WB.buildQiSpring
 --   every other island: WB.buildCheckpoint(island)
+--
+-- Eggs (assets/eggs/<EggId>.fbx): WB.storeEgg(<import>, eggId), then WB.buildEggStands(island)
+-- and require(game.ServerStorage.WorldBuild.EggAuraVFX:Clone()).build(island).
 -- Collision fidelity applies asynchronously; confirm with WB.checkCollision in a later call.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
--- cloned so edits to GameConfig are never served from Studio's require cache
+-- Modules are required as clones so Studio's require cache never serves a stale copy.
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"):Clone())
 local EggAuraVFX = require(ServerStorage:WaitForChild("WorldBuild"):WaitForChild("EggAuraVFX"):Clone())
 
@@ -35,7 +30,7 @@ local VOXEL = 4
 
 -- Terrain material colours are global to the place, so every island uses its own materials.
 WorldBuilder.MaterialColors = {
-    -- Starting Island
+    -- Yggdrasil (the Starting Island's, which it replaced)
     Grass = Color3.fromRGB(96, 158, 82),
     Ground = Color3.fromRGB(122, 96, 70),
     Rock = Color3.fromRGB(118, 120, 128),
@@ -63,7 +58,7 @@ WorldBuilder.MaterialColors = {
 -- Per-island terrain settings: how deep the terrain shell reaches below the island centre (the
 -- underside meshes take over below that) and which material sits under the surface layer.
 WorldBuilder.TerrainSettings = {
-    StartingIsland = { ShellDepth = 9, SubMaterial = "Ground", KeepThrough = { Rock = true } },
+    Yggdrasil = { ShellDepth = 9, SubMaterial = "Ground", KeepThrough = { Rock = true } },
     -- deep enough for the Whispering Hollow (floor about -9)
     JadeGrove = { ShellDepth = 14, SubMaterial = "Mud", KeepThrough = { Sandstone = true } },
     -- the lava river's channel reaches about -6 at the edge
@@ -74,9 +69,49 @@ WorldBuilder.TerrainSettings = {
     OriginAbyss = { ShellDepth = 14, SubMaterial = "Slate", KeepThrough = {} },
 }
 
+-- An island's terrain data, its grids turned by its quarter turns (Turns, layout.py) about its
+-- centre: the generator writes them unturned. Quarter turns map cells onto cells exactly.
 local function terrainData(island)
-    -- clone so a re-exported data module is never served from Studio's require cache
-    return require(ServerStorage.WorldBuild.Terrain:FindFirstChild(island):Clone())
+    local data = require(ServerStorage.WorldBuild.Terrain:FindFirstChild(island):Clone())
+    local turns = (data.Turns or 0) % 4
+    if turns == 0 then
+        return data
+    end
+    local n, cell = data.Size, data.Cell
+    local cx, cz = data.Centre.X, data.Centre.Z
+    local ox, oz = data.Origin.X - cx, data.Origin.Y - cz
+    local function turn(x, z, count)
+        for _ = 1, count do
+            x, z = -z, x
+        end
+        return x, z
+    end
+    local minX, minZ = math.huge, math.huge
+    for _, corner in { { ox, oz }, { ox + n * cell, oz }, { ox, oz + n * cell }, { ox + n * cell, oz + n * cell } } do
+        local x, z = turn(corner[1], corner[2], turns)
+        minX, minZ = math.min(minX, x), math.min(minZ, z)
+    end
+    local function regrid(values)
+        if not values then
+            return nil
+        end
+        local out = table.create(n * n, false)
+        for j = 1, n do
+            for i = 1, n do
+                local sx, sz = turn(minX + (i - 0.5) * cell, minZ + (j - 0.5) * cell, 4 - turns)
+                local si = math.floor((sx - ox) / cell + 0.5 + 0.001)
+                local sj = math.floor((sz - oz) / cell + 0.5 + 0.001)
+                out[(j - 1) * n + i] = values[(sj - 1) * n + si]
+            end
+        end
+        return out
+    end
+    local turned = table.clone(data)
+    turned.Origin = Vector2.new(cx + minX, cz + minZ)
+    turned.Heights = regrid(data.Heights)
+    turned.MaterialIndex = regrid(data.MaterialIndex)
+    turned.WaterLevels = regrid(data.WaterLevels)
+    return turned
 end
 
 function WorldBuilder.applyMaterialColors()
@@ -121,7 +156,6 @@ function WorldBuilder.buildTerrain(island)
     local maxY = math.ceil((data.Centre.Y + highest) / VOXEL) * VOXEL + VOXEL
     local layers = (maxY - minY) / VOXEL
 
-    -- one voxel column per grid cell; the grid is already aligned to 4-stud voxels
     local cellsPerVoxel = data.Cell / VOXEL
     assert(cellsPerVoxel == 1, "WorldBuilder expects 4-stud heightfield cells")
     local size = data.Size
@@ -152,15 +186,13 @@ function WorldBuilder.buildTerrain(island)
                 for k = 1, layers do
                     local y0 = minY + (k - 1) * VOXEL
                     if y0 + VOXEL > bottomY then
-                        -- Roblox renders a voxel's surface between its centre (occupancy 0) and
-                        -- the centre of the voxel above (occupancy 1), measured in Studio
+                        -- a voxel's surface renders from its centre (occupancy 0) to the next one up (1), measured in Studio
                         local occupancy = math.clamp((top - y0 - VOXEL / 2) / VOXEL, 0, 1)
                         if occupancy > 0 then
                             matGrid[i][k][j] = if keep or y0 + VOXEL >= top - VOXEL then surface else subMaterial
                             occGrid[i][k][j] = occupancy
                             filled += 1
                         elseif waterTop and y0 + VOXEL / 2 < waterTop then
-                            -- pool water fills the air above the bed up to the water surface
                             matGrid[i][k][j] = Enum.Material.Water
                             occGrid[i][k][j] = math.clamp((waterTop - y0 - VOXEL / 2) / VOXEL, 0, 1)
                         end
@@ -232,8 +264,7 @@ WorldBuilder.Collision = {
     { Prefix = "MI_EggPedestal", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "MI_MoonstoneShards", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "MI_LunarRock", Fidelity = Enum.CollisionFidelity.Hull },
-    -- Origin Abyss: the bridge's gap, the walk through the gate, the altar ring and the ruins on
-    -- each climb fragment must keep their shape (a hull would roof them over)
+    -- Origin Abyss: a hull would roof over the bridge's gap, the gate, the altar ring and the ruins
     { Prefix = "OA_BrokenBridge", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "OA_GateOfDescent", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "OA_Altar", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
@@ -248,8 +279,18 @@ WorldBuilder.Collision = {
     { Prefix = "OA_FallenDrums", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "OA_VoidCrystals", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "OA_SlateRock", Fidelity = Enum.CollisionFidelity.Hull },
+    -- Yggdrasil: the roots arch over paths and carry the climb down, so they keep their shape
+    { Prefix = "YG_MoundRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "YG_GripRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "YG_PathRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "YG_CradleRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "YG_Slab", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "YG_Taproot", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "YG_PlotStake", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "YG_PlotBoard", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "JG_", Fidelity = Enum.CollisionFidelity.Default },
     { Prefix = "SI_", Fidelity = Enum.CollisionFidelity.Default },
+    { Prefix = "YG_", Fidelity = Enum.CollisionFidelity.Default },
 }
 
 -- Surface overrides per mesh-name prefix: glowing inlays are Neon (saturated colours, since
@@ -279,8 +320,7 @@ WorldBuilder.Appearance = {
     JG_Mushrooms = { CanCollide = false },
     JG_Fern = { CanCollide = false },
     JG_BambooClump = { CanCollide = false },
-    -- Ember Peak: lava glows; the lake and river burn (WorldService returns anyone touching them
-    -- to the island's checkpoint), so they stay touchable
+    -- Ember Peak: the lava lake and river stay touchable (WorldService returns anyone touching them to the checkpoint)
     EP_UnderColumns = { CanCollide = false },
     EP_MagmaCore = table.clone(GLOW),
     EP_LavaLake = { Material = Enum.Material.Neon, CanCollide = false, CanTouch = true, CastShadow = false, Tag = "LavaHazard" },
@@ -317,9 +357,15 @@ WorldBuilder.Appearance = {
     OA_VoidFlame = table.clone(GLOW),
     OA_EggGlowRing = table.clone(GLOW),
     OA_ColossusEyes = table.clone(GLOW),
-    -- void crystals: dark glass around a glowing core
     OA_VoidCrystals = { Material = Enum.Material.Glass, Transparency = 0.35, Reflectance = 0.15, CastShadow = false },
     OA_VoidCrystalGlow = table.clone(GLOW),
+    -- Yggdrasil: the crown and the aerial roots are out of reach; Qi glows in the trunk's grooves
+    YG_CrownLower = { CanCollide = false },
+    YG_CrownUpper = { CanCollide = false },
+    YG_AerialRoots = { CanCollide = false },
+    YG_TrunkVeins = table.clone(GLOW),
+    YG_SeedLanterns = table.clone(GLOW),
+    YG_SpawnDaisGlow = table.clone(GLOW),
 }
 WorldBuilder.Appearance.SI_QiCompassGlow.Color = Color3.fromRGB(40, 210, 235)
 WorldBuilder.Appearance.SI_LanternLight.Color = Color3.fromRGB(255, 150, 60)
@@ -332,7 +378,7 @@ WorldBuilder.Appearance.EP_LavaLake.Color = Color3.fromRGB(255, 105, 20)
 WorldBuilder.Appearance.EP_LavaRiver.Color = Color3.fromRGB(255, 120, 30)
 WorldBuilder.Appearance.EP_GateFire.Color = Color3.fromRGB(255, 120, 20)
 WorldBuilder.Appearance.EP_BrazierFire.Color = Color3.fromRGB(255, 120, 20)
--- the flame meshes are a translucent core; flame particles give them their motion
+-- flame meshes are a translucent core; their particles give the motion
 WorldBuilder.Appearance.EP_GateFire.Transparency = 0.35
 WorldBuilder.Appearance.EP_BrazierFire.Transparency = 0.35
 WorldBuilder.Appearance.EP_ForgeCoals.Color = Color3.fromRGB(255, 70, 10)
@@ -353,6 +399,8 @@ WorldBuilder.Appearance.OA_VoidFlame.Transparency = 0.35
 WorldBuilder.Appearance.OA_ColossusEyes.Color = Color3.fromRGB(115, 40, 255) -- bluer violet: redder ones bloom pink
 WorldBuilder.Appearance.OA_VoidCrystals.Color = Color3.fromRGB(55, 22, 100)
 WorldBuilder.Appearance.OA_VoidCrystalGlow.Color = Color3.fromRGB(160, 55, 255)
+WorldBuilder.Appearance.YG_TrunkVeins.Color = Color3.fromRGB(40, 210, 235) -- the Qi Spring's and the compass's Qi
+WorldBuilder.Appearance.YG_SeedLanterns.Color = Color3.fromRGB(255, 170, 40)
 
 -- Kit pieces that carry a PointLight (lights take the piece's colour).
 WorldBuilder.Lights = {
@@ -375,6 +423,7 @@ WorldBuilder.Emitters = {
     OA_VoidFlame = { "VoidFlames", "VoidMotes" },
     OA_ColossusEyes = { "VoidWisps" },
     OA_VoidCrystalGlow = { "VoidMotes" },
+    YG_TrunkVeins = { "QiMotes" },
 }
 
 local function addEmitterPreset(part, preset)
@@ -412,7 +461,6 @@ local function addEmitterPreset(part, preset)
         sparks.Rate = 6
         sparks.Parent = part
     elseif preset == "VoidFlames" then
-        -- violet fire that burns down to black at its tips
         local flames = Instance.new("ParticleEmitter")
         flames.Name = "VoidFlames"
         flames.Texture = "rbxasset://textures/particles/fire_main.dds"
@@ -430,7 +478,6 @@ local function addEmitterPreset(part, preset)
         flames.Rate = 18
         flames.Parent = part
     elseif preset == "VoidMotes" then
-        -- slow motes of void light drifting up
         local motes = Instance.new("ParticleEmitter")
         motes.Name = "VoidMotes"
         motes.Texture = "rbxasset://textures/particles/sparkles_main.dds"
@@ -449,7 +496,6 @@ local function addEmitterPreset(part, preset)
         motes.Rate = 5
         motes.Parent = part
     elseif preset == "VoidWisps" then
-        -- thin tall wisps of void light seeping up out of the colossus's face, slow and few
         local wisps = Instance.new("ParticleEmitter")
         wisps.Name = "VoidWisps"
         wisps.Texture = "rbxasset://textures/particles/smoke_main.dds"
@@ -458,7 +504,7 @@ local function addEmitterPreset(part, preset)
         wisps.LightEmission = 0.7
         wisps.LightInfluence = 0
         wisps.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(0.5, 0.9), NumberSequenceKeypoint.new(1, 1.3) })
-        wisps.Squash = NumberSequence.new(1.4) -- tall and thin
+        wisps.Squash = NumberSequence.new(1.4)
         wisps.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.55),
             NumberSequenceKeypoint.new(1, 1) })
         wisps.Lifetime = NumberRange.new(2.5, 3.5)
@@ -470,6 +516,25 @@ local function addEmitterPreset(part, preset)
         wisps.EmissionDirection = Enum.NormalId.Top
         wisps.Rate = 4
         wisps.Parent = part
+    elseif preset == "QiMotes" then
+        -- drifting up round the World Tree's trunk (the veins' part spans it)
+        local motes = Instance.new("ParticleEmitter")
+        motes.Name = "QiMotes"
+        motes.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+        motes.Color = ColorSequence.new(Color3.fromRGB(150, 245, 255), Color3.fromRGB(40, 210, 235))
+        motes.LightEmission = 1
+        motes.LightInfluence = 0
+        motes.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.25, 0.45), NumberSequenceKeypoint.new(1, 0) })
+        motes.Transparency = NumberSequence.new(0.15, 1)
+        motes.Lifetime = NumberRange.new(4, 6)
+        motes.Speed = NumberRange.new(1.5, 3)
+        motes.SpreadAngle = Vector2.new(20, 20)
+        motes.Rotation = NumberRange.new(0, 360)
+        motes.RotSpeed = NumberRange.new(-30, 30)
+        motes.Drag = 0.3
+        motes.EmissionDirection = Enum.NormalId.Top
+        motes.Rate = 14
+        motes.Parent = part
     end
 end
 
@@ -550,8 +615,16 @@ function WorldBuilder.islandFolder(island, child)
     return folder
 end
 
-local function islandCentre(island)
-    return terrainData(island).Centre
+-- An island's frame: its centre, turned by its quarter turns. Island-local positions (the
+-- placements, the meshes as authored) go through it into the world.
+local function islandFrame(island)
+    local data = require(ServerStorage.WorldBuild.Terrain:FindFirstChild(island):Clone())
+    return CFrame.new(data.Centre) * CFrame.Angles(0, -(data.Turns or 0) * math.pi / 2, 0)
+end
+WorldBuilder.islandFrame = islandFrame
+
+local function islandPoint(island, localPosition)
+    return islandFrame(island):PointToWorldSpace(localPosition)
 end
 
 -- Seats an imported island-mesh model (exported with an anchor cube at the island centre) into
@@ -559,7 +632,7 @@ end
 function WorldBuilder.seatImport(island, model, anchorName, child)
     local anchor = model:FindFirstChild(anchorName)
     assert(anchor, "import is missing its anchor " .. anchorName)
-    local target = CFrame.new(islandCentre(island)) * IMPORT_TURN
+    local target = islandFrame(island) * IMPORT_TURN
     local folder = WorldBuilder.islandFolder(island, child)
     folder:ClearAllChildren()
     local frame = anchor.CFrame
@@ -568,6 +641,9 @@ function WorldBuilder.seatImport(island, model, anchorName, child)
         if part:IsA("MeshPart") then
             part.CFrame = target * frame:ToObjectSpace(part.CFrame)
             prepareMesh(part)
+            for _, preset in WorldBuilder.Emitters[part.Name] or {} do
+                addEmitterPreset(part, preset)
+            end
             part.Parent = folder
         end
     end
@@ -642,7 +718,7 @@ function WorldBuilder.shareTexture(island, sourceName, names)
 end
 
 local function standFrame(island, entry)
-    return CFrame.new(islandCentre(island) + entry.Position) * CFrame.Angles(0, entry.Yaw, 0)
+    return islandFrame(island) * CFrame.new(entry.Position) * CFrame.Angles(0, entry.Yaw, 0)
 end
 
 local function addLight(parent, color, range, brightness)
@@ -670,11 +746,10 @@ local function addSparkles(parent, color, rate)
     return sparkles
 end
 
--- Clones the kit templates to every Kit placement in Placements.<island>
--- (FloatingIslands.<island>.Kit). Lantern lights get their PointLight here.
+-- Clones the kit templates to every Kit placement in Placements.<island> (FloatingIslands.<island>.Kit).
 function WorldBuilder.placeKit(island)
     local placements = placementsFor(island)
-    local centre = CFrame.new(islandCentre(island))
+    local centre = islandFrame(island)
     local folder = WorldBuilder.islandFolder(island, "Kit")
     folder:ClearAllChildren()
     local placed = 0
@@ -712,8 +787,7 @@ WorldBuilder.EggGlow = {
     JadeSpiritEgg = Color3.fromRGB(40, 225, 120),
     BloomwoodEgg = Color3.fromRGB(255, 80, 180),
     AncientGroveEgg = Color3.fromRGB(170, 240, 40),
-    -- the Origin Abyss eggs' own glow colours (their meshes' _Glow_ parts): deeper than the old
-    -- b04fff and 646eff, which Neon showed pink and lavender
+    -- Origin Abyss: their meshes' _Glow_ colours, deep enough that Neon doesn't turn them pink or lavender
     ForbiddenOriginEgg = Color3.fromHex("643cff"),
     VoidRiftEgg = Color3.fromHex("3c64ff"),
     PrimordialAbyssEgg = Color3.fromHex("ff3cb4"),
@@ -721,9 +795,8 @@ WorldBuilder.EggGlow = {
 
 local EGG_STUDS_PER_UNIT = 1.3
 
--- The egg's light per island ({ range, brightness }), where the default (12, 1.2) is too much: on
--- Origin Abyss the thorn branches cradle the eggs, and three coloured lights that wide painted the
--- bronze red and violet (seen in Play).
+-- The egg's light per island ({ range, brightness }) where the default (12, 1.2) is too much: on
+-- Origin Abyss it painted the bronze thorn branches red and violet (seen in Play).
 local EGG_LIGHT = { OriginAbyss = { 6, 0.8 } }
 
 -- Places the egg mesh from ServerStorage.EggMeshes resting on `bottom`, facing `facing`.
@@ -761,7 +834,7 @@ local function placeEgg(stand, eggId, bottom, facing)
             part.CastShadow = false
             part.Parent = stand
             if not hex and (not primary or original.Name == eggId .. "_Body") then
-                primary = part   -- the egg's body is its main part; any other plain part is trim
+                primary = part
             end
         end
     end
@@ -819,7 +892,7 @@ function WorldBuilder.buildEggStands(island)
         -- the egg's aura is built round this point, facing the egg's front (EggAuraVFX)
         stand:SetAttribute("AuraOrigin", CFrame.lookAt(rest, rest - frame.LookVector))
         if not EggAuraVFX.has(entry.EggId) then
-            addSparkles(egg, glow, 4)   -- eggs without an aura of their own yet
+            addSparkles(egg, glow, 4)
         end
 
         local prompt = Instance.new("ProximityPrompt")
@@ -877,6 +950,7 @@ local function inscribe(panel, title, subtitle, color)
     layout.Parent = gui
     for index, line in { { title, 0.55, Enum.Font.Garamond, Color3.fromRGB(240, 222, 170) }, { subtitle, 0.3, Enum.Font.Garamond, color } } do
         local label = Instance.new("TextLabel")
+        label.Name = if index == 1 then "Title" else "Subtitle"
         label.LayoutOrder = index
         label.Size = UDim2.fromScale(0.94, line[2])
         label.BackgroundTransparency = 1
@@ -925,14 +999,13 @@ function WorldBuilder.buildWaystones(island)
 end
 
 -- ---------- bridges ----------
--- The bridges from the Starting Island to the other four (Placements/Bridges.lua, generated by
--- tools/blender/world/layout.py). Each is a Model in FloatingIslands.Bridges: a walkable deck along
--- its nodes in pieces of up to Segment studs, low rails, a round platform at each landing, and at
--- its start a gate whose Qi barrier (tagged GameConfig.BridgeBarrierTag) stops everyone below its
--- RankId: BridgeBarriers.client lets qualified players through it, and WorldService returns anyone
--- below the rank who gets past it. Zone parts over the deck past the gate tell the server who is on
--- the bridge. The deck, rails and landings are the collision; while the themed meshes are missing
--- they show as a plain blockout in the theme's colours.
+-- The bridges from Yggdrasil to the other four (Placements/Bridges.lua). Each is a Model
+-- in FloatingIslands.Bridges: a deck along its nodes in pieces of up to Segment studs, low rails, a
+-- round platform at each landing, and at its start a gate whose Qi barrier (tagged
+-- GameConfig.BridgeBarrierTag) stops everyone below its RankId (BridgeBarriers.client lets qualified
+-- players through; WorldService returns the rest). Zone parts past the gate tell the server who is
+-- on the bridge. The deck, rails and landings are the collision, a plain blockout until the themed
+-- kit dresses them.
 WorldBuilder.BridgeThemes = {
     Jade = { Deck = Color3.fromRGB(150, 110, 70), DeckMaterial = Enum.Material.WoodPlanks, Rail = Color3.fromRGB(80, 160, 110), Glow = Color3.fromRGB(40, 215, 110) },
     Ember = { Deck = Color3.fromRGB(55, 48, 46), DeckMaterial = Enum.Material.Basalt, Rail = Color3.fromRGB(35, 30, 30), Glow = Color3.fromRGB(255, 105, 25) },
@@ -955,9 +1028,8 @@ local function bridgePart(name, size, cframe, parent, color, material)
     return p
 end
 
--- A solid block carrying a deck's end onto its island: level with the deck's end, AbutmentLength
--- studs further on and AbutmentDepth deep, so wherever the ground falls away at the rim (or under a
--- corner) there is stone, not a gap; where the ground is higher it sits hidden in the terrain.
+-- A solid block carrying a deck's end onto its island, so where the ground falls away at the rim
+-- there is stone, not a gap; where the ground is higher it hides in the terrain.
 local function abutment(model, theme, width, at, outward)
     local flat = Vector3.new(outward.X, 0, outward.Z).Unit
     local centre = at + flat * (BRIDGE.AbutmentLength / 2) - Vector3.new(0, BRIDGE.AbutmentDepth / 2, 0)
@@ -973,7 +1045,7 @@ local function deckPiece(model, theme, width, a, b, zoneFolder, trimA, trimB)
     local overlap = 0.4 -- pieces overlap a little so a change of slope leaves no gap
     local deck = bridgePart("Deck", Vector3.new(width, BRIDGE.Thickness, length + overlap), frame * CFrame.new(0, -BRIDGE.Thickness / 2, 0), model, theme.Deck, theme.DeckMaterial)
     model:SetAttribute("Pieces", (model:GetAttribute("Pieces") or 0) + 1)
-    deck:SetAttribute("Order", model:GetAttribute("Pieces")) -- along the bridge from its start
+    deck:SetAttribute("Order", model:GetAttribute("Pieces"))
     local railLength = length + overlap - trimA - trimB
     if railLength > 0.5 then
         local shift = (trimA - trimB) / 2 -- toward b (-Z) by trimA, toward a by trimB
@@ -991,10 +1063,9 @@ local function deckPiece(model, theme, width, a, b, zoneFolder, trimA, trimB)
     end
 end
 
--- The themed kits (assets/world/Bridges/<Theme>Bridge.fbx, made by tools/blender/world/bridge_kits.py),
--- each imported by hand into Workspace and stored with WB.storeBridgeKit(<import>, theme) in
--- ServerStorage.BridgeKits.<Theme>. Pieces named "<x>_Glow_<rrggbb>" become Neon in that colour; the
--- rest get the maps the importer does not read.
+-- The themed kits (assets/world/Bridges/<Theme>Bridge.fbx), imported by hand and stored with
+-- WB.storeBridgeKit(<import>, theme) in ServerStorage.BridgeKits.<Theme>. Pieces named
+-- "<x>_Glow_<rrggbb>" become Neon in that colour; the rest get the maps the importer does not read.
 WorldBuilder.BridgeKitMaps = {
     Jade = { Roughness = "rbxassetid://130549356056158", Metalness = "rbxassetid://73078845907191" },
     Ember = { Roughness = "rbxassetid://77433933199242", Metalness = "rbxassetid://87497595865816" },
@@ -1095,17 +1166,16 @@ local function dressBridge(model, theme, width, landingRadius)
         total += d.Size.Z - 0.4
     end
     local run = 0
+    local bareDeck = false
     for index, deck in decks do
         local length = deck.Size.Z - 0.4
         local top = deck.CFrame * CFrame.new(0, deck.Size.Y / 2, 0)
         local pitch = math.deg(math.asin(math.clamp(top.LookVector.Y, -1, 1)))
-        local level = math.abs(pitch) < 2
-        local section = "Deck"
-        if theme == "Moon" then -- the stairway: a stair on every flight, nothing across a landing (its own piece covers it)
-            section = if level then nil else "Stair"
-        end
-        if section and placeKitPiece(theme, section, top, dressing, length / BRIDGE.Segment) then
+        local section = if theme == "Moon" and math.abs(pitch) > 15 then "Stair" else "Deck"
+        if placeKitPiece(theme, section, top, dressing, length / BRIDGE.Segment) then
             count += 1
+        else
+            bareDeck = true
         end
         local centreRun = run + length / 2
         if index % SUPPORT_EVERY[theme] == 0 and centreRun > SUPPORT_CLEAR and centreRun < total - SUPPORT_CLEAR then
@@ -1116,11 +1186,14 @@ local function dressBridge(model, theme, width, landingRadius)
         end
         run += length
     end
+    local bareLandings = {}
     for _, c in model:GetChildren() do
         if c.Name == "Landing" then
             local centre = c.Position + Vector3.new(0, BRIDGE.Thickness / 2, 0)
             if placeKitPiece(theme, "Landing", CFrame.new(centre), dressing) then
                 count += 1
+            else
+                table.insert(bareLandings, c)
             end
             -- posts round the rim, wherever a rail stands (not across the flights' openings)
             for _, r in model:GetChildren() do
@@ -1151,9 +1224,23 @@ local function dressBridge(model, theme, width, landingRadius)
             end
         end
     end
-    if count > 0 then -- the blockout becomes invisible collision under the kit
+    -- the blockout becomes invisible collision under the kit, except where the theme has no piece:
+    -- a bare landing (and the rails round it) stays as it is, and so do the whole deck and its rails
+    -- if any deck section is bare
+    local function bare(part)
+        if bareDeck and (part.Name == "Deck" or part.Name == "Rail") then
+            return true
+        end
+        for _, landing in bareLandings do
+            if part == landing or (part.Name == "Rail" and ((part.Position - landing.Position) * Vector3.new(1, 0, 1)).Magnitude < landingRadius + 1) then
+                return true
+            end
+        end
+        return false
+    end
+    if count > 0 then
         for _, c in model:GetChildren() do
-            if c.Name == "Deck" or c.Name == "Rail" or c.Name == "Landing" then
+            if (c.Name == "Deck" or c.Name == "Rail" or c.Name == "Landing") and not bare(c) then
                 c.Transparency = 1
                 c.CastShadow = false
             end
@@ -1226,10 +1313,8 @@ function WorldBuilder.buildBridges()
                 zone.CanCollide, zone.CanTouch, zone.CastShadow, zone.CanQuery = false, false, false, true
             end
         end
-        -- both ends carried onto their islands
         abutment(model, theme, width, nodes[1].Position, nodes[1].Position - nodes[2].Position)
         abutment(model, theme, width, nodes[#nodes].Position, nodes[#nodes].Position - nodes[#nodes - 1].Position)
-        -- the gate, BRIDGE.GateInset studs along the first span
         local a, b = nodes[1].Position, nodes[2].Position
         local dir = Vector3.new(b.X - a.X, 0, b.Z - a.Z).Unit
         local base = a + dir * BRIDGE.GateInset
@@ -1250,7 +1335,7 @@ function WorldBuilder.buildBridges()
         light.Color, light.Range, light.Brightness = theme.Glow, 12, 0.6
         light.Parent = barrier
         gate.Parent = model
-        model:SetAttribute("ReturnTo", base - dir * 3 + Vector3.new(0, 3, 0)) -- in front of the gate
+        model:SetAttribute("ReturnTo", base - dir * 3 + Vector3.new(0, 3, 0))
         model:SetAttribute("KitPieces", dressBridge(model, bridge.Theme, width, bridge.LandingRadius))
         model.Parent = folder
     end
@@ -1295,7 +1380,7 @@ function WorldBuilder.buildSpawn(island)
     local spawn = Instance.new("SpawnLocation")
     spawn.Name = "IslandSpawn"
     spawn.Size = Vector3.new(6, 1, 6)
-    spawn.CFrame = CFrame.new(islandCentre(island) + placements.Spawn + Vector3.new(0, 0.5, 0))
+    spawn.CFrame = CFrame.new(islandPoint(island, placements.Spawn + Vector3.new(0, 0.5, 0)))
     spawn.Transparency = 1
     spawn.Anchored = true
     spawn.CanCollide = false
@@ -1307,6 +1392,141 @@ function WorldBuilder.buildSpawn(island)
     end
     spawn.Parent = model
     return spawn
+end
+
+-- ---------- spawn slots and plots (Yggdrasil) ----------
+
+-- One slot per player (Placements.<island>.SpawnSlots), each a Model "Slot<n>" in
+-- FloatingIslands.<island>.SpawnSlots: its dais, the dais's ring ("Ring"), a SpawnLocation ("Spawn")
+-- facing the island's centre and the inscription on its name stone ("Plaque"). WorldService gives
+-- each player a slot, lights its ring and cuts their name into the stone.
+function WorldBuilder.buildSpawnSlots(island)
+    local placements = placementsFor(island)
+    local folder = WorldBuilder.islandFolder(island, "SpawnSlots")
+    folder:ClearAllChildren()
+    local centre = islandFrame(island).Position
+    for index, entry in placements.SpawnSlots do
+        local frame = standFrame(island, entry)
+        local model = Instance.new("Model")
+        model.Name = "Slot" .. index
+        model:SetAttribute("Slot", index)
+        placeTemplate(island, "YG_SpawnDais", frame, model).Name = "Dais"
+        placeTemplate(island, "YG_SpawnDaisGlow", frame, model).Name = "Ring"
+
+        local top = frame.Position + Vector3.new(0, placements.SlotTop + 0.5, 0)
+        local spawn = Instance.new("SpawnLocation")
+        spawn.Name = "Spawn"
+        spawn.Size = Vector3.new(6, 1, 6)
+        spawn.CFrame = CFrame.lookAt(top, Vector3.new(centre.X, top.Y, centre.Z))
+        spawn.Transparency = 1
+        spawn.Anchored = true
+        spawn.CanCollide = false
+        spawn.CanQuery = false
+        spawn.Neutral = true
+        spawn.Duration = 0
+        for _, child in spawn:GetChildren() do
+            child:Destroy() -- the default decal
+        end
+        spawn.Parent = model
+
+        local plaque = Instance.new("Part")
+        plaque.Name = "Plaque"
+        plaque.Size = Vector3.new(placements.SlotPanel.Size.X, placements.SlotPanel.Size.Y, 0.05)
+        plaque.CFrame = frame * CFrame.new(placements.SlotPanel.Centre)
+        plaque.Transparency = 1
+        plaque.Anchored = true
+        plaque.CanCollide = false
+        plaque.CanQuery = false
+        plaque.CanTouch = false
+        plaque.Parent = model
+        inscribe(plaque, "", "", Color3.new(1, 1, 1)) -- WorldService writes the owner
+        model.Parent = folder
+    end
+    WorldBuilder.applyCollision(folder)
+    return #folder:GetChildren()
+end
+
+-- What will stand on each plot, named on its notice board.
+WorldBuilder.Plots = {
+    Leaderboard = { Title = "Leaderboard", Subtitle = "The greatest cultivators, carved here soon" },
+    Blacksmith = { Title = "Blacksmith", Subtitle = "Exclusive weapons, forged here soon" },
+    Marketplace = { Title = "Marketplace", Subtitle = "Opening soon" },
+    BuySell = { Title = "Buy & Sell", Subtitle = "Trade your treasures here soon" },
+}
+WorldBuilder.PlotCordColor = Color3.fromRGB(190, 30, 25)
+local PLOT_STAKE_GAP = 12 -- studs, at most, between stakes
+
+-- Marks out each plot in Placements.<island>.Plots for the building to come: talisman stakes round its
+-- edge strung with sagging red cord, a notice board in front naming what will stand there, and an
+-- invisible "Area" part covering the plot (FloatingIslands.<island>.Plots.Plot_<Name>).
+function WorldBuilder.buildPlots(island)
+    local placements = placementsFor(island)
+    local folder = WorldBuilder.islandFolder(island, "Plots")
+    folder:ClearAllChildren()
+    for name, plot in placements.Plots do
+        local info = WorldBuilder.Plots[name]
+        assert(info, "no plot info for " .. name)
+        local frame = islandFrame(island) * CFrame.new(plot.Centre) * CFrame.Angles(0, plot.Yaw, 0)
+        local model = Instance.new("Model")
+        model.Name = "Plot_" .. name
+        model:SetAttribute("Plot", name)
+        marker("Area", Vector3.new(plot.Size.X, 1, plot.Size.Y), frame * CFrame.new(0, 0.5, 0), model)
+
+        -- round the edge from the front-left corner (local +Z is the front), corners included
+        local hx, hz = plot.Size.X / 2, plot.Size.Y / 2
+        local corners = { Vector2.new(-hx, hz), Vector2.new(hx, hz), Vector2.new(hx, -hz), Vector2.new(-hx, -hz) }
+        local ties = {}
+        for i, a in corners do
+            local b = corners[i % 4 + 1]
+            local steps = math.ceil((b - a).Magnitude / PLOT_STAKE_GAP)
+            for step = 0, steps - 1 do
+                local p = a:Lerp(b, step / steps)
+                local stake = placeTemplate(island, "YG_PlotStake", frame * CFrame.new(p.X, 0, p.Y) * CFrame.Angles(0, math.atan2(p.X, p.Y), 0), model)
+                stake.Name = "Stake"
+                -- the cord hangs from a tie whose axis points down, so the beam's curve sags
+                local tie = Instance.new("Attachment")
+                tie.Name = "CordTie"
+                tie.Parent = stake
+                tie.WorldCFrame = CFrame.fromMatrix(frame:PointToWorldSpace(Vector3.new(p.X, placements.PlotCordHeight, p.Y)),
+                    Vector3.new(0, -1, 0), Vector3.new(1, 0, 0))
+                table.insert(ties, tie)
+            end
+        end
+        for i, tie in ties do
+            local nextTie = ties[i % #ties + 1]
+            local cord = Instance.new("Beam")
+            cord.Name = "Cord"
+            cord.Attachment0 = tie
+            cord.Attachment1 = nextTie
+            cord.Color = ColorSequence.new(WorldBuilder.PlotCordColor)
+            cord.Width0 = 0.16
+            cord.Width1 = 0.16
+            cord.FaceCamera = true
+            cord.Segments = 8
+            cord.LightInfluence = 1
+            local sag = (tie.WorldPosition - nextTie.WorldPosition).Magnitude * 0.06
+            cord.CurveSize0 = sag
+            cord.CurveSize1 = -sag
+            cord.Parent = tie.Parent
+        end
+
+        local boardFrame = frame * CFrame.new(0, 0, hz + 3)
+        placeTemplate(island, "YG_PlotBoard", boardFrame, model).Name = "Board"
+        local panel = Instance.new("Part")
+        panel.Name = "Notice"
+        panel.Size = Vector3.new(placements.PlotBoardPanel.Size.X, placements.PlotBoardPanel.Size.Y, 0.05)
+        panel.CFrame = boardFrame * CFrame.new(placements.PlotBoardPanel.Centre)
+        panel.Transparency = 1
+        panel.Anchored = true
+        panel.CanCollide = false
+        panel.CanQuery = false
+        panel.CanTouch = false
+        panel.Parent = model
+        inscribe(panel, info.Title, info.Subtitle, Color3.fromRGB(255, 190, 90))
+        model.Parent = folder
+    end
+    WorldBuilder.applyCollision(folder)
+    return #folder:GetChildren()
 end
 
 function WorldBuilder.buildQiSpring(island)
@@ -1322,11 +1542,10 @@ function WorldBuilder.buildQiSpring(island)
     station.Name = "QiSpring"
 
     -- QiService measures the cultivation radius from this part
-    local centre = islandCentre(island) + placements.SpringCentre
+    local centre = islandPoint(island, placements.SpringCentre)
     local water = marker("SpringWater", Vector3.new(2, 0.2, 2), CFrame.new(centre), station)
     addLight(water, glow, 22, 0.9)
 
-    -- Qi motes rising off the whole pool
     local mist = marker("QiMotes", Vector3.new(stationRules.Radius * 1.6, 0.2, stationRules.Radius * 1.6), CFrame.new(centre + Vector3.new(0, 0.3, 0)), station)
     local motes = Instance.new("ParticleEmitter")
     motes.Shape = Enum.ParticleEmitterShape.Box
@@ -1360,7 +1579,7 @@ function WorldBuilder.buildQiSpring(island)
     label.Text = stationRules.DisplayName .. "\nCultivate here: +" .. stationRules.QiBonusPercent .. "% Qi"
     label.Parent = sign
 
-    WorldBuilder.buildWaterfall(station, islandCentre(island) + placements.SpillEnd, centre, WorldBuilder.Falls.Water)
+    WorldBuilder.buildWaterfall(station, islandPoint(island, placements.SpillEnd), centre, WorldBuilder.Falls.Water)
     station.Parent = model
     return station
 end
@@ -1368,8 +1587,6 @@ end
 -- Seamless vertical streaks (assets/world/StartingIsland/waterfall_streaks.png).
 WorldBuilder.WaterfallTexture = "rbxassetid://84166602047979"
 
--- Water pouring off a lip: a short arc then a long fall that fades into the sky, with a wider
--- faint sheen layer scrolling at a different speed for depth, and mist drifting off the fall.
 -- Looks for a liquid pouring off an island's edge.
 WorldBuilder.Falls = {
     Water = { Name = "Waterfall", Color = Color3.fromRGB(205, 240, 250), LightEmission = 0.25, Mist = Color3.fromRGB(225, 245, 255),
@@ -1378,6 +1595,8 @@ WorldBuilder.Falls = {
         Spray = Color3.fromRGB(255, 170, 60), SprayEmission = 1 },
 }
 
+-- A liquid pouring off `lip`: a short arc, then a long fall fading into the sky with a wider, fainter
+-- sheen scrolling at another speed, and mist drifting off it.
 function WorldBuilder.buildWaterfall(parent, lip, from, look)
     local out = Vector3.new(lip.X - from.X, 0, lip.Z - from.Z).Unit
     local holder = marker(look.Name, Vector3.new(1, 1, 1), CFrame.new(lip), parent)
@@ -1454,8 +1673,8 @@ function WorldBuilder.buildLavafall(island)
     if old then
         old:Destroy()
     end
-    local centre = islandCentre(island)
-    local holder = WorldBuilder.buildWaterfall(model, centre + placements.Lavafall.Lip, centre + placements.Lavafall.From, WorldBuilder.Falls.Lava)
+    local holder = WorldBuilder.buildWaterfall(model, islandPoint(island, placements.Lavafall.Lip), islandPoint(island, placements.Lavafall.From),
+        WorldBuilder.Falls.Lava)
     addLight(holder, Color3.fromRGB(255, 110, 30), 24, 1.4)
     return holder
 end
@@ -1474,9 +1693,8 @@ WorldBuilder.Relics = {
     VoidShard = { Color = Color3.fromRGB(120, 60, 255) },
 }
 
--- The Star Well brims with starlight: a glowing surface just under its gold lip, with starlight
--- rising off it (Placements.<island>.StarWell). Terrain voxels are too coarse for an open shaft
--- this narrow (smoothing caps a one-voxel hole), so the well is sealed by design.
+-- The Star Well's glowing surface just under its lip, with starlight rising off it
+-- (Placements.<island>.StarWell). It is sealed by design: smoothing caps a one-voxel terrain shaft.
 function WorldBuilder.buildStarWell(island)
     local placements = placementsFor(island)
     local model = WorldBuilder.islandFolder(island)
@@ -1487,13 +1705,11 @@ function WorldBuilder.buildStarWell(island)
         end
     end
     local well = placements.StarWell
-    local centre = islandCentre(island)
     local surface = Instance.new("Part")
     surface.Name = "StarSurface"
     surface.Shape = Enum.PartType.Cylinder
     surface.Size = Vector3.new(0.4, (well.Radius + 0.3) * 2, (well.Radius + 0.3) * 2)
-    surface.CFrame = CFrame.new(centre + well.Mouth - Vector3.new(0, 0.45, 0)) * CFrame.Angles(0, 0, math.pi / 2)
-    -- dark reflective glass that catches the sky, over a soft star-blue glow just beneath it
+    surface.CFrame = CFrame.new(islandPoint(island, well.Mouth - Vector3.new(0, 0.45, 0))) * CFrame.Angles(0, 0, math.pi / 2)
     surface.Material = Enum.Material.Glass
     surface.Color = Color3.fromRGB(18, 22, 64)
     surface.Transparency = 0.25
@@ -1544,7 +1760,7 @@ function WorldBuilder.buildCheckpoint(island)
     if old then
         old:Destroy()
     end
-    return marker("Checkpoint", Vector3.new(4, 1, 4), CFrame.new(islandCentre(island) + placements.Checkpoint), model)
+    return marker("Checkpoint", Vector3.new(4, 1, 4), CFrame.new(islandPoint(island, placements.Checkpoint)), model)
 end
 
 -- Builds every relic listed in Placements.<island>.Relics.
@@ -1577,7 +1793,7 @@ function WorldBuilder.buildRelic(island, relicId, localPosition)
     local crystal = Instance.new("Part")
     crystal.Name = "RelicCrystal"
     crystal.Size = Vector3.new(1.6, 1.6, 1.6)
-    crystal.CFrame = CFrame.new(islandCentre(island) + localPosition) * CFrame.Angles(0, math.rad(45), math.rad(45))
+    crystal.CFrame = CFrame.new(islandPoint(island, localPosition)) * CFrame.Angles(0, math.rad(45), math.rad(45))
     crystal.Material = Enum.Material.Neon
     crystal.Color = look.Color
     crystal.Anchored = true

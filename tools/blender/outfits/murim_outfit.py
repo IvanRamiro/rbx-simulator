@@ -1,5 +1,5 @@
 """The Murim Outfit (run inside Blender): a cultivator's robes made for the owner's avatar, worn
-over it in game (src/server/OutfitService). An original design in the spirit of the owner's
+over it in game (src/server/Outfits/OutfitService). An original design in the spirit of the owner's
 reference: a white inner robe with a black standing collar and a white crossed collar (left over
 right) embroidered in gold; a long open outer coat of gold silk deepening to dark brown at its
 embroidered hem, with embroidered bands down its fronts and gold half-sleeves; wide white sleeves
@@ -9,7 +9,7 @@ trousers; black boots with white soles and toe caps.
 Built like the eggs: high-detail pieces with procedural shaders (fabric folds, brocade, embroidery)
 baked onto one game mesh per piece (egg_bake.py). Each piece rides one R15 body part. The robe
 skirt, the belt's tassel and the cuffs are skinned to small bone chains that the client sways
-(src/client/OutfitSway.client.lua): the skirt's four panels follow the legs and trail as the
+(src/client/Character/OutfitController.client.lua): the skirt's four panels follow the legs and trail as the
 wearer moves.
 
 Measures are the owner's avatar at rest (R15, blocky: height 0.9, width 0.81, depth 0.9), in

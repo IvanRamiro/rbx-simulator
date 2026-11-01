@@ -1,37 +1,57 @@
-"""World layout for the five floating islands: one source of truth for island placement and the
-routes between them. Coordinates are Roblox studs (X east, Y up, Z south; north is -Z).
+"""World layout: one source of truth for island placement and the bridges between them.
+Coordinates are Roblox studs (X east, Y up, Z south; north is -Z).
 
-Since 2026-11-01 every route is a bridge (the owner's decision: the stepping stones made the
-islands too hard to reach). Players run, use Qinggong, or ride the sword along it; a Qi barrier
-at its start lets through only players of the destination's unlock rank. The stepping-stone data
-below (gap, leaps) is kept for reference; `route_stones` returns no stones for a bridged route.
+Since 2026-11-01 (the owner's map) Yggdrasil is the hub at the centre, about 500 studs across, and
+the four outer islands stand in a row north of it, west to east in unlock order (Jade Grove, Ember
+Peak, Moonlit Isle, Origin Abyss), every island's ground at Y 200. Each outer island keeps the shape
+it was authored with and is placed by its centre and `turns`: quarter turns, each adding 90 degrees
+of bearing ((x, z) -> (-z, x)), chosen so its gate faces Yggdrasil and its bridge runs straight.
+Quarter turns keep its terrain grid exact; every move is a whole number of 4-stud voxels.
 
     python3 tools/blender/world/layout.py            # print the layout, check the bridges
     python3 tools/blender/world/layout.py --write    # also write src/worldbuild/Placements/Bridges.lua
 """
 import math
 
-# Measured in Studio (QinggongController rules, Roblox gravity): air leaps -> (flat reach, peak height).
-REACH = {1: (31, 14), 2: (50, 21), 3: (71, 28), 4: (97, 34), 5: (124, 41), 6: (153, 48), 7: (187, 55)}
-LANDING_CLEARANCE = 3  # studs of peak height left over when landing on a raised stone
-
 ISLANDS = {
-    "StartingIsland": {"centre": (0, 200, 0), "radius": 95},
-    "JadeGrove": {"centre": (330, 206, -70), "radius": 80},
-    "EmberPeak": {"centre": (-318, 222, 262), "radius": 75},
-    "MoonlitIsle": {"centre": (80, 392, -330), "radius": 60},
-    "OriginAbyss": {"centre": (-560, 95, -540), "radius": 85},
+    "Yggdrasil": {"centre": (0, 200, 0), "radius": 250, "turns": 0},
+    "JadeGrove": {"centre": (-302, 200, -410), "radius": 80, "turns": 3},
+    "EmberPeak": {"centre": (-102, 200, -410), "radius": 75, "turns": 1},
+    "MoonlitIsle": {"centre": (100, 200, -410), "radius": 60, "turns": 0},
+    "OriginAbyss": {"centre": (300, 200, -412), "radius": 85, "turns": 1},
 }
 
-# Each route leaves one island's rim and lands on another's. `leaps` is the air-leap count of
-# the rank that unlocks the destination; every gap must be reachable with it and out of reach
-# with one leap fewer. `gap` is the planned horizontal spacing between stones.
-ROUTES = {
-    "JadeRoute": {"from": (100, 200, -12), "to": (252, 206, -52), "leaps": 2, "gap": 40},
-    "EmberRoute": {"from": (-72, 200, 72), "to": (-262, 224, 214), "leaps": 3, "gap": 57},
-    "MoonlitRoute": {"from": (8, 204, -96), "to": (66, 392, -272), "leaps": 4, "climb": 27},
-    "OriginRoute": {"from": (-78, 200, -70), "to": (-470, 200, -430), "leaps": 6, "gap": 132},
+# Where each outer island stood before the move (unturned), for the move itself.
+PREVIOUS = {
+    "JadeGrove": (330, 206, -70),
+    "EmberPeak": (-318, 222, 262),
+    "MoonlitIsle": (80, 392, -330),
+    "OriginAbyss": (-560, 95, -540),
 }
+
+# Each island's arrival, where its bridge lands (island-local, before turning): just inside its gate
+# (the Grove Gate, the Ember Gate, the Crescent Arch, and on Origin Abyss the Gate of Descent).
+ARRIVALS = {
+    "JadeGrove": (-79.8, 0.0, 17.8),
+    "EmberPeak": (56.6, 0.0, -48.6),
+    "MoonlitIsle": (-15.0, 0.0, 56.2),
+    "OriginAbyss": (50.8, 0.0, 61.8),
+}
+HUB_EXIT_RADIUS = 245    # bridges leave Yggdrasil's ground this far from its centre
+
+
+def turn(v, turns):
+    """Island-local (x, y, z) turned by quarter turns, each adding 90 degrees of bearing."""
+    x, y, z = v
+    for _ in range(turns % 4):
+        x, z = -z, x
+    return (x, y, z)
+
+
+def to_world(island, local):
+    c = ISLANDS[island]["centre"]
+    x, y, z = turn(local, ISLANDS[island]["turns"])
+    return (c[0] + x, c[1] + y, c[2] + z)
 
 
 def lerp(a, b, t):
@@ -42,115 +62,93 @@ def flat(a, b):
     return math.hypot(b[0] - a[0], b[2] - a[2])
 
 
-def route_stones(name):
-    """Stone positions (top centres) between a route's ends, evenly spaced. A bridged route has
-    none (the island scripts then place no stones)."""
-    r = ROUTES[name]
-    if name in BRIDGES:
-        return [], 1
-    a, b = r["from"], r["to"]
-    if "climb" in r:
-        steps = math.ceil((b[1] - a[1]) / r["climb"])
-    else:
-        steps = max(1, round(flat(a, b) / r["gap"]))
-    return [lerp(a, b, i / steps) for i in range(1, steps)], steps
-
-
-def check():
-    ok = True
-    for name, r in ROUTES.items():
-        if name in BRIDGES:
-            continue
-        stones, steps = route_stones(name)
-        pts = [r["from"]] + stones + [r["to"]]
-        n = r["leaps"]
-        for p, q in zip(pts, pts[1:]):
-            d, dy = flat(p, q), q[1] - p[1]
-            reach, peak = REACH[n]
-            lower_reach, lower_peak = REACH[n - 1]
-            can = d <= reach and dy <= peak - LANDING_CLEARANCE
-            blocked = d > lower_reach or dy > lower_peak - LANDING_CLEARANCE
-            if not (can and blocked):
-                ok = False
-            print(f"  {name}: gap {d:6.1f} rise {dy:+6.1f}  rank-ok={can}  lower-rank-blocked={blocked}")
-        print(f"{name}: {steps} gaps, {len(stones)} stones")
-    return ok
-
-
 # ---------- bridges ----------
-# Ends measured in Studio on 2026-11-01: `start` is on the Starting Island's ground 6 studs past
-# the route's waystone and 14 to its side (so the waystone stands beside the gate, not on the deck;
-# Moonlit's goes to the other side, clear of a spirit pine),
-# `end` on the destination's ground just inside its arrival (the Grove Gate,
-# the Ember Gate, the Crescent Arch, the Origin Route's Descent Ledge). Heights are the ground's.
-# `rise` lifts the middle of a level bridge into a gentle arch. Moonlit Isle is 192 studs higher
-# than the rim it leaves, so its bridge is a stairway of three flights zigzagging `swing` studs to
-# each side, with a landing at each turn.
+# The bridges fan out from Yggdrasil as on the owner's map. Each leaves its island's gate straight
+# out for APPROACH studs (along the line from the island's centre through its arrival), turns on a
+# round landing, and runs straight to the point of Yggdrasil's ground (HUB_EXIT_RADIUS out) facing
+# that landing. Level at Y 200; the run from the hub arches gently, its middle RISE of its length up
+# (so its ends never climb more than about 6 degrees). A bend under
+# STRAIGHT_BELOW degrees gets no landing: the bridge runs straight from the hub to the gate.
 DECK_WIDTH = 20          # studs (doubled at the owner's request): room to pass, and to ride the sword along it
 MAX_SLOPE = 34           # degrees; Roblox characters walk up far steeper, but stairs past this read as a wall
 SEGMENT = 12             # studs per deck piece along a span
+APPROACH = 35            # studs of straight bridge out of each island's gate
+LANDING_RADIUS = 15
+STRAIGHT_BELOW = 8       # degrees of bend
+RISE = 0.025
 
-BRIDGES = {
-    "JadeRoute": {"theme": "Jade", "rank": "QiGatherer", "start": (93.6, 198.4, -20.6), "end": (250.2, 206.0, -52.2), "rise": 7},
-    "EmberRoute": {"theme": "Ember", "rank": "QiAwakener", "start": (-65.3, 198.4, 76.7), "end": (-261.4, 222.0, 213.4), "rise": 9},
-    "MoonlitRoute": {"theme": "Moon", "rank": "FoundationInitiate", "start": (26.6, 199.0, -88.6), "end": (65.0, 392.0, -273.8),
-                     "swing": 78, "landing": 15, "approach": (0.2425, -0.9701), "approach_len": 18},
-    "OriginRoute": {"theme": "Origin", "rank": "DivineInitiate", "start": (-81.4, 198.4, -61.7), "end": (-468.0, 200.3, -428.0), "rise": 14},
+ROUTES = {
+    "JadeRoute": {"island": "JadeGrove", "theme": "Jade", "rank": "QiGatherer"},
+    "EmberRoute": {"island": "EmberPeak", "theme": "Ember", "rank": "QiAwakener"},
+    "MoonlitRoute": {"island": "MoonlitIsle", "theme": "Moon", "rank": "FoundationInitiate"},
+    "OriginRoute": {"island": "OriginAbyss", "theme": "Origin", "rank": "DivineInitiate"},
 }
 
 
-def bridge_nodes(name):
-    """The deck's centre line as nodes (x, y, z, landing): consecutive nodes are joined by deck
-    pieces; a landing node gets a round platform."""
-    b = BRIDGES[name]
-    s, e = b["start"], b["end"]
-    if "swing" in b:
-        fx, fz = e[0] - s[0], e[2] - s[2]
-        length = math.hypot(fx, fz)
-        ux, uz = fx / length, fz / length
-        lx, lz = -uz, ux                                   # to the side
-        w = b["swing"]
-        corners = [(s[0] + fx / 3 + lx * w, s[2] + fz / 3 + lz * w), (s[0] + 2 * fx / 3 - lx * w, s[2] + 2 * fz / 3 - lz * w)]
-        pts = [(s[0], s[2])] + corners + [(e[0], e[2])]
-        landing = [False, True, True, False]
-        if "approach" in b:   # the last stretch runs straight in, square to the arrival (the Crescent Arch)
-            ax, az = b["approach"]
-            pts.insert(-1, (e[0] - ax * b["approach_len"], e[2] - az * b["approach_len"]))
-            landing.insert(-1, False)
-        r = b["landing"]
-        # the flights climb between the landings' rims; each landing is level (rim in, centre, rim out)
-        flights = []
-        for i, (p0, p1) in enumerate(zip(pts, pts[1:])):
-            dx, dz = p1[0] - p0[0], p1[1] - p0[1]
-            d = math.hypot(dx, dz)
-            ux, uz = dx / d, dz / d
-            a0 = r if landing[i] else 0
-            a1 = r if landing[i + 1] else 0
-            flights.append(((p0[0] + ux * a0, p0[1] + uz * a0), (p1[0] - ux * a1, p1[1] - uz * a1)))
-        climb = sum(math.hypot(q[0] - p[0], q[1] - p[1]) for p, q in flights)
-        y = s[1]
-        nodes = [(s[0], y, s[2], False)]
-        for i, (p, q) in enumerate(flights):
-            y += (e[1] - s[1]) * math.hypot(q[0] - p[0], q[1] - p[1]) / climb
-            nodes.append((q[0], y, q[1], False))
-            if landing[i + 1]:
-                cx, cz = pts[i + 1]
-                nxt = flights[i + 1][0]
-                nodes.append((cx, y, cz, True))
-                nodes.append((nxt[0], y, nxt[1], False))
-        return nodes
-    n = max(2, round(flat(s, e) / SEGMENT))
-    nodes = []
+def bridge_path(name):
+    """(start on Yggdrasil, the turn or None, end at the island's arrival), world studs."""
+    island = ROUTES[name]["island"]
+    end = to_world(island, ARRIVALS[island])
+    c = ISLANDS[island]["centre"]
+    dx, dz = end[0] - c[0], end[2] - c[2]
+    n = math.hypot(dx, dz)
+    dx, dz = dx / n, dz / n
+    hub = ISLANDS["Yggdrasil"]["centre"]
+    bend = (end[0] + dx * APPROACH, end[1], end[2] + dz * APPROACH)
+    ux, uz = bend[0] - hub[0], bend[2] - hub[2]
+    u = math.hypot(ux, uz)
+    start = (hub[0] + ux / u * HUB_EXIT_RADIUS, hub[1], hub[2] + uz / u * HUB_EXIT_RADIUS)
+    lx, lz = bend[0] - start[0], bend[2] - start[2]
+    cos = (lx * -dx + lz * -dz) / math.hypot(lx, lz)
+    angle = math.degrees(math.acos(max(-1.0, min(1.0, cos))))
+    return start, (bend if angle >= STRAIGHT_BELOW else None), end
+
+
+BRIDGES = {}
+for _name, _route in ROUTES.items():
+    _start, _bend, _end = bridge_path(_name)
+    _route["from"], _route["to"] = _start, _end
+    BRIDGES[_name] = {"theme": _route["theme"], "rank": _route["rank"],
+                      "start": tuple(round(v, 1) for v in _start), "end": tuple(round(v, 1) for v in _end),
+                      "bend": _bend and tuple(round(v, 1) for v in _bend), "landing": LANDING_RADIUS}
+
+
+def route_stones(name):
+    """The old stepping stones: every route is a bridge now, so none (the island scripts place none)."""
+    return [], 1
+
+
+def _run(a, b, arch):
+    """Deck nodes from a to b (both included); an arch rises RISE of the run's length in the middle."""
+    rise = RISE * flat(a, b) if arch else 0.0
+    n = max(1, round(flat(a, b) / SEGMENT))
+    out = []
     for i in range(n + 1):
         t = i / n
-        x, y, z = lerp(s, e, t)
-        nodes.append((x, y + b["rise"] * 4 * t * (1 - t), z, False))   # a parabolic arch
-    return nodes
+        x, y, z = lerp(a, b, t)
+        out.append((x, y + rise * 4 * t * (1 - t), z, False))
+    return out
+
+
+def bridge_nodes(name):
+    """The deck's centre line as nodes (x, y, z, landing). A bend is a landing: the runs stop at its
+    rim and its centre node is marked, as the builder expects."""
+    b = BRIDGES[name]
+    s, bend, e = b["start"], b["bend"], b["end"]
+    if not bend:
+        return _run(s, e, True)
+    r = b["landing"]
+    def towards(p, q, d):
+        f = d / flat(p, q)
+        return (p[0] + (q[0] - p[0]) * f, p[1], p[2] + (q[2] - p[2]) * f)
+    rim_in, rim_out = towards(bend, s, r), towards(bend, e, r)
+    return _run(s, rim_in, True) + [(bend[0], bend[1], bend[2], True)] + _run(rim_out, e, False)
 
 
 def check_bridges():
     ok = True
-    for name in BRIDGES:
+    names = list(BRIDGES)
+    for name in names:
         nodes = bridge_nodes(name)
         steep, length = 0, 0
         for a, b in zip(nodes, nodes[1:]):
@@ -160,18 +158,54 @@ def check_bridges():
         good = steep <= MAX_SLOPE
         ok = ok and good
         print(f"{name}: {len(nodes) - 1} spans, {length:.0f} studs long, steepest {steep:.1f} deg {'OK' if good else 'TOO STEEP'}")
+    # no two bridges come within a deck's width of each other, and none passes another's island
+    legs = {name: [(p, q) for p, q in zip(_corners(name), _corners(name)[1:])] for name in names}
+    for i, a in enumerate(names):
+        for b in names[i + 1:]:
+            gap = min(_segment_gap(p, q) for p in legs[a] for q in legs[b])
+            if gap < DECK_WIDTH * 1.5:
+                ok = False
+                print(f"{a} and {b} come within {gap:.0f} studs")
+    for name in names:
+        for island, info in ISLANDS.items():
+            if island in ("Yggdrasil", ROUTES[name]["island"]):
+                continue
+            if min(_distance_to_segment(info["centre"], s, e) for s, e in legs[name]) < info["radius"] + DECK_WIDTH:
+                ok = False
+                print(f"{name} passes too close to {island}")
     return ok
+
+
+def _corners(name):
+    b = BRIDGES[name]
+    return [b["start"]] + ([b["bend"]] if b["bend"] else []) + [b["end"]]
+
+
+def _segment_gap(a, b):
+    (p1, p2), (q1, q2) = a, b
+    def o(p, q, r):
+        return (q[0] - p[0]) * (r[2] - p[2]) - (q[2] - p[2]) * (r[0] - p[0])
+    if o(p1, p2, q1) * o(p1, p2, q2) < 0 and o(q1, q2, p1) * o(q1, q2, p2) < 0:
+        return 0.0
+    return min(_distance_to_segment(q1, p1, p2), _distance_to_segment(q2, p1, p2),
+               _distance_to_segment(p1, q1, q2), _distance_to_segment(p2, q1, q2))
+
+
+def _distance_to_segment(c, s, e):
+    vx, vz = e[0] - s[0], e[2] - s[2]
+    t = max(0.0, min(1.0, ((c[0] - s[0]) * vx + (c[2] - s[2]) * vz) / (vx * vx + vz * vz)))
+    return math.hypot(c[0] - (s[0] + vx * t), c[2] - (s[2] + vz * t))
 
 
 def write_bridges(path=None):
     import os
     path = path or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "src", "worldbuild", "Placements", "Bridges.lua")
     lines = ["-- Generated by tools/blender/world/layout.py (--write): the bridges between the islands. Don't edit",
-             "-- by hand: change BRIDGES there and run it again. Positions are world studs; Nodes trace the deck's",
+             "-- by hand: change ROUTES there and run it again. Positions are world studs; Nodes trace the deck's",
              "-- centre line (its top surface), Landing marks a round platform (LandingRadius) at a turn.",
              "return {", f"    DeckWidth = {DECK_WIDTH},", "    Bridges = {"]
     for name, b in BRIDGES.items():
-        lines.append(f'        {name} = {{ Theme = "{b["theme"]}", RankId = "{b["rank"]}", LandingRadius = {b.get("landing", 0)}, Nodes = {{')
+        lines.append(f'        {name} = {{ Theme = "{b["theme"]}", RankId = "{b["rank"]}", LandingRadius = {b["landing"]}, Nodes = {{')
         for x, y, z, landing in bridge_nodes(name):
             lines.append(f"            {{ Position = Vector3.new({x:.2f}, {y:.2f}, {z:.2f}), Landing = {'true' if landing else 'false'} }},")
         lines.append("        } },")
@@ -185,6 +219,8 @@ if __name__ == "__main__":
     import sys
     for n, isl in ISLANDS.items():
         print(n, isl)
-    print("ALL BRIDGES WALKABLE" if check_bridges() else "SOME BRIDGES TOO STEEP")
+    for n, b in BRIDGES.items():
+        print(n, b["start"], "->", b["bend"] or "straight", "->", b["end"])
+    print("ALL BRIDGES GOOD" if check_bridges() else "SOME BRIDGES BAD")
     if "--write" in sys.argv:
         print("wrote", write_bridges())

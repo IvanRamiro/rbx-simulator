@@ -89,13 +89,15 @@ def gauss(dx, dz, r):
 MATERIAL_IDS = {}
 
 
-def export_heightfield(island, centre, cell, half_extent, sample, materials, path, priority=None, water=None):
+def export_heightfield(island, centre, cell, half_extent, sample, materials, path, priority=None, water=None, turns=0):
     """Sample the island top on a grid of `cell`-stud columns and write a Lua data module.
 
     sample(x, z) -> (height or None, material name) in island-local studs (x east, z south).
     water(x, z) -> terrain-water surface height (island-local) or None, for pools.
     The module holds Origin (world corner), Cell, Size, Heights (row-major, y offsets, 0 = none)
     and Materials (indices into the Materials list). Heights are stored relative to centre.Y.
+    The grid is written unturned; `turns` (quarter turns, layout.py) is recorded for the builder,
+    which turns the grid about the centre when it fills the terrain.
     """
     # Terrain:WriteVoxels needs the region on the world's 4-stud voxel grid, so each axis's grid
     # corner is snapped down to it independently (the grid then covers the half extent and a bit)
@@ -135,6 +137,7 @@ def export_heightfield(island, centre, cell, half_extent, sample, materials, pat
         "return {",
         '    Island = "%s",' % island,
         "    Centre = Vector3.new(%g, %g, %g)," % centre,
+        "    Turns = %d, -- quarter turns about the centre, each adding 90 degrees of bearing" % turns,
         "    Origin = Vector2.new(%g, %g), -- world X/Z of the grid's first corner" % (corner_x, corner_z),
         "    Cell = %d," % cell,
         "    Size = %d," % n,

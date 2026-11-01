@@ -39,7 +39,7 @@ The fantasy is becoming a cultivator whose growing power shows in ever more spec
 ### Design pillars
 
 1. **Visible progression:** ranks, Qinggong and pets change stats *and* visuals.
-2. **Movement as mastery:** a bridge leads from the Starting Island to each other island, sealed by a Qi barrier that only opens at the island's unlock rank. Players run, leap with Qinggong or (later) ride the sword along it. Qinggong's air leaps reach the high places on the islands.
+2. **Movement as mastery:** a bridge leads from Yggdrasil, the hub, to each other island, sealed by a Qi barrier that only opens at the island's unlock rank. Players run, leap with Qinggong or (later) ride the sword along it. Qinggong's air leaps reach the high places on the islands.
 3. **Collecting and discovery:** pets, relics and hidden places reward exploration.
 4. **Active and passive play:** cultivate anywhere, or at the Qi Spring for a bonus.
 5. **Player expression:** the chosen aura pet sets the look of the aura.
@@ -103,7 +103,7 @@ Qinggong is martial-arts movement through the air.
 
 | Rank | Air leaps | Run speed | Opens |
 |---|---|---|---|
-| Qi Initiate | 1 | 22 | Starting Island |
+| Qi Initiate | 1 | 22 | Yggdrasil |
 | Qi Gatherer | 2 | 24 | Jade Grove |
 | Qi Awakener | 3 | 26 | Ember Peak |
 | Foundation Initiate | 4 | 28 | Moonlit Isle |
@@ -125,7 +125,7 @@ Measured reach with Roblox gravity:
 
 The islands were first linked by floating stepping stones tuned to each rank's leaps; on November 1, 2026 the owner replaced them with bridges (section 6), since the stones made the islands too hard to reach.
 
-**Leap effects** (`src/client/QinggongFx.lua`): the cultivator rides a current of Qi rather than simply jumping.
+**Leap effects** (`src/client/Qinggong/QinggongFx.lua`): the cultivator rides a current of Qi rather than simply jumping.
 
 | Moment | Effect |
 |---|---|
@@ -190,7 +190,7 @@ Pets give **Qi bonuses** (every equipped pet) and **aura style** (the one chosen
 **Roster:** all 60 pets from the original concept are in the game, plus the retired Nine-Tail Moonfox.
 
 - **★ = sculpted in Blender:** source at `tools/blender/pets/<EggId>/<PetId>.blend`, exported to `assets/pets/<EggId>/`. A pet sits under the first egg that drops it.
-- **Unmarked pets** use procedural low-poly models (`src/client/PetArchetypes.lua`) until they get their own Blender model.
+- **Unmarked pets** use procedural low-poly models (`src/client/Pets/PetArchetypes.lua`) until they get their own Blender model.
 - **Every pet is its own species**, with its own anatomy, silhouette and face. No two share a body plan or head design, and every pet has expressive eyes.
 
 ### Animated pets and their specials
@@ -198,7 +198,7 @@ Pets give **Qi bonuses** (every equipped pet) and **aura style** (the one chosen
 **How they're built**
 
 - Animated pets are exported as separate jointed parts (`tools/blender/export_pet.py --rig`).
-- Each one is animated in code by `src/client/PetRig.lua`, with an idle pose, a moving pose, a flying pose and a special.
+- Each one is animated in code by `src/client/Pets/PetRig.lua`, with an idle pose, a moving pose, a flying pose and a special.
 
 **When specials play**
 
@@ -228,7 +228,7 @@ Specials are visual only.
 
 ### Roster by first egg
 
-**Beginner Qi Egg (Starting Island)**
+**Beginner Qi Egg (Yggdrasil)**
 
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
@@ -240,7 +240,7 @@ Specials are visual only.
 | Astral Whale ★ | Mythical | Cosmic | +100% |
 | Origin Serpent ★ | Secret | Primordial | +150% |
 
-**Spirit Breeze Egg (Starting Island)**
+**Spirit Breeze Egg (Yggdrasil)**
 
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
@@ -250,7 +250,7 @@ Specials are visual only.
 | Azure Sky Dragon ★ | Epic | Wind and sky | +60% |
 | Stormhorn Kirin | Legendary | Storms | +70% |
 
-**Elemental Core Egg (Starting Island)**
+**Elemental Core Egg (Yggdrasil)**
 
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
@@ -393,9 +393,9 @@ Each kind has its own visual purpose. None is a recolour of another.
 **Character auras** (one module per aura, all on the `CharacterAura` interface: build, show, hide, pulse, update, destroy)
 
 - **Shared pieces:**
-  - Every aura is built on the shared helpers in `src/client/AuraKit.lua`.
-  - Each is registered in `DESIGNS` in `src/client/CharacterAura.lua`.
-  - Its settings live in `src/client/AuraStyles.lua`, and its meshes in `ReplicatedStorage.AuraMeshes` (sources in `tools/blender/auras`).
+  - Every aura is built on the shared helpers in `src/client/Auras/AuraKit.lua`.
+  - Each is registered in `DESIGNS` in `src/client/Auras/CharacterAura.lua`.
+  - Its settings live in `src/client/Auras/AuraStyles.lua`, and its meshes in `ReplicatedStorage.AuraMeshes` (sources in `tools/blender/auras`).
 - **Stages:** each aura charges up, then grows from idle to charged to awakened the longer the player cultivates.
 - **Fallback:** without its meshes, a pet falls back to the anime flame aura, which is coloured by the pet's element.
 
@@ -405,7 +405,7 @@ Each kind has its own visual purpose. None is a recolour of another.
 | Ember Wyrm | **Ember Crucible** | Fast-spinning ember slashes and cloud under the player; rising debris, sparkles, a twin vortex of energy beams and body flames. The spirit bead wyrm and orbit trails join when charged; a molten fire halo forms behind the head when awakened. | `EmberCrucibleAura.lua` |
 | No aura pet | **Verdant Gale** (default) | A lime swirl and slash ring spinning on the ground, a twisting wind wisp rising through the body, rising streaks, a soft lime glow and light. | `VerdantGaleAura.lua` |
 
-**Pet auras:** each equipped pet of a cultivating player shows its own element's aura (`src/client/AuraBuilder.lua`). Aqua Wisp and Golden Kirin are done.
+**Pet auras:** each equipped pet of a cultivating player shows its own element's aura (`src/client/Auras/AuraBuilder.lua`). Aqua Wisp and Golden Kirin are done.
 
 **Poses and breakthroughs**
 
@@ -464,9 +464,9 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 
 | Island | Egg | Needs | Chances |
 |---|---|---|---|
-| Starting Island | Beginner Qi Egg | Qi Initiate | Aqua Wisp 45%, Ember Wyrm 27%, Lunar Hopper 15%, Volt Fox 8%, Golden Kirin 4%, Astral Whale 0.9%, Origin Serpent 0.1% |
-| Starting Island | Spirit Breeze Egg | Qi Adept | Wind Sprite 45%, Cloud Sheep 27%, Spirit Crane 15%, Azure Sky Dragon 8%, Stormhorn Kirin 5% |
-| Starting Island | Elemental Core Egg | Foundation Initiate | Glacier Puff 45%, Thunder Jelly 27%, Crystal Beetle 15%, Gravity Imp 8%, Thunderclaw Drake 4%, Frostfang Serpent 1% |
+| Yggdrasil | Beginner Qi Egg | Qi Initiate | Aqua Wisp 45%, Ember Wyrm 27%, Lunar Hopper 15%, Volt Fox 8%, Golden Kirin 4%, Astral Whale 0.9%, Origin Serpent 0.1% |
+| Yggdrasil | Spirit Breeze Egg | Qi Adept | Wind Sprite 45%, Cloud Sheep 27%, Spirit Crane 15%, Azure Sky Dragon 8%, Stormhorn Kirin 5% |
+| Yggdrasil | Elemental Core Egg | Foundation Initiate | Glacier Puff 45%, Thunder Jelly 27%, Crystal Beetle 15%, Gravity Imp 8%, Thunderclaw Drake 4%, Frostfang Serpent 1% |
 | Jade Grove | Jade Spirit Egg | Qi Gatherer | Moss Golem 45%, Mycelium Sprite 27%, Jade Spirit Panda 15%, Jade Antler Deer 8%, Golden Kirin 5% |
 | Jade Grove | Bloomwood Egg | Foundation Adept | Dream Moth 45%, Crystal Snail 27%, Prism Armadillo 15%, Lantern Warden 8%, Jade Wyrm Turtle 5% |
 | Jade Grove | Ancient Grove Egg | Core Initiate | Echo Bat 45%, Qi Clockwork Finch 27%, Moonfang Tiger 15%, Thousand-Eyed Guardian 8%, Ninefold Spirit Serpent 4%, Worldroot Colossus 1% |
@@ -518,7 +518,7 @@ The older family designs (`tools/blender/eggs/Eggs.blend`) are no longer used by
 Every egg on its stand has its own aura, built in the Workspace from particle emitters, trails, beams, billboards, glowing image planes and lights, with no meshes and no flipbooks, so it can be tuned in Studio and with VFX Studio.
 
 - **Built by** `src/worldbuild/EggAuraVFX.lua`, one recipe per egg: `VFX.build("<Island>")` rebuilds `FloatingIslands.<Island>.EggAuras`. Each aura is a Model tagged `EggAura` that streams in whole.
-- **Animated by** `src/client/EggAura.lua`, from attributes on the instances (listed in both modules' headers), so an aura tuned by hand keeps working.
+- **Animated by** `src/client/Auras/EggAura.lua`, from attributes on the instances (listed in both modules' headers), so an aura tuned by hand keeps working.
 - **Tuning:** tune an aura on its instances in Studio, then copy the values into its recipe, so a rebuild keeps them.
 - **Depth and rhythm, never flat:**
   - No two orbiting pieces share a speed, radius and plane. Some run the other way, and each bobs on its own period.
@@ -543,7 +543,7 @@ Every egg on its stand has its own aura, built in the Workspace from particle em
   - Some VFX Studio textures (its swirl vortex and radial burst among them) are white on black with no alpha. They work on additive particles, but show as black squares on a SurfaceGui plane, so check a texture's alpha before putting it on a plane.
   - Leaves, petals and ribbons that should read as colour, not light, use low light emission (about 0.15 to 0.35): fully additive, they wash out to pale streaks in daylight.
   - On a pale egg (Spirit Breeze, Bloomwood) a strong halo and light blow the egg out to white, so those auras keep them faint.
-  - The Jade Grove stands are 7.5 studs apart (Starting Island's are 10), so its auras stay within about 3.3 studs of the egg.
+  - The Jade Grove stands are 7.5 studs apart (Yggdrasil's are 10), so its auras stay within about 3.3 studs of the egg.
   - An emitter on a part spreads over the part's whole box, and Cylinder runs along the part's X axis. For flames round a rim, use one emitter per attachment round the ring (unrotated: they rise straight up).
   - In Edit mode, `ContentProvider` can report textures as failed that render fine in Play. Judge textures in Play.
   - A ring built of beams joined end to end shows its texture once per arc (TextureLength set to the arc's length), so the flow runs on through the joints; otherwise every joint restarts the pattern and the ring reads as dashes.
@@ -583,44 +583,52 @@ Every egg on its stand has its own aura, built in the Workspace from particle em
 
 ## 6. World
 
-Five floating islands built from original Blender work: terrain tops, sculpted undersides, landmarks and set pieces. The Starting Island is the hub, and a bridge leaves it for each other island.
+Five floating islands built from original Blender work: terrain tops, sculpted undersides, landmarks and set pieces. **Yggdrasil** is the hub at the centre, about 500 studs across (three times the others), and a bridge leaves it for each other island.
 
-**Bridges** (since November 1, 2026, replacing the stepping stones):
-- Paths in `tools/blender/world/layout.py` (`BRIDGES`; `--write` generates `src/worldbuild/Placements/Bridges.lua`), built by `WorldBuilder.buildBridges()` into `FloatingIslands.Bridges`. Each starts beside its route's waystone and lands at the island's arrival (the Grove Gate, the Ember Gate, the Crescent Arch, the Origin Route's Descent Ledge).
-- A deck 20 studs wide (doubled at the owner's request; room to ride the sword along it) with rails. Jade (161 studs, a gentle arch), Ember (241, rising 24), Moonlit (a stairway of three flights zigzagging 430 studs up 192, with a landing 30 studs across at each turn and a last stretch straight through the Crescent Arch, at most 32°), Origin (534, a long low arch).
-- Both ends of every bridge are carried onto their islands by a solid abutment (level with the deck, 8 studs on and 7 deep), so the deck meets the ground with no gap or overhang; measured across the deck's width, every end is within about half a stud of its island's ground (the Moonlit top within a stud). At the Origin end the Descent Ledge's void-fire brazier stands on the deck's end, marking where players glide down.
-- The bridges' arrivals are kept clear: a few scattered props there were removed (a moonstone shard and a lunar rock on Moonlit Isle, an obsidian shard on Ember Peak), and the island prop scripts now leave the arrivals free.
-- At each bridge's start a gate holds a **Qi barrier** (tagged `QiBarrier`, with the destination's `RankId`): solid until the player reaches that rank, then open to them (`BridgeBarriers.client`). A player below the rank found on the bridge past the gate, or on the island it leads to, is put back in front of the gate (`WorldService`). Tested in Play both ways.
-- Each bridge wears its island's kit, modelled in Blender and baked like the eggs (`tools/blender/world/bridge_kits.py` → `assets/world/Bridges/<Theme>Bridge.fbx`, piece offsets in `Placements/BridgeKits.lua`), laid by `buildBridges` over the walkable blockout, which turns into invisible collision:
-  - **Jade Grove:** plank deck with lattice rails, carved jade posts, vines winding the rails and trailing over the edges; under it cross-beams whose roots hold glowing jade lanterns; a jade gate wound with vines under a two-tier curved roof with a gold-rimmed leaf emblem.
-  - **Ember Peak:** hexagonal basalt column tops with lava glowing in the seams, walls of basalt columns; organ-pipe columns hanging beneath with molten drips; a gate of basalt column clusters under a slab split by a molten crack.
-  - **Moonlit Isle:** level moonstone treads with gold nosings, gold handrails and crescent-topped posts; round landings with a gold ring and crescent, moon-lantern posts round them; moonstone crescents hanging on gold chains beneath; a gate of gold-ringed pillars under a great gold crescent with a lantern in the doorway.
-  - **Origin Abyss:** cracked ancient slabs with void light in the cracks and a broken parapet; a hanging stone arch with chunks on bronze chains; a ruined gate, one pillar broken short, its lintel split by void light and carved with a glowing rune.
+**Layout** (since November 1, 2026, the owner's map; `tools/blender/world/layout.py` is the one source):
+- Every island's ground is at Y 200. The four outer islands stand in a row north of Yggdrasil, west to east in unlock order, each turned by quarter turns so its gate faces the hub (terrain grids stay exact; `Turns` in the terrain data, `WorldBuilder.islandFrame` and `WorldConfig.frame` carry island-local positions into the world).
+- Yggdrasil replaced the Starting Island, which carried its content over: the Beginner eggs, the Stone Lion, the Qi Spring, the Root of the Island and all its kit pieces (stored in Studio as `WorldKit.Yggdrasil`).
+
+**Bridges:**
+- Paths in `layout.py` (`BRIDGES`; `--write` generates `src/worldbuild/Placements/Bridges.lua`), built by `WorldBuilder.buildBridges()` into `FloatingIslands.Bridges`. They fan out from Yggdrasil's north rim as on the owner's map: each leaves its island's gate straight for 35 studs, turns on a round landing, and runs straight to Yggdrasil (Moonlit's runs straight through). Level, with a gentle arch (at most about 5°): Jade 195 studs, Ember 118, Moonlit 119, Origin 190.
+- A deck 20 studs wide (doubled at the owner's request; room to ride the sword along it) with rails. Both ends are carried onto their islands by a solid abutment.
+- At each bridge's start a gate holds a **Qi barrier** (tagged `QiBarrier`, with the destination's `RankId`): solid until the player reaches that rank, then open to them (`BridgeBarriers.client`). A player below the rank found on the bridge past the gate, or on the island it leads to, is put back in front of the gate (`WorldService`).
+- Each bridge wears its island's kit, modelled in Blender (`tools/blender/world/bridge_kits.py` → `assets/world/Bridges/<Theme>Bridge.fbx`, piece offsets in `Placements/BridgeKits.lua`), laid by `buildBridges` over the walkable blockout:
+  - **Jade Grove:** plank deck with lattice rails, carved jade posts, vines; a jade gate under a two-tier curved roof.
+  - **Ember Peak:** hexagonal basalt column tops with lava in the seams; a gate of basalt column clusters.
+  - **Moonlit Isle:** moonstone treads with gold handrails and crescent-topped posts; a gate under a great gold crescent.
+  - **Origin Abyss:** cracked ancient slabs with void light in the cracks; a ruined gate split by void light.
+  - Still to model: a level deck piece for Moonlit and landing pieces for Jade, Ember and Origin. Until then those parts stay visible blockout.
 - Studio's importer turns each kit half round (x and z flip, as with the eggs); the builder turns each piece back.
 
-| Island | Centre (studs) | Feel | Relics | Bridge from the Starting Island (the old stepping-stone route) |
-|---|---|---|---|---|
-| Starting Island | (0, 200, 0) | Grassy cultivation grounds and the spawn hub | Root of the Island (300 Qi, Qi Initiate) | — |
-| Jade Grove | (330, 206, −70), east | Ancient forest | Grove Heart, Jade Seed, Whispering Spring (800 Qi each, Qi Gatherer) | 3 stones, 39-stud gaps, **2 air leaps** |
-| Ember Peak | (−318, 222, 262), south-west | Volcanic, lava pools | Ember Heart, Ashen Sigil, Caldera Crown (1,500 Qi each, Qi Awakener) | 57-stud gaps, **3 air leaps** |
-| Moonlit Isle | (80, 392, −330), highest | Pale and celestial | Moon Mirror, Star Well (3,000 Qi each, Foundation Initiate) | Climbs 27 studs per stone, **4 air leaps** |
-| Origin Abyss | (−560, 95, −540), far north-west and below the others | Hidden endgame: dark slate, void crystals and rifts, broken ruins | Origin Altar (250K Qi, Divine Initiate); the Void Shard high above it (1M Qi, Void Walker) | 132-stud gaps, **6 air leaps**, then a glide down; the Void Shard climb needs **7** |
+| Island | Centre (studs), quarter turns | Feel | Relics |
+|---|---|---|---|
+| Yggdrasil | (0, 200, 0) | The World Tree and the spawn hub | Root of the Island (300 Qi, Qi Initiate) |
+| Jade Grove | (−302, 200, −410), 3 | Ancient forest | Grove Heart, Jade Seed, Whispering Spring (800 Qi each, Qi Gatherer) |
+| Ember Peak | (−102, 200, −410), 1 | Volcanic, lava pools | Ember Heart, Ashen Sigil, Caldera Crown (1,500 Qi each, Qi Awakener) |
+| Moonlit Isle | (100, 200, −410), 0 | Pale and celestial | Moon Mirror, Star Well (3,000 Qi each, Foundation Initiate) |
+| Origin Abyss | (300, 200, −412), 1 | Hidden endgame: dark slate, void crystals and rifts, broken ruins | Origin Altar (250K Qi, Divine Initiate); the Void Shard high above it (1M Qi, Void Walker) |
 
 **Shared rules**
 
 - **Relics:** each Spirit Relic gives a one-time Qi reward, and finds are saved.
-- **Qi Spring:** the spring on the Starting Island adds +50% Qi while cultivating in it.
-- **Falling:** a player who falls far below the island they last stood on is returned to that island's checkpoint.
+- **Qi Spring:** the spring on Yggdrasil adds +50% Qi while cultivating in it.
+- **Falling:** a player who falls far below the island they last stood on is returned to that island's checkpoint (on Yggdrasil, to their spawn slot).
 - **Hazards:** parts tagged `LavaHazard` (Ember Peak's lava) also return a player to their island's checkpoint on touch.
 
-### Starting Island (built)
+### Yggdrasil (built; its own meshes await import)
 
-- **Qi Compass:** the spawn plaza is an octagonal platform with the eight trigrams in the Earlier Heaven arrangement, a jade compass rose and glowing Qi channels in the tile joints.
-- **Qi Spring:** a shallow pool with lotus stepping stones and a stacked scholar's rock at its source. A stone spillway carries the water to a waterfall that pours off the island's edge.
-- **Egg garden:** three lotus pedestals hold the Beginner Qi, Spirit Breeze and Elemental Core eggs.
-- **Waystones:** one beside each bridge's gate, naming its destination and the rank that opens its bridge.
-- **Underside:** stacked rock slabs held by braided roots. A climb down twelve bracket-fungus shelves on the great path root leads to the **Root of the Island** in a root cradle.
-- **Nature:** spirit pines with flat canopies players can stand on, plum blossoms, mossy rocks and flowers.
+The World Tree stands at the centre; everything else rings it. Scripts: `ygg_island.py` (terrain and layout), `ygg_tree.py`, `ygg_meshes.py` (atlas, underside, export), `ygg_props.py` (kit and placements).
+
+- **The World Tree:** an ancient ash about 200 studs tall. Seven buttress flutes spiral up its trunk, with Qi glowing cyan in the grooves and motes drifting up. Three great roots arch over the Root Court path and four sink into the mound. Six limbs spread into a crown of flat cloud pads in tiers, some gilded where the sun catches them, with golden seed-lanterns hanging under them on threads of light and aerial roots trailing from the limbs.
+- **South:** the leaderboard plot, the **Qi Compass** (the old spawn plaza, now the fallback spawn) and the Spawn Walk with the **six spawn slots**. Each slot is a stone dais with a jade inlay and a name stone; a player holds one while in the server, its ring lit gold and their name cut into the stone, and they spawn and return there (`WorldService`). With every slot taken, a player spawns at the Qi Compass. The server's player limit should be 6 (Game Settings).
+- **West, the Market Terrace:** plots for the **Blacksmith** (exclusive weapons), the **Marketplace** and **Buy & Sell**, along a lane.
+- **Plots** (`WorldBuilder.buildPlots`): each is paved, marked out by talisman stakes strung with sagging red cord, with a roofed notice board naming what is coming, and an invisible `Area` part for the building to come.
+- **East:** the **Egg Garden** (Beginner Qi, Spirit Breeze and Elemental Core on the Starting Island's lotus pedestals, 10 studs apart), the **Stone Lion**'s lair north-west of it, and the **Qi Spring** on the rim, its waterfall pouring off the edge (the Starting Island's spring, carried over whole).
+- **North:** a paved bridgehead and a waystone for each bridge.
+- **Underside:** the Starting Island's stacked strata at Yggdrasil's scale, gripped by roots that climb out of the meadow, over the rim and down the strata to a taproot. Its lowest point stays above world Y 75: the PDS kit lies below.
+- **Root of the Island:** from the south rim the great root winds down the cliffs, sixteen bracket-fungus shelves along it, to a bowl of roots under the strata holding the relic.
+- **Nature:** spirit pines crowning low knolls near the rim, plum blossoms, mossy rocks and flowers.
 
 ### Jade Grove (built)
 
@@ -683,7 +691,7 @@ The hidden endgame island, torn in two by a void rift that zig-zags across it fr
 - **Exports:** the scripts write FBX files to `assets/world/<Island>/` and data modules to `src/worldbuild/`.
 - **Assembly:** `src/worldbuild/WorldBuilder.lua` builds each island in Studio, under `Workspace.FloatingIslands.<Island>`, and the result is saved in the place. The steps are listed at the top of that file.
 - **Terrain:** each island uses its own terrain materials, because terrain colours are global to the place:
-  - Starting Island: Grass, Ground, Rock and Cobblestone.
+  - Yggdrasil: Grass, Ground, Rock and Cobblestone (the Starting Island's).
   - Jade Grove: LeafyGrass, Mud and Sandstone.
   - Ember Peak: Basalt, CrackedLava, Asphalt (ash) and Sand (paths).
   - Moonlit Isle: Limestone, Snow (frost), Salt (paths) and Pavement.
@@ -692,7 +700,7 @@ The hidden endgame island, torn in two by a void rift that zig-zags across it fr
 
 ---
 
-## 7. Guardians and egg theft (the Starting Island guardian is built)
+## 7. Guardians and egg theft (the Yggdrasil and Jade Grove guardians are built)
 
 ### The user's decisions (November 1, 2026)
 
@@ -765,7 +773,7 @@ Guarded → Available → Carried → Dropped → Carried → Secured
 
 | Island | Guardian | Encounter direction |
 |---|---|---|
-| Starting Island | The Awakened Stone Lion | Introductory fight, basic Qinggong escape |
+| Yggdrasil | The Awakened Stone Lion | Introductory fight, basic Qinggong escape |
 | Jade Grove | The Bamboo Mantis Sage | Escape routes through trees and elevated terrain |
 | Ember Peak | Fire Guardian | Escape routes around lava and volcanic hazards |
 | Moonlit Isle | Celestial Guardian | More demanding aerial movement |
@@ -773,13 +781,13 @@ Guarded → Available → Carried → Dropped → Carried → Secured
 
 Names, attacks, health, egg pools, unlocks and rewards are still to be designed for the other four islands.
 
-### The Awakened Stone Lion (Starting Island)
+### The Awakened Stone Lion (Yggdrasil)
 
-A granite temple guardian lion come to life: a mane of carved spiral curls, spiral brows and whisker curls, glowing Qi-blue eyes, a gold collar with a jade orb and gold tassels, moss in the crevices, and a tail of five stone flame tongues ending in curls. It stands about 30 studs tall, in its lair west of the spawn plaza, facing the plaza (`GameConfig.Guardians.StoneLion`).
+A granite temple guardian lion come to life: a mane of carved spiral curls, spiral brows and whisker curls, glowing Qi-blue eyes, a gold collar with a jade orb and gold tassels, moss in the crevices, and a tail of five stone flame tongues ending in curls. It stands about 30 studs tall, in its lair on Yggdrasil's east side, north-west of the Egg Garden, facing the World Tree (`GameConfig.Guardians.StoneLion`).
 
 **Its eyes and orb tell its state:** asleep, carved stone eyes and a dull jade orb; awake, Neon Qi blue (`006eff`, narrowed to a glare) and jade (`00a05f`); weakened, flickering; enraged, red-orange and widened. Darker Neon renders as a flat black disc, so the sleeping look is stone and glass, not dim Neon.
 
-**The encounter** (`src/server/Guardian.lua`; the server decides everything):
+**The encounter** (`src/server/Guardians/Guardian.lua`; the server decides everything):
 
 | State | What it does |
 |---|---|
@@ -792,7 +800,7 @@ A granite temple guardian lion come to life: a mane of carved spiral curls, spir
 With nobody within 60 studs for 12 s, it heals and sleeps.
 
 - **Never killed, never kills:** every blow is a knockback (about 19 studs, then off your feet for 1.1 s), and a knocked-back thief drops the egg.
-- **The egg a thief earns** is the best Starting Island egg their rank opens: Beginner Qi, Spirit Breeze from Qi Adept, Elemental Core from Foundation Initiate. It becomes that egg the moment it is taken, held over the thief's head.
+- **The egg a thief earns** is the best Yggdrasil egg their rank opens: Beginner Qi, Spirit Breeze from Qi Adept, Elemental Core from Foundation Initiate. It becomes that egg the moment it is taken, held over the thief's head.
 - **Carried on foot:** no sword flight while carrying.
 - **Grace:** for 1.5 s after taking or recovering the egg the thief can't be knocked back, so a blow already on its way doesn't take the egg straight back.
 - **Dropped:** at a clear spot on the ground near where the thief was (never inside the lion), under a pillar of Qi light; only the thief sees its prompt and the 30-second countdown. A thief who leaves the game, or lets the countdown run out, sends the egg back under the paw. Falling off the island drops it where the thief last stood.
@@ -878,6 +886,8 @@ Build one complete encounter before expanding to every island.
 | `src/client` | StarterPlayerScripts |
 | `src/worldbuild` | `ServerStorage.WorldBuild` (build-time only, never required by game scripts) |
 
+Client and server scripts are grouped by feature in folders of the same names: `Auras` (client), `Pets`, `Guardians`, `Combat`, `Qinggong`, `Cultivation`, `World`, `Character` and `UI` (client), `Data` and `Outfits` (server). A script requires a module in its own folder as `script.Parent:WaitForChild("Name")`, and one in another folder as `script.Parent.Parent:WaitForChild("Folder"):WaitForChild("Name")`.
+
 **Imported models**
 
 | Kind | Where in Studio |
@@ -886,6 +896,9 @@ Build one complete encounter before expanding to every island.
 | Aura pieces | `ReplicatedStorage.AuraMeshes` |
 | Eggs | `ServerStorage.EggMeshes` |
 | Island kits | `ServerStorage.WorldKit/<Island>` |
+| Guardians | `ServerStorage.Guardians/<GuardianId>` (`WorldBuild.GuardianBuilder`) |
+| The flying sword | `ServerStorage.Weapons.FlyingSword` (`WorldBuild.OutfitBuilder.storeSword`) |
+| Outfits | `ServerStorage.Outfits/<OutfitId>` (`WorldBuild.OutfitBuilder`) |
 | The islands themselves | `Workspace.FloatingIslands`, saved in the place |
 
 **What the server owns:** Qi rewards, rank-ups, Qinggong levels, hatching, inventory, relics, world safety (spawn, checkpoints, fall reset) and saving. It never trusts the client for Qi amounts, ranks, hatch results or inventory.

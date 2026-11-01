@@ -1,9 +1,7 @@
--- The Starting Island guardian, the Awakened Stone Lion (tools/blender/guardians/stone_lion.py,
--- assets/guardians/StoneLion_pieces.json): its pieces' centres as authored, in studs from its
--- origin, the ground under its chest (front toward -Z, its left toward -X). Each piece rides a
--- segment; a segment turns about its pivot, hung from its parent segment (the Body from the root).
--- Orb and Eyes are the glow pieces, found by their exported colour (Hex).
--- WorldBuild.GuardianBuilder.store fits the import with these and joins the segments with Motor6Ds.
+-- Yggdrasil's guardian, the Awakened Stone Lion (tools/blender/guardians/stone_lion.py): its
+-- pieces' centres as authored, in studs from its origin, the ground under its chest (front toward
+-- -Z, its left toward -X). Each piece rides a segment, which turns about its pivot. Orb and Eyes are
+-- the glow pieces, found by colour (Hex). Used by GuardianBuilder.store.
 return {
     Pieces = {
         Body = { Segment = "Body", Centre = Vector3.new(0.0068, 18.3041, -1.7744) },
@@ -24,13 +22,12 @@ return {
         BackRightUpper = { Segment = "BackRightUpper", Centre = Vector3.new(4.4983, 9.5195, 7.6347) },
         BackRightLower = { Segment = "BackRightLower", Centre = Vector3.new(4.5070, 3.4786, 7.6048) },
     },
-    -- the glow pieces' look in game. Neon blooms the exported colours to one flat cyan, so these are
-    -- deeper; the eyes are narrowed to a glare (their size scaled about their centre, seen in Studio).
+    -- deeper than the exported colours, which Neon blooms to one flat cyan
     Glow = {
         Eyes = { Color = Color3.fromRGB(0, 110, 255), Scale = Vector3.new(1, 0.45, 0.8) },
         Orb = { Color = Color3.fromRGB(0, 160, 95) },
     },
-    -- where each segment turns, and the segment it hangs from (nil: the root)
+    -- Parent nil: hangs from the root
     Pivots = {
         Body = { Position = Vector3.new(0, 14, 0) },
         Head = { Parent = "Body", Position = Vector3.new(0, 22, -10) },
@@ -45,9 +42,7 @@ return {
         BackRightUpper = { Parent = "Body", Position = Vector3.new(4.3, 14, 6.4) },
         BackRightLower = { Parent = "BackRightUpper", Position = Vector3.new(4.5, 4.6, 9.6) },
     },
-    -- every map, uploaded by us. The granite's roughness is one flat 0.82 (a 64x64 map shared by the
-    -- stone pieces, its pixels read back in Studio); only the Body, with its gold collar, has its own
-    -- roughness and metalness.
+    -- granite is a shared flat 0.82 roughness map; only the Body (gold collar) has its own roughness and metalness
     Maps = (function()
         local granite = "rbxassetid://136380863427532"
         local ids = {

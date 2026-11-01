@@ -1,9 +1,7 @@
--- Jade Grove's guardian, the Bamboo Mantis Sage (tools/blender/guardians/mantis_sage.py,
--- assets/guardians/MantisSage_pieces.json): its pieces' centres as authored, in studs from its
--- origin, the ground under its thorax (front toward -Z, its left toward -X). Each piece rides a
--- segment; a segment turns about its pivot, hung from its parent segment (the Body from the root).
--- The glow pieces (the pupils, the two blade edges) are found by their segment and exported colour.
--- WorldBuild.GuardianBuilder.store fits the import with these and joins the segments with Motor6Ds.
+-- Jade Grove's guardian, the Bamboo Mantis Sage (tools/blender/guardians/mantis_sage.py): its
+-- pieces' centres as authored, in studs from its origin, the ground under its thorax (front toward
+-- -Z, its left toward -X). Each piece rides a segment, which turns about its pivot. Glow pieces are
+-- found by segment and colour. Used by GuardianBuilder.store.
 return {
     Pieces = {
         Body = { Segment = "Body", Centre = Vector3.new(0.0000, 11.0554, 13.8851) },
@@ -26,7 +24,7 @@ return {
         HindRightUpper = { Segment = "HindRightUpper", Centre = Vector3.new(6.3020, 14.9800, 7.9300) },
         HindRightLower = { Segment = "HindRightLower", Centre = Vector3.new(12.4965, 8.1086, 13.2033) },
     },
-    -- where each segment turns, and the segment it hangs from (nil: the root)
+    -- Parent nil: hangs from the root
     Pivots = {
         Body = { Position = Vector3.new(0, 12.6, 3.0) },
         Mantle = { Parent = "Body", Position = Vector3.new(0, 16.8, 3.5) },
@@ -45,17 +43,14 @@ return {
         HindRightUpper = { Parent = "Body", Position = Vector3.new(2.0, 12.3, 5.6) },
         HindRightLower = { Parent = "HindRightUpper", Position = Vector3.new(10.6, 15.8, 10.4) },
     },
-    -- the glow pieces' look in game (Neon blooms; seen in Studio)
     Glow = {
         Pupils = { Color = Color3.fromRGB(255, 144, 0) },
         LeftEdge = { Color = Color3.fromRGB(0, 200, 110) },
         RightEdge = { Color = Color3.fromRGB(0, 200, 110) },
     },
-    -- every map, uploaded by us. Roughness is flat per material (bamboo 0.38, leaf 0.45, jade 0.14:
-    -- 64x64 maps, their pixels read back in Studio) except on the Head and Neck, which mix jade, gold
-    -- and the eyes; only they have metal (gold). Eight pieces' colour and normal maps broke on upload
-    -- (the server reads them, clients render the piece grey) and were re-uploaded with one corner pixel
-    -- changed; checked on screen.
+    -- Roughness is flat per material (bamboo 0.38, leaf 0.45, jade 0.14) except on the Head and Neck,
+    -- the only pieces with metal. Some colour and normal maps broke on upload (clients render the
+    -- piece grey) and are re-uploads with one corner pixel changed.
     Maps = (function()
         local bamboo, leaf, jade = "rbxassetid://117761128526315", "rbxassetid://94743403834731", "rbxassetid://140307857549956"
         local ids = {

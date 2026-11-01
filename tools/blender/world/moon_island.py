@@ -15,8 +15,11 @@ Features:
 """
 import math
 
+import layout as L
+
 NAME = "MoonlitIsle"
-CENTRE = (80, 392, -330)
+CENTRE = L.ISLANDS[NAME]["centre"]   # its place in the world, and its quarter turns (layout.py)
+TURNS = L.ISLANDS[NAME]["turns"]
 
 BODY = (0.0, 8.0, 60.0)        # the full moon disc: centre x, z and radius
 BITE = (0.0, -28.0, 52.0)      # the disc cut away to the north; its edge is the crescent's inner curve
@@ -131,4 +134,4 @@ MATERIALS = ["Limestone", "Snow", "Salt", "Pavement"]
 def export_terrain(path=None):
     import worldlib as W
     path = path or W.REPO + "/src/worldbuild/Terrain/%s.lua" % NAME
-    return W.export_heightfield(NAME, CENTRE, 4, 80, height, MATERIALS, path, priority=[("Salt", 2)])
+    return W.export_heightfield(NAME, CENTRE, 4, 80, height, MATERIALS, path, priority=[("Salt", 2)], turns=TURNS)

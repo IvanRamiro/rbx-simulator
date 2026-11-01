@@ -8,9 +8,6 @@ return {
         OA_ColossusEyes = {
             { Position = Vector3.new(54.00, 0.21, -4.00), Yaw = -1.0304 },
         },
-        OA_DescentLedge = {
-            { Position = Vector3.new(90.00, 105.00, 110.00), Yaw = -0.0997 },
-        },
         OA_FallenDrums = {
             { Position = Vector3.new(21.45, -0.41, 19.21), Yaw = 2.8966 },
         },
@@ -76,9 +73,6 @@ return {
             { Position = Vector3.new(61.45, -0.76, 49.55), Yaw = 3.3705, Scale = 0.967 },
             { Position = Vector3.new(-69.47, 9.79, -30.92), Yaw = 2.4862, Scale = 0.777 },
             { Position = Vector3.new(-8.84, 0.39, 66.15), Yaw = 2.6121, Scale = 0.879 },
-        },
-        OA_VoidFlame = {
-            { Position = Vector3.new(90.00, 105.00, 110.00), Yaw = -0.0997 },
         },
     },
     EggStandPieces = { Pedestal = "OA_EggPedestal", GlowRing = "OA_EggGlowRing" },

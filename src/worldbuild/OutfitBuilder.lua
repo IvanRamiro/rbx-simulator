@@ -7,8 +7,7 @@
 --   OB.store(workspace.MurimOutfit, "Murim")
 --
 -- The pieces were authored round the owner's avatar at rest (Placements/<OutfitId>Outfit.lua). The
--- importer may turn the model half round, so the fit is found by matching the pieces' centres as
--- authored to where they came in, turned 0 or 180 degrees, whichever matches.
+-- importer may turn the model half round, so the fit tries both 0 and 180 degrees.
 local ServerStorage = game:GetService("ServerStorage")
 
 local OutfitBuilder = {}
@@ -55,11 +54,10 @@ local function fit(found, placements)
     end
     return best
 end
-OutfitBuilder.fit = fit -- GuardianBuilder fits its imports the same way
+OutfitBuilder.fit = fit
 
 -- The importer hangs every rig's bones from one RootPart. Each piece rides its own body part, so
--- each chain moves into its piece (bones are named after it: SkirtRoot, LeftCuffHem...), keeping
--- where it is in the world.
+-- each chain moves into the piece it is named after (SkirtRoot, LeftCuffHem...), keeping its world position.
 local function adoptBones(model, found)
     for _, bone in model:GetDescendants() do
         if bone:IsA("Bone") and not bone.Parent:IsA("Bone") then
@@ -100,7 +98,7 @@ function OutfitBuilder.store(model, outfitId)
 
     for piece, part in found do
         local info = placements.Pieces[piece]
-        local rest = frame.frame:ToObjectSpace(part.CFrame)                 -- where it sits round the avatar at rest
+        local rest = frame.frame:ToObjectSpace(part.CFrame)
         local offset = CFrame.new(placements.BodyParts[info.Part]):ToObjectSpace(rest)
         part.Name = piece
         part.Anchored = true
@@ -123,8 +121,7 @@ function OutfitBuilder.store(model, outfitId)
 end
 
 -- Stores an imported flying sword (assets/weapons/FlyingSword.fbx) in ServerStorage.Weapons.FlyingSword:
--- "Body" (its baked mesh) and its Neon glow pieces (named in Placements/FlyingSword.lua and found
--- by their exported colour), each with its Offset from the sword's origin.
+-- "Body" and its Neon glow pieces (found by exported colour), each with its Offset from the sword's origin.
 function OutfitBuilder.storeSword(model)
     local placements = require(ServerStorage.WorldBuild.Placements.FlyingSword:Clone())
     local found = {}

@@ -32,10 +32,8 @@ return {
         LeftFoot = Vector3.new(-0.405, -2.634, 0.000),
         RightFoot = Vector3.new(0.405, -2.634, 0.000),
     },
-    -- every map, uploaded by us: the importer reads only colour and normal, and its own uploads of
-    -- those failed to load for most pieces (grey in Play). The right sleeve's, boot's and shoe's colour
-    -- and normal maps were broken on upload and are re-uploaded copies with one corner pixel changed (a
-    -- broken map leaves its whole SurfaceAppearance grey). The all-black metalness maps share one id
+    -- uploaded by us: the importer reads only colour and normal, and its uploads failed (grey in Play).
+    -- The right sleeve, boot and shoe maps are re-uploads with one corner pixel changed (the first broke).
     Maps = {
         Belt = { Color = "rbxassetid://140425118164421", Normal = "rbxassetid://99909690936172", Roughness = "rbxassetid://136206143641995", Metalness = "rbxassetid://129664010152839" },
         LeftBoot = { Color = "rbxassetid://89582902623230", Normal = "rbxassetid://84936900431720", Roughness = "rbxassetid://119517234271407", Metalness = "rbxassetid://127031228999225" },

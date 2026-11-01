@@ -18,8 +18,11 @@ Features:
 """
 import math
 
+import layout as L
+
 NAME = "OriginAbyss"
-CENTRE = (-560, 95, -540)
+CENTRE = L.ISLANDS[NAME]["centre"]   # its place in the world, and its quarter turns (layout.py)
+TURNS = L.ISLANDS[NAME]["turns"]
 
 RIFT_DIR = (1 / math.sqrt(2), -1 / math.sqrt(2))   # the rift runs north-east to south-west
 RIFT_HALF = 7.0
@@ -155,4 +158,4 @@ MATERIALS = ["Slate", "Concrete", "Glacier"]
 def export_terrain(path=None):
     import worldlib as W
     path = path or W.REPO + "/src/worldbuild/Terrain/%s.lua" % NAME
-    return W.export_heightfield(NAME, CENTRE, 4, 100, height, MATERIALS, path, priority=[("Concrete", 2)])
+    return W.export_heightfield(NAME, CENTRE, 4, 100, height, MATERIALS, path, priority=[("Concrete", 2)], turns=TURNS)

@@ -13,22 +13,19 @@ local GameConfig = {
         Radius = 10,
     },
 
-    -- Qinggong: jump, then leap again in mid-air (once per air leap), and hold jump while
-    -- falling to glide. Island routes are spaced so each island needs the air leaps of the
-    -- rank that unlocks it (see tools/blender/world/layout.py).
+    -- Qinggong: leap again in mid-air (once per air leap) and hold jump while falling to glide.
+    -- Island routes are spaced so each island needs the air leaps of the rank that unlocks it
+    -- (see tools/blender/world/layout.py).
     Qinggong = {
         LeapUpSpeed = 52,
         LeapForwardSpeed = 34,
         LeapCooldown = 0.2,
         GlideFallSpeed = 14,
-        GlideSpeedFactor = 1.1, -- glide horizontal speed, relative to run speed
-        -- Stamina fuels dashes and sword flight only (air leaps keep their charges, glide is free).
-        -- It refills after a short pause, faster on the ground.
+        GlideSpeedFactor = 1.1, -- relative to run speed
+        -- Stamina fuels only dashes and sword flight; it refills after RegenDelay, faster on the ground.
         Stamina = { RegenGround = 32, RegenAir = 14, RegenDelay = 0.6 },
-        -- A dash: a short burst along the move direction (or facing), on the ground or in the air.
         Dash = { Cost = 25, Duration = 0.2, Cooldown = 0.45 },
-        -- Per rank: air leaps, run speed, stamina, dash speed (studs/s while dashing) and sword
-        -- flight speed (0 before flight unlocks, see SwordFlight).
+        -- Per rank. DashSpeed is studs/s while dashing; FlightSpeed is 0 before SwordFlight unlocks.
         Levels = {
             { RankId = "QiInitiate", AirLeaps = 1, RunSpeed = 22, Stamina = 100, DashSpeed = 70, FlightSpeed = 0 },
             { RankId = "QiGatherer", AirLeaps = 2, RunSpeed = 24, Stamina = 110, DashSpeed = 74, FlightSpeed = 0 },
@@ -40,10 +37,9 @@ local GameConfig = {
         },
     },
 
-    -- Combat (src/server/CombatService). Before the flying sword (SwordFlight.UnlockRank) a
-    -- cultivator strikes with a Qi Palm; from then on, the sword strikes. Damage grows by
-    -- RankPowerStep of the base for every rank above the first. A strike hits the nearest target in
-    -- front (within Arc degrees of facing) whose body is within Range studs.
+    -- Combat (src/server/Combat/CombatService). A Qi Palm before SwordFlight.UnlockRank, the sword
+    -- after. Damage grows by RankPowerStep of the base per rank above the first. A strike hits the
+    -- nearest target within Arc degrees of facing whose body is within Range studs.
     Combat = {
         TargetTag = "CombatTarget",
         RankPowerStep = 0.12,
@@ -51,44 +47,41 @@ local GameConfig = {
         Sword = { Damage = 16, Range = 12, Cooldown = 0.55, Arc = 80 },
     },
 
-    -- Guardians (src/server/GuardianService; design doc section 7). Each guards its island's eggs:
-    -- while it stands in the world, that island's stands hatch only eggs taken from it (a thief
-    -- earns the best of Eggs their rank opens, secured in the SafeZone). Positions are island-local
-    -- studs; Egg positions are in the guardian's own frame (front toward -Z): Under where it keeps
-    -- the egg, Offered where it sets it down when weakened (if it holds it out of reach).
-    -- Attacks, by Kind: a Sweep strikes in front (Range, Arc); a Wave rolls out along the ground to
-    -- Radius (all round, or within Arc of its facing) and a jump clears it; a Pounce leaps onto the
-    -- thief (enraged only). WeakenedHint is told to players near when it falters.
+    -- Guardians (src/server/Guardians/GuardianService; design doc section 7). While a guardian
+    -- stands, its island's stands hatch only eggs taken from it: a thief earns the best of Eggs
+    -- their rank opens, secured in the SafeZone. Positions are island-local studs. Egg positions
+    -- are in the guardian's frame (front toward -Z): Under where it keeps the egg, Offered where it
+    -- sets it down when weakened (if it holds it out of reach).
+    -- Attack kinds: Sweep strikes in front (Range, Arc); Wave rolls along the ground to Radius (all
+    -- round, or within Arc) and a jump clears it; Pounce leaps onto the thief (enraged only).
     GuardianTag = "Guardian",
     Guardians = {
         StoneLion = {
             DisplayName = "Awakened Stone Lion",
-            Island = "StartingIsland",
-            Lair = Vector3.new(-55, 0.4, -28),
-            Facing = Vector3.new(0, 0.4, 0), -- it lies in wait facing the spawn plaza
+            Island = "Yggdrasil",
+            Lair = Vector3.new(128, 0.4, -62),
+            Facing = Vector3.new(0, 0.4, 0), -- toward the World Tree
             Eggs = { "BeginnerQiEgg", "SpiritBreezeEgg", "ElementalCoreEgg" },
-            SafeZone = { Centre = Vector3.new(-32, 0, 58), Radius = 15, Name = "Egg Garden" },
+            SafeZone = { Centre = Vector3.new(170, -1.5, 6), Radius = 15, Name = "Egg Garden" },
             MaxHealth = 1200,      -- a beginner's Qi Palm weakens it alone in ~72 strikes (about half a minute)
             WeakenedAt = 0.4,      -- share of health below which it falters and the egg can be taken
-            HitRadius = 14,        -- its body round the chest, for strikes (Combat)
-            EngageRadius = 24,     -- a player this close wakes it
-            LeashRadius = 60,      -- players this far from the lair don't hold its attention
+            HitRadius = 14,        -- its body round the chest
+            EngageRadius = 24,
+            LeashRadius = 60,      -- from the lair
             CalmAfter = 12,        -- seconds with nobody near before it heals and sleeps
-            RespawnTime = 30,      -- after an egg is secured, a new one comes this much later
-            DropTime = 30,         -- a dropped egg waits this long for its thief
+            RespawnTime = 30,      -- seconds after an egg is secured
+            DropTime = 30,         -- seconds a dropped egg waits for its thief
             WalkSpeed = 12,
             ChaseSpeed = 21,       -- below a beginner's run (22): dashes and its pounces decide it
             TurnSpeed = 140,       -- degrees per second
             Egg = { Height = 4, Under = Vector3.new(4.55, 1.9, -15), CarriedHeight = 2.6 }, -- under the raised right paw
             WeakenedHint = "falters: take the egg from under its paw!",
             Stagger = 1.1,         -- seconds a knocked-back player is off their feet
-            WeakenedSlowdown = 1.7, -- attack cooldowns stretch by this while weakened
+            WeakenedSlowdown = 1.7, -- attack cooldown multiplier while weakened
             Attacks = {
-                -- the left paw slams the ground in front (the right one pins the egg)
+                -- the left paw slams (the right one pins the egg)
                 Slam = { Kind = "Sweep", Range = 24, Arc = 55, WindUp = 0.75, Cooldown = 2.6, Knockback = 45 },
-                -- a roar sends a shockwave rolling out along the ground: jump it
                 Roar = { Kind = "Wave", Radius = 44, WaveSpeed = 34, WindUp = 1.1, Cooldown = 8, Knockback = 40 },
-                -- enraged only: a leap onto where the thief is going
                 Pounce = { Kind = "Pounce", MinRange = 16, MaxRange = 46, WindUp = 0.6, Air = 0.95, Height = 9, Cooldown = 4.5, Radius = 12, Knockback = 55 },
             },
         },
@@ -110,33 +103,30 @@ local GameConfig = {
             WalkSpeed = 13,
             ChaseSpeed = 23,       -- below a Qi Gatherer's run (24); its leaps are long and high
             TurnSpeed = 160,
-            TurnsToFace = true,    -- awake at its lair it turns to face whoever it watches
-            -- held in its folded forearms, then set down on the ground before it
+            TurnsToFace = true,    -- awake at its lair, it turns to face whoever it watches
+            -- held in its folded forearms, set down on the ground when weakened
             Egg = { Height = 4, Under = Vector3.new(0, 20.2, -12.3), Offered = Vector3.new(0, 1.9, -16), CarriedHeight = 2.6 },
             WeakenedHint = "lowers its blades and sets the egg down: take it!",
             Stagger = 1.1,
             WeakenedSlowdown = 1.7,
             Attacks = {
-                -- both scythes cut across the front
                 Scythe = { Kind = "Sweep", Range = 26, Arc = 65, WindUp = 0.6, Cooldown = 2.2, Knockback = 45 },
-                -- a wave of Qi blades skims out along the ground in a cone before it: jump it
                 BladeWave = { Kind = "Wave", Arc = 50, Radius = 46, WaveSpeed = 40, WindUp = 0.9, Cooldown = 6.5, Knockback = 40 },
-                -- enraged only: a long, high leap onto the thief, as from canopy to canopy
                 Leap = { Kind = "Pounce", MinRange = 16, MaxRange = 72, WindUp = 0.5, Air = 1.1, Height = 16, Cooldown = 4.2, Radius = 12, Knockback = 55 },
             },
         },
     },
 
-    -- Sword flight: from UnlockRank, the cultivator rides a flying sword (src/server/FlightService).
-    -- It drains stamina (Cost per second while moving, HoverCost while still) and needs MinStamina
-    -- to take off. Qi barriers still hold: flight never reaches an island above the rider's rank.
+    -- Sword flight (src/server/Qinggong/FlightService), from UnlockRank. Drains stamina (Cost per
+    -- second while moving, HoverCost while still) and needs MinStamina to take off. Qi barriers
+    -- still hold: flight never reaches an island above the rider's rank.
     SwordFlight = {
         UnlockRank = "FoundationInitiate",
         Cost = 8,
         HoverCost = 4,
         MinStamina = 25,
-        ClimbSpeed = 22, -- rising or sinking straight up and down (jump / crouch keys)
-        -- the sword's Qi channel glows in the rider's realm colour (saturated: Neon blooms pale ones)
+        ClimbSpeed = 22, -- vertical, on the jump / crouch keys
+        -- the sword's glow per realm (saturated: Neon blooms pale ones)
         RealmGlow = {
             ["Qi Awakening"] = Color3.fromRGB(40, 140, 255),
             ["Qi Foundation"] = Color3.fromRGB(40, 140, 255),
@@ -145,12 +135,12 @@ local GameConfig = {
             ["Ascendant Realm"] = Color3.fromRGB(255, 170, 30),
             ["Immortal Realm"] = Color3.fromRGB(255, 170, 30),
         },
-        DefaultGlow = Color3.fromRGB(100, 60, 255), -- Divine Realm and above: violet (a bluer one: Neon turned 8246ff pink)
+        DefaultGlow = Color3.fromRGB(100, 60, 255), -- Divine Realm and above (bluer than 8246ff, which Neon turned pink)
     },
 
     RelicTag = "SpiritRelic",
     EggTag = "PetEggStand",
-    -- the Qi barrier across the start of each island bridge: only players of its RankId pass
+    -- a barrier at each island bridge: only players of its RankId pass
     BridgeBarrierTag = "QiBarrier",
     Relics = {
         { Id = "IslandRoot", DisplayName = "Root of the Island", QiReward = 300, RequiredRank = "QiInitiate" },
@@ -531,8 +521,8 @@ local GameConfig = {
         },
     },
 
-    -- Outfits worn over the player's own avatar (src/server/OutfitService). An outfit is worn by its
-    -- owners: the user ids listed, or anyone who owns its game pass once GamePassId is set.
+    -- Outfits worn over the player's avatar (src/server/Outfits/OutfitService), by the user ids
+    -- listed, or by anyone who owns its game pass once GamePassId is set.
     Outfits = {
         Murim = {
             DisplayName = "Murim Robes",

@@ -15,8 +15,11 @@ Features:
 """
 import math
 
+import layout as L
+
 NAME = "EmberPeak"
-CENTRE = (-318, 222, 262)
+CENTRE = L.ISLANDS[NAME]["centre"]   # its place in the world, and its quarter turns (layout.py)
+TURNS = L.ISLANDS[NAME]["turns"]
 
 ARRIVAL = (56, -48)            # layout.ROUTES["EmberRoute"]["to"] minus the centre
 LANDING = (48, -40, 10)        # x, z, radius; flat at +0.5
@@ -142,7 +145,7 @@ MATERIALS = ["Basalt", "CrackedLava", "Asphalt", "Sand"]
 def export_terrain(path=None):
     import worldlib as W
     path = path or W.REPO + "/src/worldbuild/Terrain/%s.lua" % NAME
-    return W.export_heightfield(NAME, CENTRE, 4, 98, height, MATERIALS, path, priority=[("Sand", 2)])
+    return W.export_heightfield(NAME, CENTRE, 4, 98, height, MATERIALS, path, priority=[("Sand", 2)], turns=TURNS)
 
 
 def _clip_river_to_rim():

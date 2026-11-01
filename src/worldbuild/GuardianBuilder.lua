@@ -1,22 +1,17 @@
 -- Build-time only: stores an imported guardian (an FBX from tools/blender/guardians) in
--- ServerStorage.Guardians.<GuardianId> as a jointed Model, ready for GuardianService to clone into
--- the world. Require a clone, as with WorldBuilder:
+-- ServerStorage.Guardians.<GuardianId> as a jointed Model for GuardianService to clone. Require a clone:
 --
 --   local GB = require(game.ServerStorage.WorldBuild.GuardianBuilder:Clone())
 --   GB.store(workspace.StoneLion, "StoneLion")
 --
 -- The Model:
---   Root      an invisible anchored part under the chest, the PrimaryPart. The Model's pivot is
---             the origin, on the ground: the guardian is moved by pivoting the Model.
---   <Piece>   the MeshParts, unanchored and massless. A segment's first piece is named after it
---             (Body, Head, Jaw, Tail, FrontLeftUpper...); its other pieces are welded to that one.
+--   Root      invisible anchored PrimaryPart; the Model's pivot is the origin, on the ground.
+--   <Piece>   unanchored, massless MeshParts. A segment's first piece is named after it (Body,
+--             Head, Jaw...); its other pieces are welded to that one.
 --   Joints    a Motor6D per segment, named after it, from its parent segment (the Body from Root) at
 --             the segment's pivot: animate a segment by its Motor6D's Transform.
--- Glow pieces are Neon, with the attribute Glow, in their look from the placements (Glow) or else
--- their exported colour.
---
--- The import is fitted like the outfits (OutfitBuilder.fit: by the pieces' centres, turned 0 or 180
--- degrees), so it may come in anywhere and either way round.
+-- Glow pieces are Neon with the attribute Glow. The import is fitted with OutfitBuilder.fit, so it
+-- may come in anywhere and either way round.
 local ServerStorage = game:GetService("ServerStorage")
 
 local OutfitBuilder = require(ServerStorage.WorldBuild.OutfitBuilder:Clone())
@@ -25,8 +20,8 @@ local GuardianBuilder = {}
 
 local ROOT_SIZE = Vector3.new(4, 1, 4)
 
--- The import's pieces: "<prefix>_<Piece>", the glow pieces "<prefix>_<Segment>_Glow_<hex>" (found
--- by their segment and colour: two segments may glow alike, as the mantis's two blade edges do).
+-- The import's pieces: "<prefix>_<Piece>", glow pieces "<prefix>_<Segment>_Glow_<hex>" (matched by
+-- segment and colour, since two segments may glow alike).
 local function findPieces(model, placements)
     local found = {}
     for _, d in model:GetDescendants() do
@@ -64,11 +59,10 @@ function GuardianBuilder.store(model, guardianId)
     root.CanTouch = false
     root.CanQuery = false
     root.Transparency = 1
-    root.PivotOffset = CFrame.new(0, -ROOT_SIZE.Y / 2, 0) -- the Model's pivot is its origin, on the ground
+    root.PivotOffset = CFrame.new(0, -ROOT_SIZE.Y / 2, 0)
     root.Parent = guardian
     guardian.PrimaryPart = root
 
-    -- every piece where it was authored, round the origin
     for name, part in found do
         local info = placements.Pieces[name]
         part.CFrame = frame.frame:ToObjectSpace(part.CFrame)
@@ -105,7 +99,6 @@ function GuardianBuilder.store(model, guardianId)
         part.Parent = guardian
     end
 
-    -- a segment's other pieces ride its first
     for name, part in found do
         local segment = placements.Pieces[name].Segment
         if name ~= segment then
@@ -116,7 +109,6 @@ function GuardianBuilder.store(model, guardianId)
         end
     end
 
-    -- the joints, each at its segment's pivot
     local joints = Instance.new("Folder")
     joints.Name = "Joints"
     for segment, pivot in placements.Pivots do

@@ -724,15 +724,11 @@ def build():
 
 
 def kit_entries():
-    stones, ledge = route_positions()
+    # the Descent Ledge and its void flame are no longer placed: since 2026-11-01 every island is at
+    # one height and the bridge lands at the Gate of Descent
     gate, gate_yaw = gate_frame()
     frags = fragment_positions()
-    # face the ledge's steps toward the island
-    ledge_yaw = math.atan2(-ledge[0], -ledge[2]) - math.atan2(-1, -1)
     return {
-        "OA_RouteStone": [(p, k * 1.4, 1.0) for k, p in enumerate(stones)],
-        "OA_DescentLedge": [(ledge, ledge_yaw, 1.0)],
-        "OA_VoidFlame": [(ledge, ledge_yaw, 1.0)],
         "OA_GateOfDescent": [(gate, gate_yaw, 1.0)],
         "OA_RuinFragment": [(p, y, 1.0) for p, y in frags[:2]],
         "OA_ShardFloor": [frags[2][0:2] + (1.0,)],
