@@ -712,13 +712,19 @@ WorldBuilder.EggGlow = {
     JadeSpiritEgg = Color3.fromRGB(40, 225, 120),
     BloomwoodEgg = Color3.fromRGB(255, 80, 180),
     AncientGroveEgg = Color3.fromRGB(170, 240, 40),
-    -- the Origin Abyss eggs' own glow colours (their meshes' _Glow_ parts)
-    ForbiddenOriginEgg = Color3.fromHex("b04fff"),
-    VoidRiftEgg = Color3.fromHex("646eff"),
-    PrimordialAbyssEgg = Color3.fromHex("ff44bf"),
+    -- the Origin Abyss eggs' own glow colours (their meshes' _Glow_ parts): deeper than the old
+    -- b04fff and 646eff, which Neon showed pink and lavender
+    ForbiddenOriginEgg = Color3.fromHex("643cff"),
+    VoidRiftEgg = Color3.fromHex("3c64ff"),
+    PrimordialAbyssEgg = Color3.fromHex("ff3cb4"),
 }
 
 local EGG_STUDS_PER_UNIT = 1.3
+
+-- The egg's light per island ({ range, brightness }), where the default (12, 1.2) is too much: on
+-- Origin Abyss the thorn branches cradle the eggs, and three coloured lights that wide painted the
+-- bronze red and violet (seen in Play).
+local EGG_LIGHT = { OriginAbyss = { 6, 0.8 } }
 
 -- Places the egg mesh from ServerStorage.EggMeshes resting on `bottom`, facing `facing`.
 local function placeEgg(stand, eggId, bottom, facing)
@@ -808,7 +814,8 @@ function WorldBuilder.buildEggStands(island)
 
         local rest = frame.Position + Vector3.new(0, entry.EggRest, 0)
         local egg = placeEgg(stand, entry.EggId, rest, frame.LookVector * -1)
-        addLight(egg, glow, 12, 1.2)
+        local eggLight = EGG_LIGHT[island] or { 12, 1.2 }
+        addLight(egg, glow, eggLight[1], eggLight[2])
         -- the egg's aura is built round this point, facing the egg's front (EggAuraVFX)
         stand:SetAttribute("AuraOrigin", CFrame.lookAt(rest, rest - frame.LookVector))
         if not EggAuraVFX.has(entry.EggId) then

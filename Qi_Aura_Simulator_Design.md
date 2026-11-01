@@ -457,8 +457,7 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
   - Gold is 0.6 metallic, not 1: fully metallic gold shows black wherever it has nothing bright to reflect.
   - The shaders' ambient occlusion is local to each piece. While baking, the game mesh lies on the high-detail surface, and a scene-wide AO sees it everywhere: the whole egg then bakes as one deep crevice (too dark, or red-hot on the lava shaders).
 - **In Studio:** an imported egg is stored with `WorldBuilder.storeEgg(model, eggId)` in `ServerStorage.EggMeshes.<EggId>`. `buildEggStands` places it at 1.3 studs per egg unit.
-- **Recreated so far:** the Starting Island, Jade Grove, Ember Peak and Moonlit Isle eggs. The Origin Abyss eggs keep the older family design below until they are recreated.
-- **Moonlit Isle eggs are their own designs** (`eggs_moon.py`, November 1, 2026): the owner asked for each to be invented after its name, not the sheet's porcelain family.
+- **All fifteen eggs are recreated.** The Moonlit Isle and Origin Abyss eggs are their own designs (`eggs_moon.py`, `eggs_origin.py`, November 1, 2026): the owner asked for each to be invented after its name, not the sheet's family designs.
 
 | Egg | Design |
 |---|---|
@@ -473,13 +472,12 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 | Celestial Egg | A piece of the night sky: glossy midnight lacquer with soft clouds of violet and teal nebula and a dusting of stars in it, cradled in a silver crescent moon whose high horn holds a glowing blue pearl, a gold constellation of six glowing stars across its front |
 | Astral Sanctum Egg | A moonstone shrine (milky white with a blue and lavender sheen): six pointed-arch windows round its middle, framed in gold with a mullion and a tracery ring, glowing violet with the light inside; small gold stars between them; plinth bands round its foot; a ribbed gold dome on its crown whose spire holds a glowing violet orb |
 | Heavenly Throne Egg | A pearl egg wearing a gold coronet of seven jewel-tipped tines, a gold sun on its front (an eight-pointed burst in a ring round a glowing cabochon, a curling flourish to either side), seated on a cushion of soft cloud that swells into armrests, a gold mandorla behind it as the throne's back: a pointed oval frame with a glowing inner line, rays fanning out from behind the egg, a jewel on a gold star at its point |
+| Forbidden Origin Egg | The sealed egg: ancient near-black seal-stone ringed by two bands of glowing violet seal-script glyphs, every glyph its own, bound by two aged bronze chains (verdigris in the hollows, like the shrine's thorns) crossing over its front and locked where they cross by a domed bronze seal with a glowing rune |
+| Void Rift Egg | The egg torn open: a shell of polished black void glass split by a jagged rift down its front, the torn edges glowing blue; through it the hollow inside is a starry blue void with a glowing heart floating in it, and jagged fragments of shell drift just off the tear |
+| Primordial Abyss Egg | The first egg: primordial stone in warped dark layers with thin ochre seams, a great fossil ammonite coiled on its front with magenta light in its spiral seam and its mouth, a bronze clockwork belt of gear teeth round its base and a small gear set in each shoulder |
 | Ancient Grove Egg | Carved wood planks in fourteen upright columns, each split at its own heights, every plank its own tone; dark bark in the grooves, pale heartwood showing at the crown. A mossy trunk behind it sends roots gripping the egg and branches spreading into lumpy crowns of leaves, and a spiral of Qi glows on its front |
 
-**Older family design** (`tools/blender/eggs/Eggs.blend`, preview `Eggs_preview.png`), still used by the Origin Abyss eggs. The second egg adds a jewelled gold band, and the third a crown and floating halo.
-
-| Island | Design |
-|---|---|
-| Origin Abyss | Obsidian plates cracked with void light, spiral void core, thorny bronze branches |
+The older family designs (`tools/blender/eggs/Eggs.blend`) are no longer used by any egg.
 
 ### Egg auras
 
@@ -523,7 +521,8 @@ Every egg on its stand has its own aura, built in the Workspace from particle em
   - A Highlight fill stronger than about 0.15 paints over an egg's baked facets, so the beat Highlight is a faint fill with a strong rim.
   - Evenly spaced beams of one size all meeting at a point read as a cage, whatever their texture. Give each its own angle, bow, width and pace, and leave the egg's front open.
   - `T.SmallGlow`'s glow is a speck in its image: at mote sizes it is invisible, so soft motes use `T.SoftGlow`. On the bright, white Moonlit Isle, motes need a deeper colour at lower light emission to show.
-  - Neon turns violet (8a4dff) pink; a bluer violet (643cff) stays violet.
+  - Neon turns violet (8a4dff, b04fff, even 7a3cff) pink; a bluer violet (643cff) stays violet.
+  - On Origin Abyss the thorn branches cradle the eggs, so its eggs' lights are short and soft (range 6, brightness 0.8, `EGG_LIGHT` in WorldBuilder) and its auras add no light: three wide coloured lights painted the bronze red and violet.
   - The detailed eggs are taller than the recipes' measures, so their auras are lifted (`lift` in `EggAuraVFX`). Effects that belong to a part of the model (a gem, a lotus, a leaf crown) are anchored to points measured on the model in Blender (`anchor`).
 
 | Egg | Breath | Aura |
@@ -539,6 +538,9 @@ Every egg on its stand has its own aura, built in the Workspace from particle em
 | Celestial | 6 s, slow | **The night breathing.** Soft points of starlight swell and fade as they drift up round it, two soft shooting stars (a glowing head, a soft tail) glide round it on their own tilted paths, the pearl on its crescent breathes a blue glow, under a faint night-blue haze. |
 | Astral Sanctum | 5.5 s | **Light from the sanctum.** Soft violet light drifts out through its windows and up, three lantern spirits circle it at their own heights and paces, each leaving a fading tail of light, and the orb on its spire breathes. |
 | Heavenly Throne | 7 s, the slowest | **Radiance.** A soft deep-gold glow breathes behind the egg, filling its mandorla; golden dust rises off its cushion of cloud, faint wisps of cloud drift from it, and the sun jewel on its front breathes. |
+| Forbidden Origin | 6.5 s | **The seal drinking light.** Soft violet motes are drawn in toward the seal from all round it, and every few seconds a slow soft swell of violet spreads from the seal and fades, as if something behind it stirs. |
+| Void Rift | 5 s | **The rift breathing.** Blue void light seeps out through the tear and drifts away, the heart breathes in the void inside, and two deep-blue wisps loop slowly round it on steep tilts, like space folding. |
+| Primordial Abyss | 8 s, the slowest | **Deep time.** Three soft lights sweep round it at three heights like a clock's hands, each a third the speed of the one below and drawing a short arc of light; the ammonite's mouth breathes magenta and faint pink motes drift out of its spiral. |
 | Phoenix Ash | a 15 s cycle | **The Ash Cycle:** the egg dies and is reborn every 15 seconds. **Ash:** its veins and phoenix emblem dim to a smoulder under a dull ember rim, pale ash falls round it (the one aura on the altar where things fall) and a thin curl of smoke rises from its crown. **Kindling:** embers wink awake round it and the glow climbs back. **Rebirth:** the ash rushes up catching fire gold, two wings of gold light sweep open behind its own sculpted wings shedding golden feathers, a sunburst blooms over its crown, its rim races through the prism's colours (its rarest pet is the Prismatic Phoenix), its light blazes gold and a nearby player's screen flashes warm. **Burning down:** the wings fold, their feathers greying into ash as they fall, and the cycle begins again. A hatch is a rebirth. The wings keep 1.76 studs clear of the Magma Heart egg (a raycast sweep over the whole wing path). |
 
 **Egg stands today:** each island has a shrine with three stands where eggs are hatched directly. Under the planned guardian loop, eggs come from guardians instead; the stands' future role is an open question (section 9).
@@ -636,7 +638,7 @@ The hidden endgame island, torn in two by a void rift that zig-zags across it fr
 - **Broken bridge:** an ancient stone bridge crosses the rift at its narrowest point. Its middle has fallen away, leaving one block hanging in the gap to jump across.
 - **Origin Altar:** on the north-west half, a ring of nine leaning obsidian slabs carved with glowing seal-script glyphs (one snapped, its top fallen outside the ring) around a stepped dais with a glowing spiral sigil. The **Origin Altar** relic floats above it.
 - **Void Shard:** a great obsidian-glass crystal with a glowing core, chained to a floating temple floor about 150 studs above the altar. Floating temple fragments climb to it, each rising 49 studs, so Void Walker clears every stage and Divine Initiate falls short. The **Void Shard** relic floats on the top floor.
-- **Egg shrine:** three obsidian plinths cracked with void light, each cradled by thorny bronze branches, after the Origin Abyss egg design. They hold the Forbidden Origin, Void Rift and Primordial Abyss eggs, and each stand glows in its egg's own colour. The Thorn Crown, seven great bronze branches rooted behind the shrine, arches over them.
+- **Egg shrine:** three obsidian plinths cracked with void light, each cradled by thorny bronze branches (which leave about 1.6 studs round the egg's axis low down). They hold the Forbidden Origin, Void Rift and Primordial Abyss eggs, and each stand glows in its egg's own colour. The Thorn Crown, seven great bronze branches rooted behind the shrine, arches over them.
 - **Fallen colossus:** a giant carved stone head sunk into the ground, its face turned toward the path. Void light shows in its eyes and through a crack across its face.
 - **Underside:** separate angular chunks with gaps between them, void light glowing through. Iron chains bind the halves beneath the rift, a glowing veil hangs deep in the rift, and broken-off debris drifts below.
 - **Dressing:** void crystals of dark glass around glowing cores (most along the rift's lips, with rising motes), slate rocks, and hewn paving on the temple terraces with stones missing toward the edges.

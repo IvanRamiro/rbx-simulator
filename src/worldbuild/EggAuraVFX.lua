@@ -1468,6 +1468,110 @@ RECIPES.HeavenlyThroneEgg = function(aura)
     centreAt(aura, C)
 end
 
+-- ---------- Origin Abyss ----------
+-- The same soft direction as Moonlit Isle. The shrine's thorn branches curve up close round each
+-- egg (about 1.6 studs from its axis low down, open above 3.3) and the stands are 6.2 studs apart,
+-- so things that circle stay high or within about 2.6 studs. No PointLight of their own: the
+-- stand's light is enough, and more coloured light paints the bronze thorns red. Points on the
+-- eggs are measured in eggs_origin.py's build.
+
+-- Forbidden Origin Egg: the seal drinking light. Soft violet motes are drawn in toward the seal
+-- from all round it; every few seconds a slow soft swell of violet spreads from the seal and
+-- fades, as if something behind it stirs; a faint violet haze.
+RECIPES.ForbiddenOriginEgg = function(aura)
+    local VIOLET, LILAC = rgb(100, 60, 255), rgb(185, 150, 255)
+    local C = modelPoint(aura, Vector3.new(0, 0, -0.008)).Y
+    set(aura.model, nil, { Gather = 1.5, Tint = rgb(150, 100, 255), Breath = 0.12, BreathPeriod = 6.5 })
+    local seal = anchor(aura, "Seal", Vector3.new(0, 0.01, 1.112))
+    finish(emitter("Stir", {
+        Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(2.6, 3), Rate = 0.35, ZOffset = 0.5,
+        Size = seq({ { 0, 0.5 }, { 1, 3.2 } }), Color = ColorSequence.new(VIOLET),
+        Transparency = seq({ { 0, 1 }, { 0.15, 0.55 }, { 1, 1 } }), Brightness = 2, LightEmission = 0.5,
+    }, { HatchEmit = 2 }), seal)
+    local around = part(aura, "SealDraw", CFrame.new(seal.Position), Vector3.new(4.4, 4.4, 4.4))
+    finish(emitter("Drawn", { -- born on a sphere round the seal, drifting in to it
+        Texture = T.SoftGlow, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
+        ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward, Speed = NumberRange.new(0.6, 0.8), Lifetime = NumberRange.new(2.6, 3),
+        Rate = 6, Size = seq({ { 0, 0 }, { 0.3, 0.42, 0.08 }, { 0.85, 0.2 }, { 1, 0 } }), Color = ColorSequence.new(LILAC, VIOLET),
+        Transparency = NumberSequence.new(0.2), Brightness = 2, LightEmission = 0.45,
+    }, { HatchEmit = 20 }), around)
+    halo(aura, VIOLET, 6, 0.86)
+    drawIn(aura, T.SoftGlow, LILAC, 0.5, 50)
+    burst(aura, rgb(200, 170, 255), 8, T.SoftGlow)
+    centreAt(aura, C)
+end
+
+-- Void Rift Egg: the rift breathing. Blue void light seeps out through the tear and drifts away;
+-- the heart breathes in the void inside; two deep-blue wisps loop slowly round it on steep tilts,
+-- like space folding; a faint blue haze.
+RECIPES.VoidRiftEgg = function(aura)
+    local BLUE, ICE = rgb(60, 100, 255), rgb(150, 185, 255)
+    local C = modelPoint(aura, Vector3.new(0, 0, -0.059)).Y
+    set(aura.model, nil, { Gather = 1.5, Tint = rgb(90, 130, 255), Breath = 0.14, BreathPeriod = 5 })
+    local heart = modelPoint(aura, Vector3.new(0, 0, -0.159))
+    -- turned so its up axis points out of the egg's front (local -Z), through the tear
+    local seep = attachment(aura, "Seep", CFrame.new(heart) * CFrame.Angles(-math.pi / 2, 0, 0))
+    finish(emitter("Seep", {
+        Texture = T.SoftGlow, EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(0.5, 0.9), SpreadAngle = Vector2.new(18, 35),
+        Drag = 0.4, Acceleration = Vector3.new(0, 0.15, 0), Lifetime = NumberRange.new(2.5, 3.5), Rate = 7,
+        Size = seq({ { 0, 0 }, { 0.35, 0.45, 0.1 }, { 1, 0 } }), Color = ColorSequence.new(ICE, BLUE),
+        Transparency = NumberSequence.new(0.2), Brightness = 2, LightEmission = 0.5,
+    }, { HatchEmit = 20 }), seep)
+    breathe(anchor(aura, "Heart", Vector3.new(0, 0, -0.159)), BLUE, 1.2, 0.45, 0)
+    for k, c in { { 30, 2.1, 62, 0, 0.3, 6 }, { -22, 2.3, -48, 30, 0.4, 7.5 } } do
+        local _, head = arc(aura, "Fold" .. k, { Orbit = c[1], Radius = c[2], Height = C + 0.6, Tilt = Vector3.new(c[3], 0, c[4]),
+            Phase = (k - 1) * 150, Bob = c[5], BobPeriod = c[6] }, 0.16, {
+            Texture = T.SoftGlow, TextureMode = Enum.TextureMode.Stretch, Lifetime = 1.8, Brightness = 2, LightEmission = 0.35,
+            Color = colors({ { 0, ICE }, { 0.4, BLUE }, { 1, rgb(30, 30, 140) } }), Transparency = seq({ { 0, 0.15 }, { 0.5, 0.4 }, { 1, 0.85 } }),
+            WidthScale = seq({ { 0, 1 }, { 1, 0.3 } }),
+        })
+        finish(emitter("Head", {
+            Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.5), Rate = 12,
+            Size = seq({ { 0, 0.45 }, { 1, 0.15 } }), Color = ColorSequence.new(ICE), Transparency = seq({ { 0, 0.3 }, { 1, 1 } }),
+            Brightness = 2, LightEmission = 0.5,
+        }, { HatchEmit = 4 }), head)
+    end
+    halo(aura, BLUE, 6, 0.86)
+    drawIn(aura, T.SoftGlow, ICE, 0.5, 50)
+    burst(aura, rgb(160, 190, 255), 8, T.SoftGlow)
+    centreAt(aura, C)
+end
+
+-- Primordial Abyss Egg: deep time. Three soft lights sweep slowly round it at three heights like a
+-- clock's hands, each a third the speed of the one below it, each drawing a short arc of light;
+-- the ammonite's mouth breathes magenta and faint pink motes drift out of its spiral; a faint
+-- magenta haze. Its breath is the slowest on the island.
+RECIPES.PrimordialAbyssEgg = function(aura)
+    local MAGENTA, ROSE, WARM = rgb(255, 60, 180), rgb(255, 160, 215), rgb(255, 200, 150)
+    local C = modelPoint(aura, Vector3.new(0, 0, -0.051)).Y
+    set(aura.model, nil, { Gather = 1.6, Tint = rgb(255, 110, 200), Breath = 0.12, BreathPeriod = 8 })
+    for k, h in { { 27, 2.0, 0.9 }, { 9, 2.3, 1.5 }, { 3, 2.6, 2.1 } } do
+        local _, head = arc(aura, "Hand" .. k, { Orbit = h[1], Radius = h[2], Height = C + h[3], Phase = (k - 1) * 130 }, 0.08, {
+            Texture = T.SoftGlow, TextureMode = Enum.TextureMode.Stretch, Lifetime = 2.4, Brightness = 2, LightEmission = 0.4,
+            Color = colors({ { 0, WARM }, { 0.5, ROSE }, { 1, MAGENTA } }), Transparency = seq({ { 0, 0.15 }, { 0.6, 0.5 }, { 1, 1 } }),
+            WidthScale = seq({ { 0, 1 }, { 1, 0.4 } }),
+        })
+        finish(emitter("Head", {
+            Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.5), Rate = 12,
+            -- rose, not warm white: brighter, the heads bloom into white blobs
+            Size = seq({ { 0, 0.38 }, { 1, 0.12 } }), Color = ColorSequence.new(rgb(255, 130, 200)), Transparency = seq({ { 0, 0.3 }, { 1, 1 } }),
+            Brightness = 2, LightEmission = 0.35,
+        }, { HatchEmit = 4 }), head)
+    end
+    breathe(anchor(aura, "Mouth", Vector3.new(-0.513, 0.007, 0.91)), MAGENTA, 1, 0.5)
+    local spiral = modelPoint(aura, Vector3.new(0, 0.005, 1.019))
+    finish(emitter("Spiral", {
+        Texture = T.SoftGlow, EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(0.3, 0.5), SpreadAngle = Vector2.new(50, 50),
+        Drag = 0.4, Acceleration = Vector3.new(0, 0.2, 0), Lifetime = NumberRange.new(2.5, 3.5), Rate = 3,
+        Size = seq({ { 0, 0 }, { 0.35, 0.38, 0.08 }, { 1, 0 } }), Color = ColorSequence.new(ROSE, MAGENTA),
+        Transparency = NumberSequence.new(0.2), Brightness = 2, LightEmission = 0.5,
+    }, { HatchEmit = 16 }), attachment(aura, "Spiral", CFrame.new(spiral) * CFrame.Angles(-math.pi / 2, 0, 0)))
+    halo(aura, MAGENTA, 6, 0.87)
+    drawIn(aura, T.SoftGlow, ROSE, 0.5, 50)
+    burst(aura, rgb(255, 180, 225), 8, T.SoftGlow)
+    centreAt(aura, C)
+end
+
 function EggAuraVFX.has(eggId)
     return RECIPES[eggId] ~= nil
 end
