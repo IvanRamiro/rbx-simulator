@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local QinggongFx = require(script.Parent:WaitForChild("QinggongFx"))
+local CombatFx = require(script.Parent:WaitForChild("CombatFx"))
 
 local BLEND_SPEED = 6
 local FLYING_MOVE_SPEED = 4
@@ -75,6 +76,29 @@ FLYING.LeftKnee = deg(-20, 0, 0)
 FLYING.LeftShoulder = pointLimb(Vector3.new(-0.15, -0.72, 0.68))
 FLYING.LeftElbow = deg(15, 0, 0)
 FLYING.Waist = deg(-6, 0, 0)
+
+-- Strikes (CombatFx): only the arms and waist, so they combine with whatever the legs are doing
+-- (running, a leap, riding the sword). The Qi Palm: the right palm thrust straight ahead from the
+-- shoulder, the left fist drawn back to the hip, the waist turned into it. The sword strike: the
+-- right hand raised forward in a sword gesture directing the flying sword, the left drawn back.
+local STRIKES = {
+    Palm = {
+        RightShoulder = pointLimb(Vector3.new(-0.05, -0.12, -0.99)),
+        RightElbow = deg(0, 0, 0),
+        RightWrist = deg(-55, 0, 0),
+        LeftShoulder = pointLimb(Vector3.new(0.12, -0.75, 0.65)),
+        LeftElbow = deg(95, 0, 0),
+        Waist = deg(0, -25, 0),
+    },
+    Sword = {
+        RightShoulder = pointLimb(Vector3.new(0.05, 0.35, -0.94)),
+        RightElbow = deg(10, 0, 0),
+        RightWrist = deg(-20, 0, 0),
+        LeftShoulder = pointLimb(Vector3.new(0.25, -0.8, 0.55)),
+        LeftElbow = deg(60, 0, 0),
+        Waist = deg(0, 15, 0),
+    },
+}
 
 -- The same pose for the other side of the body: every Right joint becomes the mirrored Left one
 -- and every Left joint the mirrored Right one.
@@ -149,14 +173,33 @@ local function findJoints(character)
     return joints
 end
 
+-- a strike's arms laid over a riding pose, built once per pair
+local combined = {}
+local function withStrike(base, strike)
+    local key = tostring(base) .. tostring(strike)
+    if not combined[key] then
+        local pose = table.clone(base)
+        for name, cframe in strike do
+            pose[name] = cframe
+        end
+        combined[key] = pose
+    end
+    return combined[key]
+end
+
 local function choosePose(player, character)
     if player:GetAttribute("IsCultivating") == true then
         return if useLotus then LOTUS else nil
     end
+    local strike = STRIKES[CombatFx.pose(player)]
     if player:GetAttribute("IsFlying") == true then
         local rootPart = character:FindFirstChild("HumanoidRootPart")
         local speed = if rootPart then rootPart.AssemblyLinearVelocity.Magnitude else 0
-        return if speed > FLYING_MOVE_SPEED then FLYING else HOVERING
+        local ride = if speed > FLYING_MOVE_SPEED then FLYING else HOVERING
+        return if strike then withStrike(ride, strike) else ride
+    end
+    if strike then
+        return strike
     end
     local qinggong = QinggongFx.pose(player)
     return qinggong and QINGGONG_POSES[qinggong]
@@ -167,6 +210,9 @@ for name, pose in QINGGONG_POSES do
     if name ~= "Glide" then
         QUICK_POSES[pose] = true
     end
+end
+for _, pose in STRIKES do
+    QUICK_POSES[pose] = true
 end
 
 local function updatePoses(deltaTime)

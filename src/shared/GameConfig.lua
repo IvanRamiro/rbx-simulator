@@ -40,6 +40,17 @@ local GameConfig = {
         },
     },
 
+    -- Combat (src/server/CombatService). Before the flying sword (SwordFlight.UnlockRank) a
+    -- cultivator strikes with a Qi Palm; from then on, the sword strikes. Damage grows by
+    -- RankPowerStep of the base for every rank above the first. A strike hits the nearest target in
+    -- front (within Arc degrees of facing) whose body is within Range studs.
+    Combat = {
+        TargetTag = "CombatTarget",
+        RankPowerStep = 0.12,
+        Palm = { Damage = 10, Range = 9, Cooldown = 0.45, Arc = 75 },
+        Sword = { Damage = 16, Range = 12, Cooldown = 0.55, Arc = 80 },
+    },
+
     -- Sword flight: from UnlockRank, the cultivator rides a flying sword (src/server/FlightService).
     -- It drains stamina (Cost per second while moving, HoverCost while still) and needs MinStamina
     -- to take off. Qi barriers still hold: flight never reaches an island above the rider's rank.

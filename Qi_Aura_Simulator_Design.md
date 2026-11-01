@@ -694,6 +694,27 @@ The hidden endgame island, torn in two by a void rift that zig-zags across it fr
 
 ## 7. Guardians and egg theft (planned)
 
+### The user's decisions (November 1, 2026)
+
+- "Qi palm strike if there's no sword yet, specially from beginner area, and make a Huge monster, for each Island, include the Health UI, Weaken state and engage", with the combat system built first, before the bosses.
+- **Caught means knockback, never death.** A hit knocks the thief back and makes them drop the egg.
+- **Egg inventory:** a secured egg goes to the player's egg inventory and is hatched at the island's stands. An island's stands stop giving free eggs once that island's guardian exists.
+- The guardians are full Blender models.
+
+### Combat (built)
+
+The server decides every hit; the client only sends "strike" and shows it.
+
+- **Weapon by rank:** the Qi Palm below `SwordFlight.UnlockRank`, the flying sword from it.
+  - Palm: 10 damage, range 9, arc 75°, cooldown 0.45 s.
+  - Sword: 16 damage, range 12, arc 80°, cooldown 0.55 s.
+  - Damage grows 12% per rank (`GameConfig.Combat.RankPowerStep`).
+- **Targets:** any Model tagged `CombatTarget` with a PrimaryPart and a `HitRadius` attribute. The nearest one in range and in the arc in front is hit; an `Invulnerable` attribute skips it.
+- **Validation:** cooldown (with 15% slack for latency), alive, not cultivating.
+- **Output:** `ServerStorage.CombatHit` (a BindableEvent: player, target, damage, position) for the guardian code, and `CombatEvent` to every client for the effects.
+- **Effects** (`CombatFx`): the Qi Palm throws a great palm print of Qi (`QiPalm` texture) in the realm's colour; the sword strike swings a copy of the player's flying sword in an arc with a crescent of sword light (`QiSlash`). Strike poses are mixed into `PoseController`, the sword one on top of the riding pose.
+- Input: left mouse, R2 or the touch "Strike" button.
+
 ### Encounter
 
 The server owns every state change. Thresholds and durations are tuned in playtests.
@@ -744,13 +765,23 @@ Guarded → Available → Carried → Dropped → Carried → Secured
 
 | Island | Guardian | Encounter direction |
 |---|---|---|
-| Starting Island | Beginner Guardian | Introductory fight, basic Qinggong escape |
+| Starting Island | The Awakened Stone Lion | Introductory fight, basic Qinggong escape |
 | Jade Grove | Nature Guardian | Escape routes through trees and elevated terrain |
 | Ember Peak | Fire Guardian | Escape routes around lava and volcanic hazards |
 | Moonlit Isle | Celestial Guardian | More demanding aerial movement |
 | Origin Abyss | Primordial Guardian | The most demanding encounter |
 
-Names, attacks, health, egg pools, unlocks and rewards are still to be designed.
+Names, attacks, health, egg pools, unlocks and rewards are still to be designed for the other four islands.
+
+### The Awakened Stone Lion (Starting Island)
+
+A granite temple guardian lion come to life: a mane of carved spiral curls, spiral brows and whisker curls, glowing Qi-blue eyes (`39d8ff`), a gold collar with a jade orb (`2fe6c8`) and gold tassels, moss in the crevices, and a tail of five stone flame tongues ending in curls. It stands about 30 studs tall.
+
+- **Guardian:** the egg is pinned under its right front paw.
+- **Weakened:** it rears, lifting the paw off the egg.
+- **Enraged:** pounces and roars shockwaves at the thief.
+
+**Asset:** `tools/blender/guardians/stone_lion.py` builds it; `assets/guardians/StoneLion.fbx` holds 12 jointed segments (Body, Head, Jaw, Tail and two pieces per leg). The curls are pieces of their own, so the bake's decimation leaves them whole. `WorldBuild.GuardianBuilder.store` fits the import and joins the segments with Motor6Ds at their pivots (`Placements/StoneLion.lua`), into `ServerStorage.Guardians.StoneLion`. Animation sets the joints' `Transform` on the client.
 
 **Guardian aura states**
 
@@ -860,7 +891,7 @@ Outfits are worn over the player's own avatar (`GameConfig.Outfits`). They are c
 
 ## 9. Open decisions
 
-- **Egg stands under the guardian loop:** a hatching spot for secured eggs, a starter egg source, or removed?
+- **Egg stands under the guardian loop:** decided: secured eggs are hatched at the stands, and an island's stands stop giving free eggs once its guardian exists.
 - **Forged weapons:** the purchase and request flow, which weapons each Qi mastery level unlocks, and how they plug into combat.
 - **PvP stealing or raids:** only ever opt-in and server-checked, with protected pets, cooldowns and clear warnings. Not planned. Guardian egg theft is PvE.
 - **Monetization:** cosmetic-first, never pay-to-win; no paid eggs or random rewards until Roblox's policies are checked.

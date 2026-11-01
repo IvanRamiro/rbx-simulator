@@ -629,6 +629,11 @@ function QinggongFx.pose(player)
     return (if now - state.leapAt < STEP_TIME then "Step" else "Tuck") .. state.side
 end
 
+-- The realm palette (Core, Main, Deep, Accent) a player's effects use: shared with CombatFx.
+function QinggongFx.palette(player)
+    return paletteFor(player)
+end
+
 -- ---------- entry point ----------
 -- kind: "Takeoff" | "Leap" (value = the leap's number) | "Glide" (value 1 = start, 0 = stop) |
 -- "Land" (value = impact strength, 0..1) | "Dash"

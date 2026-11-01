@@ -55,6 +55,7 @@ local function fit(found, placements)
     end
     return best
 end
+OutfitBuilder.fit = fit -- GuardianBuilder fits its imports the same way
 
 -- The importer hangs every rig's bones from one RootPart. Each piece rides its own body part, so
 -- each chain moves into its piece (bones are named after it: SkirtRoot, LeftCuffHem...), keeping
