@@ -420,7 +420,6 @@ def placements():
 
 def write_placements(path=W.REPO + "/src/worldbuild/Placements/JadeGrove.lua"):
     kit = {"JG_TreeShelf": [(p, y, 1.0) for p, y in JM.climb_shelves()],
-           "JG_RouteStone": [(p, k * 1.1, 1.0) for k, p in enumerate(JM.route_stone_positions())],
            "JG_GroveGate": [((J.GATE[0], ground(*J.GATE) - 0.3, J.GATE[1]), JM.gate_yaw(), 1.0)]}
     items, eggs = placements()
     for name, x, y, z, yaw, scale in items:

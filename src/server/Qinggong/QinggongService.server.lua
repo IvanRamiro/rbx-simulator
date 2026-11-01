@@ -32,6 +32,7 @@ end
 
 local function setupPlayer(player)
     local first = Ranks.getQinggong("")
+    player:SetAttribute("QinggongRunSpeed", first.RunSpeed)
     player:SetAttribute("QinggongAirLeaps", first.AirLeaps)
     player:SetAttribute("QinggongMaxStamina", first.Stamina)
     player:SetAttribute("QinggongDashSpeed", first.DashSpeed)

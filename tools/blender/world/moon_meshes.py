@@ -5,7 +5,7 @@
 - The cloud bank cushioning the island, and the moonstone geode crystals hanging beneath it.
 - The Moon Mirror: pool, rim, crescent bridge and lotus dais.
 - The Star Well: ring and starfield lining.
-- Kit pieces: the Crescent Arch at the arrival, moonstone spires and the crescent route stones.
+- Kit pieces: the Crescent Arch at the arrival and moonstone spires.
 """
 import bpy, math, random
 import worldlib as W
@@ -347,20 +347,6 @@ def crescent_slab(mb, bands, r_out, r_in, offset, thick, seg=24):
         oriented(mb, [(a[0], -thick, a[1]), (b[0], -thick, b[1]), (c[0], -thick, c[1]), (d[0], -thick, d[1])], (0, -1, 0), bands[LUNAR], 0.4, [0.3] * 4)
 
 
-def route_stone(coll, mat, bands):
-    """A floating crescent of marble with a gold edge, moonstone crystals hanging beneath
-    (origin at the top centre of its broad back, which is where players land)."""
-    mb = W.MeshBuilder()
-    crescent_slab(mb, bands, 6.0, 4.8, 3.2, 1.6)
-    for k, (x, z, length) in enumerate(((0, 3.2, 7.0), (-2.6, 2.0, 4.5), (2.6, 2.0, 5.0))):
-        JM.crystal_prism(mb, (x, -1.2, z), (0, -1, 0.1), length, 0.7, bands[MOONSTONE], k)
-    # the crescent's centre point is in its open bite; move the broad back (z 1.6..6) onto the
-    # origin, which is where the route expects players to land
-    for v in mb.verts:
-        v.y += 3.8   # Blender y is -Roblox z
-    return mb.object("MI_RouteStone", coll, mat)
-
-
 def crescent_arch(coll, mat, bands):
     """The Crescent Arch over the arrival: two moonstone spires 10 studs apart joined by a golden
     crescent arc (origin at ground centre; the path runs along Z)."""
@@ -395,18 +381,6 @@ def crescent_arch(coll, mat, bands):
 
 
 # ---------- placements ----------
-def route_stone_positions():
-    stones, _ = L.route_stones("MoonlitRoute")
-    cx, cy, cz = M.CENTRE
-    return [(x - cx, y - cy, z - cz) for x, y, z in stones]
-
-
-def route_stone_yaw():
-    """Turn each crescent so its broad back faces the climber coming from the Starting Island."""
-    a, b = L.ROUTES["MoonlitRoute"]["from"], L.ROUTES["MoonlitRoute"]["to"]
-    return math.atan2(a[0] - b[0], a[2] - b[2])
-
-
 def arch_frame():
     lx, lz, _ = M.LANDING
     a, b = M.PATHS[0][0], M.PATHS[0][1]
@@ -431,7 +405,7 @@ def relic_positions():
 
 
 ISLAND_PIECES = [cliff_skirt, cloud_bank, geode_crystals, geode_glow, mirror_pool, mirror_rim, star_well]
-KIT_PIECES = [moonstone_spire, route_stone, crescent_arch]
+KIT_PIECES = [moonstone_spire, crescent_arch]
 
 
 def build():
@@ -447,7 +421,6 @@ def build():
 def kit_entries():
     arch, arch_yaw = arch_frame()
     return {
-        "MI_RouteStone": [(p, route_stone_yaw(), 1.0) for p in route_stone_positions()],
         "MI_CrescentArch": [(arch, arch_yaw, 1.0)],
         "MI_MoonstoneSpire": [((x, ground(x, z) - 0.2, z), (k * 1.7) % TAU, 0.9 + 0.12 * (k % 3)) for k, (x, z) in enumerate(spire_positions())],
     }

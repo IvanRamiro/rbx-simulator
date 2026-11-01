@@ -6,7 +6,7 @@
 - The broken bridge with its floating rubble.
 - The Origin Altar: a monolith ring with rune glows around a stepped dais.
 - The Void Shard and the floating ruin fragments that climb to it.
-- Kit pieces: the Gate of Descent, the Origin Route stones and the Descent Ledge.
+- Kit pieces: the Gate of Descent, the ruin fragments and the shard floor.
 """
 import bpy, bmesh, math, random
 import worldlib as W
@@ -598,7 +598,7 @@ def shard_floor(coll, mat, bands):
     return mb.object("OA_ShardFloor", coll, mat)
 
 
-# ---------- kit: gate, route stones, ledge ----------
+# ---------- kit: the gate ----------
 def slab_between(mb, a, b, half_w, half_h, band, u=0.5):
     """A rectangular beam from a to b (Roblox space), its width kept horizontal."""
     a, b = W.Vector(a), W.Vector(b)
@@ -650,51 +650,7 @@ def gate_of_descent(coll, mat, bands):
     return mb.object("OA_GateOfDescent", coll, mat)
 
 
-def route_stone(coll, mat, bands):
-    """A floating obsidian shard with a flat slate top (origin at the top centre)."""
-    mb = W.MeshBuilder()
-    rnd = random.Random(661)
-    poly = [(math.cos(TAU * i / 6) * 5.0 * rnd.uniform(0.85, 1.1), math.sin(TAU * i / 6) * 5.0 * rnd.uniform(0.85, 1.1)) for i in range(6)]
-    SP.slab_tile(mb, poly, 0.0, -1.0, bands[SLATE], 0.5, 0.9)
-    JM.crystal_prism(mb, (0, -0.8, 0), (0.05, -1, 0.03), 13.0, 3.6, bands[OBSIDIAN], 5)
-    JM.crystal_prism(mb, (2.4, -1.0, 1.2), (0.3, -1, 0.2), 6.0, 1.3, bands[VOID], 6)
-    return mb.object("OA_RouteStone", coll, mat)
-
-
-def descent_ledge(coll, mat, bands):
-    """The end of the Origin Route: a broken temple landing with steps that end in the air, facing
-    the glide down to Origin Abyss (origin at the top centre; the drop is toward -X, -Z)."""
-    mb = W.MeshBuilder()
-    ruin_poly = [(-7, -6), (7, -7), (8, 5), (-6, 7)]
-    SP.slab_tile(mb, ruin_poly, 0.0, -1.4, bands[RUIN], 0.3, 0.95)
-    rings = [[(x * s, y, z * s) for x, z in ruin_poly] for s, y in ((1.0, -1.4), (0.6, -6.0), (0.2, -12.0))]
-    for k in range(2):
-        for i in range(4):
-            j = (i + 1) % 4
-            mid = ((rings[k][i][0] + rings[k][j][0]) / 2, 0, (rings[k][i][2] + rings[k][j][2]) / 2)
-            oriented(mb, [rings[k][i], rings[k][j], rings[k + 1][j], rings[k + 1][i]], (mid[0], -0.4, mid[2]), bands[FRACTURE], 0.5, [0.6] * 4)
-    oriented(mb, rings[-1], (0, -1, 0), bands[FRACTURE], 0.5, [0.2] * 4)
-    for k in range(4):  # steps leading off the edge, toward the island below
-        mb.box((-7.0 - k * 1.6, -0.5 - k * 0.6, -5.0 - k * 1.6), (3.0, 1.0, 3.0), bands[RUIN], yaw=0.785, u=0.6, top_shade=0.9, side_shade=0.6, bottom=True)
-    mb.lathe([(0.9, 3.6, 0.6), (1.6, 3.7, 0.95), (1.75, 3.4, 0.85), (1.2, 2.6, 0.6), (0.4, 0.0, 0.5)], 8, bands[BRONZE],
-             centre=(4.0, 0, 3.0), cap_top=True, u_repeat=1.0)
-    return mb.object("OA_DescentLedge", coll, mat)
-
-
-def void_flame(coll, mat, bands):
-    mb = W.MeshBuilder()
-    mb.lathe([(0.0, 6.4, 1.0), (0.8, 4.5, 0.9), (1.0, 3.6, 0.8)], 7, bands[GLOW], centre=(4.0, 0, 3.0), cap_top=False, cap_bottom=True, u_repeat=0.0)
-    return mb.object("OA_VoidFlame", coll, mat)
-
-
 # ---------- placements ----------
-def route_positions():
-    stones, _ = L.route_stones("OriginRoute")
-    cx, cy, cz = O.CENTRE
-    to = L.ROUTES["OriginRoute"]["to"]
-    return [(x - cx, y - cy, z - cz) for x, y, z in stones], (to[0] - cx, to[1] - cy, to[2] - cz)
-
-
 def gate_frame():
     gx, gz = O.GATE[0], O.GATE[1]
     a, b = O.PATHS[0][0], O.PATHS[0][1]
@@ -710,7 +666,7 @@ def relic_positions():
 
 ISLAND_PIECES = [under_chunks, void_core, rift_chains, rift_veil, broken_bridge, altar, altar_runes, temple_paving, void_shard,
                  shard_core, shard_chains]
-KIT_PIECES = [gate_of_descent, route_stone, descent_ledge, void_flame, ruin_fragment, shard_floor]
+KIT_PIECES = [gate_of_descent, ruin_fragment, shard_floor]
 
 
 def build():
@@ -724,8 +680,6 @@ def build():
 
 
 def kit_entries():
-    # the Descent Ledge and its void flame are no longer placed: since 2026-11-01 every island is at
-    # one height and the bridge lands at the Gate of Descent
     gate, gate_yaw = gate_frame()
     frags = fragment_positions()
     return {

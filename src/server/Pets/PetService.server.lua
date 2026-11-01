@@ -11,8 +11,12 @@ local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChil
 local PromptRules = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("PromptRules"))
 
 local random = Random.new()
+local REQUEST_COOLDOWN = 0.2 -- seconds between a player's equip/unequip/aura requests
 
+-- [UserId] = { [EggId] = os.clock() of the last hatch }: kept by UserId and through leaving, so
+-- rejoining this server doesn't skip a cooldown
 local lastHatchTime = {}
+local lastRequest = {}
 
 local function sendInventory(player)
     local snapshot = PetInventory.getSnapshot(player)
@@ -50,8 +54,14 @@ local function setupPlayer(player)
     sendInventory(player)
 end
 
+-- Each accepted request rebuilds the player's aura and pets on every client, so they are throttled.
 local function handleRequest(remoteEvent, action)
     remoteEvent.OnServerEvent:Connect(function(player, instanceId)
+        local now = os.clock()
+        if now - (lastRequest[player] or 0) < REQUEST_COOLDOWN then
+            return
+        end
+        lastRequest[player] = now
         if action(player, instanceId) then
             sendInventory(player)
         end
@@ -109,8 +119,8 @@ local function onEggTriggered(player, eggId, eggPart, maxDistance)
     -- a guarded egg comes from the inventory and was earned, so it skips the cooldown
     local guardian = guardianOf(eggId)
     local now = os.clock()
-    local playerHatchTimes = lastHatchTime[player] or {}
-    lastHatchTime[player] = playerHatchTimes
+    local playerHatchTimes = lastHatchTime[player.UserId] or {}
+    lastHatchTime[player.UserId] = playerHatchTimes
     if guardian then
         if EggInventory.count(player, eggId) < 1 then
             RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "Guarded", Guardian = guardian.DisplayName })
@@ -175,7 +185,7 @@ handleRequest(RemoteEvents.SetAuraPetEvent, PetInventory.setAuraPet)
 
 Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(function(player)
-    lastHatchTime[player] = nil
+    lastRequest[player] = nil
 end)
 
 for _, player in Players:GetPlayers() do

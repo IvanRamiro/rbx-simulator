@@ -217,9 +217,6 @@ local IMPORT_TURN = CFrame.Angles(0, math.pi, 0)
 -- Collision per mesh-name prefix (first match wins). Long curving roots need decomposition so
 -- their hull doesn't swallow the ledges along them; rocks and flat ledges are simple shapes.
 WorldBuilder.Collision = {
-    { Prefix = "SI_PathRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
-    { Prefix = "SI_Slab", Fidelity = Enum.CollisionFidelity.Hull },
-    { Prefix = "SI_Boulder", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "SI_RootShelf", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "SI_CradleFloor", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "SI_StoneLantern", Fidelity = Enum.CollisionFidelity.Hull },
@@ -232,7 +229,6 @@ WorldBuilder.Collision = {
     { Prefix = "JG_ElderPads", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "JG_GroveGate", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "JG_TreeShelf", Fidelity = Enum.CollisionFidelity.Box },
-    { Prefix = "JG_RouteStone", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "JG_EggPedestal", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "JG_StandingStone", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "JG_WhisperStone", Fidelity = Enum.CollisionFidelity.Hull },
@@ -243,7 +239,6 @@ WorldBuilder.Collision = {
     -- Ember Peak: the gate between its column bundles must stay passable
     { Prefix = "EP_EmberGate", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "EP_BasaltStep", Fidelity = Enum.CollisionFidelity.Hull },
-    { Prefix = "EP_RouteStone", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "EP_ForgeWalls", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "EP_AltarFloor", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "EP_EggPedestal", Fidelity = Enum.CollisionFidelity.Hull },
@@ -268,10 +263,8 @@ WorldBuilder.Collision = {
     { Prefix = "OA_BrokenBridge", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "OA_GateOfDescent", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "OA_Altar", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
-    { Prefix = "OA_DescentLedge", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "OA_RuinFragment", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "OA_ShardFloor", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
-    { Prefix = "OA_RouteStone", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "OA_ThornCrown", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "OA_Colossus", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "OA_EggPedestal", Fidelity = Enum.CollisionFidelity.Hull },
@@ -354,7 +347,6 @@ WorldBuilder.Appearance = {
     OA_VoidShard = { Material = Enum.Material.Glass, Transparency = 0.3, Reflectance = 0.2, CanCollide = false, CastShadow = false },
     OA_ShardCore = table.clone(GLOW),
     OA_ShardChains = { CanCollide = false },
-    OA_VoidFlame = table.clone(GLOW),
     OA_EggGlowRing = table.clone(GLOW),
     OA_ColossusEyes = table.clone(GLOW),
     OA_VoidCrystals = { Material = Enum.Material.Glass, Transparency = 0.35, Reflectance = 0.15, CastShadow = false },
@@ -394,8 +386,6 @@ WorldBuilder.Appearance.OA_RiftVeil.Transparency = 0.6
 WorldBuilder.Appearance.OA_AltarRunes.Color = Color3.fromRGB(140, 55, 255)
 WorldBuilder.Appearance.OA_VoidShard.Color = Color3.fromRGB(40, 18, 72)
 WorldBuilder.Appearance.OA_ShardCore.Color = Color3.fromRGB(165, 50, 255)
-WorldBuilder.Appearance.OA_VoidFlame.Color = Color3.fromRGB(160, 50, 255)
-WorldBuilder.Appearance.OA_VoidFlame.Transparency = 0.35
 WorldBuilder.Appearance.OA_ColossusEyes.Color = Color3.fromRGB(115, 40, 255) -- bluer violet: redder ones bloom pink
 WorldBuilder.Appearance.OA_VoidCrystals.Color = Color3.fromRGB(55, 22, 100)
 WorldBuilder.Appearance.OA_VoidCrystalGlow.Color = Color3.fromRGB(160, 55, 255)
@@ -410,7 +400,6 @@ WorldBuilder.Lights = {
     EP_BrazierFire = { Range = 14, Brightness = 0.9 },
     EP_ForgeCoals = { Range = 18, Brightness = 1.5 },
     MI_StarLanternCore = { Range = 14, Brightness = 0.9 },
-    OA_VoidFlame = { Range = 18, Brightness = 1.2 },
     OA_ColossusEyes = { Range = 16, Brightness = 1.4 },
 }
 
@@ -420,7 +409,6 @@ WorldBuilder.Emitters = {
     EP_BrazierFire = { "Flames", "EmberSparks" },
     EP_ForgeCoals = { "EmberSparks" },
     EP_VentGlow = { "EmberSparks" },
-    OA_VoidFlame = { "VoidFlames", "VoidMotes" },
     OA_ColossusEyes = { "VoidWisps" },
     OA_VoidCrystalGlow = { "VoidMotes" },
     YG_TrunkVeins = { "QiMotes" },
@@ -460,23 +448,6 @@ local function addEmitterPreset(part, preset)
         sparks.EmissionDirection = Enum.NormalId.Top
         sparks.Rate = 6
         sparks.Parent = part
-    elseif preset == "VoidFlames" then
-        local flames = Instance.new("ParticleEmitter")
-        flames.Name = "VoidFlames"
-        flames.Texture = "rbxasset://textures/particles/fire_main.dds"
-        flames.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(230, 170, 255)),
-            ColorSequenceKeypoint.new(0.4, Color3.fromRGB(150, 40, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 0, 60)) })
-        flames.LightEmission = 0.8
-        flames.LightInfluence = 0
-        flames.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.3), NumberSequenceKeypoint.new(1, 0.3) })
-        flames.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25), NumberSequenceKeypoint.new(1, 1) })
-        flames.Lifetime = NumberRange.new(0.8, 1.3)
-        flames.Speed = NumberRange.new(2, 3.5)
-        flames.SpreadAngle = Vector2.new(6, 6)
-        flames.Rotation = NumberRange.new(-20, 20)
-        flames.EmissionDirection = Enum.NormalId.Top
-        flames.Rate = 18
-        flames.Parent = part
     elseif preset == "VoidMotes" then
         local motes = Instance.new("ParticleEmitter")
         motes.Name = "VoidMotes"
@@ -1273,7 +1244,8 @@ function WorldBuilder.buildBridges()
         for i = 1, #nodes - 1 do
             local a, b = nodes[i].Position, nodes[i + 1].Position
             local length = (b - a).Magnitude
-            local pieces = math.max(1, math.ceil(length / BRIDGE.Segment))
+            -- up to Segment studs a piece, with a little give: layout.py's 12.1-stud spans stay whole
+            local pieces = math.max(1, math.ceil(length / BRIDGE.Segment - 0.05))
             -- rails stop at the rim of a landing at either end of this span
             local landingRadius = bridge.LandingRadius
             local fromLanding, toLanding = nodes[i].Landing and landingRadius or 0, nodes[i + 1].Landing and landingRadius or 0
@@ -1340,18 +1312,6 @@ function WorldBuilder.buildBridges()
         model.Parent = folder
     end
     return #folder:GetChildren()
-end
-
--- The stepping stones the bridges replaced, removed from every island (their placements are gone).
-function WorldBuilder.removeRouteStones()
-    local removed = 0
-    for _, d in workspace.FloatingIslands:GetDescendants() do
-        if d:IsA("BasePart") and d.Name:match("_RouteStone_%d+$") then
-            d:Destroy()
-            removed += 1
-        end
-    end
-    return removed
 end
 
 -- ---------- spawn, Qi Spring, relic ----------

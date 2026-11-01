@@ -14,8 +14,8 @@ local GameConfig = {
     },
 
     -- Qinggong: leap again in mid-air (once per air leap) and hold jump while falling to glide.
-    -- Island routes are spaced so each island needs the air leaps of the rank that unlocks it
-    -- (see tools/blender/world/layout.py).
+    -- The air leaps reach the high places on the islands (the Elder Jade Tree's crown, the Void
+    -- Shard's climb); the islands themselves are joined by bridges.
     Qinggong = {
         LeapUpSpeed = 52,
         LeapForwardSpeed = 34,

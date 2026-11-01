@@ -21,14 +21,6 @@ ISLANDS = {
     "OriginAbyss": {"centre": (300, 200, -412), "radius": 85, "turns": 1},
 }
 
-# Where each outer island stood before the move (unturned), for the move itself.
-PREVIOUS = {
-    "JadeGrove": (330, 206, -70),
-    "EmberPeak": (-318, 222, 262),
-    "MoonlitIsle": (80, 392, -330),
-    "OriginAbyss": (-560, 95, -540),
-}
-
 # Each island's arrival, where its bridge lands (island-local, before turning): just inside its gate
 # (the Grove Gate, the Ember Gate, the Crescent Arch, and on Origin Abyss the Gate of Descent).
 ARRIVALS = {
@@ -107,15 +99,9 @@ def bridge_path(name):
 BRIDGES = {}
 for _name, _route in ROUTES.items():
     _start, _bend, _end = bridge_path(_name)
-    _route["from"], _route["to"] = _start, _end
     BRIDGES[_name] = {"theme": _route["theme"], "rank": _route["rank"],
                       "start": tuple(round(v, 1) for v in _start), "end": tuple(round(v, 1) for v in _end),
                       "bend": _bend and tuple(round(v, 1) for v in _bend), "landing": LANDING_RADIUS}
-
-
-def route_stones(name):
-    """The old stepping stones: every route is a bridge now, so none (the island scripts place none)."""
-    return [], 1
 
 
 def _run(a, b, arch):

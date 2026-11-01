@@ -1,6 +1,6 @@
 """Origin Abyss: the hidden endgame island, far north-west and below the others.
 
-Authored in island-local Roblox studs (x east, z south, y up; ground ~0 = world Y 95).
+Authored in island-local Roblox studs (x east, z south, y up; ground ~0 = world Y 200).
 Features:
 - The Rift: a void rift splits the island from north-east to south-west. Open sky shows
   through it, and a broken bridge and floating rubble cross it.

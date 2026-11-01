@@ -8,12 +8,15 @@ local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local BreakthroughEffect = require(script.Parent:WaitForChild("BreakthroughEffect"))
 
 local PRINT_BUILD_SUMMARY = RunService:IsStudio()
+-- studs from the camera: other players' auras farther away are hidden and not stepped
+local CULL_DISTANCE = 250
 
 local container = Instance.new("Folder")
 container.Name = "CultivationAuras"
 container.Parent = workspace
 
 local activeAuras = {}
+local fadingAuras = {} -- [player] = the aura fading out after they stopped or changed it
 local liveAuras = {}
 local connections = {}
 local activeBreakthroughs = {}
@@ -48,17 +51,43 @@ local function removeAura(aura)
         return
     end
 
+    -- one fading aura per player: switching auras quickly never stacks several
+    local previous = fadingAuras[aura.player]
+    if previous then
+        destroyAura(previous)
+    end
+    fadingAuras[aura.player] = aura
     CharacterAura.hide(aura)
-    task.delay(CharacterAura.REMOVE_DELAY, destroyAura, aura)
+    task.delay(CharacterAura.REMOVE_DELAY, function()
+        if fadingAuras[aura.player] == aura then
+            fadingAuras[aura.player] = nil
+        end
+        destroyAura(aura)
+    end)
 end
 
 local function updateAuras()
     local now = os.clock()
     local parts, cframes = {}, {}
+    local camera = workspace.CurrentCamera
+    local eye = camera and camera.CFrame.Position
+    local revealed = {}
 
     for aura in liveAuras do
-        if aura.rootPart:IsDescendantOf(workspace) and aura.model.Parent then
-            CharacterAura.update(aura, now, parts, cframes)
+        if aura.rootPart:IsDescendantOf(workspace) and (aura.model.Parent or aura.culled) then
+            local far = eye ~= nil and aura.player ~= Players.LocalPlayer
+                and (aura.rootPart.Position - eye).Magnitude > CULL_DISTANCE
+            if far and not aura.culled then
+                aura.culled = true
+                aura.model.Parent = nil
+            elseif not far then
+                if aura.culled then
+                    -- placed this frame before it is shown again, so its trails don't streak
+                    aura.culled = false
+                    table.insert(revealed, aura)
+                end
+                CharacterAura.update(aura, now, parts, cframes)
+            end
         elseif activeAuras[aura.player] == aura then
             destroyAura(aura)
             task.defer(refreshAura, aura.player)
@@ -69,6 +98,9 @@ local function updateAuras()
 
     if #parts > 0 then
         workspace:BulkMoveTo(parts, cframes, Enum.BulkMoveMode.FireCFrameChanged)
+    end
+    for _, aura in revealed do
+        aura.model.Parent = container
     end
 end
 

@@ -211,7 +211,7 @@ def scatter(rnd, count, gap, taken, edge_min=3.0, tries=4000):
     out = []
     zones = [(M.MIRROR[0], M.MIRROR[1], M.MIRROR[2] + 2), (PX, PZ, PR + 2), (M.WELL[0], M.WELL[1], M.WELL[2] + 4),
              (M.LANDING[0], M.LANDING[1], M.LANDING[2] + 4),
-             (M.ARRIVAL[0], M.ARRIVAL[1], 9)]   # where the bridge from the Starting Island lands
+             (M.ARRIVAL[0], M.ARRIVAL[1], 9)]   # where the bridge from Yggdrasil lands
     for _ in range(tries):
         if len(out) >= count:
             break
@@ -235,7 +235,7 @@ def kit_entries():
         kit.setdefault(name, []).append(((x, y, z), yaw, scale))
     add("MI_Pavilion", 0, 0, 0)
     add("MI_Armillary", 0, 0, 0)
-    taken = [(M.ARRIVAL[0], M.ARRIVAL[1], 14)]   # where the bridge from the Starting Island lands, 20 studs wide
+    taken = [(M.ARRIVAL[0], M.ARRIVAL[1], 14)]   # where the bridge from Yggdrasil lands, 20 studs wide
     # star lanterns along the paths
     for line in M.PATHS:
         for (ax, az), (bx, bz) in zip(line, line[1:]):

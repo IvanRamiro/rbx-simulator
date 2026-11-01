@@ -186,12 +186,12 @@ def plot_layout():
 
 def lantern_spots():
     spots = []
-    for b in (20, 55, 125, 160, 225, 315):           # the Root Court, clear of the paths that meet it
+    for b in (20, 55, 125, 160, 245, 315):           # the Root Court, clear of the paths that meet it
         spots.append(Y.polar(b, Y.COURT_R + 6))
     for b in (50, 70, 110, 130):                       # the Spawn Walk, between the daises
         spots.append(Y.polar(b, Y.SLOT_R + 6))
     cx, cz, r = Y.COMPASS
-    for b in (-45, -135, 25, 155):                     # the Qi Compass
+    for b in (-15, -165, 25, 155):                     # the Qi Compass, clear of its paths
         spots.append((cx + math.cos(math.radians(b)) * (r + 3.5), cz + math.sin(math.radians(b)) * (r + 3.5)))
     gx, gz, gr = Y.EGG_GARDEN
     for side in (-1, 1):                                # either side of the Egg Garden's west entrance

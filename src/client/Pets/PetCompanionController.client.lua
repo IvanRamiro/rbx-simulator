@@ -18,6 +18,8 @@ local ORBIT_RADIUS = 6.5
 local ORBIT_HEIGHT = 1.6
 local ORBIT_SPEED = 0.6
 local NOVA_INTERVAL = 25
+local CULL_DISTANCE = 250 -- studs from the camera: other players' pets farther away are hidden and not animated
+local RANK_CHECK_INTERVAL = 0.5
 
 local container = Instance.new("Folder")
 container.Name = "PetCompanions"
@@ -25,14 +27,25 @@ container.Parent = workspace
 
 local companions = {}
 
+local function destroyAura(aura)
+    if not aura.destroyed then
+        AuraBuilder.destroy(aura)
+    end
+end
+
+local function destroyPet(pet)
+    if pet.aura then
+        destroyAura(pet.aura)
+    end
+    for _, aura in pet.fading do
+        destroyAura(aura)
+    end
+    pet.model:Destroy()
+end
+
 local function clearPets(entry)
     for _, pet in entry.pets do
-        for _, aura in { pet.aura, pet.fading } do
-            if not aura.destroyed then
-                AuraBuilder.destroy(aura)
-            end
-        end
-        pet.model:Destroy()
+        destroyPet(pet)
     end
     entry.pets = {}
 end
@@ -50,7 +63,7 @@ local function syncPetAura(player, pet, cultivating)
     if cultivating and not pet.aura and not pet.noAura then
         local aura = AuraBuilder.build(player, pet.model, pet.rootPart, pet.petId, getRankId(player))
         if aura then
-            aura.model.Parent = container
+            aura.model.Parent = if pet.model.Parent then container else nil
             AuraBuilder.show(aura)
             pet.aura = aura
         else
@@ -59,19 +72,38 @@ local function syncPetAura(player, pet, cultivating)
     elseif not cultivating and pet.aura then
         local aura = pet.aura
         pet.aura = nil
-        pet.fading = aura
+        table.insert(pet.fading, aura)
         AuraBuilder.hide(aura)
         task.delay(AuraBuilder.REMOVE_DELAY, function()
-            if pet.fading == aura then
-                pet.fading = nil
+            local index = table.find(pet.fading, aura)
+            if index then
+                table.remove(pet.fading, index)
             end
-            if not aura.destroyed then
-                AuraBuilder.destroy(aura)
-            end
+            destroyAura(aura)
         end)
     end
 end
 
+local function buildPet(petId, rootPart)
+    local model, petRoot = PetModels.build(petId)
+    if not model then
+        return nil
+    end
+    model.Parent = container
+    petRoot.CFrame = rootPart.CFrame
+    return {
+        model = model,
+        rootPart = petRoot,
+        cframe = rootPart.CFrame,
+        petId = petId,
+        rig = PetModels.getRig(model),
+        speed = 0,
+        fading = {},
+    }
+end
+
+-- Keeps a player's pets matching their EquippedPetIds: pets still equipped stay where they are,
+-- new ones appear at the player's side, unequipped ones go. A new character starts them all again.
 local function syncPets(player, entry)
     local character = player.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -81,27 +113,44 @@ local function syncPets(player, entry)
     if key == entry.key and rootPart == entry.rootPart then
         return
     end
-
-    clearPets(entry)
+    if rootPart ~= entry.rootPart then
+        clearPets(entry)
+    end
     entry.key = key
     entry.rootPart = rootPart
-    if key == "" then
-        return
-    end
 
-    for _, petId in string.split(key, ",") do
-        local model, petRoot = PetModels.build(petId)
-        if model then
-            model.Parent = container
-            petRoot.CFrame = rootPart.CFrame
-            table.insert(entry.pets, {
-                model = model,
-                rootPart = petRoot,
-                cframe = rootPart.CFrame,
-                petId = petId,
-                rig = PetModels.getRig(model),
-                speed = 0,
-            })
+    local spare = {}
+    for _, pet in entry.pets do
+        spare[pet.petId] = spare[pet.petId] or {}
+        table.insert(spare[pet.petId], pet)
+    end
+    entry.pets = {}
+    if key ~= "" then
+        for _, petId in string.split(key, ",") do
+            local pet = spare[petId] and table.remove(spare[petId]) or buildPet(petId, rootPart)
+            if pet then
+                table.insert(entry.pets, pet)
+            end
+        end
+    end
+    for _, pets in spare do
+        for _, pet in pets do
+            destroyPet(pet)
+        end
+    end
+end
+
+-- Hides or shows a player's pets and their auras.
+local function setCulled(entry, culled)
+    entry.culled = culled
+    local parent = if culled then nil else container
+    for _, pet in entry.pets do
+        pet.model.Parent = parent
+        if pet.aura then
+            pet.aura.model.Parent = parent
+        end
+        for _, aura in pet.fading do
+            aura.model.Parent = parent
         end
     end
 end
@@ -136,11 +185,21 @@ local function updateCompanions(deltaTime)
     local now = os.clock()
     local blend = 1 - math.exp(-FOLLOW_SHARPNESS * deltaTime)
     local parts, cframes = {}, {}
+    local camera = workspace.CurrentCamera
+    local eye = camera and camera.CFrame.Position
 
     for player, entry in companions do
         syncPets(player, entry)
-
         local rootPart = entry.rootPart
+        local far = rootPart ~= nil and eye ~= nil and player ~= Players.LocalPlayer
+            and (rootPart.Position - eye).Magnitude > CULL_DISTANCE
+        if far ~= (entry.culled == true) then
+            setCulled(entry, far)
+        end
+        if far then
+            continue
+        end
+
         for index, pet in entry.pets do
             local target = getTargetCFrame(player, rootPart, index, #entry.pets, now)
             local previous = pet.cframe.Position
@@ -162,11 +221,18 @@ local function updateCompanions(deltaTime)
     end
 
     for player, entry in companions do
-        local rank = getRankNumber(player)
-        local rankedUp = entry.rank ~= nil and rank ~= nil and rank > entry.rank
-        entry.rank = rank
-        -- Pets fly with their owner: during (future sword) flight, and whenever the owner has been
-        -- off the ground for a moment (a Qinggong leap, a glide or a long fall).
+        if entry.culled then
+            continue
+        end
+        local rankedUp = false
+        if now >= (entry.rankCheck or 0) then
+            entry.rankCheck = now + RANK_CHECK_INTERVAL
+            local rank = getRankNumber(player)
+            rankedUp = entry.rank ~= nil and rank ~= nil and rank > entry.rank
+            entry.rank = rank
+        end
+        -- Pets fly with their owner: during sword flight, and whenever the owner has been off the
+        -- ground for a moment (a Qinggong leap, a glide or a long fall).
         local ownerHumanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
         local airborne = ownerHumanoid ~= nil and ownerHumanoid.FloorMaterial == Enum.Material.Air
         entry.airborneTime = if airborne then (entry.airborneTime or 0) + deltaTime else 0
@@ -195,10 +261,16 @@ local function updateCompanions(deltaTime)
 
     local auraParts, auraCFrames = {}, {}
     for player, entry in companions do
+        if entry.culled then
+            continue
+        end
         local cultivating = player:GetAttribute("IsCultivating") == true
         for _, pet in entry.pets do
             syncPetAura(player, pet, cultivating)
-            for _, aura in { pet.aura, pet.fading } do
+            if pet.aura then
+                AuraBuilder.update(pet.aura, now, auraParts, auraCFrames)
+            end
+            for _, aura in pet.fading do
                 AuraBuilder.update(aura, now, auraParts, auraCFrames)
             end
         end

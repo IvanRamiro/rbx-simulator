@@ -1,6 +1,6 @@
 """Moonlit Isle: the highest island, pale and celestial, shaped like a crescent moon.
 
-Authored in island-local Roblox studs (x east, z south, y up; ground ~0 = world Y 392).
+Authored in island-local Roblox studs (x east, z south, y up; ground ~0 = world Y 200).
 Features:
 - Outline: a large disc with a big offset disc cut away to the north, so seen from above the
   island is a crescent whose tapering horns curl around an open bay of sky (the layout centre
@@ -41,7 +41,7 @@ def band_point(bearing_deg, frac):
     return (round(bx + dx * r, 1), round(bz + dz * r, 1))
 
 
-ARRIVAL = (-14, 58)             # layout.ROUTES["MoonlitRoute"]["to"] minus the centre
+ARRIVAL = (-14, 58)             # where the Moonlit bridge lands (about layout.ARRIVALS["MoonlitIsle"])
 LANDING = (-12, 50, 7)          # x, z, radius; flat at +0.4
 MIRROR = band_point(150, 0.5) + (13,)    # Moon Mirror terrace (south-west): centre, radius; flat at +1.2
 MIRROR_POOL_R = 10.0

@@ -458,6 +458,7 @@ RunService.RenderStepped:Connect(function(dt)
     for model, anim in anims do
         if not model.Parent then
             anims[model] = nil
+            rigs[model] = nil
         elseif camera and model.PrimaryPart and (model.PrimaryPart.Position - camera.CFrame.Position).Magnitude <= ANIMATE_DISTANCE then
             anim:update(dt)
         end

@@ -1,6 +1,6 @@
-"""Ember Peak: the volcanic island south-west of the Starting Island.
+"""Ember Peak: the volcanic island, second in the row north of Yggdrasil.
 
-Authored in island-local Roblox studs (x east, z south, y up; ground ~0 = world Y 222).
+Authored in island-local Roblox studs (x east, z south, y up; ground ~0 = world Y 200).
 Features:
 - Arrival: the Ember Route lands on the north-east rim at a landing guarded by the Ember Gate.
 - The volcano rises in the middle; its caldera holds a lava lake with the Caldera Crown on a
@@ -21,7 +21,7 @@ NAME = "EmberPeak"
 CENTRE = L.ISLANDS[NAME]["centre"]   # its place in the world, and its quarter turns (layout.py)
 TURNS = L.ISLANDS[NAME]["turns"]
 
-ARRIVAL = (56, -48)            # layout.ROUTES["EmberRoute"]["to"] minus the centre
+ARRIVAL = (56, -48)            # where the Ember bridge lands (about layout.ARRIVALS["EmberPeak"])
 LANDING = (48, -40, 10)        # x, z, radius; flat at +0.5
 VOLCANO = (-6, 8, 36)          # centre, base radius
 RIM_H, RIM_R, CRATER_FLOOR = 40.0, 14.0, 27.0   # crater rim height and radius, caldera floor

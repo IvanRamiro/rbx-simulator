@@ -4,8 +4,7 @@
 - The underside: hanging hexagonal basalt columns, with a magma core glowing through the gaps.
 - The crater crown, the lava lake with crust plates, and the Caldera pillar.
 - The lava river.
-- Kit pieces: the basalt steps up the volcano, the Ember Gate (with its brazier fires) and the
-  Ember Route stones.
+- Kit pieces: the basalt steps up the volcano and the Ember Gate (with its brazier fires).
 
 Island-specific pieces are authored in island-local Roblox studs (anchor at the island centre);
 kit pieces are authored around their own origin.
@@ -311,16 +310,6 @@ def basalt_step(coll, mat, bands):
     return mb.object("EP_BasaltStep", coll, mat)
 
 
-def route_stone(coll, mat, bands):
-    """A floating cluster of three basalt columns, magma glowing from their broken lower ends.
-    Origin at the main column's top centre."""
-    mb = W.MeshBuilder()
-    column(mb, 0, 0, 3.6, -11.0, 0.0, bands[BASALT], 810, tilt=0.0, bottom_band=bands[MAGMA])
-    column(mb, 3.9, 1.6, 2.2, -8.0, -1.1, bands[BASALT], 811, tilt=1.0, bottom_band=bands[MAGMA])
-    column(mb, -2.6, 3.4, 2.0, -6.5, -0.6, bands[BASALT], 812, tilt=0.8, bottom_band=bands[MAGMA])
-    return mb.object("EP_RouteStone", coll, mat)
-
-
 GATE_HALF = 5.0  # half the gap between the gate's column bundles
 
 
@@ -376,12 +365,6 @@ def step_positions():
     return out
 
 
-def route_stone_positions():
-    stones, _ = L.route_stones("EmberRoute")
-    cx, cy, cz = E.CENTRE
-    return [(x - cx, y - cy, z - cz) for x, y, z in stones]
-
-
 def gate_frame():
     """Ember Gate position and yaw: across the path between the landing and the junction."""
     gx, gz = 38.0, -33.0
@@ -390,7 +373,7 @@ def gate_frame():
 
 
 ISLAND_PIECES = [under_columns, magma_core, crater_crown, lava_lake, lava_crust, caldera_pillar, lava_river]
-KIT_PIECES = [basalt_step, route_stone, ember_gate, gate_fire]
+KIT_PIECES = [basalt_step, ember_gate, gate_fire]
 
 
 def build():
@@ -425,7 +408,6 @@ def kit_entries():
     gate, gate_yaw = gate_frame()
     return {
         "EP_BasaltStep": [(p, y, 1.0) for p, y in step_positions()],
-        "EP_RouteStone": [(p, k * 1.3, 1.0) for k, p in enumerate(route_stone_positions())],
         "EP_EmberGate": [(gate, gate_yaw, 1.0)],
         "EP_GateFire": [(gate, gate_yaw, 1.0)],
     }

@@ -428,7 +428,7 @@ local function attachment(parent, name, position)
 end
 
 local function buildRig(character, humanoid, root, p)
-    local rig = { character = character, root = root, palette = p, trails = {}, ascendUntil = 0, gliding = false, angle = 0, active = false }
+    local rig = { root = root, palette = p, trails = {}, ascendUntil = 0, gliding = false, angle = 0, active = false }
     -- their width runs across the foot, so they stay full whether the body rises or glides
     for _, side in { "Left", "Right" } do
         local foot = character:FindFirstChild(side .. "Foot")
@@ -615,11 +615,16 @@ end
 -- kind: "Takeoff" | "Leap" (value = the leap's number) | "Glide" (value 1 = start, 0 = stop) |
 -- "Land" (value = impact strength, 0..1) | "Dash"
 function QinggongFx.play(player, kind, value)
+    local state = stateFor(player)
     local character, humanoid, root = rootOf(player)
     if not character then
+        -- dead or not loaded: still end a glide or leap, or the next character keeps its pose
+        if kind == "Glide" and value ~= 1 or kind == "Land" then
+            state.gliding = false
+            state.leapUntil = 0
+        end
         return
     end
-    local state = stateFor(player)
     local isLocal = player == Players.LocalPlayer
     local visible = isLocal or inRange(root)
     local detail = if isLocal then 1 else OTHERS_DETAIL

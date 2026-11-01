@@ -1,4 +1,7 @@
-"""Starting Island: the welcoming grassy cultivation island at the centre of the world.
+"""Starting Island: the welcoming grassy cultivation island that was the hub until Yggdrasil
+replaced it (2026-11-01). Kept as the ground and the Qi Spring that the Starting Island's kit
+(start_props, start_nature, start_meshes) was authored on: Yggdrasil places that kit, and carries
+the spring over whole (ygg_island.SPRING_OFFSET, SPRING_YAW, from_start).
 
 Authored in island-local Roblox studs (x east, z south, y up, ground ~0 = world Y 200).
 Features: central spawn plaza, Qi Spring terrace (north-east) whose overflow falls through a
@@ -18,16 +21,13 @@ EGG_GARDEN = (-38, 50, 22)    # sunken terrace at -1.5
 POOL_A, POOL_B, POOL_R = (40, -37), (49.7, -44.0), 6.0
 SPILL_END = (64.6, -54.8)        # where the spillway leaves the rim and the waterfall begins
 POOL_BED, POOL_WATER = 3.2, 5.6  # wading depth; the water is a mesh surface (too narrow for terrain water)
-EXITS = {                     # Qinggong route exits on the rim (match layout.ROUTES "from")
+EXITS = {                     # the old route exits on the rim, which its paths still lead to
     "JadeRoute": (100, -12),
     "EmberRoute": (-72, 72),
     "MoonlitRoute": (8, -96),
     "OriginRoute": (-78, -70),
     "RootPath": (88, 34),     # path down to the Root of the Island grotto
 }
-
-def _deg(a):
-    return math.radians(a)
 
 # Rim radius by bearing (theta = atan2(z, x); east 0, south +90, north -90).
 LOBES = [(-7, 13, 16), (135, 15, 20), (-86, 9, 14), (-138, 16, 15), (100, 7, 22), (40, 4, 18)]
@@ -77,16 +77,6 @@ def path_distance(x, z):
 def pool_distance(x, z):
     """Signed distance outside the spring pool (negative inside), with a lobed outline."""
     return _seg_dist(x, z, POOL_A, POOL_B) - POOL_R * (1 + 0.12 * math.sin(math.atan2(z - POOL_A[1], x - POOL_A[0]) * 3 + 1.3))
-
-
-def water_level(x, z):
-    """Terrain-water surface height (island-local y) for a column, or None."""
-    return POOL_WATER if pool_distance(x, z) < 0.5 else None
-
-
-def plateau(x, z, cx, cz, radius, height, soft=9):
-    d = math.hypot(x - cx, z - cz)
-    return height, 1 - __import__("worldlib").smoothstep(radius, radius + soft, d)
 
 
 def height(x, z):
@@ -141,13 +131,3 @@ def height(x, z):
         mat = "Grass"
     return h, mat
 
-
-MATERIALS = ["Grass", "Ground", "Rock", "Cobblestone"]
-
-
-def export_terrain(path=None):
-    """Write src/worldbuild/Terrain/StartingIsland.lua for WorldBuilder.buildTerrain."""
-    import worldlib as W
-    path = path or W.REPO + "/src/worldbuild/Terrain/%s.lua" % NAME
-    return W.export_heightfield(NAME, CENTRE, 4, 112, height, MATERIALS, path,
-                                priority=[("Cobblestone", 4), ("Ground", 2)])

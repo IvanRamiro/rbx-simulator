@@ -13,7 +13,9 @@ local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForCh
 local DATASTORE_NAME = "PlayerProgress"
 local SCHEMA_VERSION = 6
 
-local LOAD_ATTEMPTS = 4
+-- a record another server still holds is taken over on the last attempt, about 25 s on: long
+-- enough for that server's final save (with its retries) to land first
+local LOAD_ATTEMPTS = 6
 local LOAD_RETRY_DELAY = 5
 local FINAL_SAVE_ATTEMPTS = 3
 local SESSION_LOCK_TIMEOUT = 300
@@ -57,8 +59,9 @@ MIGRATIONS[2] = function(progress)
     progress.Relics = progress.Relics or {}
     return progress
 end
--- versions 3 and 4 changed no saved fields, so they have no migration; version 6 added Eggs,
--- which sanitizeProgress starts empty
+-- Upgrades from versions 3, 4 and 5 change nothing, so they have no migration: versions 4 and 5
+-- added pets (the bump only stops older servers, which don't know them, from dropping them) and
+-- version 6 added Eggs, which sanitizeProgress starts empty.
 
 local store = nil
 local storeOk, storeResult = pcall(function()

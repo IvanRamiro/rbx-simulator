@@ -7,7 +7,9 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
-local EggAura = require(script.Parent.Parent:WaitForChild("Auras"):WaitForChild("EggAura")) -- also animates the egg auras
+-- Requiring EggAura also starts the egg stands' auras (its RenderStepped loop runs from here):
+-- keep this require even if the hatch call below changes.
+local EggAura = require(script.Parent.Parent:WaitForChild("Auras"):WaitForChild("EggAura"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")

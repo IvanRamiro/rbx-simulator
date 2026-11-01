@@ -268,9 +268,15 @@ local function onSurge(aura, strength)
 end
 
 local function onCharge(aura)
-    for _, stream in aura.streams do
-        stream.Trail.Enabled = true
-    end
+    -- a frame later, once the streams stand at their places, so no trail streaks out from the body
+    task.delay(0.1, function()
+        if aura.destroyed or aura.hiding then
+            return
+        end
+        for _, stream in aura.streams do
+            stream.Trail.Enabled = true
+        end
+    end)
 end
 
 local function onStage(aura, stage)

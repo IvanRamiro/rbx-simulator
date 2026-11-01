@@ -325,7 +325,7 @@ def kit_entries():
     add("EP_SigilMonolith", mx, ground(mx, mz), mz, face_yaw(AX - mx, AZ - mz))
     add("EP_SigilGlow", mx, ground(mx, mz), mz, face_yaw(AX - mx, AZ - mz))
     taken = [(FX, FZ, FR + 4), (AX, AZ, 6),
-             (E.ARRIVAL[0], E.ARRIVAL[1], 14)]   # where the bridge from the Starting Island lands, 20 studs wide
+             (E.ARRIVAL[0], E.ARRIVAL[1], 14)]   # where the bridge from Yggdrasil lands, 20 studs wide
     for x, z in scatter(rnd, 9, 8, 4, 6, taken, accept=lambda x, z, r: math.hypot(x - AX, z - AZ) < AR + 16):
         add(rnd.choice(("EP_PetrifiedTreeA", "EP_PetrifiedTreeB")), x, ground(x, z) - 0.4, z, rnd.uniform(0, TAU), rnd.uniform(0.85, 1.25))
     # the altar

@@ -6,7 +6,7 @@ The single design reference for the game: what is fixed, what is built, and what
 Exact numbers live in code and data, and the tables below are generated from them:
 
 - `src/shared/GameConfig.lua`: ranks, Qinggong, pets, eggs and relics.
-- `tools/blender/world/layout.py`: island positions and Qinggong routes.
+- `tools/blender/world/layout.py`: island positions and the bridges between them.
 - `python3 tools/balance_report.py`: the current pacing.
 
 ---
@@ -662,7 +662,7 @@ Columnar basalt is the island's signature, used for the cliffs, the climb, the a
 
 Seen from above, the island is a crescent moon: a full disc with a larger offset disc cut away, its horns curling around an open bay of sky.
 
-- **Arrival and route:** a gold crescent arch between two moonstone spires. Each route stone is a small floating crescent.
+- **Arrival:** the bridge lands through a gold crescent arch between two moonstone spires.
 - **Moon Mirror:** a dark reflective pool you can walk on, in a marble-and-gold rim. A curved bridge leads to a moonstone lotus holding the **Moon Mirror** relic.
 - **Star Well:** on the west horn, a marble well with a gold lip, brimming with glowing starlight, with the **Star Well** relic above it.
 - **Celestial Pavilion:** eight porcelain pillars with gold crescent finials on a stepped marble platform, under a floating golden armillary.
@@ -675,7 +675,7 @@ Seen from above, the island is a crescent moon: a full disc with a larger offset
 
 The hidden endgame island, torn in two by a void rift that zig-zags across it from north-east to south-west, pinching and gaping as it goes. The north-west half stands higher and tilts up toward its far edge.
 
-- **Arrival and route:** the Origin Route ends at the Descent Ledge, a broken temple landing high above the island with steps that end in the air and a violet void fire. Players glide down from it. Each route stone is a floating obsidian shard.
+- **Arrival:** the bridge lands at the Gate of Descent. (The Descent Ledge, a broken temple landing high above the island that players glided down from, went when the islands were levelled.)
 - **Gate of Descent:** two carved pillars, one snapped. The lintel has fallen onto the stump. A ruined avenue lined with snapped columns and fallen column drums leads from the gate to the rift.
 - **Broken bridge:** an ancient stone bridge crosses the rift at its narrowest point. Its middle has fallen away, leaving one block hanging in the gap to jump across.
 - **Origin Altar:** on the north-west half, a ring of nine leaning obsidian slabs carved with glowing seal-script glyphs (one snapped, its top fallen outside the ring) around a stepped dais with a glowing spiral sigil. The **Origin Altar** relic floats above it.

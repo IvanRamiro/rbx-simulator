@@ -270,8 +270,10 @@ AuraStyles.Breakthroughs = {
     NewRealm = { Duration = 3, Scale = 1.5, Shockwaves = 3, Rings = 3, Streaks = 10, Burst = 32, PillarHeight = 26, Flash = 6 },
 }
 
+-- Checked in Studio after each breakthrough (AuraController). A 12-sided ring element's realm
+-- breakthrough uses 3 x 12 + 2 = 38 beams, for three seconds.
 AuraStyles.BreakthroughBudget = {
-    Beams = 24,
+    Beams = 40,
     ParticleEmitters = 3,
     Trails = 10,
     Lights = 1,

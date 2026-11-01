@@ -1,3 +1,7 @@
+-- Blends whole-body poses into every R15 character's joints, before physics each frame: the
+-- Qinggong poses (QinggongFx.pose: steps, tucks, the crane glide), the combat poses (CombatFx.pose)
+-- and the lotus seat while cultivating. Each pose is a table of joint name -> target Transform;
+-- poses fade in and out by weight, and the default animations stay underneath.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -216,6 +220,12 @@ end
 local function updatePoses(deltaTime)
     local normalStep = 1 - math.exp(-BLEND_SPEED * deltaTime)
     local quickStep = 1 - math.exp(-QINGGONG_BLEND_SPEED * deltaTime)
+    -- characters that left the world (an old character isn't always destroyed on respawn)
+    for character in rigs do
+        if not character.Parent then
+            rigs[character] = nil
+        end
+    end
     for _, player in Players:GetPlayers() do
         local character = player.Character
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -227,9 +237,6 @@ local function updatePoses(deltaTime)
         if not rig then
             rig = { joints = findJoints(character), weights = {}, written = {} }
             rigs[character] = rig
-            character.Destroying:Connect(function()
-                rigs[character] = nil
-            end)
         end
 
         local wanted = if humanoid.Health > 0 then choosePose(player, character) else nil
@@ -277,8 +284,3 @@ end
 
 RunService.PreSimulation:Connect(updatePoses)
 
-Players.PlayerRemoving:Connect(function(player)
-    if player.Character then
-        rigs[player.Character] = nil
-    end
-end)

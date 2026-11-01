@@ -1,4 +1,4 @@
-"""The Stone Lion, the Starting Island's guardian (run inside Blender): a colossal temple guardian
+"""The Stone Lion, Yggdrasil's guardian (run inside Blender): a colossal temple guardian
 lion awakened, about 28 studs tall. An original design: weathered pale granite, moss on its back,
 a mane of spiral curls round its neck and over its head, spiral brows over glowing cyan eyes, a
 broad muzzle with fangs, curled tufts at its elbows, a plume of curls for a tail, and a carved

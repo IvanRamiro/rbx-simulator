@@ -2377,7 +2377,7 @@ local function burst(rig)
         end,
     }
     Blasts[profile.Effects.Blast](rig, fx)
-    Debris:AddItem(folder, 1.4)
+    Debris:AddItem(folder, 2) -- the longest blast (Sacred Grove's branches) has faded by 1.75 s
 end
 
 function PetRig.nova(rig)

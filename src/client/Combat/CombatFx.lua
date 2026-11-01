@@ -45,8 +45,7 @@ local strikes = {} -- [player] = { weapon, until }
 
 local function rootOf(player)
     local character = player.Character
-    local root = character and character:FindFirstChild("HumanoidRootPart")
-    return character, root
+    return character and character:FindFirstChild("HumanoidRootPart")
 end
 
 local function host(cframe, size, life)
@@ -238,7 +237,7 @@ end
 
 -- ---------- entry points ----------
 function CombatFx.play(player, weapon)
-    local _, root = rootOf(player)
+    local root = rootOf(player)
     if not root then
         return
     end

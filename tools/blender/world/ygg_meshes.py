@@ -1,13 +1,14 @@
 """Yggdrasil's island meshes: the atlas, the underside the World Tree's roots hold, and the great
 root that winds down the south cliffs to the Root of the Island's cradle.
 
-The underside is the Starting Island's stacked strata at Yggdrasil's scale. Eight roots come up out
+The underside is the Starting Island's stacked strata at Yggdrasil's scale. Seven roots come up out
 of the meadow near the rim, grip the edge and run down the strata's stepped corners to the taproot
 under the island's centre. The underside's lowest point stays above world Y 75: the PDS kit lies
 below (its highest part at Y 69.5).
 
-    import ygg_meshes; ygg_meshes.build()          # in Blender: the tree, the underside, the kit
-    ygg_meshes.export()                            # assets/world/Yggdrasil/*.fbx
+    import ygg_meshes
+    objs, kit, img, report = ygg_meshes.build()    # in Blender: the tree, the underside, the kit
+    ygg_meshes.export(objs, kit, img)              # assets/world/Yggdrasil/*.fbx
 """
 import math
 import os

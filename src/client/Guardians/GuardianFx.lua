@@ -121,7 +121,17 @@ local function debrisFade(style)
 end
 
 -- ---------- the camera ----------
+-- The shake turns the camera after the camera scripts have placed it. They read the camera's look
+-- back the next frame, so each frame's turn is undone before they run, or the aim would drift.
 local shaking = {}
+local lastShake = nil
+RunService:BindToRenderStep("GuardianShakeUndo", Enum.RenderPriority.Camera.Value - 1, function()
+    local camera = Workspace.CurrentCamera
+    if camera and lastShake then
+        camera.CFrame *= lastShake:Inverse()
+    end
+    lastShake = nil
+end)
 RunService:BindToRenderStep("GuardianShake", Enum.RenderPriority.Camera.Value + 1, function()
     local camera = Workspace.CurrentCamera
     if not camera or #shaking == 0 then
@@ -140,7 +150,8 @@ RunService:BindToRenderStep("GuardianShake", Enum.RenderPriority.Camera.Value + 
     end
     if amount > 0 then
         local a = math.rad(amount)
-        camera.CFrame *= CFrame.Angles(a * math.noise(now * 18, 1), a * math.noise(now * 18, 2), a * 0.5 * math.noise(now * 18, 3))
+        lastShake = CFrame.Angles(a * math.noise(now * 18, 1), a * math.noise(now * 18, 2), a * 0.5 * math.noise(now * 18, 3))
+        camera.CFrame *= lastShake
     end
 end)
 

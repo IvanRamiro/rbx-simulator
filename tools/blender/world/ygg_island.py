@@ -8,8 +8,8 @@ East: the Egg Garden, the Stone Lion's lair north of it, and the Qi Spring on th
 paved bridgehead for each of the four bridges. The great root down to the Root of the Island
 leaves the south rim.
 
-The Qi Spring is the Starting Island's (its meshes are reused): SPRING_FRAME carries its pieces,
-authored in that island's coordinates, onto this rim.
+The Qi Spring is the Starting Island's (its meshes are reused): SPRING_OFFSET and SPRING_YAW
+(from_start) carry its pieces, authored in that island's coordinates, onto this rim.
 """
 import math
 

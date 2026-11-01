@@ -4,8 +4,8 @@ local TweenService = game:GetService("TweenService")
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local AuraKit = require(script.Parent:WaitForChild("AuraKit"))
 
--- Pet auras: each equipped pet of a cultivating player shows its own element's aura. (The
--- player's own aura is CharacterAura.)
+-- Pet auras: an equipped pet of a cultivating player shows its element's aura, for the pets that
+-- have one (ELEMENTS below; the rest show none). The player's own aura is CharacterAura.
 local AuraBuilder = {}
 
 local PET_AMOUNT = 0.6 -- pet auras are a lighter version of the element's full aura

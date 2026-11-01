@@ -12,9 +12,11 @@
 --   Resting    the egg was secured: it sleeps without one for RespawnTime.
 -- With nobody near for CalmAfter seconds, a Guardian or Weakened one heals and sleeps.
 --
--- The egg (the model's "Egg" attribute): Guarded -> Available -> Carried <-> Dropped -> Secured.
--- Every step is checked here; repeated requests are ignored. Only its thief can recover a dropped
--- egg, within DropTime; after that it returns to the lair, as does the egg of a thief who leaves.
+-- The egg (the model's "Egg" attribute, for inspecting in Studio): Guarded -> Available ->
+-- Carried <-> Dropped, then None once secured (until the guardian respawns with a new one). Every
+-- step is checked here; repeated requests are ignored. Only its thief can recover a dropped egg,
+-- within DropTime; after that it returns to the lair. It also returns if the thief leaves the
+-- server or the guardian's island, or carries it longer than MAX_CARRY without securing it.
 --
 -- Guardians never kill: every attack knocks players back (GuardianEvent "Knock" to that player's
 -- client, which owns its character), and a knocked-back thief drops the egg.
@@ -46,6 +48,7 @@ local TAKE_GRACE = 1.5          -- seconds a fresh thief can't be knocked: a blo
 local EGG_PROMPT_DISTANCE = 12
 local POUNCE_HEIGHT = 9
 local POUNCE_LEAD = 0.85        -- how far ahead it aims: a straight runner is caught, one who turns or dashes is not
+local MAX_CARRY = 120           -- seconds a thief may carry the egg; a thief hiding out of reach can't hold the guardian forever
 
 local Guardian = {}
 Guardian.__index = Guardian
@@ -335,6 +338,7 @@ function Guardian:carry(player)
     weld.C0 = offset * body.PivotOffset:Inverse()
     weld.Parent = body
     egg.owner = player
+    egg.takenAt = os.clock()
     egg.lastGrounded = nil
     egg.lastPosition = root.Position
     self.knocked[player] = os.clock() + TAKE_GRACE
@@ -381,9 +385,9 @@ function Guardian:dropSpot(near)
         offset = offset.Unit * limit
     end
     local point = self.islandCentre + offset + Vector3.new(0, near.Y - self.islandCentre.Y, 0)
-    local fromLion = flat(point - self.root.Position)
-    if fromLion.Magnitude < 18 then
-        point = self.root.Position + (if fromLion.Magnitude > 0.1 then fromLion.Unit else self.root.CFrame.LookVector * FLAT) * 18
+    local fromGuardian = flat(point - self.root.Position)
+    if fromGuardian.Magnitude < 18 then
+        point = self.root.Position + (if fromGuardian.Magnitude > 0.1 then fromGuardian.Unit else self.root.CFrame.LookVector * FLAT) * 18
             + Vector3.new(0, point.Y - self.root.Position.Y, 0)
     end
     local ground = groundAt(point, point.Y)
@@ -415,7 +419,7 @@ function Guardian:dropEgg(near)
     self:broadcast("Drop", spot)
 end
 
--- The egg goes back under the paw and the guardian walks home.
+-- The egg goes back to the guardian and it walks home.
 function Guardian:returnEgg()
     self:clearThief()
     self:guardEgg()
@@ -442,8 +446,9 @@ function Guardian:secure()
     self:broadcast("Secure", position)
 end
 
--- Every frame while the egg is carried: secured in the safe zone, or dropped if the thief is gone,
--- dead or returned by the world (falling off the island).
+-- Every frame while the egg is carried: secured in the safe zone; dropped if the thief is gone,
+-- dead or returned by the world (falling off the island); back to the guardian if they leave its
+-- island or keep it past MAX_CARRY.
 function Guardian:watchThief()
     local egg = self.egg
     local player = egg.owner
@@ -467,6 +472,10 @@ function Guardian:watchThief()
         return
     end
     local now = os.clock()
+    if flat(position - self.islandCentre).Magnitude > self.islandRadius + 10 or now - egg.takenAt > MAX_CARRY then
+        self:returnEgg()
+        return
+    end
     if not egg.nextGroundCheck or now >= egg.nextGroundCheck then
         egg.nextGroundCheck = now + 0.2
         if isGrounded(root, humanoid) then
@@ -490,11 +499,13 @@ function Guardian:inSafeZone(position, margin)
 end
 
 -- Knocks a player back from `origin` (no damage: guardians never kill); a thief drops the egg.
--- Nobody in the safe zone is touched.
+-- Nobody in the safe zone is touched, nor anyone on a flying sword (the knock's stagger would hand
+-- their character back to the Humanoid mid-flight; a thief can't fly, so no egg is at stake).
 function Guardian:knock(player, origin, power)
     local root = rootOf(player)
     local now = os.clock()
-    if not root or (self.knocked[player] and now < self.knocked[player]) or self:inSafeZone(root.Position) then
+    if not root or (self.knocked[player] and now < self.knocked[player]) or self:inSafeZone(root.Position)
+        or player:GetAttribute("IsFlying") == true then
         return
     end
     self.knocked[player] = now + KNOCK_IMMUNITY
@@ -887,14 +898,6 @@ function Guardian:decide(now)
             end
         end
     end
-end
-
-function Guardian:destroy()
-    self:clearThief()
-    if self.egg.model then
-        self.egg.model:Destroy()
-    end
-    self.model:Destroy()
 end
 
 return Guardian

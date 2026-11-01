@@ -57,10 +57,6 @@ local message = Toast.new(hud, "RelicMessage", 64, RELIC_COLOR, MESSAGE_SECONDS)
 
 hud.Parent = playerGui
 
-local function showMessage(text)
-    message:show(text)
-end
-
 local function getFoundSet()
     local found = {}
     local value = player:GetAttribute("FoundRelics")
@@ -70,10 +66,6 @@ local function getFoundSet()
         end
     end
     return found
-end
-
-local function getRankName()
-    return Ranks.getPlayerRankName(player)
 end
 
 local function updateRelic(model, found, rankName)
@@ -112,25 +104,24 @@ local function updateAll()
     end
     counter.Text = "Relics " .. foundCount .. "/" .. #GameConfig.Relics
 
-    local rankName = getRankName()
+    local rankName = Ranks.getPlayerRankName(player)
     for _, model in CollectionService:GetTagged(GameConfig.RelicTag) do
         updateRelic(model, found, rankName)
     end
 end
 
 CollectionService:GetInstanceAddedSignal(GameConfig.RelicTag):Connect(function(model)
-    updateRelic(model, getFoundSet(), getRankName())
+    updateRelic(model, getFoundSet(), Ranks.getPlayerRankName(player))
 end)
 
 player:GetAttributeChangedSignal("FoundRelics"):Connect(updateAll)
 
+updateAll()
 task.spawn(function()
     local rankValue = player:WaitForChild("leaderstats"):WaitForChild("Rank")
     rankValue.Changed:Connect(updateAll)
-    updateAll()
+    updateAll() -- now with the player's rank
 end)
-
-updateAll()
 
 RemoteEvents.RelicResultEvent.OnClientEvent:Connect(function(result)
     if typeof(result) ~= "table" then
@@ -143,8 +134,8 @@ RemoteEvents.RelicResultEvent.OnClientEvent:Connect(function(result)
     end
 
     if result.Reason == "Locked" then
-        showMessage(relic.DisplayName .. " needs " .. tostring(result.RequiredRank) .. " to attune.")
+        message:show(relic.DisplayName .. " needs " .. tostring(result.RequiredRank) .. " to attune.")
     else
-        showMessage("Attuned to " .. relic.DisplayName .. "! +" .. tostring(result.QiReward) .. " Qi")
+        message:show("Attuned to " .. relic.DisplayName .. "! +" .. tostring(result.QiReward) .. " Qi")
     end
 end)

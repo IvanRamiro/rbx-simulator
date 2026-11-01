@@ -70,12 +70,13 @@ local RIPPLE_GAP = 0.22 -- seconds between ripples fired together
 
 local auras = {} -- [model] = state, or false while the model has not streamed in complete
 
--- An instance with its attributes, kept current when they are changed (by hand, in Play).
-local function watched(instance)
+-- An instance with its attributes, kept current when they are changed (by hand, in Play). The
+-- connection goes into `connections` (the aura's), so releasing the aura drops it.
+local function watched(instance, connections)
     local entry = { Instance = instance, A = instance:GetAttributes() }
-    instance.AttributeChanged:Connect(function()
+    table.insert(connections, instance.AttributeChanged:Connect(function()
         entry.A = instance:GetAttributes()
-    end)
+    end))
     return entry
 end
 
@@ -96,16 +97,16 @@ local function index(model)
     end
     local state = {
         model = model, root = root, eggId = model:GetAttribute("EggId"), tint = model:GetAttribute("Tint"),
-        movers = {}, spinners = {}, ripples = {}, waves = {}, sways = {}, emitters = {}, trails = {}, lights = {}, guis = {}, flickers = {}, sweepers = {},
+        connections = {}, movers = {}, spinners = {}, ripples = {}, waves = {}, sways = {}, emitters = {}, trails = {}, lights = {}, guis = {}, flickers = {}, sweepers = {},
         speed = 1, glow = 1, swell = 0, level = 2,
         gather = model:GetAttribute("Gather") or 1.2,
         breathT = math.random(), beat = 0, swellBeams = {}, screenFlash = 0, distance = math.huge,
         cycleT = math.random(),
     }
-    state.modelAttrs = watched(model)
+    state.modelAttrs = watched(model, state.connections)
     for _, d in model:GetDescendants() do
         if (d:IsA("Attachment") or d:IsA("BasePart")) and d:GetAttribute("Orbit") then
-            local m = watched(d)
+            local m = watched(d, state.connections)
             m.Angle = m.A.Phase or 0
             if d:IsA("BasePart") then
                 m.Base, m.Rot, m.Followers = d.CFrame, root.CFrame:ToObjectSpace(d.CFrame).Rotation, {}
@@ -117,22 +118,22 @@ local function index(model)
             end
             table.insert(state.movers, m)
         elseif d:IsA("Attachment") and d:GetAttribute("SweepTo") then
-            table.insert(state.sweepers, watched(d))
+            table.insert(state.sweepers, watched(d, state.connections))
         elseif d:IsA("BasePart") and d:GetAttribute("Ripple") then
-            local r = watched(d)
+            local r = watched(d, state.connections)
             r.Templates = labelsOf(d)
             table.insert(state.ripples, r)
         elseif d:IsA("BasePart") and d:GetAttribute("Spin") then
-            local s = watched(d)
+            local s = watched(d, state.connections)
             s.Base, s.Angle, s.Scale, s.Labels = d.CFrame, 0, 1, labelsOf(d)
             table.insert(state.spinners, s)
         elseif d:IsA("ImageLabel") and d:GetAttribute("Sway") then
-            table.insert(state.sways, watched(d))
+            table.insert(state.sways, watched(d, state.connections))
         elseif d:IsA("ParticleEmitter") then
             table.insert(state.emitters, { Emitter = d, Rate = d.Rate, Enabled = d.Enabled, Speed = d.Speed,
                 CycleRate = d:GetAttribute("CycleRate"), CycleEmit = d:GetAttribute("CycleEmit"), CycleAt = d:GetAttribute("CycleAt") })
             if d:GetAttribute("FlickerRate") or d:GetAttribute("FlickerSpeedMin") then
-                local f = watched(d)
+                local f = watched(d, state.connections)
                 f.Next = 0
                 table.insert(state.flickers, f)
             end
@@ -601,6 +602,9 @@ end
 -- Studio), so tagging it again indexes the authored values, not ones the runtime had changed:
 -- emitters, trails and guis switched off by distance, beams swollen mid-beat, scaled brightness.
 local function release(state)
+    for _, connection in state.connections do
+        connection:Disconnect()
+    end
     for _, e in state.emitters do
         e.Emitter.Enabled, e.Emitter.Rate, e.Emitter.Speed = e.Enabled, e.Rate, e.Speed
     end
@@ -744,7 +748,19 @@ RunService.RenderStepped:Connect(function(dt)
         state.distance = distance
         if now >= (state.eggCheck or 0) then
             state.eggCheck = now + 1
-            state.hasEgg = eggOf(state) ~= nil
+            local egg = eggOf(state)
+            state.hasEgg = egg ~= nil
+            if egg and egg ~= state.egg then
+                -- a stand that streamed out and back in is new instances: forget the old ones
+                state.egg = egg
+                state.eggGlow, state.eggHeat, state.eggCycle = nil, nil, nil
+                if state.beatHighlight then
+                    state.beatHighlight.Adornee = egg
+                end
+                if state.cycleHighlight then
+                    state.cycleHighlight.Adornee = egg
+                end
+            end
         end
         local shown = state.hasEgg and state.modelAttrs.A.Visible ~= false
         setLevel(state, not shown and 0 or distance < NEAR and 2 or distance < FAR and 1 or 0)

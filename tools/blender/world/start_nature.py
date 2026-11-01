@@ -1,9 +1,8 @@
 """Starting Island nature: spirit pines with cloud-pad canopies, plum-blossom trees, mossy
-boulders and flower clumps, plus their placement (hero pieces and a seeded scatter that keeps
-paths, landmarks and the rim clear). Uses the prop atlas from start_props."""
+boulders and flower clumps, on the prop atlas from start_props. Yggdrasil places them
+(ygg_props.nature)."""
 import bpy, bmesh, math, random
 import worldlib as W
-import start_island as S
 import start_props as P
 
 TAU = 2 * math.pi
@@ -143,80 +142,6 @@ VARIANTS = {
     "SI_FlowersWarm": lambda c, m, b: flower_clump("SI_FlowersWarm", c, m, b, 37, (1, 3, 3)),
     "SI_FlowersViolet": lambda c, m, b: flower_clump("SI_FlowersViolet", c, m, b, 41, (2, 2, 0)),
 }
-
-
-# ---------- placement ----------
-HERO = [  # (variant, x, z, yaw, scale)
-    ("SI_SpiritPineA", -55.0, 20.0, 0.6, 1.25),     # crowning the lookout hill
-    ("SI_BlossomTreeA", 29.0, -44.0, 1.1, 1.1),     # framing the Qi Spring's source rock
-    ("SI_BlossomTreeB", 56.0, -30.0, 2.4, 1.0),     # far bank of the spring
-    ("SI_BlossomTreeA", -50.0, 72.0, 4.0, 1.05),    # west end of the egg garden
-    ("SI_BlossomTreeB", -16.0, 48.0, 0.3, 0.95),    # east end of the egg garden
-]
-
-
-def keepouts():
-    """(x, z, radius) discs nothing is scattered into."""
-    zones = [(0, 0, 28), (S.SPRING[0], S.SPRING[1], 25), (S.EGG_GARDEN[0], S.EGG_GARDEN[1], 22)]
-    for eid, x, z, _ in P.egg_layout()[0]:
-        zones.append((x, z, 7))
-    for route, x, z, _ in P.waystone_layout():
-        zones.append((x, z, 13))  # keep the stele and its inscription in clear view
-    for name, x, z, *_ in HERO:
-        zones.append((x, z, 9))
-    for ex, ez in S.EXITS.values():
-        zones.append((ex, ez, 12))
-    return zones
-
-
-def scatter(rnd, count, min_gap, path_clear, rim_clear, taken, accept=None, tries=4000):
-    out = []
-    zones = keepouts()
-    for _ in range(tries):
-        if len(out) >= count:
-            break
-        x, z = rnd.uniform(-100, 100), rnd.uniform(-100, 100)
-        r = math.hypot(x, z)
-        if r > S.rim(math.atan2(z, x)) - rim_clear:
-            continue
-        if S.path_distance(x, z) < path_clear or S.pool_distance(x, z) < 3:
-            continue
-        if any(math.hypot(x - zx, z - zz) < zr for zx, zz, zr in zones):
-            continue
-        if any(math.hypot(x - tx, z - tz) < max(min_gap, tg) for tx, tz, tg in taken):
-            continue
-        if accept and not accept(x, z, rnd):
-            continue
-        out.append((x, z))
-        taken.append((x, z, min_gap))
-    return out
-
-
-def near_hill(x, z):
-    return math.hypot(x - S.HILL[0], z - S.HILL[1]) < 30
-
-
-def placements():
-    rnd = random.Random(2026)
-    items = []
-    taken = [(x, z, 9) for _, x, z, *_ in HERO]
-    for name, x, z, yaw, scale in HERO:
-        items.append((name, x, z, yaw, scale, 0.6))
-    trees = scatter(rnd, 16, 15, 6, 8, taken)
-    for x, z in trees:
-        r = math.hypot(x, z)
-        pine = near_hill(x, z) or r > 58
-        name = ("SI_SpiritPineA" if rnd.random() < 0.5 else "SI_SpiritPineB") if pine else \
-               ("SI_BlossomTreeA" if rnd.random() < 0.5 else "SI_BlossomTreeB")
-        items.append((name, x, z, rnd.uniform(0, TAU), rnd.uniform(0.85, 1.15), 0.6))
-    rocks = scatter(rnd, 16, 8, 3, 2, taken, accept=lambda x, z, rr: near_hill(x, z) or math.hypot(x, z) > 62 or rr.random() < 0.3)
-    for x, z in rocks:
-        items.append(("SI_MossRockA" if rnd.random() < 0.45 else "SI_MossRockB", x, z, rnd.uniform(0, TAU), rnd.uniform(0.8, 1.3), 0.0))
-    flowers = scatter(rnd, 46, 5, 2.4, 3, taken)
-    for x, z in flowers:
-        name = rnd.choice(("SI_FlowersWhite", "SI_FlowersWarm", "SI_FlowersViolet"))
-        items.append((name, x, z, rnd.uniform(0, TAU), rnd.uniform(0.9, 1.25), 0.05))
-    return items
 
 
 def build():

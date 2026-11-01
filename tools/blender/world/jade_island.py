@@ -1,6 +1,6 @@
-"""Jade Grove: the ancient forest island east of the Starting Island.
+"""Jade Grove: the ancient forest island, first in the row north of Yggdrasil.
 
-Authored in island-local Roblox studs (x east, z south, y up; ground ~0 = world Y 206).
+Authored in island-local Roblox studs (x east, z south, y up; ground ~0 = world Y 200).
 Features: the Jade Route lands on the west rim at a small terrace with the Grove Gate; paths wind
 east to a junction, then to the Bloom Glade egg shrine (south-west), the Elder Jade Tree on its
 knoll (centre-east; Grove Heart in its hollow, Jade Seed in its crown) and down into the
@@ -15,7 +15,7 @@ NAME = "JadeGrove"
 CENTRE = L.ISLANDS[NAME]["centre"]   # its place in the world, and its quarter turns (layout.py)
 TURNS = L.ISLANDS[NAME]["turns"]
 
-ARRIVAL = (-78, 18)            # where the Jade Route's last leap lands (layout.ROUTES["JadeRoute"]["to"])
+ARRIVAL = (-78, 18)            # where the Jade bridge lands (about layout.ARRIVALS["JadeGrove"])
 LANDING = (-68, 15, 11)        # terrace inside the rim: centre x, z, radius
 GATE = (-58, 12)               # the Grove Gate, facing the arrival
 JUNCTION = (-36, 6)

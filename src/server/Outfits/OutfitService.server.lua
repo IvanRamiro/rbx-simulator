@@ -146,6 +146,8 @@ local function onPlayerAdded(player)
     player.CharacterAdded:Connect(function(character)
         onCharacterAdded(player, character)
     end)
+    -- the old character isn't always destroyed on respawn: its robes would stay behind and fall
+    player.CharacterRemoving:Connect(takeOff)
     if player.Character then
         task.spawn(onCharacterAdded, player, player.Character)
     end

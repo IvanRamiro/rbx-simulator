@@ -1,4 +1,4 @@
-"""Starting Island eggs (after the 15-egg concept sheet).
+"""Yggdrasil's eggs, first made for the Starting Island (after the 15-egg concept sheet).
 
 - Beginner Qi Egg: an egg of cut blue crystal, its facets catching the light in different blues,
   with Qi light glowing along the cuts and leaking through a few cracked facets.

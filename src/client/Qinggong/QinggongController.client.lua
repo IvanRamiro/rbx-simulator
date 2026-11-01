@@ -127,7 +127,7 @@ local staminaSpentAt = 0
 local dashUntil = 0
 local dashReadyAt = 0
 local dashDirection = Vector3.zero
-local flight = nil -- { velocity, mover, aligner, landing } while flying
+local flight = nil -- { velocity, mover, aligner, yaw, landAskedAt } while flying
 
 local function maxStamina()
     local value = player:GetAttribute("QinggongMaxStamina")
@@ -269,7 +269,7 @@ local function startFlight()
         gliding = false
         playFx("Glide", 0)
     end
-    flight = { velocity = mover.VectorVelocity, mover = mover, aligner = aligner, landing = false, yaw = rootPart.CFrame.LookVector }
+    flight = { velocity = mover.VectorVelocity, mover = mover, aligner = aligner, landAskedAt = nil, yaw = rootPart.CFrame.LookVector }
     updateHud()
 end
 
@@ -319,8 +319,9 @@ local function flyStep(humanoid, rootPart, deltaTime)
 
     local moving = flight.velocity.Magnitude > 4
     spend((if moving then config.Cost else config.HoverCost) * deltaTime)
-    if stamina <= 0 and not flight.landing then
-        flight.landing = true
+    -- out of stamina: ask to land, again every 0.6 s (the server ignores a toggle within 0.5 s of the last)
+    if stamina <= 0 and os.clock() - (flight.landAskedAt or -math.huge) > 0.6 then
+        flight.landAskedAt = os.clock()
         RemoteEvents.FlightEvent:FireServer(false)
     end
 end
@@ -478,7 +479,8 @@ end)
 local function watchJumps(character)
     local humanoid = character:WaitForChild("Humanoid")
     humanoid.StateChanged:Connect(function(_, new)
-        if new == Enum.HumanoidStateType.Jumping and player:GetAttribute("IsCultivating") ~= true then
+        if new == Enum.HumanoidStateType.Jumping and player:GetAttribute("IsCultivating") ~= true
+            and player:GetAttribute("IsFlying") ~= true then
             playFx("Takeoff", 0)
         end
     end)
