@@ -458,7 +458,7 @@ Each kind has its own visual purpose. None is a recolour of another.
 
 Fifteen eggs, **three on every island**, each needing a higher rank than the last.
 
-- **Hatching:** free, with a 45-second cooldown per egg.
+- **Hatching:** free, with a 45-second cooldown per egg, except on an island whose guardian stands in the world. There the stands hatch only eggs taken from it, held in the player's **egg inventory** (`EggInventory`, saved as `Eggs`, at most 99 of each), with no cooldown. The stand prompt shows "Hatch (n)" or "No egg held".
 - **Chances:** follow the rarity scale: Common 45%, Uncommon 27%, Rare 15%, Epic 8%, Legendary 4%, Mythical 0.9%, Secret 0.1%.
 - **Missing rarities:** when an egg has no pet of some rarity, its share goes to the next pet that has one. So later eggs give rarer pets far more often.
 
@@ -692,7 +692,7 @@ The hidden endgame island, torn in two by a void rift that zig-zags across it fr
 
 ---
 
-## 7. Guardians and egg theft (planned)
+## 7. Guardians and egg theft (the Starting Island guardian is built)
 
 ### The user's decisions (November 1, 2026)
 
@@ -775,11 +775,29 @@ Names, attacks, health, egg pools, unlocks and rewards are still to be designed 
 
 ### The Awakened Stone Lion (Starting Island)
 
-A granite temple guardian lion come to life: a mane of carved spiral curls, spiral brows and whisker curls, glowing Qi-blue eyes (`39d8ff`), a gold collar with a jade orb (`2fe6c8`) and gold tassels, moss in the crevices, and a tail of five stone flame tongues ending in curls. It stands about 30 studs tall.
+A granite temple guardian lion come to life: a mane of carved spiral curls, spiral brows and whisker curls, glowing Qi-blue eyes, a gold collar with a jade orb and gold tassels, moss in the crevices, and a tail of five stone flame tongues ending in curls. It stands about 30 studs tall, in its lair west of the spawn plaza, facing the plaza (`GameConfig.Guardians.StoneLion`).
 
-- **Guardian:** the egg is pinned under its right front paw.
-- **Weakened:** it rears, lifting the paw off the egg.
-- **Enraged:** pounces and roars shockwaves at the thief.
+**Its eyes and orb tell its state:** asleep, carved stone eyes and a dull jade orb; awake, Neon Qi blue (`006eff`, narrowed to a glare) and jade (`00a05f`); weakened, flickering; enraged, red-orange and widened. Darker Neon renders as a flat black disc, so the sleeping look is stone and glass, not dim Neon.
+
+**The encounter** (`src/server/Guardian.lua`; the server decides everything):
+
+| State | What it does |
+|---|---|
+| Dormant | A statue, its right paw pressed on the egg (the paw's sole rests on a 4-stud egg: shoulder 66°, elbow −66°). A player within 24 studs, or a strike, wakes it. |
+| Guardian | Stays at its lair. **Slam:** the left paw comes down in front (range 24, 55° arc, 0.75 s wind-up). **Roar:** a shockwave rolls out along the ground to 44 studs at 34 studs/s; whoever is on the ground when it passes is knocked back, and a jump clears it. |
+| Weakened | Below 40% of 2,400 health it rears and draws the paw up off the egg; its attacks come 1.7 times slower; health never falls below 1. The egg's prompt (F, half a second) opens. |
+| Enraged | The egg is taken: it chases the thief at 21 studs/s (a beginner runs 22) and pounces from 16 to 46 studs, aiming 0.85 of the thief's motion ahead, so a straight runner is caught and a thief who turns or dashes while it is in the air is not. It takes no damage. |
+| Returning / Resting | It walks home. After a secured egg it sleeps for 30 s, then a new egg appears under the paw. |
+
+With nobody within 60 studs for 12 s, it heals and sleeps.
+
+- **Never killed, never kills:** every blow is a knockback (about 19 studs, then off your feet for 1.1 s), and a knocked-back thief drops the egg.
+- **The egg a thief earns** is the best Starting Island egg their rank opens: Beginner Qi, Spirit Breeze from Qi Adept, Elemental Core from Foundation Initiate. It becomes that egg the moment it is taken, held over the thief's head.
+- **Carried on foot:** no sword flight while carrying.
+- **Grace:** for 1.5 s after taking or recovering the egg the thief can't be knocked back, so a blow already on its way doesn't take the egg straight back.
+- **Dropped:** at a clear spot on the ground near where the thief was (never inside the lion), under a pillar of Qi light; only the thief sees its prompt and the 30-second countdown. A thief who leaves the game, or lets the countdown run out, sends the egg back under the paw. Falling off the island drops it where the thief last stood.
+- **The Egg Garden is a sanctuary:** the egg is secured within 15 studs of its centre, the lion never comes within 12 studs of its edge, and nobody inside it can be knocked back.
+- **The client** (`GuardianController`, `GuardianAnim`, `GuardianFx`): the health bar (name, state, the 40% mark, a trailing loss), procedural animation (state poses, a walk turning into a gallop, breathing, the head turned toward its target, and the moves), stone-dust effects (the roar's rolling dust wall, slam and landing bursts, dust stirring where a pounce will land), camera shake, the way to the garden for a thief, and the knockback on your own character.
 
 **Asset:** `tools/blender/guardians/stone_lion.py` builds it; `assets/guardians/StoneLion.fbx` holds 12 jointed segments (Body, Head, Jaw, Tail and two pieces per leg). The curls are pieces of their own, so the bake's decimation leaves them whole. `WorldBuild.GuardianBuilder.store` fits the import and joins the segments with Motor6Ds at their pivots (`Placements/StoneLion.lua`), into `ServerStorage.Guardians.StoneLion`. Animation sets the joints' `Transform` on the client.
 
@@ -819,16 +837,16 @@ Build one complete encounter before expanding to every island.
 
 - [x] Cultivate Qi.
 - [x] Use basic Qinggong movement.
-- [ ] Find and engage one guardian.
-- [ ] Damage it until it is weakened.
-- [ ] Steal its egg.
-- [ ] Trigger the enraged pursuit.
-- [ ] Escape and secure the egg.
-- [ ] Fail an escape and drop the egg.
-- [ ] Find and recover the dropped egg.
-- [ ] Try another escape with it.
+- [x] Find and engage one guardian.
+- [x] Damage it until it is weakened.
+- [x] Steal its egg.
+- [x] Trigger the enraged pursuit.
+- [x] Escape and secure the egg.
+- [x] Fail an escape and drop the egg.
+- [x] Find and recover the dropped egg.
+- [x] Try another escape with it.
 - [ ] Secure the egg without duplicate copies.
-- [ ] Hatch it with the existing pet system.
+- [x] Hatch it with the existing pet system.
 
 ---
 

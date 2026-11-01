@@ -240,6 +240,8 @@ local function onHatchResult(result)
         showMessage(eggName .. " is gathering Qi. Try again in " .. tostring(result.SecondsLeft) .. "s.", Color3.new(1, 1, 1))
     elseif result.Reason == "Locked" then
         showMessage(eggName .. " needs " .. tostring(result.RequiredRank) .. " to hatch.", Color3.new(1, 1, 1))
+    elseif result.Reason == "Guarded" then
+        showMessage("Take a " .. eggName .. " from the " .. tostring(result.Guardian) .. ", then hatch it here.", Color3.new(1, 1, 1))
     elseif result.Reason == "InventoryFull" then
         showMessage("Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets).", Color3.new(1, 1, 1))
     else
@@ -260,16 +262,34 @@ local function getRankName()
     return Ranks.getPlayerRankName(player)
 end
 
+-- whether a guardian standing in the world guards this egg (its stand then hatches only eggs
+-- taken from it, counted in the player's "Egg_<EggId>" attribute)
+local function isGuarded(eggId)
+    for _, model in CollectionService:GetTagged(GameConfig.GuardianTag) do
+        local config = GameConfig.Guardians[model:GetAttribute("GuardianId")]
+        if config and model:IsDescendantOf(workspace) and table.find(config.Eggs, eggId) then
+            return true
+        end
+    end
+    return false
+end
+
 local function updateEggPrompt(stand)
-    local egg = GameConfig.Eggs[stand:GetAttribute("EggId")]
+    local eggId = stand:GetAttribute("EggId")
+    local egg = GameConfig.Eggs[eggId]
     local prompt = stand:FindFirstChildWhichIsA("ProximityPrompt", true)
     if not (egg and prompt) then
         return
     end
 
-    prompt.ActionText = if Ranks.isAtLeast(getRankName(), egg.RequiredRank)
-        then "Hatch"
-        else "Needs " .. Ranks.getRankById(egg.RequiredRank).Name
+    if not Ranks.isAtLeast(getRankName(), egg.RequiredRank) then
+        prompt.ActionText = "Needs " .. Ranks.getRankById(egg.RequiredRank).Name
+    elseif isGuarded(eggId) then
+        local held = player:GetAttribute("Egg_" .. eggId) or 0
+        prompt.ActionText = if held > 0 then "Hatch (" .. held .. ")" else "No egg held"
+    else
+        prompt.ActionText = "Hatch"
+    end
 end
 
 local function updateAllEggPrompts()
@@ -279,6 +299,13 @@ local function updateAllEggPrompts()
 end
 
 CollectionService:GetInstanceAddedSignal(GameConfig.EggTag):Connect(updateEggPrompt)
+CollectionService:GetInstanceAddedSignal(GameConfig.GuardianTag):Connect(updateAllEggPrompts)
+CollectionService:GetInstanceRemovedSignal(GameConfig.GuardianTag):Connect(updateAllEggPrompts)
+player.AttributeChanged:Connect(function(name)
+    if string.sub(name, 1, 4) == "Egg_" then
+        updateAllEggPrompts()
+    end
+end)
 
 task.spawn(function()
     local rankValue = player:WaitForChild("leaderstats"):WaitForChild("Rank")

@@ -24,6 +24,12 @@ return {
         BackRightUpper = { Segment = "BackRightUpper", Centre = Vector3.new(4.4983, 9.5195, 7.6347) },
         BackRightLower = { Segment = "BackRightLower", Centre = Vector3.new(4.5070, 3.4786, 7.6048) },
     },
+    -- the glow pieces' look in game. Neon blooms the exported colours to one flat cyan, so these are
+    -- deeper; the eyes are narrowed to a glare (their size scaled about their centre, seen in Studio).
+    Glow = {
+        Eyes = { Color = Color3.fromRGB(0, 110, 255), Scale = Vector3.new(1, 0.45, 0.8) },
+        Orb = { Color = Color3.fromRGB(0, 160, 95) },
+    },
     -- where each segment turns, and the segment it hangs from (nil: the root)
     Pivots = {
         Body = { Position = Vector3.new(0, 14, 0) },

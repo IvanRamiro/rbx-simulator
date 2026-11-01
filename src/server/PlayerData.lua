@@ -7,10 +7,11 @@ local RunService = game:GetService("RunService")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local Discoveries = require(script.Parent:WaitForChild("Discoveries"))
+local EggInventory = require(script.Parent:WaitForChild("EggInventory"))
 local PetInventory = require(script.Parent:WaitForChild("PetInventory"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 5
+local SCHEMA_VERSION = 6
 
 local LOAD_ATTEMPTS = 4
 local LOAD_RETRY_DELAY = 5
@@ -56,7 +57,8 @@ MIGRATIONS[2] = function(progress)
     progress.Relics = progress.Relics or {}
     return progress
 end
--- versions 3 and 4 changed no saved fields, so they have no migration
+-- versions 3 and 4 changed no saved fields, so they have no migration; version 6 added Eggs,
+-- which sanitizeProgress starts empty
 
 local store = nil
 local storeOk, storeResult = pcall(function()
@@ -81,6 +83,7 @@ local function sanitizeProgress(raw)
         AuraPetInstanceId = nil,
         Relics = {},
         OutfitId = nil,
+        Eggs = {},
     }
 
     if typeof(raw) ~= "table" then
@@ -152,6 +155,9 @@ local function sanitizeProgress(raw)
         progress.OutfitId = raw.OutfitId
     end
 
+    -- eggs taken from guardians, waiting to be hatched
+    progress.Eggs = EggInventory.sanitize(raw.Eggs)
+
     return progress
 end
 
@@ -176,7 +182,8 @@ local function captureProgress(player)
     local qi, rankValue = PlayerData.getStats(player)
     local pets = PetInventory.exportData(player)
     local relics = Discoveries.exportData(player)
-    if not (qi and rankValue and pets and relics) then
+    local eggs = EggInventory.exportData(player)
+    if not (qi and rankValue and pets and relics and eggs) then
         return nil
     end
 
@@ -190,6 +197,7 @@ local function captureProgress(player)
         AuraPetInstanceId = pets.AuraPetInstanceId,
         Relics = relics,
         OutfitId = player:GetAttribute("OutfitId"),
+        Eggs = eggs,
     }
 end
 
@@ -402,6 +410,7 @@ function PlayerData.release(player)
 
     PetInventory.removePlayer(player)
     Discoveries.removePlayer(player)
+    EggInventory.removePlayer(player)
 
     if not profile then
         return

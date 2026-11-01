@@ -12,7 +12,8 @@
 --             (Body, Head, Jaw, Tail, FrontLeftUpper...); its other pieces are welded to that one.
 --   Joints    a Motor6D per segment, named after it, from its parent segment (the Body from Root) at
 --             the segment's pivot: animate a segment by its Motor6D's Transform.
--- Glow pieces are Neon in their exported colour, with the attribute Glow.
+-- Glow pieces are Neon, with the attribute Glow, in their look from the placements (Glow) or else
+-- their exported colour.
 --
 -- The import is fitted like the outfits (OutfitBuilder.fit: by the pieces' centres, turned 0 or 180
 -- degrees), so it may come in anywhere and either way round.
@@ -79,7 +80,13 @@ function GuardianBuilder.store(model, guardianId)
         if info.Hex then
             part:SetAttribute("Glow", true)
             part.Material = Enum.Material.Neon
-            part.Color = Color3.fromHex(info.Hex)
+            local look = placements.Glow and placements.Glow[name] or {}
+            part.Color = look.Color or Color3.fromHex(info.Hex)
+            if look.Scale then
+                local at = part.CFrame
+                part.Size *= look.Scale
+                part.CFrame = at
+            end
             part.CastShadow = false
             part.TextureID = ""
             for _, child in part:GetChildren() do

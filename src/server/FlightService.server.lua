@@ -123,6 +123,7 @@ local function canFly(player)
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     return humanoid ~= nil and humanoid.Health > 0
         and player:GetAttribute("IsCultivating") ~= true
+        and player:GetAttribute("CarryingEgg") == nil -- a guardian's egg is carried on foot
         and Ranks.isAtLeast(Ranks.getPlayerRankName(player), config.UnlockRank)
         and (player:GetAttribute("QinggongFlightSpeed") or 0) > 0
 end
@@ -181,7 +182,7 @@ Players.PlayerRemoving:Connect(function(player)
     lastToggle[player] = nil
 end)
 
--- the server's limit, and a rank lost while flying
+-- the server's limit, a rank lost while flying, and an egg picked up (it is carried on foot)
 while true do
     task.wait(1)
     local now = os.clock()

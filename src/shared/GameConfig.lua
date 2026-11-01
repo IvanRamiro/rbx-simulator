@@ -51,6 +51,44 @@ local GameConfig = {
         Sword = { Damage = 16, Range = 12, Cooldown = 0.55, Arc = 80 },
     },
 
+    -- Guardians (src/server/GuardianService; design doc section 7). Each guards its island's eggs:
+    -- while it stands in the world, that island's stands hatch only eggs taken from it (a thief
+    -- earns the best of Eggs their rank opens, secured in the SafeZone). Positions are island-local
+    -- studs; "lion-local" ones are in the guardian's own frame (front toward -Z).
+    GuardianTag = "Guardian",
+    Guardians = {
+        StoneLion = {
+            DisplayName = "Awakened Stone Lion",
+            Island = "StartingIsland",
+            Lair = Vector3.new(-55, 0.4, -28),
+            Facing = Vector3.new(0, 0.4, 0), -- it lies in wait facing the spawn plaza
+            Eggs = { "BeginnerQiEgg", "SpiritBreezeEgg", "ElementalCoreEgg" },
+            SafeZone = { Centre = Vector3.new(-32, 0, 58), Radius = 15, Name = "Egg Garden" },
+            MaxHealth = 2400,
+            WeakenedAt = 0.4,      -- share of health below which it falters and the egg can be taken
+            HitRadius = 14,        -- its body round the chest, for strikes (Combat)
+            EngageRadius = 24,     -- a player this close wakes it
+            LeashRadius = 60,      -- players this far from the lair don't hold its attention
+            CalmAfter = 12,        -- seconds with nobody near before it heals and sleeps
+            RespawnTime = 30,      -- after an egg is secured, a new one comes this much later
+            DropTime = 30,         -- a dropped egg waits this long for its thief
+            WalkSpeed = 12,
+            ChaseSpeed = 21,       -- below a beginner's run (22): dashes and its pounces decide it
+            TurnSpeed = 140,       -- degrees per second
+            Egg = { Height = 4, Under = Vector3.new(4.55, 1.9, -15), CarriedHeight = 2.6 }, -- under the raised right paw
+            Stagger = 1.1,         -- seconds a knocked-back player is off their feet
+            WeakenedSlowdown = 1.7, -- attack cooldowns stretch by this while weakened
+            Attacks = {
+                -- the left paw slams the ground in front (the right one pins the egg)
+                Slam = { Range = 24, Arc = 55, WindUp = 0.75, Cooldown = 2.6, Knockback = 45 },
+                -- a roar sends a shockwave rolling out along the ground: jump it
+                Roar = { Radius = 44, WaveSpeed = 34, WindUp = 1.1, Cooldown = 8, Knockback = 40 },
+                -- enraged only: a leap onto where the thief is going
+                Pounce = { MinRange = 16, MaxRange = 46, WindUp = 0.6, Air = 0.95, Cooldown = 4.5, Radius = 12, Knockback = 55 },
+            },
+        },
+    },
+
     -- Sword flight: from UnlockRank, the cultivator rides a flying sword (src/server/FlightService).
     -- It drains stamina (Cost per second while moving, HoverCost while still) and needs MinStamina
     -- to take off. Qi barriers still hold: flight never reaches an island above the rider's rank.

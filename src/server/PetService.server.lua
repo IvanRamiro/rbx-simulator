@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
+local EggInventory = require(script.Parent:WaitForChild("EggInventory"))
 local PetInventory = require(script.Parent:WaitForChild("PetInventory"))
 local PlayerData = require(script.Parent:WaitForChild("PlayerData"))
 local PromptRules = require(script.Parent:WaitForChild("PromptRules"))
@@ -45,6 +46,7 @@ local function setupPlayer(player)
     end
 
     PetInventory.setupPlayer(player, if isNewPlayer then nil else progress)
+    EggInventory.setupPlayer(player, if isNewPlayer then nil else progress)
     sendInventory(player)
 end
 
@@ -76,6 +78,18 @@ local function rollEggPet(egg)
     return lastEntry.PetId, lastEntry.Weight / totalWeight
 end
 
+-- The guardian standing in the world that guards this egg, if any: while it stands, the egg is
+-- only hatched from the player's egg inventory (eggs taken from it), never for free.
+local function guardianOf(eggId)
+    for _, model in CollectionService:GetTagged(GameConfig.GuardianTag) do
+        local config = GameConfig.Guardians[model:GetAttribute("GuardianId")]
+        if config and model:IsDescendantOf(workspace) and table.find(config.Eggs, eggId) then
+            return config
+        end
+    end
+    return nil
+end
+
 local function onEggTriggered(player, eggId, eggPart, maxDistance)
     local egg = GameConfig.Eggs[eggId]
     if not egg or player.Parent ~= Players or not PromptRules.isAliveAndNear(player, eggPart, maxDistance) then
@@ -92,14 +106,24 @@ local function onEggTriggered(player, eggId, eggPart, maxDistance)
         return
     end
 
+    -- a guarded egg is hatched from the inventory (it was earned, so no cooldown); a free one waits
+    -- out its cooldown
+    local guardian = guardianOf(eggId)
     local now = os.clock()
     local playerHatchTimes = lastHatchTime[player] or {}
     lastHatchTime[player] = playerHatchTimes
-    local lastTime = playerHatchTimes[eggId]
-    if lastTime and now - lastTime < egg.Cooldown then
-        local secondsLeft = math.ceil(egg.Cooldown - (now - lastTime))
-        RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "Cooldown", SecondsLeft = secondsLeft })
-        return
+    if guardian then
+        if EggInventory.count(player, eggId) < 1 then
+            RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "Guarded", Guardian = guardian.DisplayName })
+            return
+        end
+    else
+        local lastTime = playerHatchTimes[eggId]
+        if lastTime and now - lastTime < egg.Cooldown then
+            local secondsLeft = math.ceil(egg.Cooldown - (now - lastTime))
+            RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "Cooldown", SecondsLeft = secondsLeft })
+            return
+        end
     end
 
     if PetInventory.isFull(player) then
@@ -107,8 +131,14 @@ local function onEggTriggered(player, eggId, eggPart, maxDistance)
         return
     end
 
+    if guardian and not EggInventory.take(player, eggId) then
+        return
+    end
     local petId, chance = rollEggPet(egg)
     if not PetInventory.grantPet(player, petId) then
+        if guardian then
+            EggInventory.grant(player, eggId) -- the egg wasn't hatched: give it back
+        end
         return
     end
 
