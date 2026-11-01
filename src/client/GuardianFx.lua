@@ -1,16 +1,27 @@
--- Guardian effects (client-only, cosmetic: the server decides every hit, Guardian.lua). Stone dust
--- and the guardian's Qi, never flat rings: what moves along the ground is a rolling wall of dust.
+-- Guardian effects (client-only, cosmetic: the server decides every hit, Guardian.lua): building
+-- blocks that each guardian's rig (GuardianRigs/<Id>) composes into its own moves, in its own
+-- style, and the egg's moments, shared by all. Nothing flat: what rolls along the ground is a wall
+-- of dust or leaves.
 --
---   awaken(model)                       dust shaken off the stone as it wakes
---   slam(model, windUp)                 the left paw hits the ground: a dust burst and a jolt
---   roar(model, windUp, radius, speed)  a blast of Qi from the jaws, then a wall of dust rolling
---                                       out along the ground to `radius` (jump it)
---   pounce(model, windUp, air, to)      dust stirring where it will land, until it does
---   land(position)                      a heavy landing: dust thrown out low, and a jolt
---   steal / drop / secure (position)    the egg taken (a flare of Qi), dropped (a thud of dust),
---                                       secured (gold light rising)
---   beacon(eggModel)                    a soft pillar of light over a dropped egg, until removed
---   shake(origin, strength, time)       the camera jolts, fading with distance from origin
+-- A style: { Debris = "Dust" | "Leaves", Qi = Color3, QiCore = Color3 }.
+--
+--   shake(origin, strength, time)              the camera jolts, fading with distance from origin
+--   puff(cframe, style, count, speed, spread, size, life)
+--                                              debris thrown out from a point (spread: degrees from
+--                                              its up axis, or a Vector2 for a low, wide fan), dust
+--                                              billowing or leaves tumbling
+--   shed(part, style, count)                   debris falling off a part's whole body
+--   flash(cframe, style, size)                 a soft burst of Qi light
+--   streaks(cframe, style, count, speed, spread)
+--                                              Qi streaks shot out along the cframe's look
+--   crescent(cframe, style, size)              a crescent of Qi light (a blade's cut) facing the camera
+--   wave(origin, facing, radius, speed, arc, style)
+--                                              a wall of debris with Qi streaks rolling out along the
+--                                              ground, all round (arc >= 180) or within arc degrees of
+--                                              facing
+--   telegraph(position, time, style)           debris stirring and embers rising where a leap lands
+--   steal / drop / secure (position, style)    the egg taken, dropped, secured
+--   beacon(eggModel)                           a pillar of light over a dropped egg, until removed
 local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -22,28 +33,32 @@ local colorSequence = AuraKit.colorSequence
 
 local GuardianFx = {}
 
-local TEXTURES = {
+GuardianFx.TEXTURES = {
     Fog = "rbxassetid://14050223758",       -- a soft billowing puff
     Glow = "rbxassetid://135169457468310",
     Streak = "rbxassetid://115312010132075",
+    Slash = "rbxassetid://77516609955713",  -- QiSlash (tools/blender/vfx/combat_textures.py)
+    Leaf = "rbxassetid://126547188247220",  -- BambooLeaf (combat_textures.py)
 }
+local TEXTURES = GuardianFx.TEXTURES
 local DUST = Color3.fromRGB(196, 190, 178)
 local DUST_DARK = Color3.fromRGB(142, 136, 126)
-local QI = Color3.fromRGB(0, 110, 255)
-local QI_CORE = Color3.fromRGB(150, 210, 255)
+local LEAF = Color3.fromRGB(96, 168, 70)
+local LEAF_DARK = Color3.fromRGB(40, 104, 46)
 local RAGE = Color3.fromRGB(255, 80, 25)
 local GOLD = Color3.fromRGB(255, 196, 70)
 local MAX_DISTANCE = 300
-local WAVE_POINTS = 18
+local WAVE_SPACING = 7   -- studs between the wave's emitters along its front (at full radius)
 
 local fxFolder = Instance.new("Folder")
 fxFolder.Name = "GuardianFx"
 fxFolder.Parent = Workspace
 
-local function near(position)
+function GuardianFx.near(position)
     local camera = Workspace.CurrentCamera
     return camera ~= nil and (camera.CFrame.Position - position).Magnitude <= MAX_DISTANCE
 end
+local near = GuardianFx.near
 
 local function host(cframe, life)
     local part = Instance.new("Part")
@@ -55,6 +70,7 @@ local function host(cframe, life)
     Debris:AddItem(part, life)
     return part
 end
+GuardianFx.host = host
 
 local function emitter(parent, properties)
     local e = Instance.new("ParticleEmitter")
@@ -68,18 +84,43 @@ local function emitter(parent, properties)
     return e
 end
 
--- billowing stone dust, lit by the sun
-local function dust(parent, properties)
-    local base = {
-        Texture = TEXTURES.Fog, LightEmission = 0, LightInfluence = 1,
-        Color = colorSequence({ { 0, DUST }, { 1, DUST_DARK } }),
-        Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-25, 25),
-        Drag = 2.5,
-    }
+-- debris in a style: billowing dust lit by the sun, or tumbling leaves
+local function debris(parent, style, properties)
+    local base
+    if style.Debris == "Leaves" then
+        base = {
+            Texture = TEXTURES.Leaf, LightEmission = 0, LightInfluence = 1,
+            Color = colorSequence({ { 0, LEAF }, { 1, LEAF_DARK } }),
+            Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-220, 220),
+            Drag = 2, Acceleration = Vector3.new(0, -6, 0),
+        }
+    else
+        base = {
+            Texture = TEXTURES.Fog, LightEmission = 0, LightInfluence = 1,
+            Color = colorSequence({ { 0, DUST }, { 1, DUST_DARK } }),
+            Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-25, 25),
+            Drag = 2.5,
+        }
+    end
     for k, v in properties do
         base[k] = v
     end
     return emitter(parent, base)
+end
+
+-- leaves are small and solid; dust is big and soft
+local function debrisSize(style, size)
+    if style.Debris == "Leaves" then
+        return numberSequence({ { 0, size * 0.35 }, { 1, size * 0.3 } })
+    end
+    return numberSequence({ { 0, size }, { 1, size * 2.2 } })
+end
+
+local function debrisFade(style)
+    if style.Debris == "Leaves" then
+        return numberSequence({ { 0, 0 }, { 0.75, 0.1 }, { 1, 1 } })
+    end
+    return numberSequence({ { 0, 0.35 }, { 1, 1 } })
 end
 
 -- ---------- the camera ----------
@@ -118,134 +159,125 @@ function GuardianFx.shake(origin, strength, time)
     end
 end
 
--- ---------- the guardian ----------
-function GuardianFx.awaken(model)
-    local body = model:FindFirstChild("Body")
-    if not (body and near(body.Position)) then
+-- ---------- building blocks ----------
+function GuardianFx.puff(cframe, style, count, speed, spread, size, life)
+    if not near(cframe.Position) then
         return
     end
-    -- dust shaken from the whole body, falling
-    local e = dust(body, {
+    local holder = host(cframe, (life or 1) + 1)
+    debris(holder, style, {
+        Lifetime = NumberRange.new((life or 1) * 0.7, life or 1), Speed = NumberRange.new(speed * 0.65, speed),
+        SpreadAngle = if typeof(spread) == "Vector2" then spread else Vector2.new(spread, spread), EmissionDirection = Enum.NormalId.Top,
+        Size = debrisSize(style, size), Transparency = debrisFade(style),
+    }):Emit(count)
+end
+
+function GuardianFx.shed(part, style, count)
+    if not (part and near(part.Position)) then
+        return
+    end
+    local e = debris(part, style, {
         Lifetime = NumberRange.new(1, 1.6), Speed = NumberRange.new(1, 4), SpreadAngle = Vector2.new(180, 180),
-        Acceleration = Vector3.new(0, -9, 0), Size = numberSequence({ { 0, 2.5 }, { 1, 5 } }),
-        Transparency = numberSequence({ { 0, 0.55 }, { 0.3, 0.45 }, { 1, 1 } }),
+        Acceleration = Vector3.new(0, if style.Debris == "Leaves" then -5 else -9, 0),
+        Size = debrisSize(style, 2.5), Transparency = numberSequence({ { 0, 0.5 }, { 0.3, 0.4 }, { 1, 1 } }),
     })
     task.delay(0.15, function()
-        e:Emit(30)
+        e:Emit(count)
     end)
     Debris:AddItem(e, 2)
-    GuardianFx.shake(body.Position, 1.2, 0.7)
 end
 
--- where the left paw comes down: in front of the left shoulder (lion-local)
-local SLAM_SPOT = CFrame.new(-4.6, 0.3, -17)
-
-function GuardianFx.slam(model, windUp)
-    task.delay(windUp, function()
-        local root = model.PrimaryPart
-        if not (root and model.Parent) then
-            return
-        end
-        local at = model:GetPivot() * SLAM_SPOT
-        if not near(at.Position) then
-            return
-        end
-        local holder = host(at, 2)
-        dust(holder, {
-            Lifetime = NumberRange.new(0.6, 1), Speed = NumberRange.new(14, 22), SpreadAngle = Vector2.new(80, 8),
-            EmissionDirection = Enum.NormalId.Top, Acceleration = Vector3.new(0, 3, 0),
-            Size = numberSequence({ { 0, 3 }, { 1, 7 } }), Transparency = numberSequence({ { 0, 0.35 }, { 1, 1 } }),
-        }):Emit(22)
-        emitter(holder, {
-            Texture = TEXTURES.Glow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.25),
-            Size = numberSequence({ { 0, 4 }, { 1, 10 } }), Transparency = numberSequence({ { 0, 0.4 }, { 1, 1 } }),
-            Color = colorSequence({ { 0, QI_CORE }, { 1, QI } }), Brightness = 1.6,
-        }):Emit(1)
-        GuardianFx.shake(at.Position, 1.6, 0.45)
-    end)
-end
-
--- the jaws (lion-local): a little ahead of the head
-local MOUTH = CFrame.new(0, 21.5, -21)
-
-function GuardianFx.roar(model, windUp, radius, speed)
-    task.delay(windUp, function()
-        if not model.Parent then
-            return
-        end
-        local pivot = model:GetPivot()
-        local origin = pivot.Position
-        if not near(origin) then
-            return
-        end
-        -- a blast of Qi from the jaws, thrown forward
-        local mouth = host(pivot * MOUTH, 1.5)
-        emitter(mouth, {
-            Texture = TEXTURES.Glow, EmissionDirection = Enum.NormalId.Front, Speed = NumberRange.new(10, 16),
-            SpreadAngle = Vector2.new(20, 20), Lifetime = NumberRange.new(0.5, 0.7), Drag = 3,
-            Size = numberSequence({ { 0, 4 }, { 1, 14 } }), Transparency = numberSequence({ { 0, 0.55 }, { 1, 1 } }),
-            Color = colorSequence({ { 0, QI_CORE }, { 1, QI } }), Brightness = 1.4,
-        }):Emit(6)
-        emitter(mouth, {
-            Texture = TEXTURES.Streak, EmissionDirection = Enum.NormalId.Front, Orientation = Enum.ParticleOrientation.VelocityParallel,
-            Speed = NumberRange.new(40, 60), SpreadAngle = Vector2.new(35, 25), Lifetime = NumberRange.new(0.25, 0.4),
-            Size = numberSequence({ { 0, 2.2 }, { 1, 0.5 } }), Transparency = numberSequence({ { 0, 0.2 }, { 1, 1 } }),
-            Color = colorSequence({ { 0, QI_CORE }, { 1, QI } }), Brightness = 2,
-        }):Emit(14)
-        GuardianFx.shake(origin, 2.2, 0.9)
-
-        -- the wall of dust rolling out along the ground
-        local life = radius / speed
-        local centre = host(CFrame.new(origin), life + 1.5)
-        local points = {}
-        for i = 1, WAVE_POINTS do
-            local a = Instance.new("Attachment")
-            a.Parent = centre
-            local puff = dust(a, {
-                Lifetime = NumberRange.new(0.5, 0.8), Speed = NumberRange.new(3, 7), SpreadAngle = Vector2.new(25, 25),
-                EmissionDirection = Enum.NormalId.Top, Acceleration = Vector3.new(0, 2, 0),
-                Size = numberSequence({ { 0, 4 }, { 1, 8 } }), Transparency = numberSequence({ { 0, 0.4 }, { 1, 1 } }),
-            })
-            local streak = emitter(a, {
-                Texture = TEXTURES.Streak, EmissionDirection = Enum.NormalId.Front, Orientation = Enum.ParticleOrientation.VelocityParallel,
-                Speed = NumberRange.new(speed * 0.9, speed * 1.1), SpreadAngle = Vector2.new(6, 4), Lifetime = NumberRange.new(0.25),
-                Size = numberSequence({ { 0, 1.6 }, { 1, 0.4 } }), Transparency = numberSequence({ { 0, 0.35 }, { 1, 1 } }),
-                Color = colorSequence({ { 0, QI_CORE }, { 1, QI } }), Brightness = 1.6,
-            })
-            points[i] = { attachment = a, puff = puff, streak = streak, angle = (i - 1) / WAVE_POINTS * 2 * math.pi }
-        end
-        local start = os.clock()
-        local connection
-        connection = RunService.Heartbeat:Connect(function()
-            local r = (os.clock() - start) * speed
-            if r > radius or not centre.Parent then
-                connection:Disconnect()
-                return
-            end
-            for i, point in points do
-                local outward = Vector3.new(math.cos(point.angle), 0, math.sin(point.angle))
-                local position = outward * r + Vector3.new(0, 0.6, 0)
-                point.attachment.CFrame = CFrame.lookAt(position, position + outward)
-                -- alternate points each frame: a steady wall, half the particles
-                if (i + math.floor(r)) % 2 == 0 then
-                    point.puff:Emit(1)
-                    point.streak:Emit(1)
-                end
-            end
-        end)
-    end)
-end
-
-function GuardianFx.pounce(model, windUp, air, to)
-    if not near(to) then
+function GuardianFx.flash(cframe, style, size)
+    if not near(cframe.Position) then
         return
     end
-    -- dust stirring and embers of rage where it will come down
-    local holder = host(CFrame.new(to + Vector3.new(0, 0.3, 0)), windUp + air + 1)
-    local stir = dust(holder, {
-        Rate = 26, Lifetime = NumberRange.new(0.5, 0.8), Speed = NumberRange.new(4, 8), SpreadAngle = Vector2.new(90, 10),
-        EmissionDirection = Enum.NormalId.Top, Size = numberSequence({ { 0, 2 }, { 1, 5 } }),
-        Transparency = numberSequence({ { 0, 0.55 }, { 1, 1 } }),
+    emitter(host(cframe, 1), {
+        Texture = TEXTURES.Glow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.3),
+        Size = numberSequence({ { 0, size * 0.4 }, { 1, size } }), Transparency = numberSequence({ { 0, 0.4 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, style.QiCore }, { 1, style.Qi } }), Brightness = 1.6,
+    }):Emit(1)
+end
+
+function GuardianFx.streaks(cframe, style, count, speed, spread)
+    if not near(cframe.Position) then
+        return
+    end
+    emitter(host(cframe, 1), {
+        Texture = TEXTURES.Streak, EmissionDirection = Enum.NormalId.Front, Orientation = Enum.ParticleOrientation.VelocityParallel,
+        Speed = NumberRange.new(speed * 0.7, speed), SpreadAngle = Vector2.new(spread, spread * 0.7), Lifetime = NumberRange.new(0.25, 0.4),
+        Size = numberSequence({ { 0, 2.2 }, { 1, 0.5 } }), Transparency = numberSequence({ { 0, 0.2 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, style.QiCore }, { 1, style.Qi } }), Brightness = 2,
+    }):Emit(count)
+end
+
+function GuardianFx.crescent(cframe, style, size)
+    if not near(cframe.Position) then
+        return
+    end
+    emitter(host(cframe, 1), {
+        Texture = TEXTURES.Slash, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.28), Rotation = NumberRange.new(-20, 20),
+        Size = numberSequence({ { 0, size * 0.6 }, { 1, size } }), Transparency = numberSequence({ { 0, 0.1 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, style.QiCore }, { 1, style.Qi } }), Brightness = 2.2,
+    }):Emit(1)
+end
+
+function GuardianFx.wave(origin, facing, radius, speed, arc, style)
+    if not near(origin) then
+        return
+    end
+    local life = radius / speed
+    local centre = host(CFrame.new(origin), life + 1.5)
+    local half = math.rad(math.min(arc, 180))
+    local count = math.max(5, math.floor(2 * half * radius / WAVE_SPACING))
+    local base = math.atan2(facing.Z, facing.X)
+    local points = {}
+    for i = 1, count do
+        local a = Instance.new("Attachment")
+        a.Parent = centre
+        local puff = debris(a, style, {
+            Lifetime = NumberRange.new(0.5, 0.8), Speed = NumberRange.new(3, 7), SpreadAngle = Vector2.new(25, 25),
+            EmissionDirection = Enum.NormalId.Top, Acceleration = Vector3.new(0, if style.Debris == "Leaves" then -3 else 2, 0),
+            Size = debrisSize(style, 4), Transparency = debrisFade(style),
+        })
+        local streak = emitter(a, {
+            Texture = TEXTURES.Streak, EmissionDirection = Enum.NormalId.Front, Orientation = Enum.ParticleOrientation.VelocityParallel,
+            Speed = NumberRange.new(speed * 0.9, speed * 1.1), SpreadAngle = Vector2.new(6, 4), Lifetime = NumberRange.new(0.25),
+            Size = numberSequence({ { 0, 1.6 }, { 1, 0.4 } }), Transparency = numberSequence({ { 0, 0.35 }, { 1, 1 } }),
+            Color = colorSequence({ { 0, style.QiCore }, { 1, style.Qi } }), Brightness = 1.6,
+        })
+        local angle = if arc >= 180 then (i - 1) / count * 2 * math.pi else base - half + 2 * half * (i - 0.5) / count
+        points[i] = { attachment = a, puff = puff, streak = streak, angle = angle }
+    end
+    local start = os.clock()
+    local connection
+    connection = RunService.Heartbeat:Connect(function()
+        local r = (os.clock() - start) * speed
+        if r > radius or not centre.Parent then
+            connection:Disconnect()
+            return
+        end
+        for i, point in points do
+            local outward = Vector3.new(math.cos(point.angle), 0, math.sin(point.angle))
+            local position = outward * r + Vector3.new(0, 0.6, 0)
+            point.attachment.CFrame = CFrame.lookAt(position, position + outward)
+            -- alternate points each frame: a steady wall, half the particles
+            if (i + math.floor(r)) % 2 == 0 then
+                point.puff:Emit(1)
+                point.streak:Emit(1)
+            end
+        end
+    end)
+end
+
+function GuardianFx.telegraph(position, time, style)
+    if not near(position) then
+        return
+    end
+    local holder = host(CFrame.new(position + Vector3.new(0, 0.3, 0)), time + 1)
+    local stir = debris(holder, style, {
+        Rate = if style.Debris == "Leaves" then 18 else 26, Lifetime = NumberRange.new(0.5, 0.8), Speed = NumberRange.new(4, 8),
+        SpreadAngle = Vector2.new(90, 10), EmissionDirection = Enum.NormalId.Top,
+        Size = debrisSize(style, 2), Transparency = numberSequence({ { 0, 0.55 }, { 1, 1 } }),
     })
     local embers = emitter(holder, {
         Texture = TEXTURES.Glow, Rate = 16, Lifetime = NumberRange.new(0.6, 0.9), Speed = NumberRange.new(3, 6),
@@ -253,54 +285,28 @@ function GuardianFx.pounce(model, windUp, air, to)
         Size = numberSequence({ { 0, 0.9 }, { 1, 0 } }), Transparency = numberSequence({ { 0, 0.2 }, { 1, 1 } }),
         Color = colorSequence({ { 0, GOLD }, { 1, RAGE } }), Brightness = 2,
     })
-    task.delay(windUp + air, function()
+    task.delay(time, function()
         stir.Enabled = false
         embers.Enabled = false
     end)
 end
 
-function GuardianFx.land(position)
-    if not near(position) then
-        return
-    end
-    local holder = host(CFrame.new(position + Vector3.new(0, 0.5, 0)), 2.5)
-    dust(holder, {
-        Lifetime = NumberRange.new(0.8, 1.3), Speed = NumberRange.new(22, 34), SpreadAngle = Vector2.new(180, 6),
-        EmissionDirection = Enum.NormalId.Top, Drag = 3.5, Acceleration = Vector3.new(0, 2, 0),
-        Size = numberSequence({ { 0, 4 }, { 1, 10 } }), Transparency = numberSequence({ { 0, 0.3 }, { 1, 1 } }),
-    }):Emit(36)
-    GuardianFx.shake(position, 3, 0.7)
-end
-
 -- ---------- the egg ----------
-function GuardianFx.steal(position)
+function GuardianFx.steal(position, style)
+    GuardianFx.flash(CFrame.new(position), style, 12)
     if not near(position) then
         return
     end
-    local holder = host(CFrame.new(position), 1.5)
-    emitter(holder, {
-        Texture = TEXTURES.Glow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.4),
-        Size = numberSequence({ { 0, 3 }, { 1, 12 } }), Transparency = numberSequence({ { 0, 0.3 }, { 1, 1 } }),
-        Color = colorSequence({ { 0, QI_CORE }, { 1, QI } }), Brightness = 2.2,
-    }):Emit(1)
-    emitter(holder, {
+    emitter(host(CFrame.new(position), 1.5), {
         Texture = TEXTURES.Streak, Orientation = Enum.ParticleOrientation.VelocityParallel, SpreadAngle = Vector2.new(180, 180),
         Speed = NumberRange.new(18, 30), Drag = 3, Lifetime = NumberRange.new(0.3, 0.45),
         Size = numberSequence({ { 0, 1.4 }, { 1, 0.2 } }), Transparency = numberSequence({ { 0, 0 }, { 1, 1 } }),
-        Color = colorSequence({ { 0, QI_CORE }, { 1, QI } }), Brightness = 2.2,
+        Color = colorSequence({ { 0, style.QiCore }, { 1, style.Qi } }), Brightness = 2.2,
     }):Emit(16)
 end
 
-function GuardianFx.drop(position)
-    if not near(position) then
-        return
-    end
-    local holder = host(CFrame.new(position + Vector3.new(0, 0.4, 0)), 1.8)
-    dust(holder, {
-        Lifetime = NumberRange.new(0.6, 0.9), Speed = NumberRange.new(8, 14), SpreadAngle = Vector2.new(180, 8),
-        EmissionDirection = Enum.NormalId.Top, Size = numberSequence({ { 0, 2 }, { 1, 5 } }),
-        Transparency = numberSequence({ { 0, 0.35 }, { 1, 1 } }),
-    }):Emit(14)
+function GuardianFx.drop(position, style)
+    GuardianFx.puff(CFrame.new(position + Vector3.new(0, 0.4, 0)), style, 14, 14, Vector2.new(180, 8), 2, 0.9)
 end
 
 function GuardianFx.secure(position)
@@ -341,7 +347,7 @@ function GuardianFx.beacon(eggModel)
     beam.LightEmission = 1
     beam.LightInfluence = 0
     beam.Width0, beam.Width1 = 3, 1.2
-    beam.Color = colorSequence({ { 0, QI_CORE }, { 1, QI } })
+    beam.Color = colorSequence({ { 0, Color3.fromRGB(150, 210, 255) }, { 1, Color3.fromRGB(0, 110, 255) } })
     beam.Transparency = numberSequence({ { 0, 0.25 }, { 0.6, 0.6 }, { 1, 1 } })
     beam.Parent = holder
     holder.Parent = fxFolder

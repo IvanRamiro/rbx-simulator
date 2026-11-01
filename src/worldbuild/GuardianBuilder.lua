@@ -25,14 +25,16 @@ local GuardianBuilder = {}
 
 local ROOT_SIZE = Vector3.new(4, 1, 4)
 
--- The import's pieces: "<prefix>_<Piece>", the glow pieces "<prefix>_<Segment>_Glow_<hex>".
+-- The import's pieces: "<prefix>_<Piece>", the glow pieces "<prefix>_<Segment>_Glow_<hex>" (found
+-- by their segment and colour: two segments may glow alike, as the mantis's two blade edges do).
 local function findPieces(model, placements)
     local found = {}
     for _, d in model:GetDescendants() do
         if d:IsA("MeshPart") then
-            local hex = string.match(d.Name, "_Glow_(%x+)$")
+            local segment, hex = string.match(d.Name, "_(%w+)_Glow_(%x+)$")
             for name, info in placements.Pieces do
-                if (hex and info.Hex == hex) or (not hex and not info.Hex and string.match(d.Name, "_(%w+)$") == name) then
+                if (hex and info.Hex == hex and info.Segment == segment)
+                    or (not hex and not info.Hex and string.match(d.Name, "_(%w+)$") == name) then
                     assert(not found[name], "the import has two pieces " .. name)
                     found[name] = d
                 end

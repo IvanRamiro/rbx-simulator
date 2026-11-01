@@ -766,7 +766,7 @@ Guarded → Available → Carried → Dropped → Carried → Secured
 | Island | Guardian | Encounter direction |
 |---|---|---|
 | Starting Island | The Awakened Stone Lion | Introductory fight, basic Qinggong escape |
-| Jade Grove | Nature Guardian | Escape routes through trees and elevated terrain |
+| Jade Grove | The Bamboo Mantis Sage | Escape routes through trees and elevated terrain |
 | Ember Peak | Fire Guardian | Escape routes around lava and volcanic hazards |
 | Moonlit Isle | Celestial Guardian | More demanding aerial movement |
 | Origin Abyss | Primordial Guardian | The most demanding encounter |
@@ -785,7 +785,7 @@ A granite temple guardian lion come to life: a mane of carved spiral curls, spir
 |---|---|
 | Dormant | A statue, its right paw pressed on the egg (the paw's sole rests on a 4-stud egg: shoulder 66°, elbow −66°). A player within 24 studs, or a strike, wakes it. |
 | Guardian | Stays at its lair. **Slam:** the left paw comes down in front (range 24, 55° arc, 0.75 s wind-up). **Roar:** a shockwave rolls out along the ground to 44 studs at 34 studs/s; whoever is on the ground when it passes is knocked back, and a jump clears it. |
-| Weakened | Below 40% of 2,400 health it rears and draws the paw up off the egg; its attacks come 1.7 times slower; health never falls below 1. The egg's prompt (F, half a second) opens. |
+| Weakened | Below 40% of 1,200 health (a beginner's Qi Palm gets there alone in about 72 strikes) it rears and draws the paw up off the egg; its attacks come 1.7 times slower; health never falls below 1. The egg's prompt (F, half a second) opens. |
 | Enraged | The egg is taken: it chases the thief at 21 studs/s (a beginner runs 22) and pounces from 16 to 46 studs, aiming 0.85 of the thief's motion ahead, so a straight runner is caught and a thief who turns or dashes while it is in the air is not. It takes no damage. |
 | Returning / Resting | It walks home. After a secured egg it sleeps for 30 s, then a new egg appears under the paw. |
 
@@ -800,6 +800,21 @@ With nobody within 60 studs for 12 s, it heals and sleeps.
 - **The client** (`GuardianController`, `GuardianAnim`, `GuardianFx`): the health bar (name, state, the 40% mark, a trailing loss), procedural animation (state poses, a walk turning into a gallop, breathing, the head turned toward its target, and the moves), stone-dust effects (the roar's rolling dust wall, slam and landing bursts, dust stirring where a pounce will land), camera shake, the way to the garden for a thief, and the knockback on your own character.
 
 **Asset:** `tools/blender/guardians/stone_lion.py` builds it; `assets/guardians/StoneLion.fbx` holds 12 jointed segments (Body, Head, Jaw, Tail and two pieces per leg). The curls are pieces of their own, so the bake's decimation leaves them whole. `WorldBuild.GuardianBuilder.store` fits the import and joins the segments with Motor6Ds at their pivots (`Placements/StoneLion.lua`), into `ServerStorage.Guardians.StoneLion`. Animation sets the joints' `Transform` on the client.
+
+### The Bamboo Mantis Sage (Jade Grove)
+
+A hermit sage who became the grove: a towering praying mantis of living jade bamboo, every segment a culm with pale waxy node rings, a robe of great dark leaves folded over its back, a carved jade face with faceted compound eyes and amber pupils, long drooping leaf brows and a leaf beard, a jade mala with a gold-tasselled guru bead, and jade scythes edged with glowing Qi, folded in prayer round the egg. About 36 studs tall, its legs 28 studs wide (`tools/blender/guardians/mantis_sage.py`, 16 jointed segments).
+
+Its lair is the island's east clearing, (50, 26), the only open, level ground far from the Bloom Glade (its safe zone), the arrival and the relics. 2,000 health: a Qi Gatherer's palm weakens it alone in about 110 strikes.
+
+| State | What it does |
+|---|---|
+| Dormant | Meditating: head bowed, eyes dark, the egg in its folded forearms. |
+| Guardian | Sways like a leaf in the wind and turns to face whoever it watches, the egg turning with its arms. **Scythe:** both blades cut across the front (range 26, 65° arc). **Blade wave:** a cone of Qi blades and leaves skims out along the ground (46 studs, 50° either side); jump it. |
+| Weakened | Crouches, lowers its blades and sets the egg on the ground before it. |
+| Enraged | The mantis threat display (the robe flared like wings, blades raised and open, eyes red), chasing at 23 studs/s. **Leap:** long and high (up to 72 studs), its first move after the theft. |
+
+**One framework for every guardian.** Attacks are named per guardian and have a kind: a *Sweep* in front, a *Wave* along the ground (all round or in an arc, cleared by a jump), a *Pounce* onto the thief. `Egg.Offered` sets a held egg down when it falters; `TurnsToFace` turns it at its lair, the egg welded to its root while held. Each guardian's look lives in its client rig, `GuardianRigs/<Id>` (poses, gait, moves, glow, effects).
 
 **Guardian aura states**
 

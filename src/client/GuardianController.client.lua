@@ -1,5 +1,6 @@
 -- The guardians on this client (the server decides everything, Guardian.lua):
---   - animates each guardian (GuardianAnim) and plays its effects (GuardianFx) from GuardianEvent;
+--   - animates each guardian and plays its moves' effects from GuardianEvent, through its rig
+--     (GuardianRigs/<GuardianId>: GuardianAnim drives it, GuardianFx gives the building blocks);
 --   - knockback: a guardian's blow throws this player's character (the client owns it) and takes
 --     them off their feet for a moment; nothing ever kills;
 --   - the health bar of the guardian this player is fighting, with its state and the mark where it
@@ -359,12 +360,22 @@ local function updateCountdowns()
 end
 
 -- ---------- the guardians ----------
+local rigsFolder = script.Parent:WaitForChild("GuardianRigs")
+local rigs = {} -- [model] = its rig (GuardianRigs/<GuardianId>)
+
 local function track(model)
     if anims[model] or not model:IsDescendantOf(Workspace) then
         return
     end
+    local rigModule = rigsFolder:FindFirstChild(model:GetAttribute("GuardianId") or "")
+    if not rigModule then
+        warn("GuardianController: no rig for " .. model.Name)
+        return
+    end
+    local rig = require(rigModule)
+    rigs[model] = rig
     task.spawn(function()
-        local anim = GuardianAnim.new(model)
+        local anim = GuardianAnim.new(model, rig)
         if model:IsDescendantOf(Workspace) then
             anims[model] = anim
         end
@@ -373,6 +384,7 @@ end
 CollectionService:GetInstanceAddedSignal(GameConfig.GuardianTag):Connect(track)
 CollectionService:GetInstanceRemovedSignal(GameConfig.GuardianTag):Connect(function(model)
     anims[model] = nil
+    rigs[model] = nil
 end)
 for _, model in CollectionService:GetTagged(GameConfig.GuardianTag) do
     track(model)
@@ -383,17 +395,13 @@ local function isNear(model, distance)
     return root ~= nil and model.PrimaryPart ~= nil and (model.PrimaryPart.Position - root.Position).Magnitude <= distance
 end
 
-local function displayName(model)
-    local config = GameConfig.Guardians[model:GetAttribute("GuardianId")]
-    return config and config.DisplayName or model.Name
-end
+local EGG_ACTIONS = { Steal = true, Drop = true, Recover = true, Secure = true, Return = true }
 
 RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
     if action == "Knock" then
         knock(...)
         return
     end
-    local anim = anims[model]
     if action == "Secured" then
         local eggId = ...
         local egg = GameConfig.Eggs[eggId]
@@ -406,46 +414,45 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
     if not (typeof(model) == "Instance" and model.Parent) then
         return
     end
-    if anim and (action == "Awaken" or action == "Rear" or action == "Slam" or action == "Roar" or action == "Pounce" or action == "Land") then
-        anim:play(action, ...)
+    local rig = rigs[model]
+    local config = GameConfig.Guardians[model:GetAttribute("GuardianId")]
+    local style = rig and rig.Style
+    -- its own moves: the rig animates them and shows them
+    if not EGG_ACTIONS[action] then
+        local anim = anims[model]
+        if anim then
+            anim:play(action, ...)
+        end
+        local fx = rig and rig.Fx[action]
+        if fx then
+            fx(model, ...)
+        end
     end
     if action == "Awaken" then
-        GuardianFx.awaken(model)
         if isNear(model, BAR_DISTANCE) then
-            message:show("The " .. displayName(model) .. " awakens!", Color3.fromRGB(150, 210, 255))
+            message:show("The " .. config.DisplayName .. " awakens!", Color3.fromRGB(150, 210, 255))
         end
-    elseif action == "Rear" then
+    elseif action == "Weaken" then
         if isNear(model, BAR_DISTANCE) then
-            message:show("The " .. displayName(model) .. " falters: take the egg from under its paw!", Color3.fromRGB(255, 214, 110))
+            message:show("The " .. config.DisplayName .. " " .. config.WeakenedHint, Color3.fromRGB(255, 214, 110))
         end
-    elseif action == "Slam" then
-        GuardianFx.slam(model, (...))
-    elseif action == "Roar" then
-        GuardianFx.roar(model, ...)
-    elseif action == "Pounce" then
-        local windUp, air, _, to = ...
-        GuardianFx.pounce(model, windUp, air, to)
-    elseif action == "Land" then
-        GuardianFx.land((...))
-    elseif action == "Steal" then
-        GuardianFx.steal((...))
+    elseif action == "Steal" and style then
+        GuardianFx.steal((...), style)
         if player:GetAttribute("CarryingGuardian") == model:GetAttribute("GuardianId") then
-            local config = GameConfig.Guardians[model:GetAttribute("GuardianId")]
             message:show("You took the egg! Reach the " .. config.SafeZone.Name .. "!", Color3.fromRGB(255, 214, 110))
         end
-    elseif action == "Drop" then
-        GuardianFx.drop((...))
+    elseif action == "Drop" and style then
+        GuardianFx.drop((...), style)
         local egg = eggsFolder:FindFirstChild(model.Name .. "_Egg")
         if egg and egg:GetAttribute("OwnerUserId") == player.UserId then
-            local config = GameConfig.Guardians[model:GetAttribute("GuardianId")]
             message:show("You dropped the egg! Recover it within " .. config.DropTime .. "s.", Color3.new(1, 1, 1))
         end
     elseif action == "Secure" then
         GuardianFx.secure((...))
-    elseif action == "Return" then
+    elseif action == "Return" and style then
         local egg = eggsFolder:FindFirstChild(model.Name .. "_Egg")
         if egg then
-            GuardianFx.steal(egg:GetPivot().Position)
+            GuardianFx.steal(egg:GetPivot().Position, style)
         end
     end
 end)

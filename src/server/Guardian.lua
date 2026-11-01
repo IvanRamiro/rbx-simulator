@@ -1,14 +1,16 @@
 -- One guardian encounter (design doc section 7, GameConfig.Guardians): the guardian in the world,
--- its health and states, its attacks, and the egg it guards, from under its paw to a thief's egg
+-- its health and states, its attacks, and the egg it guards, from its keeping to a thief's egg
 -- inventory. GuardianService makes one per configured guardian and steps it every frame.
 --
 -- States (the model's "State" attribute; clients animate it and show it on the health bar):
 --   Dormant    a statue over its egg. A player within EngageRadius, or a strike, wakes it.
---   Guardian   awake at its lair, the egg pinned under its right paw: it slams the left paw at
---              players in front and roars a shockwave at players round it.
---   Weakened   below WeakenedAt of its health: it falters, the paw lifts and the egg can be taken.
+--   Guardian   awake at its lair over its egg (the lion pins it under its paw, the mantis holds it
+--              in its folded forearms): it strikes at players in front and sends a shockwave out at
+--              players round it.
+--   Weakened   below WeakenedAt of its health: it falters and the egg can be taken (the lion lifts
+--              its paw; the mantis sets the egg down before it, Egg.Offered).
 --              Its attacks come slower. Its health never falls below 1: it is not killed.
---   Enraged    the egg is taken: it chases the thief, pouncing and roaring, and takes no damage.
+--   Enraged    the egg is taken: it chases the thief, pouncing and striking, and takes no damage.
 --   Returning  walking back to its lair: the egg came back to it, or was secured.
 --   Resting    the egg was secured: it sleeps without one until RespawnTime has passed.
 -- With nobody near for CalmAfter seconds, a Guardian or Weakened one heals and sleeps.
@@ -22,8 +24,9 @@
 -- client, which owns its character), and a knocked-back thief drops the egg.
 --
 -- Clients get every action as GuardianEvent:FireAllClients(model, action, ...):
---   "Awaken" | "Rear" | "Slam" windUp | "Roar" windUp radius waveSpeed | "Pounce" windUp air from to
---   "Land" position | "Steal" position | "Drop" position | "Recover" | "Secure" position | "Return"
+--   "Awaken" | "Weaken" | <a Sweep's name> windUp | <a Wave's name> windUp radius waveSpeed arc |
+--   <a Pounce's name> windUp air from to | "Land" position | "Steal" position | "Drop" position |
+--   "Recover" | "Secure" position | "Return"
 -- and the thief alone "Secured" eggId | "BagFull".
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -117,6 +120,7 @@ function Guardian.new(id, config, source, folder)
     local ground = groundAt(at, at.Y + 10)
     at = Vector3.new(at.X, if ground then ground.Y else at.Y, at.Z)
     self.lair = CFrame.lookAt(at, at + flat(island.Centre + config.Facing - at))
+    self.facing = self.lair.Rotation -- where it faces at its lair (a guardian that TurnsToFace turns it)
     local zone = config.SafeZone
     self.safeCentre = island.Centre + zone.Centre
 
@@ -164,6 +168,13 @@ function Guardian.new(id, config, source, folder)
     model.Parent = folder
     root:SetNetworkOwner(nil)
 
+    -- how far its sweeps and waves reach (who an enraged guardian attacks)
+    self.reach = 0
+    for _, spec in config.Attacks do
+        if spec.Kind ~= "Pounce" then
+            self.reach = math.max(self.reach, spec.Range or spec.Radius or 0)
+        end
+    end
     self.health = config.MaxHealth
     self.cooldowns = {}
     self.busyUntil = 0
@@ -208,8 +219,8 @@ end
 
 function Guardian:weaken()
     self:setState("Weakened")
-    self.busyUntil = os.clock() + 1.8 -- it rears and falters
-    self:broadcast("Rear")
+    self.busyUntil = os.clock() + 1.8 -- it falters
+    self:broadcast("Weaken")
     if self.egg.state == "Guarded" then
         self:setEggState("Available")
     end
@@ -243,10 +254,18 @@ end
 
 function Guardian:setEggState(state)
     local egg = self.egg
+    if state ~= "Guarded" then
+        self:releaseEgg()
+    end
     egg.state = state
     self.model:SetAttribute("Egg", state)
     if egg.model then
         egg.model:SetAttribute("State", state) -- clients find a dropped egg (and its owner) by these
+    end
+    -- a guardian that holds its egg out of reach sets it down when it falters (Egg.Offered)
+    local spot = self.config.Egg
+    if egg.model and spot.Offered and (state == "Available" or state == "Guarded") then
+        egg.model:PivotTo(self:home() * CFrame.new(if state == "Available" then spot.Offered else spot.Under))
     end
     if egg.prompt then
         egg.prompt.Enabled = state == "Available" or state == "Dropped"
@@ -267,6 +286,7 @@ function Guardian:makeEgg(eggId, height)
     if egg.model then
         egg.model:Destroy()
     end
+    egg.held = nil
     local model = EggModel.build(eggId, height)
     model.Name = self.id .. "_Egg"
     model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
@@ -291,7 +311,7 @@ function Guardian:guardEgg()
     local config = self.config
     local model = self:makeEgg(config.Eggs[1], config.Egg.Height)
     anchorEgg(model, true)
-    model:PivotTo(self.lair * CFrame.new(config.Egg.Under))
+    model:PivotTo(self:home() * CFrame.new(config.Egg.Under))
     model.Parent = eggsFolder
     self.egg.owner = nil
     self:setEggState(if self.state == "Weakened" then "Available" else "Guarded")
@@ -346,8 +366,11 @@ function Guardian:onEggPrompt(player)
         self:carry(player)
         self.egg.model.Parent = eggsFolder
         self:setState("Enraged")
-        self.busyUntil = os.clock() + 1.2 -- it sees the theft and roars
-        self.cooldowns.Pounce = os.clock() + 1.5
+        -- it sees the theft and roars; its first move after is a leap at the thief
+        self.busyUntil = os.clock() + 1.2
+        for name in self:attacksOf("Pounce") do
+            self.cooldowns[name] = self.busyUntil
+        end
         self.lastEngaged = os.clock()
         self:broadcast("Steal", position)
     elseif egg.state == "Dropped" and egg.owner == player then
@@ -524,12 +547,17 @@ function Guardian:inFront(position, arc)
     return to.Magnitude < 1 or to.Unit:Dot(flat(self.root.CFrame.LookVector).Unit) >= math.cos(math.rad(arc))
 end
 
--- The left paw slams the ground in front.
-function Guardian:slam()
-    local spec = self.config.Attacks.Slam
-    self:startCooldown("Slam")
+-- Its attacks, by kind (each guardian names its own in GameConfig: the lion's Slam, Roar and
+-- Pounce; the mantis's Scythe, BladeWave and Leap). Clients get the attack's name and the kind's
+-- arguments.
+
+-- A Sweep: a blow in front (the lion's paw, the mantis's scythes) knocks back whoever is within
+-- Range and Arc of its facing.
+function Guardian:sweep(name)
+    local spec = self.config.Attacks[name]
+    self:startCooldown(name)
     self.busyUntil = os.clock() + spec.WindUp + 0.6
-    self:broadcast("Slam", spec.WindUp)
+    self:broadcast(name, spec.WindUp)
     task.delay(spec.WindUp, function()
         if not self.model.Parent then
             return
@@ -542,18 +570,22 @@ function Guardian:slam()
     end)
 end
 
--- A roar, and a shockwave rolling out along the ground: whoever is on the ground when it passes
--- is knocked back; a jump clears it.
-function Guardian:roar()
-    local spec = self.config.Attacks.Roar
-    self:startCooldown("Roar")
+-- A Wave: a shockwave rolling out along the ground to Radius, all round (Arc 180 or more: the
+-- lion's roar) or in a cone of Arc degrees either side of its facing (the mantis's blade wave).
+-- Whoever is on the ground when it passes is knocked back; a jump clears it.
+function Guardian:wave(name)
+    local spec = self.config.Attacks[name]
+    local arc = spec.Arc or 180
+    self:startCooldown(name)
     self.busyUntil = os.clock() + spec.WindUp + 0.5
-    self:broadcast("Roar", spec.WindUp, spec.Radius, spec.WaveSpeed)
+    self:broadcast(name, spec.WindUp, spec.Radius, spec.WaveSpeed, arc)
     task.delay(spec.WindUp, function()
         if not self.model.Parent then
             return
         end
         local origin = self.root.Position
+        local facing = flat(self.root.CFrame.LookVector).Unit
+        local cosArc = math.cos(math.rad(arc))
         local start = os.clock()
         local passed = {}
         while self.model.Parent do
@@ -561,10 +593,12 @@ function Guardian:roar()
             for _, player in Players:GetPlayers() do
                 local root, humanoid = rootOf(player)
                 if root and not passed[player] then
-                    local distance = flat(root.Position - origin).Magnitude
+                    local offset = flat(root.Position - origin)
+                    local distance = offset.Magnitude
                     if distance <= radius then
                         passed[player] = true
-                        if distance <= spec.Radius and math.abs(root.Position.Y - origin.Y) < 10 and isGrounded(root, humanoid) then
+                        local within = arc >= 180 or distance < 1 or offset.Unit:Dot(facing) >= cosArc
+                        if within and distance <= spec.Radius and math.abs(root.Position.Y - origin.Y) < 10 and isGrounded(root, humanoid) then
                             self:knock(player, origin, spec.Knockback)
                         end
                     end
@@ -578,10 +612,11 @@ function Guardian:roar()
     end)
 end
 
--- A leap onto where the thief is heading (it commits at the wind-up); it lands with a shockwave.
-function Guardian:pounce(targetRoot)
-    local spec = self.config.Attacks.Pounce
-    self:startCooldown("Pounce")
+-- A Pounce: a leap onto where the thief is heading (it commits at the wind-up); it lands with a
+-- shockwave.
+function Guardian:pounce(name, targetRoot)
+    local spec = self.config.Attacks[name]
+    self:startCooldown(name)
     local from = self.root.Position
     local lead = targetRoot.Position + flat(targetRoot.AssemblyLinearVelocity) * (spec.WindUp + spec.Air) * POUNCE_LEAD
     local reach = flat(lead - from)
@@ -602,17 +637,17 @@ function Guardian:pounce(targetRoot)
     if not ground then
         return
     end
-    local launch = (self.root.CFrame * self.align.Attachment0.CFrame).Position
+    local launch = self:origin().Position
     self.busyUntil = os.clock() + spec.WindUp + spec.Air + 0.5
-    self.leap = { from = launch, to = ground, start = os.clock() + spec.WindUp, air = spec.Air }
+    self.leap = { name = name, from = launch, to = ground, start = os.clock() + spec.WindUp, air = spec.Air, height = spec.Height or POUNCE_HEIGHT }
     if flat(ground - launch).Magnitude > 0.5 then
         self.turn.CFrame = CFrame.lookAt(Vector3.zero, flat(ground - launch)).Rotation
     end
-    self:broadcast("Pounce", spec.WindUp, spec.Air, launch, ground)
+    self:broadcast(name, spec.WindUp, spec.Air, launch, ground)
 end
 
 function Guardian:land()
-    local spec = self.config.Attacks.Pounce
+    local spec = self.config.Attacks[self.leap.name]
     local at = self.leap.to
     self.leap = nil
     self.align.Position = at
@@ -622,11 +657,22 @@ function Guardian:land()
     end
 end
 
+-- Its attacks of one kind, by name.
+function Guardian:attacksOf(kind)
+    local out = {}
+    for name, spec in self.config.Attacks do
+        if spec.Kind == kind then
+            out[name] = spec
+        end
+    end
+    return out
+end
+
 -- Movement --------------------------------------------------------------------------------------
 
 -- Heads for `target` (a world point) at `speed`, stopping `stop` short of it, along the ground.
 function Guardian:moveToward(target, speed, stop, dt)
-    local here = (self.root.CFrame * self.align.Attachment0.CFrame).Position
+    local here = self:origin().Position
     local to = flat(target - here)
     if to.Magnitude > 0.5 then
         self.turn.CFrame = CFrame.lookAt(Vector3.zero, to).Rotation
@@ -656,10 +702,60 @@ function Guardian:moveToward(target, speed, stop, dt)
     return false
 end
 
+-- Where its origin (the ground under it) is now, and where it stands at its lair.
+function Guardian:origin()
+    return self.root.CFrame * self.align.Attachment0.CFrame
+end
+
+function Guardian:home()
+    return CFrame.new(self.lair.Position) * self.facing
+end
+
 function Guardian:holdAtLair()
     self.align.MaxVelocity = self.config.WalkSpeed
     self.align.Position = self.lair.Position
-    self.turn.CFrame = self.lair.Rotation
+    self.turn.CFrame = self.facing
+end
+
+-- A guardian that TurnsToFace (the mantis) turns at its lair toward the player it watches, the egg
+-- in its arms turning with it.
+function Guardian:faceTarget()
+    local id = self.model:GetAttribute("TargetId")
+    local target = id and id ~= 0 and Players:GetPlayerByUserId(id)
+    local root = target and rootOf(target)
+    local to = root and flat(root.Position - self.lair.Position)
+    if to and to.Magnitude > 1 then
+        self.facing = CFrame.lookAt(Vector3.zero, to).Rotation
+    end
+    self:holdEgg()
+end
+
+-- The egg in its arms rides its body (welded to its root, moving by the same smooth physics) while it
+-- stands at its lair; it is let go when the egg is set down, taken or replaced.
+function Guardian:holdEgg()
+    local egg = self.egg
+    if egg.held or egg.state ~= "Guarded" or not egg.model then
+        return
+    end
+    anchorEgg(egg.model, false)
+    egg.model:PivotTo(self:origin() * CFrame.new(self.config.Egg.Under))
+    local weld = Instance.new("Weld")
+    weld.Name = "HeldWeld"
+    weld.Part0, weld.Part1 = self.root, egg.model.PrimaryPart
+    weld.C0 = self.root.CFrame:ToObjectSpace(egg.model.PrimaryPart.CFrame)
+    weld.Parent = egg.model.PrimaryPart
+    egg.held = weld
+end
+
+function Guardian:releaseEgg()
+    local egg = self.egg
+    if egg.held then
+        egg.held:Destroy()
+        egg.held = nil
+        if egg.model then
+            anchorEgg(egg.model, true)
+        end
+    end
 end
 
 -- Each frame ------------------------------------------------------------------------------------
@@ -686,7 +782,7 @@ function Guardian:step(dt)
         elseif t >= 0 then
             self.align.MaxVelocity = 400
             self.align.Responsiveness = 200
-            self.align.Position = leap.from:Lerp(leap.to, t) + Vector3.new(0, POUNCE_HEIGHT * 4 * t * (1 - t), 0)
+            self.align.Position = leap.from:Lerp(leap.to, t) + Vector3.new(0, leap.height * 4 * t * (1 - t), 0)
         end
         return
     end
@@ -699,10 +795,10 @@ function Guardian:step(dt)
             if now >= self.busyUntil then
                 self:moveToward(root.Position, config.ChaseSpeed, CHASE_STOP, dt)
             else
-                self.align.Position = (self.root.CFrame * self.align.Attachment0.CFrame).Position
+                self.align.Position = self:origin().Position
             end
         else
-            self.align.Position = (self.root.CFrame * self.align.Attachment0.CFrame).Position
+            self.align.Position = self:origin().Position
         end
     elseif self.state == "Returning" then
         if self:moveToward(self.lair.Position, config.WalkSpeed, 1.5, dt) then
@@ -722,6 +818,9 @@ function Guardian:step(dt)
             end
         end
     else
+        if self.state == "Guardian" and config.TurnsToFace then
+            self:faceTarget()
+        end
         self:holdAtLair()
     end
 
@@ -745,7 +844,7 @@ function Guardian:decide(now)
     end
 
     -- who holds its attention: players near its lair (or, enraged, near itself)
-    local near = self:playersNear(if state == "Enraged" then config.Attacks.Roar.Radius else config.LeashRadius)
+    local near = self:playersNear(if state == "Enraged" then self.reach else config.LeashRadius)
     if state == "Dormant" then
         if near[1] and near[1].distance <= config.EngageRadius then
             self:awaken()
@@ -769,26 +868,36 @@ function Guardian:decide(now)
         return
     end
 
-    local attacks = config.Attacks
     if state == "Enraged" then
         local thief = self.egg.owner
         local root = thief and rootOf(thief)
         if root and self.egg.state == "Carried" then
             local distance = flat(root.Position - self.root.Position).Magnitude
-            if self:ready("Pounce") and distance >= attacks.Pounce.MinRange and distance <= attacks.Pounce.MaxRange then
-                self:pounce(root)
+            for name, spec in self:attacksOf("Pounce") do
+                if self:ready(name) and distance >= spec.MinRange and distance <= spec.MaxRange then
+                    self:pounce(name, root)
+                    return
+                end
+            end
+        end
+    end
+    for name, spec in self:attacksOf("Sweep") do
+        for _, entry in near do
+            if entry.distance <= spec.Range and self:ready(name) and self:inFront(entry.root.Position, spec.Arc) then
+                self:sweep(name)
                 return
             end
         end
     end
-    for _, entry in near do
-        if entry.distance <= attacks.Slam.Range and self:ready("Slam") and self:inFront(entry.root.Position, attacks.Slam.Arc) then
-            self:slam()
-            return
+    for name, spec in self:attacksOf("Wave") do
+        local reach = if (spec.Arc or 180) >= 180 then spec.Radius * 0.6 else spec.Radius * 0.8
+        for _, entry in near do
+            local inArc = (spec.Arc or 180) >= 180 or self:inFront(entry.root.Position, spec.Arc)
+            if self:ready(name) and entry.distance <= reach and inArc then
+                self:wave(name)
+                return
+            end
         end
-    end
-    if self:ready("Roar") and near[1].distance <= attacks.Roar.Radius * 0.6 then
-        self:roar()
     end
 end
 

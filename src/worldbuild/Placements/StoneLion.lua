@@ -45,10 +45,11 @@ return {
         BackRightUpper = { Parent = "Body", Position = Vector3.new(4.3, 14, 6.4) },
         BackRightLower = { Parent = "BackRightUpper", Position = Vector3.new(4.5, 4.6, 9.6) },
     },
-    -- every map, uploaded by us. The granite's roughness is one flat 0.82 (a 4x4 map shared by the
-    -- stone pieces); only the Body, with its gold collar, has its own roughness and metalness.
+    -- every map, uploaded by us. The granite's roughness is one flat 0.82 (a 64x64 map shared by the
+    -- stone pieces, its pixels read back in Studio); only the Body, with its gold collar, has its own
+    -- roughness and metalness.
     Maps = (function()
-        local granite = "rbxassetid://103506490377656"
+        local granite = "rbxassetid://136380863427532"
         local ids = {
             Body = { "rbxassetid://73571242740389", "rbxassetid://137823804730923", "rbxassetid://138509106462198", "rbxassetid://76603684915314" },
             BodyCurls = { "rbxassetid://102770924973008", "rbxassetid://118895832628062" },

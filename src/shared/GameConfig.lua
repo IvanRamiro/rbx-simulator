@@ -54,7 +54,11 @@ local GameConfig = {
     -- Guardians (src/server/GuardianService; design doc section 7). Each guards its island's eggs:
     -- while it stands in the world, that island's stands hatch only eggs taken from it (a thief
     -- earns the best of Eggs their rank opens, secured in the SafeZone). Positions are island-local
-    -- studs; "lion-local" ones are in the guardian's own frame (front toward -Z).
+    -- studs; Egg positions are in the guardian's own frame (front toward -Z): Under where it keeps
+    -- the egg, Offered where it sets it down when weakened (if it holds it out of reach).
+    -- Attacks, by Kind: a Sweep strikes in front (Range, Arc); a Wave rolls out along the ground to
+    -- Radius (all round, or within Arc of its facing) and a jump clears it; a Pounce leaps onto the
+    -- thief (enraged only). WeakenedHint is told to players near when it falters.
     GuardianTag = "Guardian",
     Guardians = {
         StoneLion = {
@@ -64,7 +68,7 @@ local GameConfig = {
             Facing = Vector3.new(0, 0.4, 0), -- it lies in wait facing the spawn plaza
             Eggs = { "BeginnerQiEgg", "SpiritBreezeEgg", "ElementalCoreEgg" },
             SafeZone = { Centre = Vector3.new(-32, 0, 58), Radius = 15, Name = "Egg Garden" },
-            MaxHealth = 2400,
+            MaxHealth = 1200,      -- a beginner's Qi Palm weakens it alone in ~72 strikes (about half a minute)
             WeakenedAt = 0.4,      -- share of health below which it falters and the egg can be taken
             HitRadius = 14,        -- its body round the chest, for strikes (Combat)
             EngageRadius = 24,     -- a player this close wakes it
@@ -76,15 +80,49 @@ local GameConfig = {
             ChaseSpeed = 21,       -- below a beginner's run (22): dashes and its pounces decide it
             TurnSpeed = 140,       -- degrees per second
             Egg = { Height = 4, Under = Vector3.new(4.55, 1.9, -15), CarriedHeight = 2.6 }, -- under the raised right paw
+            WeakenedHint = "falters: take the egg from under its paw!",
             Stagger = 1.1,         -- seconds a knocked-back player is off their feet
             WeakenedSlowdown = 1.7, -- attack cooldowns stretch by this while weakened
             Attacks = {
                 -- the left paw slams the ground in front (the right one pins the egg)
-                Slam = { Range = 24, Arc = 55, WindUp = 0.75, Cooldown = 2.6, Knockback = 45 },
+                Slam = { Kind = "Sweep", Range = 24, Arc = 55, WindUp = 0.75, Cooldown = 2.6, Knockback = 45 },
                 -- a roar sends a shockwave rolling out along the ground: jump it
-                Roar = { Radius = 44, WaveSpeed = 34, WindUp = 1.1, Cooldown = 8, Knockback = 40 },
+                Roar = { Kind = "Wave", Radius = 44, WaveSpeed = 34, WindUp = 1.1, Cooldown = 8, Knockback = 40 },
                 -- enraged only: a leap onto where the thief is going
-                Pounce = { MinRange = 16, MaxRange = 46, WindUp = 0.6, Air = 0.95, Cooldown = 4.5, Radius = 12, Knockback = 55 },
+                Pounce = { Kind = "Pounce", MinRange = 16, MaxRange = 46, WindUp = 0.6, Air = 0.95, Height = 9, Cooldown = 4.5, Radius = 12, Knockback = 55 },
+            },
+        },
+        MantisSage = {
+            DisplayName = "Bamboo Mantis Sage",
+            Island = "JadeGrove",
+            Lair = Vector3.new(50, 2.4, 26),    -- the only open, level ground far from the glade
+            Facing = Vector3.new(0, 2.4, 6),
+            Eggs = { "JadeSpiritEgg", "BloomwoodEgg", "AncientGroveEgg" },
+            SafeZone = { Centre = Vector3.new(-30, 4, 41), Radius = 15, Name = "Bloom Glade" },
+            MaxHealth = 2000,      -- a Qi Gatherer's palm (11 a strike) weakens it alone in ~110 strikes
+            WeakenedAt = 0.4,
+            HitRadius = 13,
+            EngageRadius = 26,
+            LeashRadius = 60,
+            CalmAfter = 12,
+            RespawnTime = 30,
+            DropTime = 30,
+            WalkSpeed = 13,
+            ChaseSpeed = 23,       -- below a Qi Gatherer's run (24); its leaps are long and high
+            TurnSpeed = 160,
+            TurnsToFace = true,    -- awake at its lair it turns to face whoever it watches
+            -- held in its folded forearms, then set down on the ground before it
+            Egg = { Height = 4, Under = Vector3.new(0, 20.2, -12.3), Offered = Vector3.new(0, 1.9, -16), CarriedHeight = 2.6 },
+            WeakenedHint = "lowers its blades and sets the egg down: take it!",
+            Stagger = 1.1,
+            WeakenedSlowdown = 1.7,
+            Attacks = {
+                -- both scythes cut across the front
+                Scythe = { Kind = "Sweep", Range = 26, Arc = 65, WindUp = 0.6, Cooldown = 2.2, Knockback = 45 },
+                -- a wave of Qi blades skims out along the ground in a cone before it: jump it
+                BladeWave = { Kind = "Wave", Arc = 50, Radius = 46, WaveSpeed = 40, WindUp = 0.9, Cooldown = 6.5, Knockback = 40 },
+                -- enraged only: a long, high leap onto the thief, as from canopy to canopy
+                Leap = { Kind = "Pounce", MinRange = 16, MaxRange = 72, WindUp = 0.5, Air = 1.1, Height = 16, Cooldown = 4.2, Radius = 12, Knockback = 55 },
             },
         },
     },

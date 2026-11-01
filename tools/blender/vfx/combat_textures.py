@@ -7,6 +7,8 @@ realm.
   Qi at its heart.
 - QiSlash: a crescent of sword light, sharp along its outer edge and fading in a soft wake
   behind it, thinning to points at both ends.
+- BambooLeaf: a single bamboo leaf, long and lance-shaped, tip up, a fine midrib and faint parallel
+  veins: the leaves the Bamboo Mantis Sage sheds and throws (tinted per effect).
 
 Run (headless, so the open Blender scene is untouched):
     Blender -b --python-expr "import sys; sys.path.insert(0, '<repo>/tools/blender/vfx'); import combat_textures; combat_textures.build_all()"
@@ -77,8 +79,21 @@ def qi_slash(size=512):
     save("QiSlash", alpha)
 
 
+def bamboo_leaf(size=256):
+    x, y = Q.grid(size)
+    t = (y + 1) / 2                                           # 0 at the stem, 1 at the tip
+    half = 0.21 * np.sin(np.pi * np.clip(t, 0, 1) ** 0.6) ** 0.8 * Q.smoothstep(0.0, 0.14, t) + 0.01   # a short stalk, widest near it, a long tapering tip
+    d = np.abs(x + 0.04 * np.sin(t * 3.0)) - half             # a slight sway along it
+    inside = Q.smoothstep(0.012, -0.012, d) * (t > 0.02) * (t < 0.995)
+    midrib = Q.line(np.abs(x + 0.04 * np.sin(t * 3.0)), 0.01, 0.012)
+    veins = 0.5 + 0.5 * np.cos((x + 0.04 * np.sin(t * 3.0)) / np.maximum(half, 0.02) * np.pi * 3.5)
+    alpha = inside * (0.86 + 0.1 * veins) * (1 - 0.25 * midrib)
+    save("BambooLeaf", alpha)
+
+
 def build_all():
     os.makedirs(OUT, exist_ok=True)
     qi_palm()
     qi_slash()
+    bamboo_leaf()
     return sorted(os.listdir(OUT))
