@@ -23,14 +23,23 @@ local WorldConfig = {
         VacantSubtitle = "A spawn slot",
     },
 
+    -- the Ascension Stele (FloatingIslands.Yggdrasil.Leaderboard): the most Qi across every server
+    Leaderboard = {
+        FolderName = "Leaderboard",
+        StoreName = "QiLeaderboard",  -- an OrderedDataStore: UserId -> whole Qi
+        RefreshEvery = 60,           -- seconds between reads of the top entries
+        WriteEvery = 120,            -- seconds between writes of a player's Qi (and once as they leave)
+    },
+
     -- touching a part with this tag (Ember Peak's lava) returns a player to their island's checkpoint
     HazardTag = "LavaHazard",
 
     Safety = {
         CheckInterval = 0.25,
-        -- studs below a player's last island before they return to its checkpoint
-        -- (deep enough for the Root of the Island climb, about 90 below the surface)
-        FallDepth = 160,
+        -- studs below a player's last island before they return to its checkpoint: below the Root of
+        -- the Island's cradle (86.5 under Yggdrasil's ground, the deepest place players stand) and
+        -- above the PDS kit under Yggdrasil (its top 130.5 under), so a fall never strands anyone on it
+        FallDepth = 110,
     },
 
     Lighting = {

@@ -122,6 +122,119 @@ def plot_board(coll, mat, bands):
 KIT = [spawn_dais, spawn_dais_glow, plot_stake, plot_board]
 
 
+# ---------- the Ascension Stele (the leaderboard) ----------
+# An honour board like a memorial archway's: a dark slate board in a bronze frame on a stepped
+# plinth, between two lacquered pillars under a tiled roof whose corners sweep up, a pearl of Qi
+# on its ridge. Built on the Leaderboard plot: origin at the plot's centre on the ground, the board
+# facing +Z (the Qi Compass). The board's face (STELE_PANEL) and the title plaque (STELE_TITLE)
+# carry the names in the game.
+STELE_PANEL = ((0.0, 8.6), (15.6, 9.6))     # the board's face: centre (x, y) and size, at z = STELE_FRONT
+STELE_TITLE = ((0.0, 15.7), (6.2, 1.1))
+STELE_FRONT = 0.2
+BOARD_Z = -0.3                               # the board's and the pillars' centre line
+PILLAR_X = 10.4
+EAVE, RIDGE, ROOF_HALF, ROOF_DEPTH = 18.4, 22.4, 14.6, 4.6
+
+
+def _roof(mb, bands):
+    """Two tiled slopes from the ridge to the eaves, each corner sweeping up, with a lacquered
+    soffit underneath and a thin edge all round."""
+    cols, rows = 24, 6
+
+    def point(i, j, side, drop=0.0):
+        x = -ROOF_HALF + 2 * ROOF_HALF * i / cols
+        t = j / rows
+        lift = 1.5 * (abs(x) / ROOF_HALF) ** 4 * t ** 1.5
+        y = RIDGE - (RIDGE - EAVE) * t ** 0.8 + lift - drop
+        return (x, y, BOARD_Z + side * ROOF_DEPTH * t)
+    for side in (1, -1):
+        for i in range(cols):
+            for j in range(rows):
+                top = [point(i, j, side), point(i + 1, j, side), point(i + 1, j + 1, side), point(i, j + 1, side)]
+                # tile channels running down the slope, lighter toward the ridge
+                shade = 0.55 + 0.14 * (i % 2) + 0.2 * (1 - j / rows)
+                P.oriented(mb, top, (0, 1, side * 0.6), bands[P.DARK], 0.5, [shade] * 4)
+                under = [point(i, j, side, 0.4), point(i + 1, j, side, 0.4), point(i + 1, j + 1, side, 0.4), point(i, j + 1, side, 0.4)]
+                P.oriented(mb, under, (0, -1, 0), bands[P.LACQUER], 0.5, [0.45] * 4)
+        for i in range(cols):   # the eave's edge
+            a, b = point(i, rows, side), point(i + 1, rows, side)
+            P.oriented(mb, [a, b, point(i + 1, rows, side, 0.4), point(i, rows, side, 0.4)], (0, 0, side), bands[P.LACQUER], 0.5, [0.7] * 4)
+        for i, sx in ((0, -1), (cols, 1)):   # the gable ends
+            for j in range(rows):
+                P.oriented(mb, [point(i, j, side), point(i, j + 1, side), point(i, j + 1, side, 0.4), point(i, j, side, 0.4)],
+                           (sx, 0, 0), bands[P.LACQUER], 0.5, [0.6] * 4)
+    mb.box((0, RIDGE + 0.15, BOARD_Z), (2 * ROOF_HALF - 1.0, 0.4, 0.6), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
+    for sx in (-1, 1):   # the ridge's upturned ends
+        mb.box((sx * (ROOF_HALF - 0.9), RIDGE + 0.7, BOARD_Z), (0.5, 1.1, 0.5), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
+        mb.box((sx * (ROOF_HALF - 0.6), RIDGE + 1.2, BOARD_Z), (0.9, 0.35, 0.5), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
+    # a bronze lotus cup on the ridge holding the pearl of Qi (stele_glow)
+    mb.lathe([(0.55, RIDGE + 1.45, 1.0), (0.8, RIDGE + 1.3, 0.9), (0.32, RIDGE + 0.75, 0.7), (0.45, RIDGE + 0.35, 0.6)], 10,
+             bands[P.BRONZE], centre=(0, 0, BOARD_Z), cap_top=True)
+
+
+def stele(coll, mat, bands):
+    mb = W.MeshBuilder()
+    # the stepped plinth (its front steps lead up to the board)
+    mb.box((0, 0.3, 0), (26, 1.6, 10), bands[P.PALE], u=0.3, top_shade=0.9, side_shade=0.65)
+    mb.box((0, 1.4, 0), (23, 0.6, 8), bands[P.PALE], u=0.5, top_shade=0.95, side_shade=0.7)
+    mb.box((0, 2.0, BOARD_Z), (20, 0.6, 6.4), bands[P.PALE], u=0.7, top_shade=1.0, side_shade=0.75)
+    # the board, its bronze sill and frame, and the face the names are written on
+    (px, py), (pw, ph) = STELE_PANEL
+    mb.box((0, 2.65, BOARD_Z), (17.6, 0.7, 1.4), bands[P.BRONZE], u=0.5, top_shade=0.9, side_shade=0.75)
+    mb.box((0, py, BOARD_Z), (pw + 1.4, ph + 1.6, 2 * (STELE_FRONT - BOARD_Z) - 0.02), bands[P.DARK], u=0.3, top_shade=0.5, side_shade=0.45)
+    mb.box((0, py + ph / 2 + 0.95, BOARD_Z), (pw + 2.2, 0.5, 1.3), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
+    for sx in (-1, 1):
+        mb.box((sx * (pw / 2 + 0.85), py, BOARD_Z), (0.5, ph + 1.6, 1.3), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
+    P.oriented(mb, [(px - pw / 2, py - ph / 2, STELE_FRONT + 0.01), (px + pw / 2, py - ph / 2, STELE_FRONT + 0.01),
+                    (px + pw / 2, py + ph / 2, STELE_FRONT + 0.01), (px - pw / 2, py + ph / 2, STELE_FRONT + 0.01)],
+               (0, 0, 1), bands[P.DARK], 0.5, [0.25] * 4)
+    # the title plaque over the board
+    (tx, ty), (tw, th) = STELE_TITLE
+    mb.box((tx, ty, 0.0), (tw + 0.8, th + 0.6, 0.5), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
+    P.oriented(mb, [(tx - tw / 2, ty - th / 2, 0.26), (tx + tw / 2, ty - th / 2, 0.26), (tx + tw / 2, ty + th / 2, 0.26), (tx - tw / 2, ty + th / 2, 0.26)],
+               (0, 0, 1), bands[P.DARK], 0.5, [0.3] * 4)
+    # the pillars: lacquered octagons on bronze bases, under bronze capitals, and the beam they carry
+    for sx in (-1, 1):
+        c = (sx * PILLAR_X, 0, BOARD_Z)
+        mb.lathe([(0.85, 17.0, 0.9), (0.85, 3.2, 0.6)], 8, bands[P.LACQUER], centre=c, phase=TAU / 16, cap_top=False, u_repeat=1.0)
+        mb.lathe([(1.0, 3.2, 0.9), (1.2, 2.9, 0.8), (1.2, 2.3, 0.6)], 8, bands[P.BRONZE], centre=c, phase=TAU / 16, cap_top=True)
+        mb.lathe([(1.15, 17.4, 1.0), (1.15, 16.9, 0.8), (0.9, 16.7, 0.6)], 8, bands[P.BRONZE], centre=c, phase=TAU / 16, cap_top=True)
+    mb.box((0, 17.9, BOARD_Z), (2 * PILLAR_X + 3.2, 1.0, 1.5), bands[P.LACQUER], u=0.5, top_shade=0.85, side_shade=0.7)
+    _roof(mb, bands)
+    return mb.object("YG_Stele", coll, mat)
+
+
+def stele_glow(coll, mat, bands):
+    """The pearl of Qi on the ridge and a fine line just inside the board's frame."""
+    mb = W.MeshBuilder()
+    r = 0.9
+    profile = [(r * math.sin(math.pi * k / 8), RIDGE + 2.1 + r * math.cos(math.pi * k / 8), 1.0) for k in range(9)]
+    mb.lathe(profile, 12, bands[P.PAPER], centre=(0, 0, BOARD_Z), cap_top=False)
+    (px, py), (pw, ph) = STELE_PANEL
+    z, w = STELE_FRONT + 0.03, 0.14
+    hx, hy = pw / 2 - 0.25, ph / 2 - 0.25
+    for (ax, ay), (bx, by) in (((-hx, -hy), (hx, -hy)), ((hx, -hy), (hx, hy)), ((hx, hy), (-hx, hy)), ((-hx, hy), (-hx, -hy))):
+        nx, ny = (0, w) if ay == by else (w, 0)
+        P.oriented(mb, [(px + ax - nx, py + ay - ny, z), (px + bx - nx, py + by - ny, z), (px + bx + nx, py + by + ny, z), (px + ax + nx, py + ay + ny, z)],
+                   (0, 0, 1), bands[P.PAPER], 0.5, [1.0] * 4)
+    return mb.object("YG_SteleGlow", coll, mat)
+
+
+def build_stele():
+    img, bands = W.atlas_image("StartingIsland_PropAtlas", 512, P.STRIPS)
+    mat = W.textured_material("StartingIsland_PropMat", img)
+    coll = W.collection("YG_Stele", W.collection(Y.NAME))
+    W.clear_collection(coll)
+    return [stele(coll, mat, bands), stele_glow(coll, mat, bands)]
+
+
+def export_stele(objs):
+    """assets/world/Yggdrasil/Yggdrasil_Stele.fbx (WB.storeKit("Yggdrasil", <import>, "YG_SteleAnchor"))."""
+    path = W.REPO + "/assets/world/Yggdrasil/Yggdrasil_Stele.fbx"
+    W.export_batch(objs, path, image=atlas_image(), anchor_name="YG_SteleAnchor")
+    return path
+
+
 def atlas_image():
     import bpy
     return bpy.data.images["StartingIsland_PropAtlas"]
@@ -353,6 +466,11 @@ def write_placements(path=W.REPO + "/src/worldbuild/Placements/Yggdrasil.lua"):
     (bx, by), (bw, bh) = BOARD_PANEL
     lines.append("    PlotBoardPanel = { Centre = Vector3.new(%g, %g, %.2f), Size = Vector2.new(%g, %g) }," % (bx, by, BOARD_FRONT + 0.03, bw, bh))
     lines.append("    PlotCordHeight = %g," % CORD_HEIGHT)
+    (sx, sy), (sw, sh) = STELE_PANEL
+    (tx, ty), (tw, th) = STELE_TITLE
+    lines.append("    -- the Ascension Stele (the leaderboard, on the Leaderboard plot): its board's face and title plaque")
+    lines.append("    SteleBoard = { Centre = Vector3.new(%g, %g, %.2f), Size = Vector2.new(%g, %g) }," % (sx, sy, STELE_FRONT + 0.03, sw, sh))
+    lines.append("    SteleTitle = { Centre = Vector3.new(%g, %g, %.2f), Size = Vector2.new(%g, %g) }," % (tx, ty, 0.29, tw, th))
     lines.append("    Spawn = Vector3.new(%.2f, %.2f, %.2f)," % (Y.COMPASS[0], 0.2 + 1.98, Y.COMPASS[1]))
     lines.append("    SpringCentre = Vector3.new(%.2f, %.2f, %.2f)," % (scx, S.POOL_WATER, scz))
     lines.append("    SpillEnd = Vector3.new(%.2f, %.2f, %.2f)," % (spill[0], P.SPILL[-1][2] + 0.35, spill[1]))

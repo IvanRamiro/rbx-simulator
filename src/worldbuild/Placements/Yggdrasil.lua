@@ -417,6 +417,9 @@ return {
     },
     PlotBoardPanel = { Centre = Vector3.new(0, 4, 0.23), Size = Vector2.new(5.2, 2.9) },
     PlotCordHeight = 4.7,
+    -- the Ascension Stele (the leaderboard, on the Leaderboard plot): its board's face and title plaque
+    SteleBoard = { Centre = Vector3.new(0, 8.6, 0.23), Size = Vector2.new(15.6, 9.6) },
+    SteleTitle = { Centre = Vector3.new(0, 15.7, 0.29), Size = Vector2.new(6.2, 1.1) },
     Spawn = Vector3.new(0.00, 2.18, 132.00),
     SpringCentre = Vector3.new(203.41, 5.60, 82.81),
     SpillEnd = Vector3.new(227.84, 3.40, 92.02),

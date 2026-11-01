@@ -10,7 +10,8 @@
 --   WB.storeKit(island, <each kit/props import>, <anchor>)
 --   -- each import uploads its own atlas copy: point all pieces at one (WB.shareTexture or TextureID)
 --   WB.placeKit(island); WB.buildEggStands(island); WB.buildRelics(island)
---   Yggdrasil (the hub): WB.buildWaystones, WB.buildSpawn, WB.buildSpawnSlots, WB.buildPlots, WB.buildQiSpring
+--   Yggdrasil (the hub): WB.buildWaystones, WB.buildSpawn, WB.buildSpawnSlots, WB.buildPlots, WB.buildLeaderboard,
+--   WB.buildQiSpring
 --   every other island: WB.buildCheckpoint(island)
 --
 -- Eggs (assets/eggs/<EggId>.fbx): WB.storeEgg(<import>, eggId), then WB.buildEggStands(island)
@@ -272,7 +273,9 @@ WorldBuilder.Collision = {
     { Prefix = "OA_FallenDrums", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "OA_VoidCrystals", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "OA_SlateRock", Fidelity = Enum.CollisionFidelity.Hull },
-    -- Yggdrasil: the roots arch over paths and carry the climb down, so they keep their shape
+    -- Yggdrasil: the roots arch over paths and carry the climb down, so they keep their shape;
+    -- the stele's roof would close a hull over the space under it
+    { Prefix = "YG_Stele", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_MoundRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_GripRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_PathRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
@@ -358,6 +361,7 @@ WorldBuilder.Appearance = {
     YG_TrunkVeins = table.clone(GLOW),
     YG_SeedLanterns = table.clone(GLOW),
     YG_SpawnDaisGlow = table.clone(GLOW),
+    YG_SteleGlow = table.clone(GLOW),
 }
 WorldBuilder.Appearance.SI_QiCompassGlow.Color = Color3.fromRGB(40, 210, 235)
 WorldBuilder.Appearance.SI_LanternLight.Color = Color3.fromRGB(255, 150, 60)
@@ -1042,19 +1046,28 @@ WorldBuilder.BridgeKitMaps = {
     Ember = { Roughness = "rbxassetid://77433933199242", Metalness = "rbxassetid://87497595865816" },
     Moon = { Roughness = "rbxassetid://136583263564323", Metalness = "rbxassetid://134485465354528" },
     Origin = { Roughness = "rbxassetid://75494153346029", Metalness = "rbxassetid://80885266655602" },
+    -- the extra kits (<Theme>BridgeExtra.fbx: landings, their posts, Moon's level deck), baked apart
+    JadeExtra = { Roughness = "rbxassetid://74872137718473", Metalness = "rbxassetid://87497595865816" },
+    EmberExtra = { Roughness = "rbxassetid://72086406723859", Metalness = "rbxassetid://87497595865816" },
+    MoonExtra = { Roughness = "rbxassetid://139482179053472", Metalness = "rbxassetid://106884015600617" },
+    OriginExtra = { Roughness = "rbxassetid://138184996228726", Metalness = "rbxassetid://131826298278154" },
 }
 
-function WorldBuilder.storeBridgeKit(model, theme)
+-- With `extra`, the import is the theme's extra kit: its pieces join the stored kit (replacing any
+-- of the same name) instead of replacing it.
+function WorldBuilder.storeBridgeKit(model, theme, extra)
     local root = ServerStorage:FindFirstChild("BridgeKits") or Instance.new("Folder")
     root.Name = "BridgeKits"
     root.Parent = ServerStorage
-    local old = root:FindFirstChild(theme)
-    if old then
-        old:Destroy()
+    local kit = root:FindFirstChild(theme)
+    if kit and not extra then
+        kit:Destroy()
+        kit = nil
     end
-    local kit = Instance.new("Folder")
+    assert(kit or not extra, "store the " .. theme .. " kit before its extra kit")
+    kit = kit or Instance.new("Folder")
     kit.Name = theme
-    local maps = WorldBuilder.BridgeKitMaps[theme]
+    local maps = WorldBuilder.BridgeKitMaps[if extra then theme .. "Extra" else theme]
     for _, m in model:GetDescendants() do
         if m:IsA("MeshPart") then
             local hex = m.Name:match("_Glow_(%x%x%x%x%x%x)$")
@@ -1070,6 +1083,10 @@ function WorldBuilder.storeBridgeKit(model, theme)
             end
             m.Anchored = true
             m.CanCollide, m.CanQuery, m.CanTouch = false, false, false -- the blockout under it is the collision
+            local old = kit:FindFirstChild(m.Name)
+            if old then
+                old:Destroy()
+            end
             m.Parent = kit
         end
     end
@@ -1136,6 +1153,23 @@ local function dressBridge(model, theme, width, landingRadius)
     for _, d in decks do
         total += d.Size.Z - 0.4
     end
+    -- the deck under a landing the theme dresses is covered by the landing piece: leave it bare
+    local landingCentres = {}
+    if kitInfo[theme] and kitInfo[theme].Landing then
+        for _, c in model:GetChildren() do
+            if c.Name == "Landing" then
+                table.insert(landingCentres, c.Position)
+            end
+        end
+    end
+    local function underLanding(position)
+        for _, centre in landingCentres do
+            if ((position - centre) * Vector3.new(1, 0, 1)).Magnitude < landingRadius then
+                return true
+            end
+        end
+        return false
+    end
     local run = 0
     local bareDeck = false
     for index, deck in decks do
@@ -1143,7 +1177,9 @@ local function dressBridge(model, theme, width, landingRadius)
         local top = deck.CFrame * CFrame.new(0, deck.Size.Y / 2, 0)
         local pitch = math.deg(math.asin(math.clamp(top.LookVector.Y, -1, 1)))
         local section = if theme == "Moon" and math.abs(pitch) > 15 then "Stair" else "Deck"
-        if placeKitPiece(theme, section, top, dressing, length / BRIDGE.Segment) then
+        if underLanding(top.Position) then
+            -- covered: neither dressed nor counted bare
+        elseif placeKitPiece(theme, section, top, dressing, length / BRIDGE.Segment) then
             count += 1
         else
             bareDeck = true
@@ -1408,7 +1444,7 @@ end
 
 -- What will stand on each plot, named on its notice board.
 WorldBuilder.Plots = {
-    Leaderboard = { Title = "Leaderboard", Subtitle = "The greatest cultivators, carved here soon" },
+    Leaderboard = { Title = "Leaderboard", Subtitle = "The greatest cultivators, carved here soon", Built = "Ascension Stele" },
     Blacksmith = { Title = "Blacksmith", Subtitle = "Exclusive weapons, forged here soon" },
     Marketplace = { Title = "Marketplace", Subtitle = "Opening soon" },
     BuySell = { Title = "Buy & Sell", Subtitle = "Trade your treasures here soon" },
@@ -1416,7 +1452,7 @@ WorldBuilder.Plots = {
 WorldBuilder.PlotCordColor = Color3.fromRGB(190, 30, 25)
 local PLOT_STAKE_GAP = 12 -- studs, at most, between stakes
 
--- Marks out each plot in Placements.<island>.Plots for the building to come: talisman stakes round its
+-- Marks out each plot in Placements.<island>.Plots still waiting for its building: talisman stakes round its
 -- edge strung with sagging red cord, a notice board in front naming what will stand there, and an
 -- invisible "Area" part covering the plot (FloatingIslands.<island>.Plots.Plot_<Name>).
 function WorldBuilder.buildPlots(island)
@@ -1426,6 +1462,9 @@ function WorldBuilder.buildPlots(island)
     for name, plot in placements.Plots do
         local info = WorldBuilder.Plots[name]
         assert(info, "no plot info for " .. name)
+        if info.Built then
+            continue -- its building stands there now (Built names it)
+        end
         local frame = islandFrame(island) * CFrame.new(plot.Centre) * CFrame.Angles(0, plot.Yaw, 0)
         local model = Instance.new("Model")
         model.Name = "Plot_" .. name
@@ -1487,6 +1526,83 @@ function WorldBuilder.buildPlots(island)
     end
     WorldBuilder.applyCollision(folder)
     return #folder:GetChildren()
+end
+
+-- ---------- the Ascension Stele (the leaderboard) ----------
+WorldBuilder.SteleRows = 10
+WorldBuilder.SteleGlow = Color3.fromRGB(205, 120, 20) -- deep amber: a paler gold blooms into a loud frame round the names
+local STELE_INK = { Color3.fromRGB(255, 205, 90), Color3.fromRGB(225, 230, 240), Color3.fromRGB(230, 150, 90) } -- the top three
+local STELE_TEXT = Color3.fromRGB(236, 226, 200)
+
+-- An invisible part carrying a SurfaceGui on its +Z face (the face a kit's text panel looks out of).
+local function textPanel(name, size, cframe, parent, pixelsPerStud)
+    local panel = marker(name, Vector3.new(size.X, size.Y, 0.05), cframe, parent)
+    local gui = Instance.new("SurfaceGui")
+    gui.Face = Enum.NormalId.Back
+    gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+    gui.PixelsPerStud = pixelsPerStud
+    gui.LightInfluence = 0.2
+    gui.MaxDistance = 160
+    gui.Parent = panel
+    return panel, gui
+end
+
+local function steleLabel(name, parent, size, position, alignment, color)
+    local label = Instance.new("TextLabel")
+    label.Name = name
+    label.Size = size
+    label.Position = position
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.Garamond
+    label.TextScaled = true
+    label.TextColor3 = color
+    label.TextXAlignment = alignment
+    label.Text = ""
+    label.Parent = parent
+    return label
+end
+
+-- The Ascension Stele on the Leaderboard plot (FloatingIslands.<island>.Leaderboard): the stele and
+-- its glow, the title plaque ("Title") and the board ("Board"), whose SurfaceGui holds a heading and
+-- rows "Row1".."Row<SteleRows>", each with Place, Cultivator, Rank and Qi labels. LeaderboardService
+-- writes the names; the builder leaves the rows empty.
+function WorldBuilder.buildLeaderboard(island)
+    local placements = placementsFor(island)
+    local plot = placements.Plots.Leaderboard
+    local folder = WorldBuilder.islandFolder(island, "Leaderboard")
+    folder:ClearAllChildren()
+    local frame = islandFrame(island) * CFrame.new(plot.Centre) * CFrame.Angles(0, plot.Yaw, 0)
+    placeTemplate(island, "YG_Stele", frame, folder).Name = "Stele"
+    local glow = placeTemplate(island, "YG_SteleGlow", frame, folder)
+    glow.Name = "Glow"
+    glow.Color = WorldBuilder.SteleGlow
+    addLight(glow, WorldBuilder.SteleGlow, 16, 0.7)
+
+    local _, titleGui = textPanel("Title", placements.SteleTitle.Size, frame * CFrame.new(placements.SteleTitle.Centre), folder, 60)
+    steleLabel("Text", titleGui, UDim2.fromScale(0.96, 0.9), UDim2.fromScale(0.02, 0.05), Enum.TextXAlignment.Center,
+        Color3.fromRGB(240, 222, 170)).Text = "Ascension Stele"
+
+    local _, gui = textPanel("Board", placements.SteleBoard.Size, frame * CFrame.new(placements.SteleBoard.Centre), folder, 40)
+    local heading = steleLabel("Heading", gui, UDim2.fromScale(0.9, 0.1), UDim2.fromScale(0.05, 0.02), Enum.TextXAlignment.Center, STELE_INK[1])
+    heading.Text = "The most Qi under Heaven"
+    local rowHeight = 0.84 / WorldBuilder.SteleRows
+    for index = 1, WorldBuilder.SteleRows do
+        local row = Instance.new("Frame")
+        row.Name = "Row" .. index
+        row.Size = UDim2.fromScale(0.94, rowHeight * 0.92)
+        row.Position = UDim2.fromScale(0.03, 0.14 + (index - 1) * rowHeight)
+        row.BackgroundColor3 = Color3.new(1, 1, 1)
+        row.BackgroundTransparency = if index % 2 == 0 then 0.94 else 1
+        row.BorderSizePixel = 0
+        row.Parent = gui
+        local ink = STELE_INK[index] or STELE_TEXT
+        steleLabel("Place", row, UDim2.fromScale(0.08, 1), UDim2.fromScale(0, 0), Enum.TextXAlignment.Center, ink).Text = tostring(index)
+        steleLabel("Cultivator", row, UDim2.fromScale(0.44, 1), UDim2.fromScale(0.1, 0), Enum.TextXAlignment.Left, ink)
+        steleLabel("Rank", row, UDim2.fromScale(0.28, 0.8), UDim2.fromScale(0.55, 0.1), Enum.TextXAlignment.Left, STELE_TEXT)
+        steleLabel("Qi", row, UDim2.fromScale(0.16, 1), UDim2.fromScale(0.84, 0), Enum.TextXAlignment.Right, ink)
+    end
+    WorldBuilder.applyCollision(folder)
+    return folder
 end
 
 function WorldBuilder.buildQiSpring(island)

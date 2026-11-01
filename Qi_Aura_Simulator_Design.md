@@ -598,7 +598,7 @@ Five floating islands built from original Blender work: terrain tops, sculpted u
   - **Ember Peak:** hexagonal basalt column tops with lava in the seams; a gate of basalt column clusters.
   - **Moonlit Isle:** moonstone treads with gold handrails and crescent-topped posts; a gate under a great gold crescent.
   - **Origin Abyss:** cracked ancient slabs with void light in the cracks; a ruined gate split by void light.
-  - Still to model: a level deck piece for Moonlit and landing pieces for Jade, Ember and Origin. Until then those parts stay visible blockout.
+  - Landings (Jade, Ember, Origin) and Moonlit's level deck came later (November 2, 2026), baked as each theme's extra kit (`<Theme>BridgeExtra.fbx`, `BK.export(theme, size=1024, extra=True)`) so the kits already in the game kept their maps: a round plank platform with a jade medallion and lantern posts; basalt hexes with lava seams and column-cluster posts; cracked wedge slabs round a glowing sigil with broken-pillar posts; moonstone pavers with gold seams. Every bridge is dressed end to end; the deck under a dressed landing is left to the landing.
 - Studio's importer turns each kit half round (x and z flip, as with the eggs); the builder turns each piece back.
 
 | Island | Centre (studs), quarter turns | Feel | Relics |
@@ -613,7 +613,7 @@ Five floating islands built from original Blender work: terrain tops, sculpted u
 
 - **Relics:** each Spirit Relic gives a one-time Qi reward, and finds are saved.
 - **Qi Spring:** the spring on Yggdrasil adds +50% Qi while cultivating in it.
-- **Falling:** a player who falls far below the island they last stood on is returned to that island's checkpoint (on Yggdrasil, to their spawn slot).
+- **Falling:** a player who falls 110 studs below the island they last stood on is returned to that island's checkpoint (on Yggdrasil, to their spawn slot). That line sits under the Root of the Island's cradle (86.5 down, the deepest place players stand) and above the PDS kit under Yggdrasil (its top 130.5 down), so a fall never strands anyone on the kit.
 - **Hazards:** parts tagged `LavaHazard` (Ember Peak's lava) also return a player to their island's checkpoint on touch.
 
 ### Yggdrasil (built; its own meshes await import)
@@ -621,9 +621,10 @@ Five floating islands built from original Blender work: terrain tops, sculpted u
 The World Tree stands at the centre; everything else rings it. Scripts: `ygg_island.py` (terrain and layout), `ygg_tree.py`, `ygg_meshes.py` (atlas, underside, export), `ygg_props.py` (kit and placements).
 
 - **The World Tree:** an ancient ash about 200 studs tall. Seven buttress flutes spiral up its trunk, with Qi glowing cyan in the grooves and motes drifting up. Three great roots arch over the Root Court path and four sink into the mound. Six limbs spread into a crown of flat cloud pads in tiers, some gilded where the sun catches them, with golden seed-lanterns hanging under them on threads of light and aerial roots trailing from the limbs.
-- **South:** the leaderboard plot, the **Qi Compass** (the old spawn plaza, now the fallback spawn) and the Spawn Walk with the **six spawn slots**. Each slot is a stone dais with a jade inlay and a name stone; a player holds one while in the server, its ring lit gold and their name cut into the stone, and they spawn and return there (`WorldService`). With every slot taken, a player spawns at the Qi Compass. The server's player limit should be 6 (Game Settings).
+- **South:** the **Ascension Stele** (the leaderboard), the **Qi Compass** (the old spawn plaza, now the fallback spawn) and the Spawn Walk with the **six spawn slots**. Each slot is a stone dais with a jade inlay and a name stone; a player holds one while in the server, its ring lit gold and their name cut into the stone, and they spawn and return there (`WorldService`). With every slot taken, a player spawns at the Qi Compass. The server's player limit should be 6 (Game Settings).
 - **West, the Market Terrace:** plots for the **Blacksmith** (exclusive weapons), the **Marketplace** and **Buy & Sell**, along a lane.
-- **Plots** (`WorldBuilder.buildPlots`): each is paved, marked out by talisman stakes strung with sagging red cord, with a roofed notice board naming what is coming, and an invisible `Area` part for the building to come.
+- **Plots** (`WorldBuilder.buildPlots`): each is paved, marked out by talisman stakes strung with sagging red cord, with a roofed notice board naming what is coming, and an invisible `Area` part for the building to come. A plot whose building stands (`WorldBuilder.Plots.<Name>.Built`) is left to it.
+- **The Ascension Stele** (the leaderboard, built November 2, 2026, `WorldBuilder.buildLeaderboard`, `LeaderboardService`): an honour board like a memorial archway's, a dark slate board in a bronze frame on a stepped plinth between red-lacquered pillars, under a tiled roof whose corners sweep up, a pearl of Qi in a bronze cup on the ridge. It lists the ten cultivators with the most Qi across every server (an OrderedDataStore, `WorldConfig.Leaderboard`), with their rank; the top three in gold, silver and bronze. A player's Qi is written as their data loads, every two minutes while it changes, and as they leave; the board re-reads every minute. Without DataStores it ranks the players in the server. Tested in Play: the owner listed first at 4.18B.
 - **East:** the **Egg Garden** (Beginner Qi, Spirit Breeze and Elemental Core on the Starting Island's lotus pedestals, 10 studs apart), the **Stone Lion**'s lair north-west of it, and the **Qi Spring** on the rim, its waterfall pouring off the edge (the Starting Island's spring, carried over whole).
 - **North:** a paved bridgehead and a waystone for each bridge.
 - **Underside:** the Starting Island's stacked strata at Yggdrasil's scale, gripped by roots that climb out of the meadow, over the rim and down the strata to a taproot. Its lowest point stays above world Y 75: the PDS kit lies below.

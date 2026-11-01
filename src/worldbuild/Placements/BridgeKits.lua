@@ -10,12 +10,20 @@ return {
         SupportGlow = { Hex = "ff5a14", Offset = Vector3.new(0.100, -10.425, -0.066), Size = Vector3.new(14.552, 9.150, 5.391) },
         Gate = { Offset = Vector3.new(-0.023, 11.450, -0.341), Size = Vector3.new(30.190, 24.900, 4.787) },
         GateGlow = { Hex = "ff5a14", Offset = Vector3.new(-0.001, 17.450, -0.000), Size = Vector3.new(27.118, 1.234, 3.520) },
+        Landing = { Offset = Vector3.new(-0.016, -5.207, 0.005), Size = Vector3.new(29.912, 11.215, 29.522) },
+        LandingGlow = { Hex = "ff5a14", Offset = Vector3.new(0.000, -5.982, -0.000), Size = Vector3.new(26.400, 10.865, 26.400) },
+        Post = { Offset = Vector3.new(0.077, 1.800, 0.187), Size = Vector3.new(2.559, 4.800, 1.771) },
+        PostGlow = { Hex = "ff5a14", Offset = Vector3.new(0.000, 3.610, -0.000), Size = Vector3.new(0.840, 0.120, 0.727) },
     },
     Jade = {
         Deck = { Offset = Vector3.new(-0.197, -0.018, 0.388), Size = Vector3.new(22.113, 8.935, 12.795) },
         Support = { Offset = Vector3.new(0.000, -10.420, -0.000), Size = Vector3.new(19.500, 17.541, 3.548) },
         SupportGlow = { Hex = "38d97a", Offset = Vector3.new(0.000, -13.300, -0.000), Size = Vector3.new(2.400, 4.600, 2.078) },
         Gate = { Offset = Vector3.new(0.000, 11.576, 0.291), Size = Vector3.new(33.000, 25.153, 4.479) },
+        Landing = { Offset = Vector3.new(-0.138, -3.950, -0.000), Size = Vector3.new(30.677, 8.500, 30.041) },
+        LandingGlow = { Hex = "38d97a", Offset = Vector3.new(0.000, -7.150, -0.000), Size = Vector3.new(1.200, 1.500, 1.039) },
+        Post = { Offset = Vector3.new(0.017, 1.825, -0.007), Size = Vector3.new(2.363, 5.250, 3.186) },
+        PostGlow = { Hex = "38d97a", Offset = Vector3.new(0.000, 2.400, -1.450), Size = Vector3.new(0.640, 0.700, 0.554) },
     },
     Moon = {
         Stair = { Offset = Vector3.new(0.000, 0.996, 0.262), Size = Vector3.new(20.120, 5.392, 12.544) },
@@ -26,6 +34,7 @@ return {
         SupportGlow = { Hex = "b9a8ff", Offset = Vector3.new(0.000, -11.150, -0.000), Size = Vector3.new(1.900, 1.900, 1.900) },
         Gate = { Offset = Vector3.new(0.000, 13.273, -0.000), Size = Vector3.new(27.000, 27.747, 3.800) },
         GateGlow = { Hex = "b9a8ff", Offset = Vector3.new(0.000, 11.100, -0.000), Size = Vector3.new(1.800, 2.200, 1.800) },
+        Deck = { Offset = Vector3.new(0.000, 1.093, 0.010), Size = Vector3.new(20.120, 5.786, 12.040) },
     },
     Origin = {
         Deck = { Offset = Vector3.new(0.000, 0.250, 0.099), Size = Vector3.new(20.569, 5.900, 13.371) },
@@ -34,5 +43,9 @@ return {
         SupportGlow = { Hex = "a35cff", Offset = Vector3.new(0.057, -9.344, -0.000), Size = Vector3.new(11.680, 10.678, 1.900) },
         Gate = { Offset = Vector3.new(0.000, 9.477, -0.000), Size = Vector3.new(28.400, 20.953, 4.400) },
         GateGlow = { Hex = "a35cff", Offset = Vector3.new(-2.100, 18.356, -0.000), Size = Vector3.new(5.200, 2.512, 3.490) },
+        Landing = { Offset = Vector3.new(0.000, -4.255, -0.000), Size = Vector3.new(29.224, 8.609, 29.224) },
+        LandingGlow = { Hex = "a35cff", Offset = Vector3.new(0.000, -0.367, 0.918), Size = Vector3.new(28.000, 1.066, 26.164) },
+        Post = { Offset = Vector3.new(0.012, 1.716, -0.000), Size = Vector3.new(1.993, 3.831, 1.969) },
+        PostGlow = { Hex = "a35cff", Offset = Vector3.new(-0.050, 2.780, -0.000), Size = Vector3.new(1.128, 0.562, 1.050) },
     },
 }
