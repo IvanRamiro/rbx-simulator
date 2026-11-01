@@ -142,11 +142,6 @@ return {
             { Position = Vector3.new(-18.79, -6.97, -53.08), Yaw = 0.7643 },
             { Position = Vector3.new(21.99, 6.36, 8.01), Yaw = 1.6050 },
         },
-        JG_RouteStone = {
-            { Position = Vector3.new(-192.00, -4.50, 48.00), Yaw = 0.0000 },
-            { Position = Vector3.new(-154.00, -3.00, 38.00), Yaw = 1.1000 },
-            { Position = Vector3.new(-116.00, -1.50, 28.00), Yaw = 2.2000 },
-        },
         JG_RuinPillar = {
             { Position = Vector3.new(66.37, 2.56, 17.33), Yaw = 0.8536, Scale = 0.994 },
             { Position = Vector3.new(-29.04, -0.32, -11.51), Yaw = 1.6023, Scale = 1.026 },

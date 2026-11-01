@@ -17,11 +17,6 @@ return {
         OA_GateOfDescent = {
             { Position = Vector3.new(40.00, 0.20, 44.00), Yaw = -2.6224 },
         },
-        OA_RouteStone = {
-            { Position = Vector3.new(384.00, 105.00, 380.00), Yaw = 0.0000 },
-            { Position = Vector3.new(286.00, 105.00, 290.00), Yaw = 1.4000 },
-            { Position = Vector3.new(188.00, 105.00, 200.00), Yaw = 2.8000 },
-        },
         OA_RuinFragment = {
             { Position = Vector3.new(-14.19, 56.00, -16.45), Yaw = -0.6000 },
             { Position = Vector3.new(-55.70, 105.00, -19.74), Yaw = -2.7000 },

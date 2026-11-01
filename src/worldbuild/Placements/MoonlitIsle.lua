@@ -45,7 +45,6 @@ return {
             { Position = Vector3.new(39.70, 0.13, 44.57), Yaw = 5.0810 },
         },
         MI_LunarRock = {
-            { Position = Vector3.new(-25.19, -2.59, 60.50), Yaw = 3.2098, Scale = 1.170 },
             { Position = Vector3.new(30.58, -0.33, 19.99), Yaw = 1.2152, Scale = 0.949 },
             { Position = Vector3.new(-48.15, -2.39, -2.62), Yaw = 1.3299, Scale = 0.856 },
             { Position = Vector3.new(51.14, 0.10, 0.08), Yaw = 4.6685, Scale = 1.370 },
@@ -57,7 +56,6 @@ return {
             { Position = Vector3.new(17.98, -0.77, 25.92), Yaw = 4.8213, Scale = 0.815 },
             { Position = Vector3.new(0.75, 1.36, 38.48), Yaw = 1.7452, Scale = 1.291 },
             { Position = Vector3.new(54.97, -1.07, 19.60), Yaw = 4.9615, Scale = 0.846 },
-            { Position = Vector3.new(-15.00, -0.66, 60.87), Yaw = 1.2098, Scale = 1.068 },
             { Position = Vector3.new(53.61, -1.15, -10.02), Yaw = 4.6182, Scale = 0.877 },
             { Position = Vector3.new(15.55, 0.82, 37.48), Yaw = 3.4794, Scale = 1.054 },
             { Position = Vector3.new(0.19, -0.58, 63.25), Yaw = 2.5942, Scale = 0.848 },
@@ -69,14 +67,6 @@ return {
         },
         MI_Pavilion = {
             { Position = Vector3.new(0.00, 0.00, 0.00), Yaw = 0.0000 },
-        },
-        MI_RouteStone = {
-            { Position = Vector3.new(-63.71, -161.14, 208.86), Yaw = -0.3183 },
-            { Position = Vector3.new(-55.43, -134.29, 183.71), Yaw = -0.3183 },
-            { Position = Vector3.new(-47.14, -107.43, 158.57), Yaw = -0.3183 },
-            { Position = Vector3.new(-38.86, -80.57, 133.43), Yaw = -0.3183 },
-            { Position = Vector3.new(-30.57, -53.71, 108.29), Yaw = -0.3183 },
-            { Position = Vector3.new(-22.29, -26.86, 83.14), Yaw = -0.3183 },
         },
         MI_StarLantern = {
             { Position = Vector3.new(-14.29, 0.58, 36.69), Yaw = 4.5245 },

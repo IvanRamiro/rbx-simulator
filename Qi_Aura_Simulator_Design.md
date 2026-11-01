@@ -39,7 +39,7 @@ The fantasy is becoming a cultivator whose growing power shows in ever more spec
 ### Design pillars
 
 1. **Visible progression:** ranks, Qinggong and pets change stats *and* visuals.
-2. **Movement as mastery:** islands are reached by Qinggong, never by free flight. Each island's route needs the air leaps of the rank that unlocks it.
+2. **Movement as mastery:** a bridge leads from the Starting Island to each other island, sealed by a Qi barrier that only opens at the island's unlock rank. Players run, leap with Qinggong or (later) ride the sword along it. Qinggong's air leaps reach the high places on the islands.
 3. **Collecting and discovery:** pets, relics and hidden places reward exploration.
 4. **Active and passive play:** cultivate anywhere, or at the Qi Spring for a bonus.
 5. **Player expression:** the chosen aura pet sets the look of the aura.
@@ -123,7 +123,7 @@ Measured reach with Roblox gravity:
 | 6 | 153 | 48 |
 | 7 | 187 | 55 |
 
-Every route gap is reachable with its rank's leaps and out of reach with one leap fewer. `layout.py` checks this.
+The islands were first linked by floating stepping stones tuned to each rank's leaps; on November 1, 2026 the owner replaced them with bridges (section 6), since the stones made the islands too hard to reach.
 
 **Leap effects** (`src/client/QinggongFx.lua`): the cultivator rides a current of Qi rather than simply jumping.
 
@@ -539,9 +539,17 @@ Every egg on its stand has its own aura, built in the Workspace from particle em
 
 ## 6. World
 
-Five floating islands built from original Blender work: terrain tops, sculpted undersides, landmarks and set pieces. The Starting Island is the hub, and a Qinggong route of floating stepping stones leaves it for each other island.
+Five floating islands built from original Blender work: terrain tops, sculpted undersides, landmarks and set pieces. The Starting Island is the hub, and a bridge leaves it for each other island.
 
-| Island | Centre (studs) | Feel | Relics | Route from the Starting Island |
+**Bridges** (since November 1, 2026, replacing the stepping stones):
+- Paths in `tools/blender/world/layout.py` (`BRIDGES`; `--write` generates `src/worldbuild/Placements/Bridges.lua`), built by `WorldBuilder.buildBridges()` into `FloatingIslands.Bridges`. Each starts beside its route's waystone and lands at the island's arrival (the Grove Gate, the Ember Gate, the Crescent Arch, the Origin Route's Descent Ledge).
+- A deck 20 studs wide (doubled at the owner's request; room to ride the sword along it) with rails. Jade (161 studs, a gentle arch), Ember (241, rising 24), Moonlit (a stairway of three flights zigzagging 430 studs up 192, with a landing 30 studs across at each turn and a last stretch straight through the Crescent Arch, at most 32°), Origin (534, a long low arch).
+- Both ends of every bridge are carried onto their islands by a solid abutment (level with the deck, 8 studs on and 7 deep), so the deck meets the ground with no gap or overhang; measured across the deck's width, every end is within about half a stud of its island's ground (the Moonlit top within a stud). At the Origin end the Descent Ledge's void-fire brazier stands on the deck's end, marking where players glide down.
+- The bridges' arrivals are kept clear: a few scattered props there were removed (a moonstone shard and a lunar rock on Moonlit Isle, an obsidian shard on Ember Peak), and the island prop scripts now leave the arrivals free.
+- At each bridge's start a gate holds a **Qi barrier** (tagged `QiBarrier`, with the destination's `RankId`): solid until the player reaches that rank, then open to them (`BridgeBarriers.client`). A player below the rank found on the bridge past the gate, or on the island it leads to, is put back in front of the gate (`WorldService`). Tested in Play both ways.
+- Each bridge is themed after its island, modelled in Blender over the same walkable deck: jade and wood with vines, basalt and lava, moonstone and gold, void-cracked ruins.
+
+| Island | Centre (studs) | Feel | Relics | Bridge from the Starting Island (the old stepping-stone route) |
 |---|---|---|---|---|
 | Starting Island | (0, 200, 0) | Grassy cultivation grounds and the spawn hub | Root of the Island (300 Qi, Qi Initiate) | — |
 | Jade Grove | (330, 206, −70), east | Ancient forest | Grove Heart, Jade Seed, Whispering Spring (800 Qi each, Qi Gatherer) | 3 stones, 39-stud gaps, **2 air leaps** |
@@ -561,7 +569,7 @@ Five floating islands built from original Blender work: terrain tops, sculpted u
 - **Qi Compass:** the spawn plaza is an octagonal platform with the eight trigrams in the Earlier Heaven arrangement, a jade compass rose and glowing Qi channels in the tile joints.
 - **Qi Spring:** a shallow pool with lotus stepping stones and a stacked scholar's rock at its source. A stone spillway carries the water to a waterfall that pours off the island's edge.
 - **Egg garden:** three lotus pedestals hold the Beginner Qi, Spirit Breeze and Elemental Core eggs.
-- **Waystones:** one at each route exit, naming its destination, the rank that unlocks it and the air leaps it takes.
+- **Waystones:** one beside each bridge's gate, naming its destination and the rank that opens its bridge.
 - **Underside:** stacked rock slabs held by braided roots. A climb down twelve bracket-fungus shelves on the great path root leads to the **Root of the Island** in a root cradle.
 - **Nature:** spirit pines with flat canopies players can stand on, plum blossoms, mossy rocks and flowers.
 
@@ -786,7 +794,7 @@ Build one complete encounter before expanding to every island.
 
 - **Egg stands under the guardian loop:** a hatching spot for secured eggs, a starter egg source, or removed?
 - **Forged weapons:** the purchase and request flow, which weapons each Qi mastery level unlocks, and how they plug into combat.
-- **Sword flight:** how it unlocks, and how it coexists with the air-leap gating of island routes.
+- **Sword flight:** how it unlocks. The bridges are wide enough to ride along; whether flight may cross a Qi barrier is still open (today the server returns anyone below the rank who reaches a bridge or island past it).
 - **Qinggong:** dashes and stamina.
 - **PvP stealing or raids:** only ever opt-in and server-checked, with protected pets, cooldowns and clear warnings. Not planned. Guardian egg theft is PvE.
 - **Monetization:** cosmetic-first, never pay-to-win; no paid eggs or random rewards until Roblox's policies are checked.

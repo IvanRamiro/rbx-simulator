@@ -80,7 +80,6 @@ return {
         EP_ObsidianShard = {
             { Position = Vector3.new(-77.65, -1.88, 13.20), Yaw = 0.3634, Scale = 0.826 },
             { Position = Vector3.new(-41.12, 0.19, -19.93), Yaw = 4.4445, Scale = 1.039 },
-            { Position = Vector3.new(52.42, -3.21, -59.53), Yaw = 4.9012, Scale = 1.190 },
             { Position = Vector3.new(-54.02, -0.12, 11.92), Yaw = 2.2705, Scale = 1.218 },
             { Position = Vector3.new(26.92, 0.67, -29.30), Yaw = 2.0641, Scale = 0.973 },
             { Position = Vector3.new(-66.82, 0.28, 1.34), Yaw = 5.1867, Scale = 0.895 },
@@ -100,11 +99,6 @@ return {
             { Position = Vector3.new(-60.21, -0.21, 5.92), Yaw = 2.0146, Scale = 0.988 },
             { Position = Vector3.new(-46.18, -0.10, 8.21), Yaw = 5.1646, Scale = 0.983 },
             { Position = Vector3.new(-40.46, 0.60, -34.98), Yaw = 5.1378, Scale = 0.912 },
-        },
-        EP_RouteStone = {
-            { Position = Vector3.new(198.50, -16.00, -154.50), Yaw = 0.0000 },
-            { Position = Vector3.new(151.00, -10.00, -119.00), Yaw = 1.3000 },
-            { Position = Vector3.new(103.50, -4.00, -83.50), Yaw = 2.6000 },
         },
         EP_SigilGlow = {
             { Position = Vector3.new(-54.50, 0.50, -12.00), Yaw = 1.5708 },

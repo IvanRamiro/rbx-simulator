@@ -35,6 +35,8 @@ local GameConfig = {
 
     RelicTag = "SpiritRelic",
     EggTag = "PetEggStand",
+    -- the Qi barrier across the start of each island bridge: only players of its RankId pass
+    BridgeBarrierTag = "QiBarrier",
     Relics = {
         { Id = "IslandRoot", DisplayName = "Root of the Island", QiReward = 300, RequiredRank = "QiInitiate" },
         { Id = "GroveHeart", DisplayName = "Grove Heart", QiReward = 800, RequiredRank = "QiGatherer" },
