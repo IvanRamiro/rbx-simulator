@@ -1,0 +1,132 @@
+{
+ "Belt": {
+  "Centre": [
+   0.0,
+   -1.1122,
+   -0.1599
+  ],
+  "Part": "LowerTorso",
+  "Skinned": true,
+  "Tris": 1794
+ },
+ "LeftBoot": {
+  "Centre": [
+   -0.3952,
+   -2.0038,
+   -0.0054
+  ],
+  "Part": "LeftLowerLeg",
+  "Skinned": false,
+  "Tris": 1496
+ },
+ "LeftCuff": {
+  "Centre": [
+   -1.4441,
+   -0.3356,
+   0.0415
+  ],
+  "Part": "LeftLowerArm",
+  "Skinned": true,
+  "Tris": 1848
+ },
+ "LeftShoe": {
+  "Centre": [
+   -0.405,
+   -2.635,
+   -0.1167
+  ],
+  "Part": "LeftFoot",
+  "Skinned": false,
+  "Tris": 312
+ },
+ "LeftSleeve": {
+  "Centre": [
+   -1.215,
+   0.5442,
+   0.0
+  ],
+  "Part": "LeftUpperArm",
+  "Skinned": false,
+  "Tris": 3560
+ },
+ "LeftTrouser": {
+  "Centre": [
+   -0.4049,
+   -1.2659,
+   -0.0002
+  ],
+  "Part": "LeftUpperLeg",
+  "Skinned": false,
+  "Tris": 2006
+ },
+ "RightBoot": {
+  "Centre": [
+   0.4148,
+   -2.0038,
+   -0.0054
+  ],
+  "Part": "RightLowerLeg",
+  "Skinned": false,
+  "Tris": 1496
+ },
+ "RightCuff": {
+  "Centre": [
+   1.4643,
+   -0.3355,
+   0.0416
+  ],
+  "Part": "RightLowerArm",
+  "Skinned": true,
+  "Tris": 1848
+ },
+ "RightShoe": {
+  "Centre": [
+   0.405,
+   -2.635,
+   -0.1167
+  ],
+  "Part": "RightFoot",
+  "Skinned": false,
+  "Tris": 312
+ },
+ "RightSleeve": {
+  "Centre": [
+   1.215,
+   0.5442,
+   0.0
+  ],
+  "Part": "RightUpperArm",
+  "Skinned": false,
+  "Tris": 3560
+ },
+ "RightTrouser": {
+  "Centre": [
+   0.4053,
+   -1.2659,
+   0.0007
+  ],
+  "Part": "RightUpperLeg",
+  "Skinned": false,
+  "Tris": 2006
+ },
+ "Skirt": {
+  "Centre": [
+   -0.0094,
+   -1.4933,
+   0.0396
+  ],
+  "Part": "LowerTorso",
+  "Skinned": true,
+  "Tris": 11998
+ },
+ "Torso": {
+  "Centre": [
+   -0.0046,
+   0.1048,
+   0.0035
+  ],
+  "Part": "UpperTorso",
+  "Skinned": false,
+  "Tris": 7606
+ }
+}

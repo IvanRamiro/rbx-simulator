@@ -80,6 +80,7 @@ local function sanitizeProgress(raw)
         EquippedPetIds = {},
         AuraPetInstanceId = nil,
         Relics = {},
+        OutfitId = nil,
     }
 
     if typeof(raw) ~= "table" then
@@ -146,6 +147,11 @@ local function sanitizeProgress(raw)
         end
     end
 
+    -- the outfit worn (OutfitService checks ownership again before dressing anyone in it)
+    if typeof(raw.OutfitId) == "string" and GameConfig.Outfits and GameConfig.Outfits[raw.OutfitId] then
+        progress.OutfitId = raw.OutfitId
+    end
+
     return progress
 end
 
@@ -183,6 +189,7 @@ local function captureProgress(player)
         EquippedPetIds = pets.EquippedPetIds,
         AuraPetInstanceId = pets.AuraPetInstanceId,
         Relics = relics,
+        OutfitId = player:GetAttribute("OutfitId"),
     }
 end
 

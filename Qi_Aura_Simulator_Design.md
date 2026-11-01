@@ -805,6 +805,25 @@ Build one complete encounter before expanding to every island.
 
 ---
 
+### Outfits (cosmetic)
+
+Outfits are worn over the player's own avatar (`GameConfig.Outfits`). They are cosmetic only, with no aura or stats.
+
+- **Murim Robes** (November 1, 2026), made for the owner and worn only by them for now. An original cultivator's outfit in the spirit of the owner's reference:
+  - a white inner robe with a black standing collar, and a white crossed collar (left over right) embroidered in gold;
+  - a long, open gold-brocade coat that deepens to dark brown at its embroidered hem, with embroidered fronts and gold half-sleeves;
+  - wide white sleeves with flared cuffs;
+  - a gold belt hung with a turquoise pendant, a pearl and a yellow tassel;
+  - loose dark trousers, and black boots with white soles and toe caps.
+- **How it is built:** `tools/blender/outfits/murim_outfit.py` makes high-detail cloth with procedural brocade and embroidery, baked to 13 game meshes (about 40,000 triangles in all), each fitted to one R15 body part of the owner's avatar.
+- **Sway:** the robe skirt, the tassel and the cuffs are skinned to small bone chains. On every client, the skirt's four panels open as each thigh swings into them, trail behind movement and lift during falls and Qinggong. The tassel and cuffs swing.
+- **In game:**
+  - `OutfitService` checks ownership on the server, welds the pieces on and hides accessories that clash (back, waist and clothing types).
+  - It saves the choice (`OutfitId`).
+  - The "Robes" button beside "Pets" toggles it.
+  - The worn model lives in `Workspace.WornOutfits`, welded to the body: inside the character, the Animator resets the bones each frame and the sway never shows.
+- **Selling:** undecided. Setting `GamePassId` makes it a game pass today. It is fitted to the owner's body proportions, so selling it to every avatar would need per-avatar fitting (Roblox layered clothing).
+
 ## 9. Open decisions
 
 - **Egg stands under the guardian loop:** a hatching spot for secured eggs, a starter egg source, or removed?
@@ -813,6 +832,7 @@ Build one complete encounter before expanding to every island.
 - **Qinggong:** dashes and stamina.
 - **PvP stealing or raids:** only ever opt-in and server-checked, with protected pets, cooldowns and clear warnings. Not planned. Guardian egg theft is PvE.
 - **Monetization:** cosmetic-first, never pay-to-win; no paid eggs or random rewards until Roblox's policies are checked.
+- **Selling outfits:** a game pass in this game (ready: set `GamePassId`) or the Roblox Avatar Marketplace (needs the UGC program and layered clothing fitted to any avatar).
 - Per-element and per-realm aura looks.
 - Blender models for the remaining procedural pets.
 - Balance tuning from playtests.

@@ -415,6 +415,16 @@ local GameConfig = {
             },
         },
     },
+
+    -- Outfits worn over the player's own avatar (src/server/OutfitService). An outfit is worn by its
+    -- owners: the user ids listed, or anyone who owns its game pass once GamePassId is set.
+    Outfits = {
+        Murim = {
+            DisplayName = "Murim Robes",
+            OwnerUserIds = { 4993575280 },
+            GamePassId = 0,
+        },
+    },
 }
 
 return GameConfig
