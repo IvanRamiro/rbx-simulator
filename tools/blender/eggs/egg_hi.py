@@ -523,10 +523,13 @@ def mat_gold(name="EggGold"):
     return g.finish(col, 0.32, 0.6, g.bump(n.outputs["Fac"], 0.1, 0.004))
 
 
-def mat_obsidian(name="EggObsidian", tones=None, vein=(1.0, 0.3, 0.02), vein_hot=(1.0, 0.68, 0.12), heat=(0.85, 0.16, 0.02)):
+def mat_obsidian(name="EggObsidian", tones=None, vein=(1.0, 0.3, 0.02), vein_hot=(1.0, 0.68, 0.12), heat=(0.85, 0.16, 0.02),
+                 heat_reach=0.16):
     """Volcanic rock plates: each plate its own dark tone (random per island), a faint glassy
     sheen, thin branching veins of molten lava running across them (bright orange with a yellow
-    core), and the plates' edges and crevices heated red (ambient occlusion turned to heat)."""
+    core), and the plates' edges and crevices heated red (ambient occlusion turned to heat).
+    heat_reach is how far the heat reaches out of a crevice: an egg's scale by default; small
+    rocks need much less, or every surface counts as a crevice."""
     g = _Graph(name)
     geo = g.n("ShaderNodeNewGeometry")
     tones = tones or [(0.0, (0.012, 0.008, 0.007)), (0.5, (0.028, 0.019, 0.016)), (1.0, (0.05, 0.034, 0.028))]
@@ -548,7 +551,7 @@ def mat_obsidian(name="EggObsidian", tones=None, vein=(1.0, 0.3, 0.02), vein_hot
     col = g.mix(core_m, col, vein_hot)
     # heat: crevices (where the plates meet the glowing core) glow red instead of going dark
     ao = g.n("ShaderNodeAmbientOcclusion", samples=16, only_local=True)
-    ao.inputs["Distance"].default_value = 0.16
+    ao.inputs["Distance"].default_value = heat_reach
     hot = g.math("POWER", g.math("SUBTRACT", 1.0, ao.outputs["AO"], clamp=True), 0.55)
     col = g.mix(g.math("MINIMUM", g.math("MULTIPLY", hot, 1.4), 1.0), col, heat)
     bevel = g.n("ShaderNodeBevel", samples=8)

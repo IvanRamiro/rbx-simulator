@@ -23,7 +23,20 @@
 --   * a model with BeatHighlight throbs a Highlight on its egg in its Tint;
 --   * a model with BeatScreen (studs) pulses the player's screen, ColorCorrection and Bloom, in
 --     its Tint when the camera is within that distance, and flashes it white-hot on the burst.
--- Auras run at full rate near the camera, half rate further out, and switch off beyond that.
+-- Parts with an Orbit attribute (rocks) orbit like attachments, carrying their child parts (their
+-- glowing cores), and tumble by Tumble (Vector3, degrees per second).
+-- An aura with PulseInterval (seconds, give or take PulseJitter) sends an energy pulse through
+-- itself, each piece answering PulseDelay seconds after it starts, so nothing pulses at once:
+--   * the aura speeds up by PulseSpeed and glows brighter by PulseGlow (fractions);
+--   * orbiting pieces are thrown PulseReach studs outward and ease back;
+--   * beams with PulseWidth and spinning planes with PulseSwell swell by that much;
+--   * emitters and ripples with PulseEmit fire that many;
+--   * with PulseEggGlow (a colour), the egg's own glowing parts heat toward it (and while a hatch
+--     gathers and bursts).
+-- The hatch's burst sends a pulse too. Settings, all model attributes, all optional: Intensity
+-- (glow), Density (emission rates), OrbitSpeed, LightIntensity, and Visible (false hides it).
+-- Auras run at full rate near the camera, half rate further out, and switch off beyond that, or
+-- when their egg's stand is gone.
 local CollectionService = game:GetService("CollectionService")
 local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
@@ -70,13 +83,21 @@ local function index(model)
         movers = {}, spinners = {}, ripples = {}, waves = {}, sways = {}, emitters = {}, trails = {}, lights = {}, guis = {},
         speed = 1, glow = 1, swell = 0, level = 2,
         gather = model:GetAttribute("Gather") or 1.2,
-        breathT = math.random(), beat = 0, beatBeams = {}, screenFlash = 0, distance = math.huge,
+        breathT = math.random(), beat = 0, swellBeams = {}, screenFlash = 0, distance = math.huge,
     }
     state.modelAttrs = watched(model)
     for _, d in model:GetDescendants() do
-        if d:IsA("Attachment") and d:GetAttribute("Orbit") then
+        if (d:IsA("Attachment") or d:IsA("BasePart")) and d:GetAttribute("Orbit") then
             local m = watched(d)
             m.Angle = m.A.Phase or 0
+            if d:IsA("BasePart") then -- a rock: it orbits whole, tumbling, carrying its child parts
+                m.Base, m.Rot, m.Followers = d.CFrame, root.CFrame:ToObjectSpace(d.CFrame).Rotation, {}
+                for _, c in d:GetDescendants() do
+                    if c:IsA("BasePart") then
+                        table.insert(m.Followers, { Part = c, Offset = d.CFrame:ToObjectSpace(c.CFrame), Base = c.CFrame })
+                    end
+                end
+            end
             table.insert(state.movers, m)
         elseif d:IsA("BasePart") and d:GetAttribute("Ripple") then
             local r = watched(d)
@@ -92,8 +113,9 @@ local function index(model)
             table.insert(state.emitters, { Emitter = d, Rate = d.Rate, Enabled = d.Enabled })
         elseif d:IsA("Trail") or d:IsA("Beam") then
             table.insert(state.trails, d)
-            if d:IsA("Beam") and d:GetAttribute("BeatWidth") then
-                table.insert(state.beatBeams, { Beam = d, W0 = d.Width0, W1 = d.Width1, B = d.Brightness, K = d:GetAttribute("BeatWidth") })
+            if d:IsA("Beam") and (d:GetAttribute("BeatWidth") or d:GetAttribute("PulseWidth")) then
+                table.insert(state.swellBeams, { Beam = d, W0 = d.Width0, W1 = d.Width1, B = d.Brightness, K = d:GetAttribute("BeatWidth") or 0,
+                    P = d:GetAttribute("PulseWidth") or 0, Delay = d:GetAttribute("PulseDelay") or 0 })
             end
         elseif d:IsA("Light") then
             table.insert(state.lights, { Light = d, Brightness = d.Brightness })
@@ -108,7 +130,7 @@ local function index(model)
 end
 
 local function rateFactor(state)
-    return state.level == 1 and 0.5 or 1
+    return (state.level == 1 and 0.5 or 1) * (state.modelAttrs.A.Density or 1)
 end
 
 -- level: 2 full, 1 half rates, 0 off.
@@ -238,9 +260,90 @@ end
 
 local THUMB = 0.08 -- where in the cycle the first thump peaks
 
+-- The energy pulse at `delay` seconds after the last one began, 0 to 1: a sharp rise, then a slow
+-- ease back.
+local PULSE_RISE, PULSE_FALL = 0.18, 1.5
+local function pulseAt(state, now, delay)
+    local start = state.pulseStart
+    if not start then
+        return 0
+    end
+    local t = now - start - (delay or 0)
+    if t <= 0 then
+        return 0
+    elseif t < PULSE_RISE then
+        return smooth(t / PULSE_RISE)
+    end
+    return 1 - smooth((t - PULSE_RISE) / PULSE_FALL)
+end
+
+local function firePulse(state, now)
+    state.pulseStart = now
+    for _, e in state.emitters do
+        local emitter = e.Emitter
+        local n = emitter:GetAttribute("PulseEmit")
+        if n and n > 0 then
+            task.delay(emitter:GetAttribute("PulseDelay") or 0, function()
+                if state.model.Parent and state.level > 0 then
+                    emitter:Emit(n)
+                end
+            end)
+        end
+    end
+    for _, r in state.ripples do
+        for k = 1, r.A.PulseEmit or 0 do
+            task.delay((r.A.PulseDelay or 0) + (k - 1) * RIPPLE_GAP, function()
+                if state.model.Parent and state.level > 0 then
+                    startRipple(state, r)
+                end
+            end)
+        end
+    end
+end
+
+-- The egg's own glowing parts (its stand's "<EggId>_Glow_<hex>" pieces) heated toward `hot`.
+local function heatEgg(state, hot, heat)
+    if not state.eggGlow then
+        local egg = eggOf(state)
+        if not egg then
+            return
+        end
+        state.eggGlow = {}
+        for _, d in egg.Parent:GetDescendants() do
+            if d:IsA("BasePart") and d.Name:find("_Glow_") then
+                table.insert(state.eggGlow, { Part = d, Color = d.Color })
+            end
+        end
+    end
+    if math.abs(heat - (state.eggHeat or 0)) < 0.005 then
+        return
+    end
+    state.eggHeat = heat
+    for _, g in state.eggGlow do
+        g.Part.Color = g.Color:Lerp(hot, heat)
+    end
+end
+
 local function step(state, dt, now)
     updateSurge(state, now)
     local ma = state.modelAttrs.A
+    if ma.Density ~= state.density then -- emission rates retuned by hand
+        state.density = ma.Density
+        if not state.hatching then
+            for _, e in state.emitters do
+                e.Emitter.Rate = e.Rate * rateFactor(state)
+            end
+        end
+    end
+    local interval = ma.PulseInterval
+    if interval and not state.hatching then
+        state.nextPulse = state.nextPulse or now + interval * math.random()
+        if now >= state.nextPulse then
+            firePulse(state, now)
+            state.nextPulse = now + interval + (ma.PulseJitter or 0) * (math.random() * 2 - 1)
+        end
+    end
+    local pulse = pulseAt(state, now, 0)
     local before = state.breathT % 1
     state.breathT += dt * state.speed / (ma.BreathPeriod or 4)
     local after = state.breathT % 1
@@ -250,21 +353,41 @@ local function step(state, dt, now)
     local beat, b = beatAt(ma, state.breathT)
     state.beat = beat
     local breath = (ma.Breath or 0) * b
-    local speed = state.speed * (1 + breath)
-    local glow = state.glow * (1 + breath * 0.6)
+    local speed = state.speed * (1 + breath) * (1 + (ma.PulseSpeed or 0) * pulse) * (ma.OrbitSpeed or 1)
+    local glow = state.glow * (1 + breath * 0.6) * (1 + (ma.PulseGlow or 0) * pulse) * (ma.Intensity or 1)
     local swell = state.swell + breath * 2
     for _, m in state.movers do
-        m.Angle += (m.A.Orbit or 0) * dt * speed
-        local radius = (m.A.Radius or 2.5) + (m.A.BeatReach or 0) * (beat + math.max(state.swell, 0) * 1.5)
+        local a = m.A
+        m.Angle += (a.Orbit or 0) * dt * speed
+        local radius = (a.Radius or 2.5) + (a.BeatReach or 0) * (beat + math.max(state.swell, 0) * 1.5)
+            + (a.PulseReach or 0) * pulseAt(state, now, a.PulseDelay)
         if state.swell < 0 then
-            radius *= 1 + state.swell * (m.A.GatherPull or 0)
+            radius *= 1 + state.swell * (a.GatherPull or 0) -- a negative pull flings it out instead
         end
-        m.Instance.Position = moverPosition(m.A, m.Angle, now, radius)
+        local p = moverPosition(a, m.Angle, now, radius)
+        if m.Rot then
+            local tumble = a.Tumble
+            if tumble then
+                local k = math.rad(1) * dt * speed
+                m.Rot *= CFrame.Angles(tumble.X * k, tumble.Y * k, tumble.Z * k)
+            end
+            local cf = state.root.CFrame * CFrame.new(p) * m.Rot
+            m.Instance.CFrame = cf
+            for _, f in m.Followers do
+                f.Part.CFrame = cf * f.Offset
+            end
+        else
+            m.Instance.Position = p
+        end
     end
-    for _, a in state.beatBeams do
-        local k = 1 + a.K * (beat + math.max(state.swell, 0))
+    local beamGlow = state.glow * (ma.Intensity or 1)
+    for _, a in state.swellBeams do
+        local k = 1 + a.K * (beat + math.max(state.swell, 0)) + a.P * pulseAt(state, now, a.Delay)
         a.Beam.Width0, a.Beam.Width1 = a.W0 * k, a.W1 * k
-        a.Beam.Brightness = a.B * k * state.glow
+        a.Beam.Brightness = a.B * k * beamGlow
+    end
+    if ma.PulseEggGlow then
+        heatEgg(state, ma.PulseEggGlow, math.max(pulse, math.clamp(state.glow - 1, 0, 1)))
     end
     if ma.BeatHighlight then
         local h = state.beatHighlight
@@ -283,8 +406,9 @@ local function step(state, dt, now)
         end
         if h then
             h.Enabled = not state.hatching and state.level > 0
-            h.FillTransparency = 1 - 0.4 * beat -- stronger, it flattens the egg's own detail
-            h.OutlineTransparency = 1 - 0.8 * beat
+            -- a faint fill and a strong rim: a stronger fill paints over the egg's baked facets
+            h.FillTransparency = 1 - 0.15 * beat
+            h.OutlineTransparency = 1 - 0.85 * beat
         end
     end
     state.screenFlash = math.max(0, state.screenFlash - dt * 1.4)
@@ -297,7 +421,7 @@ local function step(state, dt, now)
             base *= CFrame.Angles(math.rad(wobble) * math.sin(s.Precess), 0, math.rad(wobble) * math.cos(s.Precess))
         end
         s.Instance.CFrame = base * CFrame.Angles(0, math.rad(s.Angle), 0)
-        local scale = swellScale(s.A, swell)
+        local scale = swellScale(s.A, swell + (s.A.PulseSwell or 0) * pulseAt(state, now, s.A.PulseDelay))
         if math.abs(scale - s.Scale) > 1e-3 then
             s.Scale = scale
             for _, l in s.Labels do
@@ -321,11 +445,65 @@ local function step(state, dt, now)
             w.Label.ImageTransparency = w.Base + (1 - w.Base) * t ^ 1.5
         end
     end
+    local lightGlow = glow * (ma.LightIntensity or 1)
     for _, l in state.lights do
-        l.Light.Brightness = l.Brightness * glow
+        l.Light.Brightness = l.Brightness * lightGlow
     end
     for _, g in state.guis do
         g.Gui.Brightness = g.Brightness * glow
+    end
+end
+
+-- Hands an aura back as it was built when it stops being tracked (its tag removed, to tune it in
+-- Studio), so tagging it again indexes the authored values, not ones the runtime had changed:
+-- emitters, trails and guis switched off by distance, beams swollen mid-beat, scaled brightness.
+local function release(state)
+    for _, e in state.emitters do
+        e.Emitter.Enabled, e.Emitter.Rate = e.Enabled, e.Rate
+    end
+    for _, t in state.trails do
+        t.Enabled = true
+    end
+    for _, l in state.lights do
+        l.Light.Enabled = true
+    end
+    for _, g in state.guis do
+        g.Gui.Enabled = true
+    end
+    for _, a in state.swellBeams do
+        a.Beam.Width0, a.Beam.Width1, a.Beam.Brightness = a.W0, a.W1, a.B
+    end
+    for _, m in state.movers do
+        if m.Base then
+            m.Instance.CFrame = m.Base
+            for _, f in m.Followers do
+                f.Part.CFrame = f.Base
+            end
+        end
+    end
+    for _, g in state.eggGlow or {} do
+        g.Part.Color = g.Color
+    end
+    for _, l in state.lights do
+        l.Light.Brightness = l.Brightness
+    end
+    for _, g in state.guis do
+        g.Gui.Brightness = g.Brightness
+    end
+    for _, s in state.spinners do
+        s.Instance.CFrame = s.Base
+        for _, l in s.Labels do
+            l.Label.Size = l.Size
+        end
+    end
+    for _, w in state.sways do
+        w.Instance.Rotation = 0
+    end
+    for _, w in state.waves do
+        w.Label:Destroy()
+    end
+    if state.beatHighlight then
+        state.beatHighlight:Destroy()
     end
 end
 
@@ -337,6 +515,9 @@ end
 
 CollectionService:GetInstanceAddedSignal(TAG):Connect(track)
 CollectionService:GetInstanceRemovedSignal(TAG):Connect(function(model)
+    if auras[model] then
+        release(auras[model])
+    end
     auras[model] = nil
 end)
 for _, model in CollectionService:GetTagged(TAG) do
@@ -409,7 +590,12 @@ RunService.RenderStepped:Connect(function(dt)
         end
         local distance = (state.root.Position - eye).Magnitude
         state.distance = distance
-        setLevel(state, distance < NEAR and 2 or distance < FAR and 1 or 0)
+        if now >= (state.eggCheck or 0) then -- an aura whose egg is gone shows nothing
+            state.eggCheck = now + 1
+            state.hasEgg = eggOf(state) ~= nil
+        end
+        local shown = state.hasEgg and state.modelAttrs.A.Visible ~= false
+        setLevel(state, not shown and 0 or distance < NEAR and 2 or distance < FAR and 1 or 0)
         if state.level == 0 then
             continue
         end
@@ -489,6 +675,9 @@ function EggAura.hatch(eggId)
         end
         if state.model.Parent then
             emitAll(state, "HatchEmit")
+            if state.modelAttrs.A.PulseInterval then
+                firePulse(state, os.clock())
+            end
             surge(state, 2.5, 3.2, 2, 0.12, 1.6)
             if state.modelAttrs.A.BeatScreen then
                 state.screenFlash = 1

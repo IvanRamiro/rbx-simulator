@@ -29,6 +29,15 @@ Ember Peak formations and particles:
   forge ticks, and a molten heart.
 - SigilPhoenix (Phoenix Ash): a phoenix with spread wings of feathers and a long tail, inside a
   ring of flame tongues licking outward.
+- SigilCrustRing (Inferno): a ring of dark basalt crust broken into uneven segments, molten lava
+  glowing in the breaks and heating the crust's edges red, a thin broken thread of lava inside it.
+  Coloured, not white: the crust must stay dark against the glow.
+- AuraAsh: one flake of ash, irregular and thin at its edges (tinted grey in the game).
+- AuraSpark: one spark: a hot core with a short soft tail toward the bottom, with real alpha so it
+  keeps its colour over a bright sky without light emission (the library's dots are white on black
+  and only work additively); used along the particle's velocity, it reads as a streak.
+- AuraSlash: one thick slash: a crescent swelling to its full stroke mid-arc and tapering to
+  sharp points, a solid core with soft edges and a faint glow (tinted in the game).
 - AuraFlameTongue: one flame tongue, hot at its root, curling as it rises (single frame).
 - AuraRock: a chunk of obsidian with lava veins, modelled and rendered in Blender.
 
@@ -44,6 +53,10 @@ Beams:
 - AuraStream (Elemental Core): an element stream that tiles along its length: a bright core
   with two filaments braiding round it and packets of energy riding along it (scrolled by the
   beam's TextureSpeed).
+- AuraVessel (Magma Heart): a molten artery that tiles along its length, coloured (not white): a
+  white-hot core inside a blood-red body darkening to soft edges, the vessel weaving a little,
+  with pulses of heat swelling the core as they ride along it. The beams scroll it up and tint it
+  only along their length (dim at the root, full at the crown).
 
 Particles and floating objects (Jade Grove):
 - AuraPetal: one blossom petal, notched at its tip, with a faint midrib.
@@ -68,9 +81,9 @@ OUT = os.path.join(Q.REPO, "assets", "vfx", "eggs")
 grid, smoothstep, line, glow, spiral_distance = Q.grid, Q.smoothstep, Q.line, Q.glow, Q.spiral_distance
 
 
-def save(name, alpha):
+def save(name, alpha, rgb=None):
     Q.OUT = OUT
-    return Q.save(name, alpha)
+    return Q.save(name, alpha, rgb)
 
 
 def segment(x, y, ax, ay, bx, by):
@@ -166,6 +179,27 @@ def stream(w=512, h=128):
     a = np.maximum(np.maximum(core, braids), packets)
     halo = glow(np.concatenate([a, a, a], axis=1), 3)[:, w:2 * w]   # blurred across the seam, so it tiles
     return save("AuraStream", np.clip(a + halo * 0.5, 0, 1) * (1 - smoothstep(0.85, 1, np.abs(y))))
+
+
+def vessel(w=512, h=128):
+    x, y = grid(w, h)
+    u = (x + 1) / 2                                   # every term has whole periods in u, so it tiles
+    t = 2 * math.pi * u
+    yv = y - 0.1 * np.sin(t * 2 + 0.6) - 0.05 * np.sin(t * 5 + 2.1)   # the vessel weaves a little
+    pulse = smoothstep(0.35, 1, 0.6 * np.cos(t * 3) + 0.4 * np.cos(t * 7 + 1.3))   # heat riding along it
+    body = 1 - smoothstep(0.45, 0.92, np.abs(yv))
+    core = np.exp(-(yv / (0.06 + 0.05 * pulse)) ** 2)            # the white-hot thread
+    inner = np.exp(-(yv / 0.3) ** 2)                              # molten glow round it
+    strands = 0.8 + 0.2 * np.sin(yv * 24 + 1.8 * np.sin(t * 3 + 0.4) + 0.9 * np.sin(t * 5))   # flow lines along it
+    heat = np.clip(core * (0.75 + 0.25 * pulse) + 0.6 * inner * strands * (0.65 + 0.35 * pulse) + 0.2 * body, 0, 1)
+    # a ramp from a dark rim through blood red and orange to white-hot
+    stops = [(0, (0.22, 0.02, 0.03)), (0.35, (0.8, 0.07, 0.05)), (0.7, (1, 0.42, 0.1)), (1, (1, 0.93, 0.72))]
+    rgb = np.zeros(heat.shape + (3,))
+    for (k0, c0), (k1, c1) in zip(stops, stops[1:]):
+        f = np.clip((heat - k0) / (k1 - k0), 0, 1)[..., None]
+        inside = ((heat >= k0) & (heat <= k1))[..., None]
+        rgb = np.where(inside, np.array(c0) + (np.array(c1) - np.array(c0)) * f, rgb)
+    return save("AuraVessel", np.clip(body * (0.75 + 0.25 * strands) + core, 0, 1), rgb)
 
 
 def sigil_jade_leaf(size=768):
@@ -346,6 +380,83 @@ def sigil_fissure(size=768):
     a = np.maximum(a, 1 - smoothstep(0.07, 0.11, r))           # the molten eye
     a *= 1 - smoothstep(0.96, 0.99, r)
     return save("SigilFissure", np.clip(a + glow(a, 6) * 0.6, 0, 1))
+
+
+def crust_ring(size=768, segments=13, seed=9):
+    x, y = grid(size)
+    r = np.hypot(x, y)
+    th = np.arctan2(y, x)
+    px = 2.0 / size
+    rnd = np.random.default_rng(seed)
+    wobble = Q.noise1(th, 3, seed)
+    r0 = 0.7 + 0.025 * wobble + 0.008 * Q.noise1(th * 7, 2, seed + 6)
+    r1 = 0.9 + 0.03 * Q.noise1(th + 1.0, 3, seed + 1) + 0.012 * Q.noise1(th * 9, 2, seed + 7)   # a chipped rim
+    band = smoothstep(r0 - 2 * px, r0 + 2 * px, r) * (1 - smoothstep(r1 - 2 * px, r1 + 2 * px, r))
+    # the breaks: uneven angles, narrow and jagged (zigzagging as they cross the band), each its own
+    # width; `gap` is the distance to the nearest (image units)
+    cuts = (np.arange(segments) + rnd.uniform(-0.35, 0.35, segments)) * 2 * math.pi / segments
+    widths = rnd.uniform(0.006, 0.02, segments)
+    gap = np.full_like(r, 9.0)
+    for k, (c, w) in enumerate(zip(cuts, widths)):
+        jag = 0.03 * Q.noise1(r * 14 + k, 2, seed + 10 + k) + 0.01 * Q.noise1(r * 45 + k, 2, seed + 30 + k)
+        d = np.abs((th - c - jag + math.pi) % (2 * math.pi) - math.pi) * r - w
+        gap = np.minimum(gap, d)
+    crack = 1 - smoothstep(0, 7 * px, gap)                          # molten, fading out of each break
+    core = 1 - smoothstep(0, 1.5 * px, gap)                         # its white-hot middle
+    # fine fissures meandering across the crust, glowing faintly
+    fissure = line(Q.noise1(th * 6 + r * 14, 3, seed + 5), 0.012, 2 * px) * smoothstep(-0.3, 0.3, Q.noise1(th * 3, 2, seed + 8))
+    rim_heat = 1 - smoothstep(0, 0.035, np.minimum(r - r0, r1 - r))  # the crust's edges heated red
+    mott = Q.noise1(th * 23 + r * 31, 3, seed + 3) * 0.5 + Q.noise1(th * 57 + r * 71, 2, seed + 9) * 0.5
+    tone = np.clip(0.09 + 0.06 * mott, 0.03, 0.18)
+    thread = line(r - (0.63 + 0.012 * wobble), 0.008, 2 * px) * smoothstep(-0.2, 0.4, Q.noise1(th * 2, 2, seed + 4))
+    heat = np.clip(np.maximum.reduce([crack * 0.8 + core * 0.2, rim_heat * 0.45 * band, fissure * 0.55 * band, thread]), 0, 1)
+    rock = np.stack([tone * 1.1, tone * 0.85, tone * 0.8], axis=-1)
+    stops = [(0, None), (0.35, (0.55, 0.06, 0.02)), (0.7, (1, 0.4, 0.06)), (1, (1, 0.9, 0.6))]
+    rgb = rock.copy()
+    for (k0, c0), (k1, c1) in zip(stops, stops[1:]):
+        f = np.clip((heat - k0) / (k1 - k0), 0, 1)[..., None]
+        a = rock if c0 is None else np.array(c0)
+        rgb = np.where(((heat >= k0) & (heat <= k1))[..., None], a + (np.array(c1) - a) * f, rgb)
+    alpha = np.clip(np.maximum(band, thread) + glow(crack * band, 4) * 0.5, 0, 1)
+    return save("SigilCrustRing", alpha, rgb)
+
+
+def spark(size=128):
+    x, y = grid(size)
+    # an elongated drop: round at the top (the leading end), tapering into a tail below
+    yy = np.where(y > 0, y / 0.32, y / 0.95)
+    d = np.hypot(x / (0.22 + 0.1 * smoothstep(-1, 0.3, y)), yy)
+    body = 1 - smoothstep(0.55, 1.0, d)
+    core = 1 - smoothstep(0.0, 0.45, np.hypot(x / 0.16, (y - 0.08) / 0.2))
+    return save("AuraSpark", np.clip(body * 0.75 + core * 0.25, 0, 1) ** 0.9)
+
+
+def slash(size=512, radius=0.66, thickness=0.26, sweep=(15, 205)):
+    x, y = grid(size)
+    r = np.hypot(x, y)
+    th = np.degrees(np.arctan2(y, x)) % 360
+    a0, a1 = sweep
+    t = np.clip((th - a0) / (a1 - a0), 0, 1)
+    inside = (th >= a0) & (th <= a1)
+    # the stroke swells to its full thickness a little past the middle and tapers to points
+    half = 0.5 * thickness * np.sin(math.pi * t ** 0.85) * inside
+    d = np.abs(r - radius)
+    px = 2.0 / size
+    body = 1 - smoothstep(half * 0.55, half + 1.5 * px, d)
+    core = 1 - smoothstep(0, half * 0.45 + px, d)
+    halo = 1 - smoothstep(half, half + 0.06, d)
+    stroke = (body * 0.85 + core * 0.15) * smoothstep(0, 2 * px, half)   # nothing where the stroke has no width
+    return save("AuraSlash", np.clip(np.maximum(stroke, halo * 0.22 * inside), 0, 1))
+
+
+def ash(size=128, seed=21):
+    x, y = grid(size)
+    r = np.hypot(x, y)
+    th = np.arctan2(y, x)
+    edge = 0.62 + 0.2 * Q.noise1(th, 3, seed) + 0.06 * Q.noise1(th * 3, 2, seed + 1)
+    body = 1 - smoothstep(edge - 0.08, edge, r)
+    thin = 0.85 + 0.15 * Q.noise1(th * 4, 2, seed + 2)                 # unevenly thin, not a glow
+    return save("AuraAsh", body * thin)
 
 
 def sigil_crystal_forge(size=768):
@@ -539,4 +650,4 @@ def crystal(size=512):
 
 
 def build_all():
-    return [sigil_wind_rose(), sigil_wuxing(), sigil_jade_leaf(), sigil_blossom(), sigil_tree_rings(), petal(), blossom(), vortex(), bloom_light(), sigil_fissure(), sigil_crystal_forge(), sigil_phoenix(), flame_tongue(), rock(), qi_ring(), element_band(), stream(), feather(), cloud(), crystal()]
+    return [sigil_wind_rose(), sigil_wuxing(), sigil_jade_leaf(), sigil_blossom(), sigil_tree_rings(), petal(), blossom(), vortex(), bloom_light(), sigil_fissure(), sigil_crystal_forge(), sigil_phoenix(), crust_ring(), ash(), spark(), slash(), flame_tongue(), rock(), qi_ring(), element_band(), stream(), vessel(), feather(), cloud(), crystal()]
