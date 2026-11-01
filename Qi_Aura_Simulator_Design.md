@@ -140,7 +140,41 @@ The islands were first linked by floating stepping stones tuned to each rank's l
 - From the PDS' Particles & Models Kit: a soft fog puff gives every cloud burst and the riding cloud their volume (the line-drawn clouds ride on a bank of it), plus a vortex under the formations, a starburst flare and glittering Qi mist at landing.
 - Effects play at once for the player and are relayed by the server to everyone else (cosmetic only, rate-limited); other players' effects are skipped beyond 250 studs and use fewer particles.
 
-**Planned:** directional dashes and Qinggong stamina; sword flight (section 0).
+### Stamina, dash and sword flight (November 1, 2026)
+
+Decided by the owner:
+- stamina fuels only dashes and sword flight;
+- sword flight unlocks at Foundation Initiate;
+- Qi barriers still hold for flyers.
+
+- **Stamina:** one bar under the air-leap pips.
+  - Air leaps keep their charges and glide stays free.
+  - It refills after a 0.6 s pause: 32 per second on the ground, 14 in the air, none while flying.
+- **Dash** (Q, gamepad B, or the touch Dash button): a 0.2 s burst along the move direction (or facing), on the ground or in the air.
+  - It costs 25 stamina, with a 0.45 s cooldown.
+  - A gust of Qi goes with it: wind streaks stream back, a soft cloud puffs out where it set off, and a faint ripple opens.
+- **Sword flight** (G, gamepad Y, or the touch Sword button): the cultivator stands on a flying jian.
+  - **Controls:** move with the camera (look up or down to climb or dive), hold jump to rise and Ctrl, C or L2 to sink. Still, it hovers.
+  - **Cost:** 8 stamina per second moving, 4 hovering; take-off needs 25. It lands itself when stamina runs out.
+  - **Stance:** upright on the blade, one foot forward, a hand raised in a sword gesture; moving, it sinks lower and leans into the speed.
+  - **On the server:** `FlightService` checks the rank, puts the sword under the feet in `Workspace.FlyingSwords` and caps a flight at a full bar spent hovering.
+  - **The barriers still hold:** WorldService returns anyone below a bridge's rank who reaches it or its island, at any height.
+  - **Relics too:** a flyer can reach the Void Shard early but can't claim it, because the claim is rank-checked.
+- **The flying sword** (`tools/blender/weapons/flying_sword.py`, 8.3 studs long): **a blade whose cutting edge is Qi**, an original design whose identity is in its shape, readable from above while it is ridden.
+  - **The blade:** a narrow dark-gold spine with a band of gold cloud scrolls raised along it, and two bright lines inlaid beside the scrolls. The whole cutting edge is translucent glowing Qi in the rider's realm colour (azure, jade, gold or violet). It is narrow at the guard and flares toward the tip in soft flame licks, and the point itself is pure Qi.
+  - **The hilt** is gold and white like the owner's Murim robes: broad flame-tongue wings swept back round a white-jade disc in a gold rim, a white silk grip bound in gold cord, and a gold flame finial.
+  - **In flight:** a soft wake trails the blade and a white silk ribbon edged in the realm's colour streams from the pommel.
+  - **Why it was redesigned:** the first version was a plain steel jian. The owner called it generic: its outline was the default sword, its details sat at the hilt under the rider, and they lived in the texture.
+
+| Rank | Stamina | Dash speed | Flight speed |
+|---|---|---|---|
+| Qi Initiate | 100 | 70 | — |
+| Qi Gatherer | 110 | 74 | — |
+| Qi Awakener | 120 | 78 | — |
+| Foundation Initiate | 135 | 82 | 48 |
+| Perfect Foundation | 150 | 86 | 56 |
+| Divine Initiate | 170 | 92 | 64 |
+| Void Walker | 190 | 100 | 72 |
 
 ---
 
@@ -828,8 +862,6 @@ Outfits are worn over the player's own avatar (`GameConfig.Outfits`). They are c
 
 - **Egg stands under the guardian loop:** a hatching spot for secured eggs, a starter egg source, or removed?
 - **Forged weapons:** the purchase and request flow, which weapons each Qi mastery level unlocks, and how they plug into combat.
-- **Sword flight:** how it unlocks. The bridges are wide enough to ride along; whether flight may cross a Qi barrier is still open (today the server returns anyone below the rank who reaches a bridge or island past it).
-- **Qinggong:** dashes and stamina.
 - **PvP stealing or raids:** only ever opt-in and server-checked, with protected pets, cooldowns and clear warnings. Not planned. Guardian egg theft is PvE.
 - **Monetization:** cosmetic-first, never pay-to-win; no paid eggs or random rewards until Roblox's policies are checked.
 - **Selling outfits:** a game pass in this game (ready: set `GamePassId`) or the Roblox Avatar Marketplace (needs the UGC program and layered clothing fitted to any avatar).

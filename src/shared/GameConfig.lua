@@ -22,15 +22,43 @@ local GameConfig = {
         LeapCooldown = 0.2,
         GlideFallSpeed = 14,
         GlideSpeedFactor = 1.1, -- glide horizontal speed, relative to run speed
+        -- Stamina fuels dashes and sword flight only (air leaps keep their charges, glide is free).
+        -- It refills after a short pause, faster on the ground.
+        Stamina = { RegenGround = 32, RegenAir = 14, RegenDelay = 0.6 },
+        -- A dash: a short burst along the move direction (or facing), on the ground or in the air.
+        Dash = { Cost = 25, Duration = 0.2, Cooldown = 0.45 },
+        -- Per rank: air leaps, run speed, stamina, dash speed (studs/s while dashing) and sword
+        -- flight speed (0 before flight unlocks, see SwordFlight).
         Levels = {
-            { RankId = "QiInitiate", AirLeaps = 1, RunSpeed = 22 },
-            { RankId = "QiGatherer", AirLeaps = 2, RunSpeed = 24 },
-            { RankId = "QiAwakener", AirLeaps = 3, RunSpeed = 26 },
-            { RankId = "FoundationInitiate", AirLeaps = 4, RunSpeed = 28 },
-            { RankId = "PerfectFoundation", AirLeaps = 5, RunSpeed = 30 },
-            { RankId = "DivineInitiate", AirLeaps = 6, RunSpeed = 32 },
-            { RankId = "VoidWalker", AirLeaps = 7, RunSpeed = 34 },
+            { RankId = "QiInitiate", AirLeaps = 1, RunSpeed = 22, Stamina = 100, DashSpeed = 70, FlightSpeed = 0 },
+            { RankId = "QiGatherer", AirLeaps = 2, RunSpeed = 24, Stamina = 110, DashSpeed = 74, FlightSpeed = 0 },
+            { RankId = "QiAwakener", AirLeaps = 3, RunSpeed = 26, Stamina = 120, DashSpeed = 78, FlightSpeed = 0 },
+            { RankId = "FoundationInitiate", AirLeaps = 4, RunSpeed = 28, Stamina = 135, DashSpeed = 82, FlightSpeed = 48 },
+            { RankId = "PerfectFoundation", AirLeaps = 5, RunSpeed = 30, Stamina = 150, DashSpeed = 86, FlightSpeed = 56 },
+            { RankId = "DivineInitiate", AirLeaps = 6, RunSpeed = 32, Stamina = 170, DashSpeed = 92, FlightSpeed = 64 },
+            { RankId = "VoidWalker", AirLeaps = 7, RunSpeed = 34, Stamina = 190, DashSpeed = 100, FlightSpeed = 72 },
         },
+    },
+
+    -- Sword flight: from UnlockRank, the cultivator rides a flying sword (src/server/FlightService).
+    -- It drains stamina (Cost per second while moving, HoverCost while still) and needs MinStamina
+    -- to take off. Qi barriers still hold: flight never reaches an island above the rider's rank.
+    SwordFlight = {
+        UnlockRank = "FoundationInitiate",
+        Cost = 8,
+        HoverCost = 4,
+        MinStamina = 25,
+        ClimbSpeed = 22, -- rising or sinking straight up and down (jump / crouch keys)
+        -- the sword's Qi channel glows in the rider's realm colour (saturated: Neon blooms pale ones)
+        RealmGlow = {
+            ["Qi Awakening"] = Color3.fromRGB(40, 140, 255),
+            ["Qi Foundation"] = Color3.fromRGB(40, 140, 255),
+            ["Spirit Core"] = Color3.fromRGB(20, 210, 150),
+            ["Spirit Soul"] = Color3.fromRGB(20, 210, 150),
+            ["Ascendant Realm"] = Color3.fromRGB(255, 170, 30),
+            ["Immortal Realm"] = Color3.fromRGB(255, 170, 30),
+        },
+        DefaultGlow = Color3.fromRGB(100, 60, 255), -- Divine Realm and above: violet (a bluer one: Neon turned 8246ff pink)
     },
 
     RelicTag = "SpiritRelic",

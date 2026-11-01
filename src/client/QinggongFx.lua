@@ -10,6 +10,9 @@
 --            as if climbing steps in the air, alternating with each leap (see pose).
 --   Glide    (holding jump while falling): riding the clouds. A stream of cloud pours from under
 --            the feet and wind lines rush past the body.
+--   Dash     (a dash, on the ground or in the air): the body shoots forward on a gust of Qi. Wind
+--            streaks stream back past it, a soft cloud puffs out behind and lingers where it set
+--            off, and a faint ripple opens at the start.
 --   Land     (touching down after any of the above, or a hard fall): a starburst, a formation
 --            flash, shockwave rings, sharp Qi spikes, rolling cloud and glittering Qi mist, all
 --            scaled by impact.
@@ -319,6 +322,33 @@ local function step(p, feet, power, detail)
     }):Emit(count(8, detail))
 end
 
+local function dashBurst(p, centre, direction, detail)
+    local back = -direction
+    local spot = host(centre, Vector3.new(0.6, 1.6, 0.6), 1.6)
+    spot.CFrame = CFrame.lookAt(centre, centre + back)
+    -- wind streaks streaming back past the body (the emitter's Front face points back)
+    emitter(spot, {
+        Texture = TEXTURES.Streak, EmissionDirection = Enum.NormalId.Front, Orientation = Enum.ParticleOrientation.VelocityParallel,
+        Shape = Enum.ParticleEmitterShape.Box, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        Speed = NumberRange.new(28, 40), SpreadAngle = Vector2.new(8, 8), Lifetime = NumberRange.new(0.14, 0.22),
+        Size = numberSequence({ { 0, 1.6 }, { 1, 0.5 } }), Transparency = numberSequence({ { 0, 0.1 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, p.Core }, { 1, p.Main } }), Brightness = 2.2,
+    }):Emit(count(9, detail))
+    -- a soft cloud puffing out where it set off
+    puff(spot, {
+        EmissionDirection = Enum.NormalId.Front, Speed = NumberRange.new(4, 8), SpreadAngle = Vector2.new(35, 35), Drag = 3,
+        Lifetime = NumberRange.new(0.8, 1.2), Size = numberSequence({ { 0, 1 }, { 0.3, 2.2 }, { 1, 2.8 } }),
+        Transparency = numberSequence({ { 0, 1 }, { 0.1, 0.35 }, { 0.7, 0.65 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, p.Core:Lerp(p.Main, 0.4) }, { 1, p.Main } }), Brightness = 1.4,
+    }, 4, detail)
+    -- a faint ripple opening at the start, facing along the dash
+    emitter(spot, {
+        Texture = TEXTURES.Shockwave, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.3), ZOffset = 0.2,
+        Size = numberSequence({ { 0, 0.8 }, { 1, 4.2 } }), Transparency = numberSequence({ { 0, 0.35 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, p.Core }, { 1, p.Main } }), Brightness = 1.8,
+    }):Emit(1)
+end
+
 local function impact(p, ground, strength, detail, withLight)
     local s = 0.6 + 0.6 * strength
     local centre = host(ground + Vector3.new(0, GROUND_LIFT, 0), Vector3.new(0.2, 0.2, 0.2), 1.4)
@@ -601,7 +631,7 @@ end
 
 -- ---------- entry point ----------
 -- kind: "Takeoff" | "Leap" (value = the leap's number) | "Glide" (value 1 = start, 0 = stop) |
--- "Land" (value = impact strength, 0..1)
+-- "Land" (value = impact strength, 0..1) | "Dash"
 function QinggongFx.play(player, kind, value)
     local character, humanoid, root = rootOf(player)
     if not character then
@@ -645,6 +675,17 @@ function QinggongFx.play(player, kind, value)
             if ground then
                 impact(p, ground, math.clamp(value or 0.3, 0, 1), detail, isLocal)
             end
+        end
+    elseif kind == "Dash" then
+        if visible then
+            local direction = root.AssemblyLinearVelocity * Vector3.new(1, 0, 1)
+            if direction.Magnitude < 1 then
+                direction = humanoid.MoveDirection
+            end
+            if direction.Magnitude < 0.05 then
+                direction = root.CFrame.LookVector * Vector3.new(1, 0, 1)
+            end
+            dashBurst(p, root.Position, direction.Unit, detail)
         end
     elseif kind == "Takeoff" then
         startLeap(state, "Right")

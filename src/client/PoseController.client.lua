@@ -49,28 +49,32 @@ local LOTUS = symmetric({
     Neck = deg(-6, 0, 0),
 })
 
-local FLYING = symmetric({
-    RightShoulder = deg(165, 0, -8),
-    RightElbow = deg(10, 0, 0),
-    LeftShoulder = deg(-20, 0, 10),
-    LeftElbow = deg(15, 0, 0),
-    RightHip = deg(-6, 0, 3),
-    RightKnee = deg(-12, 0, 0),
-    LeftHip = deg(4, 0, -3),
-    LeftKnee = deg(-35, 0, 0),
-    RightAnkle = deg(-30, 0, 0),
-    Neck = deg(25, 0, 0),
-})
+-- Riding the flying sword: standing on the blade, the right foot forward and the left back, both
+-- drawn in so they stay on it, knees soft; the right hand held before the chest in a sword
+-- gesture, the left behind the back. Moving, the stance sinks lower and the left arm trails.
+local RIDE_LEGS = {
+    RightHip = pointLimb(Vector3.new(-0.07, -0.96, -0.26)),
+    RightKnee = deg(-16, 0, 0),
+    RightAnkle = deg(10, 0, 0),
+    LeftHip = pointLimb(Vector3.new(0.07, -0.97, 0.22)),
+    LeftKnee = deg(-10, 0, 0),
+    LeftAnkle = deg(-4, 0, 0),
+}
+local HOVERING = table.clone(RIDE_LEGS)
+HOVERING.RightShoulder = pointLimb(Vector3.new(-0.35, -0.5, -0.79))
+HOVERING.RightElbow = deg(85, 0, 0)
+HOVERING.RightWrist = deg(-10, 0, 0)
+HOVERING.LeftShoulder = pointLimb(Vector3.new(0.2, -0.82, 0.54))
+HOVERING.LeftElbow = deg(70, 0, 0)
 
-local HOVERING = symmetric({
-    RightShoulder = deg(10, 0, 20),
-    RightElbow = deg(20, 0, 0),
-    RightHip = deg(12, 0, 4),
-    RightKnee = deg(-25, 0, 0),
-    LeftHip = deg(-4, 0, -4),
-    LeftKnee = deg(-12, 0, 0),
-    RightAnkle = deg(-25, 0, 0),
-})
+local FLYING = table.clone(HOVERING)
+FLYING.RightHip = pointLimb(Vector3.new(-0.07, -0.93, -0.36))
+FLYING.RightKnee = deg(-28, 0, 0)
+FLYING.LeftHip = pointLimb(Vector3.new(0.07, -0.95, 0.3))
+FLYING.LeftKnee = deg(-20, 0, 0)
+FLYING.LeftShoulder = pointLimb(Vector3.new(-0.15, -0.72, 0.68))
+FLYING.LeftElbow = deg(15, 0, 0)
+FLYING.Waist = deg(-6, 0, 0)
 
 -- The same pose for the other side of the body: every Right joint becomes the mirrored Left one
 -- and every Left joint the mirrored Right one.

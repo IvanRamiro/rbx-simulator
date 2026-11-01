@@ -1,5 +1,7 @@
--- Grants each player the Qinggong level of their rank: the number of mid-air leaps and the run
--- speed (the "QinggongAirLeaps" and "QinggongRunSpeed" attributes). WalkSpeed is set here except
+-- Grants each player the Qinggong level of their rank: the number of mid-air leaps, the run
+-- speed, stamina, dash speed and sword flight speed (the "QinggongAirLeaps", "QinggongRunSpeed",
+-- "QinggongMaxStamina", "QinggongDashSpeed" and "QinggongFlightSpeed" attributes; flight speed is
+-- 0 before sword flight unlocks). WalkSpeed is set here except
 -- while the player meditates, when the client's hover holds it at 0 and restores the run speed.
 --
 -- Also relays each player's Qinggong effects (takeoff, leap, glide, land) to everyone else, so
@@ -12,7 +14,7 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local PlayerData = require(script.Parent:WaitForChild("PlayerData"))
 
-local FX_KINDS = { Takeoff = true, Leap = true, Glide = true, Land = true }
+local FX_KINDS = { Takeoff = true, Leap = true, Glide = true, Land = true, Dash = true }
 local FX_PER_SECOND = 20 -- far above what play produces (a leap every 0.2 s at most)
 local fxBudgets = {}
 
@@ -20,6 +22,9 @@ local function applyLevel(player, rankValue)
     local level = Ranks.getQinggong(rankValue.Value)
     player:SetAttribute("QinggongAirLeaps", level.AirLeaps)
     player:SetAttribute("QinggongRunSpeed", level.RunSpeed)
+    player:SetAttribute("QinggongMaxStamina", level.Stamina)
+    player:SetAttribute("QinggongDashSpeed", level.DashSpeed)
+    player:SetAttribute("QinggongFlightSpeed", level.FlightSpeed)
 
     local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if humanoid and player:GetAttribute("IsCultivating") ~= true then
@@ -30,6 +35,9 @@ end
 local function setupPlayer(player)
     local first = Ranks.getQinggong("")
     player:SetAttribute("QinggongAirLeaps", first.AirLeaps)
+    player:SetAttribute("QinggongMaxStamina", first.Stamina)
+    player:SetAttribute("QinggongDashSpeed", first.DashSpeed)
+    player:SetAttribute("QinggongFlightSpeed", 0)
 
     if not PlayerData.waitForData(player) then
         return

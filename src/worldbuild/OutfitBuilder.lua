@@ -121,6 +121,70 @@ function OutfitBuilder.store(model, outfitId)
     return { pieces = #folder:GetChildren(), worst = frame.worst, turned = frame.turn ~= 0 }
 end
 
+-- Stores an imported flying sword (assets/weapons/FlyingSword.fbx) in ServerStorage.Weapons.FlyingSword:
+-- "Body" (its baked mesh) and its Neon glow pieces (named in Placements/FlyingSword.lua and found
+-- by their exported colour), each with its Offset from the sword's origin.
+function OutfitBuilder.storeSword(model)
+    local placements = require(ServerStorage.WorldBuild.Placements.FlyingSword:Clone())
+    local found = {}
+    for _, d in model:GetDescendants() do
+        if d:IsA("MeshPart") then
+            local hex = string.match(d.Name, "_Glow_(%x+)$")
+            for name, info in placements.Pieces do
+                if (hex and info.Hex == hex) or (not hex and not info.Hex and string.match(d.Name, "_Body$")) then
+                    found[name] = d
+                end
+            end
+        end
+    end
+    for name in placements.Pieces do
+        assert(found[name], "the import has no piece " .. name)
+    end
+    local frame = fit(found, placements)
+    assert(frame.worst < 0.05, ("the pieces do not match their authored layout (worst %.3f studs off)"):format(frame.worst))
+
+    local root = ServerStorage:FindFirstChild("Weapons") or Instance.new("Folder")
+    root.Name = "Weapons"
+    root.Parent = ServerStorage
+    local old = root:FindFirstChild("FlyingSword")
+    if old then
+        old:Destroy()
+    end
+    local folder = Instance.new("Folder")
+    folder.Name = "FlyingSword"
+    folder:SetAttribute("Top", placements.Top)
+    for name, part in found do
+        part.Name = name
+        part.Anchored = true
+        part.CanCollide = false
+        part.CanQuery = false
+        part.CanTouch = false
+        part.Massless = true
+        local glow = placements.Pieces[name].Hex ~= nil
+        part.CastShadow = not glow
+        part:SetAttribute("Glow", glow)
+        if glow then
+            part.Material = Enum.Material.Neon
+            part.TextureID = ""
+            for _, child in part:GetChildren() do
+                child:Destroy()
+            end
+        end
+        part:SetAttribute("Offset", frame.frame:ToObjectSpace(part.CFrame))
+        part.Parent = folder
+    end
+    model:Destroy()
+    folder.Parent = root
+    for name, ids in placements.Maps do
+        local appearance = folder[name]:FindFirstChildOfClass("SurfaceAppearance")
+        if appearance then
+            appearance.ColorMap, appearance.NormalMap = ids.Color, ids.Normal
+            appearance.RoughnessMap, appearance.MetalnessMap = ids.Roughness, ids.Metalness
+        end
+    end
+    return { worst = frame.worst, turned = frame.turn ~= 0 }
+end
+
 -- Sets the pieces' maps: { <Piece> = { Color = id, Normal = id, Roughness = id, Metalness = id } }.
 function OutfitBuilder.setMaps(outfitId, maps)
     local folder = ServerStorage.Outfits[outfitId]

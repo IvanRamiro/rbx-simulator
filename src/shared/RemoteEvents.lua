@@ -14,6 +14,7 @@ local EVENT_NAMES = {
     "RelicResultEvent",
     "QinggongFxEvent",
     "OutfitEvent",
+    "FlightEvent",
 }
 
 local RemoteEvents = {}
