@@ -160,6 +160,7 @@ def split(low, coll):
         bm.faces.ensure_lookup_table()
         far = [f for f in bm.faces if round(f.calc_center_median().x / SPACING) != k]
         bmesh.ops.delete(bm, geom=far, context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")   # no stray vertices: they would stretch the bounds
         me = bpy.data.meshes.new("Fragment%d" % (k + 1))
         bm.to_mesh(me)
         bm.free()
