@@ -24,7 +24,9 @@
 --   * a model with BeatScreen (studs) pulses the player's screen, ColorCorrection and Bloom, in
 --     its Tint when the camera is within that distance, and flashes it white-hot on the burst.
 -- Parts with an Orbit attribute (rocks) orbit like attachments, carrying their child parts (their
--- glowing cores), and tumble by Tumble (Vector3, degrees per second).
+-- glowing cores), and tumble by Tumble (Vector3, degrees per second). A mover with AvoidAngle
+-- (degrees round its orbit) pulls in to AvoidRadius studs as it passes that way, past a
+-- neighbouring egg, however far a pulse or a hatch throws it.
 -- An aura with PulseInterval (seconds, give or take PulseJitter) sends an energy pulse through
 -- itself, each piece answering PulseDelay seconds after it starts, so nothing pulses at once:
 --   * the aura speeds up by PulseSpeed and glows brighter by PulseGlow (fractions);
@@ -38,6 +40,19 @@
 -- FlickerSpeedMax (NumberRanges) their speed's low and high ends jump too.
 -- The hatch's burst sends a pulse too. Settings, all model attributes, all optional: Intensity
 -- (glow), Density (emission rates), OrbitSpeed, LightIntensity, and Visible (false hides it).
+-- An aura with CyclePeriod (seconds) runs a cycle through it, a fraction from 0 to 1 that wraps
+-- round (the Phoenix Ash's death and rebirth); every curve below is a NumberSequence or
+-- ColorSequence over that fraction:
+--   * emitters with CycleRate scale their rate by it, and with CycleEmit fire that many as the
+--     cycle passes CycleAt;
+--   * lights with CycleBrightness scale by it and take their colour from CycleColor;
+--   * attachments with SweepTo move from SweepFrom (via SweepVia) to SweepTo as SweepCurve rises
+--     from 0 to 1 (a trail between one and a still attachment sweeps open like a wing);
+--   * the model's CycleEggGlow (0 cold, 1 the egg's own glow, 2 hot) cools the egg's glowing parts
+--     toward CycleEggCold and heats them toward CycleEggHot; CycleHighlight (colour),
+--     CycleOutline and CycleFill (transparencies) drive a Highlight on the egg;
+--   * with CycleScreen (studs) the player's screen flashes by CycleScreenFlash as the cycle passes
+--     CycleRebirth, and a hatch's burst jumps the cycle to CycleRebirth.
 -- Auras run at full rate near the camera, half rate further out, and switch off beyond that, or
 -- when their egg's stand is gone.
 local CollectionService = game:GetService("CollectionService")
@@ -83,10 +98,11 @@ local function index(model)
     end
     local state = {
         model = model, root = root, eggId = model:GetAttribute("EggId"), tint = model:GetAttribute("Tint"),
-        movers = {}, spinners = {}, ripples = {}, waves = {}, sways = {}, emitters = {}, trails = {}, lights = {}, guis = {}, flickers = {},
+        movers = {}, spinners = {}, ripples = {}, waves = {}, sways = {}, emitters = {}, trails = {}, lights = {}, guis = {}, flickers = {}, sweepers = {},
         speed = 1, glow = 1, swell = 0, level = 2,
         gather = model:GetAttribute("Gather") or 1.2,
         breathT = math.random(), beat = 0, swellBeams = {}, screenFlash = 0, distance = math.huge,
+        cycleT = math.random(),
     }
     state.modelAttrs = watched(model)
     for _, d in model:GetDescendants() do
@@ -102,6 +118,8 @@ local function index(model)
                 end
             end
             table.insert(state.movers, m)
+        elseif d:IsA("Attachment") and d:GetAttribute("SweepTo") then
+            table.insert(state.sweepers, watched(d))
         elseif d:IsA("BasePart") and d:GetAttribute("Ripple") then
             local r = watched(d)
             r.Templates = labelsOf(d)
@@ -113,7 +131,8 @@ local function index(model)
         elseif d:IsA("ImageLabel") and d:GetAttribute("Sway") then
             table.insert(state.sways, watched(d))
         elseif d:IsA("ParticleEmitter") then
-            table.insert(state.emitters, { Emitter = d, Rate = d.Rate, Enabled = d.Enabled, Speed = d.Speed })
+            table.insert(state.emitters, { Emitter = d, Rate = d.Rate, Enabled = d.Enabled, Speed = d.Speed,
+                CycleRate = d:GetAttribute("CycleRate"), CycleEmit = d:GetAttribute("CycleEmit"), CycleAt = d:GetAttribute("CycleAt") })
             if d:GetAttribute("FlickerRate") or d:GetAttribute("FlickerSpeedMin") then
                 local f = watched(d)
                 f.Next = 0
@@ -126,7 +145,8 @@ local function index(model)
                     P = d:GetAttribute("PulseWidth") or 0, Delay = d:GetAttribute("PulseDelay") or 0 })
             end
         elseif d:IsA("Light") then
-            table.insert(state.lights, { Light = d, Brightness = d.Brightness })
+            table.insert(state.lights, { Light = d, Brightness = d.Brightness, Color = d.Color,
+                CycleBrightness = d:GetAttribute("CycleBrightness"), CycleColor = d:GetAttribute("CycleColor") })
         elseif d:IsA("SurfaceGui") or d:IsA("BillboardGui") then
             table.insert(state.guis, { Gui = d, Brightness = d.Brightness })
         end
@@ -165,6 +185,9 @@ local function setLevel(state, level)
     end
     if state.beatHighlight then
         state.beatHighlight.Enabled = on
+    end
+    if state.cycleHighlight then
+        state.cycleHighlight.Enabled = on
     end
 end
 
@@ -309,12 +332,12 @@ local function firePulse(state, now)
     end
 end
 
--- The egg's own glowing parts (its stand's "<EggId>_Glow_<hex>" pieces) heated toward `hot`.
-local function heatEgg(state, hot, heat)
+-- The egg's own glowing parts (its stand's "<EggId>_Glow_<hex>" pieces), with their colours as built.
+local function eggGlowParts(state)
     if not state.eggGlow then
         local egg = eggOf(state)
         if not egg then
-            return
+            return nil
         end
         state.eggGlow = {}
         for _, d in egg.Parent:GetDescendants() do
@@ -323,6 +346,14 @@ local function heatEgg(state, hot, heat)
             end
         end
     end
+    return state.eggGlow
+end
+
+-- The egg's glowing parts heated toward `hot`.
+local function heatEgg(state, hot, heat)
+    if not eggGlowParts(state) then
+        return
+    end
     if math.abs(heat - (state.eggHeat or 0)) < 0.005 then
         return
     end
@@ -330,6 +361,88 @@ local function heatEgg(state, hot, heat)
     for _, g in state.eggGlow do
         g.Part.Color = g.Color:Lerp(hot, heat)
     end
+end
+
+-- A NumberSequence or ColorSequence read at `t` (0 to 1), straight between its keypoints.
+local function evalSeq(seq, t)
+    local k = seq.Keypoints
+    for i = 1, #k - 1 do
+        local a, b = k[i], k[i + 1]
+        if t <= b.Time then
+            local f = (b.Time > a.Time) and (t - a.Time) / (b.Time - a.Time) or 0
+            if typeof(a.Value) == "Color3" then
+                return a.Value:Lerp(b.Value, f)
+            end
+            return a.Value + (b.Value - a.Value) * f
+        end
+    end
+    return k[#k].Value
+end
+
+-- Whether the cycle passed `at` going from `before` to `after` (wrapping round at 1).
+local function passed(before, after, at)
+    if after >= before then
+        return before < at and at <= after
+    end
+    return at > before or at <= after
+end
+
+local function quadratic(a, b, c, t)
+    return a:Lerp(b, t):Lerp(b:Lerp(c, t), t)
+end
+
+local function stepCycle(state, dt, ma)
+    local before = state.cycleT % 1
+    state.cycleT += dt / ma.CyclePeriod
+    local t = state.cycleT % 1
+    for _, e in state.emitters do
+        if e.CycleRate and not state.hatching then
+            e.Emitter.Rate = e.Rate * rateFactor(state) * evalSeq(e.CycleRate, t)
+        end
+        if e.CycleEmit and passed(before, t, e.CycleAt or 0) then
+            e.Emitter:Emit(e.CycleEmit)
+        end
+    end
+    if ma.CycleScreen and passed(before, t, ma.CycleRebirth or 0) then
+        state.screenFlash = math.max(state.screenFlash, ma.CycleScreenFlash or 0.5)
+    end
+    for _, s in state.sweepers do
+        local a = s.A
+        local k = a.SweepCurve and evalSeq(a.SweepCurve, t) or 0
+        s.Instance.Position = quadratic(a.SweepFrom, a.SweepVia or (a.SweepFrom + a.SweepTo) / 2, a.SweepTo, math.clamp(k, 0, 1))
+    end
+    local glow = ma.CycleEggGlow and eggGlowParts(state)
+    if glow then
+        local g = evalSeq(ma.CycleEggGlow, t)
+        if math.abs(g - (state.eggCycle or -1)) > 0.004 then
+            state.eggCycle = g
+            local cold, hot = ma.CycleEggCold or Color3.new(0, 0, 0), ma.CycleEggHot or Color3.new(1, 1, 1)
+            for _, p in glow do
+                p.Part.Color = g < 1 and p.Color:Lerp(cold, 1 - g) or p.Color:Lerp(hot, math.min(g - 1, 1))
+            end
+        end
+    end
+    if ma.CycleHighlight then
+        local h = state.cycleHighlight
+        if not h then
+            local egg = eggOf(state)
+            if egg then
+                h = Instance.new("Highlight")
+                h.Name = "Cycle"
+                h.Adornee = egg
+                h.DepthMode = Enum.HighlightDepthMode.Occluded
+                h.Parent = state.model
+                state.cycleHighlight = h
+            end
+        end
+        if h then
+            local c = evalSeq(ma.CycleHighlight, t)
+            h.OutlineColor, h.FillColor = c, c
+            h.OutlineTransparency = ma.CycleOutline and evalSeq(ma.CycleOutline, t) or 1
+            h.FillTransparency = ma.CycleFill and evalSeq(ma.CycleFill, t) or 1
+        end
+    end
+    return t
 end
 
 local function step(state, dt, now)
@@ -352,6 +465,7 @@ local function step(state, dt, now)
         end
     end
     local pulse = pulseAt(state, now, 0)
+    local cycle = ma.CyclePeriod and stepCycle(state, dt, ma)
     if not state.hatching then -- flickering flames: a new rate and speed every FlickerPeriod
         for _, f in state.flickers do
             if now >= f.Next then
@@ -386,6 +500,11 @@ local function step(state, dt, now)
             + (a.PulseReach or 0) * pulseAt(state, now, a.PulseDelay)
         if state.swell < 0 then
             radius *= 1 + state.swell * (a.GatherPull or 0) -- a negative pull flings it out instead
+        end
+        local avoid = a.AvoidAngle
+        if avoid then -- a neighbouring egg that way: the orbit pulls in to AvoidRadius as it passes, whatever throws it out
+            local w = math.max(0, math.cos(math.rad(m.Angle - avoid))) ^ 2
+            radius += (math.min(radius, a.AvoidRadius or radius) - radius) * w
         end
         local p = moverPosition(a, m.Angle, now, radius)
         if m.Rot then
@@ -470,7 +589,10 @@ local function step(state, dt, now)
     end
     local lightGlow = glow * (ma.LightIntensity or 1)
     for _, l in state.lights do
-        l.Light.Brightness = l.Brightness * lightGlow
+        l.Light.Brightness = l.Brightness * lightGlow * (cycle and l.CycleBrightness and evalSeq(l.CycleBrightness, cycle) or 1)
+        if cycle and l.CycleColor then
+            l.Light.Color = evalSeq(l.CycleColor, cycle)
+        end
     end
     for _, g in state.guis do
         g.Gui.Brightness = g.Brightness * glow
@@ -508,7 +630,12 @@ local function release(state)
         g.Part.Color = g.Color
     end
     for _, l in state.lights do
-        l.Light.Brightness = l.Brightness
+        l.Light.Brightness, l.Light.Color = l.Brightness, l.Color
+    end
+    for _, s in state.sweepers do
+        if s.A.SweepFrom then
+            s.Instance.Position = s.A.SweepFrom
+        end
     end
     for _, g in state.guis do
         g.Gui.Brightness = g.Brightness
@@ -527,6 +654,9 @@ local function release(state)
     end
     if state.beatHighlight then
         state.beatHighlight:Destroy()
+    end
+    if state.cycleHighlight then
+        state.cycleHighlight:Destroy()
     end
 end
 
@@ -570,10 +700,11 @@ end
 local function updateScreen()
     local weight, flash, tint = 0, 0, nil
     for _, state in auras do
-        local radius = state and state.level > 0 and state.modelAttrs.A.BeatScreen
+        local A = state and state.modelAttrs.A
+        local radius = state and state.level > 0 and (A.BeatScreen or A.CycleScreen)
         if radius then
             local near = math.clamp(1 - state.distance / radius, 0, 1)
-            local w = smooth(near) * (0.2 + 0.8 * state.beat)
+            local w = A.BeatScreen and smooth(near) * (0.2 + 0.8 * state.beat) or 0 -- a cycle only flashes
             if w + state.screenFlash > weight + flash then
                 weight, flash, tint = w, state.screenFlash * smooth(near), state.tint
             end
@@ -702,7 +833,11 @@ function EggAura.hatch(eggId)
                 firePulse(state, os.clock())
             end
             surge(state, 2.5, 3.2, 2, 0.12, 1.6)
-            if state.modelAttrs.A.BeatScreen then
+            local ma = state.modelAttrs.A
+            if ma.CyclePeriod and ma.CycleRebirth then -- the burst is a rebirth
+                state.cycleT = math.floor(state.cycleT) + ma.CycleRebirth - 0.002
+            end
+            if ma.BeatScreen or ma.CycleScreen then
                 state.screenFlash = 1
             end
         end

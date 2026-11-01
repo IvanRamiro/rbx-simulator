@@ -889,7 +889,7 @@ end
 
 -- ---------- Ember Peak ----------
 -- The Phoenix Altar's stands are basalt columns about 6 studs apart, so an aura stays within about
--- 3.3 studs of its egg. Phoenix Ash has no aura (removed at the owner's request).
+-- 3.3 studs of its egg.
 
 local function group(aura, name)
     local f = Instance.new("Folder")
@@ -984,6 +984,133 @@ RECIPES.MagmaHeartEgg = function(aura)
     }, { HatchEmit = 25 }), bed)
 end
 
+-- Phoenix Ash Egg: the Ash Cycle, an egg that dies and is reborn every CYCLE seconds (its rarest pet
+-- is the Prismatic Phoenix). Ash: it cools, its veins and emblem dim to a smoulder, grey ash falls
+-- round it (the one aura on the altar where things fall) and a curl of dark smoke rises from its
+-- crown. Kindling: embers wink awake in the ash, the glow climbs back. Rebirth: the ash turns and
+-- rushes up catching fire gold, two wings of light sweep open from behind it shedding golden
+-- feathers, a sunburst blooms over its crown, its rim flashes through the prism's colours and a
+-- near player's screen flashes warm. Burning down: the wings fold, their feathers falling and
+-- greying into ash, and the cycle begins again. A hatch's burst is a rebirth.
+-- Its right side (+X) faces the Magma Heart 5.9 studs away: the wings open beside the egg, clear of it.
+RECIPES.PhoenixAshEgg = function(aura)
+    local size = aura.egg and aura.egg.Size or Vector3.new(4.57, 4.67, 3.53)
+    local C = size.Y / 2                             -- the egg's centre above its resting point
+    local top = size.Y
+    local GOLD, FLAME, EMBER = rgb(255, 215, 120), rgb(255, 140, 40), rgb(220, 60, 25)
+    local R = 0.735                                  -- where in the cycle the rebirth bursts
+    set(aura.model, nil, {
+        Gather = 1.6, Tint = rgb(255, 170, 60), CyclePeriod = 15, CycleRebirth = R, CycleScreen = 22, CycleScreenFlash = 0.45,
+        -- the egg's glowing parts: smouldering through the ash, white-gold at the rebirth
+        CycleEggGlow = seq({ { 0, 0.3 }, { 0.55, 0.3 }, { 0.72, 1 }, { R + 0.01, 1.8 }, { 0.8, 1.5 }, { 0.9, 0.8 }, { 1, 0.3 } }),
+        CycleEggCold = rgb(45, 14, 8), CycleEggHot = rgb(255, 225, 130),
+        -- the rim: a dull ember, kindling, then the prism's colours racing round, then gold cooling to red
+        CycleHighlight = colors({ { 0, rgb(120, 25, 15) }, { 0.6, rgb(150, 35, 15) }, { 0.72, rgb(255, 120, 40) },
+            { R + 0.001, rgb(255, 70, 70) }, { 0.748, rgb(255, 170, 40) }, { 0.76, rgb(255, 240, 90) }, { 0.772, rgb(90, 255, 140) },
+            { 0.784, rgb(80, 200, 255) }, { 0.796, rgb(190, 110, 255) }, { 0.81, rgb(255, 200, 120) }, { 0.88, rgb(255, 120, 40) },
+            { 1, rgb(120, 25, 15) } }),
+        CycleOutline = seq({ { 0, 0.85 }, { 0.6, 0.85 }, { 0.72, 0.5 }, { R + 0.005, 0.05 }, { 0.82, 0.15 }, { 0.92, 0.7 }, { 1, 0.85 } }),
+        CycleFill = seq({ { 0, 1 }, { 0.72, 1 }, { R + 0.01, 0.82 }, { 0.8, 0.9 }, { 0.86, 1 }, { 1, 1 } }),   -- a faint fill: more hides its feathers
+    })
+    -- ash falling round it through the dormant phase; none while it burns
+    local sky = part(aura, "AshSky", CFrame.new(0, top + 0.8, 0), Vector3.new(5.6, 0.4, 5.6))
+    finish(emitter("AshFall", {
+        Texture = T.Ash, Shape = Enum.ParticleEmitterShape.Box, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        EmissionDirection = Enum.NormalId.Bottom, Speed = NumberRange.new(0.3, 0.7), SpreadAngle = Vector2.new(25, 25), Drag = 0.6,
+        Acceleration = Vector3.new(0.15, -0.45, 0.05), Lifetime = NumberRange.new(5, 7), Rate = 18, Rotation = NumberRange.new(0, 360),
+        RotSpeed = NumberRange.new(-90, 90), Size = seq({ { 0, 0.3, 0.1 }, { 1, 0.25, 0.08 } }),   -- pale: dark flakes read as dirt on the sky
+        Color = colors({ { 0, rgb(175, 168, 162) }, { 1, rgb(125, 118, 114) } }), LightEmission = 0, LightInfluence = 0.2,
+        Transparency = seq({ { 0, 1 }, { 0.1, 0.15 }, { 0.85, 0.35 }, { 1, 1 } }),
+    }, { CycleRate = seq({ { 0, 1 }, { 0.6, 1 }, { 0.725, 0.6 }, { R, 0 }, { 0.86, 0 }, { 1, 1 } }) }), sky)
+    -- the body of air round the egg: embers kindle in it, and the ash rushes up out of it at the rebirth
+    local air = part(aura, "AshAir", CFrame.new(0, C, 0), Vector3.new(5.6, size.Y, 5.6))
+    finish(emitter("Kindling", {
+        Texture = T.Spark, Shape = Enum.ParticleEmitterShape.Box, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        Speed = NumberRange.new(0, 0.3), SpreadAngle = Vector2.new(180, 180), Lifetime = NumberRange.new(0.3, 0.7), Rate = 40,
+        Rotation = NumberRange.new(0, 360), Size = seq({ { 0, 0 }, { 0.4, 0.22, 0.06 }, { 1, 0 } }),
+        Color = ColorSequence.new(rgb(255, 200, 90), rgb(255, 90, 20)), LightEmission = 0.6, Brightness = 3,
+    }, { CycleRate = seq({ { 0, 0.05 }, { 0.45, 0.05 }, { 0.6, 0.2 }, { 0.72, 1 }, { 0.745, 0.4 }, { 0.8, 0 }, { 0.9, 0 }, { 1, 0.05 } }) }), air)
+    finish(emitter("AshRise", {
+        Texture = T.Ash, Shape = Enum.ParticleEmitterShape.Box, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(4, 8), SpreadAngle = Vector2.new(20, 20), Drag = 1.2,
+        Acceleration = Vector3.new(0, 2, 0), Lifetime = NumberRange.new(0.9, 1.5), Rate = 90, Rotation = NumberRange.new(0, 360),
+        RotSpeed = NumberRange.new(-200, 200), Size = seq({ { 0, 0.18, 0.05 }, { 0.3, 0.26, 0.06 }, { 1, 0 } }),
+        Color = colors({ { 0, rgb(120, 110, 105) }, { 0.18, GOLD }, { 0.5, FLAME }, { 1, EMBER } }), LightEmission = 0.6, Brightness = 3,
+        Transparency = seq({ { 0, 0.1 }, { 0.75, 0.25 }, { 1, 1 } }),
+    }, { CycleRate = seq({ { 0, 0 }, { R - 0.002, 0 }, { R + 0.003, 1 }, { 0.78, 1 }, { 0.82, 0 }, { 1, 0 } }), HatchEmit = 60 }), air)
+    -- a thin curl of dark smoke from the crown while it lies in ash
+    local crown = attachment(aura, "Crown", CFrame.new(0, top - 0.2, 0))
+    finish(emitter("CrownSmoke", {
+        Texture = T.Fog, EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(0.8, 1.2), SpreadAngle = Vector2.new(8, 8),
+        Acceleration = Vector3.new(0.2, 0.3, 0), Lifetime = NumberRange.new(2.5, 3.5), Rate = 4, Rotation = NumberRange.new(0, 360),
+        RotSpeed = NumberRange.new(-30, 30), Size = seq({ { 0, 0.4, 0.1 }, { 1, 1.5, 0.3 } }),
+        Color = colors({ { 0, rgb(80, 70, 66) }, { 1, rgb(70, 66, 66) } }), LightEmission = 0, LightInfluence = 0.2,
+        Transparency = seq({ { 0, 1 }, { 0.15, 0.7 }, { 0.7, 0.82 }, { 1, 1 } }),
+    }, { CycleRate = seq({ { 0, 1 }, { 0.6, 1 }, { 0.72, 0.3 }, { R, 0 }, { 0.9, 0 }, { 1, 1 } }) }), crown)
+    -- the sunburst over its crown at the rebirth
+    finish(emitter("Sunburst", {
+        Texture = T.Flare, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.7), Rate = 0, Rotation = NumberRange.new(0, 360),
+        Size = seq({ { 0, 1 }, { 0.25, 7 }, { 1, 8.5 } }), Color = ColorSequence.new(rgb(255, 220, 140)),
+        Transparency = seq({ { 0, 0.1 }, { 1, 1 } }), Brightness = 2,
+    }, { CycleEmit = 1, CycleAt = R + 0.003, HatchEmit = 2 }), attachment(aura, "Sun", CFrame.new(0, top + 0.6, 0)))
+
+    -- the wings: on each side three feathers of light, each a trail between a still root inside the
+    -- egg's shoulder and a tip that sweeps up and out from low at its flank, so the trail fans open
+    -- like a wing; the tips fold back down as the wings burn out. The longest feather sheds golden
+    -- feathers that grey into ash as they fall. The sweep stays in the egg's XY plane, just behind its
+    -- middle: a sweep in depth collapses to a needle seen from the front. Swept by raycasts (the egg's
+    -- CanQuery switched on for it), the wings keep 1.76 studs clear of the Magma Heart's egg, 3.3 of its stand.
+    local sweep = seq({ { 0, 0 }, { R, 0 }, { 0.79, 1 }, { 0.86, 1 }, { 0.97, 0 }, { 1, 0 } })
+    local wings = group(aura, "Wings")
+    for _, side in { -1, 1 } do
+        local root = attachment(aura, side < 0 and "WingRootL" or "WingRootR", CFrame.new(side * 1.4, C + 0.8, 0.7))
+        for k, f in { { 3.4, C + 2.0, 1.2 }, { 4.0, C + 3.0, 1.35 }, { 4.4, C + 4.0, 1.5 } } do -- tip spread x, y; lifetime
+            local from = Vector3.new(side * 1.9, C - 1.3 + 0.3 * k, 0.6)
+            local to = Vector3.new(side * f[1], f[2], 0.5)
+            local via = Vector3.new(side * (3.1 + 0.3 * k), C + 0.2 + 0.6 * k, 0.6)
+            local tip = attachment(aura, (side < 0 and "WingTipL" or "WingTipR") .. k, CFrame.new(from))
+            set(tip, nil, { SweepFrom = from, SweepVia = via, SweepTo = to, SweepCurve = sweep })
+            local trail = Instance.new("Trail")
+            trail.Name = (side < 0 and "WingL" or "WingR") .. k
+            trail.Attachment0, trail.Attachment1 = root, tip
+            set(trail, {
+                -- solid: a textured trail (ribbon, feather) leaves only thin flicks past the egg's own sculpted
+                -- wings. LightEmission over 0.15 washes it pale on the sky.
+                Texture = "", Lifetime = f[3], FaceCamera = false, LightEmission = 0.15, LightInfluence = 0, Brightness = 2.4,
+                Color = colors({ { 0, rgb(255, 215, 110) }, { 0.35, rgb(255, 140, 35) }, { 0.7, rgb(230, 60, 20) }, { 1, rgb(150, 25, 15) } }),
+                Transparency = seq({ { 0, 0 }, { 0.5, 0.25 }, { 1, 1 } }),
+            })
+            trail.Parent = wings
+            if k == 3 then
+                finish(emitter("Feathers", {
+                    Texture = T.GoldFeather, Speed = NumberRange.new(0.5, 1.5), SpreadAngle = Vector2.new(180, 180), Drag = 1,
+                    Acceleration = Vector3.new(0, -1, 0), Lifetime = NumberRange.new(1.5, 2.2), Rate = 25, Rotation = NumberRange.new(0, 360),
+                    RotSpeed = NumberRange.new(-120, 120), Size = seq({ { 0, 0.35 }, { 0.2, 0.5, 0.1 }, { 1, 0.4 } }),
+                    Color = colors({ { 0, rgb(255, 225, 150) }, { 0.4, FLAME }, { 0.85, rgb(110, 104, 100) }, { 1, rgb(90, 86, 84) } }),
+                    LightEmission = 0.25, Brightness = 2, Transparency = seq({ { 0, 0.4 }, { 0.1, 0 }, { 0.8, 0.2 }, { 1, 1 } }),
+                }, { CycleRate = seq({ { 0, 0 }, { R, 0 }, { R + 0.005, 1 }, { 0.86, 0.6 }, { 0.97, 0 }, { 1, 0 } }), HatchEmit = 14 }), tip)
+            end
+        end
+    end
+
+    -- its light: a low red smoulder, a gold blaze at the rebirth
+    local glow = light(aura, rgb(200, 50, 30), 12, 0.6)
+    glow.Parent.Position = Vector3.new(0, C, 0)
+    set(glow, nil, {
+        CycleBrightness = seq({ { 0, 0.35 }, { 0.6, 0.35 }, { 0.72, 0.8 }, { R + 0.01, 3.2 }, { 0.8, 1.6 }, { 0.9, 0.6 }, { 1, 0.35 } }),
+        CycleColor = colors({ { 0, rgb(200, 50, 30) }, { 0.6, rgb(200, 50, 30) }, { R + 0.005, rgb(255, 190, 90) }, { 0.85, rgb(255, 120, 50) }, { 1, rgb(200, 50, 30) } }),
+    })
+    drawIn(aura, T.Spark, rgb(255, 190, 90), 0.4, 50)
+    burst(aura, rgb(255, 200, 110), 9)
+    for _, d in aura.model:GetDescendants() do -- its whole hatch flare at the egg's height (the helpers assume a smaller egg)
+        if d.Name == "Burst" and d:IsA("Attachment") then
+            d.Position = Vector3.new(0, C, 0)
+        elseif d.Name == "DrawIn" and d:IsA("BasePart") then
+            d.CFrame = aura.root.CFrame * CFrame.new(0, C, 0)
+        end
+    end
+end
+
 -- Inferno Egg: a miniature volcano with an unstable molten core. Six systems, each with its own
 -- motion and timing, and every few seconds an energy pulse runs through them in turn:
 --   A. spark comets: three hot heads racing round it on tilted paths at their own speeds, shedding
@@ -1044,13 +1171,28 @@ RECIPES.InfernoEgg = function(aura)
     local source = meshes and meshes:FindFirstChild("InfernoFragments")
     if source then
         local rocks = group(aura, "MagmaFragments")
+        -- the nearest neighbouring egg (the Phoenix Altar's stands are 5.9 studs apart): the rocks pull in
+        -- as they pass it, so they never cut into it. Swept in Play over every angle, bob, pulse and hatch
+        -- push against both eggs' real surfaces: at least 0.33 studs clear of each.
+        local avoidAngle, nearest
+        local stands = aura.egg and aura.egg.Parent.Parent
+        for _, stand in stands and stands:GetChildren() or {} do
+            local egg = stand:FindFirstChild("Egg")
+            if egg and egg ~= aura.egg then
+                local rel = aura.root.CFrame:PointToObjectSpace(egg.Position)
+                local d = Vector2.new(rel.X, rel.Z).Magnitude
+                if not nearest or d < nearest then
+                    nearest, avoidAngle = d, math.deg(math.atan2(rel.Z, rel.X))
+                end
+            end
+        end
         for k, o in { -- orbit deg/s, radius, height, phase, bob, bob period, tumble (deg/s), pulse delay
             { 9, 3.05, C + 1.7, 20, 0.3, 4.2, Vector3.new(25, 40, 10), 0.25 },
             { -6, 3.25, C + 0.4, 85, 0.25, 5.1, Vector3.new(-15, 22, 35), 0.45 },
-            { 12, 2.95, C - 0.7, 150, 0.35, 3.6, Vector3.new(40, -18, 20), 0.3 },
+            { 12, 3.15, C - 0.7, 150, 0.35, 3.6, Vector3.new(40, -18, 20), 0.3 },
             { -8, 3.2, C + 1.1, 215, 0.2, 6.0, Vector3.new(10, 30, -25), 0.6 },
             { 7, 3.1, C - 0.2, 280, 0.3, 4.7, Vector3.new(-35, 15, 45), 0.4 },
-            { -11, 2.9, C + 2.2, 330, 0.25, 3.9, Vector3.new(50, -30, 15), 0.2 },
+            { -11, 3.05, C + 2.2, 330, 0.25, 3.9, Vector3.new(50, -30, 15), 0.2 },
         } do
             local body = source:FindFirstChild("Fragment" .. k)
             local core = source:FindFirstChild("Fragment" .. k .. "_Glow_ff5a14")
@@ -1066,7 +1208,8 @@ RECIPES.InfernoEgg = function(aura)
                     glow.Parent = rock
                 end
                 set(rock, nil, { Orbit = o[1], Radius = o[2], Height = o[3], Phase = o[4], Bob = o[5], BobPeriod = o[6],
-                    Tumble = o[7], PulseReach = 0.7, PulseDelay = o[8], GatherPull = -0.45 })
+                    Tumble = o[7], PulseReach = 0.7, PulseDelay = o[8], GatherPull = -0.45,
+                    AvoidAngle = avoidAngle, AvoidRadius = avoidAngle and 3.05 or nil })
                 finish(emitter("Embers", {
                     Texture = T.Dot, Speed = NumberRange.new(0.3, 0.8), SpreadAngle = Vector2.new(180, 180), Drag = 1,
                     Acceleration = Vector3.new(0, 1.4, 0), Lifetime = NumberRange.new(0.6, 1.1), Rate = 0.8,
