@@ -2,7 +2,7 @@
 
 - The Celestial Pavilion: a stepped marble platform, eight porcelain pillars with gold crescent
   finials, and a floating golden armillary.
-- Porcelain winged egg pedestals, after the Moonlit egg design.
+- Porcelain egg pedestals with blue glaze bands and gold bands at the lip and foot.
 - Island dressing: star lanterns hovering over the frost, glowing frost lilies, moonstone shards
   and lunar rocks.
 """
@@ -81,28 +81,17 @@ PEDESTAL_TOP = 4.2
 
 
 def egg_pedestal(coll, mat, bands):
-    """A porcelain column with blue glaze bands, gold wings flaring from its top and an orbiting
-    gold ring, after the Moonlit egg design (the egg rests at 4.2)."""
+    """A porcelain column with blue glaze bands and a wide dish, gold bands round its lip and foot
+    (the egg rests at 4.2). Its gold wings and orbiting ring are gone: they were sized round the old
+    egg family, and the ring cut through the new, wider Moonlit eggs."""
     mb = W.MeshBuilder()
-    mb.lathe([(1.6, PEDESTAL_TOP, 1.0), (1.85, PEDESTAL_TOP - 0.2, 0.95), (1.2, PEDESTAL_TOP - 0.8, 0.8), (0.9, 1.4, 0.7),
-              (1.5, 0.8, 0.85), (1.9, 0.0, 0.6), (1.9, -0.4, 0.4)], 16, bands[MM.PORCELAIN], cap_top=True, u_repeat=2.0)
+    top = PEDESTAL_TOP
+    mb.lathe([(1.95, top, 1.0), (2.1, top - 0.05, 0.95), (2.1, top - 0.25, 0.9), (1.9, top - 0.35, 0.85), (1.2, top - 0.9, 0.8),
+              (0.9, 1.4, 0.7), (1.5, 0.8, 0.85), (1.9, 0.0, 0.6), (1.9, -0.4, 0.4)], 32, bands[MM.PORCELAIN], cap_top=True, u_repeat=2.0)
     for y in (1.2, 2.4):
         mb.lathe([(0.97, y + 0.18, 1.0), (0.97, y - 0.18, 1.0)], 16, bands[MM.NIGHT], cap_top=False, u_repeat=1.0)
-    for side in (-1, 1):  # small gold wings
-        feathers = [((0.0, 0.0), (1.6, 0.9), (2.6, 2.2)), ((0.0, -0.2), (1.4, 0.3), (2.2, 1.1)), ((0.0, -0.4), (1.1, -0.2), (1.7, 0.2))]
-        for f, (p0, p1, p2) in enumerate(feathers):
-            pts = [(side * (1.5 + x * 0.6), PEDESTAL_TOP - 0.5 + y * 0.75, 0.0) for x, y in (p0, p1, p2)]
-            thick = [(x, y, 0.12) for x, y, _ in pts]
-            oriented(mb, [pts[0], pts[1], pts[2]], (0, 0, 1), bands[MM.GOLD], 0.5, [1.0] * 3)
-            oriented(mb, [(x, y, -0.12) for x, y, _ in pts], (0, 0, -1), bands[MM.GOLD], 0.5, [0.85] * 3)
-    for i in range(32):  # the orbiting ring, tilted
-        a0, a1 = TAU * i / 32, TAU * (i + 1) / 32
-        def rp(a, r):
-            x, z = math.cos(a) * r, math.sin(a) * r
-            return (x, PEDESTAL_TOP + 1.6 + z * 0.35, z * 0.94)
-        quad = [rp(a0, 2.3), rp(a1, 2.3), rp(a1, 2.55), rp(a0, 2.55)]
-        oriented(mb, quad, (0, 1, -0.35), bands[MM.GOLD], 0.5, [1.0] * 4)
-        oriented(mb, quad, (0, -1, 0.35), bands[MM.GOLD], 0.5, [0.75] * 4)
+    mb.lathe([(2.12, top - 0.07, 1.0), (2.12, top - 0.23, 0.85)], 32, bands[MM.GOLD], cap_top=False, u_repeat=2.0)   # the lip's band
+    mb.lathe([(1.92, 0.12, 1.0), (1.92, -0.06, 0.8)], 32, bands[MM.GOLD], cap_top=False, u_repeat=2.0)               # the foot's band
     return mb.object("MI_EggPedestal", coll, mat)
 
 
@@ -297,6 +286,14 @@ def write_all():
                      % (eid, x, PLATFORM_TOP, z, yaw, PEDESTAL_TOP))
     lines.append("    },")
     MM.write_placements(extra_kit=kit_entries(), extra_lines=lines)
+
+
+def export_pedestal():
+    """Only the egg pedestal, for a small import (WorldBuilder.storeKit replaces just that template)."""
+    objs, img = build()
+    pedestal = [o for o in objs if o.name == "MI_EggPedestal"]
+    W.export_batch(pedestal, W.REPO + "/assets/world/MoonlitIsle/MI_EggPedestal.fbx", anchor_name="MI_PropsAnchor")
+    return pedestal
 
 
 def export():

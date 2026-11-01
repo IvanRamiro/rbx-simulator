@@ -11,7 +11,8 @@ Builders (all add to a Hi mesh, which carries per-face materials and UVs):
 - foliage: a lumpy, merged clump of leaves (voxel remeshed lobes), for tree crowns.
 
 Materials (procedural Cycles shaders, baked to textures): jade, bark, leaf, blossom crystal,
-petal, wood, heartwood, foliage, gold. Each has a node named "BAKE_ROUGH" and one named
+petal, wood, heartwood, foliage, gold, obsidian, feather, and for Moonlit Isle night sky,
+moon silver, moonstone, pearl and cloud. Each has a node named "BAKE_ROUGH" and one named
 "BAKE_METAL" whose first output is the value egg_bake bakes into the roughness and metalness maps.
 """
 import math
@@ -108,9 +109,10 @@ def frames(curve):
     return out
 
 
-def htube(hi, pts, radius_fn, sides=10, per=6, mat=0, uv_scale=4.0, tip=True, knots=None, seed=0):
+def htube(hi, pts, radius_fn, sides=10, per=6, mat=0, uv_scale=4.0, tip=True, knots=None, seed=0, wobble=1.0):
     """A smooth tube through `pts` (Roblox space). radius_fn(t), t 0..1 along it. knots: number of
-    knobbly swellings along it (bark). UVs: u round the tube, v = length * uv_scale."""
+    knobbly swellings along it (bark). wobble scales its uneven swelling and pinching (0: perfectly
+    round, for polished pieces). UVs: u round the tube, v = length * uv_scale."""
     curve = [V(p) for p in W.catmull([tuple(p) for p in pts], per)]
     n = len(curve)
     fr = frames(curve)
@@ -133,7 +135,7 @@ def htube(hi, pts, radius_fn, sides=10, per=6, mat=0, uv_scale=4.0, tip=True, kn
                 da = math.cos(a - ka)
                 if d < 1 and da > 0:
                     bump += kh * (1 - d * d) * da * da
-            bump += 0.07 * math.sin(a * 3 + tt * 23 + seed) + 0.05 * math.sin(tt * 61 + seed * 2)   # uneven, swelling and pinching
+            bump += wobble * (0.07 * math.sin(a * 3 + tt * 23 + seed) + 0.05 * math.sin(tt * 61 + seed * 2))   # uneven, swelling and pinching
             ring.append(hi.v(c + (s * math.cos(a) + b * math.sin(a)) * r * (1 + bump)))
         rings.append(ring)
     for i in range(n - 1):
@@ -576,3 +578,91 @@ def mat_feather(name="EggFeather", base=(0.62, 0.04, 0.015), mid=(1.0, 0.3, 0.03
     col = g.ao(col, 0.05, 0.45)
     nrm = g.bump(g.math("ADD", barbs, g.math("MULTIPLY", shaft, 2.0)), 0.3, 0.004)
     return g.finish(col, 0.45, 0.0, nrm)
+
+
+def _stars(g, co, scale, size, keep):
+    """Soft round stars scattered over the surface: a Voronoi cell in `keep` of them holds one,
+    each its own size (up to `size` of a cell), fading from its centre. Returns 0..1."""
+    vo = g.n("ShaderNodeTexVoronoi", **{"Scale": scale})
+    g.link(co, vo.inputs["Vector"])
+    rnd = g.sep(vo.outputs["Color"])
+    radius = g.math("MULTIPLY", g.math("ADD", g.math("MULTIPLY", rnd[0], 0.7), 0.3), size)
+    glow = g.math("SUBTRACT", 1.0, g.math("DIVIDE", vo.outputs["Distance"], radius), clamp=True)
+    return g.math("MULTIPLY", g.math("POWER", glow, 1.6), g.math("LESS_THAN", rnd[1], keep))
+
+
+def mat_nightsky(name="EggNightSky"):
+    """The night sky under glossy lacquer: midnight blue deepening toward the bottom, soft clouds
+    of nebula (violet and teal) drifting through it, and stars of every size, a fine dust and a
+    scattering of brighter ones."""
+    g = _Graph(name)
+    co = g.coords()
+    z = g.sep(co)[2]
+    col = g.ramp(g.math("DIVIDE", z, K.H), [(0.0, (0.002, 0.003, 0.018)), (0.45, (0.006, 0.012, 0.06)), (1.0, (0.016, 0.03, 0.13))])
+    neb = g.n("ShaderNodeTexNoise", **{"Scale": 1.4, "Detail": 6.0, "Roughness": 0.58, "Distortion": 0.9})
+    g.link(co, neb.inputs["Vector"])
+    cloud = g.bw(g.ramp(neb.outputs["Fac"], [(0.45, (0, 0, 0)), (0.72, (1, 1, 1))]))
+    hue = g.n("ShaderNodeTexNoise", **{"Scale": 0.9, "Detail": 2.0})
+    g.link(co, hue.inputs["Vector"])
+    nebula = g.ramp(hue.outputs["Fac"], [(0.35, (0.16, 0.03, 0.3)), (0.5, (0.07, 0.04, 0.26)), (0.65, (0.01, 0.13, 0.22))])
+    col = g.mix(g.math("MULTIPLY", cloud, 0.6), col, nebula)
+    dust = _stars(g, co, 34.0, 0.16, 0.45)
+    bright = _stars(g, co, 9.0, 0.2, 0.4)
+    col = g.mix(g.math("MULTIPLY", dust, 0.55), col, (0.7, 0.78, 1.0))
+    col = g.mix(bright, col, (1.0, 0.97, 0.88))
+    col = g.ao(col, 0.08, 0.5)
+    return g.finish(col, 0.14, 0.0)
+
+
+def mat_moonsilver(name="EggMoonSilver"):
+    """The moon's own pale silver: soft grey-blue seas across it and faint crater rims, a gentle
+    metallic sheen."""
+    g = _Graph(name)
+    co = g.coords()
+    seas = g.n("ShaderNodeTexNoise", **{"Scale": 3.0, "Detail": 4.0, "Roughness": 0.5})
+    g.link(co, seas.inputs["Vector"])
+    col = g.ramp(seas.outputs["Fac"], [(0.35, (0.86, 0.89, 0.97)), (0.55, (0.66, 0.71, 0.86)), (0.75, (0.42, 0.48, 0.67))])
+    cr = g.n("ShaderNodeTexVoronoi", **{"Scale": 14.0})
+    g.link(co, cr.inputs["Vector"])
+    rim = g.math("MULTIPLY", g.math("LESS_THAN", g.math("ABSOLUTE", g.math("SUBTRACT", cr.outputs["Distance"], 0.3)), 0.05), 0.25)
+    col = g.mix(rim, col, (0.95, 0.97, 1.0))
+    col = g.ao(col, 0.06, 0.45)
+    return g.finish(col, 0.3, 0.35, g.bump(g.math("ADD", seas.outputs["Fac"], rim), 0.15, 0.006))
+
+
+def mat_moonstone(name="EggMoonstone"):
+    """Moonstone: milky white with a blue and lavender sheen drifting through it in soft swirls,
+    polished."""
+    g = _Graph(name)
+    co = g.coords()
+    sw = g.n("ShaderNodeTexNoise", **{"Scale": 1.8, "Detail": 5.0, "Roughness": 0.55, "Distortion": 1.4})
+    g.link(co, sw.inputs["Vector"])
+    hue = g.n("ShaderNodeTexNoise", **{"Scale": 1.1, "Detail": 2.0})
+    g.link(co, hue.inputs["Vector"])
+    sheen = g.ramp(hue.outputs["Fac"], [(0.35, (0.5, 0.64, 0.98)), (0.65, (0.68, 0.56, 0.96))])
+    col = g.mix(g.math("MULTIPLY", g.bw(g.ramp(sw.outputs["Fac"], [(0.38, (0, 0, 0)), (0.72, (1, 1, 1))])), 0.85), (0.8, 0.83, 0.92), sheen)
+    col = g.ao(col, 0.08, 0.5)
+    return g.finish(col, 0.12, 0.0)
+
+
+def mat_pearl(name="EggPearl"):
+    """Pearl: a warm white with soft iridescent clouds of rose, ice blue and pale gold."""
+    g = _Graph(name)
+    co = g.coords()
+    a = g.n("ShaderNodeTexNoise", **{"Scale": 1.6, "Detail": 4.0, "Roughness": 0.5, "Distortion": 0.8})
+    g.link(co, a.inputs["Vector"])
+    tint = g.ramp(a.outputs["Fac"], [(0.3, (0.96, 0.72, 0.8)), (0.5, (0.96, 0.92, 0.86)), (0.7, (0.72, 0.84, 0.99)), (0.85, (0.98, 0.86, 0.6))])
+    col = g.mix(0.8, (0.95, 0.93, 0.9), tint)
+    col = g.ao(col, 0.08, 0.55)
+    return g.finish(col, 0.2, 0.0)
+
+
+def mat_cloud(name="EggCloud"):
+    """A soft auspicious cloud: white, its folds shaded a cool blue instead of grey."""
+    g = _Graph(name)
+    a = g.n("ShaderNodeAmbientOcclusion", samples=16, only_local=True)
+    a.inputs["Distance"].default_value = 0.15
+    col = g.ramp(a.outputs["AO"], [(0.3, (0.42, 0.5, 0.85)), (0.75, (0.82, 0.86, 0.97)), (1.0, (0.97, 0.97, 1.0))])
+    fine = g.n("ShaderNodeTexNoise", **{"Scale": 8.0, "Detail": 3.0})
+    g.link(g.coords(), fine.inputs["Vector"])
+    return g.finish(col, 0.65, 0.0, g.bump(fine.outputs["Fac"], 0.08, 0.01))

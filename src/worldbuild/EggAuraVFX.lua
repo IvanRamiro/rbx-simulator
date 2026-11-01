@@ -268,11 +268,11 @@ local function drawIn(aura, texture, color, size, rate)
     }, { GatherRate = rate }), p)
 end
 
--- The hatch's burst: a starburst flash and a ripple across the rim.
-local function burst(aura, color, size)
+-- The hatch's burst: a starburst flash (or `texture`, such as a soft bloom).
+local function burst(aura, color, size, texture)
     local a = attachment(aura, "Burst", CFrame.new(0, EGG_CENTRE, 0))
     finish(emitter("Flash", {
-        Texture = T.Flare, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.4), Rate = 0, Rotation = NumberRange.new(0, 360),
+        Texture = texture or T.Flare, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.4), Rate = 0, Rotation = NumberRange.new(0, 360),
         Size = seq({ { 0, size * 0.3 }, { 0.25, size }, { 1, size * 1.15 } }), Color = ColorSequence.new(color),
         Transparency = seq({ { 0, 0 }, { 1, 1 } }), Brightness = 3,
     }, { HatchEmit = 1 }), a)
@@ -431,58 +431,54 @@ RECIPES.BeginnerQiEgg = function(aura)
     light(aura, QI, 13, 1.3)
 end
 
--- Spirit Breeze Egg: wind. A wind rose turning beneath, light-blue and white wind rings whirling
--- round the egg on three planes (two crescent gusts and a broken ring of breeze), three white
--- wind trails spiralling up and down round it, auspicious clouds drifting off the rim, feathers
--- riding the updraught.
+-- Spirit Breeze Egg: a soft breeze. No flat rings or sigils: three wisps of wind drift round it
+-- on a slow helix of widening radii (a soft glow stretched along each trail, so no edge shows),
+-- auspicious clouds billow off the bowl's lip, feathers ride a gentle updraught, under a faint
+-- halo. Its breath is slow and easy.
 RECIPES.SpiritBreezeEgg = function(aura)
     local SKY, WHITE = rgb(110, 215, 255), rgb(225, 245, 255)
     aura.model:SetAttribute("Gather", 1.2)
     aura.model:SetAttribute("Tint", rgb(170, 230, 255))
-    set(aura.model, nil, { Breath = 0.25, BreathPeriod = 3.5 }) -- gusty
-    formation(aura, "Formation", T.WindRose, 3.6, rgb(130, 220, 255), -25, 2.8)
-    ring(aura, "GustLow", EGG_CENTRE - 0.1, tilt(-12, 8), T.WindArc, 6.8, SKY, 150, 2.6, nil, { 10, 4 })
-    ring(aura, "GustHigh", EGG_CENTRE + 0.6, tilt(-20, -16), T.WindArc, 5.6, WHITE, -190, 2.4, nil, { 14, 5, 90 })
-    ring(aura, "BreezeRing", EGG_CENTRE - 0.7, tilt(-6, 6), T.BrokenRing, 7.4, rgb(165, 228, 255), 60, 2.2, 0.15, { 6, 6, 200 })
-    -- three wind trails on a helix of widening radii; feathers shed from the first one's head
+    set(aura.model, nil, { Breath = 0.15, BreathPeriod = 5 }) -- an easy breeze
+    -- three wind trails on a slow helix of widening radii; feathers shed from the first one's head
     for k = 1, 3 do
-        local _, head = arc(aura, "Wind" .. k, { Orbit = 235 - k * 25, Radius = 1.5 + 0.6 * k, Height = EGG_CENTRE, Phase = (k - 1) * 120,
-            Bob = 1.1 + 0.25 * k, BobPeriod = 2 + 0.4 * k }, 0.12, {
-            Texture = T.Ribbon, TextureMode = Enum.TextureMode.Stretch, Lifetime = 0.8, Brightness = 2.5,
-            Color = colors({ { 0, WHITE }, { 1, SKY } }), Transparency = seq({ { 0, 0.05 }, { 0.6, 0.4 }, { 1, 1 } }),
-            WidthScale = seq({ { 0, 0.4 }, { 0.1, 1 }, { 1, 0 } }),
+        local _, head = arc(aura, "Wind" .. k, { Orbit = 105 - k * 15, Radius = 1.5 + 0.6 * k, Height = EGG_CENTRE, Phase = (k - 1) * 120,
+            Bob = 0.9 + 0.25 * k, BobPeriod = 3.2 + 0.7 * k }, 0.3, {
+            -- light emission over 0.3 or brightness over 2 washes the pale egg white as a wisp crosses it
+            Texture = T.SoftGlow, TextureMode = Enum.TextureMode.Stretch, Lifetime = 1.6, Brightness = 2, LightEmission = 0.3,
+            Color = colors({ { 0, rgb(240, 250, 255) }, { 0.35, rgb(130, 210, 255) }, { 1, rgb(70, 160, 240) } }),
+            Transparency = seq({ { 0, 0.25 }, { 0.5, 0.4 }, { 1, 0.75 } }), WidthScale = seq({ { 0, 0.6 }, { 0.3, 1 }, { 1, 0.5 } }),
         })
         if k == 1 then
             finish(emitter("Shed", {
                 Texture = T.Feather, Rate = 2, Lifetime = NumberRange.new(1.5, 2.2), Speed = NumberRange.new(0.3, 0.8),
                 SpreadAngle = Vector2.new(180, 180), Drag = 1.2, Acceleration = Vector3.new(0, -0.3, 0),
-                Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-120, 120), Size = seq({ { 0, 0.4 }, { 1, 0.5 } }),
+                Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-50, 50), Size = seq({ { 0, 0.4 }, { 1, 0.5 } }),
                 Color = ColorSequence.new(WHITE), Transparency = seq({ { 0, 0.1 }, { 0.7, 0.3 }, { 1, 1 } }), LightEmission = 0.6,
             }), head)
         end
     end
-    local base = part(aura, "CloudArea", CFrame.new(0, aura.rim + 0.3, 0), Vector3.new(5.5, 0.2, 5.5))
+    local base = part(aura, "CloudArea", CFrame.new(0, aura.rim + 0.8, 0), Vector3.new(5.5, 0.2, 5.5)) -- above the bowl's lip, which hid them
     finish(emitter("Clouds", {
         Texture = T.Cloud, Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
-        ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward, EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(0.4, 0.8),
-        Lifetime = NumberRange.new(3, 4), Rate = 1.5, Drag = 0.4, SpreadAngle = Vector2.new(20, 20),
+        ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward, EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(0.3, 0.6),
+        Lifetime = NumberRange.new(4, 5), Rate = 1.2, Drag = 0.4, SpreadAngle = Vector2.new(20, 20),
         Rotation = NumberRange.new(-8, 8), RotSpeed = NumberRange.new(-6, 6),
-        Size = seq({ { 0, 1 }, { 0.4, 2.2 }, { 1, 2.6 } }), LightEmission = 0.4,
-        Color = colors({ { 0, WHITE }, { 1, rgb(140, 210, 255) } }), Transparency = seq({ { 0, 1 }, { 0.2, 0.3 }, { 1, 1 } }),
+        Size = seq({ { 0, 1 }, { 0.4, 2 }, { 1, 2.4 } }), LightEmission = 0.2,
+        Color = colors({ { 0, WHITE }, { 1, rgb(140, 210, 255) } }), Transparency = seq({ { 0, 1 }, { 0.2, 0.35 }, { 1, 1 } }),
     }, { HatchEmit = 12 }), base)
     finish(emitter("Feathers", {
         Texture = T.Feather, Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
-        EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(1, 1.8), SpreadAngle = Vector2.new(35, 35),
-        Acceleration = Vector3.new(0.4, 0.3, 0), Drag = 0.5,
-        Lifetime = NumberRange.new(3, 4), Rate = 2.5, Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-140, 140),
-        Size = seq({ { 0, 0.45 }, { 1, 0.6 } }), LightEmission = 0.6, Color = colors({ { 0, WHITE }, { 1, SKY } }),
+        EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(0.7, 1.2), SpreadAngle = Vector2.new(35, 35),
+        Acceleration = Vector3.new(0.3, 0.2, 0), Drag = 0.5,
+        Lifetime = NumberRange.new(3.5, 4.5), Rate = 2, Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-50, 50),
+        Size = seq({ { 0, 0.45 }, { 1, 0.6 } }), LightEmission = 0.25, Color = colors({ { 0, WHITE }, { 1, SKY } }),
         Transparency = seq({ { 0, 1 }, { 0.15, 0.1 }, { 1, 1 } }),
     }, { HatchEmit = 20 }), base)
-    halo(aura, rgb(150, 225, 255), 6, 0.8)
-    column(aura, rgb(150, 220, 255), rgb(235, 248, 255), 0.9, 4) -- a fast updraft: wind, not Qi
+    halo(aura, rgb(150, 225, 255), 6, 0.86)
+    column(aura, rgb(150, 220, 255), rgb(235, 248, 255), 0.45, 4) -- a gentle updraft
     drawIn(aura, T.Feather, WHITE, 0.7, 30)
-    burst(aura, rgb(200, 240, 255), 8)
-    ripple(aura, WHITE, 9, 1)
+    burst(aura, rgb(200, 240, 255), 8, T.SoftGlow)
     light(aura, SKY, 12, 0.55) -- the pale egg washes out under a stronger light
 end
 
@@ -715,45 +711,36 @@ RECIPES.JadeSpiritEgg = function(aura)
     }, { HatchEmit = 16 }), gem)
 end
 
--- Bloomwood Egg: eternal blossom. A blossom mandala over a slow bloom of golden light beneath; a
--- pink ring and a gold breeze crossing round the egg; two streams of blossom wind circling it,
--- shedding petals; petals thrown up from the rim in a fountain, drifting back down; four blossoms
--- floating round, rocking; golden pollen rising. Its breath is slow and dreamy.
+-- Bloomwood Egg: eternal blossom, soft and slow. No flat rings, sigils or blossom sprites: two
+-- streams of blossom wind drift round it shedding petals; petals float up off the rim and drift
+-- back down; golden pollen rises, with soft twinkles of light. Its breath is slow and dreamy.
 RECIPES.BloomwoodEgg = function(aura)
     local PINK, BLUSH, GOLDEN = rgb(255, 110, 190), rgb(255, 200, 230), rgb(255, 205, 110)
     aura.model:SetAttribute("Gather", 1.4)
     aura.model:SetAttribute("Tint", rgb(255, 140, 205))
     set(aura.model, nil, { Breath = 0.14, BreathPeriod = 6 }) -- dreamy
-    formation(aura, "Formation", T.BlossomSigil, 3.2, rgb(255, 120, 200), 6, 3)
-    formation(aura, "Bloom", T.BloomLight, 2.8, GOLDEN, -12, 1.6, 0.1)
-    ring(aura, "BlossomRing", EGG_CENTRE + 0.25, tilt(-20, 12), T.GlowRing, 6.2, PINK, 20, 2.3, nil, { 8, 8 })
-    ring(aura, "GoldBreeze", EGG_CENTRE - 0.3, tilt(-10, -24), T.BrokenRing, 6.4, GOLDEN, -35, 2, 0.15, { 10, 7, 160 })
-    -- two streams of blossom wind circling the egg, shedding petals
-    for k, c in { { 70, 2.5, 16, 0, 0.8, 3.4 }, { -55, 3.0, -12, 18, 0.6, 4.2 } } do
+    -- two streams of blossom wind drifting round the egg, shedding petals
+    for k, c in { { 45, 2.5, 16, 0, 0.8, 4.4 }, { -36, 3.0, -12, 18, 0.6, 5.4 } } do
         local _, head = arc(aura, "Breeze" .. k, { Orbit = c[1], Radius = c[2], Height = EGG_CENTRE + 0.2, Tilt = Vector3.new(c[3], 0, c[4]),
-            Phase = (k - 1) * 180, Bob = c[5], BobPeriod = c[6] }, 0.22, {
-            Texture = T.Ribbon, TextureMode = Enum.TextureMode.Stretch, Lifetime = 1.2, Brightness = 2.5, LightEmission = 0.3,
-            Color = colors({ { 0, rgb(255, 170, 215) }, { 0.5, rgb(255, 90, 170) }, { 1, rgb(190, 50, 150) } }), Transparency = seq({ { 0, 0.05 }, { 0.6, 0.45 }, { 1, 1 } }),
-            WidthScale = seq({ { 0, 0.4 }, { 0.1, 1 }, { 1, 0 } }),
+            Phase = (k - 1) * 180, Bob = c[5], BobPeriod = c[6] }, 0.3, {
+            -- a soft glow stretched along the trail: the ribbon texture read as a blocky band with hard ends
+            Texture = T.SoftGlow, TextureMode = Enum.TextureMode.Stretch, Lifetime = 1.8, Brightness = 2, LightEmission = 0.3,
+            Color = colors({ { 0, rgb(255, 170, 215) }, { 0.5, rgb(255, 90, 170) }, { 1, rgb(190, 50, 150) } }),
+            Transparency = seq({ { 0, 0.2 }, { 0.5, 0.35 }, { 1, 0.75 } }), WidthScale = seq({ { 0, 0.6 }, { 0.3, 1 }, { 1, 0.5 } }),
         })
-        shed(head, "Petals", T.Petal, ColorSequence.new(rgb(255, 140, 200), rgb(235, 80, 160)), 5, { 0.3, 0.48, 0.4 }, 0.4)
+        shed(head, "Petals", T.Petal, ColorSequence.new(rgb(255, 140, 200), rgb(235, 80, 160)), 4, { 0.3, 0.48, 0.4 }, 0.3).RotSpeed =
+            NumberRange.new(-60, 60) -- a slow tumble
     end
-    -- the petal fountain: petals thrown up off the rim, arcing out and drifting down
+    -- petals floating up off the rim, drifting out and slowly back down
     local rim = part(aura, "PetalRim", CFrame.new(0, aura.rim + 0.2, 0), Vector3.new(4.4, 0.2, 4.4))
     finish(emitter("Fountain", {
         Texture = T.Petal, Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
         ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward, EmissionDirection = Enum.NormalId.Top,
-        Speed = NumberRange.new(2.2, 3.2), SpreadAngle = Vector2.new(22, 22), Acceleration = Vector3.new(0, -1.6, 0), Drag = 0.9,
-        Lifetime = NumberRange.new(2.6, 3.4), Rate = 5, Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-180, 180),
+        Speed = NumberRange.new(1.3, 1.9), SpreadAngle = Vector2.new(22, 22), Acceleration = Vector3.new(0, -0.6, 0), Drag = 0.9,
+        Lifetime = NumberRange.new(3.2, 4.2), Rate = 4, Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-60, 60),
         Size = seq({ { 0, 0.3 }, { 0.2, 0.48 }, { 1, 0.42 } }), Color = ColorSequence.new(rgb(255, 150, 205), rgb(235, 90, 165)),
         Transparency = seq({ { 0, 0.5 }, { 0.1, 0.05 }, { 0.75, 0.2 }, { 1, 1 } }), LightEmission = 0.15, Brightness = 1.6,
     }, { HatchEmit = 18 }), rim)
-    -- four blossoms floating round at different heights, rocking
-    for k, b in { { 10, 2.9, 3.3, 0.4, 3.6, 1.1 }, { -8, 3.2, 1.6, 0.35, 4.4, 0.9 }, { 13, 2.7, 2.4, 0.5, 3.1, 1.0 }, { -11, 3.3, 3.0, 0.3, 5.0, 0.8 } } do
-        local floater = crystal(aura, "FloatBlossom" .. k, { Orbit = b[1], Radius = b[2], Height = b[3], Phase = (k - 1) * 90 + 30, Bob = b[4], BobPeriod = b[5] },
-            b[6], rgb(255, 165, 215), 1.5, T.Blossom, 24, PINK)
-        floater.BillboardGui.Glow.ImageTransparency = 0.78
-    end
     local pollen = part(aura, "PollenArea", CFrame.new(0, aura.rim + 0.15, 0), Vector3.new(5, 0.2, 5))
     finish(emitter("Pollen", {
         Texture = T.Dot, Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
@@ -763,18 +750,17 @@ RECIPES.BloomwoodEgg = function(aura)
         Color = ColorSequence.new(rgb(255, 230, 150), GOLDEN), Transparency = seq({ { 0, 0.1 }, { 1, 1 } }),
     }, { HatchEmit = 25 }), pollen)
     local glints = part(aura, "GlintArea", CFrame.new(0, EGG_CENTRE + 0.4, 0), Vector3.new(6, 4.5, 6))
-    finish(emitter("Glints", {
-        Texture = T.Star4, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
-        Speed = NumberRange.new(0.3, 0.7), SpreadAngle = Vector2.new(180, 180), Lifetime = NumberRange.new(0.8, 1.2), Rate = 3,
-        Rotation = NumberRange.new(0, 45), Size = seq({ { 0, 0 }, { 0.5, 0.55 }, { 1, 0 } }), Color = ColorSequence.new(BLUSH),
-        Transparency = NumberSequence.new(0.1), Brightness = 2,
+    finish(emitter("Glints", { -- soft twinkles: a round glow swelling and fading, no points
+        Texture = T.SoftGlow, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        Speed = NumberRange.new(0.2, 0.5), SpreadAngle = Vector2.new(180, 180), Lifetime = NumberRange.new(1.4, 2), Rate = 3,
+        Size = seq({ { 0, 0 }, { 0.5, 0.45 }, { 1, 0 } }), Color = ColorSequence.new(BLUSH),
+        Transparency = seq({ { 0, 0.3 }, { 1, 0.3 } }), Brightness = 2,
     }, { HatchEmit = 14 }), glints)
     -- no halo: on the pale crystal egg it reads as a milky veil
     column(aura, rgb(255, 140, 200), BLUSH, 0.3, 4).Transparency = seq({ { 0, 1 }, { 0.2, 0.82 }, { 0.6, 0.88 }, { 1, 1 } })
     mist(pollen, PINK, BLUSH, 3, 0.8)
-    ripple(aura, rgb(255, 150, 210), 9.5, 2)
     drawIn(aura, T.Petal, BLUSH, 0.6, 40)
-    burst(aura, rgb(255, 200, 230), 9)
+    burst(aura, rgb(255, 200, 230), 9, T.SoftGlow)
     light(aura, rgb(255, 120, 190), 13, 0.5)
     -- fitted to the detailed egg: 0.2 higher, golden pollen rising out of both lotus hearts, and a
     -- soft glow round the emblem's heart
@@ -1349,6 +1335,139 @@ RECIPES.InfernoEgg = function(aura)
 end
 
 -- ---------- building ----------
+-- ---------- Moonlit Isle ----------
+-- Soft and smooth, by the owner's direction: no rings, sigils, image planes or pointed sparkles,
+-- only soft glows, gliding light and slow drift (T.SoftGlow throughout: T.SmallGlow's glow is a
+-- speck in its image, invisible at mote sizes). The island is bright and white, so motes carry a
+-- deeper colour at lower light emission. The stands are about 6 studs apart, so every
+-- aura stays within about 2.9 studs of its egg. Points on the eggs are measured in eggs_moon.py's
+-- build (offsets from the body's bounding-box centre, see modelPoint).
+
+-- Moves the egg-centred pieces (halo, light, the hatch's gathering and burst) to `c` studs above
+-- the Root, for an egg whose centre is not EGG_CENTRE.
+local function centreAt(aura, c)
+    for _, d in aura.model:GetDescendants() do
+        if d:IsA("Attachment") and d.Parent == aura.root and (d.Name == "Halo" or d.Name == "Light" or d.Name == "Burst") then
+            d.Position = Vector3.new(0, c, 0)
+        elseif d:IsA("BasePart") and d.Name == "DrawIn" then
+            d.CFrame = aura.root.CFrame * CFrame.new(0, c, 0)
+        end
+    end
+end
+
+-- A soft glow breathing slowly on a point of the egg (a pearl, an orb, a jewel).
+local function breathe(at, color, size, transparency, zOffset)
+    return finish(emitter("Breath", {
+        Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(2.4, 3), Rate = 0.8,
+        Rotation = NumberRange.new(0, 360), ZOffset = zOffset or 0.4, Brightness = 2,
+        Size = seq({ { 0, size * 0.45 }, { 0.5, size }, { 1, size * 1.15 } }), Color = ColorSequence.new(color),
+        Transparency = seq({ { 0, 1 }, { 0.45, transparency }, { 1, 1 } }),
+    }, { HatchEmit = 2 }), at)
+end
+
+-- Celestial Egg: the night breathing. Soft points of starlight swell and fade as they drift
+-- slowly up round it; two soft shooting stars glide round it on tilted paths, each a glowing head
+-- with a soft tail; the pearl on its crescent breathes a blue glow; a faint night-blue haze.
+RECIPES.CelestialEgg = function(aura)
+    local NIGHT, STAR = rgb(70, 110, 255), rgb(225, 235, 255)
+    local C = modelPoint(aura, Vector3.new(0.101, 0.197, 0)).Y   -- the egg's centre (it lies in its crescent)
+    set(aura.model, nil, { Gather = 1.4, Tint = rgb(120, 170, 255), Breath = 0.12, BreathPeriod = 6 })
+    local sky = part(aura, "StarArea", CFrame.new(0, C + 0.3, 0), Vector3.new(5.2, 4.6, 5.2))
+    finish(emitter("Starlight", {
+        Texture = T.SoftGlow, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        Speed = NumberRange.new(0.1, 0.3), SpreadAngle = Vector2.new(180, 180), Acceleration = Vector3.new(0, 0.15, 0), Drag = 0.5,
+        Lifetime = NumberRange.new(2.5, 4), Rate = 7, Size = seq({ { 0, 0 }, { 0.5, 0.45, 0.12 }, { 1, 0 } }),
+        Color = ColorSequence.new(STAR, rgb(150, 190, 255)), Transparency = NumberSequence.new(0.2), Brightness = 2,
+    }, { HatchEmit = 24 }), sky)
+    -- two shooting stars, each on its own tilt, radius and pace, one the other way round
+    for k, c in { { 38, 2.5, 24, -10, 0.5, 5.5, 1.6 }, { -27, 2.85, -18, 22, 0.4, 7, 2 } } do
+        local _, head = arc(aura, "Comet" .. k, { Orbit = c[1], Radius = c[2], Height = C + 0.2, Tilt = Vector3.new(c[3], 0, c[4]),
+            Phase = (k - 1) * 170, Bob = c[5], BobPeriod = c[6] }, 0.16, {
+            Texture = T.SoftGlow, TextureMode = Enum.TextureMode.Stretch, Lifetime = c[7], Brightness = 2, LightEmission = 0.4,
+            Color = colors({ { 0, STAR }, { 0.4, rgb(140, 180, 255) }, { 1, NIGHT } }), Transparency = seq({ { 0, 0.1 }, { 0.5, 0.4 }, { 1, 0.85 } }),
+            WidthScale = seq({ { 0, 1 }, { 1, 0.2 } }),
+        })
+        finish(emitter("Head", {
+            Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.5), Rate = 12,
+            Size = seq({ { 0, 0.5 }, { 1, 0.15 } }), Color = ColorSequence.new(rgb(175, 205, 255)), Transparency = seq({ { 0, 0.3 }, { 1, 1 } }), Brightness = 2,
+        }, { HatchEmit = 4 }), head)
+    end
+    breathe(anchor(aura, "Pearl", Vector3.new(-0.68, 1.103, 0)), rgb(80, 160, 255), 1.4, 0.55)
+    halo(aura, NIGHT, 6, 0.86)
+    light(aura, rgb(110, 150, 255), 12, 0.9)
+    drawIn(aura, T.SoftGlow, STAR, 0.5, 50)
+    burst(aura, rgb(190, 215, 255), 8, T.SoftGlow)
+    centreAt(aura, C)
+end
+
+-- Astral Sanctum Egg: light from the sanctum. Soft violet light drifts out through its windows
+-- and up; three lantern spirits circle it slowly at their own heights and paces, each a soft glow
+-- leaving a fading tail of light; the orb on its spire breathes; a faint violet haze.
+RECIPES.AstralSanctumEgg = function(aura)
+    local VIOLET, LILAC = rgb(110, 60, 255), rgb(180, 145, 255)   -- a bluer violet: Neon and the bright isle push violet to pink
+    local C = modelPoint(aura, Vector3.new(0, -0.234, 0)).Y
+    set(aura.model, nil, { Gather = 1.4, Tint = rgb(170, 120, 255), Breath = 0.14, BreathPeriod = 5.5 })
+    -- born just inside the shell round the window band, so the light seems to come out through it
+    local sanctum = part(aura, "Sanctum", CFrame.new(0, C - 0.1, 0), Vector3.new(2.7, 1.7, 2.7))
+    finish(emitter("Spill", {
+        Texture = T.SoftGlow, Shape = Enum.ParticleEmitterShape.Sphere, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
+        ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward, Speed = NumberRange.new(0.3, 0.6), Drag = 0.4,
+        Acceleration = Vector3.new(0, 0.25, 0), Lifetime = NumberRange.new(2.5, 3.5), Rate = 8,
+        Size = seq({ { 0, 0 }, { 0.3, 0.5, 0.1 }, { 1, 0 } }), Color = ColorSequence.new(rgb(170, 130, 255), VIOLET),
+        Transparency = NumberSequence.new(0.2), Brightness = 2, LightEmission = 0.4,
+    }, { HatchEmit = 20 }), sanctum)
+    for k, l in { { 30, 2.3, 0.9, 0.35, 4.2 }, { -22, 2.6, -0.2, 0.3, 5.1 }, { 26, 2.8, 0.3, 0.4, 3.6 } } do
+        local lantern = attachment(aura, "Lantern" .. k, CFrame.new(0, C + l[3], l[2]))
+        set(lantern, nil, { Orbit = l[1], Radius = l[2], Height = C + l[3], Phase = (k - 1) * 120 + 20, Bob = l[4], BobPeriod = l[5] })
+        finish(emitter("Glow", { -- left behind as it moves: a soft fading tail
+            Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.9, 1.1), Rate = 14,
+            Size = seq({ { 0, 0.85 }, { 1, 0 } }), Color = ColorSequence.new(rgb(185, 150, 255), VIOLET),
+            Transparency = seq({ { 0, 0.25 }, { 1, 1 } }), Brightness = 2, LightEmission = 0.5,
+        }, { HatchEmit = 4 }), lantern)
+    end
+    breathe(anchor(aura, "Orb", Vector3.new(0, 1.336, 0)), VIOLET, 1.1, 0.5)
+    halo(aura, VIOLET, 6, 0.86)
+    light(aura, VIOLET, 12, 1)
+    drawIn(aura, T.SoftGlow, LILAC, 0.5, 50)
+    burst(aura, rgb(205, 175, 255), 8, T.SoftGlow)
+    centreAt(aura, C)
+end
+
+-- Heavenly Throne Egg: radiance. A soft gold glow breathes behind the egg, filling its mandorla;
+-- golden dust rises slowly off its cushion of cloud, and soft wisps of cloud drift from it; the
+-- sun jewel on its front breathes. Its breath is the slowest on the isle.
+RECIPES.HeavenlyThroneEgg = function(aura)
+    local GOLD, SUN = rgb(255, 190, 70), rgb(255, 225, 140)
+    local C = modelPoint(aura, Vector3.new(0, -0.493, 0.214)).Y
+    set(aura.model, nil, { Gather = 1.5, Tint = rgb(255, 210, 110), Breath = 0.12, BreathPeriod = 7 })
+    finish(emitter("Radiance", {
+        -- a deep gold at low light emission: brighter, it hazes the pearl egg to white
+        Texture = T.SoftGlow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(3, 4), Rate = 0.7, ZOffset = -3,
+        Rotation = NumberRange.new(0, 360), Size = seq({ { 0, 3.2 }, { 0.5, 4.2 }, { 1, 4.6 } }), Color = ColorSequence.new(rgb(255, 165, 40)),
+        Transparency = seq({ { 0, 1 }, { 0.4, 0.78 }, { 1, 1 } }), Brightness = 2, LightEmission = 0.35,
+    }, { HatchEmit = 2 }), anchor(aura, "Mandorla", Vector3.new(0, 0.057, -1.026)))
+    local cushion = part(aura, "Cushion", CFrame.new(modelPoint(aura, Vector3.new(0, -1.593, 0.214))), Vector3.new(3.4, 0.3, 3.4))
+    finish(emitter("Dust", {
+        Texture = T.SoftGlow, Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        EmissionDirection = Enum.NormalId.Top, Speed = NumberRange.new(0.4, 0.8), SpreadAngle = Vector2.new(25, 25),
+        Acceleration = Vector3.new(0, 0.2, 0), Drag = 0.5, Lifetime = NumberRange.new(3, 4.5), Rate = 6,
+        Size = seq({ { 0, 0 }, { 0.3, 0.4, 0.08 }, { 1, 0 } }), Color = ColorSequence.new(SUN, GOLD),
+        Transparency = NumberSequence.new(0.15), Brightness = 2,
+    }, { HatchEmit = 25 }), cushion)
+    finish(emitter("Wisps", {
+        Texture = T.Fog, Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
+        ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward, Speed = NumberRange.new(0.2, 0.4), Drag = 0.3,
+        Acceleration = Vector3.new(0, 0.1, 0), Lifetime = NumberRange.new(3.5, 5), Rate = 0.8, Rotation = NumberRange.new(0, 360),
+        RotSpeed = NumberRange.new(-10, 10), Size = seq({ { 0, 1 }, { 1, 2.4 } }), Color = ColorSequence.new(rgb(255, 250, 235)),
+        LightEmission = 0.15, Transparency = seq({ { 0, 1 }, { 0.3, 0.75 }, { 1, 1 } }),
+    }, { HatchEmit = 6 }), cushion)
+    breathe(anchor(aura, "Sun", Vector3.new(0, -0.619, 1.292)), GOLD, 1, 0.55)
+    light(aura, GOLD, 13, 0.6) -- the pearl egg washes out under a stronger light
+    drawIn(aura, T.SoftGlow, SUN, 0.5, 50)
+    burst(aura, rgb(255, 230, 160), 9, T.SoftGlow)
+    centreAt(aura, C)
+end
+
 function EggAuraVFX.has(eggId)
     return RECIPES[eggId] ~= nil
 end
