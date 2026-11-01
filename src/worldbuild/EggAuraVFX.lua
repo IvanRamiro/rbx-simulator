@@ -82,6 +82,8 @@ local T = {
     Vessel = "rbxassetid://80498467493439",      -- QA: a molten artery, coloured: white-hot core, blood-red body, dark rim
     CrustRing = "rbxassetid://125397922605343",  -- QA: dark basalt crust ring, molten in its breaks (coloured)
     Ash = "rbxassetid://117440820612388",        -- QA: one flake of ash
+    FireMain = "rbxasset://textures/particles/fire_main.dds",          -- Roblox's built-in flame
+    FireSparks = "rbxasset://textures/particles/fire_sparks_main.dds", -- Roblox's built-in fire sparks
     Spark = "rbxassetid://121337217386887",      -- QA: one spark, a hot drop with real alpha (keeps its colour on a bright sky)
 }
 
@@ -887,7 +889,7 @@ end
 
 -- ---------- Ember Peak ----------
 -- The Phoenix Altar's stands are basalt columns about 6 studs apart, so an aura stays within about
--- 3.3 studs of its egg. Magma Heart and Phoenix Ash have no aura (removed at the owner's request).
+-- 3.3 studs of its egg. Phoenix Ash has no aura (removed at the owner's request).
 
 local function group(aura, name)
     local f = Instance.new("Folder")
@@ -933,6 +935,53 @@ function EggAuraVFX.storeMeshes(model, name)
     model:Destroy()
     stored.Parent = folder
     return #stored:GetChildren()
+end
+
+-- Magma Heart Egg: a blazing fire round the egg, the owner's test fire from the Starting Island
+-- fitted to the egg. Roblox's own fire textures, no Fire object, no flipbook. Eight flame columns
+-- stand in a ring just inside the egg's widest girth (one emitter per unrotated attachment: a single
+-- emitter on a bed under the egg starts its flames inside the egg, and a ring-shaped one scatters
+-- them into thin smoke), so the flames lick up every side of it. Each column is a small copy of the
+-- test fire: flames from bright yellow through orange and red to dark red, flickering, with a faster
+-- yellow core in every other column; embers drift up from a bed under the egg. Together the columns
+-- emit what the test fire did (about 190 flames and 120 core flames a second). Half light emission,
+-- not full: fully additive flames wash out to pale smoke against the day sky.
+RECIPES.MagmaHeartEgg = function(aura)
+    local size = aura.egg and aura.egg.Size or Vector3.new(3.8, 5.25, 3.95)
+    local girth = math.max(size.X, size.Z)
+    set(aura.model, nil, { Gather = 1.4, Tint = rgb(255, 110, 25) })
+    local flames = {
+        Texture = T.FireMain, EmissionDirection = Enum.NormalId.Top, Rate = 24, Lifetime = NumberRange.new(0.5, 1.2),
+        Speed = NumberRange.new(5, 10), SpreadAngle = Vector2.new(15, 15), Acceleration = Vector3.new(0, 8, 0), Drag = 2,
+        Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-60, 60), LightEmission = 0.6, Brightness = 2.2,
+        Size = seq({ { 0, 1.3 }, { 0.15, 1.7 }, { 1, 0 } }), Transparency = seq({ { 0, 0.15 }, { 0.5, 0.25 }, { 1, 1 } }),
+        Color = colors({ { 0, rgb(255, 255, 190) }, { 0.2, rgb(255, 225, 40) }, { 0.45, rgb(255, 135, 10) }, { 0.75, rgb(220, 35, 5) }, { 1, rgb(90, 5, 0) } }),
+    }
+    local core = {
+        Texture = T.FireMain, EmissionDirection = Enum.NormalId.Top, Rate = 30, Lifetime = NumberRange.new(0.3, 0.6),
+        Speed = NumberRange.new(9, 14), SpreadAngle = Vector2.new(8, 8), Acceleration = Vector3.new(0, 10, 0), Drag = 2.5,
+        Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-90, 90), LightEmission = 0.6, Brightness = 3,
+        Size = seq({ { 0, 0.7 }, { 1, 0 } }), Transparency = seq({ { 0, 0 }, { 1, 1 } }),
+        Color = colors({ { 0, rgb(255, 255, 210) }, { 0.4, rgb(255, 235, 60) }, { 1, rgb(255, 150, 20) } }),
+    }
+    local radius = girth / 2 * 0.95
+    for k = 1, 8 do
+        local ang = (k - 0.5) * math.pi / 4
+        local at = attachment(aura, "Fire" .. k, CFrame.new(math.cos(ang) * radius, 0.15, math.sin(ang) * radius))
+        finish(emitter("Flames", flames, { FlickerRate = NumberRange.new(18, 28), FlickerSpeedMin = NumberRange.new(6, 9),
+            FlickerSpeedMax = NumberRange.new(10, 15), FlickerPeriod = 0.15, HatchEmit = 8 }), at)
+        if k % 2 == 0 then
+            finish(emitter("Core", core, { HatchEmit = 8 }), at)
+        end
+    end
+    local bed = part(aura, "FireBed", CFrame.new(0, 0.15, 0), Vector3.new(girth * 0.8, 0.2, girth * 0.8))
+    finish(emitter("Embers", {
+        Texture = T.FireSparks, EmissionDirection = Enum.NormalId.Top, Rate = 18, Lifetime = NumberRange.new(1.5, 3),
+        Speed = NumberRange.new(3, 6), SpreadAngle = Vector2.new(30, 30), Acceleration = Vector3.new(0.6, 2.5, 0.3), Drag = 1.2,
+        LightEmission = 0.6, Brightness = 4, Size = seq({ { 0, 0.32, 0.1 }, { 1, 0 } }),
+        Transparency = seq({ { 0, 0 }, { 0.8, 0.2 }, { 1, 1 } }),
+        Color = colors({ { 0, rgb(255, 220, 90) }, { 0.5, rgb(255, 120, 20) }, { 1, rgb(200, 30, 5) } }),
+    }, { HatchEmit = 25 }), bed)
 end
 
 -- Inferno Egg: a miniature volcano with an unstable molten core. Six systems, each with its own

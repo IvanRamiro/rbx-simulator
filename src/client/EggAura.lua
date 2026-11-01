@@ -33,6 +33,9 @@
 --   * emitters and ripples with PulseEmit fire that many;
 --   * with PulseEggGlow (a colour), the egg's own glowing parts heat toward it (and while a hatch
 --     gathers and bursts).
+-- Emitters with FlickerRate (a NumberRange) flicker like flames: every FlickerPeriod seconds
+-- (default 0.15) their rate jumps to a random value in that range, and with FlickerSpeedMin and
+-- FlickerSpeedMax (NumberRanges) their speed's low and high ends jump too.
 -- The hatch's burst sends a pulse too. Settings, all model attributes, all optional: Intensity
 -- (glow), Density (emission rates), OrbitSpeed, LightIntensity, and Visible (false hides it).
 -- Auras run at full rate near the camera, half rate further out, and switch off beyond that, or
@@ -80,7 +83,7 @@ local function index(model)
     end
     local state = {
         model = model, root = root, eggId = model:GetAttribute("EggId"), tint = model:GetAttribute("Tint"),
-        movers = {}, spinners = {}, ripples = {}, waves = {}, sways = {}, emitters = {}, trails = {}, lights = {}, guis = {},
+        movers = {}, spinners = {}, ripples = {}, waves = {}, sways = {}, emitters = {}, trails = {}, lights = {}, guis = {}, flickers = {},
         speed = 1, glow = 1, swell = 0, level = 2,
         gather = model:GetAttribute("Gather") or 1.2,
         breathT = math.random(), beat = 0, swellBeams = {}, screenFlash = 0, distance = math.huge,
@@ -110,7 +113,12 @@ local function index(model)
         elseif d:IsA("ImageLabel") and d:GetAttribute("Sway") then
             table.insert(state.sways, watched(d))
         elseif d:IsA("ParticleEmitter") then
-            table.insert(state.emitters, { Emitter = d, Rate = d.Rate, Enabled = d.Enabled })
+            table.insert(state.emitters, { Emitter = d, Rate = d.Rate, Enabled = d.Enabled, Speed = d.Speed })
+            if d:GetAttribute("FlickerRate") or d:GetAttribute("FlickerSpeedMin") then
+                local f = watched(d)
+                f.Next = 0
+                table.insert(state.flickers, f)
+            end
         elseif d:IsA("Trail") or d:IsA("Beam") then
             table.insert(state.trails, d)
             if d:IsA("Beam") and (d:GetAttribute("BeatWidth") or d:GetAttribute("PulseWidth")) then
@@ -344,6 +352,21 @@ local function step(state, dt, now)
         end
     end
     local pulse = pulseAt(state, now, 0)
+    if not state.hatching then -- flickering flames: a new rate and speed every FlickerPeriod
+        for _, f in state.flickers do
+            if now >= f.Next then
+                local a = f.A
+                f.Next = now + (a.FlickerPeriod or 0.15)
+                local rate, lo, hi = a.FlickerRate, a.FlickerSpeedMin, a.FlickerSpeedMax
+                if rate then
+                    f.Instance.Rate = (rate.Min + math.random() * (rate.Max - rate.Min)) * rateFactor(state)
+                end
+                if lo and hi then
+                    f.Instance.Speed = NumberRange.new(lo.Min + math.random() * (lo.Max - lo.Min), hi.Min + math.random() * (hi.Max - hi.Min))
+                end
+            end
+        end
+    end
     local before = state.breathT % 1
     state.breathT += dt * state.speed / (ma.BreathPeriod or 4)
     local after = state.breathT % 1
@@ -459,7 +482,7 @@ end
 -- emitters, trails and guis switched off by distance, beams swollen mid-beat, scaled brightness.
 local function release(state)
     for _, e in state.emitters do
-        e.Emitter.Enabled, e.Emitter.Rate = e.Enabled, e.Rate
+        e.Emitter.Enabled, e.Emitter.Rate, e.Emitter.Speed = e.Enabled, e.Rate, e.Speed
     end
     for _, t in state.trails do
         t.Enabled = true
