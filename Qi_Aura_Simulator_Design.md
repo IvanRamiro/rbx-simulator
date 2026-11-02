@@ -948,7 +948,12 @@ Build one complete encounter before expanding to every island.
 4. The enraged pursuit.
 5. Egg dropping, recovery, retry and extraction.
 6. Secured eggs connected to the existing inventory and hatching.
-7. Multiplayer ownership, exploit resistance, disconnects and edge cases. Audited November 3, 2026 (see "Data and security"); still to run: the two-player cases (another player at a dropped egg, two thefts in one frame, the thief kicked or rejoining) and the two-server cases (a save taken over, a quick server hop, a shutdown mid-theft).
+7. Multiplayer ownership, exploit resistance, disconnects and edge cases. Audited November 3, 2026 (see "Data and security"). Passed in Play, one player:
+   - a second stand refused while an egg is carried ("busy"), one egg in the world;
+   - a recovered egg dropped on death and back on its stand after 30 s, with no egg gained;
+   - the thief leaving mid-carry: the save kept its eggs and stones and released its lock.
+
+   Still to run, needing a second player or server: another player at a dropped egg, and a save taken over by another server.
 8. The framework rolled out to every island.
 9. Polish: guardian animation, auras, trails, sound, UI and cinematic feedback.
 
