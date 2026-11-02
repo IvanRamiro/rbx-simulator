@@ -137,6 +137,8 @@ RemoteEvents.RelicResultEvent.OnClientEvent:Connect(function(result)
         message:show(relic.DisplayName .. " needs " .. tostring(result.RequiredRank) .. " to attune.")
     else
         local stones = if typeof(result.Stones) == "number" and result.Stones > 0 then ", +" .. result.Stones .. " Spirit Stones" else ""
-        message:show("Attuned to " .. relic.DisplayName .. "! +" .. tostring(result.QiReward) .. " Qi" .. stones)
+        local info = typeof(result.Element) == "string" and GameConfig.Forge.Elements[result.Element]
+        local element = if info then ". " .. info.DisplayName .. " unlocked at the Blacksmith's forge" else ""
+        message:show("Attuned to " .. relic.DisplayName .. "! +" .. tostring(result.QiReward) .. " Qi" .. stones .. element)
     end
 end)

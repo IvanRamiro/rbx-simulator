@@ -5,7 +5,9 @@
 --   Shop.weapon(id)           one of them, or nil
 --   Shop.realmIndex(realm)    a realm's place in the ranks (1 = Qi Awakening), or nil
 --   Shop.playerRealmIndex(player)
---   Shop.weaponRefund(id)     what a weapon sells back for
+--   Shop.weaponRefund(id, element)  what a weapon sells back for (a forged one returns part of its forging too)
+--   Shop.forgePrice(id)       what forging a weapon with an element costs (GameConfig.Forge)
+--   Shop.element(name)        an element's GameConfig.Forge entry, or nil
 --   Shop.petValue(petId)      what a pet sells for
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -53,9 +55,23 @@ function Shop.weapon(id)
     return if typeof(id) == "string" then byId[id] else nil
 end
 
-function Shop.weaponRefund(id)
+function Shop.forgePrice(id)
     local weapon = byId[id]
-    return weapon and math.floor(weapon.Price * GameConfig.SpiritStones.WeaponRefund) or 0
+    local forge = GameConfig.Forge
+    return weapon and math.max(forge.MinPrice, math.floor(weapon.Price * forge.PriceShare)) or 0
+end
+
+function Shop.element(name)
+    return if typeof(name) == "string" then GameConfig.Forge.Elements[name] else nil
+end
+
+function Shop.weaponRefund(id, element)
+    local weapon = byId[id]
+    if not weapon then
+        return 0
+    end
+    local paid = weapon.Price + (if Shop.element(element) then Shop.forgePrice(id) else 0)
+    return math.floor(paid * GameConfig.SpiritStones.WeaponRefund)
 end
 
 -- a pet's egg realm: the earliest realm whose egg can hatch it

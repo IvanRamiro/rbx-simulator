@@ -400,10 +400,12 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
         return
     end
     if action == "Secured" then
-        local eggId, stones = ...
+        local eggId, stones, element = ...
         local egg = GameConfig.Eggs[eggId]
         local reward = if typeof(stones) == "number" and stones > 0 then " +" .. stones .. " Spirit Stones." else ""
-        message:show((egg and egg.DisplayName or "The egg") .. " secured! Hatch it at its stand." .. reward, Color3.fromRGB(255, 214, 110))
+        local info = typeof(element) == "string" and GameConfig.Forge.Elements[element]
+        local relic = if info then " Its relic unlocks " .. info.DisplayName .. " at the Blacksmith's forge." else ""
+        message:show((egg and egg.DisplayName or "The egg") .. " secured! Hatch it at its stand." .. reward .. relic, Color3.fromRGB(255, 214, 110))
         return
     elseif action == "BagFull" then
         message:show("You can't hold any more of that egg: hatch some first.", Color3.new(1, 1, 1))

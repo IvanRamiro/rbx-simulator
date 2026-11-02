@@ -1,6 +1,7 @@
--- The Spirit Stones counter, and the shop window the Blacksmith's and Buy & Sell's notice boards
--- open (ShopService sends ShopEvent "Open"). The Blacksmith lists a sword and a spear for every
--- realm: buy those of your realm or below, equip any you own. Buy & Sell lists your pets and
+-- The Spirit Stones counter, and the shop window the Blacksmith's anvil and Buy & Sell's Jade Scale
+-- open (ShopService sends ShopEvent "Open"). The Blacksmith has two tabs: Weapons lists a sword and
+-- a spear for every realm (buy those of your realm or below, equip any you own); Forge gives an
+-- owned weapon an unlocked element and a name (GameConfig.Forge). Buy & Sell lists your pets and
 -- weapons with what each fetches. Every request goes to the server, which answers with the
 -- result and fresh contents; the window closes when the player walks away.
 local Players = game:GetService("Players")
@@ -119,10 +120,11 @@ corner(window, 12)
 applyHudScale(window)
 
 local title = label(window, "", UDim2.new(1, -150, 0, 30), UDim2.fromOffset(16, 10), FORGE_COLOR)
+local LIST_TOP, TABS_TOP, FORGE_TOP, FORGE_HEIGHT = 50, 46, 78, 100
 local balance = label(window, "", UDim2.fromOffset(110, 22), UDim2.new(1, -170, 0, 14), STONE_COLOR, Enum.TextXAlignment.Right)
 
 local list = Instance.new("ScrollingFrame")
-list.Position = UDim2.fromOffset(12, 50)
+list.Position = UDim2.fromOffset(12, 50) -- render() moves it below the Blacksmith's tabs
 list.Size = UDim2.new(1, -24, 1, -62)
 list.BackgroundTransparency = 1
 list.BorderSizePixel = 0
@@ -138,7 +140,7 @@ layout.Parent = list
 local message = Toast.new(hud, "ShopMessage", 120, Color3.new(1, 1, 1), 3)
 hud.Parent = playerGui
 
-local current = { shop = nil, contents = nil, openedAt = nil }
+local current = { shop = nil, contents = nil, openedAt = nil, tab = "Weapons", element = nil }
 local render
 
 local function close()
@@ -147,9 +149,59 @@ local function close()
 end
 button(window, "X", UDim2.fromOffset(32, 32), UDim2.new(1, -44, 0, 10), Color3.fromRGB(150, 60, 60), close)
 
-local function ask(action, id)
-    RemoteEvents.ShopEvent:FireServer(action, id)
+local function ask(action, id, extra)
+    RemoteEvents.ShopEvent:FireServer(action, id, extra)
 end
+
+-- ---------- the Blacksmith's tabs and the forge's controls (kept out of the list, so typing survives a redraw) ----------
+local tabs = Instance.new("Frame")
+tabs.Position = UDim2.fromOffset(12, TABS_TOP)
+tabs.Size = UDim2.new(1, -24, 0, 26)
+tabs.BackgroundTransparency = 1
+tabs.Visible = false
+tabs.Parent = window
+local tabButtons = {}
+for index, name in { "Weapons", "Forge" } do
+    tabButtons[name] = button(tabs, name, UDim2.fromOffset(120, 26), UDim2.fromOffset((index - 1) * 128, 0), EQUIP_COLOR, function()
+        current.tab = name
+        render()
+    end)
+end
+
+local forgePanel = Instance.new("Frame")
+forgePanel.Position = UDim2.fromOffset(12, FORGE_TOP)
+forgePanel.Size = UDim2.new(1, -24, 0, FORGE_HEIGHT)
+forgePanel.BackgroundTransparency = 1
+forgePanel.Visible = false
+forgePanel.Parent = window
+local chips = Instance.new("Frame")
+chips.Size = UDim2.new(1, 0, 0, 34)
+chips.BackgroundTransparency = 1
+chips.Parent = forgePanel
+local nameBox = Instance.new("TextBox")
+nameBox.Position = UDim2.fromOffset(0, 42)
+nameBox.Size = UDim2.new(0.6, 0, 0, 28)
+nameBox.BackgroundColor3 = CARD_COLOR
+nameBox.ClearTextOnFocus = false
+nameBox.Font = Enum.Font.GothamBold
+nameBox.TextScaled = true
+nameBox.TextColor3 = Color3.new(1, 1, 1)
+nameBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
+nameBox.PlaceholderText = ("Name your weapon (%d to %d letters)"):format(GameConfig.Forge.NameLength.Min, GameConfig.Forge.NameLength.Max)
+nameBox.Text = ""
+nameBox.Parent = forgePanel
+corner(nameBox, 6)
+local namePadding = Instance.new("UIPadding")
+namePadding.PaddingLeft, namePadding.PaddingRight = UDim.new(0, 8), UDim.new(0, 8)
+namePadding.PaddingTop, namePadding.PaddingBottom = UDim.new(0, 4), UDim.new(0, 4)
+namePadding.Parent = nameBox
+nameBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local max = GameConfig.Forge.NameLength.Max
+    if (utf8.len(nameBox.Text) or 0) > max then
+        nameBox.Text = string.sub(nameBox.Text, 1, utf8.offset(nameBox.Text, max + 1) - 1)
+    end
+end)
+local forgeHint = label(forgePanel, "", UDim2.new(1, 0, 0, 16), UDim2.fromOffset(0, 78), Color3.fromRGB(190, 190, 200))
 
 local function row(order, height)
     local r = Instance.new("Frame")
@@ -189,11 +241,13 @@ local function weaponCard(parent, x, weapon, contents, realmIndex)
     card.BackgroundColor3 = CARD_COLOR
     card.Parent = parent
     corner(card, 6)
-    label(card, weapon.Name, UDim2.new(1, -10, 0, 18), UDim2.fromOffset(6, 4))
+    local mine = owned(contents, weapon.Id)
+    local element = mine and Shop.element(mine.Element)
+    label(card, if mine and mine.Name then mine.Name else weapon.Name, UDim2.new(1, -10, 0, 18), UDim2.fromOffset(6, 4),
+        element and element.Color)
     local kind = GameConfig.WeaponKinds[weapon.Kind]
     label(card, string.format("%s  ·  %d damage  ·  %d reach", weapon.Kind, math.floor(weapon.Damage + 0.5), kind.Range),
         UDim2.new(1, -10, 0, 14), UDim2.fromOffset(6, 24), Color3.fromRGB(190, 190, 200))
-    local mine = owned(contents, weapon.Id)
     local size, position = UDim2.new(1, -12, 0, 24), UDim2.new(0, 6, 1, -30)
     if mine and mine.InstanceId == contents.Weapons.Equipped then
         button(card, "Wielding", size, position, EQUIP_COLOR, nil)
@@ -212,8 +266,76 @@ local function weaponCard(parent, x, weapon, contents, realmIndex)
     end
 end
 
+local function renderForge(contents)
+    local unlocked = {}
+    for _, element in contents.Elements or {} do
+        unlocked[element] = true
+    end
+    if current.element and not unlocked[current.element] then
+        current.element = nil
+    end
+    for _, child in chips:GetChildren() do
+        child:Destroy()
+    end
+    local order = GameConfig.Forge.Order
+    for index, name in order do
+        local info = GameConfig.Forge.Elements[name]
+        local chip = button(chips, info.DisplayName, UDim2.new(1 / #order, -6, 1, 0), UDim2.new((index - 1) / #order, 0, 0, 0),
+            if unlocked[name] then info.Color else DISABLED_COLOR, function()
+                if unlocked[name] then
+                    current.element = name
+                    render()
+                else
+                    message:show("Find " .. info.Source .. " to forge with " .. info.DisplayName .. ".", Color3.new(1, 1, 1))
+                end
+            end)
+        if current.element == name then
+            local stroke = Instance.new("UIStroke")
+            stroke.Thickness = 2
+            stroke.Color = Color3.new(1, 1, 1)
+            stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            stroke.Parent = chip
+        end
+    end
+    local chosen = current.element and GameConfig.Forge.Elements[current.element]
+    forgeHint.Text = if chosen
+        then chosen.DisplayName .. ": its glow, trail and strike, and " .. math.floor(GameConfig.Forge.DamageBonus * 100 + 0.5) .. "% more damage."
+        elseif next(unlocked) then "Choose an element, name your weapon, then forge it."
+        else "Attune relics, or secure a guardian's egg, to unlock elements."
+
+    for index, weapon in contents.Weapons.Weapons do
+        local info = Shop.weapon(weapon.WeaponId)
+        if info then
+            local element = Shop.element(weapon.Element)
+            local r = row(index, 44)
+            label(r, weapon.Name or info.Name, UDim2.new(0.55, 0, 0, 20), UDim2.fromOffset(10, 4), element and element.Color)
+            label(r, info.Name .. (if element then "  ·  " .. element.DisplayName else "  ·  unforged"), UDim2.new(0.55, 0, 0, 14),
+                UDim2.fromOffset(10, 25), Color3.fromRGB(190, 190, 200))
+            local price = Shop.forgePrice(info.Id)
+            local size, position = UDim2.new(0.38, 0, 0, 30), UDim2.new(0.62, -6, 0, 7)
+            if not chosen then
+                button(r, "Choose an element", size, position, DISABLED_COLOR, nil)
+            elseif contents.Stones < price then
+                button(r, NumberFormat.compact(price) .. " Stones", size, position, DISABLED_COLOR, nil)
+            else
+                button(r, (if element then "Re-forge · " else "Forge · ") .. NumberFormat.compact(price) .. " Stones", size, position, FORGE_COLOR,
+                    function()
+                        ask("Forge", weapon.InstanceId, { Element = current.element, Name = nameBox.Text })
+                    end)
+            end
+        end
+    end
+end
+
 local function renderBlacksmith(contents)
     title.Text = "Blacksmith"
+    for name, b in tabButtons do
+        b.BackgroundColor3 = if current.tab == name then FORGE_COLOR else EQUIP_COLOR
+    end
+    if current.tab == "Forge" then
+        renderForge(contents)
+        return
+    end
     local realmIndex = Shop.playerRealmIndex(player)
     local unarmed = contents.Weapons.Equipped == nil
     local palm = row(0, 36)
@@ -280,7 +402,9 @@ local function renderBuySell(contents)
         local info = Shop.weapon(weapon.WeaponId)
         if info then
             local wielded = weapon.InstanceId == contents.Weapons.Equipped
-            sellRow(nextOrder(), info.Name, info.Realm, Color3.fromRGB(190, 190, 200), Shop.weaponRefund(info.Id),
+            local element = Shop.element(weapon.Element)
+            sellRow(nextOrder(), weapon.Name or info.Name, info.Realm .. (if element then "  ·  " .. element.DisplayName else ""),
+                if element then element.Color else Color3.fromRGB(190, 190, 200), Shop.weaponRefund(info.Id, weapon.Element),
                 if wielded then nil else function()
                     ask("SellWeapon", weapon.InstanceId)
                 end, "Wielding")
@@ -296,7 +420,14 @@ function render()
     end
     local contents = current.contents
     balance.Text = NumberFormat.compact(contents.Stones) .. " Stones"
-    if current.shop == "Blacksmith" then
+    local blacksmith = current.shop == "Blacksmith"
+    local forging = blacksmith and current.tab == "Forge"
+    tabs.Visible = blacksmith
+    forgePanel.Visible = forging
+    local top = if forging then FORGE_TOP + FORGE_HEIGHT + 4 elseif blacksmith then TABS_TOP + 32 else LIST_TOP
+    list.Position = UDim2.fromOffset(12, top)
+    list.Size = UDim2.new(1, -24, 1, -top - 12)
+    if blacksmith then
         renderBlacksmith(contents)
     else
         renderBuySell(contents)
@@ -307,6 +438,9 @@ RemoteEvents.ShopEvent.OnClientEvent:Connect(function(kind, ...)
     if kind == "Open" then
         local shop, contents = ...
         local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if shop ~= current.shop then
+            current.tab = "Weapons"
+        end
         current.shop, current.contents = shop, contents
         current.openedAt = root and root.Position
         window.Visible = true

@@ -11,7 +11,7 @@
 --   -- each import uploads its own atlas copy: point all pieces at one (WB.shareTexture or TextureID)
 --   WB.placeKit(island); WB.buildEggStands(island); WB.buildRelics(island)
 --   Yggdrasil (the hub): WB.buildWaystones, WB.buildSpawn, WB.buildSpawnSlots, WB.buildPlots, WB.buildLeaderboard,
---   WB.buildQiSpring
+--   WB.buildShops, WB.buildQiSpring
 --   every other island: WB.buildCheckpoint(island)
 --
 -- Eggs (assets/eggs/<EggId>.fbx): WB.storeEgg(<import>, eggId), then WB.buildEggStands(island)
@@ -274,8 +274,10 @@ WorldBuilder.Collision = {
     { Prefix = "OA_VoidCrystals", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "OA_SlateRock", Fidelity = Enum.CollisionFidelity.Hull },
     -- Yggdrasil: the roots arch over paths and carry the climb down, so they keep their shape;
-    -- the stele's roof would close a hull over the space under it
+    -- the stele's roof and the shops' open halls would close a hull over the space under them
     { Prefix = "YG_Stele", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "YG_Blacksmith", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "YG_BuySell", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_MoundRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_GripRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_PathRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
@@ -362,6 +364,9 @@ WorldBuilder.Appearance = {
     YG_SeedLanterns = table.clone(GLOW),
     YG_SpawnDaisGlow = table.clone(GLOW),
     YG_SteleGlow = table.clone(GLOW),
+    YG_BlacksmithGlow = table.clone(GLOW),
+    YG_BuySellStones = table.clone(GLOW),
+    YG_BuySellLanterns = table.clone(GLOW),
 }
 WorldBuilder.Appearance.SI_QiCompassGlow.Color = Color3.fromRGB(40, 210, 235)
 WorldBuilder.Appearance.SI_LanternLight.Color = Color3.fromRGB(255, 150, 60)
@@ -395,6 +400,9 @@ WorldBuilder.Appearance.OA_VoidCrystals.Color = Color3.fromRGB(55, 22, 100)
 WorldBuilder.Appearance.OA_VoidCrystalGlow.Color = Color3.fromRGB(160, 55, 255)
 WorldBuilder.Appearance.YG_TrunkVeins.Color = Color3.fromRGB(40, 210, 235) -- the Qi Spring's and the compass's Qi
 WorldBuilder.Appearance.YG_SeedLanterns.Color = Color3.fromRGB(255, 170, 40)
+WorldBuilder.Appearance.YG_BlacksmithGlow.Color = Color3.fromRGB(255, 105, 20)
+WorldBuilder.Appearance.YG_BuySellStones.Color = Color3.fromRGB(30, 215, 170) -- the Spirit Stones' jade
+WorldBuilder.Appearance.YG_BuySellLanterns.Color = Color3.fromRGB(235, 60, 30)
 
 -- Kit pieces that carry a PointLight (lights take the piece's colour).
 WorldBuilder.Lights = {
@@ -510,6 +518,27 @@ local function addEmitterPreset(part, preset)
         motes.EmissionDirection = Enum.NormalId.Top
         motes.Rate = 14
         motes.Parent = part
+    elseif preset == "Smoke" then
+        -- slow soft puffs that swell, thin out and lean downwind
+        local smoke = Instance.new("ParticleEmitter")
+        smoke.Name = "Smoke"
+        smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+        smoke.Color = ColorSequence.new(Color3.fromRGB(70, 66, 66), Color3.fromRGB(150, 148, 150))
+        smoke.LightEmission = 0
+        smoke.LightInfluence = 1
+        smoke.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.2), NumberSequenceKeypoint.new(1, 6) })
+        smoke.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(0.3, 0.6),
+            NumberSequenceKeypoint.new(1, 1) })
+        smoke.Lifetime = NumberRange.new(4, 6)
+        smoke.Speed = NumberRange.new(2, 3)
+        smoke.SpreadAngle = Vector2.new(10, 10)
+        smoke.Acceleration = Vector3.new(1.2, 0.4, 0.5)
+        smoke.Drag = 0.3
+        smoke.Rotation = NumberRange.new(0, 360)
+        smoke.RotSpeed = NumberRange.new(-15, 15)
+        smoke.EmissionDirection = Enum.NormalId.Top
+        smoke.Rate = 4
+        smoke.Parent = part
     end
 end
 
@@ -1386,20 +1415,20 @@ function WorldBuilder.buildSpawnSlots(island)
     return #folder:GetChildren()
 end
 
--- What will stand on each plot, named on its notice board.
+-- What will stand on each plot, named on its notice board. Built names the building that stands
+-- there now (buildLeaderboard, buildShops), and that plot is left unmarked.
 WorldBuilder.Plots = {
     Leaderboard = { Title = "Leaderboard", Subtitle = "The greatest cultivators, carved here soon", Built = "Ascension Stele" },
-    -- Shop: its notice board opens that shop (ShopService); the building comes later
-    Blacksmith = { Title = "Blacksmith", Subtitle = "Swords and spears for every realm", Shop = "Blacksmith", Action = "Browse" },
+    Blacksmith = { Title = "Blacksmith", Subtitle = "Swords and spears for every realm", Built = "Dragon-Kiln Forge" },
     Marketplace = { Title = "Marketplace", Subtitle = "Opening soon" },
-    BuySell = { Title = "Buy & Sell", Subtitle = "Sell pets and weapons for Spirit Stones", Shop = "BuySell", Action = "Trade" },
+    BuySell = { Title = "Buy & Sell", Subtitle = "Sell pets and weapons for Spirit Stones", Built = "Jade Scale" },
 }
 WorldBuilder.PlotCordColor = Color3.fromRGB(190, 30, 25)
 local PLOT_STAKE_GAP = 12 -- studs, at most, between stakes
 
 -- Marks out each plot in Placements.<island>.Plots still waiting for its building: talisman stakes round its
--- edge strung with sagging red cord, a notice board in front naming what will stand there, and an
--- invisible "Area" part covering the plot (FloatingIslands.<island>.Plots.Plot_<Name>).
+-- edge strung with sagging red cord and a notice board in front naming what will stand there
+-- (FloatingIslands.<island>.Plots.Plot_<Name>).
 function WorldBuilder.buildPlots(island)
     local placements = placementsFor(island)
     local folder = WorldBuilder.islandFolder(island, "Plots")
@@ -1414,7 +1443,6 @@ function WorldBuilder.buildPlots(island)
         local model = Instance.new("Model")
         model.Name = "Plot_" .. name
         model:SetAttribute("Plot", name)
-        marker("Area", Vector3.new(plot.Size.X, 1, plot.Size.Y), frame * CFrame.new(0, 0.5, 0), model)
 
         -- round the edge from the front-left corner (local +Z is the front), corners included
         local hx, hz = plot.Size.X / 2, plot.Size.Y / 2
@@ -1467,17 +1495,6 @@ function WorldBuilder.buildPlots(island)
         panel.CanTouch = false
         panel.Parent = model
         inscribe(panel, info.Title, info.Subtitle, Color3.fromRGB(255, 190, 90))
-        if info.Shop then
-            local prompt = Instance.new("ProximityPrompt")
-            prompt.ActionText = info.Action
-            prompt.ObjectText = info.Title
-            prompt.KeyboardKeyCode = Enum.KeyCode.F
-            prompt.HoldDuration = 0
-            prompt.MaxActivationDistance = 14
-            prompt.RequiresLineOfSight = false
-            prompt:SetAttribute("Shop", info.Shop)
-            prompt.Parent = panel
-        end
         model.Parent = folder
     end
     WorldBuilder.applyCollision(folder)
@@ -1559,6 +1576,89 @@ function WorldBuilder.buildLeaderboard(island)
     end
     WorldBuilder.applyCollision(folder)
     return folder
+end
+
+-- ---------- the shops (Yggdrasil) ----------
+-- Each shop's building (tools/blender/world/ygg_shops.py): its plot, the kit pieces it is made of
+-- and what its prompt says. ShopService opens the shop named by the prompt's "Shop" attribute.
+WorldBuilder.Shops = {
+    Blacksmith = { Plot = "Blacksmith", Pieces = { "YG_Blacksmith", "YG_BlacksmithGlow" }, Action = "Browse" },
+    BuySell = { Plot = "BuySell", Pieces = { "YG_BuySell", "YG_BuySellStones", "YG_BuySellLanterns" }, Action = "Trade" },
+}
+WorldBuilder.ForgeLight = Color3.fromRGB(255, 120, 40)
+WorldBuilder.LanternLight = Color3.fromRGB(255, 130, 70) -- warm: a red light tints the paving pink
+
+-- What goes on each of a shop's effect points (Placements.<island>.Shops.<Shop>.Fx).
+local SHOP_FX = {
+    -- flames licking up inside the dragon's jaws (kept short so they stay under its upper jaw) and
+    -- sparks spat out of its mouth toward the anvil (a part's Back face is its +Z, the shop's front)
+    Forge = function(part)
+        part.Size = Vector3.new(3.6, 0.6, 2)
+        addEmitterPreset(part, "Flames")
+        local flames = part:FindFirstChild("Flames")
+        flames.Speed = NumberRange.new(1.2, 2)
+        flames.Lifetime = NumberRange.new(0.4, 0.7)
+        flames.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.3), NumberSequenceKeypoint.new(1, 0.1) })
+        addEmitterPreset(part, "EmberSparks")
+        part:FindFirstChild("EmberSparks").EmissionDirection = Enum.NormalId.Back
+        addLight(part, WorldBuilder.ForgeLight, 16, 0.9) -- any brighter floods the pale dragon orange
+    end,
+    Smoke = function(part)
+        part.Size = Vector3.new(2.4, 0.4, 2.4)
+        addEmitterPreset(part, "Smoke")
+    end,
+    Stones = function(part)
+        addLight(part, WorldBuilder.Appearance.YG_BuySellStones.Color, 14, 0.9)
+    end,
+    Lantern = function(part)
+        addLight(part, WorldBuilder.LanternLight, 12, 0.5)
+    end,
+}
+
+-- The shops on their plots (FloatingIslands.<island>.Shops.<Shop>): the building's pieces, the name
+-- board over the entrance ("Sign"), the prompt that opens the shop ("Prompt", at the Blacksmith's
+-- anvil and the foot of the Jade Scale) and the effect points ("Fx").
+function WorldBuilder.buildShops(island)
+    local placements = placementsFor(island)
+    local folder = WorldBuilder.islandFolder(island, "Shops")
+    folder:ClearAllChildren()
+    for shop, info in WorldBuilder.Shops do
+        local plot = placements.Plots[info.Plot]
+        local spots = placements.Shops[shop]
+        local plotInfo = WorldBuilder.Plots[info.Plot]
+        assert(plotInfo.Built, "Plots." .. info.Plot .. " should name its building (Built)")
+        local frame = islandFrame(island) * CFrame.new(plot.Centre) * CFrame.Angles(0, plot.Yaw, 0)
+        local model = Instance.new("Model")
+        model.Name = shop
+        for _, piece in info.Pieces do
+            placeTemplate(island, piece, frame, model)
+        end
+
+        local _, signGui = textPanel("Sign", spots.Sign.Size, frame * CFrame.new(spots.Sign.Centre), model, 60)
+        steleLabel("Text", signGui, UDim2.fromScale(0.96, 0.9), UDim2.fromScale(0.02, 0.05), Enum.TextXAlignment.Center,
+            Color3.fromRGB(240, 222, 170)).Text = plotInfo.Title
+
+        local holder = marker("Prompt", Vector3.new(1, 1, 1), frame * CFrame.new(spots.Prompt), model)
+        local prompt = Instance.new("ProximityPrompt")
+        prompt.ActionText = info.Action
+        prompt.ObjectText = plotInfo.Title
+        prompt.KeyboardKeyCode = Enum.KeyCode.F
+        prompt.HoldDuration = 0
+        prompt.MaxActivationDistance = 12
+        prompt.RequiresLineOfSight = false
+        prompt:SetAttribute("Shop", shop)
+        prompt.Parent = holder
+
+        local fx = Instance.new("Folder")
+        fx.Name = "Fx"
+        fx.Parent = model
+        for _, spot in spots.Fx do
+            SHOP_FX[spot.Kind](marker(spot.Kind, Vector3.new(1, 1, 1), frame * CFrame.new(spot.Position), fx))
+        end
+        model.Parent = folder
+    end
+    WorldBuilder.applyCollision(folder)
+    return #folder:GetChildren()
 end
 
 function WorldBuilder.buildQiSpring(island)

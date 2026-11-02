@@ -8,7 +8,8 @@
 -- fires Combat.Hit; every strike is relayed to all clients (CombatEvent: striker, kind ("Palm",
 -- "Sword" or "Spear"), hit position or nil).
 --
--- The flying sword is copied to ReplicatedStorage.Weapons so clients can show it striking.
+-- Every stored weapon (ServerStorage.Weapons: the flying sword and the realm weapons, OutfitBuilder)
+-- is copied to ReplicatedStorage.Weapons so clients can show it striking.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -22,16 +23,18 @@ local COOLDOWN_SLACK = 0.85 -- requests a little early are latency, not cheating
 local lastStrike = {}
 
 do
-    local source = ServerStorage:FindFirstChild("Weapons") and ServerStorage.Weapons:FindFirstChild("FlyingSword")
-    if source then
+    local stored = ServerStorage:FindFirstChild("Weapons")
+    if stored then
         local folder = ReplicatedStorage:FindFirstChild("Weapons") or Instance.new("Folder")
         folder.Name = "Weapons"
-        folder.Parent = ReplicatedStorage
-        local old = folder:FindFirstChild("FlyingSword")
-        if old then
-            old:Destroy()
+        for _, source in stored:GetChildren() do
+            local old = folder:FindFirstChild(source.Name)
+            if old then
+                old:Destroy()
+            end
+            source:Clone().Parent = folder
         end
-        source:Clone().Parent = folder
+        folder.Parent = ReplicatedStorage
     end
 end
 

@@ -25,7 +25,7 @@
 --   "Awaken" | "Weaken" | <a Sweep's name> windUp | <a Wave's name> windUp radius waveSpeed arc |
 --   <a Pounce's name> windUp air from to | "Land" position | "Steal" position | "Drop" position |
 --   "Recover" | "Secure" position | "Return"
--- and the thief alone "Secured" eggId | "BagFull".
+-- and the thief alone "Secured" eggId stones element (the element its relic unlocked, or nil) | "BagFull".
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -36,6 +36,7 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local EggInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("EggInventory"))
 local EggModel = require(script.Parent:WaitForChild("EggModel"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
+local Elements = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Elements"))
 local Wallet = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Wallet"))
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
 
@@ -438,8 +439,10 @@ function Guardian:secure()
         return
     end
     Wallet.add(player, self.config.SecureStones or 0)
+    -- its relic: unlocks its element at the Blacksmith's forge (nil when the player already had it)
+    local element = self.config.Element and Elements.unlock(player, self.config.Element) and self.config.Element or nil
     PlayerData.saveSoon(player)
-    RemoteEvents.GuardianEvent:FireClient(player, self.model, "Secured", egg.eggId, self.config.SecureStones)
+    RemoteEvents.GuardianEvent:FireClient(player, self.model, "Secured", egg.eggId, self.config.SecureStones, element)
     self:clearThief()
     egg.model:Destroy()
     egg.model, egg.prompt, egg.eggId = nil, nil, nil

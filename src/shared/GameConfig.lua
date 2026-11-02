@@ -73,6 +73,33 @@ local GameConfig = {
     StarterWeapon = "Sword1", -- every player's first weapon, given when they own none
     MaxOwnedWeapons = 30,
 
+    -- The relic forge, at the Blacksmith: a relic unlocks its element for good (Relics.<n>.Element
+    -- when attuned; Guardians.<Id>.Element when its egg is secured). Forging gives an owned weapon an
+    -- element and a name the player chooses, for PriceShare of its price (at least MinPrice), again
+    -- for each re-forge. A forged weapon strikes DamageBonus harder, glows and trails in its
+    -- element's colours and bursts with its element (CombatFx). Neon colours stay saturated.
+    Forge = {
+        DamageBonus = 0.1,
+        PriceShare = 0.5,
+        MinPrice = 30,
+        NameLength = { Min = 3, Max = 20 },
+        Order = { "Wood", "Fire", "Frost", "Void", "Earth", "Wind" },
+        Elements = {
+            Wood = { DisplayName = "Wood", Color = Color3.fromRGB(40, 200, 70), Core = Color3.fromRGB(190, 255, 150),
+                Source = "the Root of the Island and Jade Grove's relics" },
+            Fire = { DisplayName = "Fire", Color = Color3.fromRGB(255, 90, 20), Core = Color3.fromRGB(255, 215, 120),
+                Source = "Ember Peak's relics" },
+            Frost = { DisplayName = "Frost", Color = Color3.fromRGB(40, 170, 255), Core = Color3.fromRGB(210, 245, 255),
+                Source = "Moonlit Isle's relics" },
+            Void = { DisplayName = "Void", Color = Color3.fromRGB(110, 40, 255), Core = Color3.fromRGB(205, 165, 255),
+                Source = "Origin Abyss's relics" },
+            Earth = { DisplayName = "Earth", Color = Color3.fromRGB(205, 130, 35), Core = Color3.fromRGB(255, 220, 150),
+                Source = "the Awakened Stone Lion: secure its egg" },
+            Wind = { DisplayName = "Wind", Color = Color3.fromRGB(30, 230, 190), Core = Color3.fromRGB(200, 255, 240),
+                Source = "the Bamboo Mantis Sage: secure its egg" },
+        },
+    },
+
     -- Spirit Stones: the currency of the Blacksmith and Buy & Sell (Qi is never spent: ranks are
     -- reached by total Qi). Earned by selling pets and weapons, securing guardians' eggs
     -- (Guardians.<Id>.SecureStones) and a relic's first attunement.
@@ -102,6 +129,7 @@ local GameConfig = {
             Eggs = { "BeginnerQiEgg", "SpiritBreezeEgg", "ElementalCoreEgg" },
             SafeZone = { Centre = Vector3.new(170, -1.5, 6), Radius = 15, Name = "Egg Garden" },
             SecureStones = 150,     -- Spirit Stones for securing its egg
+            Element = "Earth",      -- the relic it drops when its egg is secured unlocks this element (Forge)
             MaxHealth = 1200,      -- a beginner's Qi Palm weakens it alone in ~72 strikes (about half a minute)
             WeakenedAt = 0.4,      -- share of health below which it falters and the egg can be taken
             HitRadius = 14,        -- its body round the chest
@@ -132,6 +160,7 @@ local GameConfig = {
             Eggs = { "JadeSpiritEgg", "BloomwoodEgg", "AncientGroveEgg" },
             SafeZone = { Centre = Vector3.new(-30, 4, 41), Radius = 15, Name = "Bloom Glade" },
             SecureStones = 600,     -- Spirit Stones for securing its egg
+            Element = "Wind",
             MaxHealth = 2000,      -- a Qi Gatherer's palm (11 a strike) weakens it alone in ~110 strikes
             WeakenedAt = 0.4,
             HitRadius = 13,
@@ -183,17 +212,17 @@ local GameConfig = {
     -- a barrier at each island bridge: only players of its RankId pass
     BridgeBarrierTag = "QiBarrier",
     Relics = {
-        { Id = "IslandRoot", DisplayName = "Root of the Island", QiReward = 300, RequiredRank = "QiInitiate" },
-        { Id = "GroveHeart", DisplayName = "Grove Heart", QiReward = 800, RequiredRank = "QiGatherer" },
-        { Id = "JadeSeed", DisplayName = "Jade Seed", QiReward = 800, RequiredRank = "QiGatherer" },
-        { Id = "WhisperingSpring", DisplayName = "Whispering Spring", QiReward = 800, RequiredRank = "QiGatherer" },
-        { Id = "EmberHeart", DisplayName = "Ember Heart", QiReward = 1500, RequiredRank = "QiAwakener" },
-        { Id = "AshenSigil", DisplayName = "Ashen Sigil", QiReward = 1500, RequiredRank = "QiAwakener" },
-        { Id = "CalderaCrown", DisplayName = "Caldera Crown", QiReward = 1500, RequiredRank = "QiAwakener" },
-        { Id = "MoonMirror", DisplayName = "Moon Mirror", QiReward = 3000, RequiredRank = "FoundationInitiate" },
-        { Id = "StarWell", DisplayName = "Star Well", QiReward = 3000, RequiredRank = "FoundationInitiate" },
-        { Id = "OriginAltar", DisplayName = "Origin Altar", QiReward = 250000, RequiredRank = "DivineInitiate" },
-        { Id = "VoidShard", DisplayName = "Void Shard", QiReward = 1000000, RequiredRank = "VoidWalker" },
+        { Id = "IslandRoot", DisplayName = "Root of the Island", QiReward = 300, RequiredRank = "QiInitiate", Element = "Wood" },
+        { Id = "GroveHeart", DisplayName = "Grove Heart", QiReward = 800, RequiredRank = "QiGatherer", Element = "Wood" },
+        { Id = "JadeSeed", DisplayName = "Jade Seed", QiReward = 800, RequiredRank = "QiGatherer", Element = "Wood" },
+        { Id = "WhisperingSpring", DisplayName = "Whispering Spring", QiReward = 800, RequiredRank = "QiGatherer", Element = "Wood" },
+        { Id = "EmberHeart", DisplayName = "Ember Heart", QiReward = 1500, RequiredRank = "QiAwakener", Element = "Fire" },
+        { Id = "AshenSigil", DisplayName = "Ashen Sigil", QiReward = 1500, RequiredRank = "QiAwakener", Element = "Fire" },
+        { Id = "CalderaCrown", DisplayName = "Caldera Crown", QiReward = 1500, RequiredRank = "QiAwakener", Element = "Fire" },
+        { Id = "MoonMirror", DisplayName = "Moon Mirror", QiReward = 3000, RequiredRank = "FoundationInitiate", Element = "Frost" },
+        { Id = "StarWell", DisplayName = "Star Well", QiReward = 3000, RequiredRank = "FoundationInitiate", Element = "Frost" },
+        { Id = "OriginAltar", DisplayName = "Origin Altar", QiReward = 250000, RequiredRank = "DivineInitiate", Element = "Void" },
+        { Id = "VoidShard", DisplayName = "Void Shard", QiReward = 1000000, RequiredRank = "VoidWalker", Element = "Void" },
     },
 
     LevitationHeight = 1.5,

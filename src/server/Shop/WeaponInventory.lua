@@ -1,6 +1,7 @@
 -- The weapons a player owns (shared/Shop.lua) and the one they strike with. Saved in PlayerData as
--- Weapons = { { InstanceId, WeaponId } } and EquippedWeapon (an InstanceId, or nil for the Qi Palm),
--- and mirrored to the client as the player attribute "WeaponId" (the equipped weapon's id).
+-- Weapons = { { InstanceId, WeaponId, Element?, Name? } } (a forged weapon carries its element and
+-- the name its owner gave it, GameConfig.Forge) and EquippedWeapon (an InstanceId, or nil for the
+-- Qi Palm), and mirrored to the client as the player attributes "WeaponId" and "WeaponElement".
 -- A player who owns no weapon is given GameConfig.StarterWeapon, equipped.
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,7 +11,7 @@ local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 
 local WeaponInventory = {}
 
-local held = {} -- [player] = { weapons = { { InstanceId, WeaponId } }, equipped = InstanceId or nil }
+local held = {} -- [player] = { weapons = { { InstanceId, WeaponId, Element?, Name? } }, equipped = InstanceId or nil }
 
 local function find(data, instanceId)
     for index, weapon in data.weapons do
@@ -25,9 +26,15 @@ local function mirror(player)
     local data = held[player]
     local weapon = data and data.equipped and find(data, data.equipped)
     player:SetAttribute("WeaponId", weapon and weapon.WeaponId)
+    player:SetAttribute("WeaponElement", weapon and weapon.Element)
 end
 
--- Cleans saved weapons: known weapons, unique ids, at most MaxOwnedWeapons; an equipped id only if owned.
+local function record(weapon)
+    return { InstanceId = weapon.InstanceId, WeaponId = weapon.WeaponId, Element = weapon.Element, Name = weapon.Name }
+end
+
+-- Cleans saved weapons: known weapons, unique ids, at most MaxOwnedWeapons; an element only if known,
+-- with a name of at most the forge's length (filtered when it was given); an equipped id only if owned.
 function WeaponInventory.sanitize(rawWeapons, rawEquipped)
     local weapons, seen = {}, {}
     if typeof(rawWeapons) == "table" then
@@ -39,7 +46,10 @@ function WeaponInventory.sanitize(rawWeapons, rawEquipped)
                 and #weapon.InstanceId <= 64 and Shop.weapon(weapon.WeaponId) ~= nil
             if valid and not seen[weapon.InstanceId] then
                 seen[weapon.InstanceId] = true
-                table.insert(weapons, { InstanceId = weapon.InstanceId, WeaponId = weapon.WeaponId })
+                local forged = Shop.element(weapon.Element) ~= nil and typeof(weapon.Name) == "string"
+                    and #weapon.Name <= GameConfig.Forge.NameLength.Max
+                table.insert(weapons, { InstanceId = weapon.InstanceId, WeaponId = weapon.WeaponId,
+                    Element = if forged then weapon.Element else nil, Name = if forged then weapon.Name else nil })
             end
         end
     end
@@ -96,7 +106,27 @@ function WeaponInventory.equip(player, instanceId)
     return true
 end
 
--- Takes an unequipped weapon out of the inventory; its WeaponId, or nil.
+-- Gives an owned weapon an element and a name (the forge; the caller has checked and charged).
+-- False when it isn't theirs.
+function WeaponInventory.forge(player, instanceId, element, name)
+    local data = held[player]
+    local weapon = data and find(data, instanceId)
+    if not weapon or not Shop.element(element) then
+        return false
+    end
+    weapon.Element, weapon.Name = element, name
+    mirror(player)
+    return true
+end
+
+-- One owned weapon's record { InstanceId, WeaponId, Element?, Name? }, or nil.
+function WeaponInventory.get(player, instanceId)
+    local data = held[player]
+    local weapon = data and find(data, instanceId)
+    return weapon and record(weapon)
+end
+
+-- Takes an unequipped weapon out of the inventory; its record, or nil.
 function WeaponInventory.take(player, instanceId)
     local data = held[player]
     if not data then
@@ -107,20 +137,27 @@ function WeaponInventory.take(player, instanceId)
         return nil
     end
     table.remove(data.weapons, index)
-    return weapon.WeaponId
+    return record(weapon)
 end
 
--- The weapon the player strikes with (shared/Shop.lua's entry), or nil for the Qi Palm.
+-- The weapon the player strikes with (shared/Shop.lua's entry) and its element, or nil for the Qi Palm.
 function WeaponInventory.equipped(player)
     local data = held[player]
     local weapon = data and data.equipped and find(data, data.equipped)
-    return weapon and Shop.weapon(weapon.WeaponId)
+    return weapon and Shop.weapon(weapon.WeaponId), weapon and weapon.Element
 end
 
--- For the client's windows: { Weapons = { { InstanceId, WeaponId } }, Equipped = InstanceId or nil }.
+-- For the client's windows: { Weapons = { { InstanceId, WeaponId, Element?, Name? } }, Equipped = InstanceId or nil }.
 function WeaponInventory.snapshot(player)
     local data = held[player]
-    return data and { Weapons = table.clone(data.weapons), Equipped = data.equipped }
+    if not data then
+        return nil
+    end
+    local weapons = {}
+    for _, weapon in data.weapons do
+        table.insert(weapons, record(weapon))
+    end
+    return { Weapons = weapons, Equipped = data.equipped }
 end
 
 -- For saving (nil until the player is set up).
@@ -131,7 +168,7 @@ function WeaponInventory.exportData(player)
     end
     local weapons = {}
     for _, weapon in data.weapons do
-        table.insert(weapons, { InstanceId = weapon.InstanceId, WeaponId = weapon.WeaponId })
+        table.insert(weapons, record(weapon))
     end
     return { Weapons = weapons, Equipped = data.equipped }
 end

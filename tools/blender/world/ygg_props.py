@@ -136,17 +136,19 @@ PILLAR_X = 10.4
 EAVE, RIDGE, ROOF_HALF, ROOF_DEPTH = 18.4, 22.4, 14.6, 4.6
 
 
-def _roof(mb, bands):
-    """Two tiled slopes from the ridge to the eaves, each corner sweeping up, with a lacquered
-    soffit underneath and a thin edge all round."""
-    cols, rows = 24, 6
+def roof_y(x, t, eave, ridge, half, lift):
+    """The height of tiled_roof's tiles at x, a fraction t of the way from the ridge to the eave."""
+    return ridge - (ridge - eave) * t ** 0.8 + lift * (abs(x) / half) ** 4 * t ** 1.5
 
+
+def tiled_roof(mb, bands, eave, ridge, half, depth, z, lift=1.5, cols=24, rows=6):
+    """Two tiled slopes from a ridge along x (at height `ridge`, over z) down to the eaves `depth`
+    either side, each corner sweeping up by `lift`, with a lacquered soffit underneath, a thin edge
+    all round, a bronze ridge and upturned ridge ends. Shared by Yggdrasil's buildings."""
     def point(i, j, side, drop=0.0):
-        x = -ROOF_HALF + 2 * ROOF_HALF * i / cols
+        x = -half + 2 * half * i / cols
         t = j / rows
-        lift = 1.5 * (abs(x) / ROOF_HALF) ** 4 * t ** 1.5
-        y = RIDGE - (RIDGE - EAVE) * t ** 0.8 + lift - drop
-        return (x, y, BOARD_Z + side * ROOF_DEPTH * t)
+        return (x, roof_y(x, t, eave, ridge, half, lift) - drop, z + side * depth * t)
     for side in (1, -1):
         for i in range(cols):
             for j in range(rows):
@@ -163,13 +165,37 @@ def _roof(mb, bands):
             for j in range(rows):
                 P.oriented(mb, [point(i, j, side), point(i, j + 1, side), point(i, j + 1, side, 0.4), point(i, j, side, 0.4)],
                            (sx, 0, 0), bands[P.LACQUER], 0.5, [0.6] * 4)
-    mb.box((0, RIDGE + 0.15, BOARD_Z), (2 * ROOF_HALF - 1.0, 0.4, 0.6), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
+    k = half / ROOF_HALF   # the ornaments grow with the roof
+    mb.box((0, ridge + 0.15 * k, z), (2 * half - 1.0 * k, 0.4 * k, 0.6 * k), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
     for sx in (-1, 1):   # the ridge's upturned ends
-        mb.box((sx * (ROOF_HALF - 0.9), RIDGE + 0.7, BOARD_Z), (0.5, 1.1, 0.5), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
-        mb.box((sx * (ROOF_HALF - 0.6), RIDGE + 1.2, BOARD_Z), (0.9, 0.35, 0.5), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
-    # a bronze lotus cup on the ridge holding the pearl of Qi (stele_glow)
-    mb.lathe([(0.55, RIDGE + 1.45, 1.0), (0.8, RIDGE + 1.3, 0.9), (0.32, RIDGE + 0.75, 0.7), (0.45, RIDGE + 0.35, 0.6)], 10,
-             bands[P.BRONZE], centre=(0, 0, BOARD_Z), cap_top=True)
+        mb.box((sx * (half - 0.9 * k), ridge + 0.7 * k, z), (0.5 * k, 1.1 * k, 0.5 * k), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
+        mb.box((sx * (half - 0.6 * k), ridge + 1.2 * k, z), (0.9 * k, 0.35 * k, 0.5 * k), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
+
+
+def roof_walls(mb, frieze, gable, roof, x_wall, z_front, z_back, base, steps=16):
+    """Closes a hall up to its tiled_roof: a frieze from the beams (at height `base`) up to the soffit
+    along the front (z_front) and back (z_back), and the gable ends at x = +-x_wall, each faced inside
+    and out. roof: tiled_roof's (eave, ridge, half, depth, z, lift)."""
+    eave, ridge, half, depth, z, lift = roof
+
+    def top(x, zz):
+        return roof_y(x, min(1.0, abs(zz - z) / depth), eave, ridge, half, lift) - 0.35
+
+    for zz, out in ((z_front, 1), (z_back, -1)):
+        for k in range(steps):
+            x0, x1 = -x_wall + 2 * x_wall * k / steps, -x_wall + 2 * x_wall * (k + 1) / steps
+            for face in (out, -out):
+                zf = zz + face * 0.05
+                P.oriented(mb, [(x0, base, zf), (x1, base, zf), (x1, top(x1, zz), zf), (x0, top(x0, zz), zf)], (0, 0, face), frieze, 0.5,
+                           [0.6, 0.6, 0.8, 0.8])
+    for sx in (-1, 1):
+        x = sx * x_wall
+        for k in range(steps):
+            z0, z1 = z_back + (z_front - z_back) * k / steps, z_back + (z_front - z_back) * (k + 1) / steps
+            for face in (sx, -sx):
+                xf = x + face * 0.05
+                P.oriented(mb, [(xf, base, z0), (xf, base, z1), (xf, top(x, z1), z1), (xf, top(x, z0), z0)], (face, 0, 0), gable, 0.5,
+                           [0.55, 0.55, 0.75, 0.75])
 
 
 def stele(coll, mat, bands):
@@ -200,7 +226,10 @@ def stele(coll, mat, bands):
         mb.lathe([(1.0, 3.2, 0.9), (1.2, 2.9, 0.8), (1.2, 2.3, 0.6)], 8, bands[P.BRONZE], centre=c, phase=TAU / 16, cap_top=True)
         mb.lathe([(1.15, 17.4, 1.0), (1.15, 16.9, 0.8), (0.9, 16.7, 0.6)], 8, bands[P.BRONZE], centre=c, phase=TAU / 16, cap_top=True)
     mb.box((0, 17.9, BOARD_Z), (2 * PILLAR_X + 3.2, 1.0, 1.5), bands[P.LACQUER], u=0.5, top_shade=0.85, side_shade=0.7)
-    _roof(mb, bands)
+    tiled_roof(mb, bands, EAVE, RIDGE, ROOF_HALF, ROOF_DEPTH, BOARD_Z)
+    # a bronze lotus cup on the ridge holding the pearl of Qi (stele_glow)
+    mb.lathe([(0.55, RIDGE + 1.45, 1.0), (0.8, RIDGE + 1.3, 0.9), (0.32, RIDGE + 0.75, 0.7), (0.45, RIDGE + 0.35, 0.6)], 10,
+             bands[P.BRONZE], centre=(0, 0, BOARD_Z), cap_top=True)
     return mb.object("YG_Stele", coll, mat)
 
 
@@ -472,6 +501,21 @@ def write_placements(path=W.REPO + "/src/worldbuild/Placements/Yggdrasil.lua"):
     lines.append("    -- the Ascension Stele (the leaderboard, on the Leaderboard plot): its board's face and title plaque")
     lines.append("    SteleBoard = { Centre = Vector3.new(%g, %g, %.2f), Size = Vector2.new(%g, %g) }," % (sx, sy, STELE_FRONT + 0.03, sw, sh))
     lines.append("    SteleTitle = { Centre = Vector3.new(%g, %g, %.2f), Size = Vector2.new(%g, %g) }," % (tx, ty, 0.29, tw, th))
+    import ygg_shops as SH   # here, not at the top: ygg_shops imports this module
+    lines.append("    -- the shops' buildings (ygg_shops.py), in their plots' frames: the name board's face over the")
+    lines.append("    -- entrance, where the shop's prompt stands, and where its fire, smoke and lights go")
+    lines.append("    Shops = {")
+    for name in ("Blacksmith", "BuySell"):
+        (sx, sy, sz), (sw, sh) = SH.SIGNS[name]
+        lines.append("        %s = {" % name)
+        lines.append("            Sign = { Centre = Vector3.new(%g, %g, %.2f), Size = Vector2.new(%g, %g) }," % (sx, sy, sz + 0.03, sw, sh))
+        lines.append("            Prompt = Vector3.new(%g, %g, %g)," % SH.PROMPTS[name])
+        lines.append("            Fx = {")
+        for kind, (fx, fy, fz) in SH.FX[name]:
+            lines.append('                { Kind = "%s", Position = Vector3.new(%g, %g, %g) },' % (kind, fx, fy, fz))
+        lines.append("            },")
+        lines.append("        },")
+    lines.append("    },")
     lines.append("    Spawn = Vector3.new(%.2f, %.2f, %.2f)," % (Y.COMPASS[0], 0.2 + 1.98, Y.COMPASS[1]))
     lines.append("    SpringCentre = Vector3.new(%.2f, %.2f, %.2f)," % (scx, S.POOL_WATER, scz))
     lines.append("    SpillEnd = Vector3.new(%.2f, %.2f, %.2f)," % (spill[0], P.SPILL[-1][2] + 0.35, spill[1]))

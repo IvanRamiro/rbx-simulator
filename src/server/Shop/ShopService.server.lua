@@ -1,18 +1,23 @@
--- The Blacksmith and Buy & Sell on Yggdrasil. Each shop's plot has a notice board carrying a
--- ProximityPrompt with a "Shop" attribute ("Blacksmith" or "BuySell", WorldBuilder.buildPlots);
--- triggering it sends the player ShopEvent("Open", shop, snapshot). The client then asks with
+-- The Blacksmith and Buy & Sell on Yggdrasil. Each shop's building carries a ProximityPrompt with a
+-- "Shop" attribute ("Blacksmith" or "BuySell") on its "Prompt" part, at the Blacksmith's anvil and
+-- the foot of the Jade Scale (WorldBuilder.buildShops); triggering it sends the player
+-- ShopEvent("Open", shop, snapshot). The client then asks with
 -- ShopEvent(action, id):
 --   "Buy" weaponId            at the Blacksmith: a weapon of the player's realm or below (Shop.lua)
+--   "Forge" instanceId, { Element, Name }
+--                             at the Blacksmith: gives an owned weapon an unlocked element (Elements) and
+--                             a name (run through Roblox's text filter), for Shop.forgePrice
 --   "Equip" instanceId        anywhere: an owned weapon, or nil for the Qi Palm
 --   "SellPet" instanceId      at Buy & Sell, for Shop.petValue
 --   "SellWeapon" instanceId   at Buy & Sell, for Shop.weaponRefund (never the equipped one)
 -- and is answered ShopEvent("Result", ok, message, snapshot). Buying and selling need the player
--- within REACH of that shop's plot, and every request is throttled.
+-- within REACH of that shop's prompt, and every request is throttled.
 --
--- Also sets up each player's Spirit Stones (Wallet) and weapons (WeaponInventory) once their data
--- has loaded.
+-- Also sets up each player's Spirit Stones (Wallet), weapons (WeaponInventory) and forge elements
+-- (Elements) once their data has loaded.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextService = game:GetService("TextService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
@@ -20,12 +25,13 @@ local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
+local Elements = require(script.Parent:WaitForChild("Elements"))
 local Wallet = require(script.Parent:WaitForChild("Wallet"))
 local WeaponInventory = require(script.Parent:WaitForChild("WeaponInventory"))
 
-local REACH = 45 -- studs from a shop's plot centre
+local REACH = 45 -- studs from a shop's prompt
 local REQUEST_COOLDOWN = 0.25
-local SHOPS = { Blacksmith = "Plot_Blacksmith", BuySell = "Plot_BuySell" }
+local SHOPS = { Blacksmith = true, BuySell = true }
 
 local lastRequest = {}
 local ready = {}
@@ -35,18 +41,48 @@ local function snapshot(player)
     return {
         Stones = Wallet.balance(player),
         Weapons = WeaponInventory.snapshot(player),
+        Elements = Elements.list(player),
         Pets = pets and pets.Pets or {},
     }
 end
 
 local function nearShop(player, shop)
-    local plots = workspace:FindFirstChild(WorldConfig.FolderName)
-    plots = plots and plots:FindFirstChild(WorldConfig.StartIsland)
-    plots = plots and plots:FindFirstChild("Plots")
-    local area = plots and plots:FindFirstChild(SHOPS[shop])
-    area = area and area:FindFirstChild("Area")
+    local spot = workspace:FindFirstChild(WorldConfig.FolderName)
+    spot = spot and spot:FindFirstChild(WorldConfig.StartIsland)
+    spot = spot and spot:FindFirstChild("Shops")
+    spot = spot and spot:FindFirstChild(shop)
+    spot = spot and spot:FindFirstChild("Prompt")
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    return area ~= nil and root ~= nil and (root.Position - area.Position).Magnitude <= REACH
+    return spot ~= nil and root ~= nil and (root.Position - spot.Position).Magnitude <= REACH
+end
+
+-- How a message names a weapon: by the name its owner forged it with, or as "the <its name>".
+local function nameOf(record)
+    local weapon = Shop.weapon(record.WeaponId)
+    return record.Name or ("the " .. (weapon and weapon.Name or "weapon"))
+end
+
+-- A forged weapon's name, tidied and filtered; or nil and why not.
+local function filterName(player, raw)
+    if typeof(raw) ~= "string" then
+        return nil, "Name your weapon first."
+    end
+    local name = string.gsub(string.gsub(string.gsub(raw, "^%s+", ""), "%s+$", ""), "%s+", " ")
+    local length = utf8.len(name)
+    local limits = GameConfig.Forge.NameLength
+    if not length or length < limits.Min or length > limits.Max then
+        return nil, ("A name of %d to %d letters, please."):format(limits.Min, limits.Max)
+    end
+    local ok, filtered = pcall(function()
+        return TextService:FilterStringAsync(name, player.UserId, Enum.TextFilterContext.PublicChat):GetNonChatStringForBroadcastAsync()
+    end)
+    if not ok then
+        return nil, "Names can't be checked right now: try again soon."
+    end
+    if filtered ~= name then
+        return nil, "That name can't be used."
+    end
+    return name
 end
 
 local actions = {}
@@ -82,8 +118,50 @@ function actions.Equip(player, instanceId)
     if not WeaponInventory.equip(player, instanceId) then
         return false, "That isn't yours."
     end
-    local weapon = WeaponInventory.equipped(player)
-    return true, if weapon then "Wielding the " .. weapon.Name .. "." else "Fighting with the Qi Palm."
+    local record = instanceId and WeaponInventory.get(player, instanceId)
+    return true, if record then "Wielding " .. nameOf(record) .. "." else "Fighting with the Qi Palm."
+end
+
+local forging = {} -- [player] = true while their name is being checked (it yields)
+
+function actions.Forge(player, instanceId, spec)
+    if forging[player] then
+        return false, "The forge is already at work."
+    end
+    if not nearShop(player, "Blacksmith") then
+        return false, "Visit the Blacksmith's forge."
+    end
+    local record = typeof(instanceId) == "string" and WeaponInventory.get(player, instanceId)
+    if not record then
+        return false, "That weapon isn't yours."
+    end
+    local element = typeof(spec) == "table" and spec.Element
+    local info = Shop.element(element)
+    if not info then
+        return false, "Choose an element."
+    end
+    if not Elements.has(player, element) then
+        return false, "Find " .. info.Source .. " to forge with " .. info.DisplayName .. "."
+    end
+    local price = Shop.forgePrice(record.WeaponId)
+    if Wallet.balance(player) < price then
+        return false, "You need " .. price .. " Spirit Stones."
+    end
+    forging[player] = true
+    local name, why = filterName(player, spec.Name)
+    forging[player] = nil
+    if not name then
+        return false, why
+    end
+    -- the name check yields, so the weapon and the stones are checked again before charging
+    if not WeaponInventory.get(player, instanceId) then
+        return false, "That weapon isn't yours."
+    end
+    if not Wallet.spend(player, price) then
+        return false, "You need " .. price .. " Spirit Stones."
+    end
+    WeaponInventory.forge(player, instanceId, element, name)
+    return true, "Forged " .. name .. ", a " .. info.DisplayName .. " " .. Shop.weapon(record.WeaponId).Name .. "!"
 end
 
 function actions.SellPet(player, instanceId)
@@ -104,16 +182,16 @@ function actions.SellWeapon(player, instanceId)
     if not nearShop(player, "BuySell") then
         return false, "Visit Buy & Sell to sell weapons."
     end
-    local weaponId = WeaponInventory.take(player, instanceId)
-    if not weaponId then
+    local record = WeaponInventory.take(player, instanceId)
+    if not record then
         return false, "Put the weapon down before selling it."
     end
-    local value = Shop.weaponRefund(weaponId)
+    local value = Shop.weaponRefund(record.WeaponId, record.Element)
     Wallet.add(player, value)
-    return true, "Sold the " .. Shop.weapon(weaponId).Name .. " for " .. value .. " Spirit Stones."
+    return true, "Sold " .. nameOf(record) .. " for " .. value .. " Spirit Stones."
 end
 
-RemoteEvents.ShopEvent.OnServerEvent:Connect(function(player, action, id)
+RemoteEvents.ShopEvent.OnServerEvent:Connect(function(player, action, id, extra)
     local handler = typeof(action) == "string" and actions[action]
     if not (handler and ready[player]) then
         return
@@ -123,14 +201,14 @@ RemoteEvents.ShopEvent.OnServerEvent:Connect(function(player, action, id)
         return
     end
     lastRequest[player] = now
-    local ok, message = handler(player, id)
+    local ok, message = handler(player, id, extra)
     if ok then
         PlayerData.saveSoon(player)
     end
     RemoteEvents.ShopEvent:FireClient(player, "Result", ok, message, snapshot(player))
 end)
 
--- The shops' prompts (WorldBuilder.buildPlots puts them on the notice boards).
+-- The shops' prompts (WorldBuilder.buildShops).
 local function watchPrompt(prompt)
     if prompt:IsA("ProximityPrompt") and SHOPS[prompt:GetAttribute("Shop")] then
         prompt.Triggered:Connect(function(player)
@@ -142,13 +220,13 @@ local function watchPrompt(prompt)
 end
 task.spawn(function()
     local island = workspace:WaitForChild(WorldConfig.FolderName):WaitForChild(WorldConfig.StartIsland)
-    local plots = island:WaitForChild("Plots", 30)
-    if not plots then
-        warn("ShopService: " .. WorldConfig.StartIsland .. " has no Plots (WorldBuilder.buildPlots)")
+    local shops = island:WaitForChild("Shops", 30)
+    if not shops then
+        warn("ShopService: " .. WorldConfig.StartIsland .. " has no Shops (WorldBuilder.buildShops)")
         return
     end
-    plots.DescendantAdded:Connect(watchPrompt)
-    for _, descendant in plots:GetDescendants() do
+    shops.DescendantAdded:Connect(watchPrompt)
+    for _, descendant in shops:GetDescendants() do
         watchPrompt(descendant)
     end
 end)
@@ -160,12 +238,14 @@ local function setupPlayer(player)
     end
     Wallet.setupPlayer(player, if isNewPlayer then nil else progress)
     WeaponInventory.setupPlayer(player, if isNewPlayer then nil else progress)
+    Elements.setupPlayer(player, if isNewPlayer then nil else progress)
     ready[player] = true
 end
 
 Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(function(player)
     lastRequest[player] = nil
+    forging[player] = nil
     ready[player] = nil
 end)
 for _, player in Players:GetPlayers() do

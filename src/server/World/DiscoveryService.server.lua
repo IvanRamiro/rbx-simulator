@@ -7,6 +7,7 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Discoveries = require(script.Parent:WaitForChild("Discoveries"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
+local Elements = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Elements"))
 local Wallet = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Wallet"))
 local PromptRules = require(script.Parent:WaitForChild("PromptRules"))
 
@@ -41,6 +42,7 @@ local function onRelicTriggered(player, relicId, crystal, maxDistance)
         return
     end
 
+    local hadElement = relic.Element ~= nil and Elements.has(player, relic.Element)
     if not Discoveries.markFound(player, relicId) then
         return
     end
@@ -50,7 +52,9 @@ local function onRelicTriggered(player, relicId, crystal, maxDistance)
     Wallet.add(player, stones)
     publishFound(player)
     PlayerData.saveSoon(player)
-    RemoteEvents.RelicResultEvent:FireClient(player, { RelicId = relicId, QiReward = relic.QiReward, Stones = stones })
+    -- Element: the forge element this relic unlocked, when the player didn't have it yet
+    RemoteEvents.RelicResultEvent:FireClient(player, { RelicId = relicId, QiReward = relic.QiReward, Stones = stones,
+        Element = if relic.Element and not hadElement then relic.Element else nil })
 end
 
 local connectedRelics = {}

@@ -8,12 +8,13 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local Discoveries = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("Discoveries"))
 local EggInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("EggInventory"))
+local Elements = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Elements"))
 local Wallet = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Wallet"))
 local WeaponInventory = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("WeaponInventory"))
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 7
+local SCHEMA_VERSION = 8
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -64,7 +65,9 @@ end
 -- Upgrades from versions 3, 4 and 5 change nothing, so they have no migration: versions 4 and 5
 -- added pets (the bump only stops older servers, which don't know them, from dropping them) and
 -- version 6 added Eggs, which sanitizeProgress starts empty; version 7 added SpiritStones, Weapons
--- and EquippedWeapon, which start at none (WeaponInventory gives a player with no weapon the starter).
+-- and EquippedWeapon, which start at none (WeaponInventory gives a player with no weapon the starter);
+-- version 8 added ForgeElements (the guardians' drops) and a weapon's Element and Name, which start
+-- at none.
 
 local store = nil
 local storeOk, storeResult = pcall(function()
@@ -93,6 +96,7 @@ local function sanitizeProgress(raw)
         SpiritStones = 0,
         Weapons = {},
         EquippedWeapon = nil,
+        ForgeElements = {},
     }
 
     if typeof(raw) ~= "table" then
@@ -167,6 +171,7 @@ local function sanitizeProgress(raw)
     progress.Eggs = EggInventory.sanitize(raw.Eggs)
     progress.SpiritStones = Wallet.sanitize(raw.SpiritStones)
     progress.Weapons, progress.EquippedWeapon = WeaponInventory.sanitize(raw.Weapons, raw.EquippedWeapon)
+    progress.ForgeElements = Elements.sanitize(raw.ForgeElements)
 
     return progress
 end
@@ -195,7 +200,8 @@ local function captureProgress(player)
     local eggs = EggInventory.exportData(player)
     local stones = Wallet.exportData(player)
     local weapons = WeaponInventory.exportData(player)
-    if not (qi and rankValue and pets and relics and eggs and stones and weapons) then
+    local elements = Elements.exportData(player)
+    if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements) then
         return nil
     end
 
@@ -213,6 +219,7 @@ local function captureProgress(player)
         SpiritStones = stones,
         Weapons = weapons.Weapons,
         EquippedWeapon = weapons.Equipped,
+        ForgeElements = elements,
     }
 end
 
@@ -428,6 +435,7 @@ function PlayerData.release(player)
     EggInventory.removePlayer(player)
     Wallet.removePlayer(player)
     WeaponInventory.removePlayer(player)
+    Elements.removePlayer(player)
 
     if not profile then
         return

@@ -420,6 +420,27 @@ return {
     -- the Ascension Stele (the leaderboard, on the Leaderboard plot): its board's face and title plaque
     SteleBoard = { Centre = Vector3.new(0, 8.6, 0.23), Size = Vector2.new(15.6, 9.6) },
     SteleTitle = { Centre = Vector3.new(0, 15.7, 0.29), Size = Vector2.new(6.2, 1.1) },
+    -- the shops' buildings (ygg_shops.py), in their plots' frames: the name board's face over the
+    -- entrance, where the shop's prompt stands, and where its fire, smoke and lights go
+    Shops = {
+        Blacksmith = {
+            Sign = { Centre = Vector3.new(0, 14.4, 13.39), Size = Vector2.new(9, 1.6) },
+            Prompt = Vector3.new(0, 3.7, 2.4),
+            Fx = {
+                { Kind = "Forge", Position = Vector3.new(0, 4.5, -6.4) },
+                { Kind = "Smoke", Position = Vector3.new(0, 30.8, -10) },
+            },
+        },
+        BuySell = {
+            Sign = { Centre = Vector3.new(0, 12.75, 3.39), Size = Vector2.new(8, 1.4) },
+            Prompt = Vector3.new(0, 3.5, 11.8),
+            Fx = {
+                { Kind = "Stones", Position = Vector3.new(-7, 8.5, 8.6) },
+                { Kind = "Lantern", Position = Vector3.new(-11, 11.1, 3.8) },
+                { Kind = "Lantern", Position = Vector3.new(11, 11.1, 3.8) },
+            },
+        },
+    },
     Spawn = Vector3.new(0.00, 2.18, 132.00),
     SpringCentre = Vector3.new(203.41, 5.60, 82.81),
     SpillEnd = Vector3.new(227.84, 3.40, 92.02),

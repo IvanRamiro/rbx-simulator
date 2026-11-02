@@ -120,23 +120,26 @@ function OutfitBuilder.store(model, outfitId)
     return { pieces = #folder:GetChildren(), worst = frame.worst, turned = frame.turn ~= 0 }
 end
 
--- Stores an imported flying sword (assets/weapons/FlyingSword.fbx) in ServerStorage.Weapons.FlyingSword:
--- "Body" and its Neon glow pieces (found by exported colour), each with its Offset from the sword's origin.
-function OutfitBuilder.storeSword(model)
-    local placements = require(ServerStorage.WorldBuild.Placements.FlyingSword:Clone())
+-- Moves an imported weapon's pieces into ServerStorage.Weapons.<name>: the body ("<prefix>_Body")
+-- and each glow piece ("<prefix>_Glow_<hex>", found by its Hex), named as in its placements, each
+-- with its "Offset" from the authored origin and a "Glow" attribute; glow pieces are Neon, their
+-- exported colour. maps:
+-- { <Piece> = { Color, Normal, Roughness, Metalness } }, our own uploads (the importer's are
+-- unreliable). Returns the folder and how well the pieces fit their authored layout.
+local function storePieces(name, placements, model, maps)
     local found = {}
     for _, d in model:GetDescendants() do
         if d:IsA("MeshPart") then
             local hex = string.match(d.Name, "_Glow_(%x+)$")
-            for name, info in placements.Pieces do
+            for piece, info in placements.Pieces do
                 if (hex and info.Hex == hex) or (not hex and not info.Hex and string.match(d.Name, "_Body$")) then
-                    found[name] = d
+                    found[piece] = d
                 end
             end
         end
     end
-    for name in placements.Pieces do
-        assert(found[name], "the import has no piece " .. name)
+    for piece in placements.Pieces do
+        assert(found[piece], "the import has no piece " .. piece)
     end
     local frame = fit(found, placements)
     assert(frame.worst < 0.05, ("the pieces do not match their authored layout (worst %.3f studs off)"):format(frame.worst))
@@ -144,25 +147,25 @@ function OutfitBuilder.storeSword(model)
     local root = ServerStorage:FindFirstChild("Weapons") or Instance.new("Folder")
     root.Name = "Weapons"
     root.Parent = ServerStorage
-    local old = root:FindFirstChild("FlyingSword")
+    local old = root:FindFirstChild(name)
     if old then
         old:Destroy()
     end
     local folder = Instance.new("Folder")
-    folder.Name = "FlyingSword"
-    folder:SetAttribute("Top", placements.Top)
-    for name, part in found do
-        part.Name = name
+    folder.Name = name
+    for piece, part in found do
+        part.Name = piece
         part.Anchored = true
         part.CanCollide = false
         part.CanQuery = false
         part.CanTouch = false
         part.Massless = true
-        local glow = placements.Pieces[name].Hex ~= nil
+        local glow = placements.Pieces[piece].Hex ~= nil
         part.CastShadow = not glow
         part:SetAttribute("Glow", glow)
         if glow then
             part.Material = Enum.Material.Neon
+            part.Color = Color3.fromHex(placements.Pieces[piece].Hex) -- the flying sword's is recoloured per realm in game
             part.TextureID = ""
             for _, child in part:GetChildren() do
                 child:Destroy()
@@ -173,14 +176,40 @@ function OutfitBuilder.storeSword(model)
     end
     model:Destroy()
     folder.Parent = root
-    for name, ids in placements.Maps do
-        local appearance = folder[name]:FindFirstChildOfClass("SurfaceAppearance")
+    for piece, ids in maps or {} do
+        local appearance = folder[piece]:FindFirstChildOfClass("SurfaceAppearance")
         if appearance then
             appearance.ColorMap, appearance.NormalMap = ids.Color, ids.Normal
             appearance.RoughnessMap, appearance.MetalnessMap = ids.Roughness, ids.Metalness
         end
     end
-    return { worst = frame.worst, turned = frame.turn ~= 0 }
+    return folder, { worst = frame.worst, turned = frame.turn ~= 0 }
+end
+
+-- Stores an imported flying sword (assets/weapons/FlyingSword.fbx) in ServerStorage.Weapons.FlyingSword:
+-- "Body" and its Neon glow pieces (found by exported colour), each with its Offset from the sword's origin.
+function OutfitBuilder.storeSword(model)
+    local placements = require(ServerStorage.WorldBuild.Placements.FlyingSword:Clone())
+    local folder, result = storePieces("FlyingSword", placements, model, placements.Maps)
+    folder:SetAttribute("Top", placements.Top)
+    return result
+end
+
+-- Stores a realm weapon (tools/blender/weapons; Placements/Weapons/<WeaponId>, its maps in
+-- Placements/WeaponMaps) as ServerStorage.Weapons.<WeaponId>, with its Kind ("Sword" or "Spear") and
+-- its Hilt and Tip (where its blade or head starts, and its point, from its grip) as attributes.
+-- CombatService hands it to the clients, which show it striking (CombatFx).
+--   OB.storeWeapon("Sword1", workspace.Sword1)
+function OutfitBuilder.storeWeapon(weaponId, model)
+    local source = ServerStorage.WorldBuild.Placements.Weapons:FindFirstChild(weaponId)
+    assert(source, "no placements for weapon " .. tostring(weaponId))
+    local placements = require(source:Clone())
+    local maps = require(ServerStorage.WorldBuild.Placements.WeaponMaps:Clone())[weaponId]
+    local folder, result = storePieces(weaponId, placements, model, maps and { Body = maps })
+    folder:SetAttribute("Kind", placements.Kind)
+    folder:SetAttribute("Hilt", placements.Hilt)
+    folder:SetAttribute("Tip", placements.Tip)
+    return result
 end
 
 -- Sets the pieces' maps: { <Piece> = { Color = id, Normal = id, Roughness = id, Metalness = id } }.
