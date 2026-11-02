@@ -720,7 +720,7 @@ The hidden endgame island, about 320 studs across since the owner's upgrade, mov
 
 ---
 
-## 7. Guardians and egg theft (the Yggdrasil, Jade Grove, Ember Peak and Moonlit Isle guardians are built)
+## 7. Guardians and egg theft (all five guardians are built)
 
 ### The user's decisions (November 1, 2026)
 
@@ -797,9 +797,8 @@ Guarded → Available → Carried → Dropped → Carried → Secured
 | Jade Grove | The Bamboo Mantis Sage | Escape routes through trees and elevated terrain |
 | Ember Peak | The Ember Xuanwu | Escape routes around lava and volcanic hazards; jump its quake rings |
 | Moonlit Isle | Tiangou the Moon-Eater | More demanding aerial movement: its leaps are long and high |
-| Origin Abyss | Primordial Guardian | The most demanding encounter |
+| Origin Abyss | Pangu the World-Splitter | The most demanding encounter: a fissure to dodge, a nova to jump, a titan's leap |
 
-Names, attacks, health, egg pools, unlocks and rewards are still to be designed for Origin Abyss.
 
 ### The Awakened Stone Lion (Yggdrasil)
 
@@ -875,6 +874,23 @@ Its lair is the middle of the Lunar Court, facing the Crescent Arch; its safe zo
 | Enraged | The hunting crouch, lips drawn back, tail up, eyes red, chasing at 27 studs/s (it stops 17 short, `ChaseStop`). **Moon leap:** long, high arcs (18 to 85 studs, 26 high), stretched flat in the air. |
 
 Measured in Play (November 2, 2026): wake (it howls at once), bite, howl, weaken, steal (a Heavenly Throne Egg), the howl's ring knocking a grounded thief who drops the egg, recover, moon leaps aimed ahead of the runner and landing at the sanctuary's edge, and a secured egg (+4,000 stones). Most of its maps rendered grey after the first upload; they are re-uploads.
+
+### Pangu the World-Splitter (Origin Abyss)
+
+In the myth Pangu hatched from the cosmic egg and split the chaos inside it into heaven and earth with his axe (chosen by the owner, November 2, 2026, over Hundun and the Taotie). A titan of dark stone still cracked with the chaos he came from: violet void light in every fissure and a crack of it splitting his brow, a mane and a mantle of void drifting from him like smoke, great curved horns bound in bronze, a carved stone beard and moustache, a bronze belt with the disc of yin and yang (the split he made) over torn hangings. The world-splitting axe, a crescent of black stone with a void-lit edge, rests on his right shoulder; on his open left palm, before his chest, the cosmic egg he was born from. The island's rift is his axe stroke. About 38 studs to his crown, 46 to his horns (`tools/blender/guardians/pangu.py`, 11 jointed segments: the first guardian on two legs).
+
+**His eyes** (`guardian_kit.eye`): deep-set violet almonds with dark pupils, the lids bearing down toward his nose (an eye's `forward` is the nose side: pointed outward, the same lids read sad). He blinks slowly, shuts them asleep, glares (narrowed, red) enraged, widens and flickers weakened. The void in his cracks burns low asleep, pulses with his breath, gutters weakened and flares as he strikes.
+
+His lair is the middle of the Void Court, facing the Gate of Descent; his safe zone is the Gate of Descent terrace, back past him toward the bridge. 24,000 health: a Divine Initiate's Divine sword weakens him alone in about 80 strikes. Securing his egg pays 12,000 Spirit Stones; his relic unlocks Void. Messages call him "Pangu".
+
+| State | What he does |
+|---|---|
+| Dormant | A statue: head bowed, eyes shut, the void burning low, the egg on his palm. |
+| Guardian | Turns to face whoever he watches. **Axe cleave:** the axe comes off his shoulder and over, into the ground before him (range 30, 75° arc). **Sky-splitter:** both arms raise the axe and slam it down; a fissure races 70 studs straight ahead in a narrow line (15°): jump it or step aside. **Chaos nova:** he raises the cosmic egg and the chaos bursts out all round (44 studs); jump it. |
+| Weakened | Down on one knee, the egg set on the ground before him. |
+| Enraged | Squared up, the axe lifted, eyes red, chasing at 28 studs/s. **Titan leap:** 20 to 75 studs, 22 high, landing with a shockwave. |
+
+Measured in Play (November 2, 2026): wake, cleave, sky-splitter and nova (each knocking), the axe head's path through both strikes (down to about 9 studs before him as the hit lands; first versions swung it behind his neck and landed late), the kneel (planted foot at 0.0 after the hips were dropped 8.4), steal (a Primordial Abyss Egg), the titan leap catching a thief 51 studs off (the egg dropped), and a secured egg (+12,000 stones). All 41 maps rendered on the first upload (batches of 10).
 
 **One framework for every guardian.** Attacks are named per guardian and have a kind: a *Sweep* in front, a *Wave* along the ground (all round or in an arc, cleared by a jump), a *Pounce* onto the thief. `Egg.Offered` sets a held egg down when it falters; `TurnsToFace` turns it at its lair, the egg welded to its root while held. Each guardian's look lives in its client rig, `GuardianRigs/<Id>` (poses, gait, moves, glow, effects).
 

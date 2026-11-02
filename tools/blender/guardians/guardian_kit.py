@@ -225,6 +225,57 @@ def eye(iris, pupil, lids, centre, normal, forward, length, height, tilt=0.25, b
         sphere(lids, end, lr * 0.4, nu=8, nv=6, mat=lid_mat)
 
 
+def wisp(hi, base, direction, up, length, radius, rnd, sides=6):
+    """A wisp (of fire, of void): a tapered tongue that leaves `base` along `direction`, sways, and
+    curls toward `up` at its tip. UV v runs 0 at its root to 1 at its tip."""
+    d = V(direction).normalized()
+    u = V(up) - d * V(up).dot(d)
+    u = u.normalized() if u.length > 1e-4 else frame(d)[1]
+    side = d.cross(u)
+    sway = rnd.uniform(-1, 1)
+    pts = [V(base), V(base) + d * length * 0.35 + side * length * 0.09 * sway,
+           V(base) + d * length * 0.7 - side * length * 0.06 * sway + u * length * 0.12,
+           V(base) + d * length * 0.95 + u * length * 0.32]
+    Hm.htube(hi, pts, lambda q: radius * (1.0 + 0.25 * math.sin(math.pi * min(1.0, q * 2.5))) * (1 - q) ** 0.85, sides=sides, per=3,
+             uv_scale=1.0 / length, tip=True, wobble=0.0)
+
+
+def limb(a, b, r0, r1):
+    """Lobes along a limb, close enough that the merge reads as one smooth form."""
+    n = max(4, int((V(b) - V(a)).length / (0.45 * min(r0, r1))) + 1)
+    return capsule_lobes(a, b, r0, r1, n=n)
+
+
+def soften(o, iterations=14):
+    """Extra smoothing for living forms: the ellipsoids' creases melt into one body."""
+    Hm.apply_modifiers(o, [("SMOOTH", {"factor": 0.9, "iterations": iterations})])
+    return o
+
+
+def veins(hi, obj, starts, rnd, steps=14, step=0.7, radius=0.16, lift=0.04):
+    """Glowing cracks wandering over obj's surface: from each start, a random walk kept on the
+    surface (each point pulled to the nearest surface point and lifted a hair), forking now and then.
+    Tubes into `hi` (a glow piece)."""
+    tree = BVHTree.FromObject(obj, bpy.context.evaluated_depsgraph_get())
+
+    def onto(p):
+        hit, normal, _, _ = tree.find_nearest(W.rb(*p))
+        return V(K.rb_inv(*hit)) + V(K.rb_inv(*normal)) * lift
+
+    def walk(p, heading, n, r):
+        pts = [onto(p)]
+        for _ in range(n):
+            heading = (heading + V((rnd.uniform(-0.6, 0.6), rnd.uniform(-0.6, 0.6), rnd.uniform(-0.6, 0.6)))).normalized()
+            pts.append(onto(pts[-1] + heading * step))
+            if rnd.random() < 0.12 and n > 5:
+                walk(pts[-1], (heading + V((rnd.uniform(-1, 1), rnd.uniform(-1, 1), rnd.uniform(-1, 1)))).normalized(), n // 2, r * 0.7)
+        if len(pts) > 2:
+            Hm.htube(hi, pts, lambda q: r * (1 - 0.6 * q), sides=5, per=2, uv_scale=1.0, tip=True, wobble=0.0)
+
+    for p, heading in starts:
+        walk(V(p), V(heading).normalized(), steps, radius)
+
+
 # ---------- bake and export ----------
 def bake_piece(guardian, piece, hi, coll, budget):
     """Bakes a piece's high-detail objects onto its game mesh <guardian>_<piece>, with its maps in

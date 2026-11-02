@@ -125,31 +125,13 @@ def tuft(hi, base, direction, normal, length, width, curl=0.15, twist=0.0):
     Hm.leaf(hi, base, direction, normal, length, width, mat=0, fold=0.12, curl=curl, twist=twist, steps=10, across=3, shape=0.5)
 
 
-def wisp(hi, base, direction, up, length, radius, rnd, sides=6):
-    """A wisp of white fire: a tapered tongue that leaves `base` along `direction`, sways, and
-    curls up toward `up` at its tip. UV v runs 0 at its root to 1 at its tip (mat_flame)."""
-    d = V(direction).normalized()
-    u = V(up) - d * V(up).dot(d)
-    u = u.normalized() if u.length > 1e-4 else frame(d)[1]
-    side = d.cross(u)
-    sway = rnd.uniform(-1, 1)
-    pts = [V(base), V(base) + d * length * 0.35 + side * length * 0.09 * sway,
-           V(base) + d * length * 0.7 - side * length * 0.06 * sway + u * length * 0.12,
-           V(base) + d * length * 0.95 + u * length * 0.32]
-    Hm.htube(hi, pts, lambda q: radius * (1.0 + 0.25 * math.sin(math.pi * min(1.0, q * 2.5))) * (1 - q) ** 0.85, sides=sides, per=3,
-             uv_scale=1.0 / length, tip=True, wobble=0.0)
+wisp = G.wisp
 
 
-def limb(a, b, r0, r1):
-    """Lobes along a limb, close enough that the merge reads as one smooth form."""
-    n = max(4, int((V(b) - V(a)).length / (0.45 * min(r0, r1))) + 1)
-    return G.capsule_lobes(a, b, r0, r1, n=n)
+limb = G.limb
 
 
-def soften(o, iterations=14):
-    """Extra smoothing for living forms: the ellipsoids' creases melt into one body."""
-    Hm.apply_modifiers(o, [("SMOOTH", {"factor": 0.9, "iterations": iterations})])
-    return o
+soften = G.soften
 
 
 def ear(hi, base, tip, front, width, depth):

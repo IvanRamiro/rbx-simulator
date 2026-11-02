@@ -264,6 +264,43 @@ local GameConfig = {
                 MoonLeap = { Kind = "Pounce", MinRange = 18, MaxRange = 85, WindUp = 0.55, Air = 1.4, Height = 26, Cooldown = 4.2, Radius = 13, Knockback = 60 },
             },
         },
+        Pangu = {
+            DisplayName = "Pangu the World-Splitter",
+            Called = "Pangu",
+            Island = "OriginAbyss",
+            Lair = Vector3.new(0, 0.8, 0),         -- the middle of the Void Court, its egg plinths behind him under the Thorn Crown
+            Facing = Vector3.new(-85.8, 0.8, 122.8), -- toward the Gate of Descent, where challengers arrive
+            Eggs = { "ForbiddenOriginEgg", "VoidRiftEgg", "PrimordialAbyssEgg" },
+            SafeZone = { Centre = Vector3.new(-76.6, 0.5, 109.7), Radius = 10, Name = "Gate of Descent" },   -- back past him, toward the bridge
+            SecureStones = 12000,
+            Element = "Void",
+            MaxHealth = 24000,     -- a Divine Initiate's Divine sword (~180 a strike) weakens him alone in ~80 strikes
+            WeakenedAt = 0.4,
+            HitRadius = 8,         -- a titan on two legs: narrow at the ground
+            EngageRadius = 26,
+            LeashRadius = 62,
+            CalmAfter = 12,
+            RespawnTime = 30,
+            DropTime = 30,
+            WalkSpeed = 12,
+            ChaseSpeed = 28,       -- just below a Divine Initiate's run (32): his leaps and his fissure decide it
+            ChaseStop = 12,
+            TurnSpeed = 110,
+            TurnsToFace = true,
+            -- the cosmic egg on his open left palm; set down before him when he sinks to one knee
+            Egg = { Height = 4, Under = Vector3.new(-5.9, 25.8, -6.6), Offered = Vector3.new(-5, 1.9, -12), CarriedHeight = 2.6 },
+            WeakenedHint = "sinks to one knee and sets the cosmic egg down: take it!",
+            Stagger = 1.2,
+            WeakenedSlowdown = 1.6,
+            Attacks = {
+                AxeCleave = { Kind = "Sweep", Range = 30, Arc = 75, WindUp = 0.9, Cooldown = 2.6, Knockback = 60 },
+                -- both hands on the axe, overhead, down: a fissure races straight ahead (jump it, or step aside)
+                SkySplitter = { Kind = "Wave", Arc = 15, Radius = 70, WaveSpeed = 55, WindUp = 1.2, Cooldown = 6, Knockback = 55 },
+                -- the cosmic egg raised high, the chaos in him bursts out all round (jump it)
+                ChaosNova = { Kind = "Wave", Radius = 44, WaveSpeed = 32, WindUp = 1.4, Cooldown = 9, Knockback = 50 },
+                TitanLeap = { Kind = "Pounce", MinRange = 20, MaxRange = 75, WindUp = 0.8, Air = 1.5, Height = 22, Cooldown = 5, Radius = 16, Knockback = 65 },
+            },
+        },
     },
 
     -- Sword flight (src/server/Qinggong/FlightService), from UnlockRank. Drains stamina (Cost per

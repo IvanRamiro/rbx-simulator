@@ -1,0 +1,299 @@
+{
+ "Pieces": {
+  "Body": {
+   "Centre": [
+    -0.0042,
+    14.8778,
+    0.05
+   ],
+   "Segment": "Body"
+  },
+  "Body_Glow_8c28ff": {
+   "Centre": [
+    -0.3275,
+    18.5696,
+    0.2318
+   ],
+   "Hex": "8c28ff",
+   "Segment": "Body"
+  },
+  "Chest": {
+   "Centre": [
+    -0.0771,
+    26.3314,
+    3.0507
+   ],
+   "Segment": "Chest"
+  },
+  "Chest_Glow_8c28ff": {
+   "Centre": [
+    -0.0145,
+    26.3446,
+    0.2533
+   ],
+   "Hex": "8c28ff",
+   "Segment": "Chest"
+  },
+  "Head": {
+   "Centre": [
+    0.0,
+    36.0116,
+    1.1033
+   ],
+   "Segment": "Head"
+  },
+  "Head_Glow_06020c": {
+   "Centre": [
+    0.0021,
+    35.3662,
+    -2.8258
+   ],
+   "Hex": "06020c",
+   "Segment": "Head"
+  },
+  "Head_Glow_8c28ff": {
+   "Centre": [
+    0.0445,
+    35.5222,
+    -2.636
+   ],
+   "Hex": "8c28ff",
+   "Segment": "Head"
+  },
+  "Head_Glow_9a64ff": {
+   "Centre": [
+    0.0021,
+    35.3633,
+    -2.7067
+   ],
+   "Hex": "9a64ff",
+   "Segment": "Head"
+  },
+  "LeftForearm": {
+   "Centre": [
+    -6.928,
+    24.0426,
+    -3.0455
+   ],
+   "Segment": "LeftForearm"
+  },
+  "LeftForearm_Glow_8c28ff": {
+   "Centre": [
+    -7.46,
+    23.2514,
+    -1.7146
+   ],
+   "Hex": "8c28ff",
+   "Segment": "LeftForearm"
+  },
+  "LeftShin": {
+   "Centre": [
+    -3.5575,
+    5.6492,
+    -0.5556
+   ],
+   "Segment": "LeftShin"
+  },
+  "LeftShin_Glow_8c28ff": {
+   "Centre": [
+    -3.921,
+    6.9005,
+    0.9805
+   ],
+   "Hex": "8c28ff",
+   "Segment": "LeftShin"
+  },
+  "LeftThigh": {
+   "Centre": [
+    -3.2067,
+    14.2874,
+    0.0381
+   ],
+   "Segment": "LeftThigh"
+  },
+  "LeftThigh_Glow_8c28ff": {
+   "Centre": [
+    -4.159,
+    14.6853,
+    0.0119
+   ],
+   "Hex": "8c28ff",
+   "Segment": "LeftThigh"
+  },
+  "LeftUpperArm": {
+   "Centre": [
+    -7.4224,
+    28.0807,
+    0.3546
+   ],
+   "Segment": "LeftUpperArm"
+  },
+  "LeftUpperArm_Glow_8c28ff": {
+   "Centre": [
+    -7.7925,
+    26.703,
+    0.7854
+   ],
+   "Hex": "8c28ff",
+   "Segment": "LeftUpperArm"
+  },
+  "RightForearm": {
+   "Centre": [
+    8.2237,
+    32.1093,
+    -1.4337
+   ],
+   "Segment": "RightForearm"
+  },
+  "RightForearm_Glow_8c28ff": {
+   "Centre": [
+    7.9344,
+    32.3761,
+    -0.2662
+   ],
+   "Hex": "8c28ff",
+   "Segment": "RightForearm"
+  },
+  "RightShin": {
+   "Centre": [
+    3.5577,
+    5.6563,
+    -0.5486
+   ],
+   "Segment": "RightShin"
+  },
+  "RightShin_Glow_8c28ff": {
+   "Centre": [
+    4.6343,
+    3.4558,
+    0.1112
+   ],
+   "Hex": "8c28ff",
+   "Segment": "RightShin"
+  },
+  "RightThigh": {
+   "Centre": [
+    3.2065,
+    14.2899,
+    0.0326
+   ],
+   "Segment": "RightThigh"
+  },
+  "RightThigh_Glow_8c28ff": {
+   "Centre": [
+    3.3263,
+    11.4686,
+    -0.6213
+   ],
+   "Hex": "8c28ff",
+   "Segment": "RightThigh"
+  },
+  "RightUpperArm": {
+   "Centre": [
+    7.5245,
+    28.0714,
+    0.3
+   ],
+   "Segment": "RightUpperArm"
+  },
+  "RightUpperArm_Glow_8c28ff": {
+   "Centre": [
+    8.3159,
+    26.7094,
+    0.2146
+   ],
+   "Hex": "8c28ff",
+   "Segment": "RightUpperArm"
+  }
+ },
+ "Pivots": {
+  "Body": {
+   "Parent": null,
+   "Position": [
+    0.0,
+    18.0,
+    0.0
+   ]
+  },
+  "Chest": {
+   "Parent": "Body",
+   "Position": [
+    0.0,
+    21.1,
+    0.2
+   ]
+  },
+  "Head": {
+   "Parent": "Chest",
+   "Position": [
+    0.0,
+    32.7,
+    -0.2
+   ]
+  },
+  "LeftForearm": {
+   "Parent": "LeftUpperArm",
+   "Position": [
+    -8.6,
+    24.1,
+    1.2
+   ]
+  },
+  "LeftShin": {
+   "Parent": "LeftThigh",
+   "Position": [
+    -3.5,
+    9.4,
+    -0.5
+   ]
+  },
+  "LeftThigh": {
+   "Parent": "Body",
+   "Position": [
+    -3.2,
+    17.7,
+    0.2
+   ]
+  },
+  "LeftUpperArm": {
+   "Parent": "Chest",
+   "Position": [
+    -7.0,
+    30.9,
+    0.2
+   ]
+  },
+  "RightForearm": {
+   "Parent": "RightUpperArm",
+   "Position": [
+    8.8,
+    24.1,
+    1.0
+   ]
+  },
+  "RightShin": {
+   "Parent": "RightThigh",
+   "Position": [
+    3.5,
+    9.4,
+    -0.5
+   ]
+  },
+  "RightThigh": {
+   "Parent": "Body",
+   "Position": [
+    3.2,
+    17.7,
+    0.2
+   ]
+  },
+  "RightUpperArm": {
+   "Parent": "Chest",
+   "Position": [
+    7.0,
+    30.9,
+    0.2
+   ]
+  }
+ }
+}

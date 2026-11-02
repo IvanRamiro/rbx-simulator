@@ -2,7 +2,8 @@
 -- blocks that each guardian's rig (GuardianRigs/<Id>) composes into its own moves, and the egg's
 -- moments, shared by all.
 --
--- A style: { Debris = "Dust" | "Leaves" | "Cinders" (dark volcanic ash) | "Frost" (pale frost mist), Qi = Color3, QiCore = Color3 }.
+-- A style: { Debris = "Dust" | "Leaves" | "Cinders" (dark volcanic ash) | "Frost" (pale frost mist) | "Void" (dark violet
+-- chaos), Qi = Color3, QiCore = Color3 }.
 --
 --   shake(origin, strength, time)              the camera jolts, fading with distance from origin
 --   puff(cframe, style, count, speed, spread, size, life)
@@ -50,6 +51,8 @@ local ASH_DARK = Color3.fromRGB(46, 40, 38)
 local EMBER = Color3.fromRGB(255, 150, 30)
 local FROST = Color3.fromRGB(214, 232, 255)
 local FROST_DARK = Color3.fromRGB(150, 178, 225)
+local VOID = Color3.fromRGB(70, 34, 110)
+local VOID_DARK = Color3.fromRGB(22, 12, 38)
 local RAGE = Color3.fromRGB(255, 80, 25)
 local GOLD = Color3.fromRGB(255, 196, 70)
 local MAX_DISTANCE = 300
@@ -104,6 +107,8 @@ local function debris(parent, style, properties)
             light, dark = ASH, ASH_DARK
         elseif style.Debris == "Frost" then
             light, dark = FROST, FROST_DARK
+        elseif style.Debris == "Void" then
+            light, dark = VOID, VOID_DARK
         end
         base = {
             Texture = TEXTURES.Fog, LightEmission = 0, LightInfluence = 1,
