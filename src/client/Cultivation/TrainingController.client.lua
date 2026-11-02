@@ -6,140 +6,96 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
-local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
+local UI = script.Parent.Parent:WaitForChild("UI")
+local Hud = require(UI:WaitForChild("Hud"))
+local UiKit = require(UI:WaitForChild("UiKit"))
+local UiTheme = require(UI:WaitForChild("UiTheme"))
 
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-
-local HUD_NAME = "QiHud"
-local READY_COLOR = Color3.fromRGB(70, 160, 110)
-local CULTIVATING_COLOR = Color3.fromRGB(120, 90, 190)
-local COOLDOWN_COLOR = Color3.fromRGB(90, 90, 90)
-local RANK_UP_READY_COLOR = Color3.fromRGB(200, 155, 50)
+local C = UiTheme.Colors
 
 local keyName = GameConfig.CultivationKeybind.Name
 local lastToggleRequestTime = 0
 
-local oldHud = playerGui:FindFirstChild(HUD_NAME)
-if oldHud then
-    oldHud:Destroy()
-end
+-- ---------- the cultivator's plaque (Status): Qi, rank, progress to the next ----------
+local plaqueFrame = UiKit.panel({ Name = "QiPlaque", Size = UDim2.fromOffset(310, 108), LayoutOrder = 1, Parent = Hud.Status })
+local plaque = UiKit.content(plaqueFrame, 16, 12)
 
-local hud = Instance.new("ScreenGui")
-hud.Name = HUD_NAME
-hud.ResetOnSpawn = false
+local qiSeal = UiKit.seal(UiTheme.Seals.Qi, 38, "Jade")
+qiSeal.Parent = plaque
 
-local panel = Instance.new("Frame")
-panel.Name = "Panel"
-panel.AnchorPoint = Vector2.new(0.5, 1)
-panel.Position = UDim2.new(0.5, 0, 1, -24)
-panel.Size = UDim2.fromOffset(260, 200)
-panel.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-panel.BackgroundTransparency = 0.25
-panel.Parent = hud
-applyHudScale(panel)
+local qiLabel = UiKit.label({
+    Name = "QiLabel", Font = "Number", TextSize = 30, TextColor3 = C.JadeBright,
+    Position = UDim2.fromOffset(48, -3), Size = UDim2.new(1, -48, 0, 32), Text = "...", Parent = plaque,
+})
+local powerTag = UiKit.label({
+    Name = "Power", Font = "Strong", TextSize = 12, TextColor3 = C.Gold, AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.new(1, 0, 0, 4), Size = UDim2.fromOffset(70, 16), TextXAlignment = Enum.TextXAlignment.Right,
+    Text = "", Parent = plaque,
+})
+local rankLabel = UiKit.label({
+    Name = "RankLabel", Font = "Title", TextSize = 15, TextColor3 = C.Gold,
+    Position = UDim2.fromOffset(48, 28), Size = UDim2.new(1, -48, 0, 18), Text = "", TextTruncate = Enum.TextTruncate.AtEnd,
+    Parent = plaque,
+})
+local realmLabel = UiKit.label({
+    Name = "RealmLabel", TextSize = 12, TextColor3 = C.Mist,
+    Position = UDim2.fromOffset(48, 46), Size = UDim2.new(1, -48, 0, 14), Text = "", TextTruncate = Enum.TextTruncate.AtEnd,
+    Parent = plaque,
+})
+local progressBar = UiKit.bar({ Name = "Progress", Position = UDim2.new(0, 0, 1, -22), Size = UDim2.new(1, 0, 0, 6), Parent = plaque })
+local nextRankLabel = UiKit.label({
+    Name = "NextRankLabel", TextSize = 12, TextColor3 = C.Mist, AnchorPoint = Vector2.new(0, 1),
+    Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 14), Text = "", TextTruncate = Enum.TextTruncate.AtEnd,
+    Parent = plaque,
+})
 
-local panelCorner = Instance.new("UICorner")
-panelCorner.CornerRadius = UDim.new(0, 12)
-panelCorner.Parent = panel
+-- ---------- the dock: the breakthrough (when it's ready), the station's bonus, Cultivate ----------
+local rankUpButton = UiKit.button({
+    Name = "RankUpButton", Tone = "Gold", Font = "Title", TextSize = 17, Text = "Break Through",
+    Size = UDim2.fromOffset(240, 40), AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 20, Visible = false,
+    Parent = Hud.Dock,
+})
+UiKit.padding(rankUpButton, 16, 0)
+-- a breakthrough waiting to be taken breathes, so it is seen
+local glow = rankUpButton:FindFirstChildOfClass("UIStroke")
+task.spawn(function()
+    while true do
+        local t = os.clock()
+        if rankUpButton.Visible then
+            glow.Thickness = 1.5 + math.sin(t * 4) * 1
+        end
+        task.wait(1 / 30)
+    end
+end)
 
-local qiLabel = Instance.new("TextLabel")
-qiLabel.Name = "QiLabel"
-qiLabel.Position = UDim2.fromOffset(10, 8)
-qiLabel.Size = UDim2.new(1, -20, 0, 36)
-qiLabel.BackgroundTransparency = 1
-qiLabel.Font = Enum.Font.GothamBold
-qiLabel.TextScaled = true
-qiLabel.TextColor3 = Color3.fromRGB(150, 230, 255)
-qiLabel.Text = "Qi: ..."
-qiLabel.Parent = panel
+local stationLabel = UiKit.label({
+    Name = "StationLabel", Font = "Strong", TextSize = 13, TextColor3 = C.JadeBright,
+    BackgroundTransparency = 0.15, BackgroundColor3 = C.JadeDeep, AutomaticSize = Enum.AutomaticSize.X,
+    Size = UDim2.fromOffset(0, 24), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 25, Visible = false,
+    Text = GameConfig.TrainingStation.DisplayName .. "  +" .. GameConfig.TrainingStation.QiBonusPercent .. "% Qi",
+    Parent = Hud.Dock,
+})
+UiKit.corner(stationLabel)
+UiKit.padding(stationLabel, 10, 0)
 
-local rankLabel = Instance.new("TextLabel")
-rankLabel.Name = "RankLabel"
-rankLabel.Position = UDim2.fromOffset(10, 46)
-rankLabel.Size = UDim2.new(1, -20, 0, 24)
-rankLabel.BackgroundTransparency = 1
-rankLabel.Font = Enum.Font.GothamBold
-rankLabel.TextScaled = true
-rankLabel.TextColor3 = Color3.fromRGB(255, 215, 120)
-rankLabel.Text = "Rank: ..."
-rankLabel.Parent = panel
-
-local nextRankLabel = Instance.new("TextLabel")
-nextRankLabel.Name = "NextRankLabel"
-nextRankLabel.Position = UDim2.fromOffset(10, 72)
-nextRankLabel.Size = UDim2.new(1, -20, 0, 18)
-nextRankLabel.BackgroundTransparency = 1
-nextRankLabel.Font = Enum.Font.Gotham
-nextRankLabel.TextScaled = true
-nextRankLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
-nextRankLabel.Text = ""
-nextRankLabel.Parent = panel
-
-local cultivateButton = Instance.new("TextButton")
-cultivateButton.Name = "CultivateButton"
-cultivateButton.Position = UDim2.fromOffset(10, 98)
-cultivateButton.Size = UDim2.new(1, -20, 0, 48)
-cultivateButton.BackgroundColor3 = READY_COLOR
-cultivateButton.AutoButtonColor = true
-cultivateButton.Font = Enum.Font.GothamBold
-cultivateButton.TextScaled = true
-cultivateButton.TextColor3 = Color3.new(1, 1, 1)
-cultivateButton.Text = "Cultivate [" .. keyName .. "]"
-cultivateButton.Parent = panel
-
-local cultivateCorner = Instance.new("UICorner")
-cultivateCorner.CornerRadius = UDim.new(0, 10)
-cultivateCorner.Parent = cultivateButton
-
-local rankUpButton = Instance.new("TextButton")
-rankUpButton.Name = "RankUpButton"
-rankUpButton.Position = UDim2.fromOffset(10, 154)
-rankUpButton.Size = UDim2.new(1, -20, 0, 36)
-rankUpButton.BackgroundColor3 = COOLDOWN_COLOR
-rankUpButton.AutoButtonColor = false
-rankUpButton.Font = Enum.Font.GothamBold
-rankUpButton.TextScaled = true
-rankUpButton.TextColor3 = Color3.new(1, 1, 1)
-rankUpButton.Text = "Rank Up"
-rankUpButton.Parent = panel
-
-local rankUpCorner = Instance.new("UICorner")
-rankUpCorner.CornerRadius = UDim.new(0, 10)
-rankUpCorner.Parent = rankUpButton
-
-local stationLabel = Instance.new("TextLabel")
-stationLabel.Name = "StationLabel"
-stationLabel.AnchorPoint = Vector2.new(0.5, 1)
-stationLabel.Position = UDim2.new(0.5, 0, 0, -6)
-stationLabel.Size = UDim2.new(1, 0, 0, 26)
-stationLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-stationLabel.BackgroundTransparency = 0.25
-stationLabel.Font = Enum.Font.GothamBold
-stationLabel.TextScaled = true
-stationLabel.TextColor3 = Color3.fromRGB(150, 240, 255)
-stationLabel.Text = GameConfig.TrainingStation.DisplayName .. ": +" .. GameConfig.TrainingStation.QiBonusPercent .. "% Qi"
-stationLabel.Visible = false
-stationLabel.Parent = panel
-
-local stationCorner = Instance.new("UICorner")
-stationCorner.CornerRadius = UDim.new(0, 8)
-stationCorner.Parent = stationLabel
-
-hud.Parent = playerGui
+local cultivateButton = UiKit.button({
+    Name = "CultivateButton", Tone = "Jade", Font = "Title", TextSize = 19, Text = "Cultivate",
+    Size = UDim2.fromOffset(240, 50), LayoutOrder = 30, Parent = Hud.Dock,
+})
+local cultivateKey = UiKit.keycap(keyName)
+cultivateKey.AnchorPoint = Vector2.new(1, 0.5)
+cultivateKey.Position = UDim2.new(1, -12, 0.5, 0)
+cultivateKey.Parent = cultivateButton
 
 local function isCultivating()
     return player:GetAttribute("IsCultivating") == true
 end
 
 local function updateCultivateButton()
-    if isCultivating() then
-        cultivateButton.BackgroundColor3 = CULTIVATING_COLOR
-        cultivateButton.Text = "Cultivating... Stop [" .. keyName .. "]"
-    else
-        cultivateButton.BackgroundColor3 = READY_COLOR
-        cultivateButton.Text = "Cultivate [" .. keyName .. "]"
-    end
+    -- while cultivating it turns quiet and says how to stop: the aura itself is the feedback
+    cultivateButton:SetAttribute("Tone", if isCultivating() then "Quiet" else "Jade")
+    cultivateButton.Text = if isCultivating() then "Stop Cultivating" else "Cultivate"
 end
 
 local function requestToggleCultivation()
@@ -179,36 +135,34 @@ local qiValue = leaderstats:WaitForChild("Qi")
 local rankValue = leaderstats:WaitForChild("Rank")
 
 local function updateQiLabel()
-    qiLabel.Text = "Qi: " .. NumberFormat.compact(qiValue.Value)
+    qiLabel.Text = NumberFormat.compact(qiValue.Value)
 end
 
 local function updateRankDisplay()
     local rank = Ranks.getRank(rankValue.Value)
-    local power = if rank and rank.QiMultiplier > 1 then "  |  Qi x" .. rank.QiMultiplier else ""
-    rankLabel.Text = if rank
-        then rank.Name .. "  |  " .. rank.Realm .. " " .. rank.Level .. "/5" .. power
-        else "Rank: " .. rankValue.Value
+    powerTag.Text = if rank and rank.QiMultiplier > 1 then "Qi ×" .. rank.QiMultiplier else ""
+    rankLabel.Text = if rank then rank.Name else tostring(rankValue.Value)
+    realmLabel.Text = if rank then rank.Realm .. "  ·  " .. rank.Level .. " / 5" else ""
 
     local nextRank = Ranks.getNextRank(rankValue.Value)
     if not nextRank then
-        nextRankLabel.Text = "Highest rank reached"
+        nextRankLabel.Text = "The highest rank: nothing above you"
+        UiKit.setBar(progressBar, 1)
         rankUpButton.Visible = false
         return
     end
 
-    if rank and nextRank.Realm ~= rank.Realm then
-        nextRankLabel.Text = "Next realm: " .. nextRank.Realm .. " at " .. NumberFormat.compact(nextRank.QiRequired) .. " Qi"
-    else
-        nextRankLabel.Text = "Next: " .. nextRank.Name .. " at " .. NumberFormat.compact(nextRank.QiRequired) .. " Qi"
-    end
-    rankUpButton.Visible = true
-
+    -- the bar runs from this rank's Qi to the next one's
+    local from = if rank then rank.QiRequired else 0
     local canRankUp = qiValue.Value >= nextRank.QiRequired
-    local qiNeeded = nextRank.QiRequired - qiValue.Value
-
-    rankUpButton.BackgroundColor3 = if canRankUp then RANK_UP_READY_COLOR else COOLDOWN_COLOR
-    rankUpButton.AutoButtonColor = canRankUp
-    rankUpButton.Text = if canRankUp then "Rank Up!" else "Rank Up (" .. NumberFormat.compact(qiNeeded) .. " more Qi)"
+    UiKit.setBar(progressBar, (qiValue.Value - from) / math.max(1, nextRank.QiRequired - from))
+    local target = if rank and nextRank.Realm ~= rank.Realm then nextRank.Realm else nextRank.Name
+    nextRankLabel.Text = if canRankUp
+        then target .. ": ready to break through"
+        else target .. " at " .. NumberFormat.compact(nextRank.QiRequired) .. "  ·  " .. NumberFormat.compact(nextRank.QiRequired - qiValue.Value) .. " to go"
+    nextRankLabel.TextColor3 = if canRankUp then C.Gold else C.Mist
+    rankUpButton.Visible = canRankUp
+    rankUpButton.Text = "Break Through: " .. target
 end
 
 local function requestRankUp()

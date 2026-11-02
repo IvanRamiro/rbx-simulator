@@ -13,6 +13,8 @@ local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
+local Hud = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"))
+local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiTheme"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
@@ -89,20 +91,12 @@ local function button(parent, text, size, position, color, onClick)
 end
 
 -- ---------- the Spirit Stones counter ----------
-local counter = label(hud, "", UDim2.fromOffset(150, 30), UDim2.fromOffset(174, 64), STONE_COLOR, Enum.TextXAlignment.Center)
-counter.Name = "StoneCounter"
-counter.BackgroundColor3 = PANEL_COLOR
-counter.BackgroundTransparency = 0.25
-corner(counter, 8)
-local counterPadding = Instance.new("UIPadding")
-counterPadding.PaddingTop, counterPadding.PaddingBottom = UDim.new(0, 4), UDim.new(0, 4)
-counterPadding.Parent = counter
-applyHudScale(counter)
+local stoneChip, counter = Hud.chip("StoneCounter", UiTheme.Seals.Stones, 1)
 
 local function updateCounter()
     local stones = player:GetAttribute("SpiritStones")
-    counter.Visible = stones ~= nil
-    counter.Text = "Stones " .. NumberFormat.compact(stones or 0)
+    stoneChip.Visible = stones ~= nil
+    counter.Text = NumberFormat.compact(stones or 0) .. " Spirit Stones"
 end
 player:GetAttributeChangedSignal("SpiritStones"):Connect(updateCounter)
 updateCounter()

@@ -5,6 +5,8 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
+local Hud = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"))
+local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiTheme"))
 local HatchCeremony = require(script.Parent:WaitForChild("HatchCeremony"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
@@ -33,31 +35,18 @@ hud.ResetOnSpawn = false
 local root = Instance.new("Frame")
 root.Name = "Root"
 root.AnchorPoint = Vector2.new(0, 0.5)
-root.Position = UDim2.new(0, 16, 0.5, 0)
+root.Position = UDim2.new(0, UiTheme.Margin + 64 + 12, 0.5, 0) -- beside the rail
 root.Size = UDim2.fromOffset(260, 330)
 root.BackgroundTransparency = 1
 root.Parent = hud
 applyHudScale(root)
 
-local toggleButton = Instance.new("TextButton")
-toggleButton.Name = "ToggleButton"
-toggleButton.Size = UDim2.fromOffset(110, 40)
-toggleButton.BackgroundColor3 = PANEL_COLOR
-toggleButton.BackgroundTransparency = 0.25
-toggleButton.Font = Enum.Font.GothamBold
-toggleButton.TextScaled = true
-toggleButton.TextColor3 = Color3.new(1, 1, 1)
-toggleButton.Text = "Pets"
-toggleButton.Parent = root
-
-local toggleCorner = Instance.new("UICorner")
-toggleCorner.CornerRadius = UDim.new(0, 10)
-toggleCorner.Parent = toggleButton
+local toggleButton, setPetBadge = Hud.railButton("PetsButton", UiTheme.Seals.Pets, "Pets", 1)
 
 local panel = Instance.new("Frame")
 panel.Name = "Panel"
-panel.Position = UDim2.fromOffset(0, 48)
-panel.Size = UDim2.new(1, 0, 1, -48)
+panel.Position = UDim2.fromOffset(0, 0)
+panel.Size = UDim2.new(1, 0, 1, 0)
 panel.BackgroundColor3 = PANEL_COLOR
 panel.BackgroundTransparency = 0.25
 panel.Visible = false
@@ -214,7 +203,7 @@ local function renderInventory(snapshot)
     end
 
     local equippedText = equippedCount .. "/" .. GameConfig.MaxEquippedPets
-    toggleButton.Text = "Pets " .. equippedText
+    setPetBadge(equippedText)
     summaryLabel.Text = "Equipped " .. equippedText .. "  |  Qi bonus +" .. bonusPercent .. "%"
 
     for index, pet in snapshot.Pets do

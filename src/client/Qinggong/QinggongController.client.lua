@@ -19,105 +19,67 @@ local UserInputService = game:GetService("UserInputService")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
-local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
+local Hud = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"))
+local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKit"))
+local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiTheme"))
 local QinggongFx = require(script.Parent:WaitForChild("QinggongFx"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local qinggong = GameConfig.Qinggong
 
-local HUD_NAME = "QinggongHud"
-local PIP_READY = Color3.fromRGB(150, 235, 255)
-local PIP_SPENT = Color3.fromRGB(60, 70, 85)
-local GLIDE_COLOR = Color3.fromRGB(190, 255, 220)
-local STAMINA_COLOR = Color3.fromRGB(255, 205, 90)
-local STAMINA_LOW = Color3.fromRGB(200, 90, 70)
-local FLIGHT_COLOR = Color3.fromRGB(255, 225, 140)
+local PIP_READY = UiTheme.Colors.Sky
+local PIP_SPENT = Color3.fromRGB(48, 58, 62)
+local GLIDE_COLOR = UiTheme.Colors.JadeBright
+local STAMINA_COLOR = UiTheme.Colors.Gold
+local STAMINA_LOW = UiTheme.Colors.Cinnabar
+local FLIGHT_COLOR = UiTheme.Colors.Gold
 local NEW_PRESS_GAP = 0.18 -- jump requests closer than this are one held press
 local HARD_LANDING_SPEED = 25 -- a fall faster than this lands with an impact even without Qinggong
 local FULL_IMPACT_SPEED = 110 -- the fall speed of a full-strength landing
 local MAX_PIPS = GameConfig.Qinggong.Levels[#GameConfig.Qinggong.Levels].AirLeaps
 
-local oldHud = playerGui:FindFirstChild(HUD_NAME)
-if oldHud then
-    oldHud:Destroy()
-end
-
-local hud = Instance.new("ScreenGui")
-hud.Name = HUD_NAME
-hud.ResetOnSpawn = false
-
-local panel = Instance.new("Frame")
-panel.Name = "Panel"
-panel.AnchorPoint = Vector2.new(1, 0.5)
-panel.Position = UDim2.new(1, -16, 0.5, 0)
-panel.Size = UDim2.fromOffset(200, 96)
-panel.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-panel.BackgroundTransparency = 0.25
-panel.Parent = hud
-applyHudScale(panel)
-Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 12)
-
-local title = Instance.new("TextLabel")
-title.BackgroundTransparency = 1
-title.Position = UDim2.fromOffset(10, 6)
-title.Size = UDim2.new(1, -20, 0, 22)
-title.Font = Enum.Font.GothamBold
-title.TextScaled = true
-title.TextColor3 = Color3.new(1, 1, 1)
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Text = "Qinggong"
-title.Parent = panel
+-- the Qinggong strip, at the top of the HUD's dock: a seal, a diamond per air leap, the stamina
+-- bar and a line of what's next (or the state: gliding, sword flight)
+local panel = UiKit.panel({ Name = "QinggongStrip", Size = UDim2.fromOffset(240, 50), LayoutOrder = 10, Brackets = false, Parent = Hud.Dock })
+local seal = UiKit.seal(UiTheme.Seals.Qinggong, 30, "Jade")
+seal.AnchorPoint = Vector2.new(0, 0.5)
+seal.Position = UDim2.new(0, 9, 0.5, 0)
+seal.Parent = panel
 
 local pipRow = Instance.new("Frame")
 pipRow.BackgroundTransparency = 1
-pipRow.Position = UDim2.fromOffset(10, 32)
-pipRow.Size = UDim2.new(1, -20, 0, 14)
+pipRow.Position = UDim2.fromOffset(50, 7)
+pipRow.Size = UDim2.new(1, -60, 0, 10)
 pipRow.Parent = panel
-local pipLayout = Instance.new("UIListLayout")
-pipLayout.FillDirection = Enum.FillDirection.Horizontal
 local PIP_GAP = 4
-pipLayout.Padding = UDim.new(0, PIP_GAP)
-pipLayout.Parent = pipRow
+UiKit.list(pipRow, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, PIP_GAP), VerticalAlignment = Enum.VerticalAlignment.Center })
 
 local pips = {}
 for index = 1, MAX_PIPS do
-    local pip = Instance.new("Frame")
-    -- the most leaps any rank has (MAX_PIPS) always fit the row
-    pip.Size = UDim2.new(1 / MAX_PIPS, -PIP_GAP * (MAX_PIPS - 1) / MAX_PIPS, 1, 0)
+    local slot = Instance.new("Frame") -- the most leaps any rank has (MAX_PIPS) always fit the row
+    slot.BackgroundTransparency = 1
+    slot.Size = UDim2.new(1 / MAX_PIPS, -PIP_GAP * (MAX_PIPS - 1) / MAX_PIPS, 1, 0)
+    slot.LayoutOrder = index
+    slot.Parent = pipRow
+    local pip = Instance.new("Frame") -- a diamond: a step of light
+    pip.AnchorPoint = Vector2.new(0.5, 0.5)
+    pip.Position = UDim2.fromScale(0.5, 0.5)
+    pip.Size = UDim2.fromOffset(7, 7)
+    pip.Rotation = 45
     pip.BorderSizePixel = 0
-    pip.LayoutOrder = index
-    pip.Parent = pipRow
-    Instance.new("UICorner", pip).CornerRadius = UDim.new(0.5, 0)
+    pip.Parent = slot
     pips[index] = pip
 end
 
-local staminaBack = Instance.new("Frame")
-staminaBack.Name = "Stamina"
-staminaBack.Position = UDim2.fromOffset(10, 52)
-staminaBack.Size = UDim2.new(1, -20, 0, 8)
-staminaBack.BackgroundColor3 = PIP_SPENT
-staminaBack.BorderSizePixel = 0
-staminaBack.Parent = panel
-Instance.new("UICorner", staminaBack).CornerRadius = UDim.new(0.5, 0)
-local staminaFill = Instance.new("Frame")
+local staminaBack = UiKit.bar({ Name = "Stamina", Fill = STAMINA_COLOR, Position = UDim2.fromOffset(50, 22), Size = UDim2.new(1, -60, 0, 6), Parent = panel })
+local staminaFill = staminaBack:FindFirstChild("Fill")
 staminaFill.Size = UDim2.fromScale(1, 1)
-staminaFill.BackgroundColor3 = STAMINA_COLOR
-staminaFill.BorderSizePixel = 0
-staminaFill.Parent = staminaBack
-Instance.new("UICorner", staminaFill).CornerRadius = UDim.new(0.5, 0)
 
-local info = Instance.new("TextLabel")
-info.BackgroundTransparency = 1
-info.Position = UDim2.fromOffset(10, 66)
-info.Size = UDim2.new(1, -20, 0, 20)
-info.Font = Enum.Font.Gotham
-info.TextScaled = true
-info.TextColor3 = Color3.fromRGB(200, 200, 210)
-info.TextXAlignment = Enum.TextXAlignment.Left
-info.Parent = panel
-
-hud.Parent = playerGui
+local info = UiKit.label({
+    Name = "Info", TextSize = 12, TextColor3 = UiTheme.Colors.Mist, Position = UDim2.fromOffset(50, 31),
+    Size = UDim2.new(1, -60, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = panel,
+})
 
 local leapsUsed = 0
 local lastJumpRequest = 0
@@ -157,7 +119,7 @@ local function updateHud()
         info.TextColor3 = GLIDE_COLOR
         return
     end
-    info.TextColor3 = Color3.fromRGB(200, 200, 210)
+    info.TextColor3 = UiTheme.Colors.Mist
     local _, nextLevel = Ranks.getQinggong(Ranks.getPlayerRankName(player))
     local nextRank = nextLevel and Ranks.getRankById(nextLevel.RankId)
     info.Text = if nextRank then (nextLevel.AirLeaps .. " leaps at " .. nextRank.Name) else "Air leaps: " .. total

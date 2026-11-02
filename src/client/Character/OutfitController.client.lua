@@ -13,57 +13,18 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
-local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
+local Hud = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"))
+local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiTheme"))
 
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
 
 local OUTFIT_TAG = "WornOutfit"
 local SWAY_DISTANCE = 120
 local UP = Vector3.new(0, 1, 0)
 
--- ---------- the Robes button ----------
-local HUD_NAME = "OutfitHud"
-local PANEL_COLOR = Color3.fromRGB(20, 20, 30)
-local WORN_COLOR = Color3.fromRGB(175, 130, 45)
-
-local oldHud = playerGui:FindFirstChild(HUD_NAME)
-if oldHud then
-    oldHud:Destroy()
-end
-local hud = Instance.new("ScreenGui")
-hud.Name = HUD_NAME
-hud.ResetOnSpawn = false
--- the same frame as the Pets HUD (PetController), so the button scales and sits beside its toggle
-local root = Instance.new("Frame")
-root.Name = "Root"
-root.AnchorPoint = Vector2.new(0, 0.5)
-root.Position = UDim2.new(0, 16, 0.5, 0)
-root.Size = UDim2.fromOffset(260, 330)
-root.BackgroundTransparency = 1
-root.Parent = hud
-applyHudScale(root)
-
-local button = Instance.new("TextButton")
-button.Name = "RobesButton"
-button.Position = UDim2.fromOffset(118, 0)
-button.Size = UDim2.fromOffset(110, 40)
-button.BackgroundColor3 = PANEL_COLOR
-button.BackgroundTransparency = 0.25
-button.Font = Enum.Font.GothamBold
-button.TextScaled = true
-button.TextColor3 = Color3.new(1, 1, 1)
-button.Text = "Robes"
+-- ---------- the Robes button (on the HUD's rail, under Pets; a gold "On" while worn) ----------
+local button, setRobesBadge = Hud.railButton("RobesButton", UiTheme.Seals.Robes, "Robes", 2)
 button.Visible = false
-button.Parent = root
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 10)
-corner.Parent = button
-local padding = Instance.new("UIPadding")
-padding.PaddingLeft, padding.PaddingRight = UDim.new(0, 8), UDim.new(0, 8)
-padding.PaddingTop, padding.PaddingBottom = UDim.new(0, 6), UDim.new(0, 6)
-padding.Parent = button
-hud.Parent = playerGui
 
 local function owned()
     local list = player:GetAttribute("OwnedOutfits")
@@ -74,8 +35,7 @@ local function refreshButton()
     local outfits = owned()
     local wearing = player:GetAttribute("OutfitId")
     button.Visible = #outfits > 0
-    button.BackgroundColor3 = if wearing then WORN_COLOR else PANEL_COLOR
-    button.Text = if wearing then "Robes: On" else "Robes"
+    setRobesBadge(if wearing then "On" else nil, "Gold")
 end
 
 button.Activated:Connect(function()

@@ -20,10 +20,11 @@ local GuardianAnim = require(script.Parent:WaitForChild("GuardianAnim"))
 local GuardianFx = require(script.Parent:WaitForChild("GuardianFx"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
-local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
+local Hud = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"))
+local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKit"))
+local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiTheme"))
 
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
 
 local ANIMATE_DISTANCE = 400
 local BAR_DISTANCE = 130
@@ -99,65 +100,33 @@ local function guardianModel(guardianId)
 end
 
 -- ---------- the HUD ----------
-local hud = Instance.new("ScreenGui")
-hud.Name = "GuardianHud"
-hud.ResetOnSpawn = false
-hud.Parent = playerGui
+local message = Toast.new(nil, "GuardianMessage", nil, Color3.new(1, 1, 1), 4)
 
-local message = Toast.new(hud, "GuardianMessage", 86, Color3.new(1, 1, 1), 4)
+-- the health bar of the guardian being fought: first in the HUD's top-centre stack, so the
+-- messages (Toast) fall in below it instead of under it
+local bar = UiKit.panel({ Name = "GuardianBar", Size = UDim2.fromOffset(460, 66), LayoutOrder = 0, Visible = false, Parent = Hud.Banner })
+local barSeal = UiKit.seal(UiTheme.Seals.Guardian, 34, "Cinnabar")
+barSeal.Position = UDim2.fromOffset(14, 16)
+barSeal.Parent = bar
 
-local bar = Instance.new("Frame")
-bar.Name = "GuardianBar"
-bar.AnchorPoint = Vector2.new(0.5, 0)
-bar.Position = UDim2.new(0.5, 0, 0, 12)
-bar.Size = UDim2.fromOffset(440, 64)
-bar.BackgroundColor3 = Color3.fromRGB(24, 20, 18)
-bar.BackgroundTransparency = 0.12
-bar.Visible = false
-bar.Parent = hud
-applyHudScale(bar)
-do
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = bar
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(190, 150, 70)
-    stroke.Thickness = 1.5
-    stroke.Transparency = 0.2
-    stroke.Parent = bar
-end
+local nameLabel = UiKit.label({
+    Font = "Title", TextSize = 16, TextColor3 = GOLD, Position = UDim2.fromOffset(58, 9),
+    Size = UDim2.new(0.6, -58, 0, 20), TextTruncate = Enum.TextTruncate.AtEnd, Parent = bar,
+})
 
-local nameLabel = Instance.new("TextLabel")
-nameLabel.BackgroundTransparency = 1
-nameLabel.Position = UDim2.fromOffset(14, 7)
-nameLabel.Size = UDim2.new(0.6, 0, 0, 20)
-nameLabel.Font = Enum.Font.GothamBlack
-nameLabel.TextSize = 16
-nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-nameLabel.TextColor3 = GOLD
-nameLabel.Parent = bar
-
-local stateLabel = Instance.new("TextLabel")
-stateLabel.BackgroundTransparency = 1
-stateLabel.AnchorPoint = Vector2.new(1, 0)
-stateLabel.Position = UDim2.new(1, -14, 0, 9)
-stateLabel.Size = UDim2.new(0.5, 0, 0, 16)
-stateLabel.Font = Enum.Font.GothamBold
-stateLabel.TextSize = 12
-stateLabel.TextXAlignment = Enum.TextXAlignment.Right
-stateLabel.Parent = bar
+local stateLabel = UiKit.label({
+    Font = "Strong", TextSize = 12, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 12),
+    Size = UDim2.new(0.45, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Right, Parent = bar,
+})
 
 local barTrack = Instance.new("Frame")
-barTrack.Position = UDim2.fromOffset(14, 34)
-barTrack.Size = UDim2.new(1, -28, 0, 18)
-barTrack.BackgroundColor3 = Color3.fromRGB(50, 44, 40)
+barTrack.Position = UDim2.fromOffset(58, 34)
+barTrack.Size = UDim2.new(1, -74, 0, 18)
+barTrack.BackgroundColor3 = UiTheme.Colors.InkDeep
 barTrack.ClipsDescendants = true
 barTrack.Parent = bar
-do
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 4)
-    corner.Parent = barTrack
-end
+UiKit.corner(barTrack, 2)
+UiKit.stroke(barTrack, UiTheme.Colors.GoldDim, 0.3)
 
 -- the health just lost, catching up behind the bar
 local trailFill = Instance.new("Frame")
@@ -187,7 +156,7 @@ weakMark.Parent = barTrack
 local healthText = Instance.new("TextLabel")
 healthText.BackgroundTransparency = 1
 healthText.Size = UDim2.fromScale(1, 1)
-healthText.Font = Enum.Font.GothamBold
+healthText.FontFace = UiTheme.Fonts.Strong
 healthText.TextSize = 12
 healthText.TextColor3 = Color3.new(1, 1, 1)
 healthText.TextStrokeTransparency = 0.5
@@ -229,7 +198,7 @@ local function updateBar(dt)
     local state = best:GetAttribute("State")
     local health, maxHealth = best:GetAttribute("Health") or 0, best:GetAttribute("MaxHealth") or 1
     local share = math.clamp(health / maxHealth, 0, 1)
-    nameLabel.Text = string.upper(config and config.DisplayName or best.Name)
+    nameLabel.Text = config and config.DisplayName or best.Name
     local look = STATE_LOOK[state]
     stateLabel.Text = look.Text
     stateLabel.TextColor3 = look.Color

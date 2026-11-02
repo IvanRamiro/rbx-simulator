@@ -5,7 +5,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
-local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
+local Hud = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"))
+local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiTheme"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
@@ -13,7 +14,6 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local HUD_NAME = "RelicHud"
-local PANEL_COLOR = Color3.fromRGB(20, 20, 30)
 local RELIC_COLOR = Color3.fromRGB(170, 235, 255)
 local MESSAGE_SECONDS = 4
 local FOUND_TRANSPARENCY = 0.7
@@ -32,27 +32,8 @@ local hud = Instance.new("ScreenGui")
 hud.Name = HUD_NAME
 hud.ResetOnSpawn = false
 
-local counter = Instance.new("TextLabel")
-counter.Name = "RelicCounter"
-counter.Position = UDim2.fromOffset(16, 64)
-counter.Size = UDim2.fromOffset(150, 30)
-counter.BackgroundColor3 = PANEL_COLOR
-counter.BackgroundTransparency = 0.25
-counter.Font = Enum.Font.GothamBold
-counter.TextScaled = true
-counter.TextColor3 = RELIC_COLOR
-counter.Text = "Relics 0/" .. #GameConfig.Relics
-counter.Parent = hud
-applyHudScale(counter)
-
-local counterCorner = Instance.new("UICorner")
-counterCorner.CornerRadius = UDim.new(0, 8)
-counterCorner.Parent = counter
-
-local counterPadding = Instance.new("UIPadding")
-counterPadding.PaddingTop = UDim.new(0, 4)
-counterPadding.PaddingBottom = UDim.new(0, 4)
-counterPadding.Parent = counter
+local _, counter = Hud.chip("RelicCounter", UiTheme.Seals.Relics, 2)
+counter.Text = "0 / " .. #GameConfig.Relics .. " Relics"
 
 local message = Toast.new(hud, "RelicMessage", 64, RELIC_COLOR, MESSAGE_SECONDS)
 
@@ -103,7 +84,7 @@ local function updateAll()
     for _ in found do
         foundCount += 1
     end
-    counter.Text = "Relics " .. foundCount .. "/" .. #GameConfig.Relics
+    counter.Text = foundCount .. " / " .. #GameConfig.Relics .. " Relics"
 
     local rankName = Ranks.getPlayerRankName(player)
     for _, model in CollectionService:GetTagged(GameConfig.RelicTag) do
