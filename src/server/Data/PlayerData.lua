@@ -8,10 +8,12 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local Discoveries = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("Discoveries"))
 local EggInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("EggInventory"))
+local Wallet = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Wallet"))
+local WeaponInventory = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("WeaponInventory"))
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 6
+local SCHEMA_VERSION = 7
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -61,7 +63,8 @@ MIGRATIONS[2] = function(progress)
 end
 -- Upgrades from versions 3, 4 and 5 change nothing, so they have no migration: versions 4 and 5
 -- added pets (the bump only stops older servers, which don't know them, from dropping them) and
--- version 6 added Eggs, which sanitizeProgress starts empty.
+-- version 6 added Eggs, which sanitizeProgress starts empty; version 7 added SpiritStones, Weapons
+-- and EquippedWeapon, which start at none (WeaponInventory gives a player with no weapon the starter).
 
 local store = nil
 local storeOk, storeResult = pcall(function()
@@ -87,6 +90,9 @@ local function sanitizeProgress(raw)
         Relics = {},
         OutfitId = nil,
         Eggs = {},
+        SpiritStones = 0,
+        Weapons = {},
+        EquippedWeapon = nil,
     }
 
     if typeof(raw) ~= "table" then
@@ -159,6 +165,8 @@ local function sanitizeProgress(raw)
     end
 
     progress.Eggs = EggInventory.sanitize(raw.Eggs)
+    progress.SpiritStones = Wallet.sanitize(raw.SpiritStones)
+    progress.Weapons, progress.EquippedWeapon = WeaponInventory.sanitize(raw.Weapons, raw.EquippedWeapon)
 
     return progress
 end
@@ -185,7 +193,9 @@ local function captureProgress(player)
     local pets = PetInventory.exportData(player)
     local relics = Discoveries.exportData(player)
     local eggs = EggInventory.exportData(player)
-    if not (qi and rankValue and pets and relics and eggs) then
+    local stones = Wallet.exportData(player)
+    local weapons = WeaponInventory.exportData(player)
+    if not (qi and rankValue and pets and relics and eggs and stones and weapons) then
         return nil
     end
 
@@ -200,6 +210,9 @@ local function captureProgress(player)
         Relics = relics,
         OutfitId = player:GetAttribute("OutfitId"),
         Eggs = eggs,
+        SpiritStones = stones,
+        Weapons = weapons.Weapons,
+        EquippedWeapon = weapons.Equipped,
     }
 end
 
@@ -413,6 +426,8 @@ function PlayerData.release(player)
     PetInventory.removePlayer(player)
     Discoveries.removePlayer(player)
     EggInventory.removePlayer(player)
+    Wallet.removePlayer(player)
+    WeaponInventory.removePlayer(player)
 
     if not profile then
         return

@@ -1,4 +1,5 @@
--- Striking (GameConfig.Combat): left click, gamepad R2 or the touch Strike button. The strike's
+-- Striking with the equipped weapon (the "WeaponId" attribute; GameConfig.WeaponKinds) or the Qi
+-- Palm (GameConfig.Combat.Palm): left click, gamepad R2 or the touch Strike button. The strike's
 -- effects play here at once (CombatFx) and the server is asked to resolve it (CombatEvent); the
 -- server relays every strike back for everyone's effects and where it landed.
 local Players = game:GetService("Players")
@@ -6,15 +7,20 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
-local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
+local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local CombatFx = require(script.Parent:WaitForChild("CombatFx"))
 
 local player = Players.LocalPlayer
 local readyAt = 0
 
-local function weapon()
-    return if Ranks.isAtLeast(Ranks.getPlayerRankName(player), GameConfig.SwordFlight.UnlockRank) then "Sword" else "Palm"
+-- "Palm", "Sword" or "Spear", and its cooldown
+local function strikeKind()
+    local weapon = Shop.weapon(player:GetAttribute("WeaponId"))
+    if not weapon then
+        return "Palm", GameConfig.Combat.Palm.Cooldown
+    end
+    return weapon.Kind, GameConfig.WeaponKinds[weapon.Kind].Cooldown
 end
 
 local function strike()
@@ -24,11 +30,11 @@ local function strike()
         return
     end
     local now = os.clock()
-    local kind = weapon()
+    local kind, cooldown = strikeKind()
     if now < readyAt then
         return
     end
-    readyAt = now + GameConfig.Combat[kind].Cooldown
+    readyAt = now + cooldown
     CombatFx.play(player, kind)
     RemoteEvents.CombatEvent:FireServer()
 end

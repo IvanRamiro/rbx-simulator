@@ -36,6 +36,7 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local EggInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("EggInventory"))
 local EggModel = require(script.Parent:WaitForChild("EggModel"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
+local Wallet = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Wallet"))
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
 
 local FLAT = Vector3.new(1, 0, 1)
@@ -436,8 +437,9 @@ function Guardian:secure()
         self:returnEgg()
         return
     end
+    Wallet.add(player, self.config.SecureStones or 0)
     PlayerData.saveSoon(player)
-    RemoteEvents.GuardianEvent:FireClient(player, self.model, "Secured", egg.eggId)
+    RemoteEvents.GuardianEvent:FireClient(player, self.model, "Secured", egg.eggId, self.config.SecureStones)
     self:clearThief()
     egg.model:Destroy()
     egg.model, egg.prompt, egg.eggId = nil, nil, nil

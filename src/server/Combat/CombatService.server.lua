@@ -1,11 +1,12 @@
--- Resolves strikes (GameConfig.Combat). The client fires CombatEvent with no arguments; the server
--- decides the weapon (by rank), the cooldown, the target and the damage.
+-- Resolves strikes (GameConfig.Combat, WeaponKinds). The client fires CombatEvent with no arguments;
+-- the server decides the weapon (the one equipped, or the Qi Palm), the cooldown, the target and
+-- the damage.
 --
 -- A target is a Model tagged GameConfig.Combat.TargetTag with a PrimaryPart and a HitRadius
 -- attribute (studs round the PrimaryPart's centre). A strike lands on the nearest target within the
 -- weapon's Arc of facing and Range, unless its "Invulnerable" attribute is set. A landing strike
--- fires Combat.Hit; every strike is relayed to all clients (CombatEvent: striker, weapon, hit
--- position or nil).
+-- fires Combat.Hit; every strike is relayed to all clients (CombatEvent: striker, kind ("Palm",
+-- "Sword" or "Spear"), hit position or nil).
 --
 -- The flying sword is copied to ReplicatedStorage.Weapons so clients can show it striking.
 local CollectionService = game:GetService("CollectionService")
@@ -35,8 +36,7 @@ do
 end
 
 -- the nearest target in front within reach, and where the strike meets it
-local function findTarget(rootPart, weapon)
-    local spec = GameConfig.Combat[weapon]
+local function findTarget(rootPart, spec)
     local facing = rootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
     facing = if facing.Magnitude > 0 then facing.Unit else Vector3.new(0, 0, -1)
     local cosArc = math.cos(math.rad(spec.Arc))
@@ -66,17 +66,17 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
     if not (humanoid and rootPart) or humanoid.Health <= 0 or player:GetAttribute("IsCultivating") == true then
         return
     end
-    local weapon = Combat.weaponOf(player)
+    local strike = Combat.strikeOf(player)
     local now = os.clock()
-    if lastStrike[player] and now - lastStrike[player] < GameConfig.Combat[weapon].Cooldown * COOLDOWN_SLACK then
+    if lastStrike[player] and now - lastStrike[player] < strike.Cooldown * COOLDOWN_SLACK then
         return
     end
     lastStrike[player] = now
-    local target, point = findTarget(rootPart, weapon)
+    local target, point = findTarget(rootPart, strike)
     if target then
-        Combat.Hit:Fire(player, target, Combat.damageOf(player), point)
+        Combat.Hit:Fire(player, target, strike.Damage * Combat.powerOf(player), point)
     end
-    RemoteEvents.CombatEvent:FireAllClients(player, weapon, point)
+    RemoteEvents.CombatEvent:FireAllClients(player, strike.Kind, point)
 end)
 
 Players.PlayerRemoving:Connect(function(player)

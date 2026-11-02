@@ -18,31 +18,6 @@ local REQUEST_COOLDOWN = 0.2 -- seconds between a player's equip/unequip/aura re
 local lastHatchTime = {}
 local lastRequest = {}
 
-local function sendInventory(player)
-    local snapshot = PetInventory.getSnapshot(player)
-    RemoteEvents.PetInventoryUpdatedEvent:FireClient(player, snapshot)
-
-    local auraPetId = nil
-    if snapshot and snapshot.AuraPetInstanceId then
-        for _, pet in snapshot.Pets do
-            if pet.InstanceId == snapshot.AuraPetInstanceId then
-                auraPetId = pet.PetId
-            end
-        end
-    end
-    player:SetAttribute("AuraPetId", auraPetId)
-
-    local equippedPetIds = {}
-    if snapshot then
-        for _, pet in snapshot.Pets do
-            if pet.Equipped then
-                table.insert(equippedPetIds, pet.PetId)
-            end
-        end
-    end
-    player:SetAttribute("EquippedPetIds", table.concat(equippedPetIds, ","))
-end
-
 local function setupPlayer(player)
     local progress, isNewPlayer = PlayerData.waitForData(player)
     if not progress then
@@ -51,7 +26,7 @@ local function setupPlayer(player)
 
     PetInventory.setupPlayer(player, if isNewPlayer then nil else progress)
     EggInventory.setupPlayer(player, if isNewPlayer then nil else progress)
-    sendInventory(player)
+    PetInventory.publish(player)
 end
 
 -- Each accepted request rebuilds the player's aura and pets on every client, so they are throttled.
@@ -63,7 +38,7 @@ local function handleRequest(remoteEvent, action)
         end
         lastRequest[player] = now
         if action(player, instanceId) then
-            sendInventory(player)
+            PetInventory.publish(player)
         end
     end)
 end
@@ -152,7 +127,7 @@ local function onEggTriggered(player, eggId, eggPart, maxDistance)
     end
 
     playerHatchTimes[eggId] = now
-    sendInventory(player)
+    PetInventory.publish(player)
     PlayerData.saveSoon(player)
     RemoteEvents.EggHatchResultEvent:FireClient(player, {
         EggId = eggId,

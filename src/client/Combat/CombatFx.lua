@@ -34,8 +34,9 @@ local TEXTURES = {
     Streak = "rbxassetid://115312010132075",
 }
 local MAX_DISTANCE = 250
-local POSE_TIME = { Palm = 0.3, Sword = 0.38 }
+local POSE_TIME = { Palm = 0.3, Sword = 0.38, Spear = 0.42 }
 local SWORD_TIME = 0.3
+local SPEAR_TIME = 0.36
 
 local fxFolder = Instance.new("Folder")
 fxFolder.Name = "CombatFx"
@@ -213,6 +214,76 @@ local function sword(player, p, root)
     }):Emit(1)
 end
 
+-- ---------- the spear thrust ----------
+-- A spear of Qi light in the realm's colour (until each tier's spear is modelled): drawn back at the
+-- right hip, driven straight ahead, held a beat and gone, a lance of streaks running on to the
+-- spear's reach (GameConfig.WeaponKinds.Spear.Range).
+local function spear(player, p, root)
+    local glow = swordGlow(player)
+    local function piece(size, color, transparency)
+        local part = Instance.new("Part")
+        part.Size = size
+        part.Color = color
+        part.Material = Enum.Material.Neon
+        part.Transparency = transparency
+        part.Anchored = true
+        part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = false, false, false, false
+        part.Parent = fxFolder
+        return part
+    end
+    local shaft = piece(Vector3.new(0.2, 0.2, 7), glow, 0.25)
+    local head = piece(Vector3.new(0.55, 0.55, 1.5), p.Core, 0)
+    local tail, tip = Instance.new("Attachment"), Instance.new("Attachment")
+    tail.Position, tip.Position = Vector3.new(0, 0, 3.5), Vector3.new(0, 0, -3.5)
+    tail.Parent, tip.Parent = shaft, shaft
+    local trail = Instance.new("Trail")
+    trail.Attachment0, trail.Attachment1 = tail, tip
+    trail.Lifetime = 0.12
+    trail.FaceCamera = true
+    trail.LightEmission = 0.8
+    trail.LightInfluence = 0
+    trail.Texture = TEXTURES.Glow
+    trail.Color = colorSequence({ { 0, p.Core }, { 1, glow } })
+    trail.Transparency = numberSequence({ { 0, 0.3 }, { 1, 1 } })
+    trail.Parent = shaft
+
+    local start = os.clock()
+    local struck = false
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        local t = math.clamp((os.clock() - start) / SPEAR_TIME, 0, 1)
+        -- drawn back, then driven forward fast and eased out, held, then fading
+        local drive = math.clamp((t - 0.15) / 0.25, 0, 1)
+        local reach = -1.5 + 6.5 * (1 - (1 - drive) ^ 3)
+        local frame = root.CFrame * CFrame.new(0.9, 0.5, -1 - reach)
+        shaft.CFrame = frame
+        head.CFrame = frame * CFrame.new(0, 0, -4.2) * CFrame.Angles(0, 0, math.rad(45))
+        local fade = math.clamp((t - 0.7) / 0.3, 0, 1)
+        shaft.Transparency = 0.25 + 0.75 * fade
+        head.Transparency = fade
+        if drive >= 1 and not struck then
+            struck = true
+            local holder = host(head.CFrame, Vector3.new(0.4, 0.4, 0.4), 0.6)
+            emitter(holder, {
+                Texture = TEXTURES.Streak, EmissionDirection = Enum.NormalId.Front, Orientation = Enum.ParticleOrientation.VelocityParallel,
+                Speed = NumberRange.new(55, 70), SpreadAngle = Vector2.new(3, 3), Lifetime = NumberRange.new(0.16, 0.22), Drag = 2,
+                Size = numberSequence({ { 0, 1.6 }, { 1, 0.3 } }), Transparency = numberSequence({ { 0, 0 }, { 1, 1 } }),
+                Color = colorSequence({ { 0, p.Core }, { 1, glow } }), Brightness = 2.4,
+            }):Emit(6)
+            emitter(holder, {
+                Texture = TEXTURES.Glow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.16),
+                Size = numberSequence({ { 0, 1 }, { 1, 3.2 } }), Transparency = numberSequence({ { 0, 0.2 }, { 1, 1 } }),
+                Color = colorSequence({ { 0, p.Core }, { 1, glow } }), Brightness = 2,
+            }):Emit(1)
+        end
+        if t >= 1 then
+            connection:Disconnect()
+            shaft:Destroy()
+            head:Destroy()
+        end
+    end)
+end
+
 -- ---------- where a strike lands ----------
 function CombatFx.hit(player, position)
     local p = QinggongFx.palette(player)
@@ -249,12 +320,14 @@ function CombatFx.play(player, weapon)
     local p = QinggongFx.palette(player)
     if weapon == "Sword" then
         sword(player, p, root)
+    elseif weapon == "Spear" then
+        spear(player, p, root)
     else
         palm(p, root)
     end
 end
 
--- The strike pose a player is in ("Palm", "Sword") or nil; PoseController reads it.
+-- The strike pose a player is in ("Palm", "Sword", "Spear") or nil; PoseController reads it.
 function CombatFx.pose(player)
     local strike = strikes[player]
     if strike and os.clock() < strike.untilTime then

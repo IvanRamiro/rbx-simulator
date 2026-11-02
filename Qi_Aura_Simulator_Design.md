@@ -875,6 +875,29 @@ Build one complete encounter before expanding to every island.
 
 ---
 
+## 7b. Weapons and Spirit Stones (phase 1 built November 2, 2026)
+
+### The owner's decisions
+- The Blacksmith sells a **sword and a spear for each realm**; a player buys those of their realm or below.
+- **Buy & Sell** buys players' pets and weapons.
+- The currency is **Spirit Stones** (Qi is never spent: ranks are reached by total Qi).
+- **Sword vs spear:** the sword strikes fast and wide, the spear slower, farther and harder, for the same damage over time.
+- The Blacksmith will also **forge custom weapons**: a relic found on the maps or dropped by a guardian sets a forged weapon's element (its glow, trail and strike effect), and the player names it.
+- **Exclusive weapons** are a separate line, designed later.
+
+### Built (phase 1: the systems)
+- `GameConfig.WeaponKinds` (Sword: 12 reach, 80° arc, 0.55 s; Spear: 18 reach, 35°, 0.85 s, ×1.55 damage), `WeaponTiers` (one per realm, named, Damage 16 to 69, Price 60 to 2.2M stones), `SpiritStones` (pet values, refunds, relic share). `shared/Shop.lua` turns them into the catalogue (`Sword<tier>`, `Spear<tier>`) and prices pets by rarity and their egg's realm.
+- `server/Shop`: `Wallet` (Spirit Stones), `WeaponInventory` (owned weapons, the one wielded; a player with none gets the Reedwhisper Sword), `ShopService` (the shops' prompts, buy / wield / sell, checked on the server: reach of the shop's plot, realm, price, throttled). Saved in `PlayerData` (schema 7).
+- **Combat** strikes with the wielded weapon (`Combat.strikeOf`), or the Qi Palm with none. The spear's thrust is a spear of Qi light in the realm's colour until the spears are modelled.
+- **Earning stones:** selling pets (Common 6 to Secret 600, ×2.6 per realm of the pet's egg) and weapons (40% back), securing a guardian's egg (Stone Lion 150, Mantis Sage 600) and a relic's first attunement (a fifth of its Qi reward).
+- **Interface** (`client/Shop/ShopController`): a Stones counter by the Relics counter; the Blacksmith and Buy & Sell windows, opened from those plots' notice boards (selling asks "Sure?" first). Tested in Play: buy, wield, sell, the refusals (far away, too dear, the wielded weapon), the spear strike, and saving across a restart.
+
+### Still to build
+- **Phase 2, the art:** the 24 weapons (a sword and a spear per realm, each with its own look), and the Blacksmith and Buy & Sell buildings on their plots.
+- **Phase 3, the forge:** relic elements and naming at the Blacksmith; relics that guardians drop.
+
+---
+
 ## 8. Technical architecture
 
 **Tools:** Roblox Studio and Rojo 7.7.1 (VS Code, Git), with Blender 5.2 for pets, eggs, aura pieces and islands.

@@ -37,14 +37,52 @@ local GameConfig = {
         },
     },
 
-    -- Combat (src/server/Combat/CombatService). A Qi Palm before SwordFlight.UnlockRank, the sword
-    -- after. Damage grows by RankPowerStep of the base per rank above the first. A strike hits the
-    -- nearest target within Arc degrees of facing whose body is within Range studs.
+    -- Combat (src/server/Combat/CombatService). A player strikes with their equipped weapon
+    -- (WeaponKinds, WeaponTiers below), or the Qi Palm with none. Damage grows by RankPowerStep of the
+    -- base per rank above the first. A strike hits the nearest target within Arc degrees of facing
+    -- whose body is within Range studs.
     Combat = {
         TargetTag = "CombatTarget",
         RankPowerStep = 0.12,
         Palm = { Damage = 10, Range = 9, Cooldown = 0.45, Arc = 75 },
-        Sword = { Damage = 16, Range = 12, Cooldown = 0.55, Arc = 80 },
+    },
+
+    -- Weapons (src/server/Shop; the Blacksmith on Yggdrasil): a sword and a spear for every realm,
+    -- sold from that realm on for Spirit Stones (shared/Shop.lua names them Sword<tier>, Spear<tier>).
+    -- A strike's damage is the tier's Damage times the kind's DamageScale times the rank's power
+    -- (Combat.damageOf). The sword strikes fast and wide; the spear slower, farther and harder, for
+    -- the same damage over time. With none equipped a player strikes with the Qi Palm (Combat.Palm).
+    WeaponKinds = {
+        Sword = { Range = 12, Arc = 80, Cooldown = 0.55, DamageScale = 1 },
+        Spear = { Range = 18, Arc = 35, Cooldown = 0.85, DamageScale = 0.85 / 0.55 },
+    },
+    WeaponTiers = { -- one per realm, in the order of Ranks' realms; Price in Spirit Stones
+        { Realm = "Qi Awakening", Damage = 16, Price = 60, Sword = "Reedwhisper Sword", Spear = "Bamboo Thorn Spear" },
+        { Realm = "Qi Foundation", Damage = 21, Price = 160, Sword = "Jadevein Sword", Spear = "Jade Crane Spear" },
+        { Realm = "Spirit Core", Damage = 26, Price = 400, Sword = "Coreflame Sword", Spear = "Ember Fang Spear" },
+        { Realm = "Spirit Soul", Damage = 30, Price = 1050, Sword = "Soulmirror Sword", Spear = "Moonpiercer Spear" },
+        { Realm = "Ascendant Realm", Damage = 35, Price = 2700, Sword = "Skyrise Sword", Spear = "Cloudspine Spear" },
+        { Realm = "Immortal Realm", Damage = 40, Price = 7100, Sword = "Lotusfall Sword", Spear = "Crane Feather Spear" },
+        { Realm = "Divine Realm", Damage = 45, Price = 18500, Sword = "Thunderjudge Sword", Spear = "Thunderhowl Spear" },
+        { Realm = "Cosmic Realm", Damage = 50, Price = 48000, Sword = "Starriver Sword", Spear = "Comet Tail Spear" },
+        { Realm = "Void Realm", Damage = 54, Price = 125000, Sword = "Voidsilence Sword", Spear = "Abyss Fang Spear" },
+        { Realm = "Heavenly Dao", Damage = 59, Price = 325000, Sword = "Dao Heart Sword", Spear = "Heaven Pillar Spear" },
+        { Realm = "Primordial Realm", Damage = 64, Price = 850000, Sword = "Chaos Origin Sword", Spear = "Primeval Dragon Spear" },
+        { Realm = "Eternal Transcendence", Damage = 69, Price = 2200000, Sword = "Eternity Sword", Spear = "Eternal Sun Spear" },
+    },
+    StarterWeapon = "Sword1", -- every player's first weapon, given when they own none
+    MaxOwnedWeapons = 30,
+
+    -- Spirit Stones: the currency of the Blacksmith and Buy & Sell (Qi is never spent: ranks are
+    -- reached by total Qi). Earned by selling pets and weapons, securing guardians' eggs
+    -- (Guardians.<Id>.SecureStones) and a relic's first attunement.
+    SpiritStones = {
+        -- a pet's worth: its rarity's value times RealmFactor per realm of its egg's required rank
+        PetValue = { Common = 6, Uncommon = 12, Rare = 25, Epic = 50, Legendary = 110, Mythical = 250, Secret = 600 },
+        RealmFactor = 2.6, -- as weapon prices climb
+        WeaponRefund = 0.4, -- the share of its price a weapon sells back for
+        RelicShare = 0.2, -- a relic's first attunement pays this share of its Qi reward in stones
+        Max = 1e12,
     },
 
     -- Guardians (src/server/Guardians/GuardianService; design doc section 7). While a guardian
@@ -63,6 +101,7 @@ local GameConfig = {
             Facing = Vector3.new(0, 0.4, 0), -- toward the World Tree
             Eggs = { "BeginnerQiEgg", "SpiritBreezeEgg", "ElementalCoreEgg" },
             SafeZone = { Centre = Vector3.new(170, -1.5, 6), Radius = 15, Name = "Egg Garden" },
+            SecureStones = 150,     -- Spirit Stones for securing its egg
             MaxHealth = 1200,      -- a beginner's Qi Palm weakens it alone in ~72 strikes (about half a minute)
             WeakenedAt = 0.4,      -- share of health below which it falters and the egg can be taken
             HitRadius = 14,        -- its body round the chest
@@ -92,6 +131,7 @@ local GameConfig = {
             Facing = Vector3.new(0, 2.4, 6),
             Eggs = { "JadeSpiritEgg", "BloomwoodEgg", "AncientGroveEgg" },
             SafeZone = { Centre = Vector3.new(-30, 4, 41), Radius = 15, Name = "Bloom Glade" },
+            SecureStones = 600,     -- Spirit Stones for securing its egg
             MaxHealth = 2000,      -- a Qi Gatherer's palm (11 a strike) weakens it alone in ~110 strikes
             WeakenedAt = 0.4,
             HitRadius = 13,

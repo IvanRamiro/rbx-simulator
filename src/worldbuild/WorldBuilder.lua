@@ -1389,9 +1389,10 @@ end
 -- What will stand on each plot, named on its notice board.
 WorldBuilder.Plots = {
     Leaderboard = { Title = "Leaderboard", Subtitle = "The greatest cultivators, carved here soon", Built = "Ascension Stele" },
-    Blacksmith = { Title = "Blacksmith", Subtitle = "Exclusive weapons, forged here soon" },
+    -- Shop: its notice board opens that shop (ShopService); the building comes later
+    Blacksmith = { Title = "Blacksmith", Subtitle = "Swords and spears for every realm", Shop = "Blacksmith", Action = "Browse" },
     Marketplace = { Title = "Marketplace", Subtitle = "Opening soon" },
-    BuySell = { Title = "Buy & Sell", Subtitle = "Trade your treasures here soon" },
+    BuySell = { Title = "Buy & Sell", Subtitle = "Sell pets and weapons for Spirit Stones", Shop = "BuySell", Action = "Trade" },
 }
 WorldBuilder.PlotCordColor = Color3.fromRGB(190, 30, 25)
 local PLOT_STAKE_GAP = 12 -- studs, at most, between stakes
@@ -1466,6 +1467,17 @@ function WorldBuilder.buildPlots(island)
         panel.CanTouch = false
         panel.Parent = model
         inscribe(panel, info.Title, info.Subtitle, Color3.fromRGB(255, 190, 90))
+        if info.Shop then
+            local prompt = Instance.new("ProximityPrompt")
+            prompt.ActionText = info.Action
+            prompt.ObjectText = info.Title
+            prompt.KeyboardKeyCode = Enum.KeyCode.F
+            prompt.HoldDuration = 0
+            prompt.MaxActivationDistance = 14
+            prompt.RequiresLineOfSight = false
+            prompt:SetAttribute("Shop", info.Shop)
+            prompt.Parent = panel
+        end
         model.Parent = folder
     end
     WorldBuilder.applyCollision(folder)

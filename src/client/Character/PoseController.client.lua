@@ -84,6 +84,7 @@ FLYING.Waist = deg(-6, 0, 0)
 -- Strikes (CombatFx) pose only the arms and waist, so they combine with whatever the legs are
 -- doing. Palm: the right palm thrust ahead, the left fist drawn back to the hip, the waist
 -- turned into it. Sword: the right hand raised forward in a sword gesture, the left drawn back.
+-- Spear: both hands driven forward low along the shaft, the waist turned hard into the thrust.
 local STRIKES = {
     Palm = {
         RightShoulder = pointLimb(Vector3.new(-0.05, -0.12, -0.99)),
@@ -100,6 +101,14 @@ local STRIKES = {
         LeftShoulder = pointLimb(Vector3.new(0.25, -0.8, 0.55)),
         LeftElbow = deg(60, 0, 0),
         Waist = deg(0, 15, 0),
+    },
+    Spear = {
+        RightShoulder = pointLimb(Vector3.new(0.1, -0.25, -0.96)),
+        RightElbow = deg(5, 0, 0),
+        RightWrist = deg(-15, 0, 0),
+        LeftShoulder = pointLimb(Vector3.new(0.35, -0.4, -0.85)),
+        LeftElbow = deg(35, 0, 0),
+        Waist = deg(0, -35, 0),
     },
 }
 

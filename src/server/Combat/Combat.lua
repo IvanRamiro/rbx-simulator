@@ -1,8 +1,10 @@
 -- Combat rules shared by the server's systems (CombatService resolves strikes; guardians and any
 -- other target listen for hits).
 --
---   Combat.weaponOf(player)  "Palm" before the flying sword is earned, "Sword" after
---   Combat.damageOf(player)  the weapon's damage times the rank's power
+--   Combat.strikeOf(player)  the player's strike: { Kind = "Palm" | "Sword" | "Spear", Range, Arc,
+--                            Cooldown, Damage (before rank power), WeaponId }: their equipped weapon
+--                            (WeaponInventory), or the Qi Palm with none
+--   Combat.damageOf(player)  the strike's damage times the rank's power
 --   Combat.Hit               a BindableEvent (ServerStorage.CombatHit): (player, target, damage, position)
 --                            fired for every strike that lands on a target tagged GameConfig.Combat.TargetTag
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,6 +12,7 @@ local ServerStorage = game:GetService("ServerStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local WeaponInventory = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("WeaponInventory"))
 
 local Combat = {}
 
@@ -22,8 +25,14 @@ if not hit then
 end
 Combat.Hit = hit
 
-function Combat.weaponOf(player)
-    return if Ranks.isAtLeast(Ranks.getPlayerRankName(player), GameConfig.SwordFlight.UnlockRank) then "Sword" else "Palm"
+function Combat.strikeOf(player)
+    local weapon = WeaponInventory.equipped(player)
+    if not weapon then
+        local palm = GameConfig.Combat.Palm
+        return { Kind = "Palm", Range = palm.Range, Arc = palm.Arc, Cooldown = palm.Cooldown, Damage = palm.Damage }
+    end
+    local kind = GameConfig.WeaponKinds[weapon.Kind]
+    return { Kind = weapon.Kind, Range = kind.Range, Arc = kind.Arc, Cooldown = kind.Cooldown, Damage = weapon.Damage, WeaponId = weapon.Id }
 end
 
 function Combat.powerOf(player)
@@ -32,7 +41,7 @@ function Combat.powerOf(player)
 end
 
 function Combat.damageOf(player)
-    return GameConfig.Combat[Combat.weaponOf(player)].Damage * Combat.powerOf(player)
+    return Combat.strikeOf(player).Damage * Combat.powerOf(player)
 end
 
 return Combat

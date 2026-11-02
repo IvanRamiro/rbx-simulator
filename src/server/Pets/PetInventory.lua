@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 
 local PetInventory = {}
 
@@ -117,6 +118,22 @@ function PetInventory.unequip(player, instanceId)
     return true
 end
 
+-- Takes a pet out of the inventory (unequipping it first); its PetId, or nil when it isn't theirs.
+function PetInventory.take(player, instanceId)
+    local data = playerData[player]
+    if not data or typeof(instanceId) ~= "string" then
+        return nil
+    end
+    for index, pet in data.ownedPets do
+        if pet.InstanceId == instanceId then
+            PetInventory.unequip(player, instanceId)
+            table.remove(data.ownedPets, index)
+            return pet.PetId
+        end
+    end
+    return nil
+end
+
 function PetInventory.setAuraPet(player, instanceId)
     local data = playerData[player]
     if not data then
@@ -209,6 +226,33 @@ for eggId, egg in GameConfig.Eggs do
         assert(GameConfig.Pets[entry.PetId], "Unknown pet ID in GameConfig.Eggs." .. eggId .. ".Pool: " .. tostring(entry.PetId))
         assert(entry.Weight > 0, "GameConfig.Eggs." .. eggId .. ".Pool weights must be greater than 0")
     end
+end
+
+-- Sends the player their inventory (PetInventoryUpdatedEvent) and sets the attributes every client
+-- reads: "AuraPetId" and "EquippedPetIds" (comma-separated PetIds).
+function PetInventory.publish(player)
+    local snapshot = PetInventory.getSnapshot(player)
+    RemoteEvents.PetInventoryUpdatedEvent:FireClient(player, snapshot)
+
+    local auraPetId = nil
+    if snapshot and snapshot.AuraPetInstanceId then
+        for _, pet in snapshot.Pets do
+            if pet.InstanceId == snapshot.AuraPetInstanceId then
+                auraPetId = pet.PetId
+            end
+        end
+    end
+    player:SetAttribute("AuraPetId", auraPetId)
+
+    local equippedPetIds = {}
+    if snapshot then
+        for _, pet in snapshot.Pets do
+            if pet.Equipped then
+                table.insert(equippedPetIds, pet.PetId)
+            end
+        end
+    end
+    player:SetAttribute("EquippedPetIds", table.concat(equippedPetIds, ","))
 end
 
 return PetInventory

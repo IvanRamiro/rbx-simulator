@@ -136,6 +136,7 @@ RemoteEvents.RelicResultEvent.OnClientEvent:Connect(function(result)
     if result.Reason == "Locked" then
         message:show(relic.DisplayName .. " needs " .. tostring(result.RequiredRank) .. " to attune.")
     else
-        message:show("Attuned to " .. relic.DisplayName .. "! +" .. tostring(result.QiReward) .. " Qi")
+        local stones = if typeof(result.Stones) == "number" and result.Stones > 0 then ", +" .. result.Stones .. " Spirit Stones" else ""
+        message:show("Attuned to " .. relic.DisplayName .. "! +" .. tostring(result.QiReward) .. " Qi" .. stones)
     end
 end)
