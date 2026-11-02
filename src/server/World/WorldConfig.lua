@@ -9,7 +9,7 @@ local WorldConfig = {
         Yggdrasil = { Centre = Vector3.new(0, 200, 0), Radius = 250 },
         JadeGrove = { Centre = Vector3.new(-384, 200, -448), Radius = 160, Turns = 0 }, -- doubled 2026-11-02
         EmberPeak = { Centre = Vector3.new(-128, 200, -696), Radius = 150, Turns = 0 }, -- doubled 2026-11-02
-        MoonlitIsle = { Centre = Vector3.new(180, 200, -742), Radius = 60, Turns = 0 },
+        MoonlitIsle = { Centre = Vector3.new(192, 200, -804), Radius = 125, Turns = 0 }, -- doubled 2026-11-02
         OriginAbyss = { Centre = Vector3.new(572, 200, -784), Radius = 85, Turns = 1 },
     },
 

@@ -607,7 +607,7 @@ Five floating islands built from original Blender work: terrain tops, sculpted u
 | Yggdrasil | (0, 200, 0) | The World Tree and the spawn hub | Root of the Island (300 Qi, Qi Initiate) |
 | Jade Grove | (−384, 200, −448), 0 | Ancient forest | Grove Heart, Jade Seed, Whispering Spring (800 Qi each, Qi Gatherer) |
 | Ember Peak | (−128, 200, −696), 0 | Volcanic, lava pools | Ember Heart, Ashen Sigil, Caldera Crown (1,500 Qi each, Qi Awakener) |
-| Moonlit Isle | (180, 200, −742), 0 | Pale and celestial | Moon Mirror, Star Well (3,000 Qi each, Foundation Initiate) |
+| Moonlit Isle | (192, 200, −804), 0 | Pale and celestial | Moon Mirror, Star Well (3,000 Qi each, Foundation Initiate) |
 | Origin Abyss | (572, 200, −784), 1 | Hidden endgame: dark slate, void crystals and rifts, broken ruins | Origin Altar (250K Qi, Divine Initiate); the Void Shard high above it (1M Qi, Void Walker) |
 
 **Shared rules**
@@ -667,18 +667,18 @@ Columnar basalt is the island's signature, used for the cliffs, the climb, the a
 - **Dressing:** fire crystals, ember vents throwing sparks, basalt clusters and obsidian shards, about three times the old count, all round the arena.
 - **Tested in Play:** from the bridge to the egg pedestals in 5 s, the prompt in reach; the lava river returns the player to the new checkpoint.
 
-### Moonlit Isle (built)
+### Moonlit Isle (built; doubled November 2, 2026)
 
-Seen from above, the island is a crescent moon: a full disc with a larger offset disc cut away, its horns curling around an open bay of sky.
+Seen from above, the island is a crescent moon: a full disc (about 250 studs across since the owner's upgrade) with a deep bay of sky cut out of its north, its horns curling around it. Moved out along its unchanged bridge.
 
-- **Arrival:** the bridge lands through a gold crescent arch between two moonstone spires.
-- **Moon Mirror:** a dark reflective pool you can walk on, in a marble-and-gold rim. A curved bridge leads to a moonstone lotus holding the **Moon Mirror** relic.
-- **Star Well:** on the west horn, a marble well with a gold lip, brimming with glowing starlight, with the **Star Well** relic above it.
-- **Celestial Pavilion:** eight porcelain pillars with gold crescent finials on a stepped marble platform, under a floating golden armillary.
-  - Its porcelain egg pedestals have a wide blue dish with gold bands at the lip and foot. Their old gold wings and orbiting ring were removed with the new eggs: the ring cut through them.
-  - They hold the Celestial, Astral Sanctum and Heavenly Throne eggs.
-- **Underside and cliffs:** marble cliffs with a gold band under the lip step inward into a belt of soft cloud. Moonstone geode crystals hang beneath, some of them glowing.
-- **Dressing:** hovering porcelain star lanterns, glowing frost lilies, moonstone shards, lunar rocks and spires on the horns.
+- **Lunar Court** (the middle, a little south of the disc's centre): a level ring of moon paving bordered in salt-white stone (radius 50), ringed by hovering star lanterns along its path. Its centre is kept for Moonlit Isle's guardian (the Celestial Guardian, still to design). At its back, looking out over the bay, the three porcelain egg pedestals (a wide blue dish with gold bands at the lip and foot) hold the Celestial, Astral Sanctum and Heavenly Throne eggs.
+- **Arrival:** the bridge lands on the south rim through the gold Crescent Arch; the path runs straight to the court.
+- **Moon Mirror** (west): a dark reflective pool you can walk on, in a marble-and-gold rim. A curved bridge leads from its court-side bank to a moonstone lotus holding the **Moon Mirror** relic.
+- **Star Well** (west horn): a marble well with a gold lip, brimming with glowing starlight, with the **Star Well** relic above it.
+- **Celestial Pavilion** (east horn): eight porcelain pillars with gold crescent finials on a stepped marble platform, under a floating golden armillary (the eggs stood here before the upgrade).
+- **Underside and cliffs:** marble cliffs with a gold band under the lip step inward into a belt of soft cloud, deeper at the new size. Moonstone geode crystals hang beneath, some of them glowing.
+- **Dressing:** hovering porcelain star lanterns along every path, glowing frost lilies, moonstone shards, lunar rocks and spires on the horns, about three times the old count.
+- **Tested in Play:** from the bridge to the egg pedestals in 4 s, the prompt in reach; across the Moon Mirror's bridge to its relic; a step into the bay returns the player to the checkpoint.
 
 ### Origin Abyss (built)
 

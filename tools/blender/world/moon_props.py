@@ -2,7 +2,8 @@
 
 - The Celestial Pavilion: a stepped marble platform, eight porcelain pillars with gold crescent
   finials, and a floating golden armillary.
-- Porcelain egg pedestals with blue glaze bands and gold bands at the lip and foot.
+- Porcelain egg pedestals with blue glaze bands and gold bands at the lip and foot, in an arc at the
+  Lunar Court's back (since 2026-11-02; they stood in the pavilion before).
 - Island dressing: star lanterns hovering over the frost, glowing frost lilies, moonstone shards
   and lunar rocks.
 """
@@ -196,14 +197,12 @@ def face_yaw(fx, fz):
 
 
 def egg_layout():
-    """Three pedestals across the pavilion's far half, facing the path in."""
-    entrance = M.PATHS[2][-1]
-    toward = math.atan2(entrance[1] - PZ, entrance[0] - PX)
+    """The three porcelain pedestals in their arc at the Lunar Court's back, each facing the lair,
+    looking out over the bay behind them."""
     out = []
-    for k, eid in enumerate(EGG_IDS):
-        a = toward + math.pi + (k - 1) * 1.3   # about 6 studs apart, so the wings never overlap
-        x, z = PX + math.cos(a) * 5.0, PZ + math.sin(a) * 5.0
-        out.append((eid, x, z, face_yaw(entrance[0] - x, entrance[1] - z)))
+    for eid, bearing in zip(EGG_IDS, M.EGG_BEARINGS):
+        x, z = M.court_point(bearing, M.EGG_RING)
+        out.append((eid, x, z, face_yaw(M.LAIR[0] - x, M.LAIR[1] - z)))
     return out
 
 
@@ -211,11 +210,12 @@ def scatter(rnd, count, gap, taken, edge_min=3.0, tries=4000):
     out = []
     zones = [(M.MIRROR[0], M.MIRROR[1], M.MIRROR[2] + 2), (PX, PZ, PR + 2), (M.WELL[0], M.WELL[1], M.WELL[2] + 4),
              (M.LANDING[0], M.LANDING[1], M.LANDING[2] + 4),
-             (M.ARRIVAL[0], M.ARRIVAL[1], 9)]   # where the bridge from Yggdrasil lands
+             (M.ARRIVAL[0], M.ARRIVAL[1], 9),   # where the bridge from Yggdrasil lands
+             (M.ARENA[0], M.ARENA[1], M.RING_R + 6)]   # the Lunar Court stays open
     for _ in range(tries):
         if len(out) >= count:
             break
-        x, z = rnd.uniform(-65, 65), rnd.uniform(-60, 70)
+        x, z = rnd.uniform(-135, 135), rnd.uniform(-135, 135)
         if M.edge_distance(x, z) < edge_min or M.path_distance(x, z) < 3:
             continue
         if any(math.hypot(x - a, z - b) < r for a, b, r in zones):
@@ -260,17 +260,17 @@ def kit_entries():
             add("MI_StarLantern", x, ground(x, z), z, a)
             add("MI_StarLanternCore", x, ground(x, z), z)
             taken.append((x, z, 4))
-    for x, z in scatter(rnd, 16, 6, taken):
+    for x, z in scatter(rnd, 50, 6, taken):
         y = ground(x, z) - 0.1
         yaw = rnd.uniform(0, TAU)
         add("MI_FrostLilies", x, y, z, yaw)
         add("MI_LilyGlow", x, y, z, yaw)
-    for x, z in scatter(rnd, 9, 9, taken):
+    for x, z in scatter(rnd, 28, 9, taken):
         add("MI_MoonstoneShards", x, ground(x, z) - 0.2, z, rnd.uniform(0, TAU), rnd.uniform(0.8, 1.3))
-    for x, z in scatter(rnd, 8, 9, taken, edge_min=2.0):
+    for x, z in scatter(rnd, 24, 9, taken, edge_min=2.0):
         add("MI_LunarRock", x, ground(x, z) - 0.4, z, rnd.uniform(0, TAU), rnd.uniform(0.8, 1.4))
     # more spires along both horns
-    for deg in (192, 200, 345, 352, 18):
+    for deg in (192, 200, 210, 222, 330, 340, 352, 5, 18, 160, 140, 45):
         for frac in (0.5,):
             x, z = M.band_point(deg, frac)
             if M.edge_distance(x, z) > 1.8 and all(math.hypot(x - tx, z - tz) > max(6, tg) for tx, tz, tg in taken):
@@ -283,7 +283,7 @@ def write_all():
     lines = ['    EggStandPieces = { Pedestal = "MI_EggPedestal", GlowRing = "MI_EggGlowRing" },', "    EggStands = {"]
     for eid, x, z, yaw in egg_layout():
         lines.append('        { EggId = "%s", Position = Vector3.new(%.2f, %.2f, %.2f), Yaw = %.4f, EggRest = %.2f },'
-                     % (eid, x, PLATFORM_TOP, z, yaw, PEDESTAL_TOP))
+                     % (eid, x, ground(x, z), z, yaw, PEDESTAL_TOP))
     lines.append("    },")
     MM.write_placements(extra_kit=kit_entries(), extra_lines=lines)
 

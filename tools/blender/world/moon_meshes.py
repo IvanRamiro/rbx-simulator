@@ -120,9 +120,10 @@ def coast(offset=1.6, step_deg=3.0):
     return pts
 
 
-SKIRT_TOP, SKIRT_BOTTOM = -2.3, -25.0
-# the cliff steps inward as it falls: (depth below the island, inset from the coast)
-SKIRT_RINGS = [(SKIRT_TOP, 0.0), (SKIRT_TOP - 0.7, 0.1), (-10.0, 2.6), (-17.0, 5.0), (SKIRT_BOTTOM, 10.0)]
+SKIRT_TOP, SKIRT_BOTTOM = -2.3, -38.0
+# the cliff steps inward as it falls: (depth below the island, inset from the coast); deeper since
+# the island doubled (2026-11-02)
+SKIRT_RINGS = [(SKIRT_TOP, 0.0), (SKIRT_TOP - 0.7, 0.1), (-15.0, 4.0), (-26.0, 7.5), (SKIRT_BOTTOM, 15.0)]
 
 
 def inward(x, z):
@@ -168,8 +169,9 @@ def cliff_skirt(coll, mat, bands):
 
 def cells(spacing):
     out = []
-    for j in range(-12, 13):
-        for i in range(-12, 13):
+    n = int(140 / spacing) + 1
+    for j in range(-n, n + 1):
+        for i in range(-n, n + 1):
             x = (i + (0.5 if j % 2 else 0)) * spacing
             z = j * spacing * 0.866
             if M.edge_distance(x, z) > -1.0:
@@ -194,12 +196,12 @@ def cloud_bank(coll, mat, bands):
     for i in range(0, len(loop), 3):
         x, z = loop[i]
         ix, iz = inward(x, z)
-        r = rnd.uniform(5.0, 8.0)
-        _puff(mb, bands, (x - ix * r * 0.35, rnd.uniform(-15, -9), z - iz * r * 0.35), r, rnd)
-    for x, z in cells(12.0):
+        r = rnd.uniform(7.0, 11.0)
+        _puff(mb, bands, (x - ix * r * 0.35, rnd.uniform(-22, -13), z - iz * r * 0.35), r, rnd)
+    for x, z in cells(16.0):
         e = M.edge_distance(x, z)
-        depth = min(1.0, max(0.0, e) / 18)
-        r = rnd.uniform(7.0, 10.0)
+        depth = min(1.0, max(0.0, e) / 30)
+        r = rnd.uniform(9.5, 13.0)
         _puff(mb, bands, (x, SKIRT_BOTTOM + 4 - depth * rnd.uniform(3, 8), z), r, rnd)
     return mb.object("MI_CloudBank", coll, mat, smooth=True)
 
@@ -207,9 +209,9 @@ def cloud_bank(coll, mat, bands):
 def geode_sites():
     rnd = random.Random(311)
     out = []
-    for deg in (100, 125, 150, 172, 70, 48, 90):
-        x, z = M.band_point(deg, rnd.uniform(0.3, 0.7))
-        out.append((x, z, rnd.uniform(10, 16)))
+    for deg in (100, 125, 150, 172, 70, 48, 90, 20, 200, -20, -160, 135, 60):
+        x, z = M.band_point(deg, rnd.uniform(0.4, 0.75))
+        out.append((x, z, rnd.uniform(15, 24)))
     return out
 
 
@@ -223,7 +225,7 @@ def geode(coll, mat, bands, glow_only=False):
             if glows != glow_only:
                 continue
             d = (rnd.uniform(-0.35, 0.35), -1, rnd.uniform(-0.35, 0.35))
-            JM.crystal_prism(mb, (x + rnd.uniform(-3, 3), SKIRT_BOTTOM - 4, z + rnd.uniform(-3, 3)), d,
+            JM.crystal_prism(mb, (x + rnd.uniform(-4, 4), SKIRT_BOTTOM - 6, z + rnd.uniform(-4, 4)), d,
                              size * rnd.uniform(0.5, 1.0), size * rnd.uniform(0.09, 0.14),
                              bands[GLOW] if glow_only else bands[MOONSTONE], n * 10 + k)
     return mb.object("MI_GeodeGlow" if glow_only else "MI_Geode", coll, mat)
