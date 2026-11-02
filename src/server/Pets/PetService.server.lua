@@ -1,4 +1,3 @@
-local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -9,13 +8,11 @@ local EggInventory = require(script.Parent:WaitForChild("EggInventory"))
 local PetInventory = require(script.Parent:WaitForChild("PetInventory"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
 local PromptRules = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("PromptRules"))
+local EggModel = require(script.Parent.Parent:WaitForChild("Guardians"):WaitForChild("EggModel"))
 
 local random = Random.new()
 local REQUEST_COOLDOWN = 0.2 -- seconds between a player's equip/unequip/aura requests
 
--- [UserId] = { [EggId] = os.clock() of the last hatch }: kept by UserId and through leaving, so
--- rejoining this server doesn't skip a cooldown
-local lastHatchTime = {}
 local lastRequest = {}
 
 local function setupPlayer(player)
@@ -63,24 +60,50 @@ local function rollEggPet(egg)
     return lastEntry.PetId, lastEntry.Weight / totalWeight
 end
 
--- The guardian standing in the world that guards this egg, if any: while it stands, the egg is
--- only hatched from the player's egg inventory (eggs taken from it), never for free.
-local function guardianOf(eggId)
-    for _, model in CollectionService:GetTagged(GameConfig.GuardianTag) do
-        local config = GameConfig.Guardians[model:GetAttribute("GuardianId")]
-        if config and model:IsDescendantOf(workspace) and table.find(config.Eggs, eggId) then
-            return config
-        end
-    end
-    return nil
+-- ---------- hatching, at the Hatching Altar ----------
+-- Eggs are carried home from the guardians' stands (Guardian.lua) into the egg inventory and hatched
+-- here, at Yggdrasil's Hatching Altar (WorldBuilder.buildAltar): its prompt opens the hatching
+-- window on the client, which asks for one egg at a time (HatchEggEvent). Each hatch is staged:
+-- the egg is laid in the altar's cradle for everyone to see, and taken away when it breaks open.
+local HATCH_STAGE = 2.6 -- seconds the egg rests in the cradle before it breaks
+local hatching = {}     -- [player] = true while their egg is in the cradle
+
+-- The altar (FloatingIslands.<HatchingAltar.Island>.HatchingAltar), its prompt's part and prompt.
+local function altarParts()
+    local folder = workspace:FindFirstChild("FloatingIslands")
+    local island = folder and folder:FindFirstChild(GameConfig.HatchingAltar.Island)
+    local altar = island and island:FindFirstChild("HatchingAltar")
+    local promptPart = altar and altar:FindFirstChild("Prompt")
+    local prompt = promptPart and promptPart:FindFirstChildWhichIsA("ProximityPrompt")
+    return altar, promptPart, prompt
 end
 
-local function onEggTriggered(player, eggId, eggPart, maxDistance)
-    local egg = GameConfig.Eggs[eggId]
-    if not egg or player.Parent ~= Players or not PromptRules.isAliveAndNear(player, eggPart, maxDistance) then
+local function stageEgg(altar, eggId)
+    local cradle = altar:FindFirstChild("Cradle")
+    if not cradle then
+        return nil
+    end
+    local model = EggModel.build(eggId, 3.6)
+    model.Name = "HatchingEgg"
+    model:PivotTo(cradle.CFrame * CFrame.new(0, 1.8, 0))
+    model.PrimaryPart.Anchored = true
+    model.Parent = altar
+    task.delay(HATCH_STAGE + 0.4, function()
+        model:Destroy()
+    end)
+    return model
+end
+
+local function onHatchRequest(player, eggId)
+    local egg = typeof(eggId) == "string" and GameConfig.Eggs[eggId]
+    local altar, promptPart, prompt = altarParts()
+    if not egg or hatching[player] or player.Parent ~= Players or not promptPart
+        or not PromptRules.isAliveAndNear(player, promptPart, PromptRules.maxDistance(prompt)) then
         return
     end
-
+    if EggInventory.count(player, eggId) < 1 then
+        return
+    end
     local _, rankValue = PlayerData.getStats(player)
     if not (rankValue and Ranks.isAtLeast(rankValue.Value, egg.RequiredRank)) then
         RemoteEvents.EggHatchResultEvent:FireClient(player, {
@@ -90,69 +113,34 @@ local function onEggTriggered(player, eggId, eggPart, maxDistance)
         })
         return
     end
-
-    -- a guarded egg comes from the inventory and was earned, so it skips the cooldown
-    local guardian = guardianOf(eggId)
-    local now = os.clock()
-    local playerHatchTimes = lastHatchTime[player.UserId] or {}
-    lastHatchTime[player.UserId] = playerHatchTimes
-    if guardian then
-        if EggInventory.count(player, eggId) < 1 then
-            RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "Guarded", Guardian = guardian.DisplayName })
-            return
-        end
-    else
-        local lastTime = playerHatchTimes[eggId]
-        if lastTime and now - lastTime < egg.Cooldown then
-            local secondsLeft = math.ceil(egg.Cooldown - (now - lastTime))
-            RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "Cooldown", SecondsLeft = secondsLeft })
-            return
-        end
-    end
-
     if PetInventory.isFull(player) then
         RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "InventoryFull" })
         return
     end
-
-    if guardian and not EggInventory.take(player, eggId) then
+    if not EggInventory.take(player, eggId) then
         return
     end
     local petId, chance = rollEggPet(egg)
     if not PetInventory.grantPet(player, petId) then
-        if guardian then
-            EggInventory.grant(player, eggId)
-        end
+        EggInventory.grant(player, eggId)
         return
     end
-
-    playerHatchTimes[eggId] = now
+    hatching[player] = true
+    task.delay(HATCH_STAGE, function()
+        hatching[player] = nil
+    end)
     PetInventory.publish(player)
     PlayerData.saveSoon(player)
     RemoteEvents.EggHatchResultEvent:FireClient(player, {
         EggId = eggId,
         PetId = petId,
         ChancePercent = math.round(chance * 1000) / 10,
+        Staged = stageEgg(altar, eggId),
+        Delay = HATCH_STAGE,
     })
 end
 
-local connectedStands = {}
-
-local function connectEggStand(stand)
-    local eggId = stand:GetAttribute("EggId")
-    local prompt = stand:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if connectedStands[stand] or not (typeof(eggId) == "string" and GameConfig.Eggs[eggId] and prompt) then
-        return
-    end
-    connectedStands[stand] = true
-
-    local eggPart = prompt.Parent
-    local maxDistance = PromptRules.maxDistance(prompt)
-
-    prompt.Triggered:Connect(function(player)
-        onEggTriggered(player, eggId, eggPart, maxDistance)
-    end)
-end
+RemoteEvents.HatchEggEvent.OnServerEvent:Connect(onHatchRequest)
 
 handleRequest(RemoteEvents.EquipPetEvent, PetInventory.equip)
 handleRequest(RemoteEvents.UnequipPetEvent, PetInventory.unequip)
@@ -161,13 +149,10 @@ handleRequest(RemoteEvents.SetAuraPetEvent, PetInventory.setAuraPet)
 Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(function(player)
     lastRequest[player] = nil
+    hatching[player] = nil
 end)
 
 for _, player in Players:GetPlayers() do
     task.spawn(setupPlayer, player)
 end
 
-CollectionService:GetInstanceAddedSignal(GameConfig.EggTag):Connect(connectEggStand)
-for _, stand in CollectionService:GetTagged(GameConfig.EggTag) do
-    connectEggStand(stand)
-end

@@ -280,11 +280,13 @@ local function beatAt(ma, t)
     return (b + 1) / 2, b
 end
 
--- The egg on the aura's stand (FloatingIslands.<Island>.EggStands.<EggId>.Egg), if streamed in.
+-- The egg on the aura's stand (FloatingIslands.<Island>.EggStands.<Stand>.Egg), if streamed in. A
+-- stand keeps its name while its egg changes (the server's EggStands), so an aura names its stand
+-- (attribute Stand); auras built before that sit on the stand named after their egg.
 local function eggOf(state)
     local island = state.model.Parent and state.model.Parent.Parent
     local stands = island and island:FindFirstChild("EggStands")
-    local stand = stands and stands:FindFirstChild(state.eggId)
+    local stand = stands and stands:FindFirstChild(state.model:GetAttribute("Stand") or state.eggId)
     return stand and stand:FindFirstChild("Egg")
 end
 

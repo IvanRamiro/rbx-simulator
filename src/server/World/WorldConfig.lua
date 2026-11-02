@@ -65,4 +65,20 @@ function WorldConfig.frame(islandName)
     return CFrame.new(island.Centre) * CFrame.Angles(0, -(island.Turns or 0) * math.pi / 2, 0)
 end
 
+-- Each outer island's bridge (Placements.Bridges, layout.py), by island.
+local BRIDGE_ROUTES = { JadeGrove = "JadeRoute", EmberPeak = "EmberRoute", MoonlitIsle = "MoonlitRoute", OriginAbyss = "OriginRoute" }
+
+-- Where an island's bridge lands on Yggdrasil (the first node of its deck), or nil: the way home for
+-- a guardian's thief.
+function WorldConfig.bridgeLanding(islandName)
+    local route = BRIDGE_ROUTES[islandName]
+    local build = game:GetService("ServerStorage"):FindFirstChild("WorldBuild")
+    local module = build and build:FindFirstChild("Placements") and build.Placements:FindFirstChild("Bridges")
+    if not (route and module) then
+        return nil
+    end
+    local bridge = require(module).Bridges[route]
+    return bridge and bridge.Nodes[1].Position
+end
+
 return WorldConfig

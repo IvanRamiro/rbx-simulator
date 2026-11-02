@@ -1,10 +1,10 @@
 -- The Bamboo Mantis Sage's rig (GuardianAnim) and effects (GuardianFx).
 --
 -- Joints: Body (from the root), Mantle (the leaf robe), Neck (the long prothorax), Head, an Upper and
--- a Blade per forearm (folded in prayer round the egg at rest), an Upper and a Lower per walking leg.
+-- a Blade per forearm (folded in prayer at rest), an Upper and a Lower per walking leg.
 --   Dormant   meditating: head bowed, its amber eyes dark (closed);
 --   Guardian  awake, swaying gently side to side;
---   Weakened  crouched, its blades lowered to the egg it has set down;
+--   Weakened  crouched, its blades lowered to the ground;
 --   Enraged   the threat display: robe flared, blades raised and open, eyes red.
 -- It walks on four legs, alternate pairs together. Its debris is bamboo leaves, its Qi jade.
 local GuardianAnim = require(script.Parent.Parent:WaitForChild("GuardianAnim"))

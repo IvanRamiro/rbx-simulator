@@ -6,7 +6,7 @@
 --   Dormant   a sleeping volcano: sunk on its plastron, head drawn in, eyes shut, the serpent's head
 --             drowsing low over the shell, its eyes dulled, the magma dim;
 --   Guardian  awake, the serpent swaying over the volcano, both heads watching the nearest player;
---   Weakened  sunk low, head down, the serpent's head lowered to the egg it has laid before them;
+--   Weakened  sunk low, head down, the serpent's head hung to the ground before them;
 --   Enraged   front reared, beak open, the serpent rearing high, eyes narrowed to a glare, magma hot.
 -- It walks slowly, diagonal legs together, the shell rolling with each step. Its debris is volcanic
 -- ash and embers, its Qi magma.
@@ -40,7 +40,7 @@ Rig.Poses = {
     Guardian = { Head = { 0 } },
     Weakened = {
         Body = { -2, 0, 0, -1.4 }, Neck = { -16 }, Head = { -10 }, Jaw = { -5 },
-        SerpentNeck = { -30, 6 }, SerpentHead = { -8 }, Tail = { -10 },   -- its head hung low over the egg (-38 buried it)
+        SerpentNeck = { -30, 6 }, SerpentHead = { -8 }, Tail = { -10 },   -- its head hung low to the ground (-38 buried it)
     },
     Enraged = {
         Body = { 4, 0, 0, 0.6 }, Neck = { 10 }, Head = { 6 }, Jaw = { -14 },

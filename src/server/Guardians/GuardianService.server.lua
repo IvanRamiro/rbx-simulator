@@ -1,10 +1,11 @@
 -- Spawns every guardian in GameConfig.Guardians into Workspace.Guardians from its stored model
 -- (ServerStorage.Guardians.<Id>, stored by WorldBuild.GuardianBuilder) and drives its encounter
--- (Guardian.lua) with strikes, players leaving and a step every frame.
+-- (Guardian.lua) with strikes, players leaving and a step every frame. Its island's egg stands
+-- (EggStands.lua) are what it guards: a stand's "Take" goes to it.
 --
 -- A guardian whose model or one of whose egg meshes (ServerStorage.EggMeshes) isn't stored is
--- skipped with a warning; its island's stands then hatch freely (PetService only locks the eggs of
--- a guardian standing in the world).
+-- skipped with a warning; its island's stands then can't be taken (a stand's "Take" finds no
+-- guardian to go through).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -13,6 +14,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Combat = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("Combat"))
 local Guardian = require(script.Parent:WaitForChild("Guardian"))
+local EggStands = require(script.Parent:WaitForChild("EggStands"))
 
 local folder = workspace:FindFirstChild("Guardians") or Instance.new("Folder")
 folder.Name = "Guardians"
@@ -43,6 +45,18 @@ for id, config in GameConfig.Guardians do
         table.insert(guardians, Guardian.new(id, config, ServerStorage.Guardians[id], folder))
     end
 end
+
+EggStands.load()
+
+-- a stand's egg is taken through its island's guardian (a stand with none standing can't be taken)
+EggStands.setTakeHandler(function(player, slot)
+    for _, guardian in guardians do
+        if guardian.config.Island == slot.island then
+            guardian:takeFromStand(player, slot)
+            return
+        end
+    end
+end)
 
 Combat.Hit.Event:Connect(function(player, target, damage)
     for _, guardian in guardians do

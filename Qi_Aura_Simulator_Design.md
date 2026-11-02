@@ -58,8 +58,9 @@ The fantasy is becoming a cultivator whose growing power shows in ever more spec
 ### Core loop (planned): guardians and egg theft
 
 Defeating a guardian is not the goal. **Stealing its egg and escaping with it is.**
-Cultivate → train Qinggong → find an island's guardian → weaken it → steal the egg →
-escape the enraged pursuit → secure the egg at a safe zone → hatch it → grow stronger.
+Cultivate → train Qinggong → find an island's guardian → weaken it → take an egg from the stands
+behind it → escape the enraged pursuit home to Yggdrasil → hatch it at the Hatching Altar → grow
+stronger.
 See section 7 for the full design.
 
 ---
@@ -469,7 +470,7 @@ Each kind has its own visual purpose. None is a recolour of another.
 
 Fifteen eggs, **three on every island**, each needing a higher rank than the last.
 
-- **Hatching:** free, with a 45-second cooldown per egg, except on an island whose guardian stands in the world. There the stands hatch only eggs taken from it, held in the player's **egg inventory** (`EggInventory`, saved as `Eggs`, at most 99 of each), with no cooldown. The stand prompt shows "Hatch (n)" or "No egg held".
+- **Hatching** (since November 2, 2026, section 7): only at Yggdrasil's **Hatching Altar**, from the player's **egg inventory** (`EggInventory`, saved as `Eggs`, at most 99 of each), filled by carrying eggs home from the guardians' stands. The stands no longer hatch; their prompt is "Take". (Before: free stand hatches with a 45-second cooldown.)
 - **Chances:** follow the rarity scale: Common 45%, Uncommon 27%, Rare 15%, Epic 8%, Legendary 4%, Mythical 0.9%, Secret 0.1%.
 - **Missing rarities:** when an egg has no pet of some rarity, its share goes to the next pet that has one. So later eggs give rarer pets far more often.
 
@@ -543,7 +544,7 @@ Every egg on its stand has its own aura, built in the Workspace from particle em
 - **Idle and hatch** (no periodic pulse, which the owner judged unnecessary, except where an aura's own design calls for one: the Inferno's energy pulse):
   - Idle: everything turns, orbits, drifts and emits on its own timing.
   - Hatch, in two parts. First the aura gathers: everything speeds up and draws in, energy is pulled into the egg, and the egg glows in the aura's tint. Then it bursts: the rings fling outward, ripples run across the rim, and the egg flashes.
-- **Hatch hook:** on a successful hatch, `PetController` calls `EggAura.hatch(eggId)`. It plays at the player's nearest stand of that egg.
+- **Hatch hook:** `EggAura.hatch(eggId)` plays a stand aura's gather and burst at the player's nearest stand of that egg; since hatching moved to the Hatching Altar (`HatchCeremony`) nothing calls it.
 - **Cost:** full emission within 90 studs of the camera, half rates to 200, off beyond that. Each aura's textures are preloaded when it streams in.
 - **Textures:** VFX Studio's library, the PDS kit, and our own, drawn and rendered by `tools/blender/vfx/egg_aura_textures.py` into `assets/vfx/eggs/`.
 - **Measured in Play:**
@@ -588,7 +589,7 @@ Every egg on its stand has its own aura, built in the Workspace from particle em
 | Primordial Abyss | 8 s, the slowest | **Deep time.** Three soft lights sweep round it at three heights like a clock's hands, each a third the speed of the one below and drawing a short arc of light; the ammonite's mouth breathes magenta and faint pink motes drift out of its spiral. |
 | Phoenix Ash | a 15 s cycle | **The Ash Cycle:** the egg dies and is reborn every 15 seconds. **Ash:** its veins and phoenix emblem dim to a smoulder under a dull ember rim, pale ash falls round it (the one aura on the altar where things fall) and a thin curl of smoke rises from its crown. **Kindling:** embers wink awake round it and the glow climbs back. **Rebirth:** the ash rushes up catching fire gold, two wings of gold light sweep open behind its own sculpted wings shedding golden feathers, a sunburst blooms over its crown, its rim races through the prism's colours (its rarest pet is the Prismatic Phoenix), its light blazes gold and a nearby player's screen flashes warm. **Burning down:** the wings fold, their feathers greying into ash as they fall, and the cycle begins again. A hatch is a rebirth. The wings keep 1.76 studs clear of the Magma Heart egg (a raycast sweep over the whole wing path). |
 
-**Egg stands today:** each island has a shrine with three stands where eggs are hatched directly. Under the planned guardian loop, eggs come from guardians instead; the stands' future role is an open question (section 9).
+**Egg stands today** (section 7): each island's three stands stand behind its guardian; their eggs are what a thief carries home. A taken egg's stand stays empty, then respawns a random one of the island's eggs.
 
 ---
 
@@ -726,7 +727,18 @@ The hidden endgame island, about 320 studs across since the owner's upgrade, mov
 
 - "Qi palm strike if there's no sword yet, specially from beginner area, and make a Huge monster, for each Island, include the Health UI, Weaken state and engage", with the combat system built first, before the bosses.
 - **Caught means knockback, never death.** A hit knocks the thief back and makes them drop the egg.
-- **Egg inventory:** a secured egg goes to the player's egg inventory and is hatched at the island's stands. An island's stands stop giving free eggs once that island's guardian exists.
+- **Egg inventory:** a secured egg goes to the player's egg inventory.
+
+### The eggs are carried home (the owner's decision, November 2, 2026)
+
+"Remove all the eggs that boss holding or covering, the only eggs exist should only those behind the 3 eggs for each map, player should be able to carry the eggs behind the boss ... so the player can hatch their egg once they came back to the main hub."
+
+- **No guardian holds an egg.** Each guards its island's three egg stands, behind it (`server/Guardians/EggStands.lua`).
+- **Below 10% health** (`WeakenedAt` 0.1) a guardian falters and one of its stands' eggs can be taken (F, half a second), if the thief's rank can hatch it; otherwise "needs <rank>". One theft at a time. Taking it empties the stand and enrages the guardian.
+- **Home is Yggdrasil:** the egg is secured the moment the thief sets foot on the hub, across the island's bridge (`SafeZone = { Island = "Yggdrasil" }`; the waypoint is the bridge's hub end). The guardian can't follow off its island. The Stone Lion's eggs are already on Yggdrasil (the Egg Garden's stands): its thief carries the egg to the Hatching Altar. (A separate island for the beginner eggs is planned.)
+- **The stands:** a dropped egg that times out goes back to its stand. A secured egg leaves the stand empty for 3 minutes (`EggTheft.RespawnTime`), then a random one of the island's three eggs appears there, so two stands may show the same egg. Each stand shows its egg's glow ring, light and aura (the auras are kept as templates; an aura names its stand by the attribute `Stand`).
+- **Hatching** happens only at the **Hatching Altar** on Yggdrasil (`ygg_altar.py`, `WorldBuilder.buildAltar`, `GameConfig.HatchingAltar`, on the north-east lawn between the bridges and the Egg Garden): its prompt opens the hatching window (`HatcheryController`), which lists the eggs carried home with their counts; each Hatch lays the egg in the altar's cradle, where it rises, glows and breaks open in gold light (`HatchCeremony`) as the pet is named. The window sits at the screen's right edge so the cradle stays in sight. The cradle's pool is a deep amber (Neon 255, 110, 0, a little clear): a paler gold blooms to a flat lemon disc. The stands no longer hatch.
+- **The altar:** five roots of the World Tree break out round a two-tier dais of pale stone and arch over it, curling in like a cupped hand; under them a jade lotus on a bronze stem opens round a pool of golden Qi, the cradle; between the roots five jade seal stones, one per island, each with a gem in that island's glow.
 - The guardians are full Blender models.
 
 ### Combat (built)
@@ -749,10 +761,10 @@ The server owns every state change. Thresholds and durations are tuned in playte
 
 | State | Trigger | What happens |
 |---|---|---|
-| 1. Guardian | 100–40% HP | Protects its egg, attacks players in its area, uses its normal abilities. The egg cannot be stolen. |
-| 2. Weakened | Below 40% HP | Attacks slow down; posture, aura and effects show it is vulnerable. The egg becomes available to steal. |
-| 3. Enraged pursuit | Egg stolen | Recognises the theft and chases the thief with faster movement, leaps and area attacks. The pursuit creates urgency without making escape feel random or impossible. |
-| 4. Escape | Thief reaches the safe zone | The server secures the egg in the player's inventory. |
+| 1. Guardian | 100–10% HP | Protects its stands, attacks players in its area, uses its normal abilities. No egg can be taken. |
+| 2. Weakened | Below 10% HP | Attacks slow down; posture, aura and effects show it is vulnerable. One egg can be taken from its stands. |
+| 3. Enraged pursuit | Egg taken | Recognises the theft and chases the thief with faster movement, leaps and area attacks, as far as its island's edge. The pursuit creates urgency without making escape feel random or impossible. |
+| 4. Escape | Thief reaches Yggdrasil (the Lion's: the Hatching Altar) | The server secures the egg in the player's inventory; its stand respawns 3 minutes later. |
 
 ### Caught: the egg is recoverable
 
@@ -789,6 +801,8 @@ Egg lifecycle, with every transition validated and repeated requests ignored:
 Guarded → Available → Carried → Dropped → Carried → Secured
 ```
 
+The stand: holds an egg → empty while it is carried or dropped → the same egg back (a failed theft), or empty for 3 minutes and then a random egg of the island's (a secured one).
+
 ### Guardians by island
 
 | Island | Guardian | Encounter direction |
@@ -810,20 +824,20 @@ A granite temple guardian lion come to life: a mane of carved spiral curls, spir
 
 | State | What it does |
 |---|---|
-| Dormant | A statue, its right paw pressed on the egg (the paw's sole rests on a 4-stud egg: shoulder 66°, elbow −66°). A player within 24 studs, or a strike, wakes it. |
+| Dormant | A statue. A player within 24 studs, or a strike, wakes it. (Until November 2, 2026 it pinned its egg under its right paw.) |
 | Guardian | Stays at its lair. **Slam:** the left paw comes down in front (range 24, 55° arc, 0.75 s wind-up). **Roar:** a shockwave rolls out along the ground to 44 studs at 34 studs/s; whoever is on the ground when it passes is knocked back, and a jump clears it. |
-| Weakened | Below 40% of 1,200 health (a beginner's Qi Palm gets there alone in about 72 strikes) it rears and draws the paw up off the egg; its attacks come 1.7 times slower; health never falls below 1. The egg's prompt (F, half a second) opens. |
+| Weakened | Below 10% of 1,200 health (a beginner's Qi Palm gets there alone in about 108 strikes) it rears and draws a paw up; its attacks come 1.7 times slower; health never falls below 1. An egg can be taken from the Egg Garden's stands. |
 | Enraged | The egg is taken: it chases the thief at 21 studs/s (a beginner runs 22) and pounces from 16 to 46 studs, aiming 0.85 of the thief's motion ahead, so a straight runner is caught and a thief who turns or dashes while it is in the air is not. It takes no damage. |
-| Returning / Resting | It walks home. After a secured egg it sleeps for 30 s, then a new egg appears under the paw. |
+| Returning / Resting | It walks home. After a secured egg it sleeps for 30 s, then guards again. |
 
 With nobody within 60 studs for 12 s, it heals and sleeps.
 
 - **Never killed, never kills:** every blow is a knockback (about 19 studs, then off your feet for 1.1 s), and a knocked-back thief drops the egg.
-- **The egg a thief earns** is the best Yggdrasil egg their rank opens: Beginner Qi, Spirit Breeze from Qi Adept, Elemental Core from Foundation Initiate. It becomes that egg the moment it is taken, held over the thief's head.
+- **The egg a thief takes** is the one on the stand they take it from (their rank must open it), held over the thief's head.
 - **Carried on foot:** no sword flight while carrying.
 - **Grace:** for 1.5 s after taking or recovering the egg the thief can't be knocked back, so a blow already on its way doesn't take the egg straight back.
-- **Dropped:** at a clear spot on the ground near where the thief was (never inside the lion), under a pillar of Qi light; only the thief sees its prompt and the 30-second countdown. A thief who leaves the game, or lets the countdown run out, sends the egg back under the paw. Falling off the island drops it where the thief last stood.
-- **The Egg Garden is a sanctuary:** the egg is secured within 15 studs of its centre, the lion never comes within 12 studs of its edge, and nobody inside it can be knocked back.
+- **Dropped:** at a clear spot on the ground near where the thief was (never inside the lion), under a pillar of Qi light; only the thief sees its prompt and the 30-second countdown. A thief who leaves the game, or lets the countdown run out, sends the egg back to its stand. Falling off the island drops it where the thief last stood.
+- **The Hatching Altar is its sanctuary:** the egg is secured within 12 studs of the altar's centre, the lion never comes within 12 studs of its edge, and nobody inside it can be knocked back.
 - **The client** (`GuardianController`, `GuardianAnim`, `GuardianFx`): the health bar (name, state, the 40% mark, a trailing loss), procedural animation (state poses, a walk turning into a gallop, breathing, the head turned toward its target, and the moves), stone-dust effects (the roar's rolling dust wall, slam and landing bursts, dust stirring where a pounce will land), camera shake, the way to the garden for a thief, and the knockback on your own character.
 
 **Asset:** `tools/blender/guardians/stone_lion.py` builds it; `assets/guardians/StoneLion.fbx` holds 12 jointed segments (Body, Head, Jaw, Tail and two pieces per leg). The curls are pieces of their own, so the bake's decimation leaves them whole. `WorldBuild.GuardianBuilder.store` fits the import and joins the segments with Motor6Ds at their pivots (`Placements/StoneLion.lua`), into `ServerStorage.Guardians.StoneLion`. Animation sets the joints' `Transform` on the client.
@@ -832,13 +846,13 @@ With nobody within 60 studs for 12 s, it heals and sleeps.
 
 A hermit sage who became the grove: a towering praying mantis of living jade bamboo, every segment a culm with pale waxy node rings, a robe of great dark leaves folded over its back, a carved jade face with faceted compound eyes and amber pupils, long drooping leaf brows and a leaf beard, a jade mala with a gold-tasselled guru bead, and jade scythes edged with glowing Qi, folded in prayer round the egg. About 36 studs tall, its legs 28 studs wide (`tools/blender/guardians/mantis_sage.py`, 16 jointed segments).
 
-Its lair is the island's east clearing, (50, 26), the only open, level ground far from the Bloom Glade (its safe zone), the arrival and the relics. 2,000 health: a Qi Gatherer's palm weakens it alone in about 110 strikes.
+Its lair is the middle of the Mantis Arena, its three egg stands behind it (moved there when the island was doubled); a thief carries its egg home to Yggdrasil (until November 2, 2026 the Bloom Glade was its safe zone). 2,000 health: a Qi Gatherer's palm weakens it (below 10%) alone in about 165 strikes.
 
 | State | What it does |
 |---|---|
-| Dormant | Meditating: head bowed, eyes dark, the egg in its folded forearms. |
+| Dormant | Meditating: head bowed, eyes dark, its blades folded in prayer. |
 | Guardian | Sways like a leaf in the wind and turns to face whoever it watches, the egg turning with its arms. **Scythe:** both blades cut across the front (range 26, 65° arc). **Blade wave:** a cone of Qi blades and leaves skims out along the ground (46 studs, 50° either side); jump it. |
-| Weakened | Crouches, lowers its blades and sets the egg on the ground before it. |
+| Weakened | Crouches and lowers its blades. |
 | Enraged | The mantis threat display (the robe flared like wings, blades raised and open, eyes red), chasing at 23 studs/s. **Leap:** long and high (up to 72 studs), its first move after the theft. |
 
 ### The Ember Xuanwu (Ember Peak)
@@ -847,13 +861,13 @@ The Black Tortoise of the north gone to the volcano (chosen by the owner, Novemb
 
 **Its eyes** (`guardian_kit.eye`): almond irises with dark slit pupils and carved lids. The tortoise's are heavy-lidded under a brow shelf, slanting down toward the beak; it blinks slowly every few seconds, glares (narrowed, red) enraged, widens and flickers weakened, and shuts them asleep. The serpent's are narrow and cold under a bony ridge; it never blinks, dulls asleep and narrows to a slit as it strikes.
 
-Its lair is the middle of the Cinder Arena (set 3.5 studs toward the gate so its beak clears the egg pedestals when it turns), facing the Ember Gate; its safe zone is the Ember Forge. 3,200 health: a Qi Awakener's starter sword weakens it alone in about 80 strikes. Securing its egg pays 1,500 Spirit Stones; its relic unlocks Fire.
+Its lair is the middle of the Cinder Arena (set 3.5 studs toward the gate so its beak clears the egg pedestals when it turns), facing the Ember Gate; a thief carries its egg home to Yggdrasil (until November 2, 2026 its safe zone was the Ember Forge). 3,200 health: a Qi Awakener's starter sword weakens it (below 10%) alone in about 120 strikes. Securing its egg pays 1,500 Spirit Stones; its relic unlocks Fire.
 
 | State | What it does |
 |---|---|
 | Dormant | A sleeping volcano: sunk on its plastron, head drawn in, eyes shut, the serpent drowsing low, the magma dim. |
 | Guardian | Turns, slowly, to face whoever it watches, the serpent swaying over the volcano. **Serpent lash:** the serpent rears back and strikes the ground before it (range 30, 70° arc). **Quake:** it rears onto its hind legs and stamps; a ring of ash and fire rolls out all round (50 studs) and the volcano erupts; jump it. |
-| Weakened | Sinks low, head down; the egg lies before its beak, the serpent's head hung over it. |
+| Weakened | Sinks low, head down, the serpent's head hung low. |
 | Enraged | Front reared, beak open, the serpent rearing high, eyes red, magma hot. Slow (20 studs/s; it stops 22 short of its thief, `ChaseStop`). **Charge:** a low, heavy lunge (16 to 56 studs) that lands with a shockwave. |
 
 Measured in Play (November 2, 2026): wake, lash, quake, weaken (egg set down at `Egg.Offered`), steal, charge (landing knocked the thief, who dropped the egg), drop timing out and the egg returning, and a secured Phoenix Ash Egg (+1,500 stones) all work. The serpent's head maps rendered grey for a while after upload; they are re-uploads.
@@ -864,13 +878,13 @@ The heavenly hound of the eclipse myth, the dog that swallows the moon (chosen b
 
 **Its eyes** (`guardian_kit.eye`): gold almonds with round black pupils under a low, scowling brow. It blinks every few seconds, shuts them asleep, glares (narrowed, red) enraged, and widens and flickers weakened. Its corona burns low asleep (Neon fades with transparency), gutters weakened, flickers enraged and flares as it howls.
 
-Its lair is the middle of the Lunar Court, facing the Crescent Arch; its safe zone is the Celestial Pavilion. 11,000 health: a Soul Awakening's Spirit Soul sword weakens it alone in about 80 strikes. Securing its egg pays 4,000 Spirit Stones; its relic unlocks Frost. Messages call it "Tiangou" (`Called`).
+Its lair is the middle of the Lunar Court, facing the Crescent Arch; a thief carries its egg home to Yggdrasil (until November 2, 2026 its safe zone was the Celestial Pavilion). 11,000 health: a Soul Awakening's Spirit Soul sword weakens it (below 10%) alone in about 118 strikes. Securing its egg pays 4,000 Spirit Stones; its relic unlocks Frost. Messages call it "Tiangou" (`Called`).
 
 | State | What it does |
 |---|---|
 | Dormant | Asleep on its feet: head low, eyes shut, tail down, the corona burning low. |
 | Guardian | Alert, turning quickly to face whoever it watches, tail waving. **Bite:** it draws back and snaps (range 25, 60° arc). **Eclipse howl:** head thrown back to the sky, the eclipse flares and a ring of frost rolls out all round (52 studs); jump it. |
-| Weakened | Crouched low, panting; the egg slips from the crescent to the ground before its nose. |
+| Weakened | Crouched low, panting. |
 | Enraged | The hunting crouch, lips drawn back, tail up, eyes red, chasing at 27 studs/s (it stops 17 short, `ChaseStop`). **Moon leap:** long, high arcs (18 to 85 studs, 26 high), stretched flat in the air. |
 
 Measured in Play (November 2, 2026): wake (it howls at once), bite, howl, weaken, steal (a Heavenly Throne Egg), the howl's ring knocking a grounded thief who drops the egg, recover, moon leaps aimed ahead of the runner and landing at the sanctuary's edge, and a secured egg (+4,000 stones). Most of its maps rendered grey after the first upload; they are re-uploads.
@@ -881,18 +895,18 @@ In the myth Pangu hatched from the cosmic egg and split the chaos inside it into
 
 **His eyes** (`guardian_kit.eye`): deep-set violet almonds with dark pupils, the lids bearing down toward his nose (an eye's `forward` is the nose side: pointed outward, the same lids read sad). He blinks slowly, shuts them asleep, glares (narrowed, red) enraged, widens and flickers weakened. The void in his cracks burns low asleep, pulses with his breath, gutters weakened and flares as he strikes.
 
-His lair is the middle of the Void Court, facing the Gate of Descent; his safe zone is the Gate of Descent terrace, back past him toward the bridge. 24,000 health: a Divine Initiate's Divine sword weakens him alone in about 80 strikes. Securing his egg pays 12,000 Spirit Stones; his relic unlocks Void. Messages call him "Pangu".
+His lair is the middle of the Void Court, facing the Gate of Descent; a thief carries his egg home to Yggdrasil, back past him and across the bridge (until November 2, 2026 the Gate of Descent terrace). 24,000 health: a Divine Initiate's Divine sword weakens him (below 10%) alone in about 120 strikes. Securing his egg pays 12,000 Spirit Stones; his relic unlocks Void. Messages call him "Pangu".
 
 | State | What he does |
 |---|---|
-| Dormant | A statue: head bowed, eyes shut, the void burning low, the egg on his palm. |
+| Dormant | A statue: head bowed, eyes shut, the void burning low. |
 | Guardian | Turns to face whoever he watches. **Axe cleave:** the axe comes off his shoulder and over, into the ground before him (range 30, 75° arc). **Sky-splitter:** both arms raise the axe and slam it down; a fissure races 70 studs straight ahead in a narrow line (15°): jump it or step aside. **Chaos nova:** he raises the cosmic egg and the chaos bursts out all round (44 studs); jump it. |
-| Weakened | Down on one knee, the egg set on the ground before him. |
+| Weakened | Down on one knee. |
 | Enraged | Squared up, the axe lifted, eyes red, chasing at 28 studs/s. **Titan leap:** 20 to 75 studs, 22 high, landing with a shockwave. |
 
 Measured in Play (November 2, 2026): wake, cleave, sky-splitter and nova (each knocking), the axe head's path through both strikes (down to about 9 studs before him as the hit lands; first versions swung it behind his neck and landed late), the kneel (planted foot at 0.0 after the hips were dropped 8.4), steal (a Primordial Abyss Egg), the titan leap catching a thief 51 studs off (the egg dropped), and a secured egg (+12,000 stones). All 41 maps rendered on the first upload (batches of 10).
 
-**One framework for every guardian.** Attacks are named per guardian and have a kind: a *Sweep* in front, a *Wave* along the ground (all round or in an arc, cleared by a jump), a *Pounce* onto the thief. `Egg.Offered` sets a held egg down when it falters; `TurnsToFace` turns it at its lair, the egg welded to its root while held. Each guardian's look lives in its client rig, `GuardianRigs/<Id>` (poses, gait, moves, glow, effects).
+**One framework for every guardian.** Attacks are named per guardian and have a kind: a *Sweep* in front, a *Wave* along the ground (all round or in an arc, cleared by a jump), a *Pounce* onto the thief. `TurnsToFace` turns it at its lair toward whoever it watches. (No guardian holds an egg since November 2, 2026: the crater, crescent and palm built to cradle one stand empty.) Each guardian's look lives in its client rig, `GuardianRigs/<Id>` (poses, gait, moves, glow, effects).
 
 **Guardian aura states**
 

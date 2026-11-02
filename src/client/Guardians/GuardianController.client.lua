@@ -4,7 +4,8 @@
 --   - knockback: a guardian's blow throws this player's character (the client owns it) off its
 --     feet for a moment; nothing ever kills;
 --   - the health bar of the guardian this player is fighting, with its state and weak mark;
---   - a thief is shown the way to the safe zone; a dropped egg stands under a pillar of light,
+--   - a thief is shown the way to the safe zone (home to Yggdrasil: its end of the island's bridge);
+--     a dropped egg stands under a pillar of light,
 --     and only its thief sees its prompt and countdown.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -28,7 +29,7 @@ local BAR_DISTANCE = 130
 local GOLD = Color3.fromRGB(232, 200, 120)
 local STATE_LOOK = {
     Guardian = { Text = "GUARDIAN", Color = Color3.fromRGB(120, 220, 190) },
-    Weakened = { Text = "WEAKENED · TAKE ITS EGG", Color = Color3.fromRGB(255, 196, 70) },
+    Weakened = { Text = "WEAKENED · TAKE AN EGG", Color = Color3.fromRGB(255, 196, 70) },
     Enraged = { Text = "ENRAGED", Color = Color3.fromRGB(255, 96, 50) },
 }
 local FILL = {
@@ -405,7 +406,7 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
         local reward = if typeof(stones) == "number" and stones > 0 then " +" .. stones .. " Spirit Stones." else ""
         local info = typeof(element) == "string" and GameConfig.Forge.Elements[element]
         local relic = if info then " Its relic unlocks " .. info.DisplayName .. " at the Blacksmith's forge." else ""
-        message:show((egg and egg.DisplayName or "The egg") .. " secured! Hatch it at its stand." .. reward .. relic, Color3.fromRGB(255, 214, 110))
+        message:show((egg and egg.DisplayName or "The egg") .. " secured! Hatch it at the Hatching Altar." .. reward .. relic, Color3.fromRGB(255, 214, 110))
         return
     elseif action == "BagFull" then
         message:show("You can't hold any more of that egg: hatch some first.", Color3.new(1, 1, 1))
@@ -438,7 +439,8 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
     elseif action == "Steal" and style then
         GuardianFx.steal((...), style)
         if player:GetAttribute("CarryingGuardian") == model:GetAttribute("GuardianId") then
-            message:show("You took the egg! Reach the " .. config.SafeZone.Name .. "!", Color3.fromRGB(255, 214, 110))
+            local goal = if config.SafeZone.Island then "Carry it home to " .. config.SafeZone.Name .. "!" else "Reach the " .. config.SafeZone.Name .. "!"
+            message:show("You took the egg! " .. goal, Color3.fromRGB(255, 214, 110))
         end
     elseif action == "Drop" and style then
         GuardianFx.drop((...), style)

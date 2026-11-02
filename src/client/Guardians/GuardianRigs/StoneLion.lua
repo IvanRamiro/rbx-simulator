@@ -2,8 +2,8 @@
 --
 -- Joints: Body (from the root), Head, Jaw, Tail, and an upper and lower piece per leg. A negative X
 -- turn on the Jaw opens the mouth.
---   Dormant   a statue, its right paw pressed on the egg (the Hold);
---   Weakened  the paw drawn up off the egg, head low, panting;
+--   Dormant   a statue before the Egg Garden;
+--   Weakened  a forepaw drawn up, head low, panting;
 --   Enraged   crouched, tail up, snarling.
 -- It walks with diagonal legs together, breaking into a gallop as it speeds up. Its eyes and orb
 -- are carved stone and dull jade while it sleeps, Neon blue and jade awake, flickering weakened,
@@ -27,16 +27,13 @@ Rig.Poses = {
     Guardian = { Head = { 0 } },
     Weakened = {
         Body = { -3, 0, 0, -1.2 }, Head = { -16 }, Jaw = { -9 }, Tail = { -22 },
-        -- the paw drawn up to the chest, off the egg
+        -- a paw drawn up to the chest
         FrontRightUpper = { 30 }, FrontRightLower = { -95 },
     },
     Enraged = { Body = { -4, 0, 0, -1.5 }, Head = { -7 }, Jaw = { -16 }, Tail = { 38 } },
     Returning = { Head = { -6 } },
     Resting = { Body = { 0, 0, 0, -0.6 }, Head = { -10 } },
 }
--- The right paw pressed on the egg: measured in Studio, the sole rests 3.85 studs up, on a 4-stud egg.
-Rig.Hold = { FrontRightUpper = { 66 }, FrontRightLower = { -66 } }
-Rig.HoldStates = { Dormant = true, Guardian = true }
 Rig.Gallop = { 13, 19 }          -- speeds (studs/s) where the walk turns into a gallop
 Rig.LeapAction = "Pounce"
 Rig.Look = { Joint = "Head", Share = 0.75, Body = "Body", BodyShare = 0.15, Limit = 40 }

@@ -118,14 +118,22 @@ local GameConfig = {
         Max = 1e12,
     },
 
-    -- Guardians (src/server/Guardians/GuardianService; design doc section 7). While a guardian
-    -- stands, its island's stands hatch only eggs taken from it: a thief earns the best of Eggs
-    -- their rank opens, secured in the SafeZone. Positions are island-local studs. Egg positions
-    -- are in the guardian's frame (front toward -Z): Under where it keeps the egg, Offered where it
-    -- sets it down when weakened (if it holds it out of reach).
+    -- Guardians (src/server/Guardians/GuardianService; design doc section 7). A guardian holds no
+    -- egg: it guards its island's three egg stands (EggStands). Weakened below WeakenedAt, one of
+    -- their eggs can be taken (if the thief's rank can hatch it) and carried to the SafeZone: a
+    -- circle (island-local studs), or with Island a whole island, Yggdrasil, home across the
+    -- bridge. A secured egg goes to the egg inventory and is hatched at the Hatching Altar; its stand
+    -- shows a random one of Eggs after EggTheft.RespawnTime. Positions are island-local studs.
     -- Attack kinds: Sweep strikes in front (Range, Arc); Wave rolls along the ground to Radius (all
     -- round, or within Arc) and a jump clears it; Pounce leaps onto the thief (enraged only).
     GuardianTag = "Guardian",
+    EggTheft = {
+        RespawnTime = 180, -- seconds a stand stays empty after its egg is secured
+    },
+    -- Yggdrasil's Hatching Altar (WorldBuilder.buildAltar, PetService): where every egg carried home is
+    -- hatched. Centre is island-local (on the ground), Yaw turns its front (local +Z) toward the
+    -- World Tree and the bridges.
+    HatchingAltar = { Island = "Yggdrasil", Centre = Vector3.new(100, -0.2, -130), Yaw = -1.4 },
     Guardians = {
         StoneLion = {
             DisplayName = "Awakened Stone Lion",
@@ -133,22 +141,23 @@ local GameConfig = {
             Lair = Vector3.new(128, 0.4, -62),
             Facing = Vector3.new(0, 0.4, 0), -- toward the World Tree
             Eggs = { "BeginnerQiEgg", "SpiritBreezeEgg", "ElementalCoreEgg" },
-            SafeZone = { Centre = Vector3.new(170, -1.5, 6), Radius = 15, Name = "Egg Garden" },
+            -- its eggs are the Egg Garden's (Yggdrasil's own stands): carried to the Hatching Altar
+            SafeZone = { Centre = Vector3.new(100, -0.2, -130), Radius = 12, Name = "Hatching Altar" },
             SecureStones = 150,     -- Spirit Stones for securing its egg
             Element = "Earth",      -- the relic it drops when its egg is secured unlocks this element (Forge)
-            MaxHealth = 1200,      -- a beginner's Qi Palm weakens it alone in ~72 strikes (about half a minute)
-            WeakenedAt = 0.4,      -- share of health below which it falters and the egg can be taken
+            MaxHealth = 1200,      -- a beginner's Qi Palm weakens it alone in ~108 strikes (about 50 seconds)
+            WeakenedAt = 0.1,      -- share of health below which it falters and its stands' eggs can be taken
             HitRadius = 14,        -- its body round the chest
             EngageRadius = 24,
             LeashRadius = 60,      -- from the lair
             CalmAfter = 12,        -- seconds with nobody near before it heals and sleeps
-            RespawnTime = 30,      -- seconds after an egg is secured
+            RespawnTime = 30,      -- seconds it rests (Resting) after an egg is secured; its stand: EggTheft
             DropTime = 30,         -- seconds a dropped egg waits for its thief
             WalkSpeed = 12,
             ChaseSpeed = 21,       -- below a beginner's run (22): dashes and its pounces decide it
             TurnSpeed = 140,       -- degrees per second
-            Egg = { Height = 4, Under = Vector3.new(4.55, 1.9, -15), CarriedHeight = 2.6 }, -- under the raised right paw
-            WeakenedHint = "falters: take the egg from under its paw!",
+            Egg = { CarriedHeight = 2.6 }, -- carried over the thief's head
+            WeakenedHint = "falters: take an egg from the Egg Garden and carry it to the Hatching Altar!",
             Stagger = 1.1,         -- seconds a knocked-back player is off their feet
             WeakenedSlowdown = 1.7, -- attack cooldown multiplier while weakened
             Attacks = {
@@ -164,11 +173,11 @@ local GameConfig = {
             Lair = Vector3.new(0, 0.6, 0),      -- the middle of the Mantis Arena, its three egg stands behind it
             Facing = Vector3.new(81.7, 0.6, 96.4), -- toward the Grove Gate, where challengers arrive
             Eggs = { "JadeSpiritEgg", "BloomwoodEgg", "AncientGroveEgg" },
-            SafeZone = { Centre = Vector3.new(-90.1, 3, 52), Radius = 15, Name = "Bloom Glade" },
+            SafeZone = { Island = "Yggdrasil", Name = "Yggdrasil" },   -- home across the bridge: secured on setting foot on the hub
             SecureStones = 600,     -- Spirit Stones for securing its egg
             Element = "Wind",
-            MaxHealth = 2000,      -- a Qi Gatherer's palm (11 a strike) weakens it alone in ~110 strikes
-            WeakenedAt = 0.4,
+            MaxHealth = 2000,      -- a Qi Gatherer's palm (11 a strike) weakens it alone in ~165 strikes
+            WeakenedAt = 0.1,
             HitRadius = 13,
             EngageRadius = 26,
             LeashRadius = 60,
@@ -179,9 +188,8 @@ local GameConfig = {
             ChaseSpeed = 23,       -- below a Qi Gatherer's run (24); its leaps are long and high
             TurnSpeed = 160,
             TurnsToFace = true,    -- awake at its lair, it turns to face whoever it watches
-            -- held in its folded forearms, set down on the ground when weakened
-            Egg = { Height = 4, Under = Vector3.new(0, 20.2, -12.3), Offered = Vector3.new(0, 1.9, -16), CarriedHeight = 2.6 },
-            WeakenedHint = "lowers its blades and sets the egg down: take it!",
+            Egg = { CarriedHeight = 2.6 },
+            WeakenedHint = "lowers its blades: take an egg from the stands behind it and carry it home to Yggdrasil!",
             Stagger = 1.1,
             WeakenedSlowdown = 1.7,
             Attacks = {
@@ -198,11 +206,11 @@ local GameConfig = {
             Lair = Vector3.new(0.6, 0.5, 3.4),
             Facing = Vector3.new(22.0, 0.5, 121.0), -- toward the Ember Gate, where challengers arrive
             Eggs = { "InfernoEgg", "MagmaHeartEgg", "PhoenixAshEgg" },
-            SafeZone = { Centre = Vector3.new(86.4, 2, -50.4), Radius = 13, Name = "Ember Forge" },
+            SafeZone = { Island = "Yggdrasil", Name = "Yggdrasil" },   -- home across the bridge: secured on setting foot on the hub
             SecureStones = 1500,    -- Spirit Stones for securing its egg
             Element = "Fire",
-            MaxHealth = 3200,      -- a Qi Awakener's starter sword (~24 a strike) weakens it alone in ~80 strikes
-            WeakenedAt = 0.4,
+            MaxHealth = 3200,      -- a Qi Awakener's starter sword (~24 a strike) weakens it alone in ~120 strikes
+            WeakenedAt = 0.1,
             HitRadius = 15,        -- its shell
             EngageRadius = 28,     -- the egg pedestals stand just outside it (31)
             LeashRadius = 62,
@@ -214,9 +222,8 @@ local GameConfig = {
             ChaseStop = 22,        -- it stops this far from the thief: its beak is 29 studs ahead of its origin
             TurnSpeed = 75,        -- a ponderous turn: those who circle it meet its quake
             TurnsToFace = true,
-            -- in the crater on its shell; set down before its beak when weakened (the serpent lays it there)
-            Egg = { Height = 4, Under = Vector3.new(0, 22.6, 1.5), Offered = Vector3.new(-7, 1.9, -27), CarriedHeight = 2.6 },
-            WeakenedHint = "sinks low and its serpent lays the egg before it: take it!",
+            Egg = { CarriedHeight = 2.6 },
+            WeakenedHint = "sinks low: take an egg from the stands behind it and carry it home to Yggdrasil!",
             Stagger = 1.2,
             WeakenedSlowdown = 1.7,
             Attacks = {
@@ -235,11 +242,11 @@ local GameConfig = {
             Lair = Vector3.new(0, 1, 14),          -- the middle of the Lunar Court, its egg pedestals behind it over the bay
             Facing = Vector3.new(-27, 1, 118.2),   -- toward the Crescent Arch, where challengers arrive
             Eggs = { "CelestialEgg", "AstralSanctumEgg", "HeavenlyThroneEgg" },
-            SafeZone = { Centre = Vector3.new(84.9, 2.6, -49), Radius = 10, Name = "Celestial Pavilion" },
+            SafeZone = { Island = "Yggdrasil", Name = "Yggdrasil" },   -- home across the bridge: secured on setting foot on the hub
             SecureStones = 4000,
             Element = "Frost",
-            MaxHealth = 11000,     -- a Soul Awakening's Spirit Soul sword (~84 a strike) weakens it alone in ~80 strikes
-            WeakenedAt = 0.4,
+            MaxHealth = 11000,     -- a Soul Awakening's Spirit Soul sword (~84 a strike) weakens it alone in ~118 strikes
+            WeakenedAt = 0.1,
             HitRadius = 10,        -- its body from chest to haunch
             EngageRadius = 27,
             LeashRadius = 62,
@@ -251,9 +258,8 @@ local GameConfig = {
             ChaseStop = 17,        -- its nose is 22 studs ahead of its origin
             TurnSpeed = 180,
             TurnsToFace = true,
-            -- in the last silver crescent of its eclipse; dropped before its paws when weakened
-            Egg = { Height = 4, Under = Vector3.new(0, 26.2, -5.0), Offered = Vector3.new(0, 1.9, -25), CarriedHeight = 2.6 },
-            WeakenedHint = "staggers, and the last of the moon slips from its eclipse: take the egg!",
+            Egg = { CarriedHeight = 2.6 },
+            WeakenedHint = "staggers: take an egg from the stands behind it and carry it home to Yggdrasil!",
             Stagger = 1.1,
             WeakenedSlowdown = 1.7,
             Attacks = {
@@ -271,11 +277,11 @@ local GameConfig = {
             Lair = Vector3.new(0, 0.8, 0),         -- the middle of the Void Court, its egg plinths behind him under the Thorn Crown
             Facing = Vector3.new(-85.8, 0.8, 122.8), -- toward the Gate of Descent, where challengers arrive
             Eggs = { "ForbiddenOriginEgg", "VoidRiftEgg", "PrimordialAbyssEgg" },
-            SafeZone = { Centre = Vector3.new(-76.6, 0.5, 109.7), Radius = 10, Name = "Gate of Descent" },   -- back past him, toward the bridge
+            SafeZone = { Island = "Yggdrasil", Name = "Yggdrasil" },   -- home across the bridge: secured on setting foot on the hub
             SecureStones = 12000,
             Element = "Void",
-            MaxHealth = 24000,     -- a Divine Initiate's Divine sword (~180 a strike) weakens him alone in ~80 strikes
-            WeakenedAt = 0.4,
+            MaxHealth = 24000,     -- a Divine Initiate's Divine sword (~180 a strike) weakens him alone in ~120 strikes
+            WeakenedAt = 0.1,
             HitRadius = 8,         -- a titan on two legs: narrow at the ground
             EngageRadius = 26,
             LeashRadius = 62,
@@ -287,9 +293,8 @@ local GameConfig = {
             ChaseStop = 12,
             TurnSpeed = 110,
             TurnsToFace = true,
-            -- the cosmic egg on his open left palm; set down before him when he sinks to one knee
-            Egg = { Height = 4, Under = Vector3.new(-5.9, 25.8, -6.6), Offered = Vector3.new(-5, 1.9, -12), CarriedHeight = 2.6 },
-            WeakenedHint = "sinks to one knee and sets the cosmic egg down: take it!",
+            Egg = { CarriedHeight = 2.6 },
+            WeakenedHint = "sinks to one knee: take an egg from the stands behind him and carry it home to Yggdrasil!",
             Stagger = 1.2,
             WeakenedSlowdown = 1.6,
             Attacks = {

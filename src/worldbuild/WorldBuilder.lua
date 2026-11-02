@@ -225,6 +225,9 @@ WorldBuilder.Collision = {
     { Prefix = "SI_Waystone", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "SI_LotusStone", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "SI_MossRock", Fidelity = Enum.CollisionFidelity.Hull },
+    -- Yggdrasil: the Hatching Altar's dais must be walkable, under its arching roots
+    { Prefix = "YG_AltarRoots", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "YG_Altar", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     -- Jade Grove: the hollow, the walk-under root and the gate opening must stay passable
     { Prefix = "JG_ElderTrunk", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "JG_ElderPads", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
@@ -367,6 +370,12 @@ WorldBuilder.Appearance = {
     YG_BlacksmithGlow = table.clone(GLOW),
     YG_BuySellStones = table.clone(GLOW),
     YG_BuySellLanterns = table.clone(GLOW),
+    YG_AltarPool = table.clone(GLOW),
+    YG_AltarGemYggdrasil = table.clone(GLOW),
+    YG_AltarGemJade = table.clone(GLOW),
+    YG_AltarGemEmber = table.clone(GLOW),
+    YG_AltarGemMoonlit = table.clone(GLOW),
+    YG_AltarGemOrigin = table.clone(GLOW),
 }
 WorldBuilder.Appearance.SI_QiCompassGlow.Color = Color3.fromRGB(40, 210, 235)
 WorldBuilder.Appearance.SI_LanternLight.Color = Color3.fromRGB(255, 150, 60)
@@ -403,6 +412,16 @@ WorldBuilder.Appearance.YG_SeedLanterns.Color = Color3.fromRGB(255, 170, 40)
 WorldBuilder.Appearance.YG_BlacksmithGlow.Color = Color3.fromRGB(255, 105, 20)
 WorldBuilder.Appearance.YG_BuySellStones.Color = Color3.fromRGB(30, 215, 170) -- the Spirit Stones' jade
 WorldBuilder.Appearance.YG_BuySellLanterns.Color = Color3.fromRGB(235, 60, 30)
+-- the Hatching Altar's pool of golden Qi, and its seals' gems in each island's glow (the waystones')
+-- a deep amber, a little clear: Neon blooms a paler gold to a flat lemon disc, and the jade heart
+-- showing through reads as liquid in the lotus
+WorldBuilder.Appearance.YG_AltarPool.Color = Color3.fromRGB(255, 110, 0)
+WorldBuilder.Appearance.YG_AltarPool.Transparency = 0.3
+WorldBuilder.Appearance.YG_AltarGemYggdrasil.Color = Color3.fromRGB(40, 210, 235)
+WorldBuilder.Appearance.YG_AltarGemJade.Color = Color3.fromRGB(40, 215, 110)
+WorldBuilder.Appearance.YG_AltarGemEmber.Color = Color3.fromRGB(255, 105, 25)
+WorldBuilder.Appearance.YG_AltarGemMoonlit.Color = Color3.fromRGB(120, 100, 255)
+WorldBuilder.Appearance.YG_AltarGemOrigin.Color = Color3.fromRGB(175, 45, 255)
 
 -- Kit pieces that carry a PointLight (lights take the piece's colour).
 WorldBuilder.Lights = {
@@ -499,6 +518,25 @@ local function addEmitterPreset(part, preset)
         wisps.EmissionDirection = Enum.NormalId.Top
         wisps.Rate = 4
         wisps.Parent = part
+    elseif preset == "GoldenMotes" then
+        -- rising from the Hatching Altar's pool of golden Qi
+        local motes = Instance.new("ParticleEmitter")
+        motes.Name = "GoldenMotes"
+        motes.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+        motes.Color = ColorSequence.new(Color3.fromRGB(255, 236, 160), Color3.fromRGB(255, 170, 40))
+        motes.LightEmission = 1
+        motes.LightInfluence = 0
+        motes.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 0.4), NumberSequenceKeypoint.new(1, 0) })
+        motes.Transparency = NumberSequence.new(0.1, 1)
+        motes.Lifetime = NumberRange.new(2.5, 4)
+        motes.Speed = NumberRange.new(1, 2.2)
+        motes.SpreadAngle = Vector2.new(25, 25)
+        motes.Rotation = NumberRange.new(0, 360)
+        motes.RotSpeed = NumberRange.new(-40, 40)
+        motes.Drag = 0.4
+        motes.EmissionDirection = Enum.NormalId.Top
+        motes.Rate = 10
+        motes.Parent = part
     elseif preset == "QiMotes" then
         -- drifting up round the World Tree's trunk (the veins' part spans it)
         local motes = Instance.new("ParticleEmitter")
@@ -1659,6 +1697,52 @@ function WorldBuilder.buildShops(island)
     end
     WorldBuilder.applyCollision(folder)
     return #folder:GetChildren()
+end
+
+-- The Hatching Altar (tools/blender/world/ygg_altar.py), where eggs carried home are hatched
+-- (PetService): FloatingIslands.<island>.HatchingAltar, placed by GameConfig.HatchingAltar, with
+-- "Prompt" (its prompt, attribute Hatchery, opens the hatching window), "Cradle" (where PetService
+-- lays an egg, on the pool's surface) and "Motes" (golden motes over the pool, and its light).
+-- Spots in the altar's frame, as authored (ygg_altar.CRADLE, PROMPT, FX).
+WorldBuilder.Altar = {
+    Pieces = { "YG_Altar", "YG_AltarRoots", "YG_AltarPool", "YG_AltarGemYggdrasil", "YG_AltarGemJade", "YG_AltarGemEmber",
+        "YG_AltarGemMoonlit", "YG_AltarGemOrigin" },
+    Cradle = Vector3.new(0, 4.15, 0),
+    Prompt = Vector3.new(0, 3.2, 3.2),
+    Motes = Vector3.new(0, 4.45, 0),
+}
+
+function WorldBuilder.buildAltar(island)
+    local config = GameConfig.HatchingAltar
+    assert(island == config.Island, "the Hatching Altar stands on " .. config.Island)
+    local folder = WorldBuilder.islandFolder(island)
+    local old = folder:FindFirstChild("HatchingAltar")
+    if old then
+        old:Destroy()
+    end
+    local frame = islandFrame(island) * CFrame.new(config.Centre) * CFrame.Angles(0, config.Yaw, 0)
+    local model = Instance.new("Model")
+    model.Name = "HatchingAltar"
+    for _, piece in WorldBuilder.Altar.Pieces do
+        placeTemplate(island, piece, frame, model)
+    end
+    marker("Cradle", Vector3.new(1, 0.2, 1), frame * CFrame.new(WorldBuilder.Altar.Cradle), model)
+    local holder = marker("Prompt", Vector3.new(1, 1, 1), frame * CFrame.new(WorldBuilder.Altar.Prompt), model)
+    local prompt = Instance.new("ProximityPrompt")
+    prompt.ActionText = "Hatch"
+    prompt.ObjectText = "Hatching Altar"
+    prompt.KeyboardKeyCode = Enum.KeyCode.F
+    prompt.HoldDuration = 0
+    prompt.MaxActivationDistance = 12
+    prompt.RequiresLineOfSight = false
+    prompt:SetAttribute("Hatchery", true)
+    prompt.Parent = holder
+    local motes = marker("Motes", Vector3.new(4.4, 0.2, 4.4), frame * CFrame.new(WorldBuilder.Altar.Motes), model)
+    addEmitterPreset(motes, "GoldenMotes")
+    addLight(motes, Color3.fromRGB(255, 170, 60), 18, 1.1)
+    model.Parent = folder
+    WorldBuilder.applyCollision(model)
+    return model
 end
 
 function WorldBuilder.buildQiSpring(island)

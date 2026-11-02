@@ -7,9 +7,9 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
--- Requiring EggAura also starts the egg stands' auras (its RenderStepped loop runs from here):
--- keep this require even if the hatch call below changes.
-local EggAura = require(script.Parent.Parent:WaitForChild("Auras"):WaitForChild("EggAura"))
+-- Requiring EggAura starts the egg stands' auras (its RenderStepped loop runs from here): keep it.
+require(script.Parent.Parent:WaitForChild("Auras"):WaitForChild("EggAura"))
+local HatchCeremony = require(script.Parent:WaitForChild("HatchCeremony"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -238,23 +238,29 @@ local function onHatchResult(result)
     local egg = GameConfig.Eggs[result.EggId]
     local eggName = if egg then egg.DisplayName else "The egg"
 
-    if result.Reason == "Cooldown" then
-        showMessage(eggName .. " is gathering Qi. Try again in " .. tostring(result.SecondsLeft) .. "s.", Color3.new(1, 1, 1))
-    elseif result.Reason == "Locked" then
+    if result.Reason == "Locked" then
         showMessage(eggName .. " needs " .. tostring(result.RequiredRank) .. " to hatch.", Color3.new(1, 1, 1))
+    elseif result.Reason == "TakeLocked" then
+        showMessage(eggName .. " needs " .. tostring(result.RequiredRank) .. ": you can't carry it yet.", Color3.new(1, 1, 1))
     elseif result.Reason == "Guarded" then
-        showMessage("Take a " .. eggName .. " from the " .. tostring(result.Guardian) .. ", then hatch it here.", Color3.new(1, 1, 1))
+        local who = result.Called or ("the " .. tostring(result.Guardian))
+        local text = if result.Busy then "An egg is already being carried off. Wait for " .. who .. " to calm."
+            else "Weaken " .. who .. " first: its eggs can be taken once it falters."
+        showMessage(text, Color3.new(1, 1, 1))
     elseif result.Reason == "InventoryFull" then
         showMessage("Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets).", Color3.new(1, 1, 1))
     else
         local definition = GameConfig.Pets[result.PetId]
-        EggAura.hatch(result.EggId)
-        if definition then
-            local rarityColor = GameConfig.PetRarityColors[definition.Rarity] or Color3.new(1, 1, 1)
-            local text = "You hatched a " .. definition.DisplayName .. "! ("
-                .. definition.Rarity .. ", " .. tostring(result.ChancePercent) .. "% chance)"
-            showMessage(text, rarityColor)
-        end
+        -- the egg rises from the altar's cradle and breaks; the pet is named as it does
+        HatchCeremony.play(result.Staged, result.Delay or 0, function()
+            if definition then
+                local rarityColor = GameConfig.PetRarityColors[definition.Rarity] or Color3.new(1, 1, 1)
+                local article = if string.find(definition.DisplayName, "^[AEIOUaeiou]") then "an " else "a "
+                local text = "You hatched " .. article .. definition.DisplayName .. "! ("
+                    .. definition.Rarity .. ", " .. tostring(result.ChancePercent) .. "% chance)"
+                showMessage(text, rarityColor)
+            end
+        end)
     end
 end
 

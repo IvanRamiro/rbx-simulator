@@ -1,7 +1,7 @@
 -- Pangu the World-Splitter's rig (GuardianAnim) and effects (GuardianFx).
 --
 -- Joints: Body (from the root: the pelvis), Chest, Head, an UpperArm and a Forearm per arm (the
--- left palm holds the cosmic egg, the right hand the axe on his shoulder) and a Thigh and a Shin per
+-- left palm open, the right hand holding the axe on his shoulder) and a Thigh and a Shin per
 -- leg. Limbs hang down, so a positive X turn swings a limb's far end forward and up; the right
 -- forearm points forward and up to the fist, so on it a positive turn lifts the fist back toward the
 -- shoulder and a negative one swings the axe forward and down.
@@ -135,7 +135,7 @@ function Rig.actions(anim, pose, now)
         end
     end
 
-    -- the chaos nova: the cosmic egg raised high, the chest thrown open, the void bursting out
+    -- the chaos nova: the open left palm raised high, the chest thrown open, the void bursting out
     local nova = anim.actions.ChaosNova
     if nova then
         local windUp = nova.args[1] or 1.4
@@ -281,7 +281,7 @@ end
 
 -- ---------- his effects (GuardianController calls Rig.Fx[action](model, ...)) ----------
 local style = Rig.Style
-local EGG = CFrame.new(-5.9, 25.8, -6.6)        -- the cosmic egg in his palm (titan-local)
+local PALM = CFrame.new(-5.9, 25.8, -6.6)       -- over his open left palm, where the nova bursts (titan-local)
 local CLEAVE = CFrame.new(3, 0.6, -16)          -- where the axe comes down
 local SPLIT = CFrame.new(1, 0.6, -14)           -- where the sky-splitter strikes the ground
 
@@ -326,8 +326,8 @@ Rig.Fx = {
                 return
             end
             local pivot = model:GetPivot()
-            GuardianFx.flash(pivot * EGG * CFrame.new(0, 6, 0), style, 34)
-            GuardianFx.streaks(pivot * EGG * CFrame.Angles(math.rad(90), 0, 0), style, 20, 50, 70)
+            GuardianFx.flash(pivot * PALM * CFrame.new(0, 6, 0), style, 34)
+            GuardianFx.streaks(pivot * PALM * CFrame.Angles(math.rad(90), 0, 0), style, 20, 50, 70)
             GuardianFx.shake(pivot.Position, 2.4, 1)
             GuardianFx.wave(pivot.Position, pivot.LookVector, radius, speed, arc or 180, style)
         end)
