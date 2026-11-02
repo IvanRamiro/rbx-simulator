@@ -1,17 +1,22 @@
 """Ember Peak: the volcanic island, second in the row north of Yggdrasil.
 
-Authored in island-local Roblox studs (x east, z south, y up; ground ~0 = world Y 200).
-Features:
-- Arrival: the Ember Route lands on the north-east rim at a landing guarded by the Ember Gate.
-- The volcano rises in the middle; its caldera holds a lava lake with the Caldera Crown on a
-  basalt pillar in the centre.
-- A lava river runs from a notch in the crater rim down a carved channel to the south-west
-  edge, where it pours off the island as a lavafall.
-- Around the volcano:
-  - the Ember Forge ruins (south-east, Ember Heart);
-  - the Ash Plain with its petrified grove and the Ashen Sigil monolith (west);
-  - the Phoenix Altar egg shrine (north-west).
-- Ground: black basalt with drifts of ash; cracked lava along the river and in the caldera.
+Authored in island-local Roblox studs (x east, z south, y up; ground ~0 = world Y 200), unturned
+(TURNS 0: local axes are the world's).
+
+Since 2026-11-02 (the owner's upgrade) the island is twice as wide (about 300 studs across) and
+built round an open middle: the **Cinder Arena**, a dead-level ring of basalt bordered by cracked,
+glowing lava rock, kept for Ember Peak's guardian (still to come). Its three egg pedestals stand
+in an arc at its back, under the volcano. Nothing stands in the arena; round it:
+- the arrival terrace and the Ember Gate on the south rim, where the Ember bridge lands (the
+  island moved out along its bridge, which didn't change);
+- the volcano to the north, looming behind the eggs: its caldera holds a lava lake with the
+  Caldera Crown on a basalt pillar; basalt steps climb its arena-facing flank; a lava river runs
+  from a notch in its rim to the north-west edge and pours off as a lavafall;
+- the Ember Forge ruins to the east (Ember Heart);
+- the Ash Plain to the west, its petrified grove and the Ashen Sigil monolith.
+A path rings the arena; spokes run from it to each landmark and to the gate.
+- Ground: black basalt with drifts of ash; cracked lava along the river, in the caldera and round
+  the arena.
 """
 import math
 
@@ -21,39 +26,86 @@ NAME = "EmberPeak"
 CENTRE = L.ISLANDS[NAME]["centre"]   # its place in the world, and its quarter turns (layout.py)
 TURNS = L.ISLANDS[NAME]["turns"]
 
-ARRIVAL = (56, -48)            # where the Ember bridge lands (about layout.ARRIVALS["EmberPeak"])
-LANDING = (48, -40, 10)        # x, z, radius; flat at +0.5
-VOLCANO = (-6, 8, 36)          # centre, base radius
+ARRIVAL = (L.ARRIVALS[NAME][0], L.ARRIVALS[NAME][2])   # where the Ember bridge lands
+ARRIVAL_BEARING = math.degrees(math.atan2(ARRIVAL[1], ARRIVAL[0]))
+_IN = (-ARRIVAL[0] / math.hypot(*ARRIVAL), -ARRIVAL[1] / math.hypot(*ARRIVAL))
+
+
+def _toward_centre(d):
+    return (ARRIVAL[0] + _IN[0] * d, ARRIVAL[1] + _IN[1] * d)
+
+
+def _polar(bearing, r):
+    a = math.radians(bearing)
+    return (math.cos(a) * r, math.sin(a) * r)
+
+
+LANDING = (*_toward_centre(14), 11)        # x, z, radius; flat at +0.5
+GATE = _toward_centre(26)                  # the Ember Gate, across the path
+
+ARENA = (0.0, 0.0)                         # the Cinder Arena: level basalt to ARENA_R, glowing border to ARENA_EDGE
+ARENA_R, ARENA_EDGE, ARENA_Y = 44, 50, 0.5
+RING_R = 57                                # the path round it
+LAIR = ARENA                               # the guardian to come stands here, facing the gate
+EGG_RING = 31                              # the egg pedestals' arc at the arena's back
+EGG_BEARINGS = [ARRIVAL_BEARING + 180 + d for d in (-38, 0, 38)]
+
+VOLCANO_BEARING = ARRIVAL_BEARING + 180    # straight behind the eggs
+VOLCANO = (*_polar(VOLCANO_BEARING, 100), 36)   # centre, base radius
 RIM_H, RIM_R, CRATER_FLOOR = 40.0, 14.0, 27.0   # crater rim height and radius, caldera floor
 LAVA_LAKE = 29.0               # lava surface inside the caldera (about 9 studs across)
-FORGE = (34, 30, 14)           # Ember Forge terrace: centre, radius; flat at +2
-ASH = (-50, -12, 17)           # Ash Plain: centre, radius; flat at +0.5
-ALTAR = (-24, -44, 13)         # Phoenix Altar: centre, radius; flat at +1
-RIVER = [(-15, 18), (-24, 28), (-36, 40), (-47, 52), (-58, 63)]  # crater notch -> south-west edge
-                               # (the last point is moved onto the rim below, where the lavafall starts)
+FORGE = (*_polar(ARRIVAL_BEARING - 110, 100), 14)   # Ember Forge terrace (east): centre, radius; flat at +2
+ASH = (*_polar(ARRIVAL_BEARING + 95, 100), 17)      # Ash Plain (west): centre, radius; flat at +0.5
+
+# the lava river: from the crater's notch away from the arena, to the north-west edge (the last point
+# is moved onto the rim below, where the lavafall starts)
+_RIVER_DIR = math.radians(VOLCANO_BEARING - 45)
+RIVER = [(VOLCANO[0] + math.cos(_RIVER_DIR + w) * d, VOLCANO[1] + math.sin(_RIVER_DIR + w) * d)
+         for d, w in ((13.5, 0.0), (27, 0.06), (44, 0.02), (60, -0.05), (78, -0.03))]
 RIVER_HALF = 3.4
 
-LOBES = [(0, 6, 20), (-40, 12, 18), (50, 8, 22), (130, -5, 16), (-130, 9, 20), (175, 7, 18), (95, -4, 12)]
+BASE_R = 145.0
+LOBES = [(ARRIVAL_BEARING, 6, 20), (VOLCANO_BEARING, 8, 34), (VOLCANO_BEARING - 45, 4, 20), (ARRIVAL_BEARING - 110, 5, 24),
+         (ARRIVAL_BEARING + 95, 6, 26), (ARRIVAL_BEARING + 140, -7, 18), (ARRIVAL_BEARING - 150, -6, 18)]
 
 
 def rim(theta):
     from worldlib import fbm
     d = math.degrees(theta)
-    r = 74.0
+    r = BASE_R
     for bearing, amount, width in LOBES:
         diff = (d - bearing + 180) % 360 - 180
         r += amount * math.exp(-(diff / width) ** 2)
-    r += 4.0 * fbm(math.cos(theta) * 2.6 + 31, math.sin(theta) * 2.6 + 17, seed=71, octaves=3)
+    r += 5.0 * fbm(math.cos(theta) * 2.6 + 31, math.sin(theta) * 2.6 + 17, seed=71, octaves=3)
     return r
 
 
-JUNCTION = (22, -22)
+def _ring_point(bearing):
+    return _polar(bearing, RING_R)
+
+
+def _toward(feature, inset):
+    """The point on a round feature's arena-facing side, `inset` in from its centre."""
+    fx, fz = feature[0], feature[1]
+    d = math.hypot(fx, fz)
+    return (fx - fx / d * inset, fz - fz / d * inset)
+
+
+def _bearing_of(point):
+    return math.degrees(math.atan2(point[1], point[0]))
+
+
+def _spoke(target):
+    a = _ring_point(_bearing_of(target))
+    return [a, ((a[0] + target[0]) / 2, (a[1] + target[1]) / 2), target]
+
+
 PATHS = [
-    [ARRIVAL, (48, -40), (36, -32), JUNCTION],                      # arrival -> gate -> junction
-    [JUNCTION, (2, -38), (-14, -42)],                               # junction -> Phoenix Altar
-    [JUNCTION, (34, -6), (38, 12), (36, 20)],                       # junction -> Ember Forge (east of the volcano)
-    [(2, -38), (-20, -28), (-38, -18)],                             # altar path -> Ash Plain
-    [(30, -10), (20, -6)],                                          # spur to the foot of the basalt steps
+    [ARRIVAL, LANDING[:2], GATE, _ring_point(ARRIVAL_BEARING)],      # arrival -> gate -> the ring
+    [_ring_point(b) for b in range(0, 361, 15)],                      # the ring round the arena
+    _spoke(_toward(FORGE, FORGE[2] - 2)),                             # -> Ember Forge (its opening is this path's end)
+    _spoke(_toward(ASH, ASH[2] - 4)),                                 # -> Ash Plain
+    _spoke(_toward(VOLCANO, 27)),                                     # -> the volcano's flank, where the basalt steps start
 ]
 
 
@@ -70,6 +122,10 @@ def path_distance(x, z):
 
 def river_distance(x, z):
     return min(_seg(x, z, a, b) for a, b in zip(RIVER, RIVER[1:]))
+
+
+def arena_distance(x, z):
+    return math.hypot(x - ARENA[0], z - ARENA[1])
 
 
 def notch_weight(x, z):
@@ -101,23 +157,21 @@ def _base(x, z):
     R = rim(math.atan2(z, x))
     if r > R:
         return None
-    vx, vz, vr = VOLCANO
-    dv = math.hypot(x - vx, z - vz)
-    h = 1.8 * fbm(x / 26 + 5, z / 26 - 9, seed=81, octaves=4)
-    rough = 1.6 * abs(fbm(x / 9, z / 9, seed=82, octaves=3))   # broken lava-rock ground
-    h += rough
+    h = 2.2 * fbm(x / 36 + 5, z / 36 - 9, seed=81, octaves=4)
+    h += 1.6 * abs(fbm(x / 9, z / 9, seed=82, octaves=3))   # broken lava-rock ground
+    # flat terraces (the volcano rises after, so the arena's flattening never cuts its toe)
+    for (cx, cz, rad), lift, soft in ((LANDING, 0.5, 6), (FORGE, 2.0, 7), (ASH, 0.5, 8), ((*ARENA, RING_R + 2), ARENA_Y, 10)):
+        w = 1 - smoothstep(rad, rad + soft, math.hypot(x - cx, z - cz))
+        h = h * (1 - w) + lift * w
     h += volcano_height(x, z) * (1 + 0.05 * fbm(x / 7, z / 7, seed=83, octaves=2))
     # the lava river's channel, cut into the flank and the plain
     rd = river_distance(x, z)
     if rd < RIVER_HALF + 3:
         cut = 1 - smoothstep(RIVER_HALF - 0.5, RIVER_HALF + 3, rd)
         h -= 2.6 * cut
-    # flat terraces
-    for (cx, cz, rad), lift, soft in ((LANDING, 0.5, 6), (FORGE, 2.0, 7), (ASH, 0.5, 8), (ALTAR, 1.0, 7)):
-        w = 1 - smoothstep(rad, rad + soft, math.hypot(x - cx, z - cz))
-        h = h * (1 - w) + lift * w
-    h -= 0.4 * (1 - smoothstep(2.0, 3.8, path_distance(x, z)))
-    h -= 3.6 * (1 - smoothstep(R - 1, R - 10, r)) ** 1.6
+    if arena_distance(x, z) > ARENA_EDGE:
+        h -= 0.4 * (1 - smoothstep(2.2, 4.2, path_distance(x, z)))
+    h -= 3.6 * (1 - smoothstep(R - 1, R - 12, r)) ** 1.6
     return h
 
 
@@ -126,13 +180,16 @@ def height(x, z):
     if h is None:
         return None, None
     from worldlib import fbm
+    a = arena_distance(x, z)
+    if a < ARENA_EDGE:   # the arena: level basalt inside a glowing border of cracked lava rock
+        return h, "CrackedLava" if a > ARENA_R else "Basalt"
     vx, vz, vr = VOLCANO
     dv = math.hypot(x - vx, z - vz)
-    if path_distance(x, z) < 3.4:
+    if path_distance(x, z) < 3.6:
         mat = "Sand"
     elif river_distance(x, z) < RIVER_HALF + 2.2 or dv < RIM_R - 2:
         mat = "CrackedLava"
-    elif math.hypot(x - ASH[0], z - ASH[1]) < ASH[2] + 4 or fbm(x / 18 + 3, z / 18, seed=84, octaves=2) > 0.32:
+    elif math.hypot(x - ASH[0], z - ASH[1]) < ASH[2] + 4 or fbm(x / 22 + 3, z / 22, seed=84, octaves=2) > 0.32:
         mat = "Asphalt"   # ash drifts
     else:
         mat = "Basalt"
@@ -145,12 +202,13 @@ MATERIALS = ["Basalt", "CrackedLava", "Asphalt", "Sand"]
 def export_terrain(path=None):
     import worldlib as W
     path = path or W.REPO + "/src/worldbuild/Terrain/%s.lua" % NAME
-    return W.export_heightfield(NAME, CENTRE, 4, 98, height, MATERIALS, path, priority=[("Sand", 2)], turns=TURNS)
+    return W.export_heightfield(NAME, CENTRE, 4, 172, height, MATERIALS, path, priority=[("Sand", 2)], turns=TURNS)
 
 
 def _clip_river_to_rim():
     """Cut the river where it first reaches the island edge (where the lavafall begins)."""
-    inside = lambda x, z: math.hypot(x, z) < rim(math.atan2(z, x)) - 1.0
+    def inside(x, z):
+        return math.hypot(x, z) < rim(math.atan2(z, x)) - 1.0
     for k in range(1, len(RIVER)):
         a, b = RIVER[k - 1], RIVER[k]
         if not inside(*b):
@@ -165,6 +223,7 @@ def _clip_river_to_rim():
             del RIVER[k:]
             RIVER.append(end)
             return
+    raise ValueError("the lava river never reaches the rim: lengthen it")
 
 
 _clip_river_to_rim()

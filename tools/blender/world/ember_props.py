@@ -2,7 +2,8 @@
 
 - The Ember Forge ruins: hearth, coals, ruined walls with a furnace chimney, anvils.
 - The Ash Plain: the Ashen Sigil monolith and its glowing sigil, petrified trees.
-- The Phoenix Altar: a hex-basalt floor, cinnabar-topped column egg pedestals, braziers.
+- The Phoenix Altar, at the Cinder Arena's back: a hex-basalt pad under each cinnabar-topped column
+  egg pedestal; braziers and basalt columns ring the arena's edge.
 - Island dressing: fire crystals, ember vents, basalt clusters, obsidian shards.
 """
 import bpy, math, random
@@ -135,18 +136,19 @@ def petrified_tree(coll, mat, bands, name, seed):
 
 
 # ---------- the Phoenix Altar (egg shrine) ----------
-QX, QZ, QR = E.ALTAR
+PAD_R = 4.6   # each egg pedestal's hex-basalt pad
 ALTAR_FLOOR = 1.5  # tile tops sit just above the voxel ground of the flat terrace at +1
 PEDESTAL_TOPS = (2.8, 4.0, 5.2)   # the three egg columns rise like steps, the rarest egg highest
 
 
 def altar_floor(coll, mat, bands):
-    """Tight hexagonal basalt tops forming the shrine floor (island-local, placed at the altar)."""
+    """A pad of tight hexagonal basalt tops under each egg pedestal (island-local, placed at the origin)."""
     mb = W.MeshBuilder()
     rnd = random.Random(51)
-    for x, z in EM.hex_cells(lambda th: QR - 1.0, 3.1):
-        column(mb, QX + x, QZ + z, 1.5, ALTAR_FLOOR - 2.5, ALTAR_FLOOR + rnd.uniform(-0.06, 0.12), bands[EM.BASALT],
-               int(1000 + x * 7 + z * 13), tilt=0.0, bottom=False)
+    for _, qx, qz, _, _ in egg_layout():
+        for x, z in EM.hex_cells(lambda th: PAD_R, 3.1):
+            column(mb, qx + x, qz + z, 1.5, ALTAR_FLOOR - 2.5, ALTAR_FLOOR + rnd.uniform(-0.06, 0.12), bands[EM.BASALT],
+                   int(1000 + (qx + x) * 7 + (qz + z) * 13), tilt=0.0, bottom=False)
     return mb.object("EP_AltarFloor", coll, mat)
 
 
@@ -268,21 +270,36 @@ def face_yaw(fx, fz):
 
 
 def egg_layout():
-    """Three pedestals in an arc on the altar's far side, facing the arriving path."""
-    entrance = E.PATHS[1][-1]
-    dx, dz = entrance[0] - QX, entrance[1] - QZ
-    toward = math.atan2(dz, dx)
+    """The three pedestals in their arc at the arena's back, each facing the lair; the rarest (the
+    tallest) in the middle."""
     out = []
-    for k, (eid, top) in enumerate(zip(EGG_IDS, PEDESTAL_TOPS)):
-        a = toward + math.pi + (k - 1) * 0.75
-        x, z = QX + math.cos(a) * 8.0, QZ + math.sin(a) * 8.0
-        out.append((eid, x, z, face_yaw(entrance[0] - x, entrance[1] - z), top))
+    order = (0, 2, 1)   # Inferno, Phoenix Ash, Magma Heart round the arc: Phoenix Ash's tallest column in the middle
+    for k, bearing in enumerate(E.EGG_BEARINGS):
+        i = order[k]
+        x, z = E._polar(bearing, E.EGG_RING)
+        out.append((EGG_IDS[i], x, z, face_yaw(E.LAIR[0] - x, E.LAIR[1] - z), PEDESTAL_TOPS[i]))
+    return out
+
+
+SPOKE_BEARINGS = [E.ARRIVAL_BEARING] + [E._bearing_of(p[-1]) for p in E.PATHS[2:]]
+
+
+def arena_ring():
+    """Round the arena, between the paths, just outside its glowing border: braziers and basalt
+    column clusters alternating (props ring the middle; nothing stands in it)."""
+    out = []
+    for k in range(16):
+        bearing = 11.25 + 22.5 * k
+        if any(abs((bearing - b + 180) % 360 - 180) < 13 for b in SPOKE_BEARINGS):
+            continue
+        x, z = E._polar(bearing, E.ARENA_EDGE + 3.5)
+        out.append(("EP_Brazier" if k % 2 == 0 else "Cluster", x, z, face_yaw(-x, -z)))
     return out
 
 
 def keepouts():
-    return [(FX, FZ, FR + 4), (AX, AZ, 10), (QX, QZ, QR + 3), (E.LANDING[0], E.LANDING[1], 12),
-            (E.VOLCANO[0], E.VOLCANO[1], E.VOLCANO[2] - 4)]
+    return [(FX, FZ, FR + 4), (AX, AZ, 10), (E.ARENA[0], E.ARENA[1], E.RING_R + 5), (E.LANDING[0], E.LANDING[1], 12),
+            (E.GATE[0], E.GATE[1], 12), (E.VOLCANO[0], E.VOLCANO[1], E.VOLCANO[2] - 4)]
 
 
 def scatter(rnd, count, gap, path_clear, rim_clear, taken, accept=None, tries=5000):
@@ -291,7 +308,7 @@ def scatter(rnd, count, gap, path_clear, rim_clear, taken, accept=None, tries=50
     for _ in range(tries):
         if len(out) >= count:
             break
-        x, z = rnd.uniform(-95, 95), rnd.uniform(-95, 95)
+        x, z = rnd.uniform(-E.BASE_R - 15, E.BASE_R + 15), rnd.uniform(-E.BASE_R - 15, E.BASE_R + 15)
         if math.hypot(x, z) > E.rim(math.atan2(z, x)) - rim_clear:
             continue
         if E.path_distance(x, z) < path_clear or E.river_distance(x, z) < E.RIVER_HALF + 3:
@@ -326,32 +343,37 @@ def kit_entries():
     add("EP_SigilGlow", mx, ground(mx, mz), mz, face_yaw(AX - mx, AZ - mz))
     taken = [(FX, FZ, FR + 4), (AX, AZ, 6),
              (E.ARRIVAL[0], E.ARRIVAL[1], 14)]   # where the bridge from Yggdrasil lands, 20 studs wide
-    for x, z in scatter(rnd, 9, 8, 4, 6, taken, accept=lambda x, z, r: math.hypot(x - AX, z - AZ) < AR + 16):
+    for x, z in scatter(rnd, 16, 8, 4, 6, taken, accept=lambda x, z, r: math.hypot(x - AX, z - AZ) < AR + 22):
         add(rnd.choice(("EP_PetrifiedTreeA", "EP_PetrifiedTreeB")), x, ground(x, z) - 0.4, z, rnd.uniform(0, TAU), rnd.uniform(0.85, 1.25))
-    # the altar
+    # the altar's pads under the egg pedestals, and the ring round the arena
     add("EP_AltarFloor", 0, 0, 0)
+    for name, x, z, yaw in arena_ring():
+        y = ground(x, z)
+        if name == "EP_Brazier":
+            add("EP_Brazier", x, y, z, yaw)
+            add("EP_BrazierFire", x, y, z, yaw)
+        else:
+            add(rnd.choice(("EP_BasaltClusterA", "EP_BasaltClusterB")), x, y - 0.6, z, yaw, rnd.uniform(1.0, 1.3))
+    # by the gate's inner side, either side of the path
+    (gx0, _, gz0), _ = EM.gate_frame()
+    inward = (E.ARENA[0] - gx0, E.ARENA[1] - gz0)
+    n = math.hypot(*inward)
+    fwd, side_dir = (inward[0] / n, inward[1] / n), (-inward[1] / n, inward[0] / n)
     for side in (-1, 1):
-        entrance = E.PATHS[1][-1]
-        a = math.atan2(entrance[1] - QZ, entrance[0] - QX) + side * 0.5
-        x, z = QX + math.cos(a) * (QR - 2), QZ + math.sin(a) * (QR - 2)
-        add("EP_Brazier", x, ALTAR_FLOOR, z)
-        add("EP_BrazierFire", x, ALTAR_FLOOR, z)
-    # by the gate's inner side
-    for side in (-1, 1):
-        gx, gz = E.JUNCTION[0] + 9 + side * 4.5, E.JUNCTION[1] - 6 + side * 4.5
+        gx, gz = gx0 + fwd[0] * 5 + side_dir[0] * 7 * side, gz0 + fwd[1] * 5 + side_dir[1] * 7 * side
         add("EP_Brazier", gx, ground(gx, gz), gz)
         add("EP_BrazierFire", gx, ground(gx, gz), gz)
-    # dressing
-    for x, z in scatter(rnd, 10, 12, 4, 3, taken):
+    # dressing, over four times the old ground
+    for x, z in scatter(rnd, 30, 12, 4, 3, taken):
         add(rnd.choice(("EP_BasaltClusterA", "EP_BasaltClusterB")), x, ground(x, z) - 0.6, z, rnd.uniform(0, TAU), rnd.uniform(0.8, 1.4))
-    for x, z in scatter(rnd, 7, 10, 3, 4, taken):
+    for x, z in scatter(rnd, 20, 10, 3, 4, taken):
         add("EP_FireCrystal", x, ground(x, z) - 0.3, z, rnd.uniform(0, TAU), rnd.uniform(0.85, 1.3))
-    for x, z in scatter(rnd, 8, 10, 3, 5, taken):
+    for x, z in scatter(rnd, 22, 10, 3, 5, taken):
         y = ground(x, z) - 0.2
         yaw = rnd.uniform(0, TAU)
         add("EP_EmberVent", x, y, z, yaw)
         add("EP_VentGlow", x, y, z, yaw)
-    for x, z in scatter(rnd, 9, 8, 3, 3, taken):
+    for x, z in scatter(rnd, 26, 8, 3, 3, taken):
         add("EP_ObsidianShard", x, ground(x, z) - 0.3, z, rnd.uniform(0, TAU), rnd.uniform(0.8, 1.3))
     return kit
 
@@ -364,7 +386,7 @@ def write_all():
     lines = ['    EggStandPieces = { Pedestal = "EP_EggPedestal", GlowRing = "EP_EggGlowRing" },', "    EggStands = {"]
     for eid, x, z, yaw, top in egg_layout():
         lines.append('        { EggId = "%s", Position = Vector3.new(%.2f, %.2f, %.2f), Yaw = %.4f, EggRest = %.2f, Scale = %.3f },'
-                     % (eid, x, ALTAR_FLOOR, z, yaw, top, top / 4.0))
+                     % (eid, x, ALTAR_FLOOR, z, yaw, top, top / 4.0))   # on its hex pad
     lines.append("    },")
     s = s.replace("    Checkpoint = ", "\n".join(lines) + "\n    Checkpoint = ", 1)
     open(path, "w").write(s)

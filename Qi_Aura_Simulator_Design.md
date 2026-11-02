@@ -606,7 +606,7 @@ Five floating islands built from original Blender work: terrain tops, sculpted u
 |---|---|---|---|
 | Yggdrasil | (0, 200, 0) | The World Tree and the spawn hub | Root of the Island (300 Qi, Qi Initiate) |
 | Jade Grove | (−384, 200, −448), 0 | Ancient forest | Grove Heart, Jade Seed, Whispering Spring (800 Qi each, Qi Gatherer) |
-| Ember Peak | (−150, 200, −606), 1 | Volcanic, lava pools | Ember Heart, Ashen Sigil, Caldera Crown (1,500 Qi each, Qi Awakener) |
+| Ember Peak | (−128, 200, −696), 0 | Volcanic, lava pools | Ember Heart, Ashen Sigil, Caldera Crown (1,500 Qi each, Qi Awakener) |
 | Moonlit Isle | (180, 200, −742), 0 | Pale and celestial | Moon Mirror, Star Well (3,000 Qi each, Foundation Initiate) |
 | Origin Abyss | (572, 200, −784), 1 | Hidden endgame: dark slate, void crystals and rifts, broken ruins | Origin Altar (250K Qi, Divine Initiate); the Void Shard high above it (1M Qi, Void Walker) |
 
@@ -650,21 +650,22 @@ The World Tree stands at the centre; everything else rings it. Scripts: `ygg_isl
 - **Underside:** the faceted dark-jade mass, deeper (130 studs) with larger hanging jade crystals, moss curtains and vines round the longer rim.
 - **Tested in Play:** walked from the bridge into the arena (3 s); the Sage woke at its engage radius, its attacks knocked back without throwing anyone off; weakened in 14 strikes; the egg stolen, the Sage leapt after the thief, and the egg was secured in the Bloom Glade after a 5.6 s run (it dropped its relic: Wind unlocked).
 
-### Ember Peak (built)
+### Ember Peak (built; doubled November 2, 2026)
 
-Columnar basalt is the island's signature, used for the cliffs, the climb, the altar and the underside.
+Columnar basalt is the island's signature, used for the cliffs, the climb, the altar and the underside. Doubled for the owner's upgrade like Jade Grove: about 300 studs across, moved out along its unchanged bridge.
 
-- **Ember Gate:** the arrival, two bundles of basalt columns with iron fire braziers under an obsidian lintel with a cinnabar plaque.
-- **The volcano:**
+- **Cinder Arena** (the middle): a dead-level basalt ring bordered by glowing cracked lava rock (radius 50), a path ringing it, braziers and basalt column clusters round its edge. Its centre is kept for Ember Peak's guardian (the Fire Guardian, still to design). At its back, the **Phoenix Altar**: three cinnabar-topped column pedestals, each on a pad of hexagonal basalt, holding the Inferno, Phoenix Ash (tallest, in the middle) and Magma Heart eggs.
+- **Ember Gate:** the arrival on the south rim, two bundles of basalt columns with iron fire braziers under an obsidian lintel with a cinnabar plaque; braziers inside it; the path runs straight into the arena.
+- **The volcano** (north, looming behind the eggs):
   - a crown of basalt columns rings its crater;
   - inside, a lava lake holds the **Caldera Crown** on a basalt pillar;
-  - six basalt column steps climb the flank as the Qinggong route to the rim.
-- **Lava river:** it overflows a notch in the rim, runs down a carved channel and pours off the island's edge as a lavafall. Touching the lake or the river returns the player to Ember Peak's checkpoint.
-- **Ember Forge:** ruined walls of stacked basalt blocks with a sooty chimney and anvils. The **Ember Heart** hovers over a hearth of glowing coals; this nods to the planned forged weapons.
-- **Ash Plain:** petrified trees around a cracked obsidian monolith carved with the glowing **Ashen Sigil**.
-- **Phoenix Altar:** a hex-basalt floor with three cinnabar-topped column pedestals that step up in height. They hold the Inferno, Magma Heart and Phoenix Ash eggs, the rarest highest.
-- **Underside:** hanging hexagonal basalt columns, like organ pipes, with a magma core glowing through the gaps.
-- **Dressing:** fire crystals, ember vents throwing sparks, basalt clusters and obsidian shards.
+  - six basalt column steps climb its arena-facing flank as the Qinggong route to the rim.
+- **Lava river:** it overflows a notch in the rim, runs down a carved channel to the north-west edge and pours off the island as a lavafall. Touching the lake or the river returns the player to Ember Peak's checkpoint.
+- **Ember Forge** (east): ruined walls of stacked basalt blocks with a sooty chimney and anvils. The **Ember Heart** hovers over a hearth of glowing coals.
+- **Ash Plain** (west): petrified trees around a cracked obsidian monolith carved with the glowing **Ashen Sigil**.
+- **Underside:** hanging hexagonal basalt columns, like organ pipes (wider and deeper at the new size), with a magma core glowing through the gaps.
+- **Dressing:** fire crystals, ember vents throwing sparks, basalt clusters and obsidian shards, about three times the old count, all round the arena.
+- **Tested in Play:** from the bridge to the egg pedestals in 5 s, the prompt in reach; the lava river returns the player to the new checkpoint.
 
 ### Moonlit Isle (built)
 

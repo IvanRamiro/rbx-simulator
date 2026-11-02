@@ -142,7 +142,7 @@ def _fix_last(mb, want):
 def hex_cells(radius_fn, spacing):
     """Centres of a hexagonal grid inside the outline radius_fn(theta)."""
     out = []
-    rows = int(120 / (spacing * 0.866)) + 2
+    rows = int(175 / (spacing * 0.866)) + 2
     for j in range(-rows, rows + 1):
         for i in range(-rows, rows + 1):
             x = (i + (0.5 if j % 2 else 0.0)) * spacing
@@ -155,7 +155,7 @@ def hex_cells(radius_fn, spacing):
 
 # ---------- underside ----------
 UNDER_TOP = -3.0
-UNDER_R, UNDER_SPACING = 4.6, 10.0
+UNDER_R, UNDER_SPACING = 6.4, 14.0   # since the island doubled (2026-11-02): wider pipes, as many again
 
 
 def under_columns(coll, mat, bands):
@@ -167,7 +167,7 @@ def under_columns(coll, mat, bands):
     for n, (x, z) in enumerate(hex_cells(lambda th: E.rim(th) + 1.5, UNDER_SPACING)):
         R = E.rim(math.atan2(z, x))
         t = min(1.0, math.hypot(x, z) / R)
-        length = 16 + 66 * (1 - t ** 1.5) + rnd.uniform(-8, 8)
+        length = 22 + 92 * (1 - t ** 1.5) + rnd.uniform(-11, 11)
         column(mb, x, z, UNDER_R, UNDER_TOP - length, UNDER_TOP, bands[BASALT], 300 + n, top=False,
                tilt=rnd.uniform(1.0, 4.0), bottom_band=bands[MAGMA] if rnd.random() < 0.35 else None)
     return mb.object("EP_UnderColumns", coll, mat)
@@ -177,7 +177,7 @@ def magma_core(coll, mat, bands):
     """The glowing heart the columns hang around (Neon in Roblox, no collision)."""
     mb = W.MeshBuilder()
     rings = []
-    for s, y in ((0.86, -4.0), (0.8, -20.0), (0.62, -40.0), (0.4, -58.0), (0.18, -72.0)):
+    for s, y in ((0.86, -4.0), (0.8, -28.0), (0.62, -56.0), (0.4, -81.0), (0.18, -101.0)):
         rings.append([(math.cos(TAU * i / 20) * E.rim(TAU * i / 20) * s, y, math.sin(TAU * i / 20) * E.rim(TAU * i / 20) * s)
                       for i in range(20)])
     for k in range(len(rings) - 1):
@@ -187,13 +187,17 @@ def magma_core(coll, mat, bands):
             oriented(mb, [rings[k][i], rings[k][j], rings[k + 1][j], rings[k + 1][i]], (math.cos(a), -0.3, math.sin(a)),
                      bands[GLOW], 0.5, [1.0] * 4)
     for i in range(20):
-        oriented(mb, [rings[-1][i], rings[-1][(i + 1) % 20], (0, -78.0, 0)], (0, -1, 0), bands[GLOW], 0.5, [1.0] * 3)
+        oriented(mb, [rings[-1][i], rings[-1][(i + 1) % 20], (0, -109.0, 0)], (0, -1, 0), bands[GLOW], 0.5, [1.0] * 3)
     return mb.object("EP_MagmaCore", coll, mat)
 
 
 # ---------- the volcano: crater crown, lava lake, Caldera pillar, river ----------
 VX, VZ = E.VOLCANO[0], E.VOLCANO[1]
-STEP_ARRIVAL = 0.35   # bearing (radians from the volcano axis) where the basalt steps reach the rim
+# the basalt steps start on the flank facing the arena (the volcano path's end) and wind STEP_SWEEP
+# round the cone to reach the rim at STEP_ARRIVAL (bearing about the volcano's axis, radians)
+STEP_START = math.atan2(E.PATHS[4][-1][1] - VZ, E.PATHS[4][-1][0] - VX)
+STEP_SWEEP = 0.84
+STEP_ARRIVAL = STEP_START + STEP_SWEEP
 
 
 def crater_crown(coll, mat, bands):
@@ -346,8 +350,7 @@ def gate_fire(coll, mat, bands):
 def step_positions():
     """Basalt steps from the spur at the volcano's east foot up to the crater rim: each top rises
     about 6 studs over about 8 horizontally (two air leaps clear it easily; Ember Peak needs three)."""
-    start = E.PATHS[4][-1]
-    a0 = math.atan2(start[1] - VZ, start[0] - VX)
+    a0 = STEP_START
     out = []
     tops = [12.0, 18.0, 24.0, 30.0, 36.0, 41.0]
     for k, top in enumerate(tops):
@@ -366,8 +369,8 @@ def step_positions():
 
 
 def gate_frame():
-    """Ember Gate position and yaw: across the path between the landing and the junction."""
-    gx, gz = 38.0, -33.0
+    """Ember Gate position and yaw: across the path from the landing toward the arena."""
+    gx, gz = E.GATE
     a, b = E.PATHS[0][1], E.PATHS[0][2]
     return (gx, ground(gx, gz) - 0.3, gz), math.atan2(b[0] - a[0], b[1] - a[1])
 
