@@ -608,7 +608,7 @@ Five floating islands built from original Blender work: terrain tops, sculpted u
 | Jade Grove | (−384, 200, −448), 0 | Ancient forest | Grove Heart, Jade Seed, Whispering Spring (800 Qi each, Qi Gatherer) |
 | Ember Peak | (−128, 200, −696), 0 | Volcanic, lava pools | Ember Heart, Ashen Sigil, Caldera Crown (1,500 Qi each, Qi Awakener) |
 | Moonlit Isle | (192, 200, −804), 0 | Pale and celestial | Moon Mirror, Star Well (3,000 Qi each, Foundation Initiate) |
-| Origin Abyss | (572, 200, −784), 1 | Hidden endgame: dark slate, void crystals and rifts, broken ruins | Origin Altar (250K Qi, Divine Initiate); the Void Shard high above it (1M Qi, Void Walker) |
+| Origin Abyss | (596, 200, −856), 0 | Hidden endgame: dark slate, void crystals and rifts, broken ruins | Origin Altar (250K Qi, Divine Initiate); the Void Shard high above it (1M Qi, Void Walker) |
 
 **Shared rules**
 
@@ -680,19 +680,19 @@ Seen from above, the island is a crescent moon: a full disc (about 250 studs acr
 - **Dressing:** hovering porcelain star lanterns along every path, glowing frost lilies, moonstone shards, lunar rocks and spires on the horns, about three times the old count.
 - **Tested in Play:** from the bridge to the egg pedestals in 4 s, the prompt in reach; across the Moon Mirror's bridge to its relic; a step into the bay returns the player to the checkpoint.
 
-### Origin Abyss (built)
+### Origin Abyss (built; doubled November 2, 2026)
 
-The hidden endgame island, torn in two by a void rift that zig-zags across it from north-east to south-west, pinching and gaping as it goes. The north-west half stands higher and tilts up toward its far edge.
+The hidden endgame island, about 320 studs across since the owner's upgrade, moved out along its unchanged bridge. A void rift tears a chord across its far side; the court's side is level and open, the shelf beyond the rift raised and tilting up toward its far edge.
 
-- **Arrival:** the bridge lands at the Gate of Descent. (The Descent Ledge, a broken temple landing high above the island that players glided down from, went when the islands were levelled.)
-- **Gate of Descent:** two carved pillars, one snapped. The lintel has fallen onto the stump. A ruined avenue lined with snapped columns and fallen column drums leads from the gate to the rift.
-- **Broken bridge:** an ancient stone bridge crosses the rift at its narrowest point. Its middle has fallen away, leaving one block hanging in the gap to jump across.
-- **Origin Altar:** on the north-west half, a ring of nine leaning obsidian slabs carved with glowing seal-script glyphs (one snapped, its top fallen outside the ring) around a stepped dais with a glowing spiral sigil. The **Origin Altar** relic floats above it.
+- **Void Court** (the middle): a level court of worn temple stone bordered by void-crystal crust (radius 50). Its centre is kept for Origin Abyss's guardian (the Primordial Guardian, still to design). At its back, the **egg plinths**: three obsidian plinths cracked with void light, each cradled by thorny bronze branches and set on a pad of hewn paving, holding the Forbidden Origin, Void Rift and Primordial Abyss eggs; each stand glows in its egg's own colour. The **Thorn Crown**, seven great bronze branches (one snapped) rooted on the court's rim behind them, hooks up and inward over them.
+- **Gate of Descent** on the south-west rim, where the bridge lands: two carved pillars, one snapped, the lintel fallen onto the stump. A ruined avenue lined with snapped columns and fallen drums leads from it to the court.
+- **Fallen colossus** (west of the court): a giant carved stone head sunk into the ground, its face turned toward the path to it, void light in its eyes and through a crack across its face.
+- **The Rift** (behind the eggs): it pinches and gapes along a chord across the far side, open sky through it; it never comes within 82 studs of the court's centre. An **ancient broken bridge** crosses it where it narrows (pinched for it), its middle fallen away but for one hanging block: a run and a jump.
+- **Origin Altar** (on the shelf): a ring of nine leaning obsidian slabs carved with glowing seal-script glyphs (one snapped, its top fallen outside the ring) around a stepped dais with a glowing spiral sigil; a gap in the ring faces the path from the bridge. The **Origin Altar** relic floats above it.
 - **Void Shard:** a great obsidian-glass crystal with a glowing core, chained to a floating temple floor about 150 studs above the altar. Floating temple fragments climb to it, each rising 49 studs, so Void Walker clears every stage and Divine Initiate falls short. The **Void Shard** relic floats on the top floor.
-- **Egg shrine:** three obsidian plinths cracked with void light, each cradled by thorny bronze branches (which leave about 1.6 studs round the egg's axis low down). They hold the Forbidden Origin, Void Rift and Primordial Abyss eggs, and each stand glows in its egg's own colour. The Thorn Crown, seven great bronze branches rooted behind the shrine, arches over them.
-- **Fallen colossus:** a giant carved stone head sunk into the ground, its face turned toward the path. Void light shows in its eyes and through a crack across its face.
-- **Underside:** separate angular chunks with gaps between them, void light glowing through. Iron chains bind the halves beneath the rift, a glowing veil hangs deep in the rift, and broken-off debris drifts below.
-- **Dressing:** void crystals of dark glass around glowing cores (most along the rift's lips, with rising motes), slate rocks, and hewn paving on the temple terraces with stones missing toward the edges.
+- **Underside:** separate angular chunks (broader and deeper at the new size) with gaps between them, void light glowing through from a great lobe under the court and a smaller one under the shelf. Iron chains bind the halves beneath the rift, a glowing veil hangs deep in it, and broken-off debris drifts below.
+- **Dressing:** void crystals of dark glass around glowing cores (many along the rift's lips, with rising motes), slate rocks, about three times the old count, all round the court.
+- **Tested in Play:** from the bridge to the egg plinths in 5 s, the prompt in reach; across the broken bridge with a jump; from the shelf to the altar, its prompt in reach (after the ring was turned to open toward the path); a fall into the rift returns the player to the checkpoint.
 
 ### How islands are built
 

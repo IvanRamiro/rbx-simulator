@@ -10,7 +10,7 @@ local WorldConfig = {
         JadeGrove = { Centre = Vector3.new(-384, 200, -448), Radius = 160, Turns = 0 }, -- doubled 2026-11-02
         EmberPeak = { Centre = Vector3.new(-128, 200, -696), Radius = 150, Turns = 0 }, -- doubled 2026-11-02
         MoonlitIsle = { Centre = Vector3.new(192, 200, -804), Radius = 125, Turns = 0 }, -- doubled 2026-11-02
-        OriginAbyss = { Centre = Vector3.new(572, 200, -784), Radius = 85, Turns = 1 },
+        OriginAbyss = { Centre = Vector3.new(596, 200, -856), Radius = 165, Turns = 0 }, -- doubled 2026-11-02
     },
 
     -- Yggdrasil's spawn slots (FloatingIslands.Yggdrasil.SpawnSlots): each player in the server

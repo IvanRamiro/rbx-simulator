@@ -101,8 +101,7 @@ def drum_between(mb, a, b, r, sides, band, u=0.5, chamfer=0.25):
 
 
 # ---------- the egg shrine ----------
-SX, SZ, SR = O.SHRINE
-SHRINE_FLOOR = 0.8
+SHRINE_FLOOR = O.ARENA_Y
 PEDESTAL_TOP = 2.2      # the egg rests here
 CRACK_FACES = (0, 3, 5)   # the plinth faces with void light showing through their cracks
 PLINTH_R = 1.3            # the upper plinth's radius (8-sided)
@@ -153,46 +152,38 @@ def egg_glow_ring(coll, mat, bands):
 EGG_IDS = ["ForbiddenOriginEgg", "VoidRiftEgg", "PrimordialAbyssEgg"]
 
 
-def shrine_entrance():
-    return O.PATHS[1][-1]
-
-
-def shrine_back():
-    """Bearing from the shrine's centre away from where the path comes in."""
-    ex, ez = shrine_entrance()
-    return math.atan2(ez - SZ, ex - SX) + math.pi
-
-
 def egg_layout():
-    """Three stands across the shrine's far half, facing the path in, about 6 studs apart."""
-    ex, ez = shrine_entrance()
+    """The three plinths in their arc at the Void Court's back, each facing the lair."""
     out = []
-    for k, eid in enumerate(EGG_IDS):
-        a = shrine_back() + (k - 1) * 1.3
-        x, z = SX + math.cos(a) * 5.0, SZ + math.sin(a) * 5.0
-        out.append((eid, x, z, math.atan2(ex - x, ez - z)))
+    for eid, (x, z) in zip(EGG_IDS, O.EGG_SPOTS):
+        out.append((eid, x, z, math.atan2(O.LAIR[0] - x, O.LAIR[1] - z)))
     return out
+
+
+CROWN_ROOT_R = 46.0   # where the Thorn Crown's branches root, on the court's rim behind the eggs
 
 
 def thorn_crown(coll, mat, bands):
     """The Thorn Crown (island-local, placed at the island origin): seven great bronze branches rooted
-    around the back of the shrine, arching up and over the egg stands. One has snapped short."""
+    on the Void Court's rim behind the egg plinths, arching up and inward over them, high overhead.
+    One has snapped short."""
     rnd = random.Random(711)
     mb = W.MeshBuilder()
-    back = shrine_back()
+    back = math.radians(O.BACK_BEARING)
+    R0 = CROWN_ROOT_R
     for k in range(7):
-        a = back + (k - 3) * 0.48 + rnd.uniform(-0.06, 0.06)
-        drift = rnd.uniform(-0.12, 0.12)
-        h = rnd.uniform(9.5, 12.0)
-        at = lambda r, y, da=0.0: (SX + math.cos(a + da) * r, SHRINE_FLOOR + y, SZ + math.sin(a + da) * r)
-        pts = [at(SR + 0.8, -1.2), at(SR + 0.6, 2.5, drift * 0.3), at(SR - 0.6, h * 0.72, drift * 0.6), at(SR - 3.0, h, drift),
-               at(SR - 5.6, h - 1.6, drift * 1.4)]
+        a = back + (k - 3) * 0.2 + rnd.uniform(-0.03, 0.03)
+        drift = rnd.uniform(-0.05, 0.05)
+        h = rnd.uniform(15.0, 19.0)
+        at = lambda r, y, da=0.0: (math.cos(a + da) * r, SHRINE_FLOOR + y, math.sin(a + da) * r)
+        pts = [at(R0 + 1.2, -1.2), at(R0 + 0.8, 4.0, drift * 0.3), at(R0 - 2.5, h * 0.75, drift * 0.6), at(R0 - 9.0, h, drift),
+               at(R0 - 15.0, h - 3.0, drift * 1.4)]
         if k == 3:
             pts = pts[:3]   # snapped
-        thorn_branch(mb, pts, 1.05, 0.2 if k != 3 else 0.6, bands[OM.BRONZE], rnd, 1.8, 1.7, sides=6, per=3)
+        thorn_branch(mb, pts, 1.6, 0.3 if k != 3 else 0.9, bands[OM.BRONZE], rnd, 2.6, 2.4, sides=6, per=3)
         for j in range(3):   # roots gripping the ground
             ra = a + (j - 1) * 0.5 + rnd.uniform(-0.15, 0.15)
-            base = V(at(SR + 0.8, -0.2))
+            base = V(at(R0 + 1.2, -0.2))
             p1 = base + V((math.cos(ra) * 1.6, 0.25, math.sin(ra) * 1.6))
             p2 = base + V((math.cos(ra) * 3.2, -0.5, math.sin(ra) * 3.2))
             W.mb_tube(mb, [tuple(base), tuple(p1), tuple(p2)], lambda t: 0.6 - 0.4 * t, 5, bands[OM.BRONZE], per=2)
@@ -423,8 +414,8 @@ def build():
 # ---------- placement ----------
 def keep_clear():
     """Places dressing must stay out of: the terraces, the bridge heads and the colossus."""
-    zones = [(O.GATE[0], O.GATE[1], O.GATE[2] + 3), (SX, SZ, SR + 5), (O.ALTAR[0], O.ALTAR[1], O.ALTAR[2] + 4),
-             (O.COLOSSUS[0], O.COLOSSUS[1], 11)]
+    zones = [(O.GATE[0], O.GATE[1], O.GATE[2] + 3), (O.ARENA[0], O.ARENA[1], O.RING_R + 5), (O.ALTAR[0], O.ALTAR[1], O.ALTAR[2] + 6),
+             (O.COLOSSUS[0], O.COLOSSUS[1], 11), (O.ARRIVAL[0], O.ARRIVAL[1], 12)]
     zones += [(p[0], p[1], 6) for p, _ in O.bridge_pads()]
     return zones
 
@@ -502,9 +493,9 @@ def kit_entries():
     # void crystals along the rift's lips, where the void breaks through
     placed = 0
     for _ in range(4000):
-        if placed >= 10:
+        if placed >= 24:
             break
-        x, z = rnd.uniform(-80, 80), rnd.uniform(-80, 80)
+        x, z = rnd.uniform(-170, 170), rnd.uniform(-170, 170)
         lip = abs(O.side(x, z)) - O.rift_half(x, z)
         if not 4.0 < lip < 9.0 or not free(x, z, taken, 9, 4.0):
             continue
@@ -515,9 +506,9 @@ def kit_entries():
         taken.append((x, z, 9))
         placed += 1
     for _ in range(4000):
-        if placed >= 14:
+        if placed >= 40:
             break
-        x, z = rnd.uniform(-80, 80), rnd.uniform(-80, 80)
+        x, z = rnd.uniform(-170, 170), rnd.uniform(-170, 170)
         if not free(x, z, taken, 12, 5.0):
             continue
         yaw, scale = rnd.uniform(0, TAU), rnd.uniform(0.7, 1.2)
@@ -528,9 +519,9 @@ def kit_entries():
         placed += 1
     rocks = 0
     for _ in range(4000):
-        if rocks >= 10:
+        if rocks >= 30:
             break
-        x, z = rnd.uniform(-80, 80), rnd.uniform(-80, 80)
+        x, z = rnd.uniform(-170, 170), rnd.uniform(-170, 170)
         if not free(x, z, taken, 9, 3.0):
             continue
         scale = rnd.uniform(0.7, 1.4)

@@ -152,15 +152,16 @@ def under_chunks(coll, mat, bands):
     half, short near its coast and its rift lip, with gaps between them."""
     rnd = random.Random(601)
     groups = []
-    spacing = 11.0
-    for j in range(-10, 11):
-        for i in range(-10, 11):
+    spacing = 15.0   # since the island doubled (2026-11-02): broader, deeper chunks
+    n = int(185 / spacing) + 1
+    for j in range(-n, n + 1):
+        for i in range(-n, n + 1):
             x = (i + (0.5 if j % 2 else 0)) * spacing
             z = j * spacing * 0.866
             e = O.edge_distance(x, z)
             if e < 3.5:
                 continue
-            depth = 12 + min(1.0, max(0.0, e) / 34) ** 0.8 * 60 + rnd.uniform(-6, 6)
+            depth = 16 + min(1.0, max(0.0, e) / 50) ** 0.8 * 92 + rnd.uniform(-9, 9)
             pts = []
             cx, cz = x + rnd.uniform(-1, 1), z + rnd.uniform(-1, 1)
             half = spacing * 0.42
@@ -170,28 +171,28 @@ def under_chunks(coll, mat, bands):
             hull_chunk(pts, rnd, cx, cz, half, top, top - depth)
             groups.append([under_ground(pull_inside(p, cx, cz)) for p in pts])
     # debris that has already broken away, drifting beneath the island
-    for k in range(14):
-        a = TAU * k / 14 + rnd.uniform(-0.2, 0.2)
-        r = rnd.uniform(18, 60)
+    for k in range(24):
+        a = TAU * k / 24 + rnd.uniform(-0.2, 0.2)
+        r = rnd.uniform(30, 125)
         x, z = math.cos(a) * r, math.sin(a) * r
-        if abs(O.side(x, z)) < 12:   # keep the space under the rift open
+        if abs(O.side(x, z)) < 16:   # keep the space under the rift open
             continue
-        top = -78 - rnd.uniform(0, 30) + r * 0.4
-        size = rnd.uniform(2.5, 5.5)
+        top = -118 - rnd.uniform(0, 40) + r * 0.4
+        size = rnd.uniform(3.5, 8.0)
         pts = []
         hull_chunk(pts, rnd, x, z, size, top, top - size * rnd.uniform(1.4, 2.6), jag=0.4)
         groups.append(pts)
-    return hulls_to_object("OA_UnderChunks", coll, mat, bands[FRACTURE], groups, UNDER_TOP, UNDER_TOP - 110)
+    return hulls_to_object("OA_UnderChunks", coll, mat, bands[FRACTURE], groups, UNDER_TOP, UNDER_TOP - 165)
 
 
 def void_core(coll, mat, bands):
-    """The void light the chunks hang around (Neon in Roblox), one lobe under each half."""
+    """The void light the chunks hang around (Neon in Roblox): a great lobe under the court's side and
+    a smaller one under the shelf beyond the rift."""
     mb = W.MeshBuilder()
-    for sign in (1, -1):
-        nx, nz = -O.RIFT_DIR[1], O.RIFT_DIR[0]
-        cx, cz = nx * sign * 34, nz * sign * 34
-        rings = [(19, -6), (17, -20), (12, -36), (6, -50), (0.0, -58)]   # kept inside the chunks so it only shows through the gaps
-        mb.lathe([(r, y, 1.0) for r, y in rings], 14, bands[GLOW], centre=(cx, 0, cz), cap_top=True, u_repeat=0.0)
+    nx, nz = -O.RIFT_DIR[1], O.RIFT_DIR[0]
+    for (cx, cz), k in (((nx * 8, nz * 8), 2.0), ((O.ALTAR[0], O.ALTAR[1]), 0.9)):
+        rings = [(19 * k, -6), (17 * k, -10 - 10 * k), (12 * k, -14 - 22 * k), (6 * k, -18 - 32 * k), (0.0, -20 - 38 * k)]
+        mb.lathe([(r, y, 1.0) for r, y in rings], 14, bands[GLOW], centre=(cx, 0, cz), cap_top=True, u_repeat=0.0)   # kept inside the chunks
     return mb.object("OA_VoidCore", coll, mat)
 
 
@@ -240,7 +241,7 @@ def rift_chains(coll, mat, bands):
     mb = W.MeshBuilder()
     ax, az = O.RIFT_DIR
     nx, nz = -az, ax
-    for along, depth, span in ((-30, -9, 24), (4, -14, 28), (34, -10, 24)):
+    for along, depth, span in ((-62, -9, 26), (-26, -14, 30), (28, -12, 30), (64, -10, 26)):   # clear of the bridge (along 0)
         cx, cz = ax * along, az * along
         s = O.side(cx, cz)
         cx, cz = cx - nx * s, cz - nz * s   # centred on the meandering rift, anchored in the chunks either side
@@ -256,7 +257,7 @@ def rift_veil(coll, mat, bands):
     ax, az = O.RIFT_DIR
     nx, nz = -az, ax
     pts = []
-    for k in range(-14, 15):
+    for k in range(-24, 25):
         along = k * 6.5
         x, z = ax * along, az * along
         for _ in range(3):   # settle onto the meandering centreline
@@ -324,6 +325,10 @@ DAIS_TOP = ALTAR_FLOOR + 2.4
 
 
 RING_R = 13.0
+# turn the ring so the gap between two slabs faces the path in from the rift bridge (since the island
+# doubled, 2026-11-02, the path arrives from the court's side)
+_APPROACH = math.atan2(O.PATHS[4][0][1] - AZ, O.PATHS[4][0][0] - AX)
+RING_PHASE = _APPROACH + TAU / 18
 SNAPPED = 3     # this monolith broke; its top lies on the ground outside the ring
 TOPPLING = 7    # this one leans hard outward
 
@@ -333,7 +338,7 @@ def monoliths():
     rnd = random.Random(621)
     out = []
     for k in range(9):
-        a = TAU * k / 9 + 0.2 + rnd.uniform(-0.08, 0.08)
+        a = TAU * k / 9 + RING_PHASE + rnd.uniform(-0.08, 0.08)
         o, tg = (math.cos(a), math.sin(a)), (-math.sin(a), math.cos(a))
         lean_out = 0.2 if k == TOPPLING else rnd.uniform(0.02, 0.09)
         lean_tan = rnd.uniform(-0.05, 0.05)
@@ -447,11 +452,13 @@ def altar_runes(coll, mat, bands):
 
 # ---------- temple paving ----------
 def temple_paving(coll, mat, bands):
-    """Hewn paving slabs on the three temple terraces (gate, egg shrine, altar), laid in staggered
-    rings. Stones are missing toward each terrace's worn edge, showing the slate beneath."""
+    """Hewn paving slabs on the temple terraces (the gate, the altar, and a pad under each egg plinth
+    at the Void Court's back), laid in staggered rings. Stones are missing toward each terrace's worn
+    edge, showing the slate beneath."""
     mb = W.MeshBuilder()
     rnd = random.Random(671)
-    for (cx, cz, rad), lift, inner in ((O.GATE, 0.5, 0.0), (O.SHRINE, 0.8, 0.0), (O.ALTAR, ALTAR_FLOOR, 7.7)):
+    terraces = [(O.GATE, 0.5, 0.0), (O.ALTAR, ALTAR_FLOOR, 7.7)] + [((x, z, O.EGG_PAD_R), O.ARENA_Y, 0.0) for x, z in O.EGG_SPOTS]
+    for (cx, cz, rad), lift, inner in terraces:
         r0 = inner
         while r0 < rad - 1.0:
             r1 = min(r0 + 2.6, rad - 0.4)
@@ -703,8 +710,8 @@ def write_placements(extra_kit=None, extra_lines=(), path=W.REPO + "/src/worldbu
         lines.append("        },")
     lines.append("    },")
     lines += list(extra_lines)
-    gx, gz = O.GATE[0], O.GATE[1]
-    lines.append("    Checkpoint = Vector3.new(%.2f, %.2f, %.2f)," % (gx, ground(gx, gz) + 0.5, gz + 6))
+    gx, gz = O.GATE[0] + O._IN[0] * 6, O.GATE[1] + O._IN[1] * 6   # just inside the gate
+    lines.append("    Checkpoint = Vector3.new(%.2f, %.2f, %.2f)," % (gx, ground(gx, gz) + 0.5, gz))
     lines.append("    Relics = {")
     for rid, (x, y, z) in relic_positions().items():
         lines.append("        %s = Vector3.new(%.2f, %.2f, %.2f)," % (rid, x, y, z))
