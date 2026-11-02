@@ -6,11 +6,13 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
 local HatchCeremony = require(script.Parent:WaitForChild("HatchCeremony"))
+local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local HUD_NAME = "PetHud"
+local GRAND_REVEAL = { Legendary = true, Mythical = true, Secret = true } -- rarities revealed with the grander sound
 local PANEL_COLOR = Color3.fromRGB(20, 20, 30)
 local ROW_COLOR = Color3.fromRGB(40, 40, 55)
 local EQUIP_COLOR = Color3.fromRGB(70, 160, 110)
@@ -234,6 +236,9 @@ local function onHatchResult(result)
     local egg = GameConfig.Eggs[result.EggId]
     local eggName = if egg then egg.DisplayName else "The egg"
 
+    if result.Reason then
+        Sfx.play("Error") -- refused: the egg is locked, guarded, or the bag is full
+    end
     if result.Reason == "Locked" then
         showMessage(eggName .. " needs " .. tostring(result.RequiredRank) .. " to hatch.", Color3.new(1, 1, 1))
     elseif result.Reason == "TakeLocked" then
@@ -251,6 +256,7 @@ local function onHatchResult(result)
         local delay = if typeof(result.BreakAt) == "number" then math.max(0, result.BreakAt - workspace:GetServerTimeNow()) else 0
         HatchCeremony.play(result.Staged, delay, function()
             if definition then
+                Sfx.play(if GRAND_REVEAL[definition.Rarity] then "RareReveal" else "HatchReveal")
                 local rarityColor = GameConfig.PetRarityColors[definition.Rarity] or Color3.new(1, 1, 1)
                 local article = if string.find(definition.DisplayName, "^[AEIOUaeiou]") then "an " else "a "
                 local text = "You hatched " .. article .. definition.DisplayName .. "! ("

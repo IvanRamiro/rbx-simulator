@@ -6,6 +6,7 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local CharacterAura = require(script.Parent:WaitForChild("CharacterAura"))
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local BreakthroughEffect = require(script.Parent:WaitForChild("BreakthroughEffect"))
+local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local PRINT_BUILD_SUMMARY = RunService:IsStudio()
 -- studs from the camera: other players' auras farther away are hidden and not stepped
@@ -225,6 +226,7 @@ local function playBreakthrough(player)
         end
     end)
     activeBreakthroughs[player] = effect
+    Sfx.play("Breakthrough", rootPart)
 
     local aura = activeAuras[player]
     if aura then

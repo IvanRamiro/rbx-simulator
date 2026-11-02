@@ -4,6 +4,7 @@
 --   - knockback: a guardian's blow throws this player's character (the client owns it) off its
 --     feet for a moment; nothing ever kills;
 --   - the health bar of the guardian this player is fighting, with its state and weak mark;
+--   - each guardian's voice and blows (VOICES), and the egg's sounds;
 --   - a thief is shown the way to the safe zone (home to Yggdrasil: its end of the island's bridge);
 --     a dropped egg stands under a pillar of light,
 --     and only its thief sees its prompt and countdown.
@@ -17,6 +18,7 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local GuardianAnim = require(script.Parent:WaitForChild("GuardianAnim"))
 local GuardianFx = require(script.Parent:WaitForChild("GuardianFx"))
+local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
 local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
 
@@ -36,6 +38,54 @@ local FILL = {
     Calm = { Color3.fromRGB(50, 214, 160), Color3.fromRGB(12, 128, 98) },
     Rage = { Color3.fromRGB(255, 120, 50), Color3.fromRGB(170, 32, 18) },
 }
+
+-- Each guardian's sounds by action (SoundCatalog names). `Start` plays as the action arrives; `Hit`
+-- when the move lands, its wind-up (the action's first value) plus `Lead` (negative: a roar swells
+-- before its shockwave). "Land" plays where it lands.
+local VOICES = {
+    StoneLion = {
+        Awaken = { Start = "LionAwaken" }, Weaken = { Start = "LionWeaken" },
+        Slam = { Hit = "LionSlam" }, Roar = { Hit = "LionRoar", Lead = -0.5 },
+        Pounce = { Hit = "GuardianLeap" }, Land = { Start = "LionLand" },
+    },
+    MantisSage = {
+        Awaken = { Start = "MantisAwaken" }, Weaken = { Start = "MantisWeaken" },
+        Scythe = { Hit = "MantisScythe", Lead = -0.1 }, BladeWave = { Hit = "MantisBladeWave", Lead = -0.2 },
+        Leap = { Hit = "GuardianLeap" }, Land = { Start = "MantisLand" },
+    },
+    EmberXuanwu = {
+        Awaken = { Start = "XuanwuAwaken" }, Weaken = { Start = "XuanwuWeaken" },
+        SerpentLash = { Hit = "XuanwuLash", Lead = -0.15 }, Quake = { Hit = "XuanwuQuake" },
+        Charge = { Hit = "GuardianLeap" }, Land = { Start = "XuanwuLand" },
+    },
+    Tiangou = {
+        Awaken = { Start = "TiangouAwaken" }, Weaken = { Start = "TiangouWeaken" },
+        Bite = { Hit = "TiangouBite" }, EclipseHowl = { Hit = "TiangouHowl", Lead = -0.8 },
+        MoonLeap = { Hit = "GuardianLeap" }, Land = { Start = "TiangouLand" },
+    },
+    Pangu = {
+        Awaken = { Start = "PanguAwaken" }, Weaken = { Start = "PanguWeaken" },
+        AxeCleave = { Hit = "PanguCleave", Lead = -0.7 }, SkySplitter = { Hit = "PanguSplit", Lead = -0.2 },
+        ChaosNova = { Hit = "PanguNova", Lead = -0.45 }, TitanLeap = { Hit = "GuardianLeap" },
+        Land = { Start = "PanguLand" },
+    },
+}
+local EGG_SOUNDS = { Steal = "EggSteal", Drop = "EggDrop", Recover = "EggSteal", Secure = "EggSecure", Return = "EggReturn" }
+
+local function voice(model, action, ...)
+    local cue = (VOICES[model:GetAttribute("GuardianId")] or {})[action]
+    if not cue then
+        return
+    end
+    local at = if action == "Land" then (...) else model.PrimaryPart
+    if cue.Start then
+        Sfx.play(cue.Start, at)
+    end
+    local windUp = ...
+    if cue.Hit and typeof(windUp) == "number" then
+        Sfx.after(math.max(0, windUp + (cue.Lead or 0)), cue.Hit, at)
+    end
+end
 
 local anims = {} -- [model] = GuardianAnim
 
@@ -397,6 +447,7 @@ local EGG_ACTIONS = { Steal = true, Drop = true, Recover = true, Secure = true, 
 
 RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
     if action == "Knock" then
+        Sfx.play("Knockback")
         knock(...)
         return
     end
@@ -409,6 +460,7 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
         message:show((egg and egg.DisplayName or "The egg") .. " secured! Hatch it at the Hatching Altar." .. reward .. relic, Color3.fromRGB(255, 214, 110))
         return
     elseif action == "BagFull" then
+        Sfx.play("Error")
         message:show("You can't hold any more of that egg: hatch some first.", Color3.new(1, 1, 1))
         return
     end
@@ -427,6 +479,11 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
         if fx then
             fx(model, ...)
         end
+        voice(model, action, ...)
+    elseif EGG_SOUNDS[action] then
+        local egg = eggsFolder:FindFirstChild(model.Name .. "_Egg")
+        local at = if typeof((...)) == "Vector3" then (...) else egg and egg.PrimaryPart
+        Sfx.play(EGG_SOUNDS[action], at or model.PrimaryPart)
     end
     if action == "Awaken" then
         if isNear(model, BAR_DISTANCE) then

@@ -109,8 +109,14 @@ local function returnToCheckpoint(player, character, islandName)
     end
 end
 
+-- the island a player was last on, also as their "Island" attribute (their client's music follows it)
+local function setIsland(player, name)
+    lastIsland[player] = name
+    player:SetAttribute("Island", name)
+end
+
 local function setupPlayer(player)
-    lastIsland[player] = WorldConfig.StartIsland
+    setIsland(player, WorldConfig.StartIsland)
     -- RespawnLocation needs the SpawnLocation itself, never a plain checkpoint part
     local slot = claimSlot(player)
     player.RespawnLocation = if slot then slot.Spawn else startIsland.IslandSpawn
@@ -205,11 +211,11 @@ while true do
             if blocked and blocked.ReturnTo then
                 rootPart.AssemblyLinearVelocity = Vector3.zero
                 character:PivotTo(CFrame.lookAt(blocked.ReturnTo, blocked.ReturnTo - (blocked.Model.Gate.QiBarrier.Position - blocked.ReturnTo) * Vector3.new(1, 0, 1)))
-                lastIsland[player] = WorldConfig.StartIsland
+                setIsland(player, WorldConfig.StartIsland)
                 continue
             end
             if humanoid.FloorMaterial ~= Enum.Material.Air then
-                lastIsland[player] = islandAt(rootPart.Position) or lastIsland[player]
+                setIsland(player, islandAt(rootPart.Position) or lastIsland[player])
             end
             local island = WorldConfig.Islands[lastIsland[player]]
             local fellFar = rootPart.Position.Y < island.Centre.Y - WorldConfig.Safety.FallDepth

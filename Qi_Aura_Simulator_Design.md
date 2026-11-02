@@ -948,7 +948,7 @@ Build one complete encounter before expanding to every island.
 4. The enraged pursuit.
 5. Egg dropping, recovery, retry and extraction.
 6. Secured eggs connected to the existing inventory and hatching.
-7. Multiplayer ownership, exploit resistance, disconnects and edge cases.
+7. Multiplayer ownership, exploit resistance, disconnects and edge cases. Audited November 3, 2026 (see "Data and security"); still to run: the two-player cases (another player at a dropped egg, two thefts in one frame, the thief kicked or rejoining) and the two-server cases (a save taken over, a quick server hop, a shutdown mid-theft).
 8. The framework rolled out to every island.
 9. Polish: guardian animation, auras, trails, sound, UI and cinematic feedback.
 
@@ -964,7 +964,7 @@ Build one complete encounter before expanding to every island.
 - [x] Fail an escape and drop the egg.
 - [x] Find and recover the dropped egg.
 - [x] Try another escape with it.
-- [ ] Secure the egg without duplicate copies.
+- [x] Secure the egg without duplicate copies (audited November 3, 2026: no way to copy an egg or a pet; the steal, drop and return played through in Play; the two-player and two-server cases are still to run, step 7).
 - [x] Hatch it with the existing pet system.
 
 ---
@@ -1030,7 +1030,7 @@ Build one complete encounter before expanding to every island.
 | `src/client` | StarterPlayerScripts |
 | `src/worldbuild` | `ServerStorage.WorldBuild` (build-time only, never required by game scripts) |
 
-Client and server scripts are grouped by feature in folders of the same names: `Auras` (client), `Pets`, `Guardians`, `Combat`, `Qinggong`, `Cultivation`, `World`, `Character` and `UI` (client), `Data` and `Outfits` (server). A script requires a module in its own folder as `script.Parent:WaitForChild("Name")`, and one in another folder as `script.Parent.Parent:WaitForChild("Folder"):WaitForChild("Name")`.
+Client and server scripts are grouped by feature in folders of the same names: `Auras` (client), `Pets`, `Guardians`, `Combat`, `Qinggong`, `Cultivation`, `World`, `Character`, `UI` and `Audio` (client), `Data` and `Outfits` (server). A script requires a module in its own folder as `script.Parent:WaitForChild("Name")`, and one in another folder as `script.Parent.Parent:WaitForChild("Folder"):WaitForChild("Name")`.
 
 **Imported models**
 
@@ -1051,11 +1051,30 @@ Client and server scripts are grouped by feature in folders of the same names: `
 
 **Shared config:** ranks, Qinggong, pets, eggs and relics.
 
+### Sound (built November 3, 2026)
+
+The game had no audio. Every sound comes from Roblox's licensed libraries only: Pro Sound Effects and APM Music, never user uploads.
+- `client/Audio/SoundCatalog` names every sound: its ids, level, pitch, reach, start, length and layers. Levels and starts were set from each file's loudness measured in Play; the files differ up to 200 times.
+- `Sfx` plays them: one-shots at a point or on a part, culled past their reach; loops faded in and out; four SoundGroups (Music, Ambience, Effects, Interface).
+- `AudioController` handles:
+  - each island's bed and music, from the player's `Island` attribute (WorldService);
+  - the taiko battle theme near an awake guardian or while carrying an egg, with a heartbeat under it for the thief. The island's music returns 4 s after the fight and resumes where it was left;
+  - the sword-flight wind for every player, the cultivation hum, and a click on every HUD button.
+- Each guardian has its own voice and blows (GuardianController `VOICES`), timed to the move's wind-up so the sound lands with the hit; and a weaken cry of its own.
+- The egg steals, drops, returns and secures; strikes and hits; leap, dash, glide and landing (QinggongFx); the hatch's rumble, crack and reveal (a bell for Legendary and up); the breakthrough gong; and the shop's open, coins and refusal.
+
 ### Data and security
 
 - Validate every important action on the server.
 - Save with Roblox data stores; old saves are migrated automatically.
 - Test multiplayer, rejoining and invalid requests, not just the happy path.
+- **The launch-safety audit (November 3, 2026)** traced the egg, pet, Spirit Stone and weapon lifecycle through disconnects, rejoins, shutdowns, save failures and repeated requests. Every save is one `UpdateAsync` checked against the session, and there is no trading, so a failed save can only roll back, never copy. Fixed:
+  - The starter weapon went to anyone owning none, so selling it and rejoining minted Spirit Stones without end. It now goes to a new player only, or once to a save from before weapons (`PlayerData` migration 6).
+  - A forged name was measured in characters at the forge but in bytes on load, so an accented or CJK name lost its element. Both now count characters.
+  - A save asked for while one was writing, or just after, was dropped (up to 60 s of progress at risk, a secured egg included). It is now rescheduled.
+  - A player whose save another server took over kept playing unsaved. They are now kicked with "Your progress continues in another server".
+  - Each guardian steps in its own `pcall`: one error can't freeze the others, or an egg they carry.
+- **Release rule:** never rename or remove a pet, egg or weapon id, or lower a cap: loading a save drops what it doesn't know.
 - No secrets in source control; avoid third-party asset packs.
 
 ---
@@ -1081,7 +1100,7 @@ Outfits are worn over the player's own avatar (`GameConfig.Outfits`). They are c
 
 ## 9. Open decisions
 
-- **Egg stands under the guardian loop:** decided: secured eggs are hatched at the stands, and an island's stands stop giving free eggs once its guardian exists.
+- **Egg stands under the guardian loop:** decided (November 2, 2026): the stands give no free eggs; a guardian's eggs are stolen from them, carried home to Yggdrasil and hatched only at the Hatching Altar (section 7, "The eggs are carried home").
 - **Forged weapons:** the purchase and request flow, which weapons each Qi mastery level unlocks, and how they plug into combat.
 - **PvP stealing or raids:** only ever opt-in and server-checked, with protected pets, cooldowns and clear warnings. Not planned. Guardian egg theft is PvE.
 - **Monetization:** cosmetic-first, never pay-to-win; no paid eggs or random rewards until Roblox's policies are checked.

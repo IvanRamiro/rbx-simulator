@@ -26,6 +26,7 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local AuraKit = require(script.Parent.Parent:WaitForChild("Auras"):WaitForChild("AuraKit"))
 local QinggongFx = require(script.Parent.Parent:WaitForChild("Qinggong"):WaitForChild("QinggongFx"))
+local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local numberSequence = AuraKit.numberSequence
 local colorSequence = AuraKit.colorSequence
@@ -45,6 +46,7 @@ local MAX_DISTANCE = 250
 local POSE_TIME = { Palm = 0.3, Sword = 0.38, Spear = 0.42 }
 local SWORD_TIME = 0.3
 local SPEAR_TIME = 0.36
+local SWING = { Palm = "PalmStrike", Sword = "SwordSwing", Spear = "SpearThrust" } -- each strike's sound (SoundCatalog)
 
 local fxFolder = Instance.new("Folder")
 fxFolder.Name = "CombatFx"
@@ -444,6 +446,7 @@ end
 
 -- ---------- where a strike lands ----------
 function CombatFx.hit(player, position)
+    Sfx.play("QiImpact", position)
     local p = QinggongFx.palette(player)
     local holder = host(CFrame.new(position), Vector3.new(0.4, 0.4, 0.4), 1)
     emitter(holder, {
@@ -475,6 +478,7 @@ function CombatFx.play(player, weapon)
     if player ~= Players.LocalPlayer and (not camera or (camera.CFrame.Position - root.Position).Magnitude > MAX_DISTANCE) then
         return
     end
+    Sfx.play(SWING[weapon] or "PalmStrike", root)
     local p = QinggongFx.palette(player)
     if weapon == "Sword" then
         sword(player, p, root)

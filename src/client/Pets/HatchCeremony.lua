@@ -6,10 +6,12 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local GuardianFx = require(script.Parent.Parent:WaitForChild("Guardians"):WaitForChild("GuardianFx"))
+local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local HatchCeremony = {}
 
 local RISE = 1.6 -- studs the egg lifts from the cradle
+local SHIVER = 0.7 -- the share of the rise after which the egg shivers (and rattles)
 
 function HatchCeremony.play(model, delay, onBreak)
     if not (model and model.PrimaryPart) then
@@ -36,14 +38,16 @@ function HatchCeremony.play(model, delay, onBreak)
         end
         local u = t / delay
         local lift = RISE * (1 - (1 - u) ^ 3)
-        local shiver = if u > 0.7 then 0.06 * math.sin(t * 60) * (u - 0.7) / 0.3 else 0
+        local shiver = if u > SHIVER then 0.06 * math.sin(t * 60) * (u - SHIVER) / (1 - SHIVER) else 0
         model:PivotTo(start * CFrame.new(shiver, lift, 0) * CFrame.Angles(0, t * (1.2 + 5 * u * u), 0))
         highlight.FillTransparency = 1 - 0.65 * u * u
         highlight.OutlineTransparency = 1 - 0.8 * u
     end)
+    Sfx.after(delay * SHIVER, "EggRumble", model.PrimaryPart)
     task.delay(delay, function()
         if model.Parent then
             local at = model:GetPivot().Position
+            Sfx.play("EggCrack", at)
             GuardianFx.secure(at)
             GuardianFx.flash(CFrame.new(at), { Qi = Color3.fromRGB(255, 190, 70), QiCore = Color3.fromRGB(255, 250, 230) }, 12)
             for _, part in model:GetDescendants() do

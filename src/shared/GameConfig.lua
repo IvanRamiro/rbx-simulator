@@ -76,7 +76,7 @@ local GameConfig = {
         { Realm = "Primordial Realm", Damage = 64, Price = 850000, Sword = "Chaos Origin Sword", Spear = "Primeval Dragon Spear" },
         { Realm = "Eternal Transcendence", Damage = 69, Price = 2200000, Sword = "Eternity Sword", Spear = "Eternal Sun Spear" },
     },
-    StarterWeapon = "Sword1", -- every player's first weapon, given when they own none
+    StarterWeapon = "Sword1", -- every player's first weapon, given once: to a new player, or to a save from before weapons (PlayerData)
     MaxOwnedWeapons = 30,
 
     -- The relic forge, at the Blacksmith: a relic unlocks its element for good (Relics.<n>.Element

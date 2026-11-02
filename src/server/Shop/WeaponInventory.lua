@@ -46,8 +46,9 @@ function WeaponInventory.sanitize(rawWeapons, rawEquipped)
                 and #weapon.InstanceId <= 64 and Shop.weapon(weapon.WeaponId) ~= nil
             if valid and not seen[weapon.InstanceId] then
                 seen[weapon.InstanceId] = true
-                local forged = Shop.element(weapon.Element) ~= nil and typeof(weapon.Name) == "string"
-                    and #weapon.Name <= GameConfig.Forge.NameLength.Max
+                -- the forge counts a name's characters (utf8.len, ShopService); nil for broken UTF-8
+                local length = typeof(weapon.Name) == "string" and utf8.len(weapon.Name)
+                local forged = Shop.element(weapon.Element) ~= nil and length and length <= GameConfig.Forge.NameLength.Max
                 table.insert(weapons, { InstanceId = weapon.InstanceId, WeaponId = weapon.WeaponId,
                     Element = if forged then weapon.Element else nil, Name = if forged then weapon.Name else nil })
             end
@@ -62,10 +63,12 @@ local function add(data, weaponId)
     return weapon
 end
 
+-- `progress` is nil for a new player, who is given the starter weapon. Only then: a player who
+-- sold every weapon keeps the Qi Palm, or the starter could be sold again on every rejoin.
 function WeaponInventory.setupPlayer(player, progress)
     local weapons, equipped = WeaponInventory.sanitize(progress and progress.Weapons, progress and progress.EquippedWeapon)
     local data = { weapons = weapons, equipped = equipped }
-    if #weapons == 0 then
+    if progress == nil then
         data.equipped = add(data, GameConfig.StarterWeapon).InstanceId
     end
     held[player] = data

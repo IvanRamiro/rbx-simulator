@@ -7,6 +7,7 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
+local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -134,11 +135,13 @@ RemoteEvents.RelicResultEvent.OnClientEvent:Connect(function(result)
     end
 
     if result.Reason == "Locked" then
+        Sfx.play("Error")
         message:show(relic.DisplayName .. " needs " .. tostring(result.RequiredRank) .. " to attune.")
     else
         local stones = if typeof(result.Stones) == "number" and result.Stones > 0 then ", +" .. result.Stones .. " Spirit Stones" else ""
         local info = typeof(result.Element) == "string" and GameConfig.Forge.Elements[result.Element]
         local element = if info then ". " .. info.DisplayName .. " unlocked at the Blacksmith's forge" else ""
+        Sfx.play("Attune")
         message:show("Attuned to " .. relic.DisplayName .. "! +" .. tostring(result.QiReward) .. " Qi" .. stones .. element)
     end
 end)

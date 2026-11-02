@@ -24,6 +24,7 @@ local FINAL_SAVE_ATTEMPTS = 3
 local SESSION_LOCK_TIMEOUT = 300
 local MIN_SECONDS_BETWEEN_SAVES = 10
 local WRITE_COOLDOWN = 6
+local BUSY_RETRY = 1            -- seconds before a quick save tries again while a write is in flight
 local MAX_QI = 1e15
 
 local PlayerData = {}
@@ -62,12 +63,23 @@ MIGRATIONS[2] = function(progress)
     progress.Relics = progress.Relics or {}
     return progress
 end
+
 -- Upgrades from versions 3, 4 and 5 change nothing, so they have no migration: versions 4 and 5
 -- added pets (the bump only stops older servers, which don't know them, from dropping them) and
 -- version 6 added Eggs, which sanitizeProgress starts empty; version 7 added SpiritStones, Weapons
--- and EquippedWeapon, which start at none (WeaponInventory gives a player with no weapon the starter);
--- version 8 added ForgeElements (the guardians' drops) and a weapon's Element and Name, which start
--- at none.
+-- and EquippedWeapon (MIGRATIONS[6], below); version 8 added ForgeElements (the guardians' drops)
+-- and a weapon's Element and Name, which start at none.
+
+-- A save from before weapons gets the starter weapon, once. A new player is given it by
+-- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
+MIGRATIONS[6] = function(progress)
+    if typeof(progress.Weapons) ~= "table" then
+        local starter = { InstanceId = HttpService:GenerateGUID(false), WeaponId = GameConfig.StarterWeapon }
+        progress.Weapons = { starter }
+        progress.EquippedWeapon = starter.InstanceId
+    end
+    return progress
+end
 
 local store = nil
 local storeOk, storeResult = pcall(function()
@@ -388,11 +400,14 @@ end
 
 function PlayerData.save(player)
     local profile = profiles[player]
-    if not profile or not profile.canSave or profile.isReleasing or profile.isSaving then
+    if not profile or not profile.canSave or profile.isReleasing then
         return
     end
 
-    if os.clock() - profile.lastSaveTime < WRITE_COOLDOWN then
+    -- a write in flight holds an older snapshot, and one that just landed holds the cooldown: this
+    -- change is saved as soon as they allow, never left for the next autosave
+    if profile.isSaving or os.clock() - profile.lastSaveTime < WRITE_COOLDOWN then
+        PlayerData.saveSoon(player)
         return
     end
 
@@ -405,6 +420,10 @@ function PlayerData.save(player)
     writeRecord(profile, progress, false)
     profile.lastSaveTime = os.clock()
     profile.isSaving = false
+    if not profile.canSave and player.Parent == Players then
+        -- another server took the save over: playing on here would never be saved
+        player:Kick("Your progress continues in another server. Rejoin to keep playing.")
+    end
 end
 
 function PlayerData.saveSoon(player)
@@ -414,7 +433,7 @@ function PlayerData.saveSoon(player)
     end
 
     profile.quickSaveScheduled = true
-    local delay = math.max(0, profile.lastSaveTime + MIN_SECONDS_BETWEEN_SAVES - os.clock())
+    local delay = math.max(if profile.isSaving then BUSY_RETRY else 0, profile.lastSaveTime + MIN_SECONDS_BETWEEN_SAVES - os.clock())
 
     task.delay(delay, function()
         profile.quickSaveScheduled = false

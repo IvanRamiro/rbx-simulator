@@ -72,8 +72,14 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
+-- each guardian steps alone: an error in one must not freeze the others (or a carried egg with them)
+local failed = {}
 RunService.Heartbeat:Connect(function(dt)
     for _, guardian in guardians do
-        guardian:step(dt)
+        local ok, err = pcall(guardian.step, guardian, dt)
+        if not ok and not failed[guardian] then
+            failed[guardian] = true -- once: it would repeat every frame
+            warn("Guardian " .. tostring(guardian.id) .. " step failed: " .. tostring(err))
+        end
     end
 end)

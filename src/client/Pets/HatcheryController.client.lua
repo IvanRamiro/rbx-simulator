@@ -13,6 +13,7 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
+local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -173,6 +174,9 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt, who)
     end
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     openedAt = root and root.Position
+    if not window.Visible then
+        Sfx.play("Open")
+    end
     window.Visible = true
     render()
 end)

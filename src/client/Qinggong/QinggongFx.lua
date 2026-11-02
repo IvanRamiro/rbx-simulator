@@ -27,6 +27,7 @@ local Workspace = game:GetService("Workspace")
 
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local AuraKit = require(script.Parent.Parent:WaitForChild("Auras"):WaitForChild("AuraKit"))
+local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local numberSequence = AuraKit.numberSequence
 local colorSequence = AuraKit.colorSequence
@@ -642,7 +643,7 @@ RunService.RenderStepped:Connect(function(deltaTime)
 end)
 
 -- ---------- pose state ----------
-local states = setmetatable({}, { __mode = "k" }) -- [player] = { leapAt, leapUntil, side, gliding }
+local states = setmetatable({}, { __mode = "k" }) -- [player] = { leapAt, leapUntil, side, gliding, stopWind }
 
 local function stateFor(player)
     local state = states[player]
@@ -683,6 +684,21 @@ function QinggongFx.palette(player)
     return paletteFor(player)
 end
 
+-- the glide's wind, on while a visible player glides
+local function glideWind(state, root, on)
+    if on and state.windRoot ~= root then
+        glideWind(state, nil, false) -- a loop left on a body that's gone (a respawn mid-glide)
+    end
+    if on and not state.stopWind then
+        state.stopWind = Sfx.loop("GlideLoop", root)
+        state.windRoot = root
+    elseif not on and state.stopWind then
+        state.stopWind()
+        state.stopWind = nil
+        state.windRoot = nil
+    end
+end
+
 -- ---------- entry point ----------
 -- kind: "Takeoff" | "Leap" (value = the leap's number) | "Glide" (value 1 = start, 0 = stop) |
 -- "Land" (value = impact strength, 0..1) | "Dash"
@@ -694,6 +710,7 @@ function QinggongFx.play(player, kind, value)
         if kind == "Glide" and value ~= 1 or kind == "Land" then
             state.gliding = false
             state.leapUntil = 0
+            glideWind(state, nil, false)
         end
         return
     end
@@ -710,6 +727,7 @@ function QinggongFx.play(player, kind, value)
                 rig.ascendUntil = os.clock() + ASCEND_TIME
                 rig.active = true
             end
+            Sfx.play("Leap", root)
             local leaps = math.max(1, player:GetAttribute("QinggongAirLeaps") or 1)
             step(p, root.Position - Vector3.new(0, feetOffset(humanoid, root), 0), math.clamp((value or 1) / leaps, 0, 1), detail)
         end
@@ -721,6 +739,7 @@ function QinggongFx.play(player, kind, value)
             rig.gliding = state.gliding
             rig.active = true
         end
+        glideWind(state, root, state.gliding and visible)
     elseif kind == "Land" then
         state.gliding = false
         state.leapUntil = 0
@@ -730,10 +749,14 @@ function QinggongFx.play(player, kind, value)
             rig.ascendUntil = 0
             rig.active = true
         end
+        glideWind(state, nil, false)
         if visible then
             local ground = groundBelow(character, root, feetOffset(humanoid, root) + 4)
             if ground then
                 impact(p, ground, math.clamp(value or 0.3, 0, 1), detail, isLocal)
+                if (value or 0) >= 0.3 then
+                    Sfx.play("Land", ground)
+                end
             end
         end
     elseif kind == "Dash" then
@@ -746,6 +769,7 @@ function QinggongFx.play(player, kind, value)
                 direction = root.CFrame.LookVector * Vector3.new(1, 0, 1)
             end
             dashBurst(p, root.Position, direction.Unit, detail)
+            Sfx.play("Dash", root)
         end
     elseif kind == "Takeoff" then
         startLeap(state, "Right")

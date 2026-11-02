@@ -14,6 +14,7 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
+local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -443,10 +444,14 @@ RemoteEvents.ShopEvent.OnClientEvent:Connect(function(kind, ...)
         end
         current.shop, current.contents = shop, contents
         current.openedAt = root and root.Position
+        if not window.Visible then
+            Sfx.play("Open")
+        end
         window.Visible = true
         render()
     elseif kind == "Result" then
         local ok, text, contents = ...
+        Sfx.play(if ok then "Purchase" else "Error")
         message:show(text, if ok then STONE_COLOR else Color3.fromRGB(255, 150, 140))
         if contents then
             current.contents = contents
