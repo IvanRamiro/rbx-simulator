@@ -42,7 +42,7 @@ local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForCh
 
 local FLAT = Vector3.new(1, 0, 1)
 local DECIDE_EVERY = 0.1        -- seconds between decisions; movement runs every frame
-local CHASE_STOP = 13           -- it stops this far from its prey (its face is ~20 studs ahead of the chest)
+local CHASE_STOP = 13           -- it stops this far from its prey (its face is ~20 studs ahead of the chest); config.ChaseStop overrides
 local KNOCK_IMMUNITY = 0.6      -- seconds
 local TELEPORT_JUMP = 40        -- a thief moving this far in one frame was returned by the world
 local SANCTUARY_MARGIN = 12     -- studs it keeps outside its safe zone's edge
@@ -797,7 +797,7 @@ function Guardian:step(dt)
         if root and flat(root.Position - self.islandCentre).Magnitude < self.islandRadius + 10 then
             self.model:SetAttribute("TargetId", thief.UserId)
             if now >= self.busyUntil then
-                self:moveToward(root.Position, config.ChaseSpeed, CHASE_STOP, dt)
+                self:moveToward(root.Position, config.ChaseSpeed, config.ChaseStop or CHASE_STOP, dt)
             else
                 self.align.Position = self:origin().Position
             end

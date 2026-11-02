@@ -429,11 +429,11 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
     end
     if action == "Awaken" then
         if isNear(model, BAR_DISTANCE) then
-            message:show("The " .. config.DisplayName .. " awakens!", Color3.fromRGB(150, 210, 255))
+            message:show((config.Called or "The " .. config.DisplayName) .. " awakens!", Color3.fromRGB(150, 210, 255))
         end
     elseif action == "Weaken" then
         if isNear(model, BAR_DISTANCE) then
-            message:show("The " .. config.DisplayName .. " " .. config.WeakenedHint, Color3.fromRGB(255, 214, 110))
+            message:show((config.Called or "The " .. config.DisplayName) .. " " .. config.WeakenedHint, Color3.fromRGB(255, 214, 110))
         end
     elseif action == "Steal" and style then
         GuardianFx.steal((...), style)

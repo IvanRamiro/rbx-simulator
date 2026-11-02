@@ -7,7 +7,7 @@
 --   Enraged   crouched, tail up, snarling.
 -- It walks with diagonal legs together, breaking into a gallop as it speeds up. Its eyes and orb
 -- are carved stone and dull jade while it sleeps, Neon blue and jade awake, flickering weakened,
--- red-orange and widened enraged. Its debris is stone dust, its Qi blue.
+-- red-orange and widened enraged; they blink. Its debris is stone dust, its Qi blue.
 local GuardianAnim = require(script.Parent.Parent:WaitForChild("GuardianAnim"))
 local GuardianFx = require(script.Parent.Parent:WaitForChild("GuardianFx"))
 
@@ -186,9 +186,13 @@ function Rig.actions(anim, pose, now)
     end
 end
 
--- The eyes and orb. Asleep they are carved stone and dull jade (dark Neon renders as a flat black
--- disc); awake, Neon. Set locally: the server never changes them.
+-- The eyes and orb. The eyes are a temple lion's (an almond iris, a dark Neon cat pupil, carved stone
+-- lids in a frown): asleep they are carved stone, the pupil cut a shade darker, and the orb dull jade
+-- (dark Neon renders as a flat black disc); awake, Neon blue, a slow blink every few seconds; weakened,
+-- flickering and wide; enraged, red-orange and wider still. Set locally: the server never changes them.
 local STONE = Color3.fromRGB(160, 156, 148)
+local STONE_PUPIL = Color3.fromRGB(96, 92, 86)
+local PUPIL = Color3.fromRGB(6, 16, 28)
 local DULL_JADE = Color3.fromRGB(46, 116, 88)
 local EYES = {
     Guardian = Color3.fromRGB(0, 110, 255),
@@ -196,41 +200,68 @@ local EYES = {
     Enraged = Color3.fromRGB(255, 70, 20),
     Returning = Color3.fromRGB(0, 110, 255),
 }
+local OPEN = { Weakened = 1.15, Enraged = 1.2 }   -- the iris's height by state (1 otherwise)
 local ORB = Color3.fromRGB(0, 160, 95)
 local ORB_DIM = Color3.fromRGB(0, 90, 55) -- dimmest it flickers to while weakened (darker Neon reads black)
 
 function Rig.setup(anim)
     anim.eyes = anim.model:FindFirstChild("Eyes")
+    anim.pupils = anim.model:FindFirstChild("Pupils")
     anim.orb = anim.model:FindFirstChild("Orb")
     anim.eyeSize = anim.eyes and anim.eyes.Size
+    anim.pupilSize = anim.pupils and anim.pupils.Size
+    anim.nextBlink = os.clock() + 2
+end
+
+-- a size change keeps the part's centre; its weld to the head is untouched
+local function open(part, base, amount)
+    if part then
+        local size = Vector3.new(base.X, math.max(base.Y * amount, 0.02), base.Z)
+        if (part.Size - size).Magnitude > 0.005 then
+            part.Size = part.Size:Lerp(size, 0.6)   -- quick enough for a full blink
+        end
+    end
 end
 
 function Rig.glow(anim, state, now)
-    local eyes, orb = anim.eyes, anim.orb
+    local eyes, pupils, orb = anim.eyes, anim.pupils, anim.orb
     local color = EYES[state] or EYES.Guardian
-    local open = 1
     if state == "Weakened" then
         local flicker = 0.5 + 0.5 * math.sin(now * 13) * math.sin(now * 5.3)
         color = Color3.fromRGB(0, 60, 150):Lerp(color, 0.35 + 0.65 * flicker)
-    elseif state == "Enraged" then
-        open = 1.7
     end
     local awaken = anim:action("Awaken", 1.8)
     if awaken then
         color = Color3.fromRGB(0, 60, 150):Lerp(EYES.Guardian, smooth((awaken - 0.3) / 0.4))
     end
     local asleep = (state == "Dormant" or state == "Resting") and not awaken
+    local amount = OPEN[state] or 1
+    if not asleep and now >= anim.nextBlink then
+        anim.blinkAt = now
+        anim.nextBlink = now + 2.5 + 3 * math.random()
+    end
+    if anim.blinkAt then
+        local b = (now - anim.blinkAt) / 0.28
+        if b >= 1 then
+            anim.blinkAt = nil
+        elseif not asleep then
+            amount *= 1 - math.min(1, math.sin(math.pi * b) * 1.6) * 0.95   -- shut for a moment at its middle
+        end
+    end
     local material = if asleep then Enum.Material.SmoothPlastic else Enum.Material.Neon
     if eyes then
         if eyes.Material ~= material then
             eyes.Material = material
         end
         eyes.Color = if asleep then STONE else eyes.Color:Lerp(color, 0.25)
-        -- a size change keeps the part's centre; its weld to the head is untouched
-        local size = Vector3.new(anim.eyeSize.X, anim.eyeSize.Y * open, anim.eyeSize.Z)
-        if (eyes.Size - size).Magnitude > 0.01 then
-            eyes.Size = eyes.Size:Lerp(size, 0.2)
+        open(eyes, anim.eyeSize, if asleep then 1 else amount)
+    end
+    if pupils then
+        if pupils.Material ~= material then
+            pupils.Material = material
         end
+        pupils.Color = if asleep then STONE_PUPIL else PUPIL
+        open(pupils, anim.pupilSize, if asleep then 1 else amount)
     end
     if orb then
         local orbMaterial = if asleep then Enum.Material.Glass else Enum.Material.Neon

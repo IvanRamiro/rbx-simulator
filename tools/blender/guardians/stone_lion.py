@@ -18,7 +18,8 @@ each segment turns on its parent) are written with the export for the game to bu
 
     import stone_lion as L
     L.build()        # the high-detail segments, in collection StoneLionHi
-    L.export()       # bake each segment; write assets/guardians/StoneLion.fbx, its maps, pivots
+    L.bake(names)    # bake those segments' pieces (a few per call: the connection drops on long runs)
+    L.export()       # assets/guardians/StoneLion.fbx and its pieces report
 """
 import math
 import random
@@ -37,6 +38,7 @@ TAU = 2 * math.pi
 NAME = "StoneLion"
 OUT_DIR = G.OUT_DIR
 EYE = "39d8ff"           # the eyes' Qi
+PUPIL = "06101c"         # the round pupils: dark Neon renders as a flat black disc, and the rig blinks it with the iris
 ORB = "2fe6c8"           # the collar's jade orb
 
 # segment: (parent, pivot): where it turns on its parent (Roblox studs)
@@ -61,6 +63,17 @@ PIVOTS = {
 # ---------- shapes (guardian_kit) ----------
 blob, capsule_lobes, surface_down, frame = G.blob, G.capsule_lobes, G.surface_down, G.frame
 curl, on_ellipsoid, cone, sphere = G.curl, G.on_ellipsoid, G.cone, G.sphere
+
+
+def surface_along(obj, near, normal, reach=6.0):
+    """Where the line through `near` along `normal` leaves obj's surface outward (Roblox space): cast
+    back toward obj from `reach` out."""
+    from mathutils.bvhtree import BVHTree
+    tree = BVHTree.FromObject(obj, bpy.context.evaluated_depsgraph_get())
+    start = V(near) + V(normal) * reach
+    hit, _, _, _ = tree.ray_cast(W.rb(*start), W.rb(*(-V(normal))))
+    assert hit is not None, "no surface behind the eye"
+    return V(K.rb_inv(*hit))
 
 
 # ---------- materials ----------
@@ -143,7 +156,7 @@ def head(coll, M):
              ((-2.6, 28.2, -16.8), (2.1, 1.0, 1.6), (0, 0, -12)), ((2.6, 28.2, -16.8), (2.1, 1.0, 1.6), (0, 0, 12)),
              ((0, 27.4, -10.4), (6.2, 5.8, 4.0), None), ((-5.2, 28.4, -12.4), (1.3, 1.9, 0.8), (0, 0, 25)), ((5.2, 28.4, -12.4), (1.3, 1.9, 0.8), (0, 0, -25))]
     stone = blob("SL_Head", coll, M["granite"], lobes, voxel=0.12, rough=0.05)
-    carved, glow = Hm.Hi(), Hm.Hi()
+    carved, glow, pupils, lids = Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi()
     rnd = random.Random(11)
     # curls over the crown and back of the head
     mane = ((0, 27.4, -10.4), (6.5, 6.1, 4.3))
@@ -156,12 +169,21 @@ def head(coll, M):
     for side in (-1, 1):
         curl(carved, (side * 2.6, 29.0, -17.2), (side * 0.2, 0.8, -0.6), 1.2, turns=1.8, thick=0.32, spin=side)
         curl(carved, (side * 2.2, 23.3, -20.3), (side * 0.5, -0.1, -0.85), 0.8, turns=1.6, thick=0.24, spin=-side)
-        sphere(glow, (side * 2.4, 26.8, -18.0), 1.25)            # the eyes, bulging, alight with Qi
+        # the eyes: a temple lion's, bulging and round-pupilled under carved stone lids set in a frown,
+        # seated on the stone (measured, not guessed)
+        normal = V((side * 0.5, 0.05, -0.87)).normalized()
+        seat = surface_along(stone, V((side * 2.4, 26.8, -18.0)), normal)
+        G.eye(glow, pupils, lids, seat, normal, (0, 0, -1), 1.3, 0.85, tilt=0.14, bulge=0.5, lid=0.38, droop=0.44, lower=0.22,
+              slit=0.19, pupil_height=0.62)
     # the upper fangs
     for side in (-1, 1):
         cone(carved, (side * 1.8, 22.6, -20.2), (side * 1.7, 20.9, -20.6), 0.42)
         cone(carved, (side * 0.8, 22.5, -20.7), (side * 0.8, 21.6, -20.9), 0.26)
-    return [stone, carved.object("SL_HeadCurls", coll, [M["granite"]])], {EYE: [glow.object("SL_Eyes", coll, [K.glow_material(EYE)], smooth=True)]}
+    lid = lids.object("SL_HeadLids", coll, [M["granite"]])
+    lid["keep"] = True
+    return [stone, lid, carved.object("SL_HeadCurls", coll, [M["granite"]])], \
+        {EYE: [glow.object("SL_Eyes", coll, [K.glow_material(EYE)], smooth=True)],
+         PUPIL: [pupils.object("SL_Pupils", coll, [K.glow_material(PUPIL)], smooth=True)]}
 
 
 def jaw(coll, M):
@@ -250,17 +272,20 @@ def build(only=None):
         coll = W.collection(NAME + "_" + name, root)
         W.clear_collection(coll)
         hi, glow = fn(coll, M)
+        for hexstr, objs in glow.items():
+            assert len(objs) == 1, "one glow piece per colour per segment"
+            objs[0].name = NAME + "_" + name + "_Glow_" + hexstr
         out[name] = (hi, glow, coll)
     return out
 
 
 def pieces(name, hi):
-    """A segment's game pieces: [(piece, hi objects)]. Curls and gold are kept whole (the stone mass
+    """A segment's game pieces: [(piece, hi objects)]. Curls, gold and lids are kept whole (the stone mass
     is decimated around them), or, on the curl-covered segments, the curls are a piece of their own."""
     curls = [o for o in hi if o.name.endswith("Curls")]
     rest = [o for o in hi if o not in curls]
     for o in rest:
-        o["keep"] = o.name.endswith("Gold")
+        o["keep"] = o.name.endswith("Gold") or o.name.endswith("Lids")      # the eyes' carved lids stay whole
     if name in OWN_CURLS:
         for o in curls:
             o["keep"] = False
@@ -280,3 +305,19 @@ centre_of = G.centre_of
 def write_fbx(parts, report):
     """One FBX of every segment's game mesh and glow piece, and the pieces' centres and pivots."""
     return G.write_fbx(NAME, parts, report)
+
+
+def bake(names):
+    """Bakes these segments' game pieces (built already); records them for export()."""
+    parts = bpy.app.driver_namespace.setdefault("lion_parts", {})
+    for name in names:
+        coll = bpy.data.collections[NAME + "_" + name]
+        hi = [o for o in coll.objects if o.name.startswith("SL_") and o.type == "MESH"]
+        for piece, objs in pieces(name, hi):
+            low = G.bake_piece(NAME, piece, objs, coll, BUDGET.get(piece, 5000))
+            parts[piece] = (name, low.name)
+    return {p: B.tris(bpy.data.objects[l]) for p, (_, l) in parts.items()}
+
+
+def export():
+    return G.export(NAME, PIVOTS, bpy.app.driver_namespace["lion_parts"])

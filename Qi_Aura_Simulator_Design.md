@@ -18,7 +18,7 @@ These never change without an explicit decision from the project owner.
 - **Ranks** stay as designed (section 2).
 - **Eggs** stay as designed: their pets, pools, chances and themes (section 5).
 - **No mistakes.** Every pet, egg, island and effect is checked against this document before it is built. For a pet, that means its egg, rarity and theme.
-- **Every pet has expressive eyes.**
+- **Every pet and every guardian has expressive eyes**: never a plain glowing ball. A guardian's eye is an almond iris with a slit pupil and lids that give it a look (`guardian_kit.eye`), and its rig makes it live (blinks, glares).
 - **Aura concept** stays as designed (section 4). The bar is not "looks like Sol's RNG": it is to genuinely compete with, and aim to surpass, Sol's RNG's most impressive auras.
 - **No generic style.** Islands, pets and effects are original Blender work with their own silhouette and identity. Nothing is a recoloured copy of another piece.
 - **Weapons:** players purchase or request a **forged weapon**, and their Qi mastery decides which weapons they can get.
@@ -720,7 +720,7 @@ The hidden endgame island, about 320 studs across since the owner's upgrade, mov
 
 ---
 
-## 7. Guardians and egg theft (the Yggdrasil and Jade Grove guardians are built)
+## 7. Guardians and egg theft (the Yggdrasil, Jade Grove, Ember Peak and Moonlit Isle guardians are built)
 
 ### The user's decisions (November 1, 2026)
 
@@ -795,17 +795,17 @@ Guarded → Available → Carried → Dropped → Carried → Secured
 |---|---|---|
 | Yggdrasil | The Awakened Stone Lion | Introductory fight, basic Qinggong escape |
 | Jade Grove | The Bamboo Mantis Sage | Escape routes through trees and elevated terrain |
-| Ember Peak | Fire Guardian | Escape routes around lava and volcanic hazards |
-| Moonlit Isle | Celestial Guardian | More demanding aerial movement |
+| Ember Peak | The Ember Xuanwu | Escape routes around lava and volcanic hazards; jump its quake rings |
+| Moonlit Isle | Tiangou the Moon-Eater | More demanding aerial movement: its leaps are long and high |
 | Origin Abyss | Primordial Guardian | The most demanding encounter |
 
-Names, attacks, health, egg pools, unlocks and rewards are still to be designed for the other four islands.
+Names, attacks, health, egg pools, unlocks and rewards are still to be designed for Origin Abyss.
 
 ### The Awakened Stone Lion (Yggdrasil)
 
 A granite temple guardian lion come to life: a mane of carved spiral curls, spiral brows and whisker curls, glowing Qi-blue eyes, a gold collar with a jade orb and gold tassels, moss in the crevices, and a tail of five stone flame tongues ending in curls. It stands about 30 studs tall, in its lair on Yggdrasil's east side, north-west of the Egg Garden, facing the World Tree (`GameConfig.Guardians.StoneLion`).
 
-**Its eyes and orb tell its state:** asleep, carved stone eyes and a dull jade orb; awake, Neon Qi blue (`006eff`, narrowed to a glare) and jade (`00a05f`); weakened, flickering; enraged, red-orange and widened. Darker Neon renders as a flat black disc, so the sleeping look is stone and glass, not dim Neon.
+**Its eyes and orb tell its state.** The eyes (rebuilt November 2, 2026 with `guardian_kit.eye`) are a temple lion's: bulging almond irises with dark cat pupils under carved stone lids set in a frown. Asleep, carved stone eyes (the pupil cut a shade darker) and a dull jade orb; awake, Neon Qi blue (`006eff`) and jade (`00a05f`), blinking every few seconds; weakened, flickering and wide; enraged, red-orange and wider still. Darker Neon renders as a flat black disc (the pupils use that), so the sleeping look is stone and glass, not dim Neon.
 
 **The encounter** (`src/server/Guardians/Guardian.lua`; the server decides everything):
 
@@ -841,6 +841,40 @@ Its lair is the island's east clearing, (50, 26), the only open, level ground fa
 | Guardian | Sways like a leaf in the wind and turns to face whoever it watches, the egg turning with its arms. **Scythe:** both blades cut across the front (range 26, 65° arc). **Blade wave:** a cone of Qi blades and leaves skims out along the ground (46 studs, 50° either side); jump it. |
 | Weakened | Crouches, lowers its blades and sets the egg on the ground before it. |
 | Enraged | The mantis threat display (the robe flared like wings, blades raised and open, eyes red), chasing at 23 studs/s. **Leap:** long and high (up to 72 studs), its first move after the theft. |
+
+### The Ember Xuanwu (Ember Peak)
+
+The Black Tortoise of the north gone to the volcano (chosen by the owner, November 2, 2026): a colossal tortoise whose shell has become a small volcano, a dome of black basalt columns stepped up into a cone whose crater cradles the egg, the magma inside the shell glowing in every seam between the columns. Coiled round the shell is its companion, a molten serpent of cooled black crust broken into bands, lava glowing between them, its dragon head rising over the volcano's flank. The tortoise has a snapping turtle's wedge of a face, a hooked horn beak and a crown of small basalt columns. About 24 studs to the crater's rim, 31 to the serpent's crown, 48 from beak to tail (`tools/blender/guardians/ember_xuanwu.py`, 15 jointed segments; the basalt Shell is its own piece on the Body).
+
+**Its eyes** (`guardian_kit.eye`): almond irises with dark slit pupils and carved lids. The tortoise's are heavy-lidded under a brow shelf, slanting down toward the beak; it blinks slowly every few seconds, glares (narrowed, red) enraged, widens and flickers weakened, and shuts them asleep. The serpent's are narrow and cold under a bony ridge; it never blinks, dulls asleep and narrows to a slit as it strikes.
+
+Its lair is the middle of the Cinder Arena (set 3.5 studs toward the gate so its beak clears the egg pedestals when it turns), facing the Ember Gate; its safe zone is the Ember Forge. 3,200 health: a Qi Awakener's starter sword weakens it alone in about 80 strikes. Securing its egg pays 1,500 Spirit Stones; its relic unlocks Fire.
+
+| State | What it does |
+|---|---|
+| Dormant | A sleeping volcano: sunk on its plastron, head drawn in, eyes shut, the serpent drowsing low, the magma dim. |
+| Guardian | Turns, slowly, to face whoever it watches, the serpent swaying over the volcano. **Serpent lash:** the serpent rears back and strikes the ground before it (range 30, 70° arc). **Quake:** it rears onto its hind legs and stamps; a ring of ash and fire rolls out all round (50 studs) and the volcano erupts; jump it. |
+| Weakened | Sinks low, head down; the egg lies before its beak, the serpent's head hung over it. |
+| Enraged | Front reared, beak open, the serpent rearing high, eyes red, magma hot. Slow (20 studs/s; it stops 22 short of its thief, `ChaseStop`). **Charge:** a low, heavy lunge (16 to 56 studs) that lands with a shockwave. |
+
+Measured in Play (November 2, 2026): wake, lash, quake, weaken (egg set down at `Egg.Offered`), steal, charge (landing knocked the thief, who dropped the egg), drop timing out and the egg returning, and a secured Phoenix Ash Egg (+1,500 stones) all work. The serpent's head maps rendered grey for a while after upload; they are re-uploads.
+
+### Tiangou the Moon-Eater (Moonlit Isle)
+
+The heavenly hound of the eclipse myth, the dog that swallows the moon (chosen by the owner, November 2, 2026, over a three-legged moon toad and a moon-backed spider). A lean, long-legged sighthound whose coat is the midnight sky (deep blue, faint constellations in it, silvered where moonlight falls), with a ruff, a plume of a tail and feathered legs of white fire, tall pointed ears with a flicker of fire inside, fangs and a black nose. Above its shoulders stands the eclipse it made: the swallowed moon as a black disc (dark Neon) ringed by a corona of white fire with a few long streamers, framing its head from the front, held up by streams of fire from its shoulders. The egg sits in the moon's last silver crescent, before the disc. About 14 studs at the shoulder, 33 to the top of the eclipse, 44 from nose to tail (`tools/blender/guardians/tiangou.py`, 14 jointed segments).
+
+**Its eyes** (`guardian_kit.eye`): gold almonds with round black pupils under a low, scowling brow. It blinks every few seconds, shuts them asleep, glares (narrowed, red) enraged, and widens and flickers weakened. Its corona burns low asleep (Neon fades with transparency), gutters weakened, flickers enraged and flares as it howls.
+
+Its lair is the middle of the Lunar Court, facing the Crescent Arch; its safe zone is the Celestial Pavilion. 11,000 health: a Soul Awakening's Spirit Soul sword weakens it alone in about 80 strikes. Securing its egg pays 4,000 Spirit Stones; its relic unlocks Frost. Messages call it "Tiangou" (`Called`).
+
+| State | What it does |
+|---|---|
+| Dormant | Asleep on its feet: head low, eyes shut, tail down, the corona burning low. |
+| Guardian | Alert, turning quickly to face whoever it watches, tail waving. **Bite:** it draws back and snaps (range 25, 60° arc). **Eclipse howl:** head thrown back to the sky, the eclipse flares and a ring of frost rolls out all round (52 studs); jump it. |
+| Weakened | Crouched low, panting; the egg slips from the crescent to the ground before its nose. |
+| Enraged | The hunting crouch, lips drawn back, tail up, eyes red, chasing at 27 studs/s (it stops 17 short, `ChaseStop`). **Moon leap:** long, high arcs (18 to 85 studs, 26 high), stretched flat in the air. |
+
+Measured in Play (November 2, 2026): wake (it howls at once), bite, howl, weaken, steal (a Heavenly Throne Egg), the howl's ring knocking a grounded thief who drops the egg, recover, moon leaps aimed ahead of the runner and landing at the sanctuary's edge, and a secured egg (+4,000 stones). Most of its maps rendered grey after the first upload; they are re-uploads.
 
 **One framework for every guardian.** Attacks are named per guardian and have a kind: a *Sweep* in front, a *Wave* along the ground (all round or in an arc, cleared by a jump), a *Pounce* onto the thief. `Egg.Offered` sets a held egg down when it falters; `TurnsToFace` turns it at its lair, the egg welded to its root while held. Each guardian's look lives in its client rig, `GuardianRigs/<Id>` (poses, gait, moves, glow, effects).
 

@@ -190,6 +190,80 @@ local GameConfig = {
                 Leap = { Kind = "Pounce", MinRange = 16, MaxRange = 72, WindUp = 0.5, Air = 1.1, Height = 16, Cooldown = 4.2, Radius = 12, Knockback = 55 },
             },
         },
+        EmberXuanwu = {
+            DisplayName = "Ember Xuanwu",
+            Island = "EmberPeak",
+            -- the Cinder Arena's middle, set 3.5 studs toward the gate so its beak (29 studs ahead of
+            -- its origin) clears the egg pedestals behind it when it turns to face them
+            Lair = Vector3.new(0.6, 0.5, 3.4),
+            Facing = Vector3.new(22.0, 0.5, 121.0), -- toward the Ember Gate, where challengers arrive
+            Eggs = { "InfernoEgg", "MagmaHeartEgg", "PhoenixAshEgg" },
+            SafeZone = { Centre = Vector3.new(86.4, 2, -50.4), Radius = 13, Name = "Ember Forge" },
+            SecureStones = 1500,    -- Spirit Stones for securing its egg
+            Element = "Fire",
+            MaxHealth = 3200,      -- a Qi Awakener's starter sword (~24 a strike) weakens it alone in ~80 strikes
+            WeakenedAt = 0.4,
+            HitRadius = 15,        -- its shell
+            EngageRadius = 28,     -- the egg pedestals stand just outside it (31)
+            LeashRadius = 62,
+            CalmAfter = 12,
+            RespawnTime = 30,
+            DropTime = 30,
+            WalkSpeed = 9,
+            ChaseSpeed = 20,       -- slow (a Qi Awakener runs 26): its charge decides the chase
+            ChaseStop = 22,        -- it stops this far from the thief: its beak is 29 studs ahead of its origin
+            TurnSpeed = 75,        -- a ponderous turn: those who circle it meet its quake
+            TurnsToFace = true,
+            -- in the crater on its shell; set down before its beak when weakened (the serpent lays it there)
+            Egg = { Height = 4, Under = Vector3.new(0, 22.6, 1.5), Offered = Vector3.new(-7, 1.9, -27), CarriedHeight = 2.6 },
+            WeakenedHint = "sinks low and its serpent lays the egg before it: take it!",
+            Stagger = 1.2,
+            WeakenedSlowdown = 1.7,
+            Attacks = {
+                -- the serpent rears back over the volcano and strikes down at the ground before it
+                SerpentLash = { Kind = "Sweep", Range = 30, Arc = 70, WindUp = 0.8, Cooldown = 2.8, Knockback = 50 },
+                -- it rears onto its hind legs and stomps: a quake ring rolls out all round (jump it)
+                Quake = { Kind = "Wave", Radius = 50, WaveSpeed = 30, WindUp = 1.3, Cooldown = 7.5, Knockback = 45 },
+                -- a ground-shaking lunge, low and heavy
+                Charge = { Kind = "Pounce", MinRange = 16, MaxRange = 56, WindUp = 0.9, Air = 1.0, Height = 3, Cooldown = 5, Radius = 15, Knockback = 60 },
+            },
+        },
+        Tiangou = {
+            DisplayName = "Tiangou the Moon-Eater",
+            Called = "Tiangou",                    -- how messages name it (default: "The " .. DisplayName)
+            Island = "MoonlitIsle",
+            Lair = Vector3.new(0, 1, 14),          -- the middle of the Lunar Court, its egg pedestals behind it over the bay
+            Facing = Vector3.new(-27, 1, 118.2),   -- toward the Crescent Arch, where challengers arrive
+            Eggs = { "CelestialEgg", "AstralSanctumEgg", "HeavenlyThroneEgg" },
+            SafeZone = { Centre = Vector3.new(84.9, 2.6, -49), Radius = 10, Name = "Celestial Pavilion" },
+            SecureStones = 4000,
+            Element = "Frost",
+            MaxHealth = 11000,     -- a Soul Awakening's Spirit Soul sword (~84 a strike) weakens it alone in ~80 strikes
+            WeakenedAt = 0.4,
+            HitRadius = 10,        -- its body from chest to haunch
+            EngageRadius = 27,
+            LeashRadius = 62,
+            CalmAfter = 12,
+            RespawnTime = 30,
+            DropTime = 30,
+            WalkSpeed = 14,
+            ChaseSpeed = 27,       -- a hound: just below a Soul Awakening's run (30); its leaps decide the chase
+            ChaseStop = 17,        -- its nose is 22 studs ahead of its origin
+            TurnSpeed = 180,
+            TurnsToFace = true,
+            -- in the last silver crescent of its eclipse; dropped before its paws when weakened
+            Egg = { Height = 4, Under = Vector3.new(0, 26.2, -5.0), Offered = Vector3.new(0, 1.9, -25), CarriedHeight = 2.6 },
+            WeakenedHint = "staggers, and the last of the moon slips from its eclipse: take the egg!",
+            Stagger = 1.1,
+            WeakenedSlowdown = 1.7,
+            Attacks = {
+                Bite = { Kind = "Sweep", Range = 25, Arc = 60, WindUp = 0.5, Cooldown = 2.0, Knockback = 50 },
+                -- it howls at the sky and the eclipse flares: a ring of frost rolls out all round (jump it)
+                EclipseHowl = { Kind = "Wave", Radius = 52, WaveSpeed = 36, WindUp = 1.0, Cooldown = 7, Knockback = 45 },
+                -- long, high arcs: watch the sky
+                MoonLeap = { Kind = "Pounce", MinRange = 18, MaxRange = 85, WindUp = 0.55, Air = 1.4, Height = 26, Cooldown = 4.2, Radius = 13, Knockback = 60 },
+            },
+        },
     },
 
     -- Sword flight (src/server/Qinggong/FlightService), from UnlockRank. Drains stamina (Cost per

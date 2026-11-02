@@ -2,7 +2,7 @@
 -- blocks that each guardian's rig (GuardianRigs/<Id>) composes into its own moves, and the egg's
 -- moments, shared by all.
 --
--- A style: { Debris = "Dust" | "Leaves", Qi = Color3, QiCore = Color3 }.
+-- A style: { Debris = "Dust" | "Leaves" | "Cinders" (dark volcanic ash) | "Frost" (pale frost mist), Qi = Color3, QiCore = Color3 }.
 --
 --   shake(origin, strength, time)              the camera jolts, fading with distance from origin
 --   puff(cframe, style, count, speed, spread, size, life)
@@ -14,6 +14,7 @@
 --   streaks(cframe, style, count, speed, spread)
 --                                              Qi streaks shot out along the cframe's look
 --   crescent(cframe, style, size)              a crescent of Qi light (a blade's cut) facing the camera
+--   embers(cframe, count, speed, spread, life) glowing embers flung up from a point, falling back
 --   wave(origin, facing, radius, speed, arc, style)
 --                                              a wall of debris with Qi streaks rolling out along the
 --                                              ground, all round (arc >= 180) or within arc degrees of
@@ -44,6 +45,11 @@ local DUST = Color3.fromRGB(196, 190, 178)
 local DUST_DARK = Color3.fromRGB(142, 136, 126)
 local LEAF = Color3.fromRGB(96, 168, 70)
 local LEAF_DARK = Color3.fromRGB(40, 104, 46)
+local ASH = Color3.fromRGB(92, 82, 76)
+local ASH_DARK = Color3.fromRGB(46, 40, 38)
+local EMBER = Color3.fromRGB(255, 150, 30)
+local FROST = Color3.fromRGB(214, 232, 255)
+local FROST_DARK = Color3.fromRGB(150, 178, 225)
 local RAGE = Color3.fromRGB(255, 80, 25)
 local GOLD = Color3.fromRGB(255, 196, 70)
 local MAX_DISTANCE = 300
@@ -93,9 +99,15 @@ local function debris(parent, style, properties)
             Drag = 2, Acceleration = Vector3.new(0, -6, 0),
         }
     else
+        local light, dark = DUST, DUST_DARK
+        if style.Debris == "Cinders" then
+            light, dark = ASH, ASH_DARK
+        elseif style.Debris == "Frost" then
+            light, dark = FROST, FROST_DARK
+        end
         base = {
             Texture = TEXTURES.Fog, LightEmission = 0, LightInfluence = 1,
-            Color = colorSequence({ { 0, DUST }, { 1, DUST_DARK } }),
+            Color = colorSequence({ { 0, light }, { 1, dark } }),
             Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-25, 25),
             Drag = 2.5,
         }
@@ -227,6 +239,20 @@ function GuardianFx.crescent(cframe, style, size)
         Size = numberSequence({ { 0, size * 0.6 }, { 1, size } }), Transparency = numberSequence({ { 0, 0.1 }, { 1, 1 } }),
         Color = colorSequence({ { 0, style.QiCore }, { 1, style.Qi } }), Brightness = 2.2,
     }):Emit(1)
+end
+
+function GuardianFx.embers(cframe, count, speed, spread, life)
+    if not near(cframe.Position) then
+        return
+    end
+    life = life or 1.4
+    emitter(host(cframe, life + 0.5), {
+        Texture = TEXTURES.Glow, EmissionDirection = Enum.NormalId.Top, SpreadAngle = Vector2.new(spread, spread),
+        Speed = NumberRange.new(speed * 0.5, speed), Lifetime = NumberRange.new(life * 0.6, life), Drag = 0.6,
+        Acceleration = Vector3.new(0, -speed * 0.9, 0),
+        Size = numberSequence({ { 0, 0.7 }, { 0.7, 0.45 }, { 1, 0 } }), Transparency = numberSequence({ { 0, 0 }, { 0.8, 0.2 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, EMBER }, { 1, RAGE } }), Brightness = 2.4,
+    }):Emit(count)
 end
 
 function GuardianFx.wave(origin, facing, radius, speed, arc, style)

@@ -1,0 +1,326 @@
+{
+ "Pieces": {
+  "BackLeftLower": {
+   "Centre": [
+    -12.3076,
+    3.0428,
+    12.8205
+   ],
+   "Segment": "BackLeftLower"
+  },
+  "BackLeftUpper": {
+   "Centre": [
+    -9.7784,
+    5.6669,
+    11.3726
+   ],
+   "Segment": "BackLeftUpper"
+  },
+  "BackRightLower": {
+   "Centre": [
+    12.2993,
+    3.0475,
+    12.8127
+   ],
+   "Segment": "BackRightLower"
+  },
+  "BackRightUpper": {
+   "Centre": [
+    9.777,
+    5.6686,
+    11.3749
+   ],
+   "Segment": "BackRightUpper"
+  },
+  "Body": {
+   "Centre": [
+    0.3958,
+    9.3499,
+    0.594
+   ],
+   "Segment": "Body"
+  },
+  "Body_Glow_ff4600": {
+   "Centre": [
+    0.2777,
+    13.95,
+    0.983
+   ],
+   "Hex": "ff4600",
+   "Segment": "Body"
+  },
+  "FrontLeftLower": {
+   "Centre": [
+    -12.7925,
+    3.2411,
+    -11.874
+   ],
+   "Segment": "FrontLeftLower"
+  },
+  "FrontLeftUpper": {
+   "Centre": [
+    -9.9268,
+    6.0661,
+    -9.2494
+   ],
+   "Segment": "FrontLeftUpper"
+  },
+  "FrontRightLower": {
+   "Centre": [
+    12.7954,
+    3.2382,
+    -11.8701
+   ],
+   "Segment": "FrontRightLower"
+  },
+  "FrontRightUpper": {
+   "Centre": [
+    9.929,
+    6.0705,
+    -9.256
+   ],
+   "Segment": "FrontRightUpper"
+  },
+  "Head": {
+   "Centre": [
+    0.0053,
+    12.0852,
+    -23.3498
+   ],
+   "Segment": "Head"
+  },
+  "Head_Glow_1c0700": {
+   "Centre": [
+    0.0,
+    12.114,
+    -23.4856
+   ],
+   "Hex": "1c0700",
+   "Segment": "Head"
+  },
+  "Head_Glow_ff4600": {
+   "Centre": [
+    0.0,
+    9.4,
+    -22.4
+   ],
+   "Hex": "ff4600",
+   "Segment": "Head"
+  },
+  "Head_Glow_ffa000": {
+   "Centre": [
+    0.0,
+    12.1,
+    -23.4
+   ],
+   "Hex": "ffa000",
+   "Segment": "Head"
+  },
+  "Jaw": {
+   "Centre": [
+    0.005,
+    9.2505,
+    -23.744
+   ],
+   "Segment": "Jaw"
+  },
+  "Neck": {
+   "Centre": [
+    0.0082,
+    8.9275,
+    -14.5451
+   ],
+   "Segment": "Neck"
+  },
+  "SerpentHead": {
+   "Centre": [
+    -5.0,
+    27.4068,
+    -14.0884
+   ],
+   "Segment": "SerpentHead"
+  },
+  "SerpentHead_Glow_1c0700": {
+   "Centre": [
+    -5.0,
+    27.9744,
+    -15.9415
+   ],
+   "Hex": "1c0700",
+   "Segment": "SerpentHead"
+  },
+  "SerpentHead_Glow_ff4600": {
+   "Centre": [
+    -5.0,
+    26.55,
+    -15.6
+   ],
+   "Hex": "ff4600",
+   "Segment": "SerpentHead"
+  },
+  "SerpentHead_Glow_ffc800": {
+   "Centre": [
+    -5.0,
+    27.95,
+    -15.9
+   ],
+   "Hex": "ffc800",
+   "Segment": "SerpentHead"
+  },
+  "SerpentNeck": {
+   "Centre": [
+    -7.994,
+    20.997,
+    1.024
+   ],
+   "Segment": "SerpentNeck"
+  },
+  "SerpentNeck_Glow_ff4600": {
+   "Centre": [
+    -8.1491,
+    20.8452,
+    0.7924
+   ],
+   "Hex": "ff4600",
+   "Segment": "SerpentNeck"
+  },
+  "Shell": {
+   "Centre": [
+    0.172,
+    14.8802,
+    1.5532
+   ],
+   "Segment": "Body"
+  },
+  "Tail": {
+   "Centre": [
+    0.0132,
+    4.9665,
+    18.3642
+   ],
+   "Segment": "Tail"
+  }
+ },
+ "Pivots": {
+  "BackLeftLower": {
+   "Parent": "BackLeftUpper",
+   "Position": [
+    -12.0,
+    4.8,
+    12.6
+   ]
+  },
+  "BackLeftUpper": {
+   "Parent": "Body",
+   "Position": [
+    -8.6,
+    6.0,
+    10.8
+   ]
+  },
+  "BackRightLower": {
+   "Parent": "BackRightUpper",
+   "Position": [
+    12.0,
+    4.8,
+    12.6
+   ]
+  },
+  "BackRightUpper": {
+   "Parent": "Body",
+   "Position": [
+    8.6,
+    6.0,
+    10.8
+   ]
+  },
+  "Body": {
+   "Parent": null,
+   "Position": [
+    0.0,
+    7.0,
+    1.5
+   ]
+  },
+  "FrontLeftLower": {
+   "Parent": "FrontLeftUpper",
+   "Position": [
+    -12.4,
+    5.2,
+    -10.6
+   ]
+  },
+  "FrontLeftUpper": {
+   "Parent": "Body",
+   "Position": [
+    -8.6,
+    6.4,
+    -8.6
+   ]
+  },
+  "FrontRightLower": {
+   "Parent": "FrontRightUpper",
+   "Position": [
+    12.4,
+    5.2,
+    -10.6
+   ]
+  },
+  "FrontRightUpper": {
+   "Parent": "Body",
+   "Position": [
+    8.6,
+    6.4,
+    -8.6
+   ]
+  },
+  "Head": {
+   "Parent": "Neck",
+   "Position": [
+    0.0,
+    10.4,
+    -18.6
+   ]
+  },
+  "Jaw": {
+   "Parent": "Head",
+   "Position": [
+    0.0,
+    9.6,
+    -20.6
+   ]
+  },
+  "Neck": {
+   "Parent": "Body",
+   "Position": [
+    0.0,
+    8.6,
+    -12.0
+   ]
+  },
+  "SerpentHead": {
+   "Parent": "SerpentNeck",
+   "Position": [
+    -5.0,
+    27.2,
+    -12.6
+   ]
+  },
+  "SerpentNeck": {
+   "Parent": "Body",
+   "Position": [
+    -7.37,
+    13.55,
+    13.41
+   ]
+  },
+  "Tail": {
+   "Parent": "Body",
+   "Position": [
+    0.0,
+    5.6,
+    16.4
+   ]
+  }
+ }
+}
