@@ -76,13 +76,15 @@ pipRow.Size = UDim2.new(1, -20, 0, 14)
 pipRow.Parent = panel
 local pipLayout = Instance.new("UIListLayout")
 pipLayout.FillDirection = Enum.FillDirection.Horizontal
-pipLayout.Padding = UDim.new(0, 6)
+local PIP_GAP = 4
+pipLayout.Padding = UDim.new(0, PIP_GAP)
 pipLayout.Parent = pipRow
 
 local pips = {}
 for index = 1, MAX_PIPS do
     local pip = Instance.new("Frame")
-    pip.Size = UDim2.fromOffset(18, 14)
+    -- the most leaps any rank has (MAX_PIPS) always fit the row
+    pip.Size = UDim2.new(1 / MAX_PIPS, -PIP_GAP * (MAX_PIPS - 1) / MAX_PIPS, 1, 0)
     pip.BorderSizePixel = 0
     pip.LayoutOrder = index
     pip.Parent = pipRow

@@ -34,6 +34,12 @@ local GameConfig = {
             { RankId = "PerfectFoundation", AirLeaps = 5, RunSpeed = 30, Stamina = 150, DashSpeed = 86, FlightSpeed = 56 },
             { RankId = "DivineInitiate", AirLeaps = 6, RunSpeed = 32, Stamina = 170, DashSpeed = 92, FlightSpeed = 64 },
             { RankId = "VoidWalker", AirLeaps = 7, RunSpeed = 34, Stamina = 190, DashSpeed = 100, FlightSpeed = 72 },
+            -- the last three realms (the owner, 2026-11-02: "the speed doesn't feel enough even though I am
+            -- max realm"): each a big step faster, flight always faster than the run
+            { RankId = "DaoSeeker", AirLeaps = 8, RunSpeed = 44, Stamina = 215, DashSpeed = 115, FlightSpeed = 88 },
+            { RankId = "PrimordialAwakening", AirLeaps = 9, RunSpeed = 54, Stamina = 240, DashSpeed = 130, FlightSpeed = 104 },
+            { RankId = "EternalInitiate", AirLeaps = 10, RunSpeed = 64, Stamina = 270, DashSpeed = 150, FlightSpeed = 120 },
+            { RankId = "EternalOrigin", AirLeaps = 11, RunSpeed = 76, Stamina = 300, DashSpeed = 170, FlightSpeed = 140 },
         },
     },
 

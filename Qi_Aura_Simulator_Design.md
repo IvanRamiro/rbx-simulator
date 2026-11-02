@@ -110,6 +110,12 @@ Qinggong is martial-arts movement through the air.
 | Perfect Foundation | 5 | 30 | — |
 | Divine Initiate | 6 | 32 | Origin Abyss |
 | Void Walker | 7 | 34 | The Void Shard above Origin Abyss |
+| Dao Seeker | 8 | 44 | — |
+| Primordial Awakening | 9 | 54 | — |
+| Eternal Initiate | 10 | 64 | — |
+| Eternal Origin | 11 | 76 | — |
+
+The last four rows were added on November 2, 2026, when the owner found the speed at max realm wasn't enough (it had stopped growing at Void Walker): each of the last realms is a big step faster, and the highest rank runs at 76.
 
 Measured reach with Roblox gravity:
 
@@ -133,6 +139,7 @@ The islands were first linked by floating stepping stones tuned to each rank's l
 | Air leap | The foot steps on the void: a small formation, a vortex and a ripple ring open, clouds burst from the step and linger, streaks shoot downward |
 | Rising after a leap | Energy trails from the feet, a silk ribbon from the shoulders, a current of Qi spiralling round the body. The legs stride like climbing steps in the air: the driving knee thrusts up while the other leg pushes off, arms swinging opposite, then both knees tuck. The legs alternate: the ground jump drives the right knee, the first air leap the left, the second the right, and so on |
 | Glide | Riding a cloud: clouds held under the feet, small wisps shed behind, wind lines rushing past; crane-stance glide pose |
+| Running (on the ground, from 19 studs/s) | A wind trail (the owner's request, November 2, 2026): a band of wispy wind streaks streams back from each shoulder (the owner's chosen trail texture, "Images/Trails15", asset 124753331461910), a bright wind line from each hand, wind lines rush past the body and the stride kicks up wind-blown dust, all stronger the faster the run (full from 64 studs/s). Each client reads every runner's own movement, so it needs no relay |
 | Landing | A starburst flare, a formation flash, two shockwave rings, sharp Qi spikes, rolling cloud and glittering Qi mist, scaled by impact speed |
 
 - The colour follows the realm: azure (Qi Awakening, Qi Foundation), jade (Spirit Core, Spirit Soul), gold (Ascendant, Immortal), violet (Divine and above).
@@ -175,6 +182,10 @@ Decided by the owner:
 | Perfect Foundation | 150 | 86 | 56 |
 | Divine Initiate | 170 | 92 | 64 |
 | Void Walker | 190 | 100 | 72 |
+| Dao Seeker | 215 | 115 | 88 |
+| Primordial Awakening | 240 | 130 | 104 |
+| Eternal Initiate | 270 | 150 | 120 |
+| Eternal Origin | 300 | 170 | 140 |
 
 ---
 

@@ -9,6 +9,10 @@
 --   Dash     wind streaks back past the body, a lingering cloud and a faint ripple at the start.
 --   Land     (after any of the above, or a hard fall) a starburst, formation flash, shockwave
 --            rings, Qi spikes, rolling cloud and Qi mist, all scaled by impact.
+--   Run      (running on the ground) a wind trail: two streaming bands of wispy wind streaks (the
+--            owner's chosen texture) peel back from the shoulders, wind lines rush past the body and the stride kicks up a little wind-blown
+--            dust, all stronger the faster the run (full at RUN_FULL_SPEED). Read from each
+--            character's own movement, so other players' need no message.
 --
 -- Colours follow the cultivator's realm. Effects play here at once for the local player; other
 -- players' arrive through QinggongFxEvent and are skipped beyond MAX_DISTANCE from the camera.
@@ -42,6 +46,8 @@ local TEXTURES = {
     GlitterFog = "rbxassetid://14049414463", -- Qi mist shot through with glints
     Vortex = "rbxassetid://14050094484",     -- a spiral that turns under the formations
     Flare = "rbxassetid://14054628491",      -- a starburst for the moment of impact
+    -- chosen by the owner for the running wind trail (2026-11-02): "Images/Trails15", by BloxenRBLX
+    WindTrail = "rbxassetid://124753331461910",
 }
 
 -- Core is the near-white heart of the light, Main the body of the effect, Deep its fading edge,
@@ -67,6 +73,8 @@ local LEAP_POSE_TIME = 0.55     -- how long the leap poses hold after a takeoff 
 local STEP_TIME = 0.2           -- the first part of it: the stepping stride, before the knees tuck
 local ASCEND_TIME = 0.6         -- how long the trails, ribbon and spiral run after an air leap
 local GROUND_LIFT = 0.35        -- flat ground effects float this far up, clear of terrain grass
+local RUN_MIN_SPEED = 19        -- studs/s on the ground before the wind trail shows (above a walk, below the first run)
+local RUN_FULL_SPEED = 64       -- the wind trail is at full strength from this speed
 
 local fxFolder = Instance.new("Folder")
 fxFolder.Name = "QinggongFx"
@@ -428,7 +436,7 @@ local function attachment(parent, name, position)
 end
 
 local function buildRig(character, humanoid, root, p)
-    local rig = { root = root, palette = p, trails = {}, ascendUntil = 0, gliding = false, angle = 0, active = false }
+    local rig = { root = root, palette = p, trails = {}, ascendUntil = 0, gliding = false, running = 0, shownRun = -1, angle = 0, active = false }
     -- their width runs across the foot, so they stay full whether the body rises or glides
     for _, side in { "Left", "Right" } do
         local foot = character:FindFirstChild(side .. "Foot")
@@ -488,6 +496,34 @@ local function buildRig(character, humanoid, root, p)
         Size = numberSequence({ { 0, 0.8 }, { 0.3, 1.3 }, { 1, 1.5 } }),
         Transparency = numberSequence({ { 0, 1 }, { 0.2, 0.55 }, { 1, 1 } }),
         Color = colorSequence({ { 0, p.Main }, { 1, p.Deep } }), Brightness = 1.2,
+    })
+    -- the wind trail while running: a soft band of wind from each shoulder's back (standing upright,
+    -- so it streams out flat behind the runner) and a bright wind line from each hand
+    rig.runTrails = {}
+    for _, side in { -1, 1 } do
+        local w0 = attachment(torso, "QinggongRunA", Vector3.new(side * 1.0, 1.1, 0.45))
+        local w1 = attachment(torso, "QinggongRunB", Vector3.new(side * 1.0, -1.2, 0.45))
+        table.insert(rig.runTrails, trailBetween(torso, w0, w1, {
+            Name = "QinggongRunTrail", Texture = TEXTURES.WindTrail, TextureMode = Enum.TextureMode.Stretch, Lifetime = 0.32,
+            Color = colorSequence({ { 0, p.Core }, { 0.3, p.Core:Lerp(p.Main, 0.4) }, { 1, p.Main } }), Brightness = 1.8,
+            Transparency = numberSequence({ { 0, 0.5 }, { 0.4, 0.65 }, { 1, 1 } }), WidthScale = numberSequence({ { 0, 1 }, { 1, 0.3 } }),
+        }))
+        local hand = character:FindFirstChild(side < 0 and "LeftHand" or "RightHand")
+        if hand then
+            local h0 = attachment(hand, "QinggongRunA", Vector3.new(0, 0.12, 0))
+            local h1 = attachment(hand, "QinggongRunB", Vector3.new(0, -0.12, 0))
+            table.insert(rig.runTrails, trailBetween(hand, h0, h1, {
+                Name = "QinggongRunTrail", Texture = TEXTURES.Streak, TextureMode = Enum.TextureMode.Stretch, Lifetime = 0.26,
+                Color = colorSequence({ { 0, p.Core }, { 1, p.Main } }), Brightness = 2.4,
+                Transparency = numberSequence({ { 0, 0.3 }, { 1, 1 } }), WidthScale = numberSequence({ { 0, 1 }, { 1, 0.4 } }),
+            }))
+        end
+    end
+    rig.dust = emitter(feet, {
+        Name = "QinggongRunDust", Texture = TEXTURES.Fog, VelocityInheritance = -0.15, Speed = NumberRange.new(1, 3),
+        SpreadAngle = Vector2.new(70, 20), Lifetime = NumberRange.new(0.35, 0.55), Rotation = NumberRange.new(0, 360),
+        RotSpeed = NumberRange.new(-40, 40), Size = numberSequence({ { 0, 0.6 }, { 1, 2.4 } }), LightEmission = 0.25,
+        Transparency = numberSequence({ { 0, 0.7 }, { 1, 1 } }), Color = colorSequence({ { 0, p.Core }, { 1, p.Main } }), Brightness = 1,
     })
     -- the root part's box spreads the wind lines round the body
     rig.wind = emitter(root, {
@@ -554,16 +590,52 @@ local function updateRig(rig, deltaTime, now)
     rig.stream.Rate = if gliding then 5 * rig.detail else 0
     rig.streamFog.Rate = if gliding then 3 * rig.detail else 0
     rig.shed.Rate = if gliding then 6 * rig.detail else 0
-    rig.wind.Rate = if gliding then 16 * rig.detail else 0
-    rig.active = ascending or gliding
+    -- the wind trail while running, scaled by how fast (rig.running, 0..1)
+    local running = if visible and not gliding and not ascending then rig.running else 0
+    for _, trail in rig.runTrails do
+        setTrail(trail, running > 0)
+    end
+    if math.abs(running - rig.shownRun) > 0.05 then   -- denser the faster (only re-set when it changes)
+        rig.shownRun = running
+        local fade = numberSequence({ { 0, 0.75 - 0.4 * running }, { 0.4, 0.85 - 0.3 * running }, { 1, 1 } })
+        for _, trail in rig.runTrails do
+            trail.Transparency = fade
+        end
+    end
+    rig.dust.Rate = running * 10 * rig.detail
+    rig.wind.Rate = if gliding then 16 * rig.detail else running * 18 * rig.detail
+    rig.active = ascending or gliding or running > 0
+end
+
+-- How strongly a character is running (0..1): on the ground, faster than RUN_MIN_SPEED.
+local function runStrength(humanoid, root)
+    if humanoid.FloorMaterial == Enum.Material.Air or humanoid:GetState() == Enum.HumanoidStateType.Seated then
+        return 0
+    end
+    local speed = (root.AssemblyLinearVelocity * Vector3.new(1, 0, 1)).Magnitude
+    if speed < RUN_MIN_SPEED then
+        return 0
+    end
+    return math.clamp((speed - RUN_MIN_SPEED) / (RUN_FULL_SPEED - RUN_MIN_SPEED), 0.15, 1)
 end
 
 RunService.RenderStepped:Connect(function(deltaTime)
     local now = os.clock()
+    for _, player in Players:GetPlayers() do   -- who is running (rigs are built on demand)
+        local character, humanoid, root = rootOf(player)
+        local rig = character and rigs[character]
+        local strength = if character and inRange(root) then runStrength(humanoid, root) else 0
+        if strength > 0 and not rig then
+            rig = rigFor(player)
+        end
+        if rig then
+            rig.running = strength
+        end
+    end
     for character, rig in rigs do
         if character.Parent == nil then
             rigs[character] = nil -- the character was removed (respawn or leaving) without being destroyed
-        elseif rig.active or now < rig.ascendUntil or rig.gliding then
+        elseif rig.active or now < rig.ascendUntil or rig.gliding or rig.running > 0 then
             updateRig(rig, deltaTime, now)
         end
     end
