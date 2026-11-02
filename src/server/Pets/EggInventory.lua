@@ -1,4 +1,4 @@
--- The eggs a player has taken from guardians and secured, to hatch at their island's stands
+-- The eggs a player has taken from guardians and secured, to hatch at Yggdrasil's Hatching Altar
 -- (PetService). Saved in PlayerData as Eggs = { [EggId] = count } and mirrored to the client as
 -- player attributes "Egg_<EggId>".
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

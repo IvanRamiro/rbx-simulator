@@ -10,9 +10,6 @@ landmark and Qinggong route exit, and the Root of the Island grotto beneath.
 """
 import math
 
-NAME = "StartingIsland"
-CENTRE = (0, 200, 0)
-
 PLAZA = (0, 0, 24)            # x, z, radius
 SPRING = (46, -42, 19)        # terrace centre and radius; ground lifted +6
 HILL = (-50, 16, 22)          # lookout hill: centre, radius; peak +15
@@ -21,13 +18,6 @@ EGG_GARDEN = (-38, 50, 22)    # sunken terrace at -1.5
 POOL_A, POOL_B, POOL_R = (40, -37), (49.7, -44.0), 6.0
 SPILL_END = (64.6, -54.8)        # where the spillway leaves the rim and the waterfall begins
 POOL_BED, POOL_WATER = 3.2, 5.6  # wading depth; the water is a mesh surface (too narrow for terrain water)
-EXITS = {                     # the old route exits on the rim, which its paths still lead to
-    "JadeRoute": (100, -12),
-    "EmberRoute": (-72, 72),
-    "MoonlitRoute": (8, -96),
-    "OriginRoute": (-78, -70),
-    "RootPath": (88, 34),     # path down to the Root of the Island grotto
-}
 
 # Rim radius by bearing (theta = atan2(z, x); east 0, south +90, north -90).
 LOBES = [(-7, 13, 16), (135, 15, 20), (-86, 9, 14), (-138, 16, 15), (100, 7, 22), (40, 4, 18)]

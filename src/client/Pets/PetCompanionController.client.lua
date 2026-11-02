@@ -84,12 +84,13 @@ local function syncPetAura(player, pet, cultivating)
     end
 end
 
-local function buildPet(petId, rootPart)
+-- `hidden`: its owner is culled (far away), so it waits out of the world like their other pets.
+local function buildPet(petId, rootPart, hidden)
     local model, petRoot = PetModels.build(petId)
     if not model then
         return nil
     end
-    model.Parent = container
+    model.Parent = if hidden then nil else container
     petRoot.CFrame = rootPart.CFrame
     return {
         model = model,
@@ -127,7 +128,7 @@ local function syncPets(player, entry)
     entry.pets = {}
     if key ~= "" then
         for _, petId in string.split(key, ",") do
-            local pet = spare[petId] and table.remove(spare[petId]) or buildPet(petId, rootPart)
+            local pet = spare[petId] and table.remove(spare[petId]) or buildPet(petId, rootPart, entry.culled)
             if pet then
                 table.insert(entry.pets, pet)
             end

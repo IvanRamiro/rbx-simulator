@@ -36,7 +36,6 @@ W = K.W
 V = Vector
 TAU = 2 * math.pi
 NAME = "StoneLion"
-OUT_DIR = G.OUT_DIR
 EYE = "39d8ff"           # the eyes' Qi
 PUPIL = "06101c"         # the round pupils: dark Neon renders as a flat black disc, and the rig blinks it with the iris
 ORB = "2fe6c8"           # the collar's jade orb
@@ -293,18 +292,6 @@ def pieces(name, hi):
     for o in curls:
         o["keep"] = True
     return [(name, rest + curls)]
-
-
-def bake_segment(name, hi, coll):
-    return G.bake_piece(NAME, name, hi, coll, BUDGET.get(name, 5000))
-
-
-centre_of = G.centre_of
-
-
-def write_fbx(parts, report):
-    """One FBX of every segment's game mesh and glow piece, and the pieces' centres and pivots."""
-    return G.write_fbx(NAME, parts, report)
 
 
 def bake(names):

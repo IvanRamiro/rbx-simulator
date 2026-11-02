@@ -34,9 +34,9 @@ import eggs_moon as Mo
 W = K.W
 V = K.V
 TAU = K.TAU
-H, R = K.H, K.R
+H = K.H
 on, normal_at = J.on, J.normal_at
-sphere, star, uv_path = Mo.sphere, Mo.star, Mo.uv_path
+sphere, uv_path = Mo.sphere, Mo.uv_path
 
 
 def tube(hi, pts, r, sides=6, mat=0, tip=False):
@@ -102,7 +102,7 @@ def chain_path(sign, n=240):
     return [(i / n, 0.5 + sign * 0.2 * math.sin(TAU * i / n)) for i in range(n + 1)]
 
 
-def chain(hi, sign, rnd, off=0.034, spacing=0.1, mat=0):
+def chain(hi, sign, off=0.034, spacing=0.1, mat=0):
     """Oval links along the path, each turned a quarter from the last."""
     path = uv_path(chain_path(sign), off, per=1)
     dist = [0.0]
@@ -139,7 +139,7 @@ def forbidden_origin(coll, M):
             glyph(runes, (k + 0.5) / count, vc, 0.66 / count, h, rnd, 0.016, 0.0095)
     bronze = Hm.Hi()
     for sign in (1, -1):
-        chain(bronze, sign, rnd)
+        chain(bronze, sign)
     # the seal where they cross: a domed bronze medallion in a ring, a rune glowing on its face
     sn = normal_at(0.0, 0.5)
     sc = on(0.0, 0.5, 0.075)

@@ -30,8 +30,7 @@ import eggs_jade as J
 W = K.W
 V = K.V
 TAU = K.TAU
-H, R = K.H, K.R
-on, normal_at, surface_path, uv_of = J.on, J.normal_at, J.surface_path, J.uv_of
+on, normal_at = J.on, J.normal_at
 
 
 def rock(hi, centre, size, seed, mat=0, stretch=(1.0, 1.0, 1.0), n=14):
@@ -140,7 +139,7 @@ PA_FLAME = "ff5a14"    # the phoenix flame on the front
 PA_HEART = "ffa21e"    # its hot heart
 
 
-def flame_outline(cu, cv, w, h, n_side=10):
+def flame_outline(cu, cv, w, h):
     """A phoenix flame in (u, v): a tall central tongue between two tongues curling out and up from
     its shoulders, closed along a rounded base. Star-shaped from (cu, cv - 0.25 h)."""
     pts = []
@@ -182,7 +181,6 @@ def wing(hi, side, mat, rnd):
 
 
 def phoenix_ash(coll, M):
-    mb = Hm.Hi()
     shell_mb = W.MeshBuilder()
     K.shell(shell_mb, (0.5, 0.5), nu=48, nv=32)
     shell = shell_mb.object("PA_Shell", coll, M["embershell"], smooth=True)

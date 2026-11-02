@@ -17,15 +17,9 @@ from mathutils.bvhtree import BVHTree
 
 import ee_kit as K
 
+EB = K.EB
+
 LINING_SCALE = 0.35
-
-
-def _override(objs, active):
-    win = bpy.context.window_manager.windows[0]
-    area = next(a for a in win.screen.areas if a.type == "VIEW_3D")
-    region = next(r for r in area.regions if r.type == "WINDOW")
-    return bpy.context.temp_override(window=win, area=area, region=region, active_object=active,
-                                     selected_objects=objs, selected_editable_objects=objs, object=active)
 
 
 def _islands(bm, uvl):
@@ -67,7 +61,7 @@ def unwrap(lows, lining_names=("EE_CrimsonLining",)):
     for o in lows:
         o.select_set(True)
     bpy.context.view_layer.objects.active = lows[0]
-    with _override(lows, lows[0]):
+    with K.override(lows, lows[0]):
         bpy.ops.object.mode_set(mode="EDIT")
         bpy.ops.mesh.select_all(action="SELECT")
         bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=0.003, scale_to_bounds=False)
@@ -93,71 +87,11 @@ def unwrap(lows, lining_names=("EE_CrimsonLining",)):
                     lp[uvl].uv = (cx + (u.x - cx) * LINING_SCALE, cy + (u.y - cy) * LINING_SCALE)
         bm.to_mesh(o.data)
         bm.free()
-    with _override(lows, lows[0]):
+    with K.override(lows, lows[0]):
         bpy.ops.object.mode_set(mode="EDIT")
         bpy.ops.mesh.select_all(action="SELECT")
         bpy.ops.uv.pack_islands(margin=0.004, rotate=True, scale=True)
         bpy.ops.object.mode_set(mode="OBJECT")
-
-
-def _image(name, size, color):
-    img = bpy.data.images.get(name)
-    if img:
-        bpy.data.images.remove(img)
-    img = bpy.data.images.new(name, size, size, alpha=False)
-    if not color:
-        img.colorspace_settings.name = "Non-Color"
-    return img
-
-
-def _bake_material(item, images):
-    m = bpy.data.materials.get(item + "_Baked") or bpy.data.materials.new(item + "_Baked")
-    m.use_nodes = True
-    t = m.node_tree
-    for nd in list(t.nodes):
-        t.nodes.remove(nd)
-    out = t.nodes.new("ShaderNodeOutputMaterial")
-    bsdf = t.nodes.new("ShaderNodeBsdfPrincipled")
-    t.links.new(bsdf.outputs[0], out.inputs["Surface"])
-    for key, img in images.items():
-        nd = t.nodes.new("ShaderNodeTexImage")
-        nd.image = img
-        nd.name = key
-    return m
-
-
-def _wire(m):
-    t = m.node_tree
-    bsdf = next(n for n in t.nodes if n.type == "BSDF_PRINCIPLED")
-    t.links.new(t.nodes["color"].outputs["Color"], bsdf.inputs["Base Color"])
-    nm = t.nodes.new("ShaderNodeNormalMap")
-    t.links.new(t.nodes["normal"].outputs["Color"], nm.inputs["Color"])
-    t.links.new(nm.outputs["Normal"], bsdf.inputs["Normal"])
-    t.links.new(t.nodes["roughness"].outputs["Color"], bsdf.inputs["Roughness"])
-    t.links.new(t.nodes["metalness"].outputs["Color"], bsdf.inputs["Metallic"])
-
-
-def _route(materials, node_name):
-    undo = []
-    for m in materials:
-        t = m.node_tree
-        out = next(n for n in t.nodes if n.type == "OUTPUT_MATERIAL")
-        old = out.inputs["Surface"].links[0].from_socket if out.inputs["Surface"].links else None
-        em = t.nodes.new("ShaderNodeEmission")
-        src = t.nodes.get(node_name)
-        if src is not None:
-            t.links.new(src.outputs[0], em.inputs["Color"])
-        else:
-            em.inputs["Color"].default_value = (0, 0, 0, 1)
-        t.links.new(em.outputs[0], out.inputs["Surface"])
-        undo.append((t, out, old, em))
-
-    def restore():
-        for t, out, old, em in undo:
-            t.nodes.remove(em)
-            if old is not None:
-                t.links.new(old, out.inputs["Surface"])
-    return restore
 
 
 def pairs_by_name(lows, his, decals):
@@ -178,7 +112,8 @@ def pairs_by_name(lows, his, decals):
         verts = [d.matrix_world @ v.co for v in list(d.data.vertices)[:: max(1, len(d.data.vertices) // 40)]]
         best, best_d = None, 1e9
         for o in his:
-            tot = sum((trees[o.name].find_nearest(p)[3] or 1e9) for p in verts)
+            dists = (trees[o.name].find_nearest(p)[3] for p in verts)
+            tot = sum(d if d is not None else 1e9 for d in dists)
             if tot < best_d:
                 best, best_d = o, tot
         owner.setdefault(best.name, []).append(d)
@@ -193,9 +128,9 @@ def bake(item, pairs, size=2048, small=1024, samples=12, extrusion=0.06, ray=0.1
     """Bakes every pair into the item's maps (written to OUT_DIR); returns the images."""
     scene = bpy.context.scene
     vl = bpy.context.view_layer
-    images = {"color": _image(item + "_Color", size, True), "normal": _image(item + "_Normal", size, False),
-              "roughness": _image(item + "_Roughness", small, False), "metalness": _image(item + "_Metalness", small, False)}
-    mat = _bake_material(item, images)
+    images = {"color": EB._image(item + "_Color", size, True), "normal": EB._image(item + "_Normal", size, False),
+              "roughness": EB._image(item + "_Roughness", small, False), "metalness": EB._image(item + "_Metalness", small, False)}
+    mat = EB._baked_material(item, images)
     for lo, _ in pairs:
         lo.data.materials.clear()
         lo.data.materials.append(mat)
@@ -211,7 +146,7 @@ def bake(item, pairs, size=2048, small=1024, samples=12, extrusion=0.06, ray=0.1
         for key, kind, route in passes:
             mat.node_tree.nodes.active = mat.node_tree.nodes[key]
             hi_mats = {m for o in all_hi for m in o.data.materials if m}
-            restore = _route(hi_mats, route) if route else None
+            restore = EB._route_value(hi_mats, route) if route else None
             try:
                 for n, (lo, his) in enumerate(pairs):
                     # only this pair takes part: the other pieces are hidden from the rays
@@ -241,7 +176,7 @@ def bake(item, pairs, size=2048, small=1024, samples=12, extrusion=0.06, ray=0.1
                     restore()
     finally:
         scene.render.engine = engine
-    _wire(mat)
+    EB.wire_baked(mat)
     os.makedirs(K.OUT_DIR, exist_ok=True)
     for key, img in images.items():
         img.filepath_raw = os.path.join(K.OUT_DIR, item + "_" + key + ".png")

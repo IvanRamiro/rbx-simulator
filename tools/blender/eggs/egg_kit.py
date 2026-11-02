@@ -59,7 +59,7 @@ def egg_point(u, v, r=R, h=H, swell=0.13, offset=0.0):
     return p, n
 
 
-def shell(mb, band, nu=40, nv=28, u_repeat=1.0, offset=0.0, v_from=0.0, v_to=1.0, shade=None, **egg):
+def shell(mb, band, nu=40, nv=28, u_repeat=1.0, offset=0.0, v_from=0.0, v_to=1.0, **egg):
     """The egg's skin as a quad grid. The strip's u runs once round the egg (times u_repeat) and
     its v from the bottom to the top, so a strip painted as a function of (u, v) maps onto the
     egg like a label."""
@@ -75,105 +75,19 @@ def shell(mb, band, nu=40, nv=28, u_repeat=1.0, offset=0.0, v_from=0.0, v_to=1.0
             mb.face([tuple(p) for p in q], uv)
 
 
-def hull_shell(name, coll, mat, band, points, seed=0, tones=6):
-    """A faceted shell: the convex hull of points on the egg. Each facet samples its own spot of
-    the strip (u picks a tone at random, v follows height), so neighbouring facets catch the
-    light differently like cut crystal."""
-    rnd = random.Random(seed)
-    bm = bmesh.new()
-    for p in points:
-        bm.verts.new(W.rb(*p))
-    bmesh.ops.convex_hull(bm, input=bm.verts)
-    bm.faces.ensure_lookup_table()
-    uv = bm.loops.layers.uv.new("UVMap")
-    v0, v1 = band
-    for f in bm.faces:
-        tone = (rnd.randrange(tones) + 0.5) / tones
-        for l in f.loops:
-            h = max(0.02, min(0.98, l.vert.co.z / H))
-            l[uv].uv = (tone, v0 + (v1 - v0) * h)
-        f.smooth = False
-    me = bpy.data.meshes.new(name)
-    bm.to_mesh(me)
-    edges = [(V(rb_inv(*e.verts[0].co)), V(rb_inv(*e.verts[1].co))) for e in bm.edges]
-    bm.free()
-    me.materials.append(mat)
-    o = bpy.data.objects.new(name, me)
-    coll.objects.link(o)
-    return o, edges
-
-
-def plated_shell(mb, band, sites, nu=64, nv=44, stretch=0.55, gap=0.93, lift=(0.0, 0.05), tilt=0.12, depth=0.09,
-                 seed=0, tones=6, **egg):
-    """The egg broken into cut plates: every grid cell belongs to its nearest site (with heights
-    squeezed by `stretch`, so the plates come out long and upright), and each plate is pressed
-    flat onto its own slightly tilted plane, raised by its own amount and shrunk toward its
-    centre so seams open between plates. Each plate gets walls down to `depth` below the shell,
-    so whatever lies under the seams (an inner glowing shell) shows only through them. Each
-    plate samples one tone of the strip (u), shaded by height (v). Returns the plates' centres
-    and normals."""
-    rnd = random.Random(seed)
-    grid = [[egg_point(i / nu, j / nv, **egg) for i in range(nu)] for j in range(nv + 1)]
-    sq = [V((p.x, p.y * stretch, p.z)) for p in sites]
-
-    def owner(p):
-        q = V((p.x, p.y * stretch, p.z))
-        return min(range(len(sq)), key=lambda k: (sq[k] - q).length_squared)
-
-    cells = {}
-    for j in range(nv):
-        for i in range(nu):
-            corners = [(j, i), (j, (i + 1) % nu), (j + 1, (i + 1) % nu), (j + 1, i)]
-            c = sum((grid[a][b][0] for a, b in corners), V((0, 0, 0))) / 4
-            cells.setdefault(owner(c), []).append(corners)
-    v0, v1 = band
-    plates = []
-    for k, quads in cells.items():
-        keys = {key for q in quads for key in q}
-        pts = {key: grid[key[0]][key[1]][0] for key in keys}
-        c = sum(pts.values(), V((0, 0, 0))) / len(pts)
-        n = sum((grid[a][b][1] for a, b in keys), V((0, 0, 0))).normalized()
-        n = (n + V((rnd.uniform(-tilt, tilt), rnd.uniform(-tilt, tilt), rnd.uniform(-tilt, tilt)))).normalized()
-        plane = c + n * rnd.uniform(*lift)
-        top = {key: plane + (p - c - n * (p - c).dot(n)) * gap for key, p in pts.items()}
-        tone = (rnd.randrange(tones) + 0.5) / tones
-        shade = lambda p: v0 + (v1 - v0) * max(0.03, min(0.97, p.y / (egg.get("h", H)) * 0.85 + 0.1))
-        for q in quads:
-            poly = [top[key] for key in q]
-            W_oriented_uv(mb, poly, tuple(n), [(tone, shade(p)) for p in poly])
-        # walls along the plate's outline (edges used by one of its quads only)
-        count = {}
-        for q in quads:
-            for a, b in zip(q, q[1:] + q[:1]):
-                e = (a, b) if a < b else (b, a)
-                count[e] = count.get(e, 0) + 1
-        for (a, b), m in count.items():
-            if m != 1:
-                continue
-            pa, pb = top[a], top[b]
-            ia = grid[a[0]][a[1]][0] - grid[a[0]][a[1]][1] * depth
-            ib = grid[b[0]][b[1]][0] - grid[b[0]][b[1]][1] * depth
-            out = (pa + pb) / 2 - c
-            W_oriented_uv(mb, [pa, pb, ib, ia], tuple(out), [(tone, v0 + (v1 - v0) * 0.08)] * 4)
-        plates.append((c, n))
-    return plates
-
-
-def crystal_plates(mb, band, sites, gap=0.9, lift=(0.0, 0.05), tilt=0.14, depth=0.1, seed=0, tones=6, squash=1.0, peak=0.0, **egg):
+def crystal_plates(mb, band, sites, gap=0.9, lift=(0.0, 0.05), tilt=0.14, depth=0.1, seed=0, tones=6, peak=0.0, **egg):
     """The egg as cut crystal plates: one flat polygonal plate per site, its corners where the
     plate meets its neighbours (the centres of the triangles of the sites' hull, laid back on the
     egg). Each plate lies on its own slightly tilted plane that touches its highest corner, so
     no part of it dips under the shell; it is raised a little and shrunk toward its site so a
     seam opens round it, with walls down to `depth` under the shell (anything inside shows only
     through the seams). Each plate samples one tone of the strip (u), shaded by height (v).
-    squash < 1 builds the pattern with heights squeezed, so the plates come out long and upright
-    (spread the sites evenly over the squeezed egg too: see squashed_sites). peak > 0 cuts each
-    plate into facets rising to a ridge point set toward its upper end, so the facets catch the
-    light differently, like cut crystal."""
+    peak > 0 cuts each plate into facets rising to a ridge point set toward its upper end, so the
+    facets catch the light differently, like cut crystal."""
     rnd = random.Random(seed)
     bm = bmesh.new()
     for p in sites:
-        bm.verts.new(W.rb(p.x, p.y * squash, p.z))
+        bm.verts.new(W.rb(p.x, p.y, p.z))
     bmesh.ops.convex_hull(bm, input=bm.verts)
     bm.verts.ensure_lookup_table()
     v0, v1 = band
@@ -181,7 +95,6 @@ def crystal_plates(mb, band, sites, gap=0.9, lift=(0.0, 0.05), tilt=0.14, depth=
 
     def on_egg(q):
         # lay a point back onto the egg along the ray from the egg's axis at its height
-        best = None
         y = max(0.0, min(h, q.y))
         vv = math.acos(max(-1.0, min(1.0, 1 - 2 * y / h))) / math.pi
         uu = (math.atan2(q.x, q.z) / TAU) % 1.0
@@ -189,7 +102,6 @@ def crystal_plates(mb, band, sites, gap=0.9, lift=(0.0, 0.05), tilt=0.14, depth=
 
     for vert in bm.verts:
         site = V(rb_inv(*vert.co))
-        site.y /= squash
         faces = list(vert.link_faces)
         if len(faces) < 3:
             continue
@@ -201,7 +113,6 @@ def crystal_plates(mb, band, sites, gap=0.9, lift=(0.0, 0.05), tilt=0.14, depth=
         corners = []
         for f in faces:
             c = V(rb_inv(*f.calc_center_median()))
-            c.y /= squash
             p, _ = on_egg(c)
             d = p - site
             corners.append((math.atan2(d.dot(e2), d.dot(e1)), p))
@@ -236,13 +147,6 @@ def crystal_plates(mb, band, sites, gap=0.9, lift=(0.0, 0.05), tilt=0.14, depth=
     bm.free()
 
 
-def squashed_sites(n, seed, squash, **egg):
-    """Sites spread evenly over the egg squeezed in height by `squash`, then stretched back onto
-    the real egg (its profile scales with height, so they land exactly on it)."""
-    h = egg.pop("h", H)
-    return [V((p.x, p.y / squash, p.z)) for p in surface_sites(n, seed, h=h * squash, **egg)]
-
-
 def W_oriented_uv(mb, pts, normal, uvs):
     """A face wound to face along `normal`, with its own UV per corner."""
     a, b, c = V(pts[0]), V(pts[1]), V(pts[2])
@@ -262,20 +166,6 @@ def surface_sites(n, seed, **egg):
         u = (k * golden / TAU + rnd.uniform(-0.03, 0.03)) % 1.0
         out.append(egg_point(u, min(0.99, max(0.01, v + rnd.uniform(-0.015, 0.015))), **egg)[0])
     return out
-
-
-def egg_points(n, seed, jitter=0.0, **egg):
-    """n points spread evenly over the egg (a Fibonacci spiral in height), plus both poles."""
-    rnd = random.Random(seed)
-    pts = [egg_point(0, 0, **egg)[0], egg_point(0, 1, **egg)[0]]
-    golden = math.pi * (3 - math.sqrt(5))
-    for k in range(n):
-        v = 0.03 + 0.94 * (k + 0.5) / n
-        v = (1 - math.cos(math.pi * v)) / 2          # denser near the poles, where the egg curves fastest
-        u = (k * golden / TAU) % 1.0
-        p, nrm = egg_point(u + rnd.uniform(-jitter, jitter) * 0.02, v, **egg)
-        pts.append(p + nrm * rnd.uniform(-jitter, jitter) * 0.05)
-    return pts
 
 
 def strip_between(mb, a, b, normal, width, band, u=0.5, lift=0.012):
@@ -414,7 +304,7 @@ def shard(mb, base, direction, length, width, band, seed=0, sides=5, shade_tip=1
         W_oriented(mb, [ring0[j], ring0[k], b - d * width * 0.5], tuple(-d), band, 0.5, 0.3)
 
 
-def xiangyun(mb, centre, normal, up, size, band, thick=0.06, turns=1.3, seed=0, flip=1):
+def xiangyun(mb, centre, normal, up, size, band, thick=0.06, turns=1.3, flip=1):
     """A raised auspicious cloud ornament on a surface: three spiral curls of a tube, the middle
     one larger, joined by a sweeping base stroke."""
     n, u = V(normal).normalized(), V(up).normalized()

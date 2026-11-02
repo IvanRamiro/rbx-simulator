@@ -11,7 +11,6 @@
 import bpy, bmesh, math, random
 import worldlib as W
 import origin_island as O
-import layout as L
 import start_props as SP
 import jade_meshes as JM
 
@@ -511,12 +510,12 @@ def void_shard(coll, mat, bands):
     circling it (island-local)."""
     mb = W.MeshBuilder()
     c = (AX, SHARD_C, AZ)
-    JM.crystal_prism(mb, c, (0.08, 1, 0.05), 30.0, 6.0, bands[OBSIDIAN], 1)
-    JM.crystal_prism(mb, c, (-0.08, -1, -0.05), 16.0, 6.0, bands[OBSIDIAN], 2)
+    JM.crystal_prism(mb, c, (0.08, 1, 0.05), 30.0, 6.0, bands[OBSIDIAN])
+    JM.crystal_prism(mb, c, (-0.08, -1, -0.05), 16.0, 6.0, bands[OBSIDIAN])
     for k in range(6):
         a = TAU * k / 6 + 0.3
         p = (AX + math.cos(a) * 12, SHARD_C - 6 + (k % 3) * 6, AZ + math.sin(a) * 12)
-        JM.crystal_prism(mb, p, (math.cos(a) * 0.3, 1 if k % 2 else -1, math.sin(a) * 0.3), 6.0, 1.1, bands[VOID], 10 + k)
+        JM.crystal_prism(mb, p, (math.cos(a) * 0.3, 1 if k % 2 else -1, math.sin(a) * 0.3), 6.0, 1.1, bands[VOID])
     return mb.object("OA_VoidShard", coll, mat)
 
 
@@ -533,8 +532,8 @@ def shard_core(coll, mat, bands):
     """The light inside the shard (Neon in Roblox), seen through its translucent glass."""
     mb = W.MeshBuilder()
     c = (AX, SHARD_C, AZ)
-    JM.crystal_prism(mb, c, (0.08, 1, 0.05), 26.0, 3.0, bands[GLOW], 3)
-    JM.crystal_prism(mb, c, (-0.08, -1, -0.05), 13.0, 3.0, bands[GLOW], 4)
+    JM.crystal_prism(mb, c, (0.08, 1, 0.05), 26.0, 3.0, bands[GLOW])
+    JM.crystal_prism(mb, c, (-0.08, -1, -0.05), 13.0, 3.0, bands[GLOW])
     return mb.object("OA_ShardCore", coll, mat)
 
 

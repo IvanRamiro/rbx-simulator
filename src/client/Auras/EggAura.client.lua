@@ -5,40 +5,35 @@
 --     beams sweep, their crystals drift);
 --   * parts with a Spin attribute turn (formations and rings), their tilt precessing by Wobble
 --     degrees every WobblePeriod seconds if set, and their images swell toward SwellScale as
---     the aura breathes and on the hatch burst, and draw in by GatherScale while a hatch gathers;
---   * parts with a Ripple attribute send rings running outward on the hatch;
---   * image labels with a Sway attribute rock to and fro;
---   * on a hatch, the aura gathers for Gather seconds (everything speeds up and draws in, emitters
---     with GatherRate pull energy in, the egg glows in the aura's Tint), then bursts: emitters
---     with HatchEmit fire, the rings fling outward and the egg flashes.
+--     the aura breathes in and draw in by GatherScale as it breathes out;
+--   * parts with a Ripple attribute are rings sent running outward (by PulseEmit or BeatEmit);
+--   * image labels with a Sway attribute rock to and fro.
 -- The aura breathes (model attributes Breath, a fraction, and BreathPeriod, in
 -- seconds): its speed, glow and ring size swell and ease back in a slow rhythm. BreathShape
--- "Heartbeat" makes it beat instead: a double thump, then a rest. The rhythm runs faster as the
--- aura speeds up, so a heart races while a hatch gathers. On the beat (0 to 1, the breath's peak):
+-- "Heartbeat" makes it beat instead: a double thump, then a rest. On the beat (0 to 1, the
+-- breath's peak):
 --   * beams with BeatWidth swell their width and brightness by that fraction;
---   * orbiting attachments with BeatReach are flung that many studs further out, and with
---     GatherPull drawn in by that fraction while a hatch gathers (and flung out on the burst);
+--   * orbiting attachments with BeatReach are flung that many studs further out;
 --   * emitters and ripples with BeatEmit fire that many on each first thump;
 --   * a model with BeatHighlight throbs a Highlight on its egg in its Tint;
 --   * a model with BeatScreen (studs) pulses the player's screen, ColorCorrection and Bloom, in
---     its Tint when the camera is within that distance, and flashes it white-hot on the burst.
+--     its Tint when the camera is within that distance.
 -- Parts with an Orbit attribute (rocks) orbit like attachments, carrying their child parts (their
 -- glowing cores), and tumble by Tumble (Vector3, degrees per second). A mover with AvoidAngle
 -- (degrees round its orbit) pulls in to AvoidRadius studs as it passes that way, past a
--- neighbouring egg, however far a pulse or a hatch throws it.
+-- neighbouring egg, however far a pulse throws it.
 -- An aura with PulseInterval (seconds, give or take PulseJitter) sends an energy pulse through
 -- itself, each piece answering PulseDelay seconds after it starts, so nothing pulses at once:
 --   * the aura speeds up by PulseSpeed and glows brighter by PulseGlow (fractions);
 --   * orbiting pieces are thrown PulseReach studs outward and ease back;
 --   * beams with PulseWidth and spinning planes with PulseSwell swell by that much;
 --   * emitters and ripples with PulseEmit fire that many;
---   * with PulseEggGlow (a colour), the egg's own glowing parts heat toward it (and while a hatch
---     gathers and bursts).
+--   * with PulseEggGlow (a colour), the egg's own glowing parts heat toward it.
 -- Emitters with FlickerRate (a NumberRange) flicker like flames: every FlickerPeriod seconds
 -- (default 0.15) their rate jumps to a random value in that range, and with FlickerSpeedMin and
 -- FlickerSpeedMax (NumberRanges) their speed's low and high ends jump too.
--- The hatch's burst sends a pulse too. Settings, all model attributes, all optional: Intensity
--- (glow), Density (emission rates), OrbitSpeed, LightIntensity, and Visible (false hides it).
+-- Settings, all model attributes, all optional: Intensity (glow), Density (emission rates),
+-- OrbitSpeed, LightIntensity, and Visible (false hides it).
 -- An aura with CyclePeriod (seconds) runs a cycle through it, a fraction from 0 to 1 that wraps
 -- round; every curve below is a NumberSequence or ColorSequence over that fraction:
 --   * emitters with CycleRate scale their rate by it, and with CycleEmit fire that many as the
@@ -50,17 +45,14 @@
 --     toward CycleEggCold and heats them toward CycleEggHot; CycleHighlight (colour),
 --     CycleOutline and CycleFill (transparencies) drive a Highlight on the egg;
 --   * with CycleScreen (studs) the player's screen flashes by CycleScreenFlash as the cycle passes
---     CycleRebirth, and a hatch's burst jumps the cycle to CycleRebirth.
+--     CycleRebirth.
 -- Auras run at full rate near the camera, half rate further out, and switch off beyond that, or
 -- when their egg's stand is gone.
 local CollectionService = game:GetService("CollectionService")
 local ContentProvider = game:GetService("ContentProvider")
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
-local EggAura = {}
 
 local TAG = "EggAura"
 local NEAR = 90   -- full emission rates within this distance of the camera
@@ -98,8 +90,7 @@ local function index(model)
     local state = {
         model = model, root = root, eggId = model:GetAttribute("EggId"), tint = model:GetAttribute("Tint"),
         connections = {}, movers = {}, spinners = {}, ripples = {}, waves = {}, sways = {}, emitters = {}, trails = {}, lights = {}, guis = {}, flickers = {}, sweepers = {},
-        speed = 1, glow = 1, swell = 0, level = 2,
-        gather = model:GetAttribute("Gather") or 1.2,
+        level = 2,
         breathT = math.random(), beat = 0, swellBeams = {}, screenFlash = 0, distance = math.huge,
         cycleT = math.random(),
     }
@@ -169,9 +160,7 @@ local function setLevel(state, level)
     local on = level > 0
     for _, e in state.emitters do
         e.Emitter.Enabled = on and e.Enabled
-        if not state.hatching then
-            e.Emitter.Rate = e.Rate * rateFactor(state)
-        end
+        e.Emitter.Rate = e.Rate * rateFactor(state)
     end
     for _, t in state.trails do
         t.Enabled = on
@@ -200,7 +189,7 @@ local function moverPosition(a, angle, now, radius)
     return p + Vector3.new(0, (a.Height or 1.75) + bob, 0)
 end
 
--- How big a spinning plane's image is: swell 0 is at rest, 1 fully swollen, -1 drawn in to gather.
+-- How big a spinning plane's image is: swell 0 is at rest, 1 fully swollen, -1 drawn in.
 local function swellScale(a, swell)
     if swell >= 0 then
         return 1 + swell * ((a.SwellScale or 1) - 1)
@@ -211,32 +200,6 @@ end
 local function smooth(k)
     k = math.clamp(k, 0, 1)
     return k * k * (3 - 2 * k)
-end
-
--- Eases speed, glow and swell toward the targets over `rise` seconds, then back to rest (1, 1, 0)
--- over `fall`.
-local REST = { 1, 1, 0 }
-local function surge(state, speed, glow, swell, rise, fall)
-    state.surge = { From = { state.speed, state.glow, state.swell }, To = { speed, glow, swell }, Start = os.clock(), Rise = rise, Fall = fall }
-end
-
-local function updateSurge(state, now)
-    local s = state.surge
-    if not s then
-        return
-    end
-    local t = now - s.Start
-    local from, to, k
-    if t < s.Rise then
-        from, to, k = s.From, s.To, smooth(t / s.Rise)
-    elseif t < s.Rise + s.Fall then
-        from, to, k = s.To, REST, smooth((t - s.Rise) / s.Fall)
-    else
-        from, to, k, state.surge = REST, REST, 1, nil
-    end
-    state.speed = from[1] + (to[1] - from[1]) * k
-    state.glow = from[2] + (to[2] - from[2]) * k
-    state.swell = from[3] + (to[3] - from[3]) * k
 end
 
 -- A ring running outward: a copy of the ripple's hidden image, grown and faded by step().
@@ -397,7 +360,7 @@ local function stepCycle(state, dt, ma)
     state.cycleT += dt / ma.CyclePeriod
     local t = state.cycleT % 1
     for _, e in state.emitters do
-        if e.CycleRate and not state.hatching then
+        if e.CycleRate then
             e.Emitter.Rate = e.Rate * rateFactor(state) * evalSeq(e.CycleRate, t)
         end
         if e.CycleEmit and passed(before, t, e.CycleAt or 0) then
@@ -447,18 +410,15 @@ local function stepCycle(state, dt, ma)
 end
 
 local function step(state, dt, now)
-    updateSurge(state, now)
     local ma = state.modelAttrs.A
     if ma.Density ~= state.density then
         state.density = ma.Density
-        if not state.hatching then
-            for _, e in state.emitters do
-                e.Emitter.Rate = e.Rate * rateFactor(state)
-            end
+        for _, e in state.emitters do
+            e.Emitter.Rate = e.Rate * rateFactor(state)
         end
     end
     local interval = ma.PulseInterval
-    if interval and not state.hatching then
+    if interval then
         state.nextPulse = state.nextPulse or now + interval * math.random()
         if now >= state.nextPulse then
             firePulse(state, now)
@@ -467,23 +427,21 @@ local function step(state, dt, now)
     end
     local pulse = pulseAt(state, now, 0)
     local cycle = ma.CyclePeriod and stepCycle(state, dt, ma)
-    if not state.hatching then
-        for _, f in state.flickers do
-            if now >= f.Next then
-                local a = f.A
-                f.Next = now + (a.FlickerPeriod or 0.15)
-                local rate, lo, hi = a.FlickerRate, a.FlickerSpeedMin, a.FlickerSpeedMax
-                if rate then
-                    f.Instance.Rate = (rate.Min + math.random() * (rate.Max - rate.Min)) * rateFactor(state)
-                end
-                if lo and hi then
-                    f.Instance.Speed = NumberRange.new(lo.Min + math.random() * (lo.Max - lo.Min), hi.Min + math.random() * (hi.Max - hi.Min))
-                end
+    for _, f in state.flickers do
+        if now >= f.Next then
+            local a = f.A
+            f.Next = now + (a.FlickerPeriod or 0.15)
+            local rate, lo, hi = a.FlickerRate, a.FlickerSpeedMin, a.FlickerSpeedMax
+            if rate then
+                f.Instance.Rate = (rate.Min + math.random() * (rate.Max - rate.Min)) * rateFactor(state)
+            end
+            if lo and hi then
+                f.Instance.Speed = NumberRange.new(lo.Min + math.random() * (lo.Max - lo.Min), hi.Min + math.random() * (hi.Max - hi.Min))
             end
         end
     end
     local before = state.breathT % 1
-    state.breathT += dt * state.speed / (ma.BreathPeriod or 4)
+    state.breathT += dt / (ma.BreathPeriod or 4)
     local after = state.breathT % 1
     if (before < THUMB and after >= THUMB) or (after < before and after >= THUMB) then
         emitAll(state, "BeatEmit")
@@ -491,17 +449,13 @@ local function step(state, dt, now)
     local beat, b = beatAt(ma, state.breathT)
     state.beat = beat
     local breath = (ma.Breath or 0) * b
-    local speed = state.speed * (1 + breath) * (1 + (ma.PulseSpeed or 0) * pulse) * (ma.OrbitSpeed or 1)
-    local glow = state.glow * (1 + breath * 0.6) * (1 + (ma.PulseGlow or 0) * pulse) * (ma.Intensity or 1)
-    local swell = state.swell + breath * 2
+    local speed = (1 + breath) * (1 + (ma.PulseSpeed or 0) * pulse) * (ma.OrbitSpeed or 1)
+    local glow = (1 + breath * 0.6) * (1 + (ma.PulseGlow or 0) * pulse) * (ma.Intensity or 1)
+    local swell = breath * 2
     for _, m in state.movers do
         local a = m.A
         m.Angle += (a.Orbit or 0) * dt * speed
-        local radius = (a.Radius or 2.5) + (a.BeatReach or 0) * (beat + math.max(state.swell, 0) * 1.5)
-            + (a.PulseReach or 0) * pulseAt(state, now, a.PulseDelay)
-        if state.swell < 0 then
-            radius *= 1 + state.swell * (a.GatherPull or 0)
-        end
+        local radius = (a.Radius or 2.5) + (a.BeatReach or 0) * beat + (a.PulseReach or 0) * pulseAt(state, now, a.PulseDelay)
         local avoid = a.AvoidAngle
         if avoid then
             local w = math.max(0, math.cos(math.rad(m.Angle - avoid))) ^ 2
@@ -523,14 +477,14 @@ local function step(state, dt, now)
             m.Instance.Position = p
         end
     end
-    local beamGlow = state.glow * (ma.Intensity or 1)
+    local beamGlow = ma.Intensity or 1
     for _, a in state.swellBeams do
-        local k = 1 + a.K * (beat + math.max(state.swell, 0)) + a.P * pulseAt(state, now, a.Delay)
+        local k = 1 + a.K * beat + a.P * pulseAt(state, now, a.Delay)
         a.Beam.Width0, a.Beam.Width1 = a.W0 * k, a.W1 * k
         a.Beam.Brightness = a.B * k * beamGlow
     end
     if ma.PulseEggGlow then
-        heatEgg(state, ma.PulseEggGlow, math.max(pulse, math.clamp(state.glow - 1, 0, 1)))
+        heatEgg(state, ma.PulseEggGlow, pulse)
     end
     if ma.BeatHighlight then
         local h = state.beatHighlight
@@ -548,7 +502,7 @@ local function step(state, dt, now)
             end
         end
         if h then
-            h.Enabled = not state.hatching and state.level > 0
+            h.Enabled = state.level > 0
             -- a stronger fill paints over the egg's baked facets
             h.FillTransparency = 1 - 0.15 * beat
             h.OutlineTransparency = 1 - 0.85 * beat
@@ -774,94 +728,3 @@ RunService.RenderStepped:Connect(function(dt)
     updateScreen()
 end)
 
--- The egg brightens in the aura's tint while the hatch gathers, flashes on the burst, then fades.
-local function brighten(state)
-    local egg = eggOf(state)
-    if not egg then
-        return nil
-    end
-    local highlight = Instance.new("Highlight")
-    highlight.Adornee = egg
-    highlight.DepthMode = Enum.HighlightDepthMode.Occluded
-    highlight.FillColor = state.tint or Color3.new(1, 1, 1)
-    highlight.OutlineColor = Color3.new(1, 1, 1)
-    highlight.FillTransparency = 1
-    highlight.OutlineTransparency = 1
-    highlight.Parent = state.model
-    TweenService:Create(highlight, TweenInfo.new(state.gather, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-        { FillTransparency = 0.45, OutlineTransparency = 0.3 }):Play()
-    return highlight
-end
-
-local function flash(highlight)
-    if not highlight or not highlight.Parent then
-        return
-    end
-    highlight.FillColor = highlight.FillColor:Lerp(Color3.new(1, 1, 1), 0.6)
-    highlight.FillTransparency = 0.05
-    highlight.OutlineTransparency = 0
-    local fade = TweenService:Create(highlight, TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        { FillTransparency = 1, OutlineTransparency = 1 })
-    fade.Completed:Connect(function()
-        highlight:Destroy()
-    end)
-    fade:Play()
-end
-
--- Plays the hatch at the aura of this egg nearest the player: it gathers, then bursts.
-function EggAura.hatch(eggId)
-    local character = Players.LocalPlayer.Character
-    local root = character and character:FindFirstChild("HumanoidRootPart")
-    if not root then
-        return
-    end
-    local best, bestDistance = nil, 60
-    for _, state in auras do
-        if state and state.eggId == eggId then
-            local d = (state.root.Position - root.Position).Magnitude
-            if d < bestDistance then
-                best, bestDistance = state, d
-            end
-        end
-    end
-    if not best or best.hatching then
-        return
-    end
-    local state = best
-    state.hatching = true
-    surge(state, 6, 2.6, -1, state.gather, 2)
-    for _, e in state.emitters do
-        local rate = e.Emitter:GetAttribute("GatherRate")
-        if rate then
-            e.Emitter.Rate = rate
-        end
-    end
-    local highlight = brighten(state)
-    task.delay(state.gather, function()
-        for _, e in state.emitters do
-            if e.Emitter:GetAttribute("GatherRate") then
-                e.Emitter.Rate = e.Rate * rateFactor(state)
-            end
-        end
-        if state.model.Parent then
-            emitAll(state, "HatchEmit")
-            if state.modelAttrs.A.PulseInterval then
-                firePulse(state, os.clock())
-            end
-            surge(state, 2.5, 3.2, 2, 0.12, 1.6)
-            local ma = state.modelAttrs.A
-            if ma.CyclePeriod and ma.CycleRebirth then
-                state.cycleT = math.floor(state.cycleT) + ma.CycleRebirth - 0.002
-            end
-            if ma.BeatScreen or ma.CycleScreen then
-                state.screenFlash = 1
-            end
-        end
-        flash(highlight)
-        task.delay(1.8, function()
-            state.hatching = false
-        end)
-    end)
-end
-
-return EggAura

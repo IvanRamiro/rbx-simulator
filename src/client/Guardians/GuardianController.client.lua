@@ -451,9 +451,9 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
     elseif action == "Secure" then
         GuardianFx.secure((...))
     elseif action == "Return" and style then
-        local egg = eggsFolder:FindFirstChild(model.Name .. "_Egg")
-        if egg then
-            GuardianFx.steal(egg:GetPivot().Position, style)
+        local position = ...
+        if position then
+            GuardianFx.steal(position, style)
         end
     end
 end)

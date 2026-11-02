@@ -78,11 +78,6 @@ class Hi:
         return o
 
 
-def from_builder(mb, name, coll, material, smooth=False):
-    """An object from an egg_kit/worldlib MeshBuilder (its own UVs are ignored by the shaders)."""
-    return mb.object(name, coll, material, smooth=smooth)
-
-
 def apply_modifiers(obj, mods):
     """Adds modifiers [(type, {prop: value})] and applies them all, keeping the object."""
     for kind, props in mods:
@@ -196,7 +191,7 @@ def solidify(obj, thickness=0.012):
     return apply_modifiers(obj, [("SOLIDIFY", {"thickness": thickness, "offset": 0.0, "use_even_offset": True})])
 
 
-def foliage(name, coll, material, lobes, voxel=0.035, seed=0, roughness=0.06):
+def foliage(name, coll, material, lobes, voxel=0.035, roughness=0.06):
     """A lumpy crown of leaves: lobes [(centre (Roblox space), radius)], merged by a voxel remesh
     and roughened so the outline breaks into leafy clumps."""
     bm = bmesh.new()

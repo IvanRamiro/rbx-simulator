@@ -8,7 +8,7 @@
 - Ruins along the avenue: snapped columns and fallen column drums.
 - Island dressing: void crystal clusters (glass around glowing cores) and slate rocks.
 """
-import bpy, math, random
+import math, random
 import worldlib as W
 import origin_island as O
 import origin_meshes as OM
@@ -300,7 +300,7 @@ def colossus(coll, mat, bands):
         base = V(head_to_local(head_surface(u, circlet_v)))
         out = (V(head_to_local(head_surface(u, circlet_v + 0.1) * 1.3)) - base).normalized()
         length = rnd.uniform(0.8, 1.2) if k in (2, 5) else rnd.uniform(2.2, 3.4)
-        JM.crystal_prism(mb, tuple(base), tuple(out), length, 0.4, bands[OM.BRONZE], 30 + k)
+        JM.crystal_prism(mb, tuple(base), tuple(out), length, 0.4, bands[OM.BRONZE])
     return mb.object("OA_Colossus", coll, mat)
 
 
@@ -379,7 +379,7 @@ def void_crystals(coll, mat, bands):
     """A cluster of void crystals breaking out of the slate (glass in Roblox, over OA_VoidCrystalGlow)."""
     mb = W.MeshBuilder()
     for n, (base, d, length, r) in enumerate(crystal_set(random.Random(741))):
-        JM.crystal_prism(mb, base, d, length, r, bands[OM.OBSIDIAN], 40 + n)
+        JM.crystal_prism(mb, base, d, length, r, bands[OM.OBSIDIAN])
     return mb.object("OA_VoidCrystals", coll, mat)
 
 
@@ -387,7 +387,7 @@ def void_crystal_glow(coll, mat, bands):
     """The light inside each crystal (Neon in Roblox), a slimmer core along the same axis."""
     mb = W.MeshBuilder()
     for n, (base, d, length, r) in enumerate(crystal_set(random.Random(741))):
-        JM.crystal_prism(mb, base, d, length * 0.85, r * 0.45, bands[OM.GLOW], 40 + n)
+        JM.crystal_prism(mb, base, d, length * 0.85, r * 0.45, bands[OM.GLOW])
     return mb.object("OA_VoidCrystalGlow", coll, mat)
 
 

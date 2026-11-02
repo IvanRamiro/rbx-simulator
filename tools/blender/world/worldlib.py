@@ -37,7 +37,6 @@ def mesh_object(name, verts, faces, coll, uvs=None, smooth=True, material=None):
     me.validate()
     if uvs is not None:
         layer = me.uv_layers.new(name="UVMap")
-        i = 0
         for poly, fuv in zip(me.polygons, uvs):
             for li, uv in zip(poly.loop_indices, fuv):
                 layer.data[li].uv = uv
@@ -86,9 +85,6 @@ def gauss(dx, dz, r):
 
 
 # ---------- heightfield export ----------
-MATERIAL_IDS = {}
-
-
 def export_heightfield(island, centre, cell, half_extent, sample, materials, path, priority=None, water=None, turns=0):
     """Sample the island top on a grid of `cell`-stud columns and write a Lua data module.
 
@@ -273,12 +269,6 @@ def export_batch(objects, fbx_path, image=None, anchor_name=None):
                              apply_scale_options="FBX_SCALE_UNITS", path_mode="COPY", embed_textures=True, mesh_smooth_type="FACE")
     for a in extra:
         me = a.data; bpy.data.objects.remove(a, do_unlink=True); bpy.data.meshes.remove(me)
-
-
-def bbox_centre(obj):
-    """Centre of an object's local bounding box (Roblox MeshPart pivots sit there after import)."""
-    xs = [v.co.x for v in obj.data.vertices]; ys = [v.co.y for v in obj.data.vertices]; zs = [v.co.z for v in obj.data.vertices]
-    return Vector(((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, (min(zs) + max(zs)) / 2))
 
 
 # ---------- mesh builder (one object per asset, authored in Roblox studs) ----------

@@ -11,8 +11,12 @@
 --   -- each import uploads its own atlas copy: point all pieces at one (WB.shareTexture or TextureID)
 --   WB.placeKit(island); WB.buildEggStands(island); WB.buildRelics(island)
 --   Yggdrasil (the hub): WB.buildWaystones, WB.buildSpawn, WB.buildSpawnSlots, WB.buildPlots, WB.buildLeaderboard,
---   WB.buildShops, WB.buildQiSpring
---   every other island: WB.buildCheckpoint(island)
+--   WB.buildShops, WB.buildQiSpring, WB.buildAltar
+--   every other island: WB.buildCheckpoint(island); Ember Peak also WB.buildLavafall, Moonlit Isle
+--   WB.buildStarWell
+--   terrain colours (once, after any terrain build): WB.applyMaterialColors()
+--
+-- Bridges (assets/world/Bridges): WB.storeBridgeKit(<import>, theme), then WB.buildBridges().
 --
 -- Eggs (assets/eggs/<EggId>.fbx): WB.storeEgg(<import>, eggId), then WB.buildEggStands(island)
 -- and require(game.ServerStorage.WorldBuild.EggAuraVFX:Clone()).build(island).
@@ -253,6 +257,7 @@ WorldBuilder.Collision = {
     { Prefix = "EP_FireCrystal", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "EP_EmberVent", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "EP_ObsidianShard", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "EP_RouteStone", Fidelity = Enum.CollisionFidelity.Hull },
     -- Moonlit Isle: the Star Well's shaft, the mirror's bridge and dais, and the arch stay open
     { Prefix = "MI_StarWell", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "MI_MirrorRim", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
@@ -276,6 +281,8 @@ WorldBuilder.Collision = {
     { Prefix = "OA_FallenDrums", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "OA_VoidCrystals", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "OA_SlateRock", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "OA_RouteStone", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "OA_DescentLedge", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     -- Yggdrasil: the roots arch over paths and carry the climb down, so they keep their shape;
     -- the stele's roof and the shops' open halls would close a hull over the space under them
     { Prefix = "YG_Stele", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
@@ -292,6 +299,9 @@ WorldBuilder.Collision = {
     { Prefix = "JG_", Fidelity = Enum.CollisionFidelity.Default },
     { Prefix = "SI_", Fidelity = Enum.CollisionFidelity.Default },
     { Prefix = "YG_", Fidelity = Enum.CollisionFidelity.Default },
+    { Prefix = "EP_", Fidelity = Enum.CollisionFidelity.Default },
+    { Prefix = "MI_", Fidelity = Enum.CollisionFidelity.Default },
+    { Prefix = "OA_", Fidelity = Enum.CollisionFidelity.Default },
 }
 
 -- Surface overrides per mesh-name prefix: glowing inlays are Neon (saturated colours, since
@@ -659,9 +669,13 @@ end
 
 -- An island's frame: its centre, turned by its quarter turns. Island-local positions (the
 -- placements, the meshes as authored) go through it into the world.
+local frames = {} -- [island] = CFrame: a terrain module is large, so it is read once per require of this module
 local function islandFrame(island)
-    local data = require(ServerStorage.WorldBuild.Terrain:FindFirstChild(island):Clone())
-    return CFrame.new(data.Centre) * CFrame.Angles(0, -(data.Turns or 0) * math.pi / 2, 0)
+    if not frames[island] then
+        local data = require(ServerStorage.WorldBuild.Terrain:FindFirstChild(island):Clone())
+        frames[island] = CFrame.new(data.Centre) * CFrame.Angles(0, -(data.Turns or 0) * math.pi / 2, 0)
+    end
+    return frames[island]
 end
 WorldBuilder.islandFrame = islandFrame
 
@@ -876,8 +890,6 @@ WorldBuilder.EggGlow = {
     PrimordialAbyssEgg = Color3.fromHex("ff3cb4"),
 }
 
-local EGG_STUDS_PER_UNIT = 1.3
-
 -- The egg's light per island ({ range, brightness }) where the default (12, 1.2) is too much: on
 -- Origin Abyss it painted the bronze thorn branches red and violet (seen in Play).
 local EGG_LIGHT = { OriginAbyss = { 6, 0.8 } }
@@ -888,7 +900,7 @@ local function placeEgg(stand, eggId, bottom, facing)
     local source = folder and folder:FindFirstChild(eggId)
     assert(source and source:IsA("Model"), "missing egg mesh ServerStorage.EggMeshes." .. eggId)
     local boxCFrame, boxSize = source:GetBoundingBox()
-    local centre = bottom + Vector3.new(0, boxSize.Y * EGG_STUDS_PER_UNIT / 2, 0)
+    local centre = bottom + Vector3.new(0, boxSize.Y * GameConfig.EggStudsPerUnit / 2, 0)
     local placement = CFrame.lookAt(centre, centre + Vector3.new(facing.X, 0, facing.Z))
     local primary
     for _, original in source:GetDescendants() do
@@ -908,8 +920,8 @@ local function placeEgg(stand, eggId, bottom, facing)
                 end
             end
             local relative = boxCFrame:ToObjectSpace(original.CFrame)
-            part.Size = original.Size * EGG_STUDS_PER_UNIT
-            part.CFrame = placement * (relative.Rotation + relative.Position * EGG_STUDS_PER_UNIT)
+            part.Size = original.Size * GameConfig.EggStudsPerUnit
+            part.CFrame = placement * (relative.Rotation + relative.Position * GameConfig.EggStudsPerUnit)
             part.Anchored = true
             part.CanCollide = false
             part.CanQuery = false
@@ -930,6 +942,11 @@ end
 function WorldBuilder.storeEgg(model, eggId)
     assert(model:FindFirstChild(eggId .. "_Body", true), "the import has no " .. eggId .. "_Body")
     local folder = ServerStorage:FindFirstChild("EggMeshes")
+    if not folder then
+        folder = Instance.new("Folder")
+        folder.Name = "EggMeshes"
+        folder.Parent = ServerStorage
+    end
     local old = folder:FindFirstChild(eggId)
     if old then
         old:Destroy()
@@ -979,15 +996,14 @@ function WorldBuilder.buildEggStands(island)
         end
 
         local prompt = Instance.new("ProximityPrompt")
-        prompt.ActionText = "Hatch"
+        prompt.ActionText = "Take" -- EggStands drives it in play
         prompt.ObjectText = eggConfig.DisplayName
         prompt.KeyboardKeyCode = Enum.KeyCode.F
-        prompt.HoldDuration = 1
+        prompt.HoldDuration = 0.5
         prompt.MaxActivationDistance = 10
         prompt.RequiresLineOfSight = false
         prompt.Parent = pedestal
 
-        CollectionService:AddTag(stand, GameConfig.EggTag)
         stand.Parent = folder
     end
     WorldBuilder.applyCollision(folder)
@@ -1047,6 +1063,40 @@ local function inscribe(panel, title, subtitle, color)
     return gui
 end
 
+-- An invisible anchored part that nothing touches: a panel to write on, or a marker.
+local function marker(name, size, cframe, parent)
+    local part = Instance.new("Part")
+    part.Name = name
+    part.Size = size
+    part.CFrame = cframe
+    part.Transparency = 1
+    part.Anchored = true
+    part.CanCollide = false
+    part.CanQuery = false
+    part.CanTouch = false
+    part.Parent = parent
+    return part
+end
+
+-- An invisible, neutral SpawnLocation (no decal, no forcefield).
+local function spawnPoint(name, cframe, parent)
+    local spawn = Instance.new("SpawnLocation")
+    spawn.Name = name
+    spawn.Size = Vector3.new(6, 1, 6)
+    spawn.CFrame = cframe
+    spawn.Transparency = 1
+    spawn.Anchored = true
+    spawn.CanCollide = false
+    spawn.CanQuery = false
+    spawn.Neutral = true
+    spawn.Duration = 0
+    for _, child in spawn:GetChildren() do
+        child:Destroy() -- the default decal
+    end
+    spawn.Parent = parent
+    return spawn
+end
+
 function WorldBuilder.buildWaystones(island)
     local placements = placementsFor(island)
     local folder = WorldBuilder.islandFolder(island, "Waystones")
@@ -1064,16 +1114,9 @@ function WorldBuilder.buildWaystones(island)
         glow.Color = info.Color
         addLight(glow, info.Color, 10, 0.8)
 
-        local panel = Instance.new("Part")
-        panel.Name = "Inscription"
-        panel.Size = Vector3.new(placements.WaystonePanel.Size.X, placements.WaystonePanel.Size.Y, 0.05)
-        panel.CFrame = frame * CFrame.new(placements.WaystonePanel.Centre)
-        panel.Transparency = 1
-        panel.Anchored = true
-        panel.CanCollide = false
-        panel.CanQuery = false
-        panel.CanTouch = false
-        panel.Parent = model
+        local panelSize = placements.WaystonePanel.Size
+        local panel = marker("Inscription", Vector3.new(panelSize.X, panelSize.Y, 0.05),
+            frame * CFrame.new(placements.WaystonePanel.Centre), model)
         inscribe(panel, info.Title, info.Subtitle or rankLine(info.RankId), info.Color)
         model.Parent = folder
     end
@@ -1363,20 +1406,6 @@ end
 
 -- ---------- spawn, Qi Spring, relic ----------
 
-local function marker(name, size, cframe, parent)
-    local part = Instance.new("Part")
-    part.Name = name
-    part.Size = size
-    part.CFrame = cframe
-    part.Transparency = 1
-    part.Anchored = true
-    part.CanCollide = false
-    part.CanQuery = false
-    part.CanTouch = false
-    part.Parent = parent
-    return part
-end
-
 function WorldBuilder.buildSpawn(island)
     local placements = placementsFor(island)
     local model = WorldBuilder.islandFolder(island)
@@ -1384,21 +1413,7 @@ function WorldBuilder.buildSpawn(island)
     if old then
         old:Destroy()
     end
-    local spawn = Instance.new("SpawnLocation")
-    spawn.Name = "IslandSpawn"
-    spawn.Size = Vector3.new(6, 1, 6)
-    spawn.CFrame = CFrame.new(islandPoint(island, placements.Spawn + Vector3.new(0, 0.5, 0)))
-    spawn.Transparency = 1
-    spawn.Anchored = true
-    spawn.CanCollide = false
-    spawn.CanQuery = false
-    spawn.Neutral = true
-    spawn.Duration = 0
-    for _, child in spawn:GetChildren() do
-        child:Destroy() -- the default decal
-    end
-    spawn.Parent = model
-    return spawn
+    return spawnPoint("IslandSpawn", CFrame.new(islandPoint(island, placements.Spawn + Vector3.new(0, 0.5, 0))), model)
 end
 
 -- ---------- spawn slots and plots (Yggdrasil) ----------
@@ -1421,31 +1436,11 @@ function WorldBuilder.buildSpawnSlots(island)
         placeTemplate(island, "YG_SpawnDaisGlow", frame, model).Name = "Ring"
 
         local top = frame.Position + Vector3.new(0, placements.SlotTop + 0.5, 0)
-        local spawn = Instance.new("SpawnLocation")
-        spawn.Name = "Spawn"
-        spawn.Size = Vector3.new(6, 1, 6)
-        spawn.CFrame = CFrame.lookAt(top, Vector3.new(centre.X, top.Y, centre.Z))
-        spawn.Transparency = 1
-        spawn.Anchored = true
-        spawn.CanCollide = false
-        spawn.CanQuery = false
-        spawn.Neutral = true
-        spawn.Duration = 0
-        for _, child in spawn:GetChildren() do
-            child:Destroy() -- the default decal
-        end
-        spawn.Parent = model
+        spawnPoint("Spawn", CFrame.lookAt(top, Vector3.new(centre.X, top.Y, centre.Z)), model)
 
-        local plaque = Instance.new("Part")
-        plaque.Name = "Plaque"
-        plaque.Size = Vector3.new(placements.SlotPanel.Size.X, placements.SlotPanel.Size.Y, 0.05)
-        plaque.CFrame = frame * CFrame.new(placements.SlotPanel.Centre)
-        plaque.Transparency = 1
-        plaque.Anchored = true
-        plaque.CanCollide = false
-        plaque.CanQuery = false
-        plaque.CanTouch = false
-        plaque.Parent = model
+        local plaqueSize = placements.SlotPanel.Size
+        local plaque = marker("Plaque", Vector3.new(plaqueSize.X, plaqueSize.Y, 0.05),
+            frame * CFrame.new(placements.SlotPanel.Centre), model)
         inscribe(plaque, "", "", Color3.new(1, 1, 1)) -- WorldService writes the owner
         model.Parent = folder
     end
@@ -1522,16 +1517,9 @@ function WorldBuilder.buildPlots(island)
 
         local boardFrame = frame * CFrame.new(0, 0, hz + 3)
         placeTemplate(island, "YG_PlotBoard", boardFrame, model).Name = "Board"
-        local panel = Instance.new("Part")
-        panel.Name = "Notice"
-        panel.Size = Vector3.new(placements.PlotBoardPanel.Size.X, placements.PlotBoardPanel.Size.Y, 0.05)
-        panel.CFrame = boardFrame * CFrame.new(placements.PlotBoardPanel.Centre)
-        panel.Transparency = 1
-        panel.Anchored = true
-        panel.CanCollide = false
-        panel.CanQuery = false
-        panel.CanTouch = false
-        panel.Parent = model
+        local noticeSize = placements.PlotBoardPanel.Size
+        local panel = marker("Notice", Vector3.new(noticeSize.X, noticeSize.Y, 0.05),
+            boardFrame * CFrame.new(placements.PlotBoardPanel.Centre), model)
         inscribe(panel, info.Title, info.Subtitle, Color3.fromRGB(255, 190, 90))
         model.Parent = folder
     end
@@ -1914,11 +1902,9 @@ WorldBuilder.Relics = {
 function WorldBuilder.buildStarWell(island)
     local placements = placementsFor(island)
     local model = WorldBuilder.islandFolder(island)
-    for _, name in { "StarWellLight", "StarFloor", "StarSurface" } do
-        local old = model:FindFirstChild(name)
-        if old then
-            old:Destroy()
-        end
+    local old = model:FindFirstChild("StarSurface")
+    if old then
+        old:Destroy()
     end
     local well = placements.StarWell
     local surface = Instance.new("Part")

@@ -9,10 +9,9 @@
 Island-specific pieces are authored in island-local Roblox studs (anchor at the island centre);
 kit pieces are authored around their own origin.
 """
-import bpy, math, os, random
+import math, random
 import worldlib as W
 import ember_island as E
-import layout as L
 import start_props as SP
 
 TAU = 2 * math.pi

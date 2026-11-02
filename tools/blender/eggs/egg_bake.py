@@ -14,7 +14,6 @@ are made:
 import math
 import os
 
-import bmesh
 import bpy
 
 import egg_kit as K
@@ -121,7 +120,6 @@ def _baked_material(egg_id, images):
     out = t.nodes.new("ShaderNodeOutputMaterial")
     bsdf = t.nodes.new("ShaderNodeBsdfPrincipled")
     t.links.new(bsdf.outputs[0], out.inputs["Surface"])
-    nodes = {}
     for key, img in images.items():
         nd = t.nodes.new("ShaderNodeTexImage")
         nd.image = img

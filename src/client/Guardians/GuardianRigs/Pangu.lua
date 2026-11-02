@@ -256,34 +256,12 @@ function Rig.setup(anim)
             table.insert(anim.void, part)
         end
     end
-    anim.nextBlink = os.clock() + 2
-end
-
-local function open(part, base, amount)
-    if part then
-        local size = Vector3.new(base.X, math.max(base.Y * amount, 0.02), base.Z)
-        if (part.Size - size).Magnitude > 0.005 then
-            part.Size = part.Size:Lerp(size, 0.6)   -- quick enough for a full blink
-        end
-    end
 end
 
 function Rig.glow(anim, state, now)
     local awaken = anim:action("Awaken", 2.2)
     local asleep = (state == "Dormant" or state == "Resting") and not awaken
-    local amount = OPEN[state] or 1
-    if not asleep and now >= anim.nextBlink then
-        anim.blinkAt = now
-        anim.nextBlink = now + 4 + 3 * math.random()
-    end
-    if anim.blinkAt then
-        local b = (now - anim.blinkAt) / 0.34
-        if b >= 1 then
-            anim.blinkAt = nil
-        else
-            amount *= 1 - math.min(1, math.sin(math.pi * b) * 1.6) * 0.95   -- shut for a moment at its middle
-        end
-    end
+    local amount = (OPEN[state] or 1) * anim:blink(now, asleep, 4, 0.34)
     if awaken then
         amount *= smooth((awaken - 0.6) / 0.6)
     end
@@ -299,8 +277,8 @@ function Rig.glow(anim, state, now)
     if anim.iris then
         anim.iris.Color = anim.iris.Color:Lerp(color, 0.25)
     end
-    open(anim.iris, anim.irisSize, if asleep then 0.02 else amount)
-    open(anim.pupils, anim.pupilSize, if asleep then 0.02 else amount)
+    GuardianAnim.openEye(anim.iris, anim.irisSize, if asleep then 0.02 else amount)
+    GuardianAnim.openEye(anim.pupils, anim.pupilSize, if asleep then 0.02 else amount)
 
     -- the void in his cracks: low asleep, pulsing with his breath, guttering weakened, hot enraged,
     -- flaring as he strikes

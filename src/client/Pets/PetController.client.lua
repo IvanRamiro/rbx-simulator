@@ -5,8 +5,6 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
--- Requiring EggAura starts the egg stands' auras (its RenderStepped loop runs from here): keep it.
-require(script.Parent.Parent:WaitForChild("Auras"):WaitForChild("EggAura"))
 local HatchCeremony = require(script.Parent:WaitForChild("HatchCeremony"))
 
 local player = Players.LocalPlayer
@@ -250,7 +248,8 @@ local function onHatchResult(result)
     else
         local definition = GameConfig.Pets[result.PetId]
         -- the egg rises from the altar's cradle and breaks; the pet is named as it does
-        HatchCeremony.play(result.Staged, result.Delay or 0, function()
+        local delay = if typeof(result.BreakAt) == "number" then math.max(0, result.BreakAt - workspace:GetServerTimeNow()) else 0
+        HatchCeremony.play(result.Staged, delay, function()
             if definition then
                 local rarityColor = GameConfig.PetRarityColors[definition.Rarity] or Color3.new(1, 1, 1)
                 local article = if string.find(definition.DisplayName, "^[AEIOUaeiou]") then "an " else "a "

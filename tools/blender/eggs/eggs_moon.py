@@ -29,7 +29,7 @@ import eggs_jade as J
 W = K.W
 V = K.V
 TAU = K.TAU
-H, R = K.H, K.R
+H = K.H
 on, normal_at = J.on, J.normal_at
 
 

@@ -765,7 +765,7 @@ function CharacterAura.update(aura, now, parts, cframes)
 
     if now >= aura.nextGroundCheck then
         aura.nextGroundCheck = now + GROUND_CHECK_SECONDS
-        groundParams.FilterDescendantsInstances = { aura.character, aura.model, aura.model.Parent, workspace:FindFirstChild("PetCompanions") }
+        groundParams.FilterDescendantsInstances = { aura.character, aura.model, workspace:FindFirstChild("PetCompanions") }
         local hit = workspace:Raycast(aura.rootPart.Position, Vector3.new(0, -MAX_GROUND_DROP, 0), groundParams)
         aura.groundY = if hit then hit.Position.Y else nil
     end

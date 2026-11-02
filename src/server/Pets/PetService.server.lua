@@ -65,7 +65,7 @@ end
 -- here, at Yggdrasil's Hatching Altar (WorldBuilder.buildAltar): its prompt opens the hatching
 -- window on the client, which asks for one egg at a time (HatchEggEvent). Each hatch is staged:
 -- the egg is laid in the altar's cradle for everyone to see, and taken away when it breaks open.
-local HATCH_STAGE = 2.6 -- seconds the egg rests in the cradle before it breaks
+local HATCH_STAGE = GameConfig.HatchingAltar.Stage -- seconds the egg rests in the cradle before it breaks
 local hatching = {}     -- [player] = true while their egg is in the cradle
 
 -- The altar (FloatingIslands.<HatchingAltar.Island>.HatchingAltar), its prompt's part and prompt.
@@ -85,6 +85,7 @@ local function stageEgg(altar, eggId)
     end
     local model = EggModel.build(eggId, 3.6)
     model.Name = "HatchingEgg"
+    model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent -- it rides in the remote: it must be there
     model:PivotTo(cradle.CFrame * CFrame.new(0, 1.8, 0))
     model.PrimaryPart.Anchored = true
     model.Parent = altar
@@ -136,7 +137,7 @@ local function onHatchRequest(player, eggId)
         PetId = petId,
         ChancePercent = math.round(chance * 1000) / 10,
         Staged = stageEgg(altar, eggId),
-        Delay = HATCH_STAGE,
+        BreakAt = workspace:GetServerTimeNow() + HATCH_STAGE, -- server time: the client breaks it on time, however late this arrives
     })
 end
 

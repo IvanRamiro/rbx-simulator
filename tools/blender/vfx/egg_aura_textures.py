@@ -155,7 +155,7 @@ def qi_ring(size=768):
 
 def element_band(size=768):
     x, y = grid(size)
-    r, th = np.hypot(x, y), np.arctan2(y, x)
+    r = np.hypot(x, y)
     px = 2.0 / size
     nodes = [(0.87 * math.cos(math.pi / 2 + k * math.tau / 5), 0.87 * math.sin(math.pi / 2 + k * math.tau / 5)) for k in range(5)]
     near = np.min([np.hypot(x - nx, y - ny) for nx, ny in nodes], axis=0)
@@ -249,7 +249,7 @@ def sigil_jade_leaf(size=768):
 
 def sigil_blossom(size=768):
     x, y = grid(size)
-    r, th = np.hypot(x, y), np.arctan2(y, x)
+    r = np.hypot(x, y)
     px = 2.0 / size
     a = np.maximum(line(r - 0.94, 0.01, 2 * px), line(r - 0.8, 0.008, 2 * px))
     # beads between the rings, one per petal tip and between
@@ -282,7 +282,7 @@ def sigil_blossom(size=768):
 
 def sigil_tree_rings(size=768):
     x, y = grid(size)
-    r, th = np.hypot(x, y), np.arctan2(y, x)
+    r = np.hypot(x, y)
     px = 2.0 / size
     # growth rings: uneven, wider on one side, drifting off centre as the tree grew
     a = np.zeros_like(x)

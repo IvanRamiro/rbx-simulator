@@ -17,7 +17,8 @@ Roblox studs relative to the HumanoidRootPart, front toward -Z, measured in Play
 
     import murim_outfit as O
     O.build()            # the high-detail pieces, in collection MurimOutfitHi
-    O.export_all()       # bake every piece and write assets/outfits/MurimOutfit.fbx and the maps
+    O.export_all()       # bake every piece; write assets/outfits/MurimOutfit.fbx, the maps and
+                         # MurimOutfit_pieces.json
 """
 import json
 import math
@@ -699,13 +700,14 @@ def rig(name, low, coll):
 
 
 # ---------- export ----------
-def export_all(only=None, report_path=None):
+def export_all():
     """Bakes each piece's game mesh and writes assets/outfits/MurimOutfit.fbx (all pieces, skinned
-    ones with their rigs) plus outfit_pieces.json (each piece's body part and authored centre)."""
+    ones with their rigs), each piece's maps, and MurimOutfit_pieces.json (each piece's body part
+    and authored centre, which src/worldbuild/Placements/MurimOutfit.lua is generated from)."""
     report = {}
     exported = []
     os.makedirs(OUT_DIR, exist_ok=True)
-    for name, (hi, coll, part, budget, skinned) in build(only).items():
+    for name, (hi, coll, part, budget, skinned) in build().items():
         piece_id = NAME + "_" + name
         old = bpy.data.objects.get(piece_id)
         if old:
@@ -714,7 +716,7 @@ def export_all(only=None, report_path=None):
         total = sum(B.tris(o) for o in hi)
         low = B.make_low(piece_id, hi, coll, budget, sheet_ratio=max(0.15, min(0.55, budget / max(1, total))))
         low.name = piece_id
-        old_dir = K.EGG_DIR
+        old_dir = B.EGG_DIR
         B.EGG_DIR = OUT_DIR
         try:
             B.bake(piece_id, hi, low, size=1024, small=512)
@@ -728,6 +730,8 @@ def export_all(only=None, report_path=None):
             objs.append(rig(name, low, coll))
         exported += objs
         report[name] = {"Part": part, "Centre": [round(c, 4) for c in (lo + hi_) / 2], "Tris": B.tris(low), "Skinned": skinned}
+    write_fbx(exported)
+    write_report(report)
     return report, exported
 
 

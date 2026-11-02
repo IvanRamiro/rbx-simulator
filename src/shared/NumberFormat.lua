@@ -15,7 +15,10 @@ function NumberFormat.compact(number)
             local scaled = number / step.Value
             local decimals = if scaled >= 100 then 0 elseif scaled >= 10 then 1 else 2
             local text = string.format("%." .. decimals .. "f", math.floor(scaled * 10 ^ decimals) / 10 ^ decimals)
-            text = string.gsub(text, "%.?0+$", "")
+            if decimals > 0 then
+                -- trim trailing decimal zeros only: 100K must keep its own zeros
+                text = string.gsub(string.gsub(text, "0+$", ""), "%.$", "")
+            end
             return sign .. text .. step.Suffix
         end
     end

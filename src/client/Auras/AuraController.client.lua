@@ -294,8 +294,9 @@ local function watchPlayer(player)
     end
 
     task.spawn(function()
-        local rankValue = player:WaitForChild("leaderstats"):WaitForChild("Rank")
-        if connections[player] ~= playerConnections then
+        local leaderstats = player:WaitForChild("leaderstats", 60)
+        local rankValue = leaderstats and leaderstats:WaitForChild("Rank", 60)
+        if not rankValue or connections[player] ~= playerConnections then
             return
         end
 

@@ -10,8 +10,6 @@
 import math
 import random
 
-import bpy
-
 import egg_kit as K
 
 W = K.W
@@ -99,10 +97,6 @@ def spirit_breeze(coll, mat, bands):
     glow = W.MeshBuilder()
     # the gold crescent on the egg's right shoulder, opening toward the front, with a curl at its tip
     cu, cv = 0.19, 0.58
-    centre, n = K.egg_point(cu, cv, offset=0.0)
-    up = V((0, 1, 0))
-    s = up.cross(n).normalized()
-    t = n.cross(s).normalized()
     arc = []
     for i in range(22):
         a = math.radians(-150 + 300 * i / 21)
@@ -128,7 +122,6 @@ def spirit_breeze(coll, mat, bands):
             K.strip_between(glow, a, b, K.egg_point(cu, cv)[1], 0.045 * (1.2 - abs(k - 1) * 0.3), (0.5, 0.5), lift=0.0)
     # the bed of clouds: five puffs round the base, each a cluster of round lobes with gold curls
     clouds = W.MeshBuilder()
-    rnd = random.Random(21)
     for k in range(5):
         u = (k + 0.5) / 5 + 0.04
         p, n = K.egg_point(u, 0.16)
@@ -140,7 +133,7 @@ def spirit_breeze(coll, mat, bands):
             clouds.lathe([(0.0, rr, 1.0), (rr * 0.7, rr * 0.72, 0.95), (rr, 0.0, 0.8), (rr * 0.72, -rr * 0.68, 0.55), (0.0, -rr * 0.9, 0.4)],
                          10, bands[CLOUD], centre=tuple(cc), cap_top=False, u_repeat=1.0)
         # a gold curl on the cloud's face
-        K.xiangyun(gold, base + out * 0.5 + V((0, 0.05, 0)), out, (0, 1, 0), 0.56, bands[GOLD], thick=0.03, seed=k, flip=1 if k % 2 else -1)
+        K.xiangyun(gold, base + out * 0.5 + V((0, 0.05, 0)), out, (0, 1, 0), 0.56, bands[GOLD], thick=0.03, flip=1 if k % 2 else -1)
     g = gold.object("SB_Gold", coll, mat)
     c = clouds.object("SB_Clouds", coll, mat, smooth=True)
     s_ = glow.object("SB_Sigil", coll, K.glow_material(SB_SIGIL))

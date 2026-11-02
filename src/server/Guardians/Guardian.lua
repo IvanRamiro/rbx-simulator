@@ -19,8 +19,9 @@
 -- the guardian rests, then guards again). One theft at a time. Every step is checked here; repeated
 -- requests are ignored. Only its thief can recover a dropped egg, within DropTime; after that it goes
 -- back to its stand. It also goes back if the thief leaves the server or carries it longer than
--- MAX_CARRY without securing it. The safe zone (SafeZone) is a circle, or with SafeZone.Island a
--- whole island: Yggdrasil, the hub, reached across the bridge.
+-- MAX_CARRY without securing it. The safe zone (SafeZone) is a circle (round its Centre, or with
+-- SafeZone.Altar the Hatching Altar's), or with SafeZone.Island a whole island: Yggdrasil, the hub,
+-- reached across the bridge.
 --
 -- Guardians never kill: every attack knocks players back (GuardianEvent "Knock" to that player's
 -- client, which owns its character), and a knocked-back thief drops the egg.
@@ -28,7 +29,7 @@
 -- Clients get every action as GuardianEvent:FireAllClients(model, action, ...):
 --   "Awaken" | "Weaken" | <a Sweep's name> windUp | <a Wave's name> windUp radius waveSpeed arc |
 --   <a Pounce's name> windUp air from to | "Land" position | "Steal" position | "Drop" position |
---   "Recover" | "Secure" position | "Return"
+--   "Recover" | "Secure" position | "Return" position (where the egg was, or nil)
 -- and the thief alone "Secured" eggId stones element (the element its relic unlocked, or nil) | "BagFull".
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -118,6 +119,9 @@ function Guardian.new(id, config, source, folder)
         -- the hub: secured on setting foot on it; the waypoint is its end of this island's bridge
         self.safeIsland = WorldConfig.Islands[zone.Island]
         self.safeCentre = WorldConfig.bridgeLanding(config.Island) or self.safeIsland.Centre
+    elseif zone.Altar then
+        local altar = GameConfig.HatchingAltar
+        self.safeCentre = WorldConfig.frame(altar.Island):PointToWorldSpace(altar.Centre)
     else
         self.safeCentre = frame:PointToWorldSpace(zone.Centre)
     end
@@ -296,7 +300,8 @@ end
 
 function Guardian:clearThief()
     local owner = self.egg.owner
-    if owner and owner.Parent then
+    -- a thief who dropped this egg may since have taken another guardian's: leave that one's marks
+    if owner and owner.Parent and owner:GetAttribute("CarryingGuardian") == self.id then
         owner:SetAttribute("CarryingEgg", nil)
         owner:SetAttribute("CarryingGuardian", nil)
     end
@@ -429,13 +434,15 @@ function Guardian:returnEgg()
     if egg.slot and egg.eggId then
         EggStands.restore(egg.slot, egg.eggId)
     end
+    -- where it vanished, sent along: the model is gone before the clients hear of it
+    local position = egg.model and egg.model:GetPivot().Position
     if egg.model then
         egg.model:Destroy()
     end
     egg.model, egg.prompt, egg.eggId, egg.slot = nil, nil, nil, nil
     self:setEggState("Guarded")
     self:setState("Returning")
-    self:broadcast("Return")
+    self:broadcast("Return", position)
 end
 
 function Guardian:secure()
@@ -850,10 +857,11 @@ function Guardian:decide(now)
             return
         end
     end
-    if now < self.busyUntil or not near[1] then
+    if now < self.busyUntil then
         return
     end
 
+    -- a pounce reaches the thief past its sweeps and waves, so it is checked before anyone's near
     if state == "Enraged" then
         local thief = self.egg.owner
         local root = thief and rootOf(thief)
@@ -866,6 +874,9 @@ function Guardian:decide(now)
                 end
             end
         end
+    end
+    if not near[1] then
+        return
     end
     for name, spec in self:attacksOf("Sweep") do
         for _, entry in near do

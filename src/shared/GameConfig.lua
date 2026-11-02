@@ -56,7 +56,7 @@ local GameConfig = {
     -- Weapons (src/server/Shop; the Blacksmith on Yggdrasil): a sword and a spear for every realm,
     -- sold from that realm on for Spirit Stones (shared/Shop.lua names them Sword<tier>, Spear<tier>).
     -- A strike's damage is the tier's Damage times the kind's DamageScale times the rank's power
-    -- (Combat.damageOf). The sword strikes fast and wide; the spear slower, farther and harder, for
+    -- (Combat.powerOf). The sword strikes fast and wide; the spear slower, farther and harder, for
     -- the same damage over time. With none equipped a player strikes with the Qi Palm (Combat.Palm).
     WeaponKinds = {
         Sword = { Range = 12, Arc = 80, Cooldown = 0.55, DamageScale = 1 },
@@ -132,8 +132,11 @@ local GameConfig = {
     },
     -- Yggdrasil's Hatching Altar (WorldBuilder.buildAltar, PetService): where every egg carried home is
     -- hatched. Centre is island-local (on the ground), Yaw turns its front (local +Z) toward the
-    -- World Tree and the bridges.
-    HatchingAltar = { Island = "Yggdrasil", Centre = Vector3.new(100, -0.2, -130), Yaw = -1.4 },
+    -- World Tree and the bridges. Stage: seconds an egg rests in the cradle before it breaks (one
+    -- egg at a time per player: the client's Hatch button waits as long).
+    HatchingAltar = { Island = "Yggdrasil", Centre = Vector3.new(100, -0.2, -130), Yaw = -1.4, Stage = 2.6 },
+    -- the size of a stand's egg (and a carried one): studs per unit of its Blender model
+    EggStudsPerUnit = 1.3,
     Guardians = {
         StoneLion = {
             DisplayName = "Awakened Stone Lion",
@@ -142,7 +145,7 @@ local GameConfig = {
             Facing = Vector3.new(0, 0.4, 0), -- toward the World Tree
             Eggs = { "BeginnerQiEgg", "SpiritBreezeEgg", "ElementalCoreEgg" },
             -- its eggs are the Egg Garden's (Yggdrasil's own stands): carried to the Hatching Altar
-            SafeZone = { Centre = Vector3.new(100, -0.2, -130), Radius = 12, Name = "Hatching Altar" },
+            SafeZone = { Altar = true, Radius = 12, Name = "Hatching Altar" }, -- round HatchingAltar.Centre
             SecureStones = 150,     -- Spirit Stones for securing its egg
             Element = "Earth",      -- the relic it drops when its egg is secured unlocks this element (Forge)
             MaxHealth = 1200,      -- a beginner's Qi Palm weakens it alone in ~108 strikes (about 50 seconds)
@@ -161,7 +164,7 @@ local GameConfig = {
             Stagger = 1.1,         -- seconds a knocked-back player is off their feet
             WeakenedSlowdown = 1.7, -- attack cooldown multiplier while weakened
             Attacks = {
-                -- the left paw slams (the right one pins the egg)
+                -- a forepaw slams
                 Slam = { Kind = "Sweep", Range = 24, Arc = 55, WindUp = 0.75, Cooldown = 2.6, Knockback = 45 },
                 Roar = { Kind = "Wave", Radius = 44, WaveSpeed = 34, WindUp = 1.1, Cooldown = 8, Knockback = 40 },
                 Pounce = { Kind = "Pounce", MinRange = 16, MaxRange = 46, WindUp = 0.6, Air = 0.95, Height = 9, Cooldown = 4.5, Radius = 12, Knockback = 55 },
@@ -330,7 +333,6 @@ local GameConfig = {
     },
 
     RelicTag = "SpiritRelic",
-    EggTag = "PetEggStand",
     -- a barrier at each island bridge: only players of its RankId pass
     BridgeBarrierTag = "QiBarrier",
     Relics = {
@@ -525,7 +527,6 @@ local GameConfig = {
         BeginnerQiEgg = {
             DisplayName = "Beginner Qi Egg",
             RequiredRank = "QiInitiate",
-            Cooldown = 45,
             Pool = {
                 { PetId = "AquaWisp", Weight = 45 },
                 { PetId = "EmberWyrm", Weight = 27 },
@@ -539,7 +540,6 @@ local GameConfig = {
         JadeSpiritEgg = {
             DisplayName = "Jade Spirit Egg",
             RequiredRank = "QiGatherer",
-            Cooldown = 45,
             Pool = {
                 { PetId = "MossGolem", Weight = 45 },
                 { PetId = "MyceliumSprite", Weight = 27 },
@@ -551,7 +551,6 @@ local GameConfig = {
         InfernoEgg = {
             DisplayName = "Inferno Egg",
             RequiredRank = "QiAwakener",
-            Cooldown = 45,
             Pool = {
                 { PetId = "MagmaCub", Weight = 45 },
                 { PetId = "EmberWyrm", Weight = 50 },
@@ -563,7 +562,6 @@ local GameConfig = {
         SpiritBreezeEgg = {
             DisplayName = "Spirit Breeze Egg",
             RequiredRank = "QiAdept",
-            Cooldown = 45,
             Pool = {
                 { PetId = "WindSprite", Weight = 45 },
                 { PetId = "CloudSheep", Weight = 27 },
@@ -575,7 +573,6 @@ local GameConfig = {
         ElementalCoreEgg = {
             DisplayName = "Elemental Core Egg",
             RequiredRank = "FoundationInitiate",
-            Cooldown = 45,
             Pool = {
                 { PetId = "GlacierPuff", Weight = 45 },
                 { PetId = "ThunderJelly", Weight = 27 },
@@ -588,7 +585,6 @@ local GameConfig = {
         BloomwoodEgg = {
             DisplayName = "Bloomwood Egg",
             RequiredRank = "FoundationAdept",
-            Cooldown = 45,
             Pool = {
                 { PetId = "DreamMoth", Weight = 45 },
                 { PetId = "CrystalSnail", Weight = 27 },
@@ -600,7 +596,6 @@ local GameConfig = {
         AncientGroveEgg = {
             DisplayName = "Ancient Grove Egg",
             RequiredRank = "CoreInitiate",
-            Cooldown = 45,
             Pool = {
                 { PetId = "EchoBat", Weight = 45 },
                 { PetId = "QiClockworkFinch", Weight = 27 },
@@ -613,7 +608,6 @@ local GameConfig = {
         MagmaHeartEgg = {
             DisplayName = "Magma Heart Egg",
             RequiredRank = "PerfectFoundation",
-            Cooldown = 45,
             Pool = {
                 { PetId = "SandPhantom", Weight = 45 },
                 { PetId = "SolarButterfly", Weight = 27 },
@@ -625,7 +619,6 @@ local GameConfig = {
         PhoenixAshEgg = {
             DisplayName = "Phoenix Ash Egg",
             RequiredRank = "CoreAdept",
-            Cooldown = 45,
             Pool = {
                 { PetId = "MagmaCub", Weight = 45 },
                 { PetId = "EmberWyrm", Weight = 42 },
@@ -638,7 +631,6 @@ local GameConfig = {
         CelestialEgg = {
             DisplayName = "Celestial Egg",
             RequiredRank = "SoulAwakening",
-            Cooldown = 45,
             Pool = {
                 { PetId = "StarfallFox", Weight = 45 },
                 { PetId = "CosmicJellyfish", Weight = 27 },
@@ -651,7 +643,6 @@ local GameConfig = {
         AstralSanctumEgg = {
             DisplayName = "Astral Sanctum Egg",
             RequiredRank = "AscendantInitiate",
-            Cooldown = 45,
             Pool = {
                 { PetId = "StarfallFox", Weight = 45 },
                 { PetId = "CosmicJellyfish", Weight = 27 },
@@ -664,7 +655,6 @@ local GameConfig = {
         HeavenlyThroneEgg = {
             DisplayName = "Heavenly Throne Egg",
             RequiredRank = "LesserImmortal",
-            Cooldown = 45,
             Pool = {
                 { PetId = "CelestialSnowLeopard", Weight = 47.5 },
                 { PetId = "EclipseCat", Weight = 47.5 },
@@ -677,7 +667,6 @@ local GameConfig = {
         ForbiddenOriginEgg = {
             DisplayName = "Forbidden Origin Egg",
             RequiredRank = "DivineInitiate",
-            Cooldown = 45,
             Pool = {
                 { PetId = "Shadowcoil", Weight = 87 },
                 { PetId = "EclipseCat", Weight = 8 },
@@ -689,7 +678,6 @@ local GameConfig = {
         VoidRiftEgg = {
             DisplayName = "Void Rift Egg",
             RequiredRank = "VoidWalker",
-            Cooldown = 45,
             Pool = {
                 { PetId = "Shadowcoil", Weight = 87 },
                 { PetId = "EclipseCat", Weight = 8 },
@@ -701,7 +689,6 @@ local GameConfig = {
         PrimordialAbyssEgg = {
             DisplayName = "Primordial Abyss Egg",
             RequiredRank = "PrimordialAwakening",
-            Cooldown = 45,
             Pool = {
                 { PetId = "HeavenbreakerApe", Weight = 99 },
                 { PetId = "VoidscaleHydra", Weight = 0.45 },

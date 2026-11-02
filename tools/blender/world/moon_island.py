@@ -52,7 +52,6 @@ def _polar(bearing, r):
 
 
 ARRIVAL = (L.ARRIVALS[NAME][0], L.ARRIVALS[NAME][2])   # where the Moonlit bridge lands
-ARRIVAL_BEARING = math.degrees(math.atan2(ARRIVAL[1], ARRIVAL[0]))
 _IN = (-ARRIVAL[0] / math.hypot(*ARRIVAL), -ARRIVAL[1] / math.hypot(*ARRIVAL))
 LANDING = (ARRIVAL[0] + _IN[0] * 12, ARRIVAL[1] + _IN[1] * 12, 9)   # x, z, radius; flat at +0.4
 
@@ -111,10 +110,6 @@ def edge_distance(x, z):
     # the bay beyond the horn tips
     wobble = 2.6 * fbm(x / 24 + 41, z / 24 + 3, seed=121, octaves=3) * smoothstep(-0.5, 3.0, base)
     return base + wobble
-
-
-def inside(x, z):
-    return edge_distance(x, z) > 0
 
 
 def _seg(px, pz, a, b):

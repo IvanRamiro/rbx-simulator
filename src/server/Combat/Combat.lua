@@ -5,7 +5,7 @@
 --                            Cooldown, Damage (before rank power), WeaponId, Element }: their equipped
 --                            weapon (WeaponInventory; a forged one GameConfig.Forge.DamageBonus harder),
 --                            or the Qi Palm with none
---   Combat.damageOf(player)  the strike's damage times the rank's power
+--   Combat.powerOf(player)   the rank's damage multiplier (GameConfig.Combat.RankPowerStep a rank)
 --   Combat.Hit               a BindableEvent (ServerStorage.CombatHit): (player, target, damage, position)
 --                            fired for every strike that lands on a target tagged GameConfig.Combat.TargetTag
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -41,10 +41,6 @@ end
 function Combat.powerOf(player)
     local index = Ranks.getIndex(Ranks.getPlayerRankName(player)) or 1
     return 1 + (index - 1) * GameConfig.Combat.RankPowerStep
-end
-
-function Combat.damageOf(player)
-    return Combat.strikeOf(player).Damage * Combat.powerOf(player)
 end
 
 return Combat

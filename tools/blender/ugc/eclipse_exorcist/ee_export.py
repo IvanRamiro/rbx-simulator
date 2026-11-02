@@ -14,10 +14,8 @@ Layered clothing (the robe, the hakama), per item:
 The seal cord is layered too, worn over the robe: its inner cage is the robe's outer cage (the
 surface it was modelled on), so it sits on the robe on any body, and tightens onto the body when
 worn alone. (As a rigid accessory it scaled with the body while the robe kept its real thickness,
-and on a narrow body the robe swallowed it.) rigid() is kept for a rigid version.
+and on a narrow body the robe swallowed it.)
 """
-import json
-import math
 import os
 
 import bmesh
@@ -28,7 +26,6 @@ from mathutils.kdtree import KDTree
 
 import ee_kit as K
 
-V = Vector
 R15 = ["Root", "HumanoidRootNode", "LowerTorso", "UpperTorso", "Head", "LeftUpperArm", "LeftLowerArm", "LeftHand",
        "RightUpperArm", "RightLowerArm", "RightHand", "LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "RightUpperLeg",
        "RightLowerLeg", "RightFoot"]
@@ -62,6 +59,9 @@ def _copy(src, name):
 
 
 # ---------- the reference (once per Blender session) ----------
+REFERENCE = ("Blocky_Armature", "EE_InnerCage_Blocky", "Blocky_BodyFront_Att", "Blocky_WaistCenter_Att")
+
+
 def setup_reference(ref_dir):
     """Imports Roblox's reference files from `ref_dir` and prepares what the export needs:
     - ref_dir/blocky/BlockyCharacter.fbx: the blocky body (its armature "Armature.001"... renamed
@@ -71,8 +71,10 @@ def setup_reference(ref_dir):
       by UV (the two layouts are identical: every corner matches);
     - Blocky_BodyFront_Att and Blocky_WaistCenter_Att: the markers the items' attachments copy.
     Downloads (create.roblox.com/docs/avatar/resources): Clothing_Cage_Templates.zip and
-    BlockyCharacter.fbx. Import their FBX files only: never open their .blend files (scripts)."""
-    from mathutils import kdtree
+    BlockyCharacter.fbx. Import their FBX files only: never open their .blend files (scripts).
+    Already done in this session: reuses what is there (a second import would arrive as "name.001")."""
+    if all(bpy.data.objects.get(n) for n in REFERENCE):
+        return {"reused": True}
 
     def imp(path, tag):
         before = set(bpy.data.objects.keys())
@@ -94,7 +96,7 @@ def setup_reference(ref_dir):
         for poly in me.polygons:
             for li in poly.loop_indices:
                 pts.append((uv[li].uv.copy(), o.matrix_world @ me.vertices[me.loops[li].vertex_index].co))
-    kd = kdtree.KDTree(len(pts))
+    kd = KDTree(len(pts))
     for i, (u, _) in enumerate(pts):
         kd.insert((u.x, u.y, 0), i)
     kd.balance()
@@ -129,21 +131,13 @@ def skeleton(name, source="Blocky_Armature"):
     bpy.ops.object.select_all(action="DESELECT")
     arm.select_set(True)
     vl.objects.active = arm
-    with _override([arm], arm):
+    with K.override([arm], arm):
         bpy.ops.object.mode_set(mode="EDIT")
         for eb in list(arm.data.edit_bones):
             if eb.name not in R15:
                 arm.data.edit_bones.remove(eb)
         bpy.ops.object.mode_set(mode="OBJECT")
     return arm
-
-
-def _override(objs, active):
-    win = bpy.context.window_manager.windows[0]
-    area = next(a for a in win.screen.areas if a.type == "VIEW_3D")
-    region = next(r for r in area.regions if r.type == "WINDOW")
-    return bpy.context.temp_override(window=win, area=area, region=region, active_object=active,
-                                     selected_objects=objs, selected_editable_objects=objs, object=active)
 
 
 # ---------- weights ----------
@@ -243,7 +237,7 @@ def join(objects, name):
         o.hide_set(False)
         o.select_set(True)
     vl.objects.active = objects[0]
-    with _override(objects, objects[0]):
+    with K.override(objects, objects[0]):
         bpy.ops.object.join()
     o = objects[0]
     if o.name != name:
@@ -458,17 +452,3 @@ def layered(item, pieces, weight_fn, att_source, att_name, inner_source="EE_Inne
     rep.update({"tris": K.tris(mesh), "fbx": path,
                 "max_influences": max((len([g for g in v.groups if g.weight > 1e-4]) for v in mesh.data.vertices), default=0)})
     return rep
-
-
-def rigid(item, pieces):
-    """Writes the rigid accessory (one mesh) and its bounds (world space) for Studio."""
-    mesh = join(pieces, item)
-    path = os.path.join(K.OUT_DIR, item + ".fbx")
-    write_fbx([mesh], path)
-    bb = [mesh.matrix_world @ V(c) for c in mesh.bound_box]
-    lo = [min(v[i] for v in bb) for i in range(3)]
-    hi = [max(v[i] for v in bb) for i in range(3)]
-    info = {"tris": K.tris(mesh), "fbx": path, "min": lo, "max": hi}
-    with open(os.path.join(K.OUT_DIR, item + "_bounds.json"), "w") as f:
-        json.dump(info, f, indent=1)
-    return info

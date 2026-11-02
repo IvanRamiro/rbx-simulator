@@ -14,7 +14,6 @@ Run (headless, so the open Blender scene is untouched):
     Blender -b --python-expr "import sys; sys.path.insert(0, '<repo>/tools/blender/vfx'); import combat_textures; combat_textures.build_all()"
 Writes PNGs to assets/vfx/combat/.
 """
-import math
 import os
 
 import numpy as np

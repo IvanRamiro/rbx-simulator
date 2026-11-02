@@ -7,10 +7,9 @@
 - The Star Well: ring and starfield lining.
 - Kit pieces: the Crescent Arch at the arrival and moonstone spires.
 """
-import bpy, math, random
+import math, random
 import worldlib as W
 import moon_island as M
-import layout as L
 import start_props as SP
 import jade_meshes as JM
 
@@ -227,7 +226,7 @@ def geode(coll, mat, bands, glow_only=False):
             d = (rnd.uniform(-0.35, 0.35), -1, rnd.uniform(-0.35, 0.35))
             JM.crystal_prism(mb, (x + rnd.uniform(-4, 4), SKIRT_BOTTOM - 6, z + rnd.uniform(-4, 4)), d,
                              size * rnd.uniform(0.5, 1.0), size * rnd.uniform(0.09, 0.14),
-                             bands[GLOW] if glow_only else bands[MOONSTONE], n * 10 + k)
+                             bands[GLOW] if glow_only else bands[MOONSTONE])
     return mb.object("MI_GeodeGlow" if glow_only else "MI_Geode", coll, mat)
 
 
@@ -240,7 +239,7 @@ def geode_glow(coll, mat, bands):
 
 
 # ---------- the Moon Mirror ----------
-MX, MZ, MR = M.MIRROR
+MX, MZ = M.MIRROR[:2]
 POOL_Y = 1.45
 DAIS_TOP = 2.4
 
@@ -318,35 +317,8 @@ def moonstone_spire(coll, mat, bands):
     mb = W.MeshBuilder()
     mb.lathe([(1.4, 0.8, 0.9), (1.7, 0.6, 0.85), (1.9, 0.0, 0.7), (1.9, -1.2, 0.4)], 6, bands[MARBLE], cap_top=True, u_repeat=0.0)
     mb.lathe([(1.12, 1.25, 1.0), (1.2, 0.8, 0.8)], 6, bands[GOLD], cap_top=False, u_repeat=0.0)
-    JM.crystal_prism(mb, (0, 0.8, 0), (0, 1, 0), 13.0, 1.05, bands[MOONSTONE], 5)
+    JM.crystal_prism(mb, (0, 0.8, 0), (0, 1, 0), 13.0, 1.05, bands[MOONSTONE])
     return mb.object("MI_MoonstoneSpire", coll, mat)
-
-
-def crescent_slab(mb, bands, r_out, r_in, offset, thick, seg=24):
-    """A flat crescent: the disc of radius r_out minus a disc of radius r_in shifted by offset
-    along -Z. Top at y=0. Built as a strip between the two arcs."""
-    def outer(t):
-        a = math.radians(200 + 140 * t)  # from one horn round the back to the other (+Z side is the back)
-        return (math.cos(a) * r_out, -math.sin(a) * r_out)
-    pts_o, pts_i = [], []
-    for k in range(seg + 1):
-        t = k / seg
-        ox, oz = outer(t)
-        pts_o.append((ox, oz))
-        # matching point on the inner arc: scaled toward the bite centre
-        cx, cz = 0.0, -offset
-        dx, dz = ox - cx, oz - cz
-        L_ = math.hypot(dx, dz)
-        w = math.sin(math.pi * t) ** 0.8  # thickest in the middle, horns taper to points
-        pts_i.append((ox - dx / L_ * (r_out - r_in) * w * 0 + (cx + dx / L_ * r_in - ox) * w, oz + (cz + dz / L_ * r_in - oz) * w))
-    for k in range(seg):
-        a, b, c, d = pts_o[k], pts_o[k + 1], pts_i[k + 1], pts_i[k]
-        oriented(mb, [(a[0], 0, a[1]), (b[0], 0, b[1]), (c[0], 0, c[1]), (d[0], 0, d[1])], (0, 1, 0), bands[MARBLE], 0.4, [0.95] * 4)
-        for p, q in ((a, b), (c, d)):
-            mid = ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2)
-            oriented(mb, [(p[0], 0, p[1]), (q[0], 0, q[1]), (q[0], -thick, q[1]), (p[0], -thick, p[1])], (mid[0], 0, mid[1] + offset * 0.5),
-                     bands[GOLD] if p is a else bands[MARBLE], 0.4, [0.8, 0.8, 0.5, 0.5])
-        oriented(mb, [(a[0], -thick, a[1]), (b[0], -thick, b[1]), (c[0], -thick, c[1]), (d[0], -thick, d[1])], (0, -1, 0), bands[LUNAR], 0.4, [0.3] * 4)
 
 
 def crescent_arch(coll, mat, bands):
@@ -356,7 +328,7 @@ def crescent_arch(coll, mat, bands):
     for side in (-1, 1):
         x = side * 5.0
         mb.lathe([(1.2, 0.8, 0.9), (1.5, 0.6, 0.85), (1.7, 0.0, 0.7), (1.7, -1.2, 0.4)], 6, bands[MARBLE], centre=(x, 0, 0), cap_top=True, u_repeat=0.0)
-        JM.crystal_prism(mb, (x, 0.8, 0), (side * -0.06, 1, 0), 10.5, 0.95, bands[MOONSTONE], 7 + side)
+        JM.crystal_prism(mb, (x, 0.8, 0), (side * -0.06, 1, 0), 10.5, 0.95, bands[MOONSTONE])
     # golden crescent arc: a thick band along a semicircle, thinning toward its ends
     seg = 28
     for k in range(seg):

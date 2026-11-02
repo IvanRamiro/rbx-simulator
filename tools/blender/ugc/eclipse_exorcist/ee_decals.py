@@ -175,8 +175,9 @@ def project(f, name, coll, materials, bvh, centre, direction, up, rotate=0.0, li
         # wound to face out of the cloth (toward where it was cast from)
         if face.normal.length > 0 and face.normal.dot(-d) < 0:
             face.normal_flip()
-        for loop, (u, v) in zip(face.loops, pts):
-            loop[uvl].uv = (u, v)
+        uv_of = dict(zip(bv, pts))         # by vertex: a flip reverses the loops
+        for loop in face.loops:
+            loop[uvl].uv = uv_of[loop.vert]
         kept += 1
     me = bpy.data.meshes.new(name)
     bm.to_mesh(me)

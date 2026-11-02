@@ -99,7 +99,7 @@ local function animateOssuary(rig, s, moving, fly, nova)
     pose(m.Jaw, CFrame.Angles(-(0.14 * chatter + 0.6 * nova + 0.05 * fly), 0, 0))
 
     for _, name in { "WingL", "WingR" } do
-        local side = rig.sides[name]
+        local side = rig.sides[name] or 0
         local raise = 0.12 * math.sin(t * 1.3) * (1 - fly) - 0.25 * moving + (0.1 + 0.5 * math.sin(t * 3.2)) * fly + 0.5 * nova
         local sweep = -0.15 * moving + 0.3 * nova
         pose(m[name], CFrame.Angles(0, side * sweep, side * raise))

@@ -1,7 +1,7 @@
 """Starting Island nature: spirit pines with cloud-pad canopies, plum-blossom trees, mossy
 boulders and flower clumps, on the prop atlas from start_props. Yggdrasil places them
 (ygg_props.nature)."""
-import bpy, bmesh, math, random
+import math, random
 import worldlib as W
 import start_props as P
 
@@ -145,8 +145,7 @@ VARIANTS = {
 
 
 def build():
-    img = bpy.data.images["StartingIsland_PropAtlas"]
-    _, bands = W.atlas_image("StartingIsland_PropAtlas", 512, P.STRIPS)
+    img, bands = W.atlas_image("StartingIsland_PropAtlas", 512, P.STRIPS)
     mat = W.textured_material("StartingIsland_PropMat", img)
     root = W.collection("StartingIsland")
     coll = W.collection("SI_Nature", root)

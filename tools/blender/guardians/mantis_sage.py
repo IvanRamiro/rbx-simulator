@@ -19,7 +19,6 @@ Authored in Roblox studs, standing, facing -Z, its feet on the ground at y = 0.
     M.export()                    # assets/guardians/MantisSage.fbx and its pieces report
 """
 import math
-import random
 
 import bpy
 from mathutils import Vector
@@ -240,8 +239,8 @@ def mantle(coll, M):
 
 def neck(coll, M):
     bam, beads, gold = Hm.Hi(), Hm.Hi(), Hm.Hi()
-    curve = culm(bam, [(0, 13.6, 1.0), (0, 18.0, -1.5), (0, 23.0, -4.6), (0, 26.6, -6.6)], 1.55, 1.3,
-                 swell=lambda t: 1 + 0.18 * math.exp(-((t - 0.72) / 0.12) ** 2))
+    culm(bam, [(0, 13.6, 1.0), (0, 18.0, -1.5), (0, 23.0, -4.6), (0, 26.6, -6.6)], 1.55, 1.3,
+         swell=lambda t: 1 + 0.18 * math.exp(-((t - 0.72) / 0.12) ** 2))
     cap(bam, (0, 26.6, -6.6), 1.3)
     # the mala: jade beads round the neck, draping lower at the front, a guru bead and a gold tassel
     centre, axis = V((0, 20.4, -3.0)), V((0, 5.0, -3.1)).normalized()

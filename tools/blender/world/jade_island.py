@@ -82,14 +82,14 @@ def _ring_point(bearing):
     return _polar(bearing, RING_R)
 
 
-def _spoke(bearing, end, steps=3):
+def _spoke(bearing, end):
     """A path from the ring at `bearing` out to `end`, bending gently."""
     a = _ring_point(bearing)
     mid = ((a[0] + end[0]) / 2 + (end[1] - a[1]) * 0.08, (a[1] + end[1]) / 2 - (end[0] - a[0]) * 0.08)
     return [a, mid, end]
 
 
-def _edge_of(feature, bearing_from_centre, margin=2):
+def _edge_of(feature, margin=2):
     """A point on a round feature's edge facing the arena."""
     fx, fz, fr = feature
     d = math.hypot(fx, fz)
@@ -99,10 +99,10 @@ def _edge_of(feature, bearing_from_centre, margin=2):
 PATHS = [
     [ARRIVAL, LANDING[:2], GATE, _ring_point(ARRIVAL_BEARING)],                             # arrival -> gate -> the ring
     [_polar(b, RING_R) for b in range(0, 361, 15)],                                        # the ring round the arena
-    _spoke(150, _edge_of(GLADE, 150)),                                                     # -> Bloom Glade
-    _spoke(-62, _edge_of(ELDER, -62)),                                                     # -> Elder Tree
-    _spoke(-148, _edge_of(HOLLOW, -148, -2)),                                              # -> Whispering Hollow (descends)
-    _spoke(100, _edge_of(RUINS, 100)),                                                     # -> Ruin Court
+    _spoke(150, _edge_of(GLADE)),                                                          # -> Bloom Glade
+    _spoke(-62, _edge_of(ELDER)),                                                          # -> Elder Tree
+    _spoke(-148, _edge_of(HOLLOW, -2)),                                                    # -> Whispering Hollow (descends)
+    _spoke(100, _edge_of(RUINS)),                                                          # -> Ruin Court
 ]
 
 

@@ -25,16 +25,34 @@ WORLD = os.path.join(REPO, "tools", "blender", "world")
 for p in (EGGS, WORLD):
     if p not in sys.path:
         sys.path.append(p)
+import egg_bake as EB  # noqa: E402
 import egg_hi as Hm  # noqa: E402  (its _Graph builds the shaders)
+import worldlib as W  # noqa: E402
 
 V = Vector
 TAU = 2 * math.pi
 OUT_DIR = os.path.join(REPO, "assets", "ugc", "EclipseExorcist")
 
 
-def smoothstep(e0, e1, x):
-    t = max(0.0, min(1.0, (x - e0) / (e1 - e0))) if e1 != e0 else (1.0 if x >= e1 else 0.0)
-    return t * t * (3 - 2 * t)
+smoothstep = W.smoothstep
+collection = W.collection
+clear_collection = W.clear_collection
+tris = EB.tris
+
+
+def levels(top, bottom, step):
+    """Heights from top to bottom (both included), about `step` apart."""
+    n = max(1, int(round(abs(top - bottom) / step)))
+    return [top + (bottom - top) * k / n for k in range(n + 1)]
+
+
+def override(objs, active):
+    """A context for operators that need the 3D view, acting on `objs` with `active` active."""
+    win = bpy.context.window_manager.windows[0]
+    area = next(a for a in win.screen.areas if a.type == "VIEW_3D")
+    region = next(r for r in area.regions if r.type == "WINDOW")
+    return bpy.context.temp_override(window=win, area=area, region=region, active_object=active,
+                                     selected_objects=objs, selected_editable_objects=objs, object=active)
 
 
 # ---------- mesh building ----------
@@ -107,26 +125,6 @@ def solidify(obj, thickness, lining_offset=1):
     return apply_modifiers(obj, [("SOLIDIFY", {"thickness": thickness, "offset": -1.0, "use_even_offset": True,
                                                "use_rim": True, "material_offset": lining_offset,
                                                "material_offset_rim": 0})])
-
-
-def tris(obj):
-    return sum(len(p.vertices) - 2 for p in obj.data.polygons)
-
-
-def collection(name, parent=None):
-    c = bpy.data.collections.get(name)
-    if c is None:
-        c = bpy.data.collections.new(name)
-        (parent or bpy.context.scene.collection).children.link(c)
-    return c
-
-
-def clear_collection(c):
-    for o in list(c.objects):
-        me = o.data if o.type == "MESH" else None
-        bpy.data.objects.remove(o, do_unlink=True)
-        if me is not None and me.users == 0:
-            bpy.data.meshes.remove(me)
 
 
 # ---------- shapes ----------
@@ -299,23 +297,16 @@ def _fractures(g, co, scale, width):
     return g.math("MULTIPLY", edge, streak), vo.outputs["Distance"]
 
 
-def mat_eclipse_silk(name="EE_EclipseSilk", clouds=False):
+def mat_eclipse_silk(name="EE_EclipseSilk"):
     """Black silk: a fine twill, folds deepening, a faint cool sheen; crimson fractures leaking
-    through it (thickest low on the wearer's left, where the seal strains), and grey storm clouds
-    printed across it (on the right sleeve and the hem)."""
+    through it (thickest low on the wearer's left, where the seal strains). Its storm clouds are
+    printed on as decals (ee_robe.MOTIFS)."""
     g = G(name)
     co = g.coords()
     x, y, z = g.sep(co)
     tw = g.n("ShaderNodeTexWave", wave_type="BANDS", bands_direction="DIAGONAL", **{"Scale": 38.0})
     g.link(co, tw.inputs["Vector"])
     col = g.mix(g.math("MULTIPLY", tw.outputs["Fac"], 0.18), (0.016, 0.015, 0.019), (0.04, 0.038, 0.045))
-    if clouds:
-        fill, outline = _cloud_print(g, co, 1.6)
-        # where the clouds are printed: the right sleeve (x < -1) and the lower robe
-        where = g.math("MAXIMUM", g.math("LESS_THAN", x, -1.02), g.math("LESS_THAN", z, -0.55))
-        cloud = g.math("MULTIPLY", g.math("MAXIMUM", g.math("MULTIPLY", fill, 0.75), outline), where)
-        col = g.mix(cloud, col, (0.30, 0.30, 0.33))
-        col = g.mix(g.math("MULTIPLY", g.math("MULTIPLY", outline, where), 0.8), col, (0.62, 0.62, 0.66))
     frac, dist = _fractures(g, co, 2.6, 0.012)
     # the fractures gather toward the wearer's left and the hem
     lean = g.math("ADD", g.math("MULTIPLY", x, 0.35), g.math("MULTIPLY", z, -0.25))
@@ -377,7 +368,7 @@ def mat_stole(name="EE_StoleSilk"):
     pin = g.math("LESS_THAN", g.math("ABSOLUTE", g.math("SUBTRACT", du, 0.385)), 0.012)
     col = g.mix(border, col, (0.02, 0.02, 0.025))
     col = g.mix(pin, col, (0.6, 0.02, 0.04))
-    # the seal stamp, 0.55 studs from the hanging end (v counts from the back end; STOLE_LENGTH set below)
+    # the seal stamp near the hanging end (v counts from the back end; STOLE_STAMP_V is set by the robe)
     sv = g.math("SUBTRACT", v, STOLE_STAMP_V)
     d = g.math("SQRT", g.math("ADD", g.math("MULTIPLY", sv, sv), g.math("MULTIPLY", g.math("MULTIPLY", du, 0.5), g.math("MULTIPLY", du, 0.5))))
     ring = g.math("LESS_THAN", g.math("ABSOLUTE", g.math("SUBTRACT", d, 0.14)), 0.018)
@@ -496,12 +487,10 @@ def mat_ofuda(name="EE_Ofuda"):
     g.link(co, grain.inputs["Vector"])
     col = g.mix(g.math("MULTIPLY", grain.outputs["Fac"], 0.35), (0.42, 0.01, 0.03), (0.66, 0.04, 0.06))
     bands = g.math("MAXIMUM", g.math("LESS_THAN", v, 0.07), g.math("GREATER_THAN", v, 0.94))
-    # sigils: a column of cells, each a broken stroke pattern from a Voronoi cell's position
-    cell = g.n("ShaderNodeTexVoronoi", **{"Scale": 1.0})
+    # sigils: broken strokes of a distorted wave pattern, in a column down the middle
     sv = g.n("ShaderNodeCombineXYZ")
     g.link(g.math("MULTIPLY", u, 3.0), sv.inputs[0])
     g.link(g.math("MULTIPLY", v, 7.0), sv.inputs[1])
-    g.link(sv.outputs[0], cell.inputs["Vector"])
     strokes = g.n("ShaderNodeTexWave", wave_type="BANDS", **{"Scale": 1.6, "Distortion": 4.5, "Detail": 1.0})
     g.link(sv.outputs[0], strokes.inputs["Vector"])
     ink = g.math("GREATER_THAN", strokes.outputs["Fac"], 0.6)
@@ -509,7 +498,7 @@ def mat_ofuda(name="EE_Ofuda"):
                     g.math("MULTIPLY", g.math("GREATER_THAN", v, 0.13), g.math("LESS_THAN", v, 0.7)))
     mark = g.math("MAXIMUM", bands, g.math("MULTIPLY", ink, column))
     col = g.mix(mark, col, (0.02, 0.01, 0.01))
-    # a square vermilion stamp near the foot, outlined, its centre a darker eclipse
+    # a square black stamp near the foot: an outline round a dot
     su, sv2 = g.math("ABSOLUTE", g.math("SUBTRACT", u, 0.5)), g.math("ABSOLUTE", g.math("SUBTRACT", v, 0.8))
     square = g.math("MULTIPLY", g.math("LESS_THAN", su, 0.22), g.math("LESS_THAN", sv2, 0.08))
     inner = g.math("MULTIPLY", g.math("LESS_THAN", su, 0.17), g.math("LESS_THAN", sv2, 0.055))

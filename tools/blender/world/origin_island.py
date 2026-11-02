@@ -113,10 +113,6 @@ def edge_distance(x, z):
     return min(coast, lip)
 
 
-def inside(x, z):
-    return edge_distance(x, z) > 0
-
-
 def _lip_toward(sign):
     """Where the bridge line (from the court toward the altar) meets the rift's lip on the court's
     side (sign 1) or the shelf's (-1)."""

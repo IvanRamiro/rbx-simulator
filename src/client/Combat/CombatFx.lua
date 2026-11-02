@@ -50,7 +50,7 @@ local fxFolder = Instance.new("Folder")
 fxFolder.Name = "CombatFx"
 fxFolder.Parent = Workspace
 
-local strikes = {} -- [player] = { weapon, until }
+local strikes = {} -- [player] = { weapon, untilTime }
 
 local function rootOf(player)
     local character = player.Character

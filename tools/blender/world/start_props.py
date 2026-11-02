@@ -5,7 +5,7 @@ Every piece is authored in Roblox studs around its own origin (ground centre) ex
 pieces, which are authored in the Starting Island's coordinates (start_island). Yggdrasil places
 them all (ygg_props.placements); the spring as one piece, moved onto its rim.
 """
-import bpy, bmesh, math, os, random
+import bpy, bmesh, math, random
 import worldlib as W
 import start_island as S
 

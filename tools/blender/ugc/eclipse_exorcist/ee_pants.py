@@ -26,12 +26,7 @@ WRAP_TOP, WRAP_BOTTOM = -1.18, -1.7
 BOOT_TOP, SOLE = -1.66, -2.02
 
 
-def levels(top, bottom, step):
-    n = max(1, int(round(abs(top - bottom) / step)))
-    return [top + (bottom - top) * k / n for k in range(n + 1)]
-
-
-def leg_section(t, v, side, outer_a, inner_a, b):
+def leg_section(t, side, outer_a, inner_a, b):
     """A leg's cross-section: wide on the outside, flattened on the inside (where the legs meet)."""
     outward = math.sin(t) * side > 0
     a = outer_a if outward else inner_a
@@ -45,7 +40,7 @@ def hakama_leg(r, side):
     m = K.Mesh()
     n, step = r["leg"]
     cx = LEG_X * side
-    zs = levels(0.05, HAKAMA_HEM, step)
+    zs = K.levels(0.05, HAKAMA_HEM, step)
     pts, uvs = [], []
     total = len(zs) - 1
     for j, z in enumerate(zs):
@@ -56,7 +51,7 @@ def hakama_leg(r, side):
         row, uvrow = [], []
         for i in range(n + 1):
             t = TAU * i / n
-            x, y, nrm = leg_section(t, v, side, outer, inner, b)
+            x, y, nrm = leg_section(t, side, outer, inner, b)
             front = max(0.0, -math.cos(t))
             back = max(0.0, math.cos(t))
             # pleats: sharp at the front (five), softer at the back (two)
@@ -77,7 +72,7 @@ def hip(r):
     m = K.Mesh()
     n, step = r["hip"]
     pts, uvs = [], []
-    for z in levels(HIP_TOP, -0.1, step):
+    for z in K.levels(HIP_TOP, -0.1, step):
         row, uvrow = [], []
         for i in range(n + 1):
             t = TAU * i / n
@@ -96,7 +91,7 @@ def wrap(r, side):
     m = K.Mesh()
     n, step = r["wrap"]
     cx = LEG_X * side
-    zs = levels(WRAP_TOP, WRAP_BOTTOM, step)
+    zs = K.levels(WRAP_TOP, WRAP_BOTTOM, step)
     hi = step < 0.1
     pts, uvs = [], []
     for z in zs:
@@ -143,7 +138,7 @@ def boot(r, side):
     m = K.Mesh()
     n, step = r["boot"]
     cx = LEG_X * side
-    zs = levels(BOOT_TOP, SOLE, step)
+    zs = K.levels(BOOT_TOP, SOLE, step)
     hi = step < 0.1
     pts, uvs = [], []
     for z in zs:

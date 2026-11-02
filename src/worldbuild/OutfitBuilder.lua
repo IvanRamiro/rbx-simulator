@@ -237,8 +237,8 @@ function OutfitBuilder.setMaps(outfitId, maps)
         if appearance then
             appearance.ColorMap = ids.Color or appearance.ColorMap
             appearance.NormalMap = ids.Normal or appearance.NormalMap
-            appearance.RoughnessMap = ids.Roughness
-            appearance.MetalnessMap = ids.Metalness
+            appearance.RoughnessMap = ids.Roughness or appearance.RoughnessMap
+            appearance.MetalnessMap = ids.Metalness or appearance.MetalnessMap
         end
     end
 end

@@ -81,7 +81,7 @@ local function writeQi(player, force)
     local ok, err = pcall(function()
         store:SetAsync(tostring(player.UserId), qi)
     end)
-    if ok then
+    if ok and player.Parent then -- a write still running when the player left mustn't keep them
         written[player] = { Qi = qi, At = os.clock() }
     else
         warn("LeaderboardService: couldn't record " .. player.Name .. "'s Qi: " .. tostring(err))
@@ -129,7 +129,9 @@ end
 
 -- A player's Qi goes on the board as soon as their data loads, not at the next round.
 local function onPlayerAdded(player)
-    if PlayerData.waitForData(player) and player.Parent == Players then
+    -- QiService makes leaderstats on the same data load, in no set order with this
+    local stats = PlayerData.waitForData(player) and player:WaitForChild("leaderstats", 30)
+    if stats and stats:WaitForChild("Qi", 30) and player.Parent == Players then
         writeQi(player, true)
         render(topEntries())
     end

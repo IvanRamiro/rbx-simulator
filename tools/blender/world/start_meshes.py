@@ -2,8 +2,7 @@
 and the cradle floor (SI_CradleFloor), which Yggdrasil places along its great root. Yggdrasil's
 atlas (ygg_meshes) also reuses the strata, moss and stone colours here. The Starting Island's own
 underside was retired with it (2026-11-01)."""
-import bpy, math, os, random
-from mathutils import Vector
+import math
 import worldlib as W
 
 TAU = 2 * math.pi
@@ -104,6 +103,6 @@ def cradle_floor_mesh(coll, mat, bands, name="SI_CradleFloor"):
     for ra, rb_ in zip(rings, rings[1:]):
         for i in range(seg):
             j = (i + 1) % seg
-            faces.append([ra[i], ra[j], rb_[j], rb_[i]][::-1] if False else [ra[i], rb_[i], rb_[j], ra[j]])
+            faces.append([ra[i], rb_[i], rb_[j], ra[j]])
             uvs.append([(i / seg * 2, v0), (i / seg * 2, v1), ((i + 1) / seg * 2, v1), ((i + 1) / seg * 2, v0)])
     return W.mesh_object(name, [W.Vector(v) for v in verts], faces, coll, uvs=uvs, smooth=True, material=mat)

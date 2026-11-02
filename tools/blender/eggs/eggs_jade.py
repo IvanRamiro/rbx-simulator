@@ -13,13 +13,11 @@ roughness and metalness maps (egg_bake.py). Glowing parts stay separate (Neon in
   branches spread into lumpy crowns of leaves; a spiral of Qi glowing on its front.
 
     import eggs_jade as J
-    J.build()           # the high-detail eggs, in collections JadeSpiritEgg, BloomwoodEgg, ...
+    J.build()           # the high-detail eggs, in collections JadeSpiritEggHi, BloomwoodEggHi, ...
     J.export_all()      # bake and export: assets/eggs/<EggId>.fbx plus its maps
 """
 import math
 import random
-
-import bpy
 
 import egg_bake as B
 import egg_hi as Hm
@@ -28,7 +26,7 @@ import egg_kit as K
 W = K.W
 V = K.V
 TAU = K.TAU
-H, R = K.H, K.R
+H = K.H
 
 
 def on(u, v, off=0.0):
@@ -258,7 +256,7 @@ def bloomwood(coll, M):
     K.shell(inner, (0.5, 0.5), nu=32, nv=20, offset=-0.04)
     under = inner.object("BW_Under", coll, M["gold"])     # gold showing in the seams between the facets
     under["keep"] = True
-    gold, leaves, petals, heart = Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi()
+    gold, leaves, petals = Hm.Hi(), Hm.Hi(), Hm.Hi()
     lotus_glow = W.MeshBuilder()
     rnd = random.Random(43)
     # gold filigree branching down over the crown from its tip
@@ -340,7 +338,6 @@ def plank(hi, u0, u1, v0, v1, lift, depth, seed, mat=0, nu=3, nv=8):
 
 
 def ancient_grove(coll, M):
-    mb = W.MeshBuilder()
     # carved planks: fourteen upright columns round the egg, each split once or twice at its own
     # heights, under a domed cap at the crown and a disc at the base
     wood = Hm.Hi()
@@ -401,7 +398,7 @@ def ancient_grove(coll, M):
                  uv_scale=2.5, tip=False, seed=85 + k)
         crowns.append([(tuple(fork_to + V((dx, dy, dz)) * 0.24), 0.24 * s_) for dx, dy, dz, s_ in
                        ((0, 0.3, 0, 0.75), (0.5, 0, 0.3, 0.55), (-0.45, 0.05, -0.3, 0.55))])
-    crown_objs = [Hm.foliage(f"AG_Crown{k}", coll, M["foliage"], lobes, voxel=0.03, seed=k) for k, lobes in enumerate(crowns)]
+    crown_objs = [Hm.foliage(f"AG_Crown{k}", coll, M["foliage"], lobes, voxel=0.03) for k, lobes in enumerate(crowns)]
     # the spiral of Qi on the front, low and to the right, its tail sweeping up
     glow = W.MeshBuilder()
     su, sv = 0.06, 0.3

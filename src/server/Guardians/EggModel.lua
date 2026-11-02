@@ -1,6 +1,6 @@
--- A loose egg model (guarded, carried or dropped), built from its mesh in ServerStorage.EggMeshes
--- (stored by WorldBuilder.storeEgg). Parts are welded to the body ("Egg", the PrimaryPart); glow
--- pieces are Neon in their exported colour, as on the stands.
+-- A loose egg model (on a stand, carried, dropped or hatching), built from its mesh in
+-- ServerStorage.EggMeshes (stored by WorldBuilder.storeEgg). Parts are welded to the body ("Egg",
+-- the PrimaryPart); glow pieces are Neon in their exported colour, as on the stands.
 --
 --   EggModel.build(eggId, height)  a Model `height` studs tall, its pivot at the egg's centre;
 --                                  every part non-colliding, unanchored and massless.

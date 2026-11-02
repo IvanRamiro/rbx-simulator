@@ -9,8 +9,6 @@ and baked; the robe and hakama exported as layered clothing on the blocky body, 
 layered clothing worn over the robe. Returns the export reports. Uploading the maps and setting the
 accessories up in Studio are separate (see the vault's Worked Builds note).
 """
-import bpy
-
 import ee_bake as B
 import ee_export as X
 import ee_kit as K
@@ -20,8 +18,16 @@ import ee_waist as Wt
 
 
 def run(ref_dir, out_dir=None):
+    saved = K.OUT_DIR
     if out_dir:
         K.OUT_DIR = out_dir
+    try:
+        return _run(ref_dir)
+    finally:
+        K.OUT_DIR = saved
+
+
+def _run(ref_dir):
     report = {"reference": X.setup_reference(ref_dir)}
     root = K.collection("EclipseExorcist")
     built = {}

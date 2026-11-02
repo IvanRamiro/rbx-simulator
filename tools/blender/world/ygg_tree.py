@@ -15,7 +15,6 @@ import random
 from mathutils import Vector
 
 import worldlib as W
-import ygg_island as Y
 
 TAU = 2 * math.pi
 FLUTES = 7
@@ -92,7 +91,7 @@ def trunk(coll, mat, bands):
     return W.mesh_object("YG_Trunk", verts, faces, coll, uvs=uvs, material=mat)
 
 
-def veins(coll, mat):
+def veins(coll):
     """Qi in the grooves: a broken ribbon up each groove, lying just proud of the bark."""
     verts, faces = [], []
     rnd = random.Random(7)
@@ -287,7 +286,7 @@ def aerial_roots(coll, mat, bands):
 
 
 def build(coll, mat, bands):
-    objs = [trunk(coll, mat, bands), veins(coll, mat)]
+    objs = [trunk(coll, mat, bands), veins(coll)]
     objs += mound_roots(coll, mat, bands)
     objs += limbs(coll, mat, bands)
     objs += crown(coll, mat, bands)

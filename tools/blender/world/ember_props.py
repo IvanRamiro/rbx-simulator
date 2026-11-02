@@ -57,7 +57,7 @@ def forge_walls(coll, mat, bands):
         x, z = FX + math.cos(a) * (FR - 1.5), FZ + math.sin(a) * (FR - 1.5)
         courses = rnd.choice((1, 2, 2, 3, 4)) if abs((a + math.pi / 2 + math.pi) % TAU - math.pi) > 0.7 else 5
         for c in range(courses):
-            yaw = -a + rnd.uniform(-0.06, 0.06)
+            rnd.uniform(-0.06, 0.06)            # an unused draw, kept so the stones after it stay as exported
             mb.box((x, FORGE_FLOOR + 0.55 + c * 1.1, z), (3.3 - c * 0.15, 1.05, 1.6), bands[EM.BASALT if c % 2 else EM.SOOT],
                    yaw=math.pi / 2 - a, u=rnd.random(), top_shade=0.8, side_shade=0.55)
     # the furnace chimney on the north side (toward -Z), a tapering stack with an iron collar
@@ -198,7 +198,7 @@ def fire_crystal(coll, mat, bands):
         a = rnd.uniform(0, TAU)
         d = (math.cos(a) * rnd.uniform(0.2, 0.55), 1, math.sin(a) * rnd.uniform(0.2, 0.55))
         JM.crystal_prism(mb, (math.cos(a) * 0.7, 0.6, math.sin(a) * 0.7), d, rnd.uniform(2.2, 4.6), rnd.uniform(0.35, 0.6),
-                         bands[EM.CRYSTAL], k)
+                         bands[EM.CRYSTAL])
     return mb.object("EP_FireCrystal", coll, mat)
 
 
@@ -233,7 +233,7 @@ def obsidian_shard(coll, mat, bands):
     for k in range(3):
         a = rnd.uniform(0, TAU)
         JM.crystal_prism(mb, (math.cos(a) * 0.5, -0.5, math.sin(a) * 0.5), (math.cos(a) * 0.35, 1, math.sin(a) * 0.35),
-                         rnd.uniform(2.5, 4.5), rnd.uniform(0.45, 0.7), bands[EM.OBSIDIAN], k)
+                         rnd.uniform(2.5, 4.5), rnd.uniform(0.45, 0.7), bands[EM.OBSIDIAN])
     return mb.object("EP_ObsidianShard", coll, mat)
 
 

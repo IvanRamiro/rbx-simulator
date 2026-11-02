@@ -715,7 +715,8 @@ function QinggongFx.play(player, kind, value)
         end
     elseif kind == "Glide" then
         state.gliding = value == 1
-        local rig = visible and rigFor(player)
+        -- out of range, an existing rig still learns it, or its clouds stay on after a glide ends
+        local rig = if visible then rigFor(player) else rigs[character]
         if rig then
             rig.gliding = state.gliding
             rig.active = true

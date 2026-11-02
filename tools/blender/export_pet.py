@@ -248,20 +248,7 @@ def main():
         for polygon in obj.data.polygons:
             polygon.use_smooth = False
 
-    bpy.ops.object.select_all(action="DESELECT")
-    for obj in exported:
-        obj.select_set(True)
-    bpy.ops.export_scene.fbx(
-        filepath=os.path.join(OUTPUT_DIR, PET_ID + ".fbx"),
-        use_selection=True,
-        object_types={"MESH"},
-        axis_forward="-Z",
-        axis_up="Y",
-        apply_scale_options="FBX_SCALE_UNITS",
-        path_mode="COPY",
-        embed_textures=True,
-        mesh_smooth_type="FACE",
-    )
+    export_fbx(exported)
 
     low = [min(v.co[i] for obj in exported for v in obj.data.vertices) for i in range(3)]
     high = [max(v.co[i] for obj in exported for v in obj.data.vertices) for i in range(3)]

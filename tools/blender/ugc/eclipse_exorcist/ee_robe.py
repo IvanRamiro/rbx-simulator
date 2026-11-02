@@ -41,11 +41,6 @@ SLEEVE_X = 1.53
 CUFF = 0.62                   # the crimson cuff runs from the sleeve's opening up to here
 
 
-def levels(top, bottom, step):
-    n = max(1, int(round(abs(top - bottom) / step)))
-    return [top + (bottom - top) * k / n for k in range(n + 1)]
-
-
 def torso_b(z):
     """The torso's half-depth: the body's 0.5 plus room, filling out over the chest to meet the
     collar (which must clear the head)."""
@@ -71,7 +66,7 @@ def torso(r):
     m = K.Mesh()
     n, step = r["torso"]
     # the game mesh keeps only the rows the shape needs (where the chest fills out)
-    zs = levels(1.98, -0.04, step)[::-1] if step else [-0.04, 0.6, 1.3, 1.65, 1.98]
+    zs = K.levels(1.98, -0.04, step)[::-1] if step else [-0.04, 0.6, 1.3, 1.65, 1.98]
     rings = [(z, TORSO_A, torso_b(z)) for z in zs]
     bt = torso_b(2.0)
     rings += [(2.04, TORSO_A - 0.02, bt), (2.075, TORSO_A - 0.15, bt), (2.09, NECK[0] + 0.012, NECK[1] + 0.01)]
@@ -125,7 +120,7 @@ def sleeve(r, side):
     m = K.Mesh()
     n, step = r["sleeve"]
     cx = SLEEVE_X * side
-    zs = sorted(set(levels(2.04, 0.42, step) + [CUFF]), reverse=True)
+    zs = sorted(set(K.levels(2.04, 0.42, step) + [CUFF]), reverse=True)
     pts, uvs, mats = [], [], []
     for z in zs:
         v = (2.04 - z) / (2.04 - 0.42)

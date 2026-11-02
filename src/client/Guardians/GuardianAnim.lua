@@ -288,6 +288,36 @@ function GuardianAnim:tremor(joint, pitch, yaw, roll)
     t[3] += roll or 0
 end
 
+-- How open the eyes are for blinking this frame: 1, or nearly shut at the middle of a blink. A blink
+-- lasts `length` seconds and comes every `gap` to `gap` + 3 seconds, never while `asleep`.
+function GuardianAnim:blink(now, asleep, gap, length)
+    self.nextBlink = self.nextBlink or now + 2
+    if not asleep and now >= self.nextBlink then
+        self.blinkAt = now
+        self.nextBlink = now + gap + 3 * math.random()
+    end
+    if self.blinkAt then
+        local b = (now - self.blinkAt) / length
+        if b >= 1 then
+            self.blinkAt = nil
+        elseif not asleep then
+            return 1 - math.min(1, math.sin(math.pi * b) * 1.6) * 0.95 -- shut for a moment at its middle
+        end
+    end
+    return 1
+end
+
+-- Opens an eye part (or nil) to `amount` of its height `base`. A size change keeps the part's
+-- centre, so its weld to the head is untouched; it eases quickly enough for a full blink.
+function GuardianAnim.openEye(part, base, amount)
+    if part then
+        local size = Vector3.new(base.X, math.max(base.Y * amount, 0.02), base.Z)
+        if (part.Size - size).Magnitude > 0.005 then
+            part.Size = part.Size:Lerp(size, 0.6)
+        end
+    end
+end
+
 -- The yaw (degrees) that turns the head toward the target player, or 0.
 function GuardianAnim:lookYaw(limit)
     local id = self.model:GetAttribute("TargetId")

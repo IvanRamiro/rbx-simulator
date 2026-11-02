@@ -152,13 +152,18 @@ local function onPlayerAdded(player)
         task.spawn(onCharacterAdded, player, player.Character)
     end
 
-    local owned = {}
+    -- ownsOutfit can yield (a game pass check): the player may have left by the end
+    local owns, owned = {}, {}
     for outfitId in GameConfig.Outfits do
         if ownsOutfit(player, outfitId) then
-            ownership[player][outfitId] = true
+            owns[outfitId] = true
             table.insert(owned, outfitId)
         end
     end
+    if not player.Parent then
+        return
+    end
+    ownership[player] = owns
     table.sort(owned)
     player:SetAttribute("OwnedOutfits", table.concat(owned, ","))
 

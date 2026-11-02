@@ -162,7 +162,7 @@ def moonstone_shards(coll, mat, bands):
     for k in range(4):
         a = rnd.uniform(0, TAU)
         JM.crystal_prism(mb, (math.cos(a) * 0.5, 0.3, math.sin(a) * 0.5), (math.cos(a) * 0.35, 1, math.sin(a) * 0.35),
-                         rnd.uniform(1.8, 3.6), rnd.uniform(0.3, 0.5), bands[MM.MOONSTONE], k)
+                         rnd.uniform(1.8, 3.6), rnd.uniform(0.3, 0.5), bands[MM.MOONSTONE])
     return mb.object("MI_MoonstoneShards", coll, mat)
 
 

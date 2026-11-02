@@ -78,11 +78,6 @@ function GuardianBuilder.store(model, guardianId)
             part.Material = Enum.Material.Neon
             local look = placements.Glow and placements.Glow[name] or {}
             part.Color = look.Color or Color3.fromHex(info.Hex)
-            if look.Scale then
-                local at = part.CFrame
-                part.Size *= look.Scale
-                part.CFrame = at
-            end
             part.CastShadow = false
             part.TextureID = ""
             for _, child in part:GetChildren() do

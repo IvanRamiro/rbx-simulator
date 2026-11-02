@@ -248,17 +248,6 @@ function Rig.setup(anim)
     anim.orb = anim.model:FindFirstChild("Orb")
     anim.eyeSize = anim.eyes and anim.eyes.Size
     anim.pupilSize = anim.pupils and anim.pupils.Size
-    anim.nextBlink = os.clock() + 2
-end
-
--- a size change keeps the part's centre; its weld to the head is untouched
-local function open(part, base, amount)
-    if part then
-        local size = Vector3.new(base.X, math.max(base.Y * amount, 0.02), base.Z)
-        if (part.Size - size).Magnitude > 0.005 then
-            part.Size = part.Size:Lerp(size, 0.6)   -- quick enough for a full blink
-        end
-    end
 end
 
 function Rig.glow(anim, state, now)
@@ -273,33 +262,21 @@ function Rig.glow(anim, state, now)
         color = Color3.fromRGB(0, 60, 150):Lerp(EYES.Guardian, smooth((awaken - 0.3) / 0.4))
     end
     local asleep = (state == "Dormant" or state == "Resting") and not awaken
-    local amount = OPEN[state] or 1
-    if not asleep and now >= anim.nextBlink then
-        anim.blinkAt = now
-        anim.nextBlink = now + 2.5 + 3 * math.random()
-    end
-    if anim.blinkAt then
-        local b = (now - anim.blinkAt) / 0.28
-        if b >= 1 then
-            anim.blinkAt = nil
-        elseif not asleep then
-            amount *= 1 - math.min(1, math.sin(math.pi * b) * 1.6) * 0.95   -- shut for a moment at its middle
-        end
-    end
+    local amount = (OPEN[state] or 1) * anim:blink(now, asleep, 2.5, 0.28)
     local material = if asleep then Enum.Material.SmoothPlastic else Enum.Material.Neon
     if eyes then
         if eyes.Material ~= material then
             eyes.Material = material
         end
         eyes.Color = if asleep then STONE else eyes.Color:Lerp(color, 0.25)
-        open(eyes, anim.eyeSize, if asleep then 1 else amount)
+        GuardianAnim.openEye(eyes, anim.eyeSize, if asleep then 1 else amount)
     end
     if pupils then
         if pupils.Material ~= material then
             pupils.Material = material
         end
         pupils.Color = if asleep then STONE_PUPIL else PUPIL
-        open(pupils, anim.pupilSize, if asleep then 1 else amount)
+        GuardianAnim.openEye(pupils, anim.pupilSize, if asleep then 1 else amount)
     end
     if orb then
         local orbMaterial = if asleep then Enum.Material.Glass else Enum.Material.Neon

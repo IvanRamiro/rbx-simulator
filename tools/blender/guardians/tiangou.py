@@ -120,11 +120,6 @@ def materials():
 cone, sphere, frame = G.cone, G.sphere, G.frame
 
 
-def tuft(hi, base, direction, normal, length, width, curl=0.15, twist=0.0):
-    """A tongue of white fire: a narrow leaf shape, pointed, curling."""
-    Hm.leaf(hi, base, direction, normal, length, width, mat=0, fold=0.12, curl=curl, twist=twist, steps=10, across=3, shape=0.5)
-
-
 wisp = G.wisp
 
 
@@ -147,13 +142,6 @@ def ear(hi, base, tip, front, width, depth):
     for tri, out in (([ia, ib, ih], f), ([ib, it, ih], f), ([it, ia, ih], f), ([ib, ic, it], -f + across), ([ic, ia, it], -f - across),
                      ([ia, ic, ib], -up)):
         hi.facing(tri, [(0, 0), (1, 0), (0.5, 1)], tuple(out))
-
-
-def sheet(hi, name, coll, mat, thickness=0.08):
-    o = hi.object(name, coll, [mat])
-    Hm.solidify(o, thickness)
-    o["sheet"] = True
-    return o
 
 
 def flame_ring(hi, centre, axis, radius, count, length, rnd, lean=0.6, width=0.3):

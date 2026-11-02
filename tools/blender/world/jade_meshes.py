@@ -5,10 +5,9 @@ canopy, standing pads and its Qinggong climb) and the Grove Gate.
 Island-specific pieces are authored in island-local Roblox studs and exported with an anchor at
 the island centre; kit pieces (tree shelf, gate) are authored around their own origin.
 """
-import bpy, math, os, random
+import math, random
 import worldlib as W
 import jade_island as J
-import layout as L
 
 TAU = 2 * math.pi
 
@@ -96,10 +95,6 @@ STRIPS = [(96, strata), (48, jade), (48, moss), (64, bark), (64, leaf), (48, sto
 STRATA, JADE, MOSS, BARK, LEAF, STONE, GOLD, BAMBOO, FLOWERS, SOIL, GLOW = range(11)
 
 
-def flower_u(k):
-    return (k + 0.5) / 5
-
-
 # ---------- shared helpers ----------
 def oriented(mb, pts, want, band, u=0.5, shade=None):
     import start_props
@@ -157,7 +152,7 @@ CRYSTAL_SITES = [(-60, -60, 48, 26), (68, -68, -60, 28), (20, -88, 68, 32), (-68
                  (-12, -108, -28, 36), (-96, -34, 10, 22), (40, -40, -96, 22), (100, -36, -20, 22)]
 
 
-def crystal_prism(mb, base, direction, length, radius, band, seed):
+def crystal_prism(mb, base, direction, length, radius, band):
     """A hexagonal crystal with a pointed tip, growing from `base` along `direction`."""
     d = W.Vector(direction).normalized()
     ref = W.Vector((0, 1, 0)) if abs(d.y) < 0.9 else W.Vector((1, 0, 0))
@@ -184,7 +179,7 @@ def under_crystals(coll, mat, bands):
             length = size * rnd.uniform(0.55, 1.0)
             radius = size * rnd.uniform(0.1, 0.17)
             base = (x + rnd.uniform(-2, 2), y + 3, z + rnd.uniform(-2, 2))
-            crystal_prism(mb, base, tuple(d), length, radius, bands[JADE], n * 10 + k)
+            crystal_prism(mb, base, tuple(d), length, radius, bands[JADE])
     return mb.object("JG_UnderCrystals", coll, mat)
 
 
@@ -235,7 +230,7 @@ def vines(coll, mat, bands):
 
 # ---------- the Elder Jade Tree ----------
 EX, EZ = J.ELDER[0], J.ELDER[1]
-PILLAR_RING, PILLAR_R, TRUNK_BASE = 6.0, 3.3, 12.0
+PILLAR_RING, TRUNK_BASE = 6.0, 12.0
 
 
 def elder_base():
@@ -259,7 +254,6 @@ def trunk_axis(h):
 
 def elder_trunk(coll, mat, bands):
     mb = W.MeshBuilder()
-    rnd = random.Random(13)
     y0 = elder_base()
     B = bands[BARK]
     # three root pillars around a walk-in hollow (entrances west, south-east, north-east)
@@ -322,14 +316,6 @@ def elder_branches(coll, mat, bands):
         mid = (ax + math.cos(ang) * reach * 0.55, y0 + h + rise * 0.3, az + math.sin(ang) * reach * 0.55)
         W.mb_tube(mb, [start, mid, branch_end(ang, h, reach, rise)], lambda t: 2.4 - 1.5 * t, 8, bands[BARK], per=5)
     return mb.object("JG_ElderBranches", coll, mat)
-
-
-def pad_disc(mb, centre, r, band, seed, thick=1.0):
-    rnd = random.Random(seed)
-    ph = rnd.uniform(0, TAU)
-    mb.lathe([(r * 0.6, thick, 1.0), (r, thick * 0.4, 0.85), (r * 0.95, -thick * 0.3, 0.55), (r * 0.5, -thick * 0.8, 0.35)],
-             12, band, centre=centre, rmod=lambda th, k: 1 + 0.1 * math.sin(5 * th + ph), phase=ph, cap_top=True,
-             cap_bottom=True, u_repeat=0.0)
 
 
 CROWN_PAD = 58.6  # height of the crown nest's floor above the tree base

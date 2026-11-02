@@ -499,8 +499,11 @@ RemoteEvents.QinggongFxEvent.OnClientEvent:Connect(function(source, kind, value)
 end)
 
 player:GetAttributeChangedSignal("QinggongAirLeaps"):Connect(updateHud)
+local knownMax = maxStamina()
 player:GetAttributeChangedSignal("QinggongMaxStamina"):Connect(function()
-    stamina = math.min(stamina, maxStamina())
+    -- the first value to arrive (on joining) fills the bar; later changes only cap it
+    stamina = if knownMax == 0 then maxStamina() else math.min(stamina, maxStamina())
+    knownMax = maxStamina()
 end)
 player.CharacterAdded:Connect(function()
     leapsUsed = 0

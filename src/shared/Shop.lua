@@ -1,8 +1,7 @@
 -- What the Blacksmith sells and what Buy & Sell pays, from GameConfig.WeaponKinds, WeaponTiers and
 -- SpiritStones. Shared, so the server's checks and the client's windows never disagree on a price.
 --
---   Shop.weapons              every weapon, by tier then kind: { Id, Kind, Tier, Name, Realm, Price, Damage }
---   Shop.weapon(id)           one of them, or nil
+--   Shop.weapon(id)           a weapon ("Sword<tier>" or "Spear<tier>"): { Id, Kind, Tier, Name, Realm, Price, Damage }, or nil
 --   Shop.realmIndex(realm)    a realm's place in the ranks (1 = Qi Awakening), or nil
 --   Shop.playerRealmIndex(player)
 --   Shop.weaponRefund(id, element)  what a weapon sells back for (a forged one returns part of its forging too)
@@ -32,7 +31,6 @@ function Shop.playerRealmIndex(player)
     return rank and Shop.realmIndex(rank.Realm) or 1
 end
 
-Shop.weapons = {}
 local byId = {}
 for tier, info in GameConfig.WeaponTiers do
     assert(Shop.realmIndex(info.Realm) == tier, "WeaponTiers[" .. tier .. "] is not the realm in that place: " .. info.Realm)
@@ -46,7 +44,6 @@ for tier, info in GameConfig.WeaponTiers do
             Price = info.Price,
             Damage = info.Damage * GameConfig.WeaponKinds[kind].DamageScale,
         }
-        table.insert(Shop.weapons, weapon)
         byId[weapon.Id] = weapon
     end
 end

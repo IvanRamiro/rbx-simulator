@@ -1,13 +1,13 @@
 """Presentation renders for the eggs, in their own Blender scene ("EggLab") so the island scenes are
 never touched. Objects are linked into the scene's collection for the render and unlinked after.
 
-    render(objects, path, view="front" | "three_quarter" | "back", size=(900, 900), distance=None, cycles=0)
-    sheet(rows, path)   rows: [[objects of egg 1, objects of egg 2, ...], ...] laid out in a grid
+    render(objects, path, view="front" | "three_quarter" | "back", size=(900, 900), centre=(0, 0, 1.4),
+           distance=8.5, cycles=0)
 """
 import math
 
 import bpy
-from mathutils import Euler, Vector
+from mathutils import Vector
 
 SCENE = "EggLab"
 BG = (0.012, 0.016, 0.05)
@@ -54,13 +54,6 @@ def frame(scene, centre, distance, view):
     offset = Vector((math.sin(yaw) * math.cos(pitch), -math.cos(yaw) * math.cos(pitch), math.sin(pitch))) * distance
     cam.location = Vector(centre) + offset
     cam.rotation_euler = (Vector(centre) - cam.location).to_track_quat("-Z", "Y").to_euler()
-
-
-def _bloom(scene, on):
-    try:
-        scene.eevee.use_bloom = on
-    except AttributeError:
-        pass
 
 
 def render(objects, path, view="front", size=(900, 900), centre=(0, 0, 1.4), distance=8.5, cycles=0):

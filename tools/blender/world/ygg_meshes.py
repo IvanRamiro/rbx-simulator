@@ -11,8 +11,6 @@ below (its highest part at Y 69.5).
     ygg_meshes.export(objs, kit, img)              # assets/world/Yggdrasil/*.fbx
 """
 import math
-import os
-import random
 
 import bpy
 

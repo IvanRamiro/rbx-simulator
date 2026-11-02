@@ -231,7 +231,7 @@ def jade_outcrop(coll, mat, bands):
         a = rnd.uniform(0, TAU)
         d = (math.cos(a) * rnd.uniform(0.2, 0.5), 1, math.sin(a) * rnd.uniform(0.2, 0.5))
         JM.crystal_prism(mb, (math.cos(a) * 0.8, 0.8, math.sin(a) * 0.8), d, rnd.uniform(2.5, 5.0), rnd.uniform(0.4, 0.7),
-                         bands[JM.JADE], k)
+                         bands[JM.JADE])
     crystals = mb.object("JG_OutcropCrystals_tmp", coll, mat)
     return _join("JG_JadeOutcrop", [o_rock, crystals])
 
@@ -241,7 +241,6 @@ def ruin_pillar(coll, mat, bands):
     rnd = random.Random(41)
     S = bands[JM.STONE]
     mb.lathe([(1.6, 0.5, 0.85), (1.8, 0.2, 0.7), (1.8, -0.8, 0.5)], 8, S, cap_top=True, u_repeat=0.0)
-    broken = lambda th, k: 1.0
     mb.lathe([(1.0, 5.4, 0.8), (1.0, 0.5, 0.6)], 8, S, cap_top=False, u_repeat=1.0)
     # jagged broken top
     top = [(math.cos(TAU * i / 8) * 1.0, 5.4 + rnd.uniform(-0.6, 0.9), math.sin(TAU * i / 8) * 1.0) for i in range(8)]

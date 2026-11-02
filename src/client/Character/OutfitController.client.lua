@@ -160,12 +160,16 @@ local function collect(state)
 end
 
 local function track(outfit)
-    -- worn outside the character (see OutfitService), its Character value names the wearer
+    -- worn outside the character (see OutfitService), its Character value names the wearer; with
+    -- streaming the wearer can arrive after the outfit, leaving the value nil until then
     local link = outfit:WaitForChild("Character", 10)
-    if not link or not link.Value or not CollectionService:HasTag(outfit, OUTFIT_TAG) then
+    while link and not link.Value and outfit.Parent do
+        task.wait(0.5)
+    end
+    if not (link and link.Value) or not CollectionService:HasTag(outfit, OUTFIT_TAG) then
         return
     end
-    states[outfit] = { outfit = outfit, character = link.Value, chains = {}, cuffs = {}, phase = math.random() * 10, lastF = 0, ready = false }
+    states[outfit] = { outfit = outfit, link = link, character = link.Value, chains = {}, cuffs = {}, phase = math.random() * 10, lastF = 0, ready = false }
 end
 
 local function untrack(outfit)
@@ -252,9 +256,15 @@ RunService.RenderStepped:Connect(function(dt)
     local now = os.clock()
     dt = math.min(dt, 1 / 20)
     for outfit, state in states do
-        local rootPart = state.character and state.character:FindFirstChild("HumanoidRootPart")
-        if not outfit.Parent or not state.character.Parent or not rootPart then
+        if state.link.Value and state.link.Value ~= state.character then
+            -- the wearer streamed back in as new instances: find their limbs again
+            state.character, state.ready = state.link.Value, false
+        end
+        local rootPart = state.character:FindFirstChild("HumanoidRootPart")
+        if not outfit.Parent then
             states[outfit] = nil
+        elseif not rootPart then
+            continue -- the wearer streamed out or is respawning: the outfit is rebuilt or comes back
         elseif (rootPart.Position - camera.CFrame.Position).Magnitude < SWAY_DISTANCE then
             if not state.ready then
                 collect(state)

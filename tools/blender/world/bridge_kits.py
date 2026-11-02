@@ -440,7 +440,7 @@ def moon_slope():
     return best
 
 
-def crescent(hi, centre, radius, thickness, width=0.42, start=0.25, end=0.75, segments=20, axis="z"):
+def crescent(hi, centre, radius, width=0.42, start=0.25, end=0.75, segments=20, axis="z"):
     """A crescent moon: a tube along an arc that thickens in its middle, facing along `axis`."""
     cx, cy, cz = centre
     pts = []
@@ -477,7 +477,7 @@ def moon_stair(ox, mats):
     for side in (-1, 1):
         x = ox + side * (DECK_WIDTH / 2 - 0.65)
         prism(stone, (x, -rise / 2 + 0.6, run / 2 - 0.4), 0.36, 3.0, sides=8, taper=0.85)     # plumb once laid
-        crescent(gold, (x, -rise / 2 + 4.0, run / 2 - 0.4), 0.55, 0.14, width=0.16, axis="x")
+        crescent(gold, (x, -rise / 2 + 4.0, run / 2 - 0.4), 0.55, width=0.16, axis="x")
         box(frame_stone, (x, -0.4, 0), (1.3, 2.6, SECTION + 0.02))           # stringer
         box(frame_gold, (x, 0.95, 0), (1.42, 0.14, SECTION + 0.02))          # its gold trim
         box(frame_gold, (x, 3.0, 0), (0.24, 0.24, SECTION + 0.02))           # handrail
@@ -509,8 +509,8 @@ def moon_support(ox, mats):
             ring = [(hx + (math.cos(TAU * j / 12) * 0.26 if k % 2 else 0), y + math.sin(TAU * j / 12) * 0.48,
                      (math.cos(TAU * j / 12) * 0.26 if k % 2 == 0 else 0)) for j in range(13)]
             Hm.htube(gold, ring, lambda t: 0.08, sides=5, per=1, uv_scale=2.0, tip=False)
-    crescent(stone, (ox, cy, 0), cr, 0.6, width=1.15, start=0.54, end=0.96, segments=26, axis="z")
-    crescent(gold, (ox, cy, 0.0), cr + 0.55, 0.6, width=0.22, start=0.56, end=0.94, segments=26, axis="z")
+    crescent(stone, (ox, cy, 0), cr, width=1.15, start=0.54, end=0.96, segments=26, axis="z")
+    crescent(gold, (ox, cy, 0.0), cr + 0.55, width=0.22, start=0.56, end=0.94, segments=26, axis="z")
     prism(glow, (ox, cy - 2.6, 0), 0.95, 1.9, sides=12, taper=0.5)            # a moon lantern cradled in its arms
     prism(gold, (ox, cy - 0.7, 0), 1.1, 0.25, sides=12, taper=0.8)
     objs = [stone.object("MoonSupport_Stone", mats.coll, [mats.stone]),
@@ -536,8 +536,8 @@ def moon_gate(ox, mats):
     # a great crescent resting on the pillar caps, its horns rising past them
     span = px + 0.6
     cy = 15.5 - span * math.sin(math.radians(10))
-    crescent(gold, (ox, cy, 0), span / math.cos(math.radians(10)), 0.8, width=1.3, start=0.03, end=0.47, segments=44, axis="z")
-    crescent(stone, (ox, cy, -0.3), span / math.cos(math.radians(10)) - 1.3, 0.8, width=0.7, start=0.07, end=0.43, segments=40, axis="z")
+    crescent(gold, (ox, cy, 0), span / math.cos(math.radians(10)), width=1.3, start=0.03, end=0.47, segments=44, axis="z")
+    crescent(stone, (ox, cy, -0.3), span / math.cos(math.radians(10)) - 1.3, width=0.7, start=0.07, end=0.43, segments=40, axis="z")
     box(gold, (ox, 15.9, 0), (DECK_WIDTH + 2.0, 0.55, 0.9))                    # a gold beam between the caps
     for k in range(5):                                                         # a chain to the lantern
         ring = [(ox + (math.cos(TAU * j / 12) * 0.2 if k % 2 else 0), 15.4 - k * 0.6 + math.sin(TAU * j / 12) * 0.36,
@@ -729,7 +729,7 @@ def moon_deck(ox, mats):
     for side in (-1, 1):
         x = ox + side * (DECK_WIDTH / 2 - 0.65)
         prism(stone, (x, 0.0, half - 0.4), 0.36, 3.0, sides=8, taper=0.85)
-        crescent(gold, (x, 3.4, half - 0.4), 0.55, 0.14, width=0.16, axis="x")
+        crescent(gold, (x, 3.4, half - 0.4), 0.55, width=0.16, axis="x")
         box(stone, (x, -0.4, 0), (1.3, 2.6, SECTION + 0.02))                  # stringer
         box(gold, (x, 0.95, 0), (1.42, 0.14, SECTION + 0.02))                 # its gold trim
         box(gold, (x, 3.0, 0), (0.24, 0.24, SECTION + 0.02))                  # handrail
@@ -864,11 +864,12 @@ def export(theme, size=2048, extra=False):
         bpy.data.objects.remove(old, do_unlink=True)
     low = B.make_low(name, hi_objs, coll, EXTRA_BUDGET if extra else BUDGET[theme], sheet_ratio=0.25)
     os.makedirs(OUT_DIR, exist_ok=True)
+    saved = B.EGG_DIR
     B.EGG_DIR = OUT_DIR                     # the maps go next to the kit's FBX
     try:
         B.bake(name, hi_objs, low, size=size, small=1024, extrusion=0.04, ray=0.12)
     finally:
-        B.EGG_DIR = K.EGG_DIR
+        B.EGG_DIR = saved
     bodies = _split(low, coll, theme, pieces)
     rows, report = [], {}
     for k, (piece, body) in enumerate(zip(pieces, bodies)):

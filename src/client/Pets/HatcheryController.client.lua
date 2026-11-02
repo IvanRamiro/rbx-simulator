@@ -24,7 +24,7 @@ local TITLE_COLOR = Color3.fromRGB(240, 200, 110)
 local HATCH_COLOR = Color3.fromRGB(70, 160, 110)
 local DISABLED_COLOR = Color3.fromRGB(80, 80, 88)
 local WALK_AWAY = 18
-local PRESS_GAP = 0.6 -- seconds between hatch presses (the server stages one egg at a time)
+local PRESS_GAP = GameConfig.HatchingAltar.Stage -- the server stages one egg at a time: a press sooner is ignored
 
 local old = playerGui:FindFirstChild(HUD_NAME)
 if old then
@@ -177,10 +177,22 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt, who)
     render()
 end)
 
--- the list follows the egg inventory while the window is open
+-- the list follows the egg inventory, and the player's rank (which eggs they can hatch), while the
+-- window is open
 player.AttributeChanged:Connect(function(name)
     if window.Visible and string.sub(name, 1, 4) == "Egg_" then
         render()
+    end
+end)
+task.spawn(function()
+    local leaderstats = player:WaitForChild("leaderstats", 60)
+    local rank = leaderstats and leaderstats:WaitForChild("Rank", 60)
+    if rank then
+        rank.Changed:Connect(function()
+            if window.Visible then
+                render()
+            end
+        end)
     end
 end)
 

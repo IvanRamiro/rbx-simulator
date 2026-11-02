@@ -264,18 +264,11 @@ function Rig.setup(anim)
             table.insert(anim.magma, part)
         end
     end
-    anim.nextBlink = os.clock() + 2
 end
 
 local function shape(eye, open)
     for _, key in { "iris", "pupil" } do
-        local part, base = eye[key], eye[key .. "Size"]
-        if part then
-            local size = Vector3.new(base.X, math.max(base.Y * open, 0.02), base.Z)
-            if (part.Size - size).Magnitude > 0.005 then
-                part.Size = part.Size:Lerp(size, 0.6)   -- quick enough for a full blink
-            end
-        end
+        GuardianAnim.openEye(eye[key], eye[key .. "Size"], open)
     end
 end
 
@@ -300,19 +293,7 @@ function Rig.glow(anim, state, now)
     local eyes = anim.eyes
 
     -- the tortoise: a slow blink every few seconds; opening as it wakes
-    local open = OPEN[state] or 1
-    if not asleep and now >= anim.nextBlink then
-        anim.blinkAt = now
-        anim.nextBlink = now + 3 + 3 * math.random()
-    end
-    if anim.blinkAt then
-        local b = (now - anim.blinkAt) / 0.32
-        if b >= 1 then
-            anim.blinkAt = nil
-        else
-            open *= 1 - math.min(1, math.sin(math.pi * b) * 1.6) * 0.95   -- shut for a moment at its middle
-        end
-    end
+    local open = (OPEN[state] or 1) * anim:blink(now, asleep, 3, 0.32)
     if awaken then
         open *= smooth((awaken - 0.4) / 0.6)
     end

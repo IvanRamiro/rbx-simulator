@@ -279,7 +279,6 @@ def dome_spots(spacing, cx, cz, seed=3, rounds=24):
     """Points spread evenly over the dome outside the volcano, `spacing` apart: thrown at random,
     then pushed apart over the surface until they settle. [(point, normal)]."""
     rnd = random.Random(seed)
-    area = 0.0
     pts = []
     for _ in range(9000):
         u, v = rnd.random(), 0.5 + 0.5 * rnd.random()
@@ -466,7 +465,7 @@ def head(coll, M):
         ((-1.85, 12.95, -23.2), (1.6, 0.6, 1.7), (0, 0, -16)), ((1.85, 12.95, -23.2), (1.6, 0.6, 1.7), (0, 0, 16)),  # brow shelves
         ((-2.5, 10.6, -21.6), (1.3, 1.1, 1.6), None), ((2.5, 10.6, -21.6), (1.3, 1.1, 1.6), None),                # heavy jowls
         ((0, 11.2, -19.4), (3.1, 2.4, 1.8), None)], voxel=0.09, smooth=0.8, rough=0.03, chisel="XuanwuHide")
-    basalt, glow, pupils, lids, throat, obs = Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi()
+    basalt, glow, pupils, lids, throat = Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi()
     rnd = random.Random(31)
     # a crown of basalt columns rising from the brow and sweeping back, the volcano in small
     for row, (z, ys, count) in enumerate(((-22.6, 13.5, 3), (-21.0, 13.9, 4), (-19.4, 13.7, 3))):

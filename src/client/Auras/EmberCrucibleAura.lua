@@ -281,7 +281,6 @@ local function buildWyrm(aura)
     aura.wyrmGlow = meshPart(aura, "WyrmGlow", headScale, "Eye")
     local offset = head.CFrame:ToObjectSpace(glow.CFrame)
     aura.wyrmGlowOffset = offset.Rotation + offset.Position * headScale
-    aura.wyrmHeadSize = aura.wyrmHead.Size
 
     local shell = template("BeadShell")
     aura.beads = {}
@@ -443,7 +442,6 @@ function EmberCrucibleAura.update(aura, now, parts, cframes)
     local headAt = wyrmPoint(aura, seat, u, level)
     local headCF = CFrame.lookAt(headAt, wyrmPoint(aura, seat, u + 0.05, level)) * CFrame.Angles(0.15 * math.sin(now * 3), 0, 0)
     local present = fade * math.min(1, level * 1.5)
-    aura.wyrmHead.Size = aura.wyrmHeadSize
     place(aura.wyrmHead, headCF)
     place(aura.wyrmGlow, headCF * aura.wyrmGlowOffset)
     showPart(aura.wyrmHead, 0, present)

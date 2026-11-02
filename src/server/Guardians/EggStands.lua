@@ -11,7 +11,7 @@
 -- AuraOrigin attribute (the egg's resting point, facing the stand's front). Each egg's aura (an
 -- "EggAura" model in the island's EggAuras folder) is kept as a template when the server starts, so
 -- any stand can show any of its island's eggs; the aura's Stand attribute names its stand for the
--- client (src/client/Auras/EggAura.lua).
+-- client (src/client/Auras/EggAura.client.lua).
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -23,10 +23,8 @@ local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForCh
 local EggStands = {}
 
 local AURA_TAG = "EggAura"
-local STUDS_PER_EGG_UNIT = 1.3 -- the stands' egg scale (WorldBuilder: EGG_STUDS_PER_UNIT)
 local TAKE_DISTANCE = 12
 
-local slotsByIsland = {} -- [island] = { slot }
 local looks = {}         -- [eggId] = { ring = Color3, light = PointLight template, extras = { Instance }, aura = Model, auraOffset = CFrame }
 local onTake             -- function(player, slot), set by GuardianService
 
@@ -89,7 +87,7 @@ local function show(slot, eggId)
     local source = ServerStorage:FindFirstChild("EggMeshes") and ServerStorage.EggMeshes:FindFirstChild(eggId)
     assert(look and source, "no look for egg " .. eggId)
     local _, box = source:GetBoundingBox()
-    local height = box.Y * STUDS_PER_EGG_UNIT
+    local height = box.Y * GameConfig.EggStudsPerUnit
     local model = EggModel.build(eggId, height)
     model:PivotTo(CFrame.new(slot.rest.Position + Vector3.new(0, height / 2, 0)) * slot.rest.Rotation)
     model.PrimaryPart.Anchored = true
@@ -150,8 +148,6 @@ local function register(island, stand, aurasFolder)
             end
         end)
     end
-    slotsByIsland[island] = slotsByIsland[island] or {}
-    table.insert(slotsByIsland[island], slot)
 end
 
 -- Finds every island's stands (call once at start, after the world is loaded).
@@ -173,10 +169,6 @@ end
 -- What to do when a player asks to take a stand's egg: function(player, slot).
 function EggStands.setTakeHandler(handler)
     onTake = handler
-end
-
-function EggStands.slots(island)
-    return slotsByIsland[island] or {}
 end
 
 -- Whether the player stands close enough to the slot's egg to take it.

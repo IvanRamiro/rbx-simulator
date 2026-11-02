@@ -1,5 +1,5 @@
-"""The Eclipse Exorcist's seal cord (run inside Blender; a rigid Waist accessory on
-WaistCenterAttachment), worn over the robe.
+"""The Eclipse Exorcist's seal cord (run inside Blender; layered clothing on WaistCenterAttachment,
+worn over the robe: see ee_export).
 
 The rope that binds the seal: a braided crimson cord of two twisted strands round the waist, tied
 off-centre on the wearer's left in a heavy wrapped knot with one loop flaring up, its two ends
@@ -37,7 +37,7 @@ def ring_point(t, z=CORD_Z):
     return V((x, y, z)), nrm
 
 
-def strands(m, path, r, mat, closed=False, radius=STRAND, twist_r=TWIST_R):
+def strands(m, path, r, mat, radius=STRAND, twist_r=TWIST_R):
     """Two strands wound round each other along `path`: the braid."""
     fr = K.frames(path)
     along = [0.0]
@@ -48,7 +48,7 @@ def strands(m, path, r, mat, closed=False, radius=STRAND, twist_r=TWIST_R):
         for c, (t, side, up), d in zip(path, fr, along):
             ang = TAU * TWISTS * d + math.pi * s
             curve.append(c + (side * math.cos(ang) + up * math.sin(ang)) * twist_r)
-        K.tube(m, curve, lambda k, n: radius, r["cord_sides"], mat, cap=not closed, twist=0.35 if r["fibre"] else 0.0, uv_v=3.0)
+        K.tube(m, curve, lambda k, n: radius, r["cord_sides"], mat, cap=True, twist=0.35 if r["fibre"] else 0.0, uv_v=3.0)
 
 
 KNOT_HALF = 0.16              # half the knot's wrapping, along the cord
@@ -263,7 +263,7 @@ def ofuda(r):
 
 
 def shide(r):
-    """Two shide papers on the right hip: white strips cut and folded into a zigzag, hanging from the
+    """Two shide papers on the left hip: white strips cut and folded into a zigzag, hanging from the
     cord."""
     m = K.Mesh()
     for k, (t, length) in enumerate(((1.12, 0.6), (1.42, 0.5))):
@@ -286,9 +286,6 @@ def shide(r):
 
 def chain_path():
     """The chain's line: from the cord at the front right, sagging, to the right hip."""
-    a, na = ring_point(KNOT_T - 0.2)
-    b, nb = ring_point(-1.45)
-    a, b = a + na * 0.07, b + nb * 0.07
     pts = []
     for k in range(41):
         s = k / 40
