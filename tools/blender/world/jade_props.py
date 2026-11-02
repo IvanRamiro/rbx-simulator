@@ -309,19 +309,52 @@ def face_yaw(fx, fz):
     return math.atan2(fx, fz)
 
 
-def glade_layout():
-    gx, gz, gr = J.GLADE
-    entrance = (-32, 26)
+def arena_eggs():
+    """The three egg stands in their arc behind the Mantis Sage's lair, each facing the lair."""
     eggs = []
-    for eid, (dx, dz) in zip(EGG_IDS, ((-7.5, 4.0), (0.0, 7.0), (7.5, 4.0))):
-        x, z = gx + dx, gz + dz
-        eggs.append((eid, x, z, face_yaw(entrance[0] - x, entrance[1] - z)))
+    for eid, bearing in zip(EGG_IDS, J.EGG_BEARINGS):
+        x, z = J._polar(bearing, J.EGG_RING)
+        eggs.append((eid, x, z, face_yaw(J.LAIR[0] - x, J.LAIR[1] - z)))
+    return eggs
+
+
+def glade_stones():
+    """The Bloom Glade's ring of standing stones, its opening toward the arena."""
+    gx, gz, gr = J.GLADE
+    opening = math.atan2(J.ARENA[1] - gz, J.ARENA[0] - gx)
     stones = []
     for k in range(7):
-        a = math.radians(-90 + 30 + k * (300 / 6))  # leave the north entrance open
+        a = opening + math.radians(30 + k * (300 / 6))
         x, z = gx + math.cos(a) * 15.5, gz + math.sin(a) * 15.5
         stones.append((x, z, face_yaw(gx - x, gz - z)))
-    return eggs, stones
+    return stones
+
+
+SPOKE_BEARINGS = [J.ARRIVAL_BEARING, 150, -62, -148, 100]   # where paths leave the arena's ring
+
+
+def arena_ring():
+    """Round the arena, between the paths: jade lanterns and standing stones alternating, just outside
+    its flagstones (props ring the middle; nothing stands in it)."""
+    out = []
+    for k in range(16):
+        bearing = 11.25 + 22.5 * k
+        if any(abs((bearing - b + 180) % 360 - 180) < 13 for b in SPOKE_BEARINGS):
+            continue
+        x, z = J._polar(bearing, J.ARENA_EDGE + 3)
+        out.append(("JG_JadeLantern" if k % 2 == 0 else "JG_StandingStone", x, z, face_yaw(-x, -z)))
+    return out
+
+
+def ruin_court():
+    """Broken pillars round the Ruin Court."""
+    rx, rz, rr = J.RUINS
+    rnd = random.Random(31)
+    out = []
+    for k in range(7):
+        a = math.radians(k * 360 / 7 + rnd.uniform(-10, 10))
+        out.append((rx + math.cos(a) * (rr - 3), rz + math.sin(a) * (rr - 3), rnd.uniform(0, TAU)))
+    return out
 
 
 def whisper_layout():
@@ -344,7 +377,8 @@ def flank(end, prev, spread):
 
 def keepouts():
     zones = [(J.GLADE[0], J.GLADE[1], 20), (J.ELDER[0], J.ELDER[1], 26), (J.HOLLOW[0], J.HOLLOW[1], 16),
-             (J.LANDING[0], J.LANDING[1], 14), (J.GATE[0], J.GATE[1], 14), (J.ARRIVAL[0], J.ARRIVAL[1], 12)]
+             (J.LANDING[0], J.LANDING[1], 14), (J.GATE[0], J.GATE[1], 14), (J.ARRIVAL[0], J.ARRIVAL[1], 12),
+             (J.ARENA[0], J.ARENA[1], J.RING_R + 5), (J.RUINS[0], J.RUINS[1], J.RUINS[2] + 2)]
     return zones
 
 
@@ -353,7 +387,7 @@ def scatter(rnd, count, gap, path_clear, rim_clear, taken, zones, inside=None, t
     for _ in range(tries):
         if len(out) >= count:
             break
-        x, z = rnd.uniform(-95, 95), rnd.uniform(-95, 95)
+        x, z = rnd.uniform(-J.BASE_R - 15, J.BASE_R + 15), rnd.uniform(-J.BASE_R - 15, J.BASE_R + 15)
         if math.hypot(x, z) > J.rim(math.atan2(z, x)) - rim_clear:
             continue
         if J.path_distance(x, z) < path_clear or J.pool_distance(x, z) < 2.5:
@@ -373,17 +407,24 @@ def placements():
     """Kit entries (name, x, y, z, yaw, scale), the egg stands and the rest of Placements."""
     rnd = random.Random(2027)
     items = []
-    eggs, stones = glade_layout()
+    eggs = arena_eggs()
     gx, gz = J.GLADE[0], J.GLADE[1]
     items.append(("JG_GladeFloor", gx, 1.02, gz, 0.0, 1.0))  # the glade terrace is flat at +1
-    for x, z, yaw in stones:
+    for x, z, yaw in glade_stones():
         items.append(("JG_StandingStone", x, ground(x, z), z, yaw, rnd.uniform(0.9, 1.1)))
+    for name, x, z, yaw in arena_ring():
+        y = ground(x, z)
+        items.append((name, x, y, z, yaw, 1.0 if name == "JG_JadeLantern" else rnd.uniform(0.95, 1.1)))
+        if name == "JG_JadeLantern":
+            items.append(("JG_JadeLanternLight", x, y, z, yaw, 1.0))
+    for x, z, yaw in ruin_court():
+        items.append(("JG_RuinPillar", x, ground(x, z), z, yaw, rnd.uniform(0.9, 1.25)))
     for x, z, yaw in whisper_layout():
         items.append(("JG_WhisperStone", x, ground(x, z), z, yaw, 1.0))
     items.append(("JG_HollowWater", 0, 0, 0, 0.0, 1.0))
     items.append(("JG_HollowRim", 0, 0, 0, 0.0, 1.0))
-    lanterns = flank(J.PATHS[1][-1], J.PATHS[1][-2], 5.0) + flank(J.PATHS[3][-1], J.PATHS[3][-2], 4.0) + \
-        flank(J.PATHS[2][-1], J.PATHS[2][-2], 4.5)
+    lanterns = flank(J.PATHS[2][-1], J.PATHS[2][-2], 5.0) + flank(J.PATHS[4][-1], J.PATHS[4][-2], 4.0) + \
+        flank(J.PATHS[3][-1], J.PATHS[3][-2], 4.5) + flank(J.PATHS[5][-1], J.PATHS[5][-2], 4.5)
     yaw = JM.gate_yaw()
     fwd, right = (math.sin(yaw), math.cos(yaw)), (math.cos(yaw), -math.sin(yaw))
     for side in (1, -1):  # just inside the Grove Gate, either side of the path
@@ -395,25 +436,27 @@ def placements():
         items.append(("JG_JadeLanternLight", x, y, z, yaw, 1.0))
     zones = keepouts()
     taken = [(x, z, 3) for _, x, _, z, *_ in items]
-    for x, z in scatter(rnd, 15, 17, 6, 8, taken, zones):
-        items.append((rnd.choice(("JG_AncientTreeA", "JG_AncientTreeB")), x, ground(x, z) - 0.4, z, rnd.uniform(0, TAU), rnd.uniform(0.85, 1.2)))
-    for x, z in scatter(rnd, 9, 11, 4, 6, taken, zones):
+    # the forest ringing the arena: four times the ground of the old island, so about three times the trees
+    for x, z in scatter(rnd, 46, 17, 6, 8, taken, zones):
+        items.append((rnd.choice(("JG_AncientTreeA", "JG_AncientTreeB")), x, ground(x, z) - 0.4, z, rnd.uniform(0, TAU), rnd.uniform(0.85, 1.25)))
+    for x, z in scatter(rnd, 28, 11, 4, 6, taken, zones):
         items.append(("JG_BambooClump", x, ground(x, z), z, rnd.uniform(0, TAU), rnd.uniform(0.85, 1.15)))
-    for x, z in scatter(rnd, 7, 12, 3, 4, taken, zones):
+    for x, z in scatter(rnd, 20, 12, 3, 4, taken, zones):
         items.append(("JG_JadeOutcrop", x, ground(x, z) - 0.3, z, rnd.uniform(0, TAU), rnd.uniform(0.9, 1.4)))
-    for x, z in scatter(rnd, 5, 14, 4, 6, taken, zones):
+    for x, z in scatter(rnd, 10, 14, 4, 6, taken, zones):
         items.append(("JG_RuinPillar", x, ground(x, z), z, rnd.uniform(0, TAU), rnd.uniform(0.9, 1.2)))
-    for x, z in scatter(rnd, 4, 14, 4, 6, taken, zones):
+    for x, z in scatter(rnd, 12, 14, 4, 6, taken, zones):
         items.append(("JG_FallenLog", x, ground(x, z) - 0.6, z, rnd.uniform(0, TAU), rnd.uniform(0.9, 1.2)))
-    # ferns and mushrooms everywhere, including the hollow and the Elder Tree knoll (but not paths)
+    # ferns and mushrooms everywhere outside the arena, including the hollow and the Elder Tree knoll (but not paths)
     small_ok = lambda x, z: all(math.hypot(x - zx, z - zz) > zr for zx, zz, zr in
-                                ((J.GLADE[0], J.GLADE[1], 14), (J.LANDING[0], J.LANDING[1], 12), (J.GATE[0], J.GATE[1], 10)))
-    for x, z in scatter(rnd, 14, 7, 2.6, 4, taken, zones, inside=small_ok):
+                                ((J.GLADE[0], J.GLADE[1], 14), (J.LANDING[0], J.LANDING[1], 12), (J.GATE[0], J.GATE[1], 10),
+                                 (J.ARENA[0], J.ARENA[1], J.RING_R + 3), (J.RUINS[0], J.RUINS[1], J.RUINS[2] - 2)))
+    for x, z in scatter(rnd, 40, 7, 2.6, 4, taken, zones, inside=small_ok):
         y = ground(x, z)
         yaw = rnd.uniform(0, TAU)
         items.append(("JG_Mushrooms", x, y, z, yaw, 1.0))
         items.append(("JG_MushroomCaps", x, y, z, yaw, 1.0))
-    for x, z in scatter(rnd, 44, 5, 2.6, 3, taken, zones, inside=small_ok):
+    for x, z in scatter(rnd, 130, 5, 2.6, 3, taken, zones, inside=small_ok):
         items.append(("JG_Fern", x, ground(x, z) - 0.1, z, rnd.uniform(0, TAU), rnd.uniform(0.9, 1.4)))
     return items, eggs
 
@@ -437,7 +480,7 @@ def write_placements(path=W.REPO + "/src/worldbuild/Placements/JadeGrove.lua"):
     lines.append("    EggStands = {")
     for eid, x, z, yaw in eggs:
         lines.append('        { EggId = "%s", Position = Vector3.new(%.2f, %.2f, %.2f), Yaw = %.4f, EggRest = %.2f },'
-                     % (eid, x, 1.0, z, yaw, PEDESTAL_TOP))
+                     % (eid, x, ground(x, z), z, yaw, PEDESTAL_TOP))
     lines.append("    },")
     lx, lz = J.LANDING[0], J.LANDING[1]
     lines.append("    Checkpoint = Vector3.new(%.2f, %.2f, %.2f)," % (lx, ground(lx, lz) + 0.5, lz))

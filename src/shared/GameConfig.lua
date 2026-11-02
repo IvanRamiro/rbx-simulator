@@ -155,10 +155,10 @@ local GameConfig = {
         MantisSage = {
             DisplayName = "Bamboo Mantis Sage",
             Island = "JadeGrove",
-            Lair = Vector3.new(50, 2.4, 26),    -- the only open, level ground far from the glade
-            Facing = Vector3.new(0, 2.4, 6),
+            Lair = Vector3.new(0, 0.6, 0),      -- the middle of the Mantis Arena, its three egg stands behind it
+            Facing = Vector3.new(81.7, 0.6, 96.4), -- toward the Grove Gate, where challengers arrive
             Eggs = { "JadeSpiritEgg", "BloomwoodEgg", "AncientGroveEgg" },
-            SafeZone = { Centre = Vector3.new(-30, 4, 41), Radius = 15, Name = "Bloom Glade" },
+            SafeZone = { Centre = Vector3.new(-90.1, 3, 52), Radius = 15, Name = "Bloom Glade" },
             SecureStones = 600,     -- Spirit Stones for securing its egg
             Element = "Wind",
             MaxHealth = 2000,      -- a Qi Gatherer's palm (11 a strike) weakens it alone in ~110 strikes

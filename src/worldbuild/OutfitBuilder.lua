@@ -195,6 +195,22 @@ function OutfitBuilder.storeSword(model)
     return result
 end
 
+-- Sets every stored realm weapon's maps from Placements/WeaponMaps (after new uploads); the names set.
+function OutfitBuilder.setWeaponMaps()
+    local maps = require(ServerStorage.WorldBuild.Placements.WeaponMaps:Clone())
+    local set = {}
+    for weaponId, ids in maps do
+        local folder = ServerStorage:FindFirstChild("Weapons") and ServerStorage.Weapons:FindFirstChild(weaponId)
+        local appearance = folder and folder:FindFirstChild("Body") and folder.Body:FindFirstChildOfClass("SurfaceAppearance")
+        if appearance then
+            appearance.ColorMap, appearance.NormalMap = ids.Color, ids.Normal
+            appearance.RoughnessMap, appearance.MetalnessMap = ids.Roughness, ids.Metalness
+            table.insert(set, weaponId)
+        end
+    end
+    return set
+end
+
 -- Stores a realm weapon (tools/blender/weapons; Placements/Weapons/<WeaponId>, its maps in
 -- Placements/WeaponMaps) as ServerStorage.Weapons.<WeaponId>, with its Kind ("Sword" or "Spear") and
 -- its Hilt and Tip (where its blade or head starts, and its point, from its grip) as attributes.

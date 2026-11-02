@@ -605,7 +605,7 @@ Five floating islands built from original Blender work: terrain tops, sculpted u
 | Island | Centre (studs), quarter turns | Feel | Relics |
 |---|---|---|---|
 | Yggdrasil | (0, 200, 0) | The World Tree and the spawn hub | Root of the Island (300 Qi, Qi Initiate) |
-| Jade Grove | (−302, 200, −410), 3 | Ancient forest | Grove Heart, Jade Seed, Whispering Spring (800 Qi each, Qi Gatherer) |
+| Jade Grove | (−384, 200, −448), 0 | Ancient forest | Grove Heart, Jade Seed, Whispering Spring (800 Qi each, Qi Gatherer) |
 | Ember Peak | (−150, 200, −606), 1 | Volcanic, lava pools | Ember Heart, Ashen Sigil, Caldera Crown (1,500 Qi each, Qi Awakener) |
 | Moonlit Isle | (180, 200, −742), 0 | Pale and celestial | Moon Mirror, Star Well (3,000 Qi each, Foundation Initiate) |
 | Origin Abyss | (572, 200, −784), 1 | Hidden endgame: dark slate, void crystals and rifts, broken ruins | Origin Altar (250K Qi, Divine Initiate); the Void Shard high above it (1M Qi, Void Walker) |
@@ -636,17 +636,19 @@ The World Tree stands at the centre; everything else rings it. Scripts: `ygg_isl
 - **Root of the Island:** from the south rim the great root winds down the cliffs, sixteen bracket-fungus shelves along it, to a bowl of roots under the strata holding the relic.
 - **Nature:** spirit pines crowning low knolls near the rim, plum blossoms, mossy rocks and flowers.
 
-### Jade Grove (built)
+### Jade Grove (built; doubled November 2, 2026)
 
-- **Grove Gate:** a moon gate at the arrival.
-- **Elder Jade Tree:**
-  - three root pillars form a walk-in hollow holding the **Grove Heart**;
-  - buttress roots, one arching high enough to walk under;
-  - a Qinggong climb of fungus shelves and leaf-cloud canopy tiers up to the crown nest and the **Jade Seed**.
-- **Bloom Glade:** a flagstone shrine ringed by standing stones, with golden-root pedestals for the Jade Spirit, Bloomwood and Ancient Grove eggs.
-- **Whispering Hollow:** a sunken spring with whisper stones and the **Whispering Spring**.
-- **Underside:** a faceted dark-jade mass with hanging jade crystals, moss curtains and vines.
-- **Forest:** ancient trees with walkable canopy tiers, bamboo, ferns, glowing mushrooms, jade crystal outcrops, ruin pillars and fallen logs.
+**The owner's upgrade** (November 2, 2026, for every outer island, Yggdrasil unchanged): twice the size; the boss in the middle of the island guarding its three eggs; no obstacle in the middle, props round the sides; the bridges as they are. Jade Grove was rebuilt first for review. It is about 300 studs across, and moved out along its unchanged bridge (the bridge file regenerates byte-identical); the other islands fan apart the same way when they double (planned: each one's centre on its bridge's line, about its new radius past the bridge end; all four then clear each other by 45 studs or more).
+
+- **Mantis Arena** (the middle): a dead-level ring of grass bordered by jade flagstones (radius 50), a path ringing it. The **Bamboo Mantis Sage**'s lair is its centre, facing the Grove Gate; the **three egg stands** (Jade Spirit, Bloomwood, Ancient Grove) stand in an arc 31 studs behind it, just past its engage radius. Nothing solid stands in it; jade lanterns and standing stones ring its edge between the paths.
+- **Grove Gate** and the arrival terrace on the south-east rim, where the Jade bridge lands; a path leads straight into the arena.
+- **Elder Jade Tree** to the north-east (Grove Heart in its hollow, Jade Seed in its crown, the fungus-shelf climb).
+- **Whispering Hollow** to the north-west (the spring pool and the Whispering Spring).
+- **Bloom Glade** to the south-west: the flagstone sanctuary ringed by standing stones, opening toward the arena. It is the Mantis Sage's safe zone, where a stolen egg is secured.
+- **Ruin Court** to the south: broken pillars round a clearing.
+- **Forest** ringing everything: ancient trees, bamboo, jade outcrops, ruin pillars, fallen logs, ferns and glowing mushrooms (about three times the old count).
+- **Underside:** the faceted dark-jade mass, deeper (130 studs) with larger hanging jade crystals, moss curtains and vines round the longer rim.
+- **Tested in Play:** walked from the bridge into the arena (3 s); the Sage woke at its engage radius, its attacks knocked back without throwing anyone off; weakened in 14 strikes; the egg stolen, the Sage leapt after the thief, and the egg was secured in the Bloom Glade after a 5.6 s run (it dropped its relic: Wind unlocked).
 
 ### Ember Peak (built)
 

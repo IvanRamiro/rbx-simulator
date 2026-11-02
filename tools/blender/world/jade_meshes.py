@@ -111,11 +111,12 @@ def ground(x, z):
 
 
 # ---------- underside: a faceted jade mass ----------
-# (radius scale relative to the rim, y) from the cliff top down to the tip
-BODY = [(1.0, -3.2), (1.03, -7.0), (1.0, -14.0), (0.93, -21.0), (0.8, -32.0), (0.63, -45.0), (0.45, -58.0),
-        (0.28, -70.0), (0.12, -80.0)]
-TIP = (6.0, -88.0, -4.0)   # x, y, z of the lowest point
-BODY_SEG = 22
+# (radius scale relative to the rim, y) from the cliff top down to the tip: deeper since the island
+# doubled (2026-11-02), so the mass keeps its proportions
+BODY = [(1.0, -3.2), (1.03, -8.0), (1.0, -18.0), (0.93, -30.0), (0.8, -46.0), (0.63, -66.0), (0.45, -86.0),
+        (0.28, -104.0), (0.12, -118.0)]
+TIP = (12.0, -130.0, -8.0)   # x, y, z of the lowest point
+BODY_SEG = 36
 
 
 def body(coll, mat, bands):
@@ -152,8 +153,8 @@ def body(coll, mat, bands):
     return mb.object("JG_Underside", coll, mat)
 
 
-CRYSTAL_SITES = [(-30, -40, 24, 10), (34, -46, -30, 12), (10, -60, 34, 14), (-34, -30, -38, 9), (40, -34, 26, 10),
-                 (-6, -74, -14, 15)]
+CRYSTAL_SITES = [(-60, -60, 48, 26), (68, -68, -60, 28), (20, -88, 68, 32), (-68, -44, -76, 24), (80, -50, 52, 26),
+                 (-12, -108, -28, 36), (-96, -34, 10, 22), (40, -40, -96, 22), (100, -36, -20, 22)]
 
 
 def crystal_prism(mb, base, direction, length, radius, band, seed):
@@ -192,10 +193,10 @@ def moss_curtains(coll, mat, bands):
     mb = W.MeshBuilder()
     rnd = random.Random(77)
     v0, v1 = bands[MOSS]
-    for start in range(0, 360, 26):
+    for start in range(0, 360, 13):
         if rnd.random() < 0.35:
             continue
-        span = rnd.uniform(8, 16)
+        span = rnd.uniform(5, 9)
         cols = []
         steps = 7
         for s in range(steps + 1):
@@ -213,8 +214,8 @@ def moss_curtains(coll, mat, bands):
 def vines(coll, mat, bands):
     mb = W.MeshBuilder()
     rnd = random.Random(55)
-    for k in range(16):
-        th = TAU * k / 16 + rnd.uniform(-0.12, 0.12)
+    for k in range(32):
+        th = TAU * k / 32 + rnd.uniform(-0.06, 0.06)
         R = J.rim(th) + 1.4
         x, z = math.cos(th) * R, math.sin(th) * R
         length = rnd.uniform(10, 26)

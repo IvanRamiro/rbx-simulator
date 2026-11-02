@@ -21,7 +21,7 @@ import math
 
 ISLANDS = {
     "Yggdrasil": {"centre": (0, 200, 0), "radius": 250, "turns": 0},
-    "JadeGrove": {"centre": (-302, 200, -410), "radius": 80, "turns": 3},
+    "JadeGrove": {"centre": (-384, 200, -448), "radius": 160, "turns": 0},
     "EmberPeak": {"centre": (-150, 200, -606), "radius": 75, "turns": 1},
     "MoonlitIsle": {"centre": (180, 200, -742), "radius": 60, "turns": 0},
     "OriginAbyss": {"centre": (572, 200, -784), "radius": 85, "turns": 1},
@@ -30,7 +30,7 @@ ISLANDS = {
 # Each island's arrival, where its bridge lands (island-local, before turning): just inside its gate
 # (the Grove Gate, the Ember Gate, the Crescent Arch, and on Origin Abyss the Gate of Descent).
 ARRIVALS = {
-    "JadeGrove": (-79.8, 0.0, 17.8),
+    "JadeGrove": (99.8, 0.0, 117.8),    # since the island doubled (2026-11-02): its old bridge end
     "EmberPeak": (56.6, 0.0, -48.6),
     "MoonlitIsle": (-15.0, 0.0, 56.2),
     "OriginAbyss": (50.8, 0.0, 61.8),
