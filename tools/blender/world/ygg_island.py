@@ -102,10 +102,10 @@ def rim(theta):
     r += 6.0 * fbm(math.cos(theta) * 2.6 + 4, math.sin(theta) * 2.6 - 9, seed=71, octaves=3)
     # each bridgehead and the root's exit stand on a broad headland: their ground runs past where
     # the bridge (layout.HUB_EXIT_RADIUS) or the root leaves it
-    for x, z in list(EXITS.values()) + [ROOT_EXIT]:
-        want = math.hypot(x, z) + 14 - r
+    for (x, z), reach, width in [(e, 16, 9.5) for e in EXITS.values()] + [(ROOT_EXIT, 14, 6.5)]:
+        want = math.hypot(x, z) + reach - r
         if want > 0:
-            r += want * math.exp(-(((d - math.degrees(math.atan2(z, x)) + 180) % 360 - 180) / 6.5) ** 2)
+            r += want * math.exp(-(((d - math.degrees(math.atan2(z, x)) + 180) % 360 - 180) / width) ** 2)
     # the spring's cove: the rim passes just inside the spill's end
     spill_r = math.hypot(*SPILL)
     cove = r - (spill_r - 0.8)
@@ -175,7 +175,7 @@ def plot_distance(x, z, plot):
 
 # Low knolls near the rim, for a skyline: centre x, z, radius, height
 KNOLLS = [(-118, 200, 26, 6.0), (122, 196, 24, 5.0), (-216, -66, 22, 5.5), (-78, -176, 28, 7.0), (172, -120, 24, 6.0)]
-BRIDGEHEAD_R = 18.0
+BRIDGEHEAD_R = 26.0             # paved round each bridge's start: the decks are 40 studs wide
 
 
 def flats():
@@ -186,7 +186,7 @@ def flats():
     out += [(x, z, SLOT_PAD, 0.2, 6, "Ground") for x, z in SLOTS]   # bare earth: grass would grow through the dais
     for x, z in EXITS.values():
         r = math.hypot(x, z)
-        out.append((x * (r - 8) / r, z * (r - 8) / r, BRIDGEHEAD_R, 0.0, 8, "Cobblestone"))
+        out.append((x * (r - 10) / r, z * (r - 10) / r, BRIDGEHEAD_R, 0.0, 8, "Cobblestone"))
     return out
 
 

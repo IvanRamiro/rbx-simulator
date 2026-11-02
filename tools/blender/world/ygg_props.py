@@ -278,7 +278,8 @@ def waystone_layout():
     for route, (ex, ez) in list(Y.EXITS.items()) + [("RootPath", Y.ROOT_EXIT)]:
         L = math.hypot(ex, ez)
         dx, dz = ex / L, ez / L
-        x, z = ex - dx * 10 - dz * 13, ez - dz * 10 + dx * 13
+        side = 7.5 if route == "RootPath" else 28.0   # beside the bridge's 40-stud deck
+        x, z = ex - dx * 10 - dz * side, ez - dz * 10 + dx * side
         out.append((route, x, z, face_yaw(-dx, -dz)))
     return out
 
@@ -333,7 +334,7 @@ def keepouts():
     zones = [(0, 0, 96), (Y.COMPASS[0], Y.COMPASS[1], Y.COMPASS[2] + 8), (Y.EGG_GARDEN[0], Y.EGG_GARDEN[1], Y.EGG_GARDEN[2] + 4),
              (Y.LION_LAIR[0], Y.LION_LAIR[1], 26), (Y.SPRING_CENTRE[0], Y.SPRING_CENTRE[1], 32)]
     zones += [(x, z, Y.SLOT_PAD + 9) for x, z in Y.SLOTS]
-    zones += [(x, z, 28) for x, z in Y.EXITS.values()] + [(Y.ROOT_EXIT[0], Y.ROOT_EXIT[1], 22)]
+    zones += [(x, z, 38) for x, z in Y.EXITS.values()] + [(Y.ROOT_EXIT[0], Y.ROOT_EXIT[1], 22)]
     zones += [(x, z, 13) for _, x, z, _ in waystone_layout()]
     zones += [(x, z, 9) for _, x, z, *_ in HERO]
     for b in G.GRIP_BEARINGS:   # where the gripping roots cross the meadow

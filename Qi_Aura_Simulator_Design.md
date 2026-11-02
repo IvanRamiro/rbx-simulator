@@ -586,28 +586,29 @@ Every egg on its stand has its own aura, built in the Workspace from particle em
 Five floating islands built from original Blender work: terrain tops, sculpted undersides, landmarks and set pieces. **Yggdrasil** is the hub at the centre, about 500 studs across (three times the others), and a bridge leaves it for each other island.
 
 **Layout** (since November 1, 2026, the owner's map; `tools/blender/world/layout.py` is the one source):
-- Every island's ground is at Y 200. The four outer islands stand in a row north of Yggdrasil, west to east in unlock order, each turned by quarter turns so its gate faces the hub (terrain grids stay exact; `Turns` in the terrain data, `WorldBuilder.islandFrame` and `WorldConfig.frame` carry island-local positions into the world).
+- Every island's ground is at Y 200. The four outer islands fan out north of Yggdrasil, west to east in unlock order, and the harder an island, the farther it stands (the owner's rule, November 2, 2026): each bridge takes about four seconds longer to run than the last at its unlock rank's run speed. Each island is turned by quarter turns so its gate faces the hub (terrain grids stay exact; `Turns` in the terrain data, `WorldBuilder.islandFrame` and `WorldConfig.frame` carry island-local positions into the world).
 - Yggdrasil replaced the Starting Island, which carried its content over: the Beginner eggs, the Stone Lion, the Qi Spring, the Root of the Island and all its kit pieces (stored in Studio as `WorldKit.Yggdrasil`).
 
 **Bridges:**
-- Paths in `layout.py` (`BRIDGES`; `--write` generates `src/worldbuild/Placements/Bridges.lua`), built by `WorldBuilder.buildBridges()` into `FloatingIslands.Bridges`. They fan out from Yggdrasil's north rim as on the owner's map: each leaves its island's gate straight for 35 studs, turns on a round landing, and runs straight to Yggdrasil (Moonlit's runs straight through). Level, with a gentle arch (at most about 5°): Jade 195 studs, Ember 118, Moonlit 119, Origin 190.
-- A deck 20 studs wide (doubled at the owner's request; room to ride the sword along it) with rails. Both ends are carried onto their islands by a solid abutment.
+- Paths in `layout.py` (`BRIDGES`; `--write` generates `src/worldbuild/Placements/Bridges.lua`), built by `WorldBuilder.buildBridges()` into `FloatingIslands.Bridges`. They fan out from Yggdrasil's north rim as on the owner's map, each one straight span from Yggdrasil's ground to just inside its island's gate (no landings: the owner's call). Level, with a gentle arch (at most about 6°): Jade 191 studs, Ember 314, Moonlit 461, Origin 649, about 8, 12, 16 and 20 seconds to run at each unlock rank's speed (24 to 32 studs/s); the sword flies the last two in about 10.
+- A deck 40 studs wide (doubled twice at the owner's request; room to ride the sword along it) with rails. Both ends are carried onto their islands by a solid abutment.
 - At each bridge's start a gate holds a **Qi barrier** (tagged `QiBarrier`, with the destination's `RankId`): solid until the player reaches that rank, then open to them (`BridgeBarriers.client`). A player below the rank found on the bridge past the gate, or on the island it leads to, is put back in front of the gate (`WorldService`).
 - Each bridge wears its island's kit, modelled in Blender (`tools/blender/world/bridge_kits.py` → `assets/world/Bridges/<Theme>Bridge.fbx`, piece offsets in `Placements/BridgeKits.lua`), laid by `buildBridges` over the walkable blockout:
   - **Jade Grove:** plank deck with lattice rails, carved jade posts, vines; a jade gate under a two-tier curved roof.
   - **Ember Peak:** hexagonal basalt column tops with lava in the seams; a gate of basalt column clusters.
   - **Moonlit Isle:** moonstone treads with gold handrails and crescent-topped posts; a gate under a great gold crescent.
   - **Origin Abyss:** cracked ancient slabs with void light in the cracks; a ruined gate split by void light.
-  - Landings (Jade, Ember, Origin) and Moonlit's level deck came later (November 2, 2026), baked as each theme's extra kit (`<Theme>BridgeExtra.fbx`, `BK.export(theme, size=1024, extra=True)`) so the kits already in the game kept their maps: a round plank platform with a jade medallion and lantern posts; basalt hexes with lava seams and column-cluster posts; cracked wedge slabs round a glowing sigil with broken-pillar posts; moonstone pavers with gold seams. Every bridge is dressed end to end; the deck under a dressed landing is left to the landing.
+  - Moonlit's level deck (moonstone pavers with gold seams) is its extra kit (`MoonBridgeExtra.fbx`, `BK.export("Moon", extra=True)`), added after the Moon kit was baked. Every kit was rebuilt at the 40-stud width, so posts and gates keep their shape. Every bridge is dressed end to end.
+- Decorative pieces that stand where a bridge comes onto an island (rocks, shards, lilies, scattered trees: `WorldBuilder.ClearOfBridges`) are left out when the island's kit is placed, so a bridge can move or widen without re-running an island's scatter.
 - Studio's importer turns each kit half round (x and z flip, as with the eggs); the builder turns each piece back.
 
 | Island | Centre (studs), quarter turns | Feel | Relics |
 |---|---|---|---|
 | Yggdrasil | (0, 200, 0) | The World Tree and the spawn hub | Root of the Island (300 Qi, Qi Initiate) |
 | Jade Grove | (−302, 200, −410), 3 | Ancient forest | Grove Heart, Jade Seed, Whispering Spring (800 Qi each, Qi Gatherer) |
-| Ember Peak | (−102, 200, −410), 1 | Volcanic, lava pools | Ember Heart, Ashen Sigil, Caldera Crown (1,500 Qi each, Qi Awakener) |
-| Moonlit Isle | (100, 200, −410), 0 | Pale and celestial | Moon Mirror, Star Well (3,000 Qi each, Foundation Initiate) |
-| Origin Abyss | (300, 200, −412), 1 | Hidden endgame: dark slate, void crystals and rifts, broken ruins | Origin Altar (250K Qi, Divine Initiate); the Void Shard high above it (1M Qi, Void Walker) |
+| Ember Peak | (−150, 200, −606), 1 | Volcanic, lava pools | Ember Heart, Ashen Sigil, Caldera Crown (1,500 Qi each, Qi Awakener) |
+| Moonlit Isle | (180, 200, −742), 0 | Pale and celestial | Moon Mirror, Star Well (3,000 Qi each, Foundation Initiate) |
+| Origin Abyss | (572, 200, −784), 1 | Hidden endgame: dark slate, void crystals and rifts, broken ruins | Origin Altar (250K Qi, Divine Initiate); the Void Shard high above it (1M Qi, Void Walker) |
 
 **Shared rules**
 

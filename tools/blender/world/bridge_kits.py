@@ -13,7 +13,7 @@ studs apart, so one bake covers them all.
     BK.build("Jade")          # the high-detail pieces, in collection JadeBridgeHi
     BK.export("Jade")         # bake and export assets/world/Bridges/JadeBridge.fbx (+ maps), and
                               # write src/worldbuild/Placements/BridgeKits.lua (piece offsets)
-    BK.export("Jade", size=1024, extra=True)   # the landing and post added later: JadeBridgeExtra.fbx
+    BK.export("Moon", extra=True)   # the level deck added later: MoonBridgeExtra.fbx
 
 Kits:
 - Jade (Jade Grove): a plank walk on two stringers, jade posts with carved caps, wooden rails with
@@ -238,7 +238,7 @@ def jade_deck(ox, mats):
             yaw=rnd.uniform(-0.008, 0.008), roll=rnd.uniform(-0.006, 0.006))
     for x in (-edge + 0.4, edge - 0.4):
         box(beams, (ox + x, -0.25, 0), (0.8, 1.1, SECTION + 0.02))             # fascia over the plank ends
-    for x in (-6.5, 6.5):
+    for x in (-DECK_WIDTH * 0.33, 0.0, DECK_WIDTH * 0.33):
         box(beams, (ox + x, -1.1, 0), (1.0, 1.2, SECTION + 0.02))              # stringers
     box(beams, (ox, -1.25, 0), (DECK_WIDTH - 2.0, 0.8, 1.0))                   # a cross-tie
     rail_x = edge - 0.45
@@ -392,7 +392,9 @@ def ember_support(ox, mats):
     rock, glow = Hm.Hi(), Hm.Hi()
     spots = [(0, 0, 1.4, 12), (-2.6, 1.2, 1.1, 8), (2.5, -1.0, 1.2, 9.5), (-4.8, -0.8, 0.9, 5.5), (4.9, 0.9, 1.0, 6.5),
              (-1.3, -2.2, 0.9, 7), (1.4, 2.1, 0.85, 5), (-6.6, 0.4, 0.8, 4), (6.8, -0.3, 0.8, 3.5)]
+    spread = DECK_WIDTH / 20                                                    # the cluster spreads with the deck
     for x, z, rr, length in spots:
+        x *= spread
         prism(rock, (ox + x, -2.4 - length, z), rr, length, sides=6, taper=1.05, yaw=rnd.uniform(0, 1))
         prism(glow, (ox + x, -2.4 - length - 0.6, z), rr * 0.45, 0.65, sides=6, taper=1.6)   # a molten drip at the tip
     objs = [rock.object("EmberSupport_Rock", mats.coll, [mats.rock], smooth=False)]
@@ -491,39 +493,6 @@ def moon_stair(ox, mats):
     for o in framed:
         chamfer(o, 0.05)
     return turned + framed, []
-
-
-def moon_landing(ox, mats):
-    """A landing at a turn of the stairway: a moonstone disc with a gold inlay ring and a crescent
-    set into its middle, a stepped rim underneath."""
-    stone, gold = Hm.Hi(), Hm.Hi()
-    r = L.BRIDGES["MoonlitRoute"]["landing"]
-    prism(stone, (ox, -1.6, 0), r, 1.6, sides=48)
-    prism(stone, (ox, -2.6, 0), r - 1.2, 1.0, sides=48, taper=0.92)
-    prism(stone, (ox, -4.2, 0), r * 0.55, 1.6, sides=24, taper=1.6)
-    ring = [(ox + math.cos(TAU * k / 64) * (r - 2.2), 0.0, math.sin(TAU * k / 64) * (r - 2.2)) for k in range(65)]
-    Hm.htube(gold, ring, lambda t: 0.18, sides=6, per=1, uv_scale=2.0, tip=False)
-    crescent(gold, (ox, -0.05, 0), 3.2, 0.1, width=0.6, start=0.2, end=0.8, segments=28, axis="y")
-    objs = [stone.object("MoonLanding_Stone", mats.coll, [mats.stone], smooth=False),
-            gold.object("MoonLanding_Gold", mats.coll, [mats.gold], smooth=True)]
-    chamfer(objs[0], 0.06)
-    objs[1]["keep"] = True
-    return objs, []
-
-
-def moon_post(ox, mats):
-    """A post round a landing's rim: a slim moonstone post carrying a gold crescent that cradles a
-    glowing moon lantern."""
-    stone, gold, glow = Hm.Hi(), Hm.Hi(), Hm.Hi()
-    prism(stone, (ox, -0.4, 0), 0.55, 0.6, sides=8, taper=0.8)
-    prism(stone, (ox, 0.2, 0), 0.34, 3.2, sides=8, taper=0.85)
-    crescent(gold, (ox, 4.0, 0), 0.75, 0.14, width=0.2, start=0.55, end=1.2, axis="x")
-    prism(glow, (ox, 3.5, 0), 0.32, 0.8, sides=8, taper=0.6)
-    objs = [stone.object("MoonPost_Stone", mats.coll, [mats.stone], smooth=False),
-            gold.object("MoonPost_Gold", mats.coll, [mats.gold], smooth=True)]
-    chamfer(objs[0], 0.05)
-    objs[1]["keep"] = True
-    return objs, [glow.object("MoonPost_Glow_" + MOON_GLOW, mats.coll, [K.glow_material(MOON_GLOW)], smooth=False)]
 
 
 def moon_support(ox, mats):
@@ -742,192 +711,7 @@ class _Mats:
     pass
 
 
-# ---------- landings and their posts (the extra kits) ----------
-# A landing is the round platform at a bridge's turn (layout.LANDING_RADIUS), its top at y = 0 round
-# its centre; the builder stands a post round its rim wherever a rail runs, leaving the flights'
-# openings clear, so a landing carries no rim wall of its own.
-LANDING_R = L.LANDING_RADIUS
-
-
-def _disc_cells(r, pitch):
-    """Rows across a disc of radius r: (z, half-length) for each row `pitch` apart."""
-    rows = []
-    n = int(2 * r / pitch)
-    for k in range(n):
-        z = -r + pitch * (k + 0.5)
-        half = math.sqrt(max(0.0, r * r - z * z))
-        if half > 0.8:
-            rows.append((z, half))
-    return rows
-
-
-def jade_landing(ox, mats):
-    """A round plank platform: planks across inside a ring of curved fascia boards, a jade leaf
-    inlaid at its middle, cross-beams beneath with a jade lantern hanging on a root at the centre."""
-    rnd = random.Random(311)
-    planks, beams, jade, vines, leaves, glow = Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi()
-    r = LANDING_R - 0.9
-    for z, half in _disc_cells(r, 1.2):
-        box(planks, (ox + rnd.uniform(-0.1, 0.1), -0.2 + rnd.uniform(-0.03, 0.03), z), (2 * half - 0.3, 0.4, 1.06),
-            yaw=rnd.uniform(-0.006, 0.006))
-    segs = 32
-    for k in range(segs):   # the fascia ring
-        a = TAU * (k + 0.5) / segs
-        box(beams, (ox + math.cos(a) * (LANDING_R - 0.45), -0.25, math.sin(a) * (LANDING_R - 0.45)),
-            (0.8, 1.1, TAU * LANDING_R / segs + 0.08), yaw=-a)
-    for yaw in (0.0, math.pi / 2):   # the cross-beams and a ring beam under the planks
-        box(beams, (ox, -1.1, 0), (1.0, 1.2, 2 * r - 1.0), yaw=yaw)
-    for k in range(segs):
-        a = TAU * (k + 0.5) / segs
-        box(beams, (ox + math.cos(a) * (r - 2.5), -1.0, math.sin(a) * (r - 2.5)), (0.8, 1.0, TAU * (r - 2.5) / segs + 0.1), yaw=-a)
-    # a jade medallion inlaid at the middle, a leaf's vein raised across it
-    prism(jade, (ox, -0.1, 0), 2.6, 0.22, sides=16)
-    prism(jade, (ox, -0.15, 0), 3.1, 0.12, sides=16)
-    box(jade, (ox, 0.14, 0), (4.4, 0.1, 0.22))
-    for k in (-1, 1):
-        for t in (-0.9, 0.3):
-            box(jade, (ox + t, 0.14, k * 0.55), (1.5, 0.08, 0.16), yaw=k * 0.6)
-    # a root down from the beams' crossing, a lantern on it
-    Hm.htube(vines, [(ox, -1.6, 0), (ox + 0.4, -3.2, 0.3), (ox - 0.2, -4.8, -0.2), (ox, -5.6, 0)], lambda t: 0.35 - 0.2 * t,
-             sides=6, per=4, uv_scale=1.0, tip=False)
-    prism(jade, (ox, -6.4, 0), 0.75, 0.3, sides=6, taper=1.0)
-    prism(glow, (ox, -7.9, 0), 0.6, 1.5, sides=6, taper=0.85)
-    prism(jade, (ox, -8.2, 0), 0.7, 0.3, sides=6, taper=1.0)
-    for k in range(6):   # vines trailing off the rim
-        a = TAU * k / 6 + rnd.uniform(-0.3, 0.3)
-        hanging_vine(vines, leaves, (ox + math.cos(a) * (LANDING_R - 0.2), -0.4, math.sin(a) * (LANDING_R - 0.2)),
-                     rnd.uniform(2.5, 5.0), seed=320 + k)
-    objs = [planks.object("JadeLanding_Planks", mats.coll, [mats.planks], smooth=False),
-            beams.object("JadeLanding_Beams", mats.coll, [mats.beams], smooth=False),
-            jade.object("JadeLanding_Jade", mats.coll, [mats.jade], smooth=False),
-            vines.object("JadeLanding_Vines", mats.coll, [mats.vine]),
-            leaves.object("JadeLanding_Leaves", mats.coll, [mats.leaf])]
-    for o in objs[:3]:
-        chamfer(o, 0.06)
-    Hm.solidify(objs[4], 0.02)
-    objs[4]["sheet"] = True
-    return objs, [glow.object("JadeLanding_Glow_" + JADE_LANTERN, mats.coll, [K.glow_material(JADE_LANTERN)], smooth=False)]
-
-
-def jade_post(ox, mats):
-    """A post round a landing's rim: the deck's carved jade post, a vine up it, a small jade lantern
-    hung from a bracket under its cap."""
-    jade, beams, vines, leaves, glow = Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi()
-    prism(jade, (ox, -0.8, 0), 0.62, 4.1, sides=8, taper=0.9, yaw=math.pi / 8)
-    prism(jade, (ox, 3.3, 0), 0.85, 0.45, sides=8, taper=1.0, yaw=math.pi / 8)
-    prism(jade, (ox, 3.75, 0), 0.65, 0.7, sides=8, taper=0.12, yaw=math.pi / 8)
-    prism(jade, (ox, 0.2, 0), 0.78, 0.35, sides=8, taper=1.0, yaw=math.pi / 8)
-    box(beams, (ox, 3.0, -0.9), (0.2, 0.2, 1.4))          # the bracket, toward the landing (local -z)
-    prism(glow, (ox, 2.05, -1.45), 0.32, 0.7, sides=6, taper=0.8)
-    vine(vines, leaves, (ox, 0.1, 0.62), (ox, 3.2, 0.62), seed=331, turns=1.6, radius=0.62)
-    objs = [jade.object("JadePost_Jade", mats.coll, [mats.jade], smooth=False),
-            beams.object("JadePost_Beams", mats.coll, [mats.beams], smooth=False),
-            vines.object("JadePost_Vines", mats.coll, [mats.vine]),
-            leaves.object("JadePost_Leaves", mats.coll, [mats.leaf])]
-    chamfer(objs[0], 0.05)
-    Hm.solidify(objs[3], 0.02)
-    objs[3]["sheet"] = True
-    return objs, [glow.object("JadePost_Glow_" + JADE_LANTERN, mats.coll, [K.glow_material(JADE_LANTERN)], smooth=False)]
-
-
-def ember_landing(ox, mats):
-    """A round platform of basalt column tops, lava glowing in the seams, on a basalt drum with
-    organ-pipe columns hanging under it, a molten drip at each tip."""
-    rnd = random.Random(411)
-    rock, glow = Hm.Hi(), Hm.Hi()
-    r = HEX_R
-    lim = LANDING_R - 1.2
-    col = 0
-    x = -lim
-    while x <= lim + 1e-6:
-        shift = (col % 2) * r * math.sqrt(3) / 2
-        z = -lim + shift
-        while z <= lim + 1e-6:
-            if math.hypot(x, z) <= lim - r * 0.2:
-                prism(rock, (ox + x, -rnd.uniform(0.0, 0.12) - 1.4, z), r * 0.93, 1.4, sides=6, taper=0.98)
-            z += r * math.sqrt(3)
-        x += 1.5 * r
-        col += 1
-    prism(glow, (ox, -0.85, 0), lim - 0.6, 0.3, sides=32)                           # the molten bed in the seams
-    prism(rock, (ox, -2.4, 0), LANDING_R - 0.3, 1.1, sides=24)                        # the drum
-    for k in range(18):                                                              # its rim of standing columns, knee high
-        a = TAU * k / 18
-        prism(rock, (ox + math.cos(a) * (LANDING_R - 0.85), -2.2, math.sin(a) * (LANDING_R - 0.85)), 0.86, 2.6, sides=6, taper=0.97, yaw=rnd.uniform(0, 1))
-    for k in range(9):
-        a, d = rnd.uniform(0, TAU), rnd.uniform(0, LANDING_R * 0.7)
-        length = rnd.uniform(3, 9)
-        cx, cz = math.cos(a) * d, math.sin(a) * d
-        prism(rock, (ox + cx, -2.4 - length, cz), rnd.uniform(0.8, 1.3), length, sides=6, taper=1.05, yaw=rnd.uniform(0, 1))
-        prism(glow, (ox + cx, -3.0 - length, cz), 0.45, 0.65, sides=6, taper=1.6)
-    objs = [rock.object("EmberLanding_Rock", mats.coll, [mats.rock], smooth=False)]
-    chamfer(objs[0], 0.06)
-    return objs, [glow.object("EmberLanding_Glow_" + EMBER_LAVA, mats.coll, [K.glow_material(EMBER_LAVA)], smooth=False)]
-
-
-def ember_post(ox, mats):
-    """A cluster of three basalt columns round a landing's rim, the tallest cracked open on top with
-    lava welling in it."""
-    rock, glow = Hm.Hi(), Hm.Hi()
-    for dx, dz, rr, h, yaw in ((0, 0, 0.75, 4.2, 0.2), (0.85, 0.55, 0.55, 3.0, 0.7), (-0.75, 0.6, 0.5, 2.4, 0.4)):
-        prism(rock, (ox + dx, -0.6, dz), rr, h + 0.6, sides=6, taper=0.96, yaw=yaw)
-    prism(glow, (ox, 3.55, 0), 0.42, 0.12, sides=6, taper=1.0)
-    objs = [rock.object("EmberPost_Rock", mats.coll, [mats.rock], smooth=False)]
-    chamfer(objs[0], 0.06)
-    return objs, [glow.object("EmberPost_Glow_" + EMBER_LAVA, mats.coll, [K.glow_material(EMBER_LAVA)], smooth=False)]
-
-
-def origin_landing(ox, mats):
-    """An ancient round platform: a ring of worn wedge slabs split by void cracks round a sigil
-    stone whose carved ring glows, a bronze band round the drum beneath, broken chunks hanging on
-    bronze chains."""
-    rnd = random.Random(511)
-    stone, glow, bronze = Hm.Hi(), Hm.Hi(), Hm.Hi()
-    inner, outer, n = 4.2, LANDING_R - 0.4, 12
-    for k in range(n):   # the wedge slabs, each a little sunk or raised, a void crack between each pair
-        a0, a1 = TAU * k / n + 0.02, TAU * (k + 1) / n - 0.02
-        mid = (a0 + a1) / 2
-        dr = (outer - inner)
-        box(stone, (ox + math.cos(mid) * (inner + dr / 2), -0.45 - rnd.uniform(0, 0.12), math.sin(mid) * (inner + dr / 2)),
-            (dr - 0.2, 0.9, 2 * (inner + dr / 2) * math.sin((a1 - a0) / 2) * 1.08), yaw=-mid)
-        if rnd.random() < 0.6:
-            a = TAU * (k + 1) / n
-            box(glow, (ox + math.cos(a) * (inner + dr / 2), -0.6, math.sin(a) * (inner + dr / 2)), (dr - 1.2, 0.6, 0.16), yaw=-a)
-    prism(stone, (ox, -0.85, 0), inner - 0.2, 0.9, sides=16)   # the sigil stone
-    ring = [(ox + math.cos(TAU * k / 32) * (inner - 1.0), 0.04, math.sin(TAU * k / 32) * (inner - 1.0)) for k in range(33)]
-    Hm.htube(glow, ring, lambda t: 0.12, sides=5, per=1, uv_scale=1.0, tip=False)
-    box(glow, (ox, 0.04, 0), (inner * 1.2, 0.08, 0.16), yaw=0.6)
-    box(glow, (ox, 0.04, 0), (inner * 1.2, 0.08, 0.16), yaw=-0.6)
-    prism(stone, (ox, -2.6, 0), LANDING_R - 0.6, 1.8, sides=24, taper=0.9)          # the drum
-    prism(bronze, (ox, -1.4, 0), LANDING_R - 0.45, 0.4, sides=24)
-    for k in range(5):   # broken chunks on chains under it
-        a = TAU * k / 5 + rnd.uniform(-0.3, 0.3)
-        d = rnd.uniform(4, LANDING_R - 4)
-        cx, cz = math.cos(a) * d, math.sin(a) * d
-        drop = rnd.uniform(2.5, 6)
-        box(bronze, (ox + cx, -3.5 - drop / 2, cz), (0.18, drop, 0.18))
-        box(stone, (ox + cx, -3.5 - drop - 1.0, cz), (rnd.uniform(1.6, 2.6), rnd.uniform(1.4, 2.2), rnd.uniform(1.6, 2.6)),
-            yaw=rnd.uniform(0, 1), roll=rnd.uniform(-0.2, 0.2))
-    objs = [stone.object("OriginLanding_Stone", mats.coll, [mats.stone], smooth=False),
-            bronze.object("OriginLanding_Bronze", mats.coll, [mats.bronze], smooth=False)]
-    chamfer(objs[0], 0.09)
-    chamfer(objs[1], 0.04)
-    return objs, [glow.object("OriginLanding_Glow_" + VOID_GLOW, mats.coll, [K.glow_material(VOID_GLOW)], smooth=False)]
-
-
-def origin_post(ox, mats):
-    """A broken pillar stub round a landing's rim: bronze-banded, its top snapped off at a slant,
-    void light in the break."""
-    stone, glow, bronze = Hm.Hi(), Hm.Hi(), Hm.Hi()
-    prism(stone, (ox, -0.2, 0), 0.95, 3.0, sides=8, taper=0.88)
-    box(stone, (ox + 0.2, 3.0, 0.1), (1.2, 0.9, 1.1), roll=0.45, yaw=0.3)   # the snapped top, tilted
-    for y in (0.5, 2.0):
-        prism(bronze, (ox, y, 0), 1.0, 0.3, sides=8, taper=1.0)
-    box(glow, (ox - 0.05, 2.78, 0.0), (1.2, 0.08, 1.05), roll=0.42)
-    objs = [stone.object("OriginPost_Stone", mats.coll, [mats.stone], smooth=False),
-            bronze.object("OriginPost_Bronze", mats.coll, [mats.bronze], smooth=False)]
-    chamfer(objs[0], 0.08)
-    chamfer(objs[1], 0.04)
-    return objs, [glow.object("OriginPost_Glow_" + VOID_GLOW, mats.coll, [K.glow_material(VOID_GLOW)], smooth=False)]
+# ---------- added later (the extra kits) ----------
 
 
 def moon_deck(ox, mats):
@@ -960,15 +744,12 @@ KITS = {
     "Jade": [("Deck", jade_deck), ("Support", jade_support), ("Gate", jade_gate)],
     "Ember": [("Deck", ember_deck), ("Support", ember_support), ("Gate", ember_gate)],
     "Origin": [("Deck", origin_deck), ("Support", origin_support), ("Gate", origin_gate)],
-    "Moon": [("Stair", moon_stair), ("Landing", moon_landing), ("Post", moon_post), ("Support", moon_support), ("Gate", moon_gate)],
+    "Moon": [("Stair", moon_stair), ("Support", moon_support), ("Gate", moon_gate)],
 }
 
 # The pieces added after the kits were baked, each theme's baked on its own (<Theme>BridgeExtra.fbx)
 # so the kits already in the game keep their maps.
 EXTRA_KITS = {
-    "Jade": [("Landing", jade_landing), ("Post", jade_post)],
-    "Ember": [("Landing", ember_landing), ("Post", ember_post)],
-    "Origin": [("Landing", origin_landing), ("Post", origin_post)],
     "Moon": [("Deck", moon_deck)],
 }
 
@@ -1008,8 +789,8 @@ def build(theme, extra=False):
 
 
 # ---------- bake and export ----------
-BUDGET = {"Jade": 10000, "Ember": 9000, "Moon": 9000, "Origin": 9000}          # triangles for the whole kit's game meshes (the deck repeats dozens of times)
-EXTRA_BUDGET = 6000
+BUDGET = {"Jade": 16000, "Ember": 16000, "Moon": 12000, "Origin": 14000}      # triangles for the whole kit's game meshes (the deck repeats dozens of times)
+EXTRA_BUDGET = 14000
 
 
 def _split(low, coll, theme, pieces):
@@ -1072,8 +853,7 @@ def write_offsets(entries, path=None):
 
 
 def export(theme, size=2048, extra=False):
-    """Bakes and exports a theme's kit, or with `extra` its extra kit (<Theme>BridgeExtra.fbx and maps,
-    smaller: a 1024 bake is plenty for a few pieces)."""
+    """Bakes and exports a theme's kit, or with `extra` its extra kit (<Theme>BridgeExtra.fbx and maps)."""
     built, coll = build(theme, extra)
     pieces = [p for p, _ in (EXTRA_KITS if extra else KITS)[theme]]
     hi_objs = [o for p in pieces for o in built[p][0]]

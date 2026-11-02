@@ -8,9 +8,9 @@ local WorldConfig = {
     Islands = {
         Yggdrasil = { Centre = Vector3.new(0, 200, 0), Radius = 250 },
         JadeGrove = { Centre = Vector3.new(-302, 200, -410), Radius = 80, Turns = 3 },
-        EmberPeak = { Centre = Vector3.new(-102, 200, -410), Radius = 75, Turns = 1 },
-        MoonlitIsle = { Centre = Vector3.new(100, 200, -410), Radius = 60, Turns = 0 },
-        OriginAbyss = { Centre = Vector3.new(300, 200, -412), Radius = 85, Turns = 1 },
+        EmberPeak = { Centre = Vector3.new(-150, 200, -606), Radius = 75, Turns = 1 },
+        MoonlitIsle = { Centre = Vector3.new(180, 200, -742), Radius = 60, Turns = 0 },
+        OriginAbyss = { Centre = Vector3.new(572, 200, -784), Radius = 85, Turns = 1 },
     },
 
     -- Yggdrasil's spawn slots (FloatingIslands.Yggdrasil.SpawnSlots): each player in the server

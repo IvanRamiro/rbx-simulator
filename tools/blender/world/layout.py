@@ -8,6 +8,12 @@ it was authored with and is placed by its centre and `turns`: quarter turns, eac
 of bearing ((x, z) -> (-z, x)), chosen so its gate faces Yggdrasil and its bridge runs straight.
 Quarter turns keep its terrain grid exact; every move is a whole number of 4-stud voxels.
 
+Since 2026-11-02 the harder an island, the farther it stands (the owner's rule): each bridge takes
+about four seconds longer to run than the last at its unlock rank's run speed (GameConfig.Qinggong):
+Jade ~200 studs (Qi Gatherer, 24 studs/s), Ember ~320 (Qi Awakener, 26), Moonlit ~460 (Foundation
+Initiate, 28; the sword flies it in ~10 s), Origin ~650 (Divine Initiate, 32). The islands sit on
+their old bearings from Yggdrasil, moved out until their bridges measure that.
+
     python3 tools/blender/world/layout.py            # print the layout, check the bridges
     python3 tools/blender/world/layout.py --write    # also write src/worldbuild/Placements/Bridges.lua
 """
@@ -16,9 +22,9 @@ import math
 ISLANDS = {
     "Yggdrasil": {"centre": (0, 200, 0), "radius": 250, "turns": 0},
     "JadeGrove": {"centre": (-302, 200, -410), "radius": 80, "turns": 3},
-    "EmberPeak": {"centre": (-102, 200, -410), "radius": 75, "turns": 1},
-    "MoonlitIsle": {"centre": (100, 200, -410), "radius": 60, "turns": 0},
-    "OriginAbyss": {"centre": (300, 200, -412), "radius": 85, "turns": 1},
+    "EmberPeak": {"centre": (-150, 200, -606), "radius": 75, "turns": 1},
+    "MoonlitIsle": {"centre": (180, 200, -742), "radius": 60, "turns": 0},
+    "OriginAbyss": {"centre": (572, 200, -784), "radius": 85, "turns": 1},
 }
 
 # Each island's arrival, where its bridge lands (island-local, before turning): just inside its gate
@@ -55,18 +61,13 @@ def flat(a, b):
 
 
 # ---------- bridges ----------
-# The bridges fan out from Yggdrasil as on the owner's map. Each leaves its island's gate straight
-# out for APPROACH studs (along the line from the island's centre through its arrival), turns on a
-# round landing, and runs straight to the point of Yggdrasil's ground (HUB_EXIT_RADIUS out) facing
-# that landing. Level at Y 200; the run from the hub arches gently, its middle RISE of its length up
-# (so its ends never climb more than about 6 degrees). A bend under
-# STRAIGHT_BELOW degrees gets no landing: the bridge runs straight from the hub to the gate.
-DECK_WIDTH = 20          # studs (doubled at the owner's request): room to pass, and to ride the sword along it
+# The bridges fan out from Yggdrasil as on the owner's map, each straight from Yggdrasil's ground
+# (HUB_EXIT_RADIUS out, facing its island) to just inside its island's gate (ARRIVALS). Level at
+# Y 200, arching gently: the middle rises RISE of the length (so the ends never climb more than
+# about 6 degrees). No landings: the owner wants each bridge one straight span.
+DECK_WIDTH = 40          # studs (doubled twice at the owner's request): room to pass, and to ride the sword along it
 MAX_SLOPE = 34           # degrees; Roblox characters walk up far steeper, but stairs past this read as a wall
 SEGMENT = 12             # studs per deck piece along a span
-APPROACH = 35            # studs of straight bridge out of each island's gate
-LANDING_RADIUS = 15
-STRAIGHT_BELOW = 8       # degrees of bend
 RISE = 0.025
 
 ROUTES = {
@@ -78,57 +79,33 @@ ROUTES = {
 
 
 def bridge_path(name):
-    """(start on Yggdrasil, the turn or None, end at the island's arrival), world studs."""
-    island = ROUTES[name]["island"]
-    end = to_world(island, ARRIVALS[island])
-    c = ISLANDS[island]["centre"]
-    dx, dz = end[0] - c[0], end[2] - c[2]
-    n = math.hypot(dx, dz)
-    dx, dz = dx / n, dz / n
+    """(start on Yggdrasil, end at the island's arrival), world studs."""
+    end = to_world(ROUTES[name]["island"], ARRIVALS[ROUTES[name]["island"]])
     hub = ISLANDS["Yggdrasil"]["centre"]
-    bend = (end[0] + dx * APPROACH, end[1], end[2] + dz * APPROACH)
-    ux, uz = bend[0] - hub[0], bend[2] - hub[2]
+    ux, uz = end[0] - hub[0], end[2] - hub[2]
     u = math.hypot(ux, uz)
     start = (hub[0] + ux / u * HUB_EXIT_RADIUS, hub[1], hub[2] + uz / u * HUB_EXIT_RADIUS)
-    lx, lz = bend[0] - start[0], bend[2] - start[2]
-    cos = (lx * -dx + lz * -dz) / math.hypot(lx, lz)
-    angle = math.degrees(math.acos(max(-1.0, min(1.0, cos))))
-    return start, (bend if angle >= STRAIGHT_BELOW else None), end
+    return start, end
 
 
 BRIDGES = {}
 for _name, _route in ROUTES.items():
-    _start, _bend, _end = bridge_path(_name)
+    _start, _end = bridge_path(_name)
     BRIDGES[_name] = {"theme": _route["theme"], "rank": _route["rank"],
-                      "start": tuple(round(v, 1) for v in _start), "end": tuple(round(v, 1) for v in _end),
-                      "bend": _bend and tuple(round(v, 1) for v in _bend), "landing": LANDING_RADIUS}
+                      "start": tuple(round(v, 1) for v in _start), "end": tuple(round(v, 1) for v in _end)}
 
 
-def _run(a, b, arch):
-    """Deck nodes from a to b (both included); an arch rises RISE of the run's length in the middle."""
-    rise = RISE * flat(a, b) if arch else 0.0
+def bridge_nodes(name):
+    """The deck's centre line as nodes (x, y, z), SEGMENT studs or so apart, arching."""
+    a, b = BRIDGES[name]["start"], BRIDGES[name]["end"]
+    rise = RISE * flat(a, b)
     n = max(1, round(flat(a, b) / SEGMENT))
     out = []
     for i in range(n + 1):
         t = i / n
         x, y, z = lerp(a, b, t)
-        out.append((x, y + rise * 4 * t * (1 - t), z, False))
+        out.append((x, y + rise * 4 * t * (1 - t), z))
     return out
-
-
-def bridge_nodes(name):
-    """The deck's centre line as nodes (x, y, z, landing). A bend is a landing: the runs stop at its
-    rim and its centre node is marked, as the builder expects."""
-    b = BRIDGES[name]
-    s, bend, e = b["start"], b["bend"], b["end"]
-    if not bend:
-        return _run(s, e, True)
-    r = b["landing"]
-    def towards(p, q, d):
-        f = d / flat(p, q)
-        return (p[0] + (q[0] - p[0]) * f, p[1], p[2] + (q[2] - p[2]) * f)
-    rim_in, rim_out = towards(bend, s, r), towards(bend, e, r)
-    return _run(s, rim_in, True) + [(bend[0], bend[1], bend[2], True)] + _run(rim_out, e, False)
 
 
 def check_bridges():
@@ -164,7 +141,7 @@ def check_bridges():
 
 def _corners(name):
     b = BRIDGES[name]
-    return [b["start"]] + ([b["bend"]] if b["bend"] else []) + [b["end"]]
+    return [b["start"], b["end"]]
 
 
 def _segment_gap(a, b):
@@ -188,12 +165,12 @@ def write_bridges(path=None):
     path = path or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "src", "worldbuild", "Placements", "Bridges.lua")
     lines = ["-- Generated by tools/blender/world/layout.py (--write): the bridges between the islands. Don't edit",
              "-- by hand: change ROUTES there and run it again. Positions are world studs; Nodes trace the deck's",
-             "-- centre line (its top surface), Landing marks a round platform (LandingRadius) at a turn.",
+             "-- centre line (its top surface).",
              "return {", f"    DeckWidth = {DECK_WIDTH},", "    Bridges = {"]
     for name, b in BRIDGES.items():
-        lines.append(f'        {name} = {{ Theme = "{b["theme"]}", RankId = "{b["rank"]}", LandingRadius = {b["landing"]}, Nodes = {{')
-        for x, y, z, landing in bridge_nodes(name):
-            lines.append(f"            {{ Position = Vector3.new({x:.2f}, {y:.2f}, {z:.2f}), Landing = {'true' if landing else 'false'} }},")
+        lines.append(f'        {name} = {{ Theme = "{b["theme"]}", RankId = "{b["rank"]}", Nodes = {{')
+        for x, y, z in bridge_nodes(name):
+            lines.append(f"            {{ Position = Vector3.new({x:.2f}, {y:.2f}, {z:.2f}) }},")
         lines.append("        } },")
     lines += ["    },", "}", ""]
     with open(path, "w") as f:
@@ -206,7 +183,7 @@ if __name__ == "__main__":
     for n, isl in ISLANDS.items():
         print(n, isl)
     for n, b in BRIDGES.items():
-        print(n, b["start"], "->", b["bend"] or "straight", "->", b["end"])
+        print(n, b["start"], "->", b["end"])
     print("ALL BRIDGES GOOD" if check_bridges() else "SOME BRIDGES BAD")
     if "--write" in sys.argv:
         print("wrote", write_bridges())

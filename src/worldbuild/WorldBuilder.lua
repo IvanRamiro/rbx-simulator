@@ -721,16 +721,57 @@ local function addSparkles(parent, color, rate)
     return sparkles
 end
 
+-- Decorative pieces that give way to a bridge: placeKit leaves out any standing where a bridge comes
+-- onto an island (its span and its abutment), so moving or widening a bridge never needs
+-- an island's seeded scatter re-run.
+WorldBuilder.ClearOfBridges = {
+    MI_MoonstoneSpire = true, MI_MoonstoneShards = true, MI_LunarRock = true, MI_FrostLilies = true, MI_LilyGlow = true,
+    EP_ObsidianShard = true, EP_BasaltClusterA = true, EP_BasaltClusterB = true, EP_FireCrystal = true,
+    EP_EmberVent = true, EP_VentGlow = true,
+    JG_JadeOutcrop = true, JG_FallenLog = true, JG_Fern = true, JG_Mushrooms = true,
+    JG_AncientTreeA = true, JG_AncientTreeB = true, JG_BambooClump = true,
+    OA_SlateRock = true, OA_VoidCrystals = true, OA_VoidCrystalGlow = true,
+}
+
+-- Each bridge's span, flat, to 10 studs past its end (its abutment).
+local function bridgeEnds()
+    local bridges = require(ServerStorage.WorldBuild.Placements.Bridges:Clone())
+    local ends = {}
+    for _, bridge in bridges.Bridges do
+        local nodes = bridge.Nodes
+        local from = nodes[1].Position
+        local run = (nodes[#nodes].Position - from) * Vector3.new(1, 0, 1)
+        table.insert(ends, { From = from, Along = run.Unit, Length = run.Magnitude + 10, Half = bridges.DeckWidth / 2 + 2 })
+    end
+    return ends
+end
+
+local function onBridgeEnd(ends, position)
+    for _, e in ends do
+        local offset = (position - e.From) * Vector3.new(1, 0, 1)
+        local along = offset:Dot(e.Along)
+        if along >= 0 and along <= e.Length and (offset - e.Along * along).Magnitude <= e.Half then
+            return true
+        end
+    end
+    return false
+end
+
 -- Clones the kit templates to every Kit placement in Placements.<island> (FloatingIslands.<island>.Kit).
 function WorldBuilder.placeKit(island)
     local placements = placementsFor(island)
     local centre = islandFrame(island)
     local folder = WorldBuilder.islandFolder(island, "Kit")
     folder:ClearAllChildren()
+    local ends = bridgeEnds()
     local placed = 0
     for name, list in placements.Kit do
         for index, entry in list do
-            local part = placeTemplate(island, name, centre * CFrame.new(entry.Position) * CFrame.Angles(0, entry.Yaw, 0), folder, entry.Scale)
+            local frame = centre * CFrame.new(entry.Position) * CFrame.Angles(0, entry.Yaw, 0)
+            if WorldBuilder.ClearOfBridges[name] and onBridgeEnd(ends, frame.Position) then
+                continue
+            end
+            local part = placeTemplate(island, name, frame, folder, entry.Scale)
             part.Name = name .. "_" .. index
             local light = WorldBuilder.Lights[name]
             if light then
@@ -975,12 +1016,12 @@ end
 
 -- ---------- bridges ----------
 -- The bridges from Yggdrasil to the other four (Placements/Bridges.lua). Each is a Model
--- in FloatingIslands.Bridges: a deck along its nodes in pieces of up to Segment studs, low rails, a
--- round platform at each landing, and at its start a gate whose Qi barrier (tagged
+-- in FloatingIslands.Bridges: one straight span, a deck along its nodes in pieces of up to Segment
+-- studs, low rails, and at its start a gate whose Qi barrier (tagged
 -- GameConfig.BridgeBarrierTag) stops everyone below its RankId (BridgeBarriers.client lets qualified
 -- players through; WorldService returns the rest). Zone parts past the gate tell the server who is
--- on the bridge. The deck, rails and landings are the collision, a plain blockout until the themed
--- kit dresses them.
+-- on the bridge. The deck and rails are the collision, a plain blockout until the themed kit dresses
+-- them.
 WorldBuilder.BridgeThemes = {
     Jade = { Deck = Color3.fromRGB(150, 110, 70), DeckMaterial = Enum.Material.WoodPlanks, Rail = Color3.fromRGB(80, 160, 110), Glow = Color3.fromRGB(40, 215, 110) },
     Ember = { Deck = Color3.fromRGB(55, 48, 46), DeckMaterial = Enum.Material.Basalt, Rail = Color3.fromRGB(35, 30, 30), Glow = Color3.fromRGB(255, 105, 25) },
@@ -1012,22 +1053,17 @@ local function abutment(model, theme, width, at, outward)
         CFrame.lookAt(centre, centre + flat), model, theme.Deck, theme.DeckMaterial)
 end
 
--- one straight piece of deck from a to b (top surface centre line), with its rails and zone; the
--- rails leave out `trimA` studs at a's end and `trimB` at b's (where the piece runs onto a landing)
-local function deckPiece(model, theme, width, a, b, zoneFolder, trimA, trimB)
+-- one straight piece of deck from a to b (top surface centre line), with its rails and zone
+local function deckPiece(model, theme, width, a, b, zoneFolder)
     local length = (b - a).Magnitude
     local frame = CFrame.lookAt((a + b) / 2, b)
     local overlap = 0.4 -- pieces overlap a little so a change of slope leaves no gap
     local deck = bridgePart("Deck", Vector3.new(width, BRIDGE.Thickness, length + overlap), frame * CFrame.new(0, -BRIDGE.Thickness / 2, 0), model, theme.Deck, theme.DeckMaterial)
     model:SetAttribute("Pieces", (model:GetAttribute("Pieces") or 0) + 1)
     deck:SetAttribute("Order", model:GetAttribute("Pieces"))
-    local railLength = length + overlap - trimA - trimB
-    if railLength > 0.5 then
-        local shift = (trimA - trimB) / 2 -- toward b (-Z) by trimA, toward a by trimB
-        for side = -1, 1, 2 do
-            bridgePart("Rail", Vector3.new(BRIDGE.RailWidth, BRIDGE.RailHeight, railLength),
-                frame * CFrame.new(side * (width / 2 - BRIDGE.RailWidth / 2), BRIDGE.RailHeight / 2, -shift), model, theme.Rail, Enum.Material.SmoothPlastic)
-        end
+    for side = -1, 1, 2 do
+        bridgePart("Rail", Vector3.new(BRIDGE.RailWidth, BRIDGE.RailHeight, length + overlap),
+            frame * CFrame.new(side * (width / 2 - BRIDGE.RailWidth / 2), BRIDGE.RailHeight / 2, 0), model, theme.Rail, Enum.Material.SmoothPlastic)
     end
     if zoneFolder then
         local zone = bridgePart("Zone", Vector3.new(width + 8, BRIDGE.ZoneHeight, length + overlap),
@@ -1042,15 +1078,12 @@ end
 -- WB.storeBridgeKit(<import>, theme) in ServerStorage.BridgeKits.<Theme>. Pieces named
 -- "<x>_Glow_<rrggbb>" become Neon in that colour; the rest get the maps the importer does not read.
 WorldBuilder.BridgeKitMaps = {
-    Jade = { Roughness = "rbxassetid://130549356056158", Metalness = "rbxassetid://73078845907191" },
-    Ember = { Roughness = "rbxassetid://77433933199242", Metalness = "rbxassetid://87497595865816" },
-    Moon = { Roughness = "rbxassetid://136583263564323", Metalness = "rbxassetid://134485465354528" },
-    Origin = { Roughness = "rbxassetid://75494153346029", Metalness = "rbxassetid://80885266655602" },
-    -- the extra kits (<Theme>BridgeExtra.fbx: landings, their posts, Moon's level deck), baked apart
-    JadeExtra = { Roughness = "rbxassetid://74872137718473", Metalness = "rbxassetid://87497595865816" },
-    EmberExtra = { Roughness = "rbxassetid://72086406723859", Metalness = "rbxassetid://87497595865816" },
-    MoonExtra = { Roughness = "rbxassetid://139482179053472", Metalness = "rbxassetid://106884015600617" },
-    OriginExtra = { Roughness = "rbxassetid://138184996228726", Metalness = "rbxassetid://131826298278154" },
+    Jade = { Roughness = "rbxassetid://140603311452129", Metalness = "rbxassetid://70674142166061" },
+    Ember = { Roughness = "rbxassetid://123446572117201", Metalness = "rbxassetid://87497595865816" },
+    Moon = { Roughness = "rbxassetid://108481130424902", Metalness = "rbxassetid://116564473666370" },
+    Origin = { Roughness = "rbxassetid://70728910964549", Metalness = "rbxassetid://104078115058483" },
+    -- Moon's extra kit (MoonBridgeExtra.fbx: its level deck), baked apart
+    MoonExtra = { Roughness = "rbxassetid://108002843043070", Metalness = "rbxassetid://118382741100339" },
 }
 
 -- With `extra`, the import is the theme's extra kit: its pieces join the stored kit (replacing any
@@ -1129,9 +1162,9 @@ local SUPPORT_EVERY = { Jade = 3, Ember = 2, Moon = 4, Origin = 3 } -- deck piec
 local SUPPORT_CLEAR = 24 -- studs from either end with no support (they would sink into the islands)
 
 -- Dress a built bridge with its theme's kit, if the kit is stored: a deck (or stair) section on every
--- piece of deck, the landings, posts round them, supports hanging under it, the gate. The blockout
+-- piece of deck, supports hanging under it, the gate. The blockout
 -- stays as the invisible collision. Returns the number of pieces placed.
-local function dressBridge(model, theme, width, landingRadius)
+local function dressBridge(model, theme)
     local kits = ServerStorage:FindFirstChild("BridgeKits")
     if not (kits and kits:FindFirstChild(theme)) then
         return 0
@@ -1153,23 +1186,6 @@ local function dressBridge(model, theme, width, landingRadius)
     for _, d in decks do
         total += d.Size.Z - 0.4
     end
-    -- the deck under a landing the theme dresses is covered by the landing piece: leave it bare
-    local landingCentres = {}
-    if kitInfo[theme] and kitInfo[theme].Landing then
-        for _, c in model:GetChildren() do
-            if c.Name == "Landing" then
-                table.insert(landingCentres, c.Position)
-            end
-        end
-    end
-    local function underLanding(position)
-        for _, centre in landingCentres do
-            if ((position - centre) * Vector3.new(1, 0, 1)).Magnitude < landingRadius then
-                return true
-            end
-        end
-        return false
-    end
     local run = 0
     local bareDeck = false
     for index, deck in decks do
@@ -1177,9 +1193,7 @@ local function dressBridge(model, theme, width, landingRadius)
         local top = deck.CFrame * CFrame.new(0, deck.Size.Y / 2, 0)
         local pitch = math.deg(math.asin(math.clamp(top.LookVector.Y, -1, 1)))
         local section = if theme == "Moon" and math.abs(pitch) > 15 then "Stair" else "Deck"
-        if underLanding(top.Position) then
-            -- covered: neither dressed nor counted bare
-        elseif placeKitPiece(theme, section, top, dressing, length / BRIDGE.Segment) then
+        if placeKitPiece(theme, section, top, dressing, length / BRIDGE.Segment) then
             count += 1
         else
             bareDeck = true
@@ -1192,31 +1206,6 @@ local function dressBridge(model, theme, width, landingRadius)
             end
         end
         run += length
-    end
-    local bareLandings = {}
-    for _, c in model:GetChildren() do
-        if c.Name == "Landing" then
-            local centre = c.Position + Vector3.new(0, BRIDGE.Thickness / 2, 0)
-            if placeKitPiece(theme, "Landing", CFrame.new(centre), dressing) then
-                count += 1
-            else
-                table.insert(bareLandings, c)
-            end
-            -- posts round the rim, wherever a rail stands (not across the flights' openings)
-            for _, r in model:GetChildren() do
-                if r.Name == "Rail" and (Vector3.new(r.Position.X - centre.X, 0, r.Position.Z - centre.Z)).Magnitude > landingRadius - 1.5
-                    and math.abs(r.Position.Y - centre.Y - BRIDGE.RailHeight / 2) < 0.5 and r.Size.Z < 5 then
-                    local out = Vector3.new(r.Position.X - centre.X, 0, r.Position.Z - centre.Z)
-                    local ang = math.atan2(out.Z, out.X)
-                    if math.floor(ang / (2 * math.pi) * 28 + 0.5) % 3 == 0 then -- every third rail segment
-                        local at = centre + out.Unit * (landingRadius - 0.9)
-                        if placeKitPiece(theme, "Post", CFrame.lookAt(at, centre * Vector3.new(1, 0, 1) + Vector3.new(0, at.Y, 0)), dressing) then
-                            count += 1
-                        end
-                    end
-                end
-            end
-        end
     end
     local gate = model:FindFirstChild("Gate")
     local barrier = gate and gate:FindFirstChild("QiBarrier")
@@ -1231,23 +1220,11 @@ local function dressBridge(model, theme, width, landingRadius)
             end
         end
     end
-    -- the blockout becomes invisible collision under the kit, except where the theme has no piece:
-    -- a bare landing (and the rails round it) stays as it is, and so do the whole deck and its rails
-    -- if any deck section is bare
-    local function bare(part)
-        if bareDeck and (part.Name == "Deck" or part.Name == "Rail") then
-            return true
-        end
-        for _, landing in bareLandings do
-            if part == landing or (part.Name == "Rail" and ((part.Position - landing.Position) * Vector3.new(1, 0, 1)).Magnitude < landingRadius + 1) then
-                return true
-            end
-        end
-        return false
-    end
-    if count > 0 then
+    -- the blockout becomes invisible collision under the kit, unless a deck section is bare: then the
+    -- whole deck and its rails stay as they are
+    if count > 0 and not bareDeck then
         for _, c in model:GetChildren() do
-            if (c.Name == "Deck" or c.Name == "Rail" or c.Name == "Landing") and not bare(c) then
+            if c.Name == "Deck" or c.Name == "Rail" then
                 c.Transparency = 1
                 c.CastShadow = false
             end
@@ -1282,44 +1259,11 @@ function WorldBuilder.buildBridges()
             local length = (b - a).Magnitude
             -- up to Segment studs a piece, with a little give: layout.py's 12.1-stud spans stay whole
             local pieces = math.max(1, math.ceil(length / BRIDGE.Segment - 0.05))
-            -- rails stop at the rim of a landing at either end of this span
-            local landingRadius = bridge.LandingRadius
-            local fromLanding, toLanding = nodes[i].Landing and landingRadius or 0, nodes[i + 1].Landing and landingRadius or 0
             for k = 1, pieces do
-                local p, q = a:Lerp(b, (k - 1) / pieces), a:Lerp(b, k / pieces)
-                local d0, d1 = length * (k - 1) / pieces, length * k / pieces
-                local trimA = math.clamp(fromLanding - d0, 0, d1 - d0)
-                local trimB = math.clamp(d1 - (length - toLanding), 0, d1 - d0)
-                deckPiece(model, theme, width, p, q, run + d0 >= zoneFrom and zones or nil, trimA, trimB)
+                local d0 = length * (k - 1) / pieces
+                deckPiece(model, theme, width, a:Lerp(b, (k - 1) / pieces), a:Lerp(b, k / pieces), run + d0 >= zoneFrom and zones or nil)
             end
             run += length
-            if nodes[i + 1].Landing then
-                local landing = bridgePart("Landing", Vector3.new(BRIDGE.Thickness, landingRadius * 2, landingRadius * 2),
-                    CFrame.new(b - Vector3.new(0, BRIDGE.Thickness / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)), model, theme.Deck, theme.DeckMaterial)
-                landing.Shape = Enum.PartType.Cylinder
-                local inDir = Vector3.new(a.X - b.X, 0, a.Z - b.Z).Unit
-                local nextNode = nodes[i + 2].Position
-                local outDir = Vector3.new(nextNode.X - b.X, 0, nextNode.Z - b.Z).Unit
-                local posts = 28
-                for k = 0, posts - 1 do
-                    local ang = k / posts * 2 * math.pi
-                    local dir = Vector3.new(math.cos(ang), 0, math.sin(ang))
-                    -- open within the deck's width where each flight joins
-                    local half = math.deg(math.asin(math.min(1, (width / 2 + 1) / landingRadius)))
-                    local clear = math.deg(math.acos(math.clamp(dir:Dot(inDir), -1, 1))) > half and math.deg(math.acos(math.clamp(dir:Dot(outDir), -1, 1))) > half
-                    if clear then
-                        local chord = 2 * landingRadius * math.sin(math.pi / posts) + 0.2
-                        bridgePart("Rail", Vector3.new(BRIDGE.RailWidth, BRIDGE.RailHeight, chord),
-                            CFrame.lookAt(b + dir * (landingRadius - BRIDGE.RailWidth / 2), b + dir * (landingRadius - BRIDGE.RailWidth / 2) + dir:Cross(Vector3.yAxis)) + Vector3.new(0, BRIDGE.RailHeight / 2, 0),
-                            model, theme.Rail, Enum.Material.SmoothPlastic)
-                    end
-                end
-                local zone = bridgePart("Zone", Vector3.new(BRIDGE.ZoneHeight, landingRadius * 2 + 8, landingRadius * 2 + 8),
-                    CFrame.new(b + Vector3.new(0, BRIDGE.ZoneHeight / 2 - 3, 0)) * CFrame.Angles(0, 0, math.rad(90)), zones, theme.Glow)
-                zone.Shape = Enum.PartType.Cylinder
-                zone.Transparency = 1
-                zone.CanCollide, zone.CanTouch, zone.CastShadow, zone.CanQuery = false, false, false, true
-            end
         end
         abutment(model, theme, width, nodes[1].Position, nodes[1].Position - nodes[2].Position)
         abutment(model, theme, width, nodes[#nodes].Position, nodes[#nodes].Position - nodes[#nodes - 1].Position)
@@ -1344,7 +1288,7 @@ function WorldBuilder.buildBridges()
         light.Parent = barrier
         gate.Parent = model
         model:SetAttribute("ReturnTo", base - dir * 3 + Vector3.new(0, 3, 0))
-        model:SetAttribute("KitPieces", dressBridge(model, bridge.Theme, width, bridge.LandingRadius))
+        model:SetAttribute("KitPieces", dressBridge(model, bridge.Theme))
         model.Parent = folder
     end
     return #folder:GetChildren()
