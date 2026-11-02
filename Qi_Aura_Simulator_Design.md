@@ -953,7 +953,12 @@ Build one complete encounter before expanding to every island.
    - a recovered egg dropped on death and back on its stand after 30 s, with no egg gained;
    - the thief leaving mid-carry: the save kept its eggs and stones and released its lock.
 
-   Still to run, needing a second player or server: another player at a dropped egg, and a save taken over by another server.
+   Passed with two players (Studio local server, November 3, 2026):
+   - another player at a dropped egg: no prompt for them, and forcing the hold is refused; the thief still recovers it;
+   - two players taking the same stand in the same instant: exactly one egg made, the other refused;
+   - the thief leaving with the egg dropped: it is back on its stand at once, the guardian returning.
+
+   Still to run, on live servers: a save taken over by another server.
 8. The framework rolled out to every island.
 9. Polish: guardian animation, auras, trails, sound, UI and cinematic feedback.
 
