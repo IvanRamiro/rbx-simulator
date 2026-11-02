@@ -1,7 +1,8 @@
--- A message banner at the top of the screen (the HUD's Banner region, where every Toast stacks,
--- so two never overlap). It fades in, hides itself after a few seconds, and a newer message
--- replaces the one showing. Toast.new(_, name, _, textColor, seconds): the first and third
--- arguments (a parent and a height) are kept for the callers but no longer used.
+-- A System notification at the top of the screen: a small window headed [ NOTIFICATION ] with
+-- the message under it, in the HUD's Banner region where every Toast stacks (two never overlap).
+-- It fades in, hides itself after a few seconds, and a newer message replaces the one showing.
+-- Toast.new(_, name, _, textColor, seconds): the first and third arguments (a parent and a height)
+-- are kept for the callers but no longer used.
 local TweenService = game:GetService("TweenService")
 
 local Hud = require(script.Parent:WaitForChild("Hud"))
@@ -12,49 +13,62 @@ local Toast = {}
 Toast.__index = Toast
 
 local FADE = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local WIDTH = 460
 local created = 0
 
 function Toast.new(_, name, _, textColor, seconds)
     created += 1
+    -- a CanvasGroup fades the whole window at once; its padding keeps the glow and ticks inside it
+    local group = Instance.new("CanvasGroup")
+    group.Name = name
+    group.BackgroundTransparency = 1
+    group.AutomaticSize = Enum.AutomaticSize.Y
+    group.Size = UDim2.fromOffset(WIDTH + 6, 0)
+    group.LayoutOrder = created
+    group.Visible = false
+    group.Parent = Hud.Banner
+    UiKit.padding(group, 3, 3)
+
+    local window = UiKit.panel({ Name = "Window", AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0), Parent = group })
+    local inner = Instance.new("Frame")
+    inner.Name = "Inner"
+    inner.BackgroundTransparency = 1
+    inner.AutomaticSize = Enum.AutomaticSize.Y
+    inner.Size = UDim2.new(1, 0, 0, 0)
+    inner.Parent = window
+    UiKit.padding(inner, 16, 9)
+    UiKit.list(inner, { Padding = UDim.new(0, 5), HorizontalAlignment = Enum.HorizontalAlignment.Center })
+    UiKit.header(inner, "NOTIFICATION", { TextSize = 11, Color = UiTheme.Colors.Muted, LayoutOrder = 1 })
     local label = UiKit.label({
-        Name = name, Font = "Strong", TextSize = 17, TextColor3 = textColor, TextWrapped = true,
-        TextXAlignment = Enum.TextXAlignment.Center, BackgroundTransparency = UiTheme.PanelTransparency,
-        BackgroundColor3 = UiTheme.Colors.Ink, AutomaticSize = Enum.AutomaticSize.XY, Size = UDim2.new(),
-        LayoutOrder = created, Visible = false, Parent = Hud.Banner,
+        Name = "Message", Font = "Strong", TextSize = 16, TextColor3 = textColor, TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Center, AutomaticSize = Enum.AutomaticSize.Y,
+        Size = UDim2.new(1, 0, 0, 0), LayoutOrder = 2, Parent = inner,
     })
-    local limit = Instance.new("UISizeConstraint")
-    limit.MaxSize = Vector2.new(520, math.huge)
-    limit.Parent = label
-    UiKit.corner(label)
-    local edge = UiKit.stroke(label, UiTheme.Colors.Gold, 0.4)
-    UiKit.padding(label, 18, 9)
-    return setmetatable({ label = label, edge = edge, seconds = seconds, shown = 0 }, Toast)
+    return setmetatable({ group = group, label = label, seconds = seconds, shown = 0 }, Toast)
 end
 
 function Toast:show(text, color)
     self.shown += 1
     local this = self.shown
-    local label = self.label
-    label.Text = text
+    local group = self.group
+    self.label.Text = text
     if color then
-        label.TextColor3 = color
+        self.label.TextColor3 = color
     end
-    if not label.Visible then
-        label.TextTransparency, label.BackgroundTransparency, self.edge.Transparency = 1, 1, 1
-        label.Visible = true
+    if not group.Visible then
+        group.GroupTransparency = 1
+        group.Visible = true
     end
-    TweenService:Create(label, FADE, { TextTransparency = 0, BackgroundTransparency = UiTheme.PanelTransparency }):Play()
-    TweenService:Create(self.edge, FADE, { Transparency = 0.4 }):Play()
+    TweenService:Create(group, FADE, { GroupTransparency = 0 }):Play()
 
     task.delay(self.seconds, function()
         if self.shown ~= this then
             return
         end
-        TweenService:Create(label, FADE, { TextTransparency = 1, BackgroundTransparency = 1 }):Play()
-        TweenService:Create(self.edge, FADE, { Transparency = 1 }):Play()
+        TweenService:Create(group, FADE, { GroupTransparency = 1 }):Play()
         task.delay(FADE.Time, function()
             if self.shown == this then
-                label.Visible = false
+                group.Visible = false
             end
         end)
     end)

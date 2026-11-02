@@ -91,7 +91,7 @@ local function button(parent, text, size, position, color, onClick)
 end
 
 -- ---------- the Spirit Stones counter ----------
-local stoneChip, counter = Hud.chip("StoneCounter", UiTheme.Seals.Stones, 1)
+local stoneChip, counter = Hud.chip("StoneCounter", UiTheme.Icons.Stones, 1)
 
 local function updateCounter()
     local stones = player:GetAttribute("SpiritStones")

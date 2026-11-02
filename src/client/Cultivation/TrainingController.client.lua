@@ -17,42 +17,54 @@ local C = UiTheme.Colors
 local keyName = GameConfig.CultivationKeybind.Name
 local lastToggleRequestTime = 0
 
--- ---------- the cultivator's plaque (Status): Qi, rank, progress to the next ----------
-local plaqueFrame = UiKit.panel({ Name = "QiPlaque", Size = UDim2.fromOffset(310, 108), LayoutOrder = 1, Parent = Hud.Status })
-local plaque = UiKit.content(plaqueFrame, 16, 12)
+-- ---------- the STATUS window (the Status region): Qi, name, rank, realm, progress ----------
+local statusFrame = UiKit.panel({ Name = "StatusWindow", Size = UDim2.fromOffset(310, 178), LayoutOrder = 1, Parent = Hud.Status })
+local status = UiKit.content(statusFrame, 14, 10)
+UiKit.header(status, "STATUS", { TextSize = 13 })
 
-local qiSeal = UiKit.seal(UiTheme.Seals.Qi, 38, "Jade")
-qiSeal.Parent = plaque
-
+local qiIcon = UiKit.icon(UiTheme.Icons.Qi, 34, "Accent")
+qiIcon.Position = UDim2.fromOffset(0, 30)
+qiIcon.Parent = status
+UiKit.label({
+    Name = "QiCaption", Font = "Strong", TextSize = 10, TextColor3 = C.Muted, Text = "QI",
+    Position = UDim2.fromOffset(44, 28), Size = UDim2.fromOffset(40, 12), Parent = status,
+})
 local qiLabel = UiKit.label({
-    Name = "QiLabel", Font = "Number", TextSize = 30, TextColor3 = C.JadeBright,
-    Position = UDim2.fromOffset(48, -3), Size = UDim2.new(1, -48, 0, 32), Text = "...", Parent = plaque,
+    Name = "QiLabel", Font = "Number", TextSize = 26, TextColor3 = C.AccentBright,
+    Position = UDim2.fromOffset(44, 38), Size = UDim2.new(1, -120, 0, 28), Text = "...", Parent = status,
 })
 local powerTag = UiKit.label({
-    Name = "Power", Font = "Strong", TextSize = 12, TextColor3 = C.Gold, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, 0, 0, 4), Size = UDim2.fromOffset(70, 16), TextXAlignment = Enum.TextXAlignment.Right,
-    Text = "", Parent = plaque,
+    Name = "Power", Font = "Strong", TextSize = 12, TextColor3 = C.Highlight, AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.new(1, 0, 0, 44), Size = UDim2.fromOffset(80, 16), TextXAlignment = Enum.TextXAlignment.Right,
+    Text = "", Parent = status,
 })
-local rankLabel = UiKit.label({
-    Name = "RankLabel", Font = "Title", TextSize = 15, TextColor3 = C.Gold,
-    Position = UDim2.fromOffset(48, 28), Size = UDim2.new(1, -48, 0, 18), Text = "", TextTruncate = Enum.TextTruncate.AtEnd,
-    Parent = plaque,
-})
-local realmLabel = UiKit.label({
-    Name = "RealmLabel", TextSize = 12, TextColor3 = C.Mist,
-    Position = UDim2.fromOffset(48, 46), Size = UDim2.new(1, -48, 0, 14), Text = "", TextTruncate = Enum.TextTruncate.AtEnd,
-    Parent = plaque,
-})
-local progressBar = UiKit.bar({ Name = "Progress", Position = UDim2.new(0, 0, 1, -22), Size = UDim2.new(1, 0, 0, 6), Parent = plaque })
+
+-- the System's fields: a muted key, its value
+local function field(key, y, color)
+    UiKit.label({
+        Name = key .. "Key", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = key,
+        Position = UDim2.fromOffset(0, y), Size = UDim2.fromOffset(58, 16), Parent = status,
+    })
+    return UiKit.label({
+        Name = key .. "Value", Font = "Strong", TextSize = 13, TextColor3 = color or C.Text, Text = "",
+        Position = UDim2.fromOffset(60, y), Size = UDim2.new(1, -60, 0, 16), TextTruncate = Enum.TextTruncate.AtEnd,
+        Parent = status,
+    })
+end
+field("NAME", 74).Text = player.DisplayName
+local rankLabel = field("RANK", 92, C.Highlight)
+local realmLabel = field("REALM", 110)
+
+local progressBar = UiKit.bar({ Name = "Progress", Position = UDim2.new(0, 0, 1, -22), Size = UDim2.new(1, 0, 0, 6), Parent = status })
 local nextRankLabel = UiKit.label({
-    Name = "NextRankLabel", TextSize = 12, TextColor3 = C.Mist, AnchorPoint = Vector2.new(0, 1),
+    Name = "NextRankLabel", TextSize = 11, TextColor3 = C.Muted, AnchorPoint = Vector2.new(0, 1),
     Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 14), Text = "", TextTruncate = Enum.TextTruncate.AtEnd,
-    Parent = plaque,
+    Parent = status,
 })
 
 -- ---------- the dock: the breakthrough (when it's ready), the station's bonus, Cultivate ----------
 local rankUpButton = UiKit.button({
-    Name = "RankUpButton", Tone = "Gold", Font = "Title", TextSize = 17, Text = "Break Through",
+    Name = "RankUpButton", Tone = "Highlight", Font = "Title", TextSize = 17, Text = "BREAK THROUGH",
     Size = UDim2.fromOffset(240, 40), AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 20, Visible = false,
     Parent = Hud.Dock,
 })
@@ -70,8 +82,8 @@ task.spawn(function()
 end)
 
 local stationLabel = UiKit.label({
-    Name = "StationLabel", Font = "Strong", TextSize = 13, TextColor3 = C.JadeBright,
-    BackgroundTransparency = 0.15, BackgroundColor3 = C.JadeDeep, AutomaticSize = Enum.AutomaticSize.X,
+    Name = "StationLabel", Font = "Strong", TextSize = 13, TextColor3 = C.AccentBright,
+    BackgroundTransparency = 0.15, BackgroundColor3 = C.AccentDeep, AutomaticSize = Enum.AutomaticSize.X,
     Size = UDim2.fromOffset(0, 24), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 25, Visible = false,
     Text = GameConfig.TrainingStation.DisplayName .. "  +" .. GameConfig.TrainingStation.QiBonusPercent .. "% Qi",
     Parent = Hud.Dock,
@@ -80,7 +92,7 @@ UiKit.corner(stationLabel)
 UiKit.padding(stationLabel, 10, 0)
 
 local cultivateButton = UiKit.button({
-    Name = "CultivateButton", Tone = "Jade", Font = "Title", TextSize = 19, Text = "Cultivate",
+    Name = "CultivateButton", Tone = "Accent", Font = "Title", TextSize = 18, Text = "CULTIVATE",
     Size = UDim2.fromOffset(240, 50), LayoutOrder = 30, Parent = Hud.Dock,
 })
 local cultivateKey = UiKit.keycap(keyName)
@@ -94,8 +106,8 @@ end
 
 local function updateCultivateButton()
     -- while cultivating it turns quiet and says how to stop: the aura itself is the feedback
-    cultivateButton:SetAttribute("Tone", if isCultivating() then "Quiet" else "Jade")
-    cultivateButton.Text = if isCultivating() then "Stop Cultivating" else "Cultivate"
+    cultivateButton:SetAttribute("Tone", if isCultivating() then "Quiet" else "Accent")
+    cultivateButton.Text = if isCultivating() then "STOP CULTIVATING" else "CULTIVATE"
 end
 
 local function requestToggleCultivation()
@@ -160,9 +172,9 @@ local function updateRankDisplay()
     nextRankLabel.Text = if canRankUp
         then target .. ": ready to break through"
         else target .. " at " .. NumberFormat.compact(nextRank.QiRequired) .. "  ·  " .. NumberFormat.compact(nextRank.QiRequired - qiValue.Value) .. " to go"
-    nextRankLabel.TextColor3 = if canRankUp then C.Gold else C.Mist
+    nextRankLabel.TextColor3 = if canRankUp then C.Highlight else C.Muted
     rankUpButton.Visible = canRankUp
-    rankUpButton.Text = "Break Through: " .. target
+    rankUpButton.Text = "BREAK THROUGH: " .. string.upper(target)
 end
 
 local function requestRankUp()

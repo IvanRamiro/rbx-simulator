@@ -30,22 +30,22 @@ local qinggong = GameConfig.Qinggong
 
 local PIP_READY = UiTheme.Colors.Sky
 local PIP_SPENT = Color3.fromRGB(48, 58, 62)
-local GLIDE_COLOR = UiTheme.Colors.JadeBright
-local STAMINA_COLOR = UiTheme.Colors.Gold
-local STAMINA_LOW = UiTheme.Colors.Cinnabar
-local FLIGHT_COLOR = UiTheme.Colors.Gold
+local GLIDE_COLOR = UiTheme.Colors.AccentBright
+local STAMINA_COLOR = UiTheme.Colors.Highlight
+local STAMINA_LOW = UiTheme.Colors.Danger
+local FLIGHT_COLOR = UiTheme.Colors.Highlight
 local NEW_PRESS_GAP = 0.18 -- jump requests closer than this are one held press
 local HARD_LANDING_SPEED = 25 -- a fall faster than this lands with an impact even without Qinggong
 local FULL_IMPACT_SPEED = 110 -- the fall speed of a full-strength landing
 local MAX_PIPS = GameConfig.Qinggong.Levels[#GameConfig.Qinggong.Levels].AirLeaps
 
--- the Qinggong strip, at the top of the HUD's dock: a seal, a diamond per air leap, the stamina
+-- the Qinggong strip, at the top of the HUD's dock: an icon, a diamond per air leap, the stamina
 -- bar and a line of what's next (or the state: gliding, sword flight)
 local panel = UiKit.panel({ Name = "QinggongStrip", Size = UDim2.fromOffset(240, 50), LayoutOrder = 10, Brackets = false, Parent = Hud.Dock })
-local seal = UiKit.seal(UiTheme.Seals.Qinggong, 30, "Jade")
-seal.AnchorPoint = Vector2.new(0, 0.5)
-seal.Position = UDim2.new(0, 9, 0.5, 0)
-seal.Parent = panel
+local icon = UiKit.icon(UiTheme.Icons.Qinggong, 30, "Accent")
+icon.AnchorPoint = Vector2.new(0, 0.5)
+icon.Position = UDim2.new(0, 9, 0.5, 0)
+icon.Parent = panel
 
 local pipRow = Instance.new("Frame")
 pipRow.BackgroundTransparency = 1
@@ -77,7 +77,7 @@ local staminaFill = staminaBack:FindFirstChild("Fill")
 staminaFill.Size = UDim2.fromScale(1, 1)
 
 local info = UiKit.label({
-    Name = "Info", TextSize = 12, TextColor3 = UiTheme.Colors.Mist, Position = UDim2.fromOffset(50, 31),
+    Name = "Info", TextSize = 12, TextColor3 = UiTheme.Colors.Muted, Position = UDim2.fromOffset(50, 31),
     Size = UDim2.new(1, -60, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = panel,
 })
 
@@ -119,7 +119,7 @@ local function updateHud()
         info.TextColor3 = GLIDE_COLOR
         return
     end
-    info.TextColor3 = UiTheme.Colors.Mist
+    info.TextColor3 = UiTheme.Colors.Muted
     local _, nextLevel = Ranks.getQinggong(Ranks.getPlayerRankName(player))
     local nextRank = nextLevel and Ranks.getRankById(nextLevel.RankId)
     info.Text = if nextRank then (nextLevel.AirLeaps .. " leaps at " .. nextRank.Name) else "Air leaps: " .. total

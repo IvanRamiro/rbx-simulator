@@ -23,7 +23,7 @@ local SWAY_DISTANCE = 120
 local UP = Vector3.new(0, 1, 0)
 
 -- ---------- the Robes button (on the HUD's rail, under Pets; a gold "On" while worn) ----------
-local button, setRobesBadge = Hud.railButton("RobesButton", UiTheme.Seals.Robes, "Robes", 2)
+local button, setRobesBadge = Hud.railButton("RobesButton", UiTheme.Icons.Robes, "Robes", 2)
 button.Visible = false
 
 local function owned()
@@ -35,7 +35,7 @@ local function refreshButton()
     local outfits = owned()
     local wearing = player:GetAttribute("OutfitId")
     button.Visible = #outfits > 0
-    setRobesBadge(if wearing then "On" else nil, "Gold")
+    setRobesBadge(if wearing then "On" else nil, "Highlight")
 end
 
 button.Activated:Connect(function()

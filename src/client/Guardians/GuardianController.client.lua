@@ -29,15 +29,16 @@ local player = Players.LocalPlayer
 local ANIMATE_DISTANCE = 400
 local BAR_DISTANCE = 130
 
-local GOLD = Color3.fromRGB(232, 200, 120)
+local GOLD = Color3.fromRGB(232, 200, 120) -- the in-world waypoint to the safe zone
+local NAME_COLOR = Color3.fromRGB(236, 246, 255)
 local STATE_LOOK = {
-    Guardian = { Text = "GUARDIAN", Color = Color3.fromRGB(120, 220, 190) },
+    Guardian = { Text = "GUARDIAN", Color = Color3.fromRGB(120, 214, 255) },
     Weakened = { Text = "WEAKENED · TAKE AN EGG", Color = Color3.fromRGB(255, 196, 70) },
     Enraged = { Text = "ENRAGED", Color = Color3.fromRGB(255, 96, 50) },
 }
-local FILL = {
-    Calm = { Color3.fromRGB(50, 214, 160), Color3.fromRGB(12, 128, 98) },
-    Rage = { Color3.fromRGB(255, 120, 50), Color3.fromRGB(170, 32, 18) },
+local FILL = { -- the System's blue while it guards; red once enraged
+    Calm = { Color3.fromRGB(120, 214, 255), Color3.fromRGB(26, 104, 196) },
+    Rage = { Color3.fromRGB(255, 110, 120), Color3.fromRGB(176, 22, 44) },
 }
 
 -- Each guardian's sounds by action (SoundCatalog names). `Start` plays as the action arrives; `Hit`
@@ -105,12 +106,12 @@ local message = Toast.new(nil, "GuardianMessage", nil, Color3.new(1, 1, 1), 4)
 -- the health bar of the guardian being fought: first in the HUD's top-centre stack, so the
 -- messages (Toast) fall in below it instead of under it
 local bar = UiKit.panel({ Name = "GuardianBar", Size = UDim2.fromOffset(460, 66), LayoutOrder = 0, Visible = false, Parent = Hud.Banner })
-local barSeal = UiKit.seal(UiTheme.Seals.Guardian, 34, "Cinnabar")
-barSeal.Position = UDim2.fromOffset(14, 16)
-barSeal.Parent = bar
+local barIcon = UiKit.icon(UiTheme.Icons.Guardian, 34, "Danger")
+barIcon.Position = UDim2.fromOffset(14, 16)
+barIcon.Parent = bar
 
 local nameLabel = UiKit.label({
-    Font = "Title", TextSize = 16, TextColor3 = GOLD, Position = UDim2.fromOffset(58, 9),
+    Font = "Title", TextSize = 16, TextColor3 = NAME_COLOR, Position = UDim2.fromOffset(58, 9),
     Size = UDim2.new(0.6, -58, 0, 20), TextTruncate = Enum.TextTruncate.AtEnd, Parent = bar,
 })
 
@@ -122,16 +123,16 @@ local stateLabel = UiKit.label({
 local barTrack = Instance.new("Frame")
 barTrack.Position = UDim2.fromOffset(58, 34)
 barTrack.Size = UDim2.new(1, -74, 0, 18)
-barTrack.BackgroundColor3 = UiTheme.Colors.InkDeep
+barTrack.BackgroundColor3 = UiTheme.Colors.Well
 barTrack.ClipsDescendants = true
 barTrack.Parent = bar
 UiKit.corner(barTrack, 2)
-UiKit.stroke(barTrack, UiTheme.Colors.GoldDim, 0.3)
+UiKit.stroke(barTrack, UiTheme.Colors.EdgeDim, 0.3)
 
 -- the health just lost, catching up behind the bar
 local trailFill = Instance.new("Frame")
 trailFill.BorderSizePixel = 0
-trailFill.BackgroundColor3 = Color3.fromRGB(245, 232, 205)
+trailFill.BackgroundColor3 = Color3.fromRGB(236, 246, 255)
 trailFill.Size = UDim2.fromScale(1, 1)
 trailFill.Parent = barTrack
 
@@ -147,7 +148,7 @@ fillGradient.Parent = fill
 -- where it weakens
 local weakMark = Instance.new("Frame")
 weakMark.BorderSizePixel = 0
-weakMark.BackgroundColor3 = GOLD
+weakMark.BackgroundColor3 = UiTheme.Colors.Highlight
 weakMark.AnchorPoint = Vector2.new(0.5, 0)
 weakMark.Size = UDim2.new(0, 2, 1, 0)
 weakMark.ZIndex = 3

@@ -41,7 +41,7 @@ root.BackgroundTransparency = 1
 root.Parent = hud
 applyHudScale(root)
 
-local toggleButton, setPetBadge = Hud.railButton("PetsButton", UiTheme.Seals.Pets, "Pets", 1)
+local toggleButton, setPetBadge = Hud.railButton("PetsButton", UiTheme.Icons.Pets, "Pets", 1)
 
 local panel = Instance.new("Frame")
 panel.Name = "Panel"

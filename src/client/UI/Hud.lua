@@ -1,7 +1,7 @@
 -- The HUD's one screen and its regions. Every controller puts its pieces into a region, in its
 -- LayoutOrder, instead of placing them by pixel, so they line up and never overlap:
 --   Status   top left: the cultivator's plaque (Qi, rank, progress), then the resource chips
---   Rail     left, centred: the menu seals (Pets, Robes ...)
+--   Rail     left, centred: the menu buttons (Pets, Robes ...)
 --   Dock     bottom centre, bottom up: Cultivate, the breakthrough, the Qinggong strip
 --   Banner   top centre: messages (Toast)
 -- Windows (the pets list, the altar, the shops) open in their own ScreenGuis.
@@ -65,18 +65,25 @@ chips.Parent = Hud.Status
 UiKit.list(chips, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), VerticalAlignment = Enum.VerticalAlignment.Center })
 Hud.Chips = chips
 
--- A resource chip: its seal and a value. Returns the chip and its value label.
-function Hud.chip(name, glyph, order)
+-- A resource chip: its icon and a value. Returns the chip and its value label.
+function Hud.chip(name, image, order)
     local chip = UiKit.panel({
         Name = name, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 34),
         LayoutOrder = order, Brackets = false, Parent = chips,
     })
-    UiKit.padding(chip, 5, 5)
-    UiKit.list(chip, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), VerticalAlignment = Enum.VerticalAlignment.Center })
-    UiKit.seal(glyph, 24).Parent = chip
+    -- the row is its own frame: a list on the panel would also line up the panel's glow
+    local row = Instance.new("Frame")
+    row.Name = "Row"
+    row.BackgroundTransparency = 1
+    row.AutomaticSize = Enum.AutomaticSize.X
+    row.Size = UDim2.fromScale(0, 1)
+    row.Parent = chip
+    UiKit.padding(row, 5, 5)
+    UiKit.list(row, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), VerticalAlignment = Enum.VerticalAlignment.Center })
+    UiKit.icon(image, 24).Parent = row
     local value = UiKit.label({
         Name = "Value", Font = "Strong", TextSize = 16, AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, 24), LayoutOrder = 2, Parent = chip,
+        Size = UDim2.fromOffset(0, 24), LayoutOrder = 2, Parent = row,
     })
     local pad = Instance.new("UIPadding")
     pad.PaddingRight = UDim.new(0, 6)
@@ -84,25 +91,25 @@ function Hud.chip(name, glyph, order)
     return chip, value
 end
 
--- A menu seal on the rail: the seal over its word, with an optional badge (a count, or a dot).
+-- A menu button on the rail: its icon over its word, with an optional badge (a count, or a dot).
 -- Returns the button and a function that sets the badge text (nil hides it).
-function Hud.railButton(name, glyph, word, order)
+function Hud.railButton(name, image, word, order)
     local button = UiKit.button({
         Name = name, Text = "", Size = UDim2.fromOffset(64, 70), LayoutOrder = order, Tone = "Quiet",
         Parent = Hud.Rail,
     })
-    local seal = UiKit.seal(glyph, 34)
-    seal.AnchorPoint = Vector2.new(0.5, 0)
-    seal.Position = UDim2.new(0.5, 0, 0, 8)
-    seal.Parent = button
+    local icon = UiKit.icon(image, 34)
+    icon.AnchorPoint = Vector2.new(0.5, 0)
+    icon.Position = UDim2.new(0.5, 0, 0, 8)
+    icon.Parent = button
     UiKit.label({
-        Name = "Word", Font = "Strong", Text = word, TextSize = 12, TextColor3 = UiTheme.Colors.Parchment,
+        Name = "Word", Font = "Strong", Text = word, TextSize = 12, TextColor3 = UiTheme.Colors.Text,
         AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -5), Size = UDim2.new(1, 0, 0, 14),
         TextXAlignment = Enum.TextXAlignment.Center, Parent = button,
     })
     local badge = UiKit.label({
-        Name = "Badge", Font = "Strong", TextSize = 11, TextColor3 = UiTheme.Colors.Ink,
-        BackgroundTransparency = 0, BackgroundColor3 = UiTheme.Colors.Jade,
+        Name = "Badge", Font = "Strong", TextSize = 11, TextColor3 = UiTheme.Colors.Panel,
+        BackgroundTransparency = 0, BackgroundColor3 = UiTheme.Colors.Accent,
         AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 6, 0, -6), Size = UDim2.fromOffset(0, 18),
         AutomaticSize = Enum.AutomaticSize.X, TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
         ZIndex = 5, Parent = button,
@@ -112,7 +119,7 @@ function Hud.railButton(name, glyph, word, order)
     local function setBadge(text, tone)
         badge.Visible = text ~= nil
         badge.Text = text or ""
-        badge.BackgroundColor3 = if tone == "Gold" then UiTheme.Colors.Gold else UiTheme.Colors.Jade
+        badge.BackgroundColor3 = if tone == "Highlight" then UiTheme.Colors.Highlight else UiTheme.Colors.Accent
     end
     return button, setBadge
 end

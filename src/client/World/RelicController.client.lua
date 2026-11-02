@@ -32,7 +32,7 @@ local hud = Instance.new("ScreenGui")
 hud.Name = HUD_NAME
 hud.ResetOnSpawn = false
 
-local _, counter = Hud.chip("RelicCounter", UiTheme.Seals.Relics, 2)
+local _, counter = Hud.chip("RelicCounter", UiTheme.Icons.Relics, 2)
 counter.Text = "0 / " .. #GameConfig.Relics .. " Relics"
 
 local message = Toast.new(hud, "RelicMessage", 64, RELIC_COLOR, MESSAGE_SECONDS)

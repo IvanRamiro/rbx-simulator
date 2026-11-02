@@ -21,6 +21,8 @@ These never change without an explicit decision from the project owner.
 - **Every pet and every guardian has expressive eyes**: never a plain glowing ball. A guardian's eye is an almond iris with a slit pupil and lids that give it a look (`guardian_kit.eye`), and its rig makes it live (blinks, glares).
 - **Aura concept** stays as designed (section 4). The bar is not "looks like Sol's RNG": it is to genuinely compete with, and aim to surpass, Sol's RNG's most impressive auras.
 - **No generic style.** Islands, pets and effects are original Blender work with their own silhouette and identity. Nothing is a recoloured copy of another piece.
+- **No Chinese text** anywhere in the game: not in the UI, icons, signs or names ("people might not want to play the game because there is chinese text", November 3, 2026). The wuxia feel comes from art, effects and English names.
+- **The interface is the cultivator's System** (November 3, 2026: "make it more like a game system status from solo leveling"). It is an original take on the genre, nothing copied: translucent blue windows with a glowing edge, bracketed headers such as [ STATUS ] and [ NOTIFICATION ], and line icons (`client/UI`: UiTheme, UiKit, Hud).
 - **Weapons:** players purchase or request a **forged weapon**, and their Qi mastery decides which weapons they can get.
 - **Sword flight:** a sword can also be ridden for flight. It is the only free flight in the game; everywhere else, players move with Qinggong.
 
