@@ -1,9 +1,7 @@
-local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
-local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local applyHudScale = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudScale"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
@@ -265,58 +263,3 @@ local function onHatchResult(result)
 end
 
 RemoteEvents.EggHatchResultEvent.OnClientEvent:Connect(onHatchResult)
-
-local function getRankName()
-    return Ranks.getPlayerRankName(player)
-end
-
--- whether a guardian standing in the world guards this egg (its stand then hatches only eggs
--- taken from it, counted in the player's "Egg_<EggId>" attribute)
-local function isGuarded(eggId)
-    for _, model in CollectionService:GetTagged(GameConfig.GuardianTag) do
-        local config = GameConfig.Guardians[model:GetAttribute("GuardianId")]
-        if config and model:IsDescendantOf(workspace) and table.find(config.Eggs, eggId) then
-            return true
-        end
-    end
-    return false
-end
-
-local function updateEggPrompt(stand)
-    local eggId = stand:GetAttribute("EggId")
-    local egg = GameConfig.Eggs[eggId]
-    local prompt = stand:FindFirstChildWhichIsA("ProximityPrompt", true)
-    if not (egg and prompt) then
-        return
-    end
-
-    if not Ranks.isAtLeast(getRankName(), egg.RequiredRank) then
-        prompt.ActionText = "Needs " .. Ranks.getRankById(egg.RequiredRank).Name
-    elseif isGuarded(eggId) then
-        local held = player:GetAttribute("Egg_" .. eggId) or 0
-        prompt.ActionText = if held > 0 then "Hatch (" .. held .. ")" else "No egg held"
-    else
-        prompt.ActionText = "Hatch"
-    end
-end
-
-local function updateAllEggPrompts()
-    for _, stand in CollectionService:GetTagged(GameConfig.EggTag) do
-        updateEggPrompt(stand)
-    end
-end
-
-CollectionService:GetInstanceAddedSignal(GameConfig.EggTag):Connect(updateEggPrompt)
-CollectionService:GetInstanceAddedSignal(GameConfig.GuardianTag):Connect(updateAllEggPrompts)
-CollectionService:GetInstanceRemovedSignal(GameConfig.GuardianTag):Connect(updateAllEggPrompts)
-player.AttributeChanged:Connect(function(name)
-    if string.sub(name, 1, 4) == "Egg_" then
-        updateAllEggPrompts()
-    end
-end)
-
-task.spawn(function()
-    local rankValue = player:WaitForChild("leaderstats"):WaitForChild("Rank")
-    rankValue.Changed:Connect(updateAllEggPrompts)
-    updateAllEggPrompts()
-end)

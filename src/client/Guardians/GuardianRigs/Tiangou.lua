@@ -15,7 +15,7 @@
 local GuardianAnim = require(script.Parent.Parent:WaitForChild("GuardianAnim"))
 local GuardianFx = require(script.Parent.Parent:WaitForChild("GuardianFx"))
 
-local add, envelope, smooth = GuardianAnim.add, GuardianAnim.envelope, GuardianAnim.smooth
+local add, envelope, smooth, keyed = GuardianAnim.add, GuardianAnim.envelope, GuardianAnim.smooth, GuardianAnim.keyed
 
 local Rig = {}
 
@@ -26,30 +26,52 @@ Rig.Joints = {
 }
 local LEGS = { "FrontLeft", "FrontRight", "BackLeft", "BackRight" }
 
+-- awake, it stands a little low on flexed legs (the planted paws need the slack)
 Rig.Poses = {
     Dormant = { Neck = { -24 }, Head = { -12 }, Tail = { -25 }, TailTip = { -15 } },
-    Guardian = { Neck = { 4 }, Tail = { 8 } },
+    Guardian = { Body = { 0, 0, 0, -0.8 }, Neck = { 4 }, Tail = { 8 } },
     Weakened = {
         Body = { -4, 0, 0, -1.5 }, Neck = { -22 }, Head = { -14 }, Jaw = { -8 }, Tail = { -30 }, TailTip = { -20 },
         FrontLeftUpper = { -10 }, FrontRightUpper = { -10 }, FrontLeftLower = { 16 }, FrontRightLower = { 16 },
     },
     Enraged = {
-        Body = { -3, 0, 0, -0.6 }, Neck = { -8 }, Head = { 8 }, Jaw = { -22 }, Tail = { 25 }, TailTip = { 15 },
+        Body = { -3, 0, 0, -0.8 }, Neck = { -8 }, Head = { 8 }, Jaw = { -22 }, Tail = { 25 }, TailTip = { 15 },
     },
-    Returning = { Head = { -4 } },
+    Returning = { Body = { 0, 0, 0, -0.8 }, Head = { -4 } },
     Resting = { Neck = { -24 }, Head = { -12 }, Tail = { -25 }, TailTip = { -15 } },
 }
 Rig.Gallop = { 14, 22 }
 Rig.LeapAction = "MoonLeap"
 Rig.Look = { Joint = "Head", Share = 0.7, Body = "Neck", BodyShare = 0.3, Limit = 50 }
+-- springs (GuardianAnim): a supple hound's body, the neck and head trailing it, and the tail in
+-- two loose lengths, the tip whipping after the root
+Rig.Springs = {
+    Body = { Freq = 4.5, Damping = 0.55, Drag = 0 },
+    Neck = { Freq = 4.5, Damping = 0.5, Drag = 0.25 },
+    Head = { Freq = 5.5, Damping = 0.5, Drag = 0.35 },
+    Jaw = { Freq = 8, Damping = 0.45, Drag = 0 },
+    Tail = { Freq = 2.6, Damping = 0.3, Drag = 1 },
+    TailTip = { Freq = 2.2, Damping = 0.26, Drag = 1 },
+}
+Rig.Lean = { Joint = "Body", Accel = 0.14, Bank = 0.07, Max = 8 }
+-- planted feet (GuardianAnim): the forelegs fold on a positive Lower turn, the hind legs on a
+-- negative one (measured in Play)
+Rig.Legs = {
+    { Name = "FrontLeft", Upper = "FrontLeftUpper", Lower = "FrontLeftLower", Axis = 1, Bend = 1 },
+    { Name = "FrontRight", Upper = "FrontRightUpper", Lower = "FrontRightLower", Axis = 1, Bend = 1 },
+    { Name = "BackLeft", Upper = "BackLeftUpper", Lower = "BackLeftLower", Axis = 1, Bend = -1 },
+    { Name = "BackRight", Upper = "BackRightUpper", Lower = "BackRightLower", Axis = 1, Bend = -1 },
+}
 Rig.Style = { Debris = "Frost", Qi = Color3.fromRGB(110, 190, 255), QiCore = Color3.fromRGB(235, 248, 255) }
 
 local TROT_STRIDE, GALLOP_STRIDE = 14, 26
 
 function Rig.gait(anim, pose, dt)
     local stride = TROT_STRIDE + (GALLOP_STRIDE - TROT_STRIDE) * anim.gallop
-    anim.phase = (anim.phase + dt * anim.speed / stride) % 1
-    local amplitude = (26 + 18 * anim.gallop) * anim.moving
+    anim.phase = (anim.phase + dt * anim.stepSpeed / stride) % 1
+    -- measured in Play: a 22 degree swing, a 50 degree fold and the body about 1.4 studs low (with
+    -- the awake poses' 0.8) keep the stance paws planted and the swing paws clear
+    local amplitude = (22 + 18 * anim.gallop) * anim.moving
     -- a trot pairs the diagonals; a gallop brings the fronts together and the hinds together
     local offsets = {
         FrontLeft = 0, FrontRight = 0.5 - 0.42 * anim.gallop,
@@ -60,23 +82,31 @@ function Rig.gait(anim, pose, dt)
         local lift = math.max(0, math.cos(a))
         local front = string.sub(leg, 1, 5) == "Front"
         add(pose, leg .. "Upper", amplitude * math.sin(a))
-        add(pose, leg .. "Lower", (if front then -1 else 1) * (34 + 16 * anim.gallop) * lift * anim.moving)
+        add(pose, leg .. "Lower", (if front then 1 else -1) * (50 + 16 * anim.gallop) * lift * anim.moving)
+        anim:lift(leg, math.min(1, lift * 2) * anim.moving)
     end
     local bound = 2 * math.pi * anim.phase
-    add(pose, "Body", 5 * anim.gallop * math.sin(bound) * anim.moving, 0, 0,
-        (0.3 + 0.8 * anim.gallop) * math.abs(math.sin(bound * 2)) * anim.moving)
+    -- trotting, the weight rolls onto each diagonal pair in turn; galloping, the back flexes instead
+    add(pose, "Body", 5 * anim.gallop * math.sin(bound) * anim.moving, 0, 1.4 * math.sin(bound) * (1 - anim.gallop) * anim.moving,
+        ((0.3 + 0.8 * anim.gallop) * math.abs(math.sin(bound * 2)) - 0.75) * anim.moving)
     add(pose, "Neck", -4 * anim.gallop * math.sin(bound) * anim.moving)
     add(pose, "Tail", -10 * anim.gallop * anim.moving, 0, 8 * math.sin(bound * 2) * anim.moving)
     add(pose, "TailTip", -12 * anim.gallop * anim.moving, 0, 12 * math.sin(bound * 2 - 0.6) * anim.moving)
 end
 
--- breathing, the tail's wave and the ruff's stir while it is awake
+-- breathing that heaves the body over its planted paws, a restless shift of weight, the tail's
+-- wave while it is awake
 function Rig.life(anim, pose, state, now)
     local asleep = state == "Dormant" or state == "Resting"
     local rate = if state == "Weakened" then 1.8 elseif asleep then 0.25 else 0.5
     local breath = math.sin(now * rate * 2 * math.pi)
-    add(pose, "Body", 0.5 * breath, 0, 0, 0.12 * breath)
-    add(pose, "Neck", -0.8 * breath)
+    add(pose, "Body", 1.2 * breath, 0, 0, 0.3 * breath)
+    add(pose, "Neck", -1.6 * math.sin(now * rate * 2 * math.pi + 0.8))
+    if not asleep then
+        local idle = 1 - anim.moving
+        add(pose, "Body", 0, 1.8 * math.sin(now * 0.37) * idle, 1.6 * math.sin(now * 0.51) * idle)
+        add(pose, "Neck", 2 * math.sin(now * 0.29) * idle, 3 * math.sin(now * 0.23) * idle)
+    end
     if state == "Weakened" then
         add(pose, "Jaw", -6 * (0.5 + 0.5 * breath))      -- panting
     end
@@ -99,56 +129,63 @@ function Rig.actions(anim, pose, now)
     -- waking: the head comes up from sleep and it howls once at the sky
     local t = anim:action("Awaken", 2.0)
     if t then
-        local rise = envelope(t, 0.5, 2.0, 0.6)
-        add(pose, "Neck", 26 * rise)
-        add(pose, "Head", 14 * rise)
-        local howl = envelope(t - 0.6, 0.3, 1.3, 0.4)
-        add(pose, "Neck", 22 * howl)
-        add(pose, "Head", 26 * howl)
-        add(pose, "Jaw", -30 * howl)
+        keyed(pose, t, {
+            { 0, {} },
+            { 0.5, { Body = { 2, 0, 0, -0.4 }, Neck = { 22 }, Head = { 10 } }, "out" },
+            { 0.85, { Body = { 6, 0, 0, -0.8 }, Neck = { 46 }, Head = { 36 }, Jaw = { -34 }, Tail = { 14 } }, "out" },
+            { 1.4, { Body = { 5, 0, 0, -0.7 }, Neck = { 42 }, Head = { 32 }, Jaw = { -30 }, Tail = { 12 } }, "linear" },
+            { 2.0, {} },
+        })
     end
 
-    -- faltering: it staggers, the forelegs buckling
+    -- faltering: it staggers, the weight lurching side to side, the forelegs buckling
     t = anim:action("Weaken", 1.9)
     if t then
         local w = envelope(t, 0.2, 1.9, 0.6)
-        add(pose, "Body", -3 * w, 0, 5 * math.sin(t * 9) * w, -0.6 * w)
-        legs(pose, -12 * w, 4 * w)
+        add(pose, "Body", -3 * w, 0, 6 * math.sin(t * 7) * w, -1.2 * w)
+        add(pose, "Neck", -10 * w, 0, -4 * math.sin(t * 7 - 0.6) * w)
     end
 
-    -- the bite: it draws back, then lunges and snaps
+    -- the bite: it draws back, mouth opening, then lunges over its planted paws and snaps shut
     local bite = anim.actions.Bite
     if bite then
-        local windUp = bite.args[1] or 0.5
-        t = anim:action("Bite", windUp + 0.6)
+        local w = bite.args[1] or 0.5
+        t = anim:action("Bite", w + 0.7)
         if t then
-            local cock = if t < windUp then smooth(t / windUp) elseif t < windUp + 0.08 then 1 - (t - windUp) / 0.08 else 0
-            local snap = envelope(t - windUp + 0.06, 0.06, 0.6, 0.4)
-            add(pose, "Body", 2 * cock - 4 * snap, 0, 0, 0, 1.2 * cock - 2.5 * snap)
-            add(pose, "Neck", 10 * cock - 22 * snap)
-            add(pose, "Head", 8 * cock - 6 * snap)
-            add(pose, "Jaw", -34 * cock + 30 * snap)
-            legs(pose, -6 * cock + 14 * snap, 0)
+            keyed(pose, t, {
+                { 0, {} },
+                { w - 0.1, { Body = { 3, 0, 0, -0.5, 1.4 }, Neck = { 14 }, Head = { 10 }, Jaw = { -38 }, Tail = { 10 } } },
+                { w + 0.02, { Body = { -6, 0, 0, -1.0, -2.8 }, Neck = { -24 }, Head = { -8 }, Jaw = { 4 }, Tail = { -6 } }, "in" },
+                { w + 0.25, { Body = { -4, 0, 0, -0.8, -2.2 }, Neck = { -18 }, Head = { -6 }, Jaw = { 0 } }, "out" },
+                { w + 0.7, {} },
+            })
         end
     end
 
-    -- the eclipse howl: head thrown back to the sky, jaw wide, then the cry
+    -- the eclipse howl: it coils low, drawing breath; the chest rises; at the release it sits back
+    -- and throws its head to the sky, jaws wide, holds the cry quivering, and lets it fade
     local howl = anim.actions.EclipseHowl
     if howl then
-        local windUp = howl.args[1] or 1.0
-        t = anim:action("EclipseHowl", windUp + 1.0)
+        local w = howl.args[1] or 1.0
+        t = anim:action("EclipseHowl", w + 1.3)
         if t then
-            local w = envelope(t, windUp * 0.8, windUp + 1.0, 0.5)
-            local burst = envelope(t - windUp, 0.05, 0.7, 0.4)
-            add(pose, "Body", 6 * w, 0, 0, 0.4 * w)
-            add(pose, "Neck", 34 * w)
-            add(pose, "Head", 28 * w + 3 * burst * math.sin(t * 40))
-            add(pose, "Jaw", -38 * w)
-            add(pose, "Tail", 18 * w)
+            keyed(pose, t, {
+                { 0, {} },
+                { w * 0.3, { Body = { -4, 0, 0, -1.4 }, Neck = { -18 }, Head = { -10 }, Tail = { -16 } }, "out" },
+                { w - 0.12, { Body = { 6, 0, 0, -0.9 }, Neck = { 18 }, Head = { 10 }, Jaw = { -14 }, Tail = { 6 } } },
+                { w + 0.06, { Body = { 10, 0, 0, -1.2 }, Neck = { 40 }, Head = { 32 }, Jaw = { -48 }, Tail = { 24 }, TailTip = { 14 } }, "out" },
+                { w + 0.7, { Body = { 9, 0, 0, -1.1 }, Neck = { 38 }, Head = { 30 }, Jaw = { -44 }, Tail = { 20 }, TailTip = { 10 } }, "linear" },
+                { w + 1.3, {} },
+            })
+            local build = smooth((t - w * 0.45) / (w * 0.55)) * (if t < w then 1 else 0)
+            anim:tremor("Body", 0.6 * build * math.sin(t * 43), 0, 0.5 * build * math.sin(t * 37))
+            local burst = envelope(t - w, 0.05, 0.7, 0.3)
+            anim:tremor("Head", 3 * burst * math.sin(t * 40), 1.5 * burst * math.sin(t * 31))
         end
     end
 
-    -- the moon leap: a deep crouch, then stretched flat through the air, tail streaming
+    -- the moon leap: a deep crouch (its planted paws fold under it), then stretched flat through the
+    -- air, tail streaming
     local leap = anim.actions.MoonLeap
     if leap then
         local windUp, air = leap.args[1] or 0.55, leap.args[2] or 1.4
@@ -156,11 +193,8 @@ function Rig.actions(anim, pose, now)
         if t then
             local crouch = envelope(t, windUp * 0.7, windUp + 0.12, 0.12)
             add(pose, "Body", -6 * crouch, 0, 0, -2 * crouch)
-            for _, leg in LEGS do
-                local front = string.sub(leg, 1, 5) == "Front"
-                add(pose, leg .. "Upper", (if front then -16 else 18) * crouch)
-                add(pose, leg .. "Lower", (if front then 28 else -30) * crouch)
-            end
+            add(pose, "Neck", -10 * crouch)
+            add(pose, "Tail", -14 * crouch)
             local u = (t - windUp) / air
             if u >= 0 and u <= 1 then
                 local stretch = envelope(u, 0.12, 1, 0.22)
@@ -175,15 +209,15 @@ function Rig.actions(anim, pose, now)
         end
     end
 
-    -- landing: the shoulders take it
-    t = anim:action("Land", 0.6)
+    -- landing: the shoulders take it, sinking deep over the paws, and it rebounds
+    t = anim:action("Land", 0.7)
     if t then
-        local give = envelope(t, 0.05, 0.6, 0.45)
-        add(pose, "Body", -5 * give, 0, 0, -1.6 * give)
-        for _, leg in LEGS do
-            local front = string.sub(leg, 1, 5) == "Front"
-            add(pose, leg .. "Lower", (if front then 20 else -20) * give)
-        end
+        keyed(pose, t, {
+            { 0, {} },
+            { 0.08, { Body = { -6, 0, 0, -2.2 }, Neck = { -12 }, Tail = { -14 } }, "out" },
+            { 0.3, { Body = { 2, 0, 0, 0.1 }, Neck = { 4 } } },
+            { 0.7, {} },
+        })
     end
 end
 

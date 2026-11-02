@@ -803,6 +803,20 @@ Guarded → Available → Carried → Dropped → Carried → Secured
 
 The stand: holds an egg → empty while it is carried or dropped → the same egg back (a failed theft), or empty for 3 minutes and then a random egg of the island's (a secured one).
 
+### How guardians move (the owner: "too stiff", twice, November 2, 2026)
+
+All guardian animation is procedural, on the client (`GuardianAnim`, one rig per guardian in `GuardianRigs/`). Each frame a rig builds a target pose from layers (state pose, gait, lean, breathing and look, one-shot moves); every joint follows it through a spring; then the feet are planted.
+
+- **Moves are keyed** (`GuardianAnim.keyed`): told as key poses with eases, the way an animator blocks them, never one slow blend over the wind-up. Every attack has a **coil** (the opposite way: head low, haunches dropping), a **load** (rising, a shiver building), a **snap** that lands exactly when the server's hit or wave fires (eased "in", fastest at the strike), a **held impact**, and a loose **recovery**. The shockwaves: the Lion sits back on its haunches and throws its head up to roar; Tiangou sits back and howls at the sky; the Xuanwu rears, forelegs off the ground, and stamps; Pangu thrusts his palm straight up (nova) or brings the axe down from overhead (sky-splitter); the Mantis rises with its blades crossed high and flings them down and out.
+- **Planted feet** (`Rig.Legs`): after the springs, each standing leg's two joints are solved so its sole stays on the ground, so a body crouches, rears, bobs and shifts its weight over its feet instead of carrying them. A leg lifts out of it as its step swings it (`anim:lift`), in the air, or for a raised paw; no foot is ever posed through the ground. Measured fold directions: the Lion's four legs and Tiangou's forelegs fold on a positive lower turn, Tiangou's hind legs and Pangu's shins on a negative one; the Mantis's and Xuanwu's sprawling legs bend on roll (left positive, right negative). Awake guardians stand on slightly flexed legs, which planted feet need as slack.
+- **Gaits measured in Play** (stance feet within about 0.1 stud of the ground, swing feet clear): the Lion 20 degree swing, 45 degree fold, body about 1.8 studs low; Tiangou 22, 50, 1.4; Pangu 22 degree stride, 55 degree knee, 1.4; the Xuanwu lifts each foot 26/18 degrees with the shell 0.6 low. Turning on the spot steps the feet too.
+- **Weight and follow-through** (`Rig.Springs`): a joint eases into a move, overshoots a little and settles (bodies about 3-4.5 Hz, limbs 9 Hz). A loose joint (`Drag`) keeps its angle in the world while what it hangs from turns, then swings after it: tails (Tiangou's tip a beat behind its root), the Xuanwu's serpent, the Mantis's robe, Pangu's open arm, every head.
+- **Lean** (`Rig.Lean`): nose down speeding up, back braking, banked into turns.
+- **Tremors** (a shudder, a quivering roar, a building shiver) go on after the springs, which would smooth them away.
+- **Cost:** 0.03-0.06 ms per guardian per frame in Studio, feet included; only guardians near the camera animate.
+
+Tuning lives in each rig: `Rig.Springs`, `Rig.Lean`, `Rig.Legs`, the gait numbers and each move's keys. Joints are listed parent first (`GuardianAnim` warns otherwise). Strikes keep their impact on the wind-up time the server sends, so effects and knockback stay in sync.
+
 ### Guardians by island
 
 | Island | Guardian | Encounter direction |
@@ -838,7 +852,7 @@ With nobody within 60 studs for 12 s, it heals and sleeps.
 - **Grace:** for 1.5 s after taking or recovering the egg the thief can't be knocked back, so a blow already on its way doesn't take the egg straight back.
 - **Dropped:** at a clear spot on the ground near where the thief was (never inside the lion), under a pillar of Qi light; only the thief sees its prompt and the 30-second countdown. A thief who leaves the game, or lets the countdown run out, sends the egg back to its stand. Falling off the island drops it where the thief last stood.
 - **The Hatching Altar is its sanctuary:** the egg is secured within 12 studs of the altar's centre, the lion never comes within 12 studs of its edge, and nobody inside it can be knocked back.
-- **The client** (`GuardianController`, `GuardianAnim`, `GuardianFx`): the health bar (name, state, the 40% mark, a trailing loss), procedural animation (state poses, a walk turning into a gallop, breathing, the head turned toward its target, and the moves), stone-dust effects (the roar's rolling dust wall, slam and landing bursts, dust stirring where a pounce will land), camera shake, the way to the garden for a thief, and the knockback on your own character.
+- **The client** (`GuardianController`, `GuardianAnim`, `GuardianFx`): the health bar (name, state, the 10% weakened mark, a trailing loss), procedural animation (state poses, a walk turning into a gallop, breathing, the head turned toward its target, and the moves, all through springs: see How guardians move), stone-dust effects (the roar's rolling dust wall, slam and landing bursts, dust stirring where a pounce will land), camera shake, the way to the Hatching Altar for a thief, and the knockback on your own character.
 
 **Asset:** `tools/blender/guardians/stone_lion.py` builds it; `assets/guardians/StoneLion.fbx` holds 12 jointed segments (Body, Head, Jaw, Tail and two pieces per leg). The curls are pieces of their own, so the bake's decimation leaves them whole. `WorldBuild.GuardianBuilder.store` fits the import and joins the segments with Motor6Ds at their pivots (`Placements/StoneLion.lua`), into `ServerStorage.Guardians.StoneLion`. Animation sets the joints' `Transform` on the client.
 

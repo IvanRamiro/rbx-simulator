@@ -17,7 +17,7 @@
 local GuardianAnim = require(script.Parent.Parent:WaitForChild("GuardianAnim"))
 local GuardianFx = require(script.Parent.Parent:WaitForChild("GuardianFx"))
 
-local add, envelope, smooth = GuardianAnim.add, GuardianAnim.envelope, GuardianAnim.smooth
+local add, envelope, smooth, keyed = GuardianAnim.add, GuardianAnim.envelope, GuardianAnim.smooth, GuardianAnim.keyed
 
 local Rig = {}
 
@@ -37,16 +37,16 @@ Rig.Poses = {
         Body = { 0, 0, 0, -0.9 }, Neck = { -10, 0, 0, 0, 2.2 }, Head = { -6 },
         SerpentNeck = { -16 }, SerpentHead = { -22 }, Tail = { -8 },
     },
-    Guardian = { Head = { 0 } },
+    Guardian = { Body = { 0, 0, 0, -0.3 }, Head = { 0 } },
     Weakened = {
         Body = { -2, 0, 0, -1.4 }, Neck = { -16 }, Head = { -10 }, Jaw = { -5 },
         SerpentNeck = { -30, 6 }, SerpentHead = { -8 }, Tail = { -10 },   -- its head hung low to the ground (-38 buried it)
     },
     Enraged = {
-        Body = { 4, 0, 0, 0.6 }, Neck = { 10 }, Head = { 6 }, Jaw = { -14 },
+        Body = { 4, 0, 0, -0.1 }, Neck = { 10 }, Head = { 6 }, Jaw = { -14 },
         SerpentNeck = { 10 }, SerpentHead = { 12 }, Tail = { 14 },
     },
-    Returning = { Head = { -4 } },
+    Returning = { Body = { 0, 0, 0, -0.3 }, Head = { -4 } },
     Resting = {
         Body = { 0, 0, 0, -0.9 }, Neck = { -10, 0, 0, 0, 2.2 }, Head = { -6 },
         SerpentNeck = { -16 }, SerpentHead = { -22 }, Tail = { -8 },
@@ -54,23 +54,46 @@ Rig.Poses = {
 }
 Rig.LeapAction = "Charge"
 Rig.Look = { Joint = "Head", Share = 0.7, Body = "Neck", BodyShare = 0.3, Limit = 35 }
+-- springs (GuardianAnim): a slow, massive shell that rocks a long time after it stops, the
+-- tortoise's head lagging it, and the serpent a heavy loose coil that sways behind every turn
+Rig.Springs = {
+    Body = { Freq = 2.8, Damping = 0.55, Drag = 0 },
+    Neck = { Freq = 3.6, Damping = 0.5, Drag = 0.3 },
+    Head = { Freq = 4.5, Damping = 0.5, Drag = 0.3 },
+    Jaw = { Freq = 7, Damping = 0.45, Drag = 0 },
+    SerpentNeck = { Freq = 1.9, Damping = 0.35, Drag = 0.9 },
+    SerpentHead = { Freq = 2.5, Damping = 0.38, Drag = 0.7 },
+    Tail = { Freq = 3, Damping = 0.35, Drag = 0.8 },
+}
+Rig.Lean = { Joint = "Body", Accel = 0.08, Bank = 0.04, Max = 5 }
+-- planted feet (GuardianAnim): the sprawling legs bend on roll, the left ones folding on a positive
+-- Lower turn and the right on a negative one (measured in Play)
+Rig.Legs = {
+    { Name = "FrontLeft", Upper = "FrontLeftUpper", Lower = "FrontLeftLower", Axis = 3, Bend = 1 },
+    { Name = "FrontRight", Upper = "FrontRightUpper", Lower = "FrontRightLower", Axis = 3, Bend = -1 },
+    { Name = "BackLeft", Upper = "BackLeftUpper", Lower = "BackLeftLower", Axis = 3, Bend = 1 },
+    { Name = "BackRight", Upper = "BackRightUpper", Lower = "BackRightLower", Axis = 3, Bend = -1 },
+}
 Rig.Style = { Debris = "Cinders", Qi = Color3.fromRGB(255, 70, 0), QiCore = Color3.fromRGB(255, 190, 90) }
 
 local STRIDE = 11
 
 function Rig.gait(anim, pose, dt)
-    anim.phase = (anim.phase + dt * anim.speed / STRIDE) % 1
+    anim.phase = (anim.phase + dt * anim.stepSpeed / STRIDE) % 1
+    -- measured in Play: lifting each foot 26/18 degrees with the shell about 0.6 studs low (with the
+    -- awake poses') plants the stance feet and gives a heavy, clear step
     local amplitude = 14 * anim.moving
     for _, leg in LEGS do
         local name, side, offset = leg[1], leg[2], leg[3]
         local a = 2 * math.pi * (anim.phase + offset)
         local lift = math.max(0, math.cos(a)) * anim.moving
-        add(pose, name .. "Upper", 0, side * amplitude * math.sin(a), side * 12 * lift)
-        add(pose, name .. "Lower", 0, 0, -side * 10 * lift)
+        add(pose, name .. "Upper", 0, side * amplitude * math.sin(a), side * 26 * lift)
+        add(pose, name .. "Lower", 0, 0, -side * 18 * lift)
+        anim:lift(name, math.min(1, lift * 2))
     end
     -- the shell rolls from side to side over the stepping pairs, and bobs as each lands
     local step = 2 * math.pi * anim.phase
-    add(pose, "Body", 0, 0, 1.6 * math.sin(step) * anim.moving, 0.35 * math.abs(math.sin(step)) * anim.moving)
+    add(pose, "Body", 0, 0, 1.6 * math.sin(step) * anim.moving, (0.35 * math.abs(math.sin(step)) - 0.3) * anim.moving)
     add(pose, "Head", -2 * math.sin(step * 2) * anim.moving, 0, -1.2 * math.sin(step) * anim.moving)
     add(pose, "SerpentNeck", 0, 3 * math.sin(step) * anim.moving)
     add(pose, "Tail", 0, 6 * math.sin(step) * anim.moving)
@@ -108,7 +131,7 @@ function Rig.actions(anim, pose, now)
     local t = anim:action("Awaken", 2.2)
     if t then
         local shake = envelope(t, 0.1, 0.8, 0.3)
-        add(pose, "Body", 0, 0.8 * shake * math.sin(t * 60), 0.8 * shake * math.sin(t * 47))
+        anim:tremor("Body", 0, 0.8 * shake * math.sin(t * 60), 0.8 * shake * math.sin(t * 47))
         local rise = envelope(t - 0.5, 0.6, 1.7, 0.6)
         add(pose, "Body", 3 * rise, 0, 0, 0.5 * rise)
         add(pose, "Neck", 14 * rise)
@@ -127,33 +150,50 @@ function Rig.actions(anim, pose, now)
         add(pose, "Neck", -8 * w)
     end
 
-    -- the serpent's lash: it rears back over the volcano, then strikes down at the ground before them
+    -- the serpent's lash: a small dip, then it rears back over the volcano, and strikes down at the
+    -- ground before them (fastest as it lands), the shell rocking into it
     local lash = anim.actions.SerpentLash
     if lash then
-        local windUp = lash.args[1] or 0.8
-        t = anim:action("SerpentLash", windUp + 0.8)
+        local w = lash.args[1] or 0.8
+        t = anim:action("SerpentLash", w + 0.9)
         if t then
-            local cock = if t < windUp then smooth(t / windUp) elseif t < windUp + 0.1 then 1 - (t - windUp) / 0.1 else 0
-            local strike = envelope(t - windUp + 0.1, 0.1, 0.8, 0.5)
-            add(pose, "SerpentNeck", 22 * cock - 46 * strike, 0, 0)
-            add(pose, "SerpentHead", 18 * cock - 22 * strike)
-            add(pose, "Body", -1.5 * strike)
+            keyed(pose, t, {
+                { 0, {} },
+                { w * 0.35, { Body = { 0, 0, 0, -0.3 }, SerpentNeck = { -8 }, SerpentHead = { -6 } }, "out" },
+                { w - 0.1, { Body = { -2, 0, -2 }, Neck = { 4, 10 }, SerpentNeck = { 26, 8 }, SerpentHead = { 22 } } },
+                { w + 0.02, { Body = { -3, 0, 2, -0.6 }, Neck = { -2 }, SerpentNeck = { -48, -4 }, SerpentHead = { -24 } }, "in" },
+                { w + 0.3, { Body = { -2, 0, 1, -0.5 }, SerpentNeck = { -42 }, SerpentHead = { -20 } }, "out" },
+                { w + 0.9, {} },
+            })
         end
     end
 
-    -- the quake: the front rears, the forelegs lift, then they stamp down
+    -- the quake: it hunkers down; the front rears, the forelegs lifting off the ground; at the
+    -- release they stamp down (fastest as they land) and the shell slams after them, shuddering
     local quake = anim.actions.Quake
     if quake then
-        local windUp = quake.args[1] or 1.3
-        t = anim:action("Quake", windUp + 0.9)
+        local w = quake.args[1] or 1.3
+        t = anim:action("Quake", w + 1.0)
         if t then
-            local rear = if t < windUp then smooth(t / windUp) elseif t < windUp + 0.12 then 1 - (t - windUp) / 0.12 else 0
-            local after = envelope(t - windUp, 0.05, 0.9, 0.5)
-            add(pose, "Body", 11 * rear - 3 * after, 0, 0, 0.8 * rear - 0.5 * after)
-            legs(pose, 26 * rear, -4 * rear)
-            add(pose, "Neck", 8 * rear - 10 * after)
-            add(pose, "Jaw", -24 * rear)
-            add(pose, "SerpentNeck", 10 * rear)
+            keyed(pose, t, {
+                { 0, {} },
+                { w * 0.3, { Body = { -3, 0, 0, -0.8 }, Neck = { -10 }, Head = { -6 }, SerpentNeck = { -8 } }, "out" },
+                { w - 0.18, { Body = { 16 }, Neck = { 14 }, Head = { 8 }, Jaw = { -26 }, SerpentNeck = { 16 }, SerpentHead = { 10 }, Tail = { -8 } } },
+                { w, { Body = { -5, 0, 0, -1.2 }, Neck = { -12 }, Head = { -8 }, Jaw = { -10 }, SerpentNeck = { -14 }, SerpentHead = { -10 } }, "in" },
+                { w + 0.3, { Body = { -4, 0, 0, -1.0 }, Neck = { -10 }, Jaw = { -8 }, SerpentNeck = { -10 } }, "out" },
+                { w + 1.0, {} },
+            })
+            -- the forelegs lift with the rear and come down with the stamp
+            local up = if t < w * 0.3 then 0 elseif t < w - 0.18 then smooth((t - w * 0.3) / (w * 0.7 - 0.18))
+                elseif t < w then 1 - ((t - w + 0.18) / 0.18) ^ 2 else 0
+            for _, leg in LEGS do
+                if string.sub(leg[1], 1, 5) == "Front" then
+                    add(pose, leg[1] .. "Upper", 0, 0, leg[2] * 30 * up)
+                    add(pose, leg[1] .. "Lower", 0, 0, -leg[2] * 20 * up)
+                    anim:lift(leg[1], up)
+                end
+            end
+            anim:tremor("Body", 1.2 * envelope(t - w, 0.02, 0.45, 0.3) * math.sin(t * 48), 0, 0.9 * envelope(t - w, 0.02, 0.45, 0.3) * math.sin(t * 37))
         end
     end
 
@@ -182,12 +222,15 @@ function Rig.actions(anim, pose, now)
         end
     end
 
-    -- landing: the shell slams down onto its legs
-    t = anim:action("Land", 0.7)
+    -- landing: the shell slams down onto its legs and rocks
+    t = anim:action("Land", 0.8)
     if t then
-        local give = envelope(t, 0.05, 0.7, 0.5)
-        add(pose, "Body", -3 * give, 0, 0, -1.1 * give)
-        legs(pose, -10 * give, -10 * give)
+        keyed(pose, t, {
+            { 0, {} },
+            { 0.08, { Body = { -4, 0, 0, -1.4 }, Neck = { -8 }, SerpentNeck = { -10 } }, "out" },
+            { 0.35, { Body = { 2, 0, 0, 0.1 }, Neck = { 3 } } },
+            { 0.8, {} },
+        })
     end
 end
 

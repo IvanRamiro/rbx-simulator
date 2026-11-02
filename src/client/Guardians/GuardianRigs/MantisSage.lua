@@ -10,7 +10,7 @@
 local GuardianAnim = require(script.Parent.Parent:WaitForChild("GuardianAnim"))
 local GuardianFx = require(script.Parent.Parent:WaitForChild("GuardianFx"))
 
-local add, envelope, smooth = GuardianAnim.add, GuardianAnim.envelope, GuardianAnim.smooth
+local add, envelope, smooth, keyed = GuardianAnim.add, GuardianAnim.envelope, GuardianAnim.smooth, GuardianAnim.keyed
 
 local Rig = {}
 
@@ -28,7 +28,7 @@ local LEGS = {
 
 Rig.Poses = {
     Dormant = { Neck = { -3 }, Head = { -16 } },
-    Guardian = { Head = { 0 } },
+    Guardian = { Body = { 0, 0, 0, -0.3 }, Head = { 0 } },
     Weakened = {
         Body = { 0, 0, 0, -2.5 }, Neck = { -20 }, Head = { -8 },
         LeftArmUpper = { -12, 0, -12 }, RightArmUpper = { -12, 0, 12 },
@@ -39,17 +39,38 @@ Rig.Poses = {
         LeftArmUpper = { 35, 0, -16 }, RightArmUpper = { 35, 0, 16 },
         LeftArmBlade = { -55 }, RightArmBlade = { -55 },
     },
-    Returning = { Head = { -6 } },
+    Returning = { Body = { 0, 0, 0, -0.3 }, Head = { -6 } },
     Resting = { Neck = { -3 }, Head = { -16 } },
 }
 Rig.LeapAction = "Leap"
 Rig.Look = { Joint = "Head", Share = 0.8, Body = "Neck", BodyShare = 0.2, Limit = 50 }
+-- springs (GuardianAnim): a light body, the leaf robe flapping behind every move, the long neck
+-- and the head trailing it like a stalk, the blades quick
+Rig.Springs = {
+    Body = { Freq = 4, Damping = 0.55, Drag = 0 },
+    Mantle = { Freq = 2.4, Damping = 0.32, Drag = 0.8 },
+    Neck = { Freq = 3.6, Damping = 0.45, Drag = 0.35 },
+    Head = { Freq = 4.5, Damping = 0.5, Drag = 0.4 },
+    LeftArmUpper = { Freq = 7, Damping = 0.55, Drag = 0.15 },
+    RightArmUpper = { Freq = 7, Damping = 0.55, Drag = 0.15 },
+    LeftArmBlade = { Freq = 9, Damping = 0.5, Drag = 0 },
+    RightArmBlade = { Freq = 9, Damping = 0.5, Drag = 0 },
+}
+Rig.Lean = { Joint = "Body", Accel = 0.1, Bank = 0.06, Max = 6 }
+-- planted feet (GuardianAnim): the sprawling legs bend on roll, the left ones folding on a positive
+-- Lower turn and the right on a negative one (measured in Play)
+Rig.Legs = {
+    { Name = "MidLeft", Upper = "MidLeftUpper", Lower = "MidLeftLower", Axis = 3, Bend = 1 },
+    { Name = "MidRight", Upper = "MidRightUpper", Lower = "MidRightLower", Axis = 3, Bend = -1 },
+    { Name = "HindLeft", Upper = "HindLeftUpper", Lower = "HindLeftLower", Axis = 3, Bend = 1 },
+    { Name = "HindRight", Upper = "HindRightUpper", Lower = "HindRightLower", Axis = 3, Bend = -1 },
+}
 Rig.Style = { Debris = "Leaves", Qi = Color3.fromRGB(0, 200, 110), QiCore = Color3.fromRGB(170, 255, 210) }
 
 local STRIDE = 16
 
 function Rig.gait(anim, pose, dt)
-    anim.phase = (anim.phase + dt * anim.speed / STRIDE) % 1
+    anim.phase = (anim.phase + dt * anim.stepSpeed / STRIDE) % 1
     local amplitude = 20 * anim.moving
     for _, leg in LEGS do
         local name, side, offset = leg[1], leg[2], leg[3]
@@ -57,6 +78,7 @@ function Rig.gait(anim, pose, dt)
         local lift = math.max(0, math.cos(a)) * anim.moving
         add(pose, name .. "Upper", 0, side * amplitude * math.sin(a), side * 16 * lift)
         add(pose, name .. "Lower", 0, 0, -side * 8 * lift)
+        anim:lift(name, math.min(1, lift * 2))
     end
     add(pose, "Body", 0, 0, 0, 0.3 * math.abs(math.sin(4 * math.pi * anim.phase)) * anim.moving)
 end
@@ -74,6 +96,15 @@ function Rig.life(anim, pose, state, now)
     add(pose, "Mantle", 1.2 * math.sin(now * 2.1))
 end
 
+-- both arms as a key pose: the upper arms' pitch and spread, the blades' fold
+local function armKey(key, pitch, roll, blade)
+    key.LeftArmUpper = { pitch, 0, -roll }
+    key.RightArmUpper = { pitch, 0, roll }
+    key.LeftArmBlade = { blade }
+    key.RightArmBlade = { blade }
+    return key
+end
+
 local function arms(pose, pitch, roll, blade)
     add(pose, "LeftArmUpper", pitch, 0, -roll)
     add(pose, "RightArmUpper", pitch, 0, roll)
@@ -87,7 +118,7 @@ function Rig.actions(anim, pose, now)
     if t then
         local rise = envelope(t, 0.7, 1.8, 0.5)
         add(pose, "Head", 18 * rise)
-        add(pose, "Mantle", 10 * envelope(t, 0.2, 1.2, 0.4) * math.sin(t * 22))
+        anim:tremor("Mantle", 10 * envelope(t, 0.2, 1.2, 0.4) * math.sin(t * 22))
         arms(pose, 0, 0, -22 * envelope(t - 0.6, 0.15, 0.6, 0.3))
     end
 
@@ -99,31 +130,41 @@ function Rig.actions(anim, pose, now)
         add(pose, "Neck", -10 * w)
     end
 
-    -- the scythes: raised and opened, then snapped shut across the front
+    -- the scythes: drawn back and opened high, the body rising on its legs; then snapped shut across
+    -- the front (fastest as they close), the body dropping into the strike, and held
     local scythe = anim.actions.Scythe
     if scythe then
-        local windUp = scythe.args[1] or 0.6
-        t = anim:action("Scythe", windUp + 0.6)
+        local w = scythe.args[1] or 0.6
+        t = anim:action("Scythe", w + 0.7)
         if t then
-            local cock = if t < windUp then smooth(t / windUp) elseif t < windUp + 0.08 then 1 - (t - windUp) / 0.08 else 0
-            local after = envelope(t - windUp, 0.04, 0.6, 0.35)
-            arms(pose, 50 * cock - 15 * after, 10 * cock, -80 * cock + 25 * after)
-            add(pose, "Neck", 4 * cock - 6 * after)
-            add(pose, "Head", -6 * after)
+            keyed(pose, t, {
+                { 0, {} },
+                { w - 0.12, armKey({ Body = { 2, 0, 0, 0.2 }, Neck = { 6 }, Head = { 4 }, Mantle = { 12 } }, 55, 12, -85) },
+                { w + 0.02, armKey({ Body = { -5, 0, 0, -0.9, -0.8 }, Neck = { -8 }, Head = { -8 }, Mantle = { 18 } }, -18, 0, 28), "in" },
+                { w + 0.25, armKey({ Body = { -4, 0, 0, -0.8, -0.6 }, Neck = { -6 }, Head = { -6 }, Mantle = { 12 } }, -12, 0, 22), "out" },
+                { w + 0.7, {} },
+            })
         end
     end
 
-    -- the blade wave: blades crossed high, the robe lifting, then flung down and out
+    -- the blade wave: it coils low, blades folded tight to its chest; rises tall, blades crossed high,
+    -- the robe lifting; at the release it flings them down and out, lunging into it, the robe
+    -- flaring, holds, and gathers itself again
     local wave = anim.actions.BladeWave
     if wave then
-        local windUp = wave.args[1] or 0.9
-        t = anim:action("BladeWave", windUp + 0.9)
+        local w = wave.args[1] or 0.9
+        t = anim:action("BladeWave", w + 1.1)
         if t then
-            local raise = if t < windUp then smooth(t / windUp) else math.max(0, 1 - (t - windUp) / 0.12)
-            local fling = envelope(t - windUp, 0.06, 0.9, 0.5)
-            arms(pose, 65 * raise - 25 * fling, -10 * raise + 35 * fling, -30 * raise - 20 * fling)
-            add(pose, "Mantle", 18 * raise + 8 * fling)
-            add(pose, "Neck", 6 * raise - 4 * fling)
+            keyed(pose, t, {
+                { 0, {} },
+                { w * 0.3, armKey({ Body = { -4, 0, 0, -1.2 }, Neck = { -10 }, Head = { -6 }, Mantle = { -6 } }, 10, 0, -60), "out" },
+                { w - 0.12, armKey({ Body = { 6, 0, 0, 0.3 }, Neck = { 12 }, Head = { 8 }, Mantle = { 22 } }, 80, -12, -35) },
+                { w + 0.04, armKey({ Body = { -8, 0, 0, -1.4, -1.2 }, Neck = { -12 }, Head = { -6 }, Mantle = { 34 } }, -30, 40, -25), "in" },
+                { w + 0.4, armKey({ Body = { -6, 0, 0, -1.2, -1.0 }, Neck = { -10 }, Head = { -4 }, Mantle = { 26 } }, -26, 36, -22), "out" },
+                { w + 1.1, {} },
+            })
+            local build = smooth((t - w * 0.45) / (w * 0.55)) * (if t < w then 1 else 0)
+            anim:tremor("Mantle", 3 * build * math.sin(t * 31))
         end
     end
 
@@ -148,9 +189,15 @@ function Rig.actions(anim, pose, now)
         end
     end
 
-    t = anim:action("Land", 0.6)
+    -- landing: it sinks deep onto its legs, the robe settling after it, and rises
+    t = anim:action("Land", 0.7)
     if t then
-        add(pose, "Body", 0, 0, 0, -2.5 * envelope(t, 0.05, 0.6, 0.45))
+        keyed(pose, t, {
+            { 0, {} },
+            { 0.08, { Body = { -4, 0, 0, -2.4 }, Neck = { -8 }, Mantle = { 18 } }, "out" },
+            { 0.32, { Body = { 1, 0, 0, 0.1 }, Neck = { 3 } } },
+            { 0.7, {} },
+        })
     end
 end
 
