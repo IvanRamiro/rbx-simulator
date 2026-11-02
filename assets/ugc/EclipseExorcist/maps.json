@@ -1,0 +1,5 @@
+{
+ "EE_Robe": {"color": "rbxassetid://95413911802494", "normal": "rbxassetid://85137449146549", "roughness": "rbxassetid://105753970994698", "metalness": "rbxassetid://125976225374729"},
+ "EE_Hakama": {"color": "rbxassetid://114948080473077", "normal": "rbxassetid://119323489761173", "roughness": "rbxassetid://93372652874148", "metalness": "rbxassetid://127031228999225"},
+ "EE_SealCord": {"color": "rbxassetid://121252008502141", "normal": "rbxassetid://135921277154684", "roughness": "rbxassetid://91224332771582", "metalness": "rbxassetid://107142920883760"}
+}
