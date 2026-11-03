@@ -1,17 +1,21 @@
-"""The Ascendant Seal: Realm 5's ground circle (the owner asked for "a better circle", 2026-11-03).
-Our own, drawn line by line. White on transparent: the game tints it (the owner's gold 255,170,40).
-No text in any language (the game's fixed directive): only rings, ticks, clouds and wings.
+"""The Ascendant Seal: Realm 5's ground circle. White on transparent: the game tints it (the owner's
+gold 255,170,40). No text in any language (the game's fixed directive): birds, clouds and wind only.
 
-From the rim inward:
-  a double rim, fine ticks between, a small diamond every 30 degrees;
-  eight auspicious clouds (ruyi scrolls), the clouds an Ascendant rises on;
-  a ring with sixteen beads;
-  eight swallow wings pointing outward, climbing (the realm's Skyrise swallow);
-  a ring of short sun rays round an open centre (the body stands there).
+Second design (2026-11-03). The owner called the first "too generic": eight repeated motifs in
+rings with ticks is every magic circle. This one is a scene in motion, not a ring of symbols:
+  three swallows chase each other round the circle (the realm's Skyrise swallow), flying clockwise;
+  each one's long tail streamer sweeps back and swells outward into the border, flowing into the
+  next bird, so the edge is three living strokes, not a drawn ring;
+  inside, an updraft: wind lines spiral in toward the feet, and three large auspicious clouds ride
+  the current between the birds;
+  the centre stays open (the body stands there).
+Rotational symmetry of three, curves only, nothing straight: it reads as climbing and turning even
+when still.
 
     python3 ascendant_seal.py assets/aura/ascendant     (needs Pillow and numpy)
 
-  AscendantSeal.png  1024x1024
+  AscendantSeal.png          1024x1024, the texture
+  AscendantSeal_preview.png  in the owner's gold on a dark ground
 """
 import math
 import os
@@ -22,135 +26,145 @@ from PIL import Image, ImageDraw, ImageFilter
 
 OUT = sys.argv[1]
 os.makedirs(OUT, exist_ok=True)
-SS = 4                        # drawn at 4x and reduced, for clean lines
+SS = 4                        # drawn at 4x and reduced, for clean edges
 W = 1024 * SS
 C = W / 2
-R = W * 0.47                  # radius 1.0; the image keeps a clear margin past it
+R = W * 0.47                  # radius 1.0; a clear margin past it
 TAU = math.tau
+BIRDS = 3
+FLIGHT = -1                   # clockwise on screen (y runs down): angles decrease as the birds fly
 
 layer = Image.new("L", (W, W), 0)
 d = ImageDraw.Draw(layer)
 
 
-def px(r, a):
-    """a point at radius r (0-1) and angle a"""
-    return (C + R * r * math.cos(a), C + R * r * math.sin(a))
+def to_px(x, y):
+    return (C + R * x, C + R * y)
 
 
-LINE = 1.35                   # every line a third thicker: at 5 studs across, thin lines shimmer away
+def polar(r, a):
+    return (r * math.cos(a), r * math.sin(a))
 
 
-def ring(r, width):
-    d.ellipse([C - R * r, C - R * r, C + R * r, C + R * r], outline=255, width=int(width * LINE * SS))
+def ribbon(centre, widths):
+    """a filled stroke along a centre line with a width at every point (tapering ends, no caps)"""
+    pts = np.asarray(centre)
+    left, right = [], []
+    for i, (p, w) in enumerate(zip(pts, widths)):
+        a = pts[max(i - 1, 0)]
+        b = pts[min(i + 1, len(pts) - 1)]
+        t = b - a
+        t = t / (np.hypot(*t) or 1)
+        n = np.array([-t[1], t[0]])
+        left.append(to_px(*(p + n * w / 2)))
+        right.append(to_px(*(p - n * w / 2)))
+    d.polygon(left + right[::-1], fill=255)
 
 
-def line(points, width):
-    d.line(points, fill=255, width=int(width * LINE * SS), joint="curve")
+def swallow(r, a, size):
+    """a swallow at radius r, angle a, flying along the circle in FLIGHT's direction: a slim body,
+    long swept wings, a deep forked tail. Local x points forward, y to the bird's left"""
+    fwd = np.array([-math.sin(a), math.cos(a)]) * FLIGHT
+    left = np.array([-fwd[1], fwd[0]])
+    base = np.array(polar(r, a))
+
+    def P(x, y):
+        q = base + size * (x * fwd + y * left)
+        return to_px(*q)
+
+    body = [P(0.55, 0), P(0.42, 0.07), P(0.12, 0.1), P(-0.3, 0.06), P(-0.38, 0), P(-0.3, -0.06), P(0.12, -0.1), P(0.42, -0.07)]
+    d.polygon(body, fill=255)
+    for side in (1, -1):
+        # the wing: a long crescent swept back, its leading edge curved, its trailing edge hollowed
+        lead = [P(0.18 - 0.62 * k ** 1.15, side * (0.06 + 0.86 * k ** 0.85)) for k in np.linspace(0, 1, 24)]
+        trail = [P(-0.44 + 0.46 * k ** 0.8, side * (0.92 - 0.86 * k ** 0.7)) for k in np.linspace(0, 1, 24)]
+        d.polygon(lead + trail, fill=255)
+        # the tail: a fork of two long streamers
+        prong = [P(-0.3 - 0.62 * k, side * (0.03 + 0.2 * k ** 1.3)) for k in np.linspace(0, 1, 16)]
+        ribbon([np.array([(c[0] - C) / R, (c[1] - C) / R]) for c in prong], np.linspace(0.05 * size * 1.4, 0.006, 16))
 
 
-def dot(p, radius):
-    rr = radius * SS
-    d.ellipse([p[0] - rr, p[1] - rr, p[0] + rr, p[1] + rr], fill=255)
+def streamer(a0):
+    """the tail streamer behind a bird at angle a0: it sweeps back round the circle against the
+    flight, swelling outward into the border and tapering away just behind the next bird"""
+    span = TAU / BIRDS * 0.93
+    k = np.linspace(0, 1, 160)
+    ang = a0 - FLIGHT * (0.16 + span * k)
+    rad = 0.74 + 0.22 * np.sin(np.minimum(k * 1.25, 1) * math.pi / 2) - 0.04 * k ** 3
+    centre = [np.array(polar(r, t)) for r, t in zip(rad, ang)]
+    width = 0.05 * np.sin(np.clip(k * 3.2, 0, 1) * math.pi / 2) * (1 - k) ** 0.8 + 0.004
+    ribbon(centre, width)
+    # a fine line riding outside it, offset a little, starting later and ending sooner
+    k2 = np.linspace(0.18, 0.86, 120)
+    ang2 = a0 - FLIGHT * (0.16 + span * k2)
+    rad2 = 0.74 + 0.22 * np.sin(np.minimum(k2 * 1.25, 1) * math.pi / 2) - 0.04 * k2 ** 3 + 0.045
+    ribbon([np.array(polar(r, t)) for r, t in zip(rad2, ang2)], 0.012 * np.sin((k2 - 0.18) / 0.68 * math.pi) + 0.002)
 
 
-# --- the rim: two rings, fine ticks between, a diamond every 30 degrees --------------------
-ring(0.985, 3.2)
-ring(0.935, 2.0)
-for k in range(120):
-    a = k * TAU / 120
-    long = k % 10 == 0
-    line([px(0.94, a), px(0.98 if long else 0.962, a)], 2.2 if long else 1.3)
-for k in range(12):
-    a = k * TAU / 12
-    pts = [px(0.985 + 0.03, a), px(0.96, a + 0.012), px(0.985 - 0.06, a), px(0.96, a - 0.012)]
-    d.polygon(pts, fill=255)
+def cloud(r0, a, s):
+    """a large auspicious cloud riding the current: two scrolls curling in under a lobed crown,
+    its lobes facing outward"""
+    t = np.array([-math.sin(a), math.cos(a)])
+    n = np.array([math.cos(a), math.sin(a)])
+    base = np.array(polar(r0, a))
 
-# --- the clouds: eight ruyi scrolls on the band, lobes outward ------------------------------
-
-
-def cloud(theta, r0, s):
-    """one auspicious cloud at angle theta, centred at radius r0, size s (in radius units).
-    Local u runs along the ring, v outward; two scrolls curl inward under a three-lobed crown,
-    with a wisp trailing behind (all of it in the direction the seal turns)"""
-    t = (-math.sin(theta), math.cos(theta))      # along the ring
-    n = (math.cos(theta), math.sin(theta))       # outward
-
-    def P(u, v):
-        x = r0 * n[0] + s * (u * t[0] + v * n[0])
-        y = r0 * n[1] + s * (u * t[1] + v * n[1])
-        return (C + R * x, C + R * y)
+    def Q(u, v):
+        return base + s * (u * t + v * n)
 
     def spiral(cu, side):
-        # from the crown's foot, curling inward round (cu, 0): 1.3 turns, the radius shrinking
         pts = []
-        for i in range(80):
-            k = i / 79
-            ang = math.pi / 2 + side * k * TAU * 1.3
-            rad = 0.42 * (1 - 0.78 * k)
-            pts.append(P(cu + side * rad * math.cos(ang) * -1, rad * math.sin(ang)))
+        for i in range(90):
+            k = i / 89
+            ang = math.pi / 2 + side * k * TAU * 1.35
+            rad = 0.42 * (1 - 0.8 * k)
+            pts.append(Q(cu - side * rad * math.cos(ang), rad * math.sin(ang)))
         return pts
 
-    line(spiral(-0.5, 1), 2.6)
-    line(spiral(0.5, -1), 2.6)
-    # the crown: a big middle lobe between two small ones, over the scrolls
-    crown = []
-    for i in range(61):
-        k = i / 60
-        u = -0.5 + k
-        v = 0.42 + 0.30 * math.sin(math.pi * k) + 0.07 * math.sin(3 * math.pi * k)
-        crown.append(P(u, v))
-    line(crown, 2.6)
-    # a wisp trailing behind, thinning
-    wisp = [P(-0.5 - 0.42 - 1.15 * k, -0.05 + 0.16 * math.sin(k * math.pi * 1.6) - 0.35 * k * k) for k in np.linspace(0, 1, 40)]
-    line(wisp, 1.8)
+    for cu, side in ((-0.5, 1), (0.5, -1)):
+        pts = spiral(cu, side)
+        ribbon(pts, np.linspace(0.016, 0.009, len(pts)))
+    crown = [Q(-0.5 + k, 0.42 + 0.32 * math.sin(math.pi * k) + 0.08 * math.sin(3 * math.pi * k)) for k in np.linspace(0, 1, 70)]
+    ribbon(crown, np.full(70, 0.016))
+    # its tail streams with the wind, along the flight
+    tail = [Q(0.92 + 0.9 * k, -0.06 - 0.25 * k * k) for k in np.linspace(0, 1, 40)]
+    ribbon(tail, np.linspace(0.013, 0.002, 40))
 
 
-for k in range(8):
-    cloud(k * TAU / 8 + TAU / 16, 0.795, 0.15)
-
-# --- a beaded ring --------------------------------------------------------------------------
-ring(0.655, 2.0)
-for k in range(16):
-    dot(px(0.655, k * TAU / 16), 5.5 if k % 2 == 0 else 3.5)
-
-# --- eight swallow wings, pointing outward ---------------------------------------------------
-
-
-def wing(theta):
-    """two swept wings meeting at a point outward, a forked tail inward: a swallow climbing"""
-    def P(r, da):
-        return px(r, theta + da)
-    for side in (1, -1):
-        outer = [P(0.62 - 0.17 * k, side * (0.0 + 0.16 * k ** 0.8)) for k in np.linspace(0, 1, 30)]
-        line(outer, 2.4)
-        inner = [P(0.555 - 0.10 * k, side * (0.0 + 0.085 * k ** 0.8)) for k in np.linspace(0, 1, 20)]
-        line(inner, 1.6)
-        tail = [P(0.50 - 0.07 * k, side * 0.03 * k) for k in np.linspace(0, 1, 12)]
-        line(tail, 1.6)
-    dot(P(0.62, 0), 4.5)
+def updraft():
+    """wind lines spiralling in toward the feet, turning the same way the birds fly"""
+    arms = 9
+    for j in range(arms):
+        a0 = j * TAU / arms
+        k = np.linspace(0, 1, 120)
+        rad = 0.62 - 0.30 * k
+        ang = a0 + FLIGHT * 1.6 * k
+        centre = [np.array(polar(r, t)) for r, t in zip(rad, ang)]
+        width = 0.011 * np.sin(k * math.pi) ** 0.8 + 0.0015
+        ribbon(centre, width)
 
 
-for k in range(8):
-    wing(k * TAU / 8)
+for b in range(BIRDS):
+    a = -math.pi / 2 + b * TAU / BIRDS
+    swallow(0.80, a, 0.21)
+    streamer(a)
+    cloud(0.50, a - FLIGHT * TAU / BIRDS / 2, 0.17)
+updraft()
+# the eye of the updraft: one soft ring round the open centre, broken where the wind enters
+for j in range(9):
+    a0 = j * TAU / 9 + 0.25
+    arc = [np.array(polar(0.30, a0 + 0.5 * k)) for k in np.linspace(0, 1, 30)]
+    ribbon(arc, 0.008 * np.sin(np.linspace(0, math.pi, 30)) + 0.002)
 
-# --- sun rays round the open centre ----------------------------------------------------------
-ring(0.36, 2.4)
-ring(0.335, 1.2)
-for k in range(32):
-    a = k * TAU / 32
-    line([px(0.37, a), px(0.405 if k % 2 == 0 else 0.388, a)], 1.6)
-
-# --- glow under every line, then reduce ------------------------------------------------------
-glow = layer.filter(ImageFilter.GaussianBlur(9 * SS)).point(lambda v: int(min(255, v * 1.5)))
-alpha = np.maximum(np.asarray(layer, dtype=float), np.asarray(glow, dtype=float) * 0.55)
+# glow under every stroke, then reduce
+glow = layer.filter(ImageFilter.GaussianBlur(10 * SS)).point(lambda v: int(min(255, v * 1.6)))
+alpha = np.maximum(np.asarray(layer, dtype=float), np.asarray(glow, dtype=float) * 0.5)
 alpha = Image.fromarray(alpha.astype(np.uint8)).resize((1024, 1024), Image.LANCZOS)
 rgba = Image.new("RGBA", (1024, 1024), (255, 255, 255, 0))
 rgba.putalpha(alpha)
 rgba.save(os.path.join(OUT, "AscendantSeal.png"))
 
-# a preview on a dark ground, in the owner's gold
-a = np.asarray(alpha, dtype=float)[:, :, None] / 255
+av = np.asarray(alpha, dtype=float)[:, :, None] / 255
 gold = np.array([255, 170, 40], dtype=float)
 bg = np.array([12, 18, 40], dtype=float)
-Image.fromarray(np.clip(bg + a * gold * 1.2, 0, 255).astype(np.uint8)).save(os.path.join(OUT, "AscendantSeal_preview.png"))
+Image.fromarray(np.clip(bg + av * gold * 1.2, 0, 255).astype(np.uint8)).save(os.path.join(OUT, "AscendantSeal_preview.png"))
 print("written:", sorted(os.listdir(OUT)))
