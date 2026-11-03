@@ -91,6 +91,11 @@ The owner also sent 16172858603 and 13655845087 again (both already above). The 
 
 **In use:** 16172858603 is now the Realm 5 workbench ground mist (`MyAura.GroundMist`).
 
+## Also in use
+
+- 7136551175 ("Circle2 Effect", kur_Dev), single image: a soft, wispy smoke ring; portal rings,
+  halos. Now the Realm 5 workbench portals' main ring.
+
 ## Notes
 
 - 95274053372063 was sent twice; it is listed once.
