@@ -95,6 +95,8 @@ The owner also sent 16172858603 and 13655845087 again (both already above). The 
 
 - 7136551175 ("Circle2 Effect", kur_Dev), single image: a soft, wispy smoke ring; portal rings,
   halos. Now the Realm 5 workbench portals' main ring.
+- 13922098740 ("marble star", unbreakablefaith), 4x4: a vortex twisting tighter until it collapses
+  into a star; portals, black holes, summoning. Now the Realm 5 portals' main ring.
 
 ## Notes
 
