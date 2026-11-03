@@ -7,12 +7,13 @@ Shells seen from both sides are double-sided: each face written twice, the copy 
 
     python3 top_tier_aura_meshes.py assets/aura/top_tier     (needs numpy)
 
-  TopTier10.obj  DaoRing_Outer  an inverted cone band opening upward round the feet
-                 DaoRing_Inner  four flat concentric rings, broken into arcs, under the feet
-                 LawPillars     four tall twisted crystal shards round the body
-  TopTier12.obj  EventHorizon        an icosphere, double-sided (a void shell round the body)
-                 OrbitalHelices      two interlocked torus knots (thin tubes) orbiting the body
-                 TranscendenceCrown  a halo behind the head: two rings, twelve spokes, nodes
+One file per mesh (the importer merges a file's objects into one mesh):
+  Tier 10   DaoRing_Outer.obj       an inverted cone band opening upward round the feet
+            DaoRing_Inner.obj       four flat concentric rings, broken into arcs, under the feet
+            LawPillars.obj          four tall twisted crystal shards round the body
+  Tier 12   EventHorizon.obj        an icosphere, double-sided (a void shell round the body)
+            OrbitalHelices.obj      two interlocked torus knots (thin tubes) orbiting the body
+            TranscendenceCrown.obj  a halo behind the head: two rings, twelve spokes, nodes
 """
 import math
 import os
@@ -53,7 +54,7 @@ def write(path, meshes):
         out.write("# Qi Aura Simulator: top-tier aura meshes (tools/vfx/top_tier_aura_meshes.py)\n")
         base = 0
         for m in meshes:
-            out.write("o %s\n" % m.name)
+            out.write("o %s\ng %s\n" % (m.name, m.name))
             for p in m.v:
                 out.write("v %.5f %.5f %.5f\n" % tuple(p))
             for uv in m.vt:
@@ -231,9 +232,8 @@ def crown():
     return m
 
 
-tier10 = [dao_outer(), dao_inner(), law_pillars()]
-tier12 = [event_horizon(), orbital_helices(), crown()]
-write(os.path.join(OUT, "TopTier10.obj"), tier10)
-write(os.path.join(OUT, "TopTier12.obj"), tier12)
-for m in tier10 + tier12:
+# one file per mesh: Studio's importer merges the objects of one OBJ into a single mesh, and these
+# pieces turn on their own
+for m in (dao_outer(), dao_inner(), law_pillars(), event_horizon(), orbital_helices(), crown()):
+    write(os.path.join(OUT, m.name + ".obj"), [m])
     print("%-20s %5d triangles" % (m.name, m.tris()))
