@@ -1,20 +1,23 @@
-"""The Skyrise Coronet: Realm 5's crown (the owner, 2026-11-03: "create an asset to blender for
-crown"; it floats above the head, not on it, with bloom and a PointLight round it in the game).
+"""The Ascendant Sun Coronet: Realm 5's crown. It floats above the head, facing forward, with bloom
+and a PointLight round it in the game.
 
-Design (the modelling directive: idea first, then primary, secondary, tertiary forms):
-  idea      the Ascendant rises like a swallow climbing the sky (the realm's Skyrise swallow, its
-            ground seal of swallows and clouds): a coronet of swept swallow wings spiralling up.
-  primary   six wing blades rising from a slim floating band, alternating tall and short, leaning
-            outward and sweeping round in one direction: a turning, climbing silhouette. The tall
-            blades end in a swallow's forked tail; the short ones in a single point.
-  secondary each blade has a raised central vane; a small bead sits where each blade meets the
-            band; the band is a lens in section, flared, with a ridge round its middle.
-  tertiary  shallow chevron feather grooves on each blade.
-Units are studs (1 Blender unit = 1 stud), Z up in Blender; the OBJ is written Y up for Studio.
-One mesh, one material (the game makes it Neon gold).
+Second design (2026-11-03). The owner called the first (six thin swept blades round a plain band)
+"so ugly": plant-like, no focal point, no hierarchy. This one is built as real crowns are made:
+shaped gold plates wrapped round a band.
+  idea      the Ascendant rises toward the sun on a swallow's wings
+  primary   a symmetric, regal silhouette rising to a centrepiece. At the front, a sun disc on a
+            cloud base; on each side, three layered swallow feathers sweep up and back from it,
+            tallest at the front and stepping down toward the sides (a soaring "W" round the sun).
+            A slim rimmed band joins them.
+  secondary the sun's raised inner ring and gem, its twelve rays (long and short), each feather's
+            raised vane, cloud scrolls at the wing roots, a small cloud emblem at the back
+  tertiary  a row of beads round the band; bevelled edges that catch the light
+Every plate is drawn flat on the unrolled band (x along its circumference, y up, d outward), given
+thickness, then wrapped onto the band's cylinder, which flares a little toward the top.
+Units are studs (1 Blender unit = 1 stud), Z up; the front faces -Y. One mesh, one material.
 
-    run inside Blender:  exec(open(".../tools/blender/auras/ascendant_crown.py").read())
-    writes assets/aura/ascendant/AscendantCrown.obj
+    run inside Blender:  exec(open(".../tools/blender/auras/ascendant_crown.py").read(), {"__name__": "__main__"})
+    then export(bpy.data.objects["AscendantCrown"]) writes assets/aura/ascendant/AscendantCrown.obj
 """
 import math
 import os
@@ -28,10 +31,16 @@ OUT = os.path.join(ROOT, "assets/aura/ascendant/AscendantCrown.obj")
 COLL = "AscendantCrown"
 TAU = math.tau
 
-BAND_R = 0.72          # the band sits round, not on, a 1.2-stud head
-BAND_H = 0.16
-BLADES = 6
-SWEEP = 1              # every blade sweeps the same way round: the crown reads as turning
+R = 0.6            # the band's radius
+FLARE = 0.1        # the plates lean outward this much per stud of height
+BAND_H = 0.13
+
+
+def wrap(x, y, d):
+    """unrolled band coordinates to space: x = 0 is the front (-Y)"""
+    a = -math.pi / 2 + x / R
+    r = R + FLARE * max(y, 0) + d
+    return Vector((r * math.cos(a), r * math.sin(a), y))
 
 
 def collection():
@@ -45,131 +54,204 @@ def collection():
     return c
 
 
-def obj_from_bmesh(bm, name, coll):
+def plate(coll, name, outline, d0, thick, bevel=0.007):
+    """a gold plate: a flat outline (x, y) given thickness outward from d0, wrapped onto the band"""
+    bm = bmesh.new()
+    vs = [bm.verts.new((x, y, d0)) for x, y in outline]
+    face = bm.faces.new(vs)
+    ext = bmesh.ops.extrude_face_region(bm, geom=[face])
+    for v in ext["geom"]:
+        if isinstance(v, bmesh.types.BMVert):
+            v.co.z += thick
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bmesh.ops.triangulate(bm, faces=bm.faces, quad_method="BEAUTY", ngon_method="BEAUTY")
+    # enough vertices to follow the band's curve
+    for _ in range(2):
+        long_edges = [e for e in bm.edges if e.calc_length() > 0.12]
+        if long_edges:
+            bmesh.ops.subdivide_edges(bm, edges=long_edges, cuts=1, use_grid_fill=False)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    for v in bm.verts:
+        v.co = wrap(v.co.x, v.co.y, v.co.z)
     me = bpy.data.meshes.new(name)
     bm.to_mesh(me)
     bm.free()
     o = bpy.data.objects.new(name, me)
     coll.objects.link(o)
+    if bevel:
+        b = o.modifiers.new("Edge", "BEVEL")
+        b.width = bevel
+        b.segments = 1
+        b.limit_method = "ANGLE"
+        b.angle_limit = math.radians(40)
     return o
 
 
-# ---------------------------------------------------------------- the band ----------------
-def band(coll):
-    """a lens-section ring, flared a little at the top, with a ridge round its middle"""
+def lens(centre_fn, width_fn, n=28, asym=0.0):
+    """an outline round a centreline: the left edge up, the right edge back down"""
+    left, right = [], []
+    for i in range(n + 1):
+        t = i / n
+        c = centre_fn(t)
+        e = 1e-3
+        a, b = centre_fn(max(0, t - e)), centre_fn(min(1, t + e))
+        tx, ty = b[0] - a[0], b[1] - a[1]
+        L = math.hypot(tx, ty) or 1
+        nx, ny = -ty / L, tx / L
+        w = width_fn(t)
+        left.append((c[0] + nx * w * (1 + asym), c[1] + ny * w * (1 + asym)))
+        right.append((c[0] - nx * w * (1 - asym), c[1] - ny * w * (1 - asym)))
+    pts = left + right[::-1]
+    out = [pts[0]]
+    for p in pts[1:]:                                    # no duplicate points (degenerate faces)
+        if math.hypot(p[0] - out[-1][0], p[1] - out[-1][1]) > 1e-4:
+            out.append(p)
+    return out
+
+
+def bezier(p0, p1, p2):
+    return lambda t: ((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0],
+                      (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1])
+
+
+def circle(cx, cy, r, n=40):
+    return [(cx + r * math.cos(i * TAU / n), cy + r * math.sin(i * TAU / n)) for i in range(n)]
+
+
+def gem(coll, name, x, y, d, radius):
+    """a cabochon: flattened against the plate, set at (x, y) on the band"""
     bm = bmesh.new()
-    seg, prof = 72, 12
+    # the small wing gems need fewer facets (the budget: Roblox takes up to 20,000 triangles)
+    bmesh.ops.create_icosphere(bm, subdivisions=2 if radius > 0.04 else 1, radius=radius)
+    a = -math.pi / 2 + x / R
+    out = Vector((math.cos(a), math.sin(a), 0))
+    for v in bm.verts:
+        along = v.co.dot(out)
+        v.co = v.co - out * along * 0.45                  # squashed toward the band
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new(name, me)
+    coll.objects.link(o)
+    o.location = wrap(x, y, d)
+    return o
+
+
+# ------------------------------------------------------------------- the parts ------------
+def band(coll):
+    """a rimmed band: lips at the top and bottom, a shallow channel between, closed inside"""
+    bm = bmesh.new()
+    seg = 72
+    prof = [(0.0, -0.01), (0.0, 0.03), (0.025, 0.035), (0.032, 0.018), (BAND_H - 0.032, 0.018),
+            (BAND_H - 0.025, 0.035), (BAND_H, 0.03), (BAND_H, -0.01)]       # (y, d) bottom to top
     rows = []
     for i in range(seg):
-        a = i * TAU / seg
-        ring = []
-        for j in range(prof):
-            t = j * TAU / prof
-            # the section: height BAND_H, depth 0.07, a ridge on the outer face at mid height
-            z = math.sin(t) * BAND_H / 2
-            out = math.cos(t) * 0.035
-            if math.cos(t) > 0:
-                out += 0.018 * math.exp(-(math.sin(t) / 0.25) ** 2)       # the ridge
-            r = BAND_R + out + 0.03 * (z / (BAND_H / 2))                    # flared to the top
-            ring.append(bm.verts.new((r * math.cos(a), r * math.sin(a), z)))
-        rows.append(ring)
+        x = i * TAU * R / seg
+        rows.append([bm.verts.new(wrap(x, y, d)) for y, d in prof])
+    n = len(prof)
     for i in range(seg):
-        for j in range(prof):
-            a, b = rows[i][j], rows[i][(j + 1) % prof]
-            c, d = rows[(i + 1) % seg][(j + 1) % prof], rows[(i + 1) % seg][j]
+        nxt = (i + 1) % seg
+        for j in range(n):
+            a, b = rows[i][j], rows[i][(j + 1) % n]
+            c, d = rows[nxt][(j + 1) % n], rows[nxt][j]
             bm.faces.new((a, b, c, d))
-    return obj_from_bmesh(bm, "Band", coll)
+    me = bpy.data.meshes.new("Band")
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new("Band", me)
+    coll.objects.link(o)
+    return [o]
 
 
-# ---------------------------------------------------------------- the blades --------------
-def blade(coll, k, tall):
-    """a swept swallow wing, built as a grid (u across, v along) and bent onto its path. Its outline
-    is a wing's, not a leaf's: a smooth curved leading edge, a trailing edge scalloped into feather
-    tips, a raised arm along the leading edge, sweeping back to a point"""
-    H = 1.15 if tall else 0.75
-    W = 0.30 if tall else 0.24
-    base_a = k * TAU / BLADES
-    nu, nv = 12, 36
-    feathers = 5 if tall else 4
-
-    def lead(v):
-        # the leading edge: swells early, then sweeps smoothly to the tip
-        return W * 0.42 * math.sin(math.pi * min(0.985, 0.16 + 0.84 * v ** 0.75)) ** 0.8 + 0.004
-
-    def trail(v):
-        # the trailing edge: broad, cut into feather tips, narrowing to the point
-        body = math.sin(math.pi * min(0.985, 0.14 + 0.86 * v ** 1.05)) ** 0.6
-        scallop = 0.72 + 0.28 * abs(math.cos(v * feathers * math.pi)) ** 0.6
-        return W * 0.58 * body * scallop + 0.004
-
-    def path(v):
-        """the centreline: rising nearly upright, leaning out a little, sweeping round"""
-        r = BAND_R + 0.02 + 0.2 * v ** 1.5
-        a = base_a + SWEEP * 0.55 * v ** 1.8
-        z = -0.03 + (BAND_H / 2 + H) * v
-        return Vector((r * math.cos(a), r * math.sin(a), z)), a
-
-    def point(u, v):
-        p, a = path(v)
-        e = 1e-3
-        p2, _ = path(min(1, v + e))
-        p1, _ = path(max(0, v - e))
-        along = (p2 - p1).normalized()
-        across = Vector((-math.sin(a), math.cos(a), 0)) * SWEEP          # + is the leading side
-        normal = along.cross(across).normalized()
-        if normal.dot(Vector((math.cos(a), math.sin(a), 0))) < 0:
-            normal = -normal
-        x = u * lead(v) if u >= 0 else u * trail(v)
-        # the arm: a raised ridge along the leading side; feather lines raking back from it
-        arm_x = lead(v) * 0.35
-        arm = 0.032 * math.exp(-((x - arm_x) / 0.03) ** 2) * (1 - v ** 2.5)
-        rake = 0.0
-        if x < arm_x:
-            f = (v * feathers * 2 + (arm_x - x) / max(W, 1e-3) * 1.6) % 1.0
-            rake = -0.005 * math.exp(-((f - 0.5) / 0.12) ** 2)
-        return p + across * x + normal * (arm + rake)
-
-    bm = bmesh.new()
-    grid = []
-    for j in range(nv + 1):
-        v = j / nv
-        grid.append([bm.verts.new(point(-1 + 2 * i / nu, v)) for i in range(nu + 1)])
-    for j in range(nv):
-        for i in range(nu):
-            bm.faces.new((grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]))
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
-    bmesh.ops.dissolve_degenerate(bm, dist=1e-5, edges=bm.edges)
-    o = obj_from_bmesh(bm, f"Blade{k}", coll)
-    sol = o.modifiers.new("Thickness", "SOLIDIFY")
-    sol.thickness = 0.035
-    sol.offset = 0
-    sol.use_even_offset = False
-    return o
+def beads(coll):
+    out = []
+    n = 24
+    for i in range(n):
+        x = (i + 0.5) * TAU * R / n
+        if min(abs(x), abs(TAU * R - x)) < 0.2 or abs(x - math.pi * R) < 0.15:   # none behind the suns' bases
+            continue
+        bm = bmesh.new()
+        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=0.019)
+        me = bpy.data.meshes.new(f"Bead{i}")
+        bm.to_mesh(me)
+        bm.free()
+        o = bpy.data.objects.new(f"Bead{i}", me)
+        coll.objects.link(o)
+        o.location = wrap(x, BAND_H / 2, 0.03)
+        out.append(o)
+    return out
 
 
-def bead(coll, k):
-    """a small faceted bead where each blade meets the band"""
-    a = k * TAU / BLADES
-    bm = bmesh.new()
-    bmesh.ops.create_icosphere(bm, subdivisions=1, radius=0.045)
-    o = obj_from_bmesh(bm, f"Bead{k}", coll)
-    o.location = ((BAND_R + 0.05) * math.cos(a), (BAND_R + 0.05) * math.sin(a), 0.0)
-    o.scale = (1, 1, 1.3)
-    return o
+def sun(coll, x0=0.0, s=1.0, tag=""):
+    """the centrepiece: a cloud base on the band, the disc, its raised ring and gem, twelve rays"""
+    parts = []
+    cy = 0.47
+    P = lambda pts: [(x0 + s * x, s * y) for x, y in pts]
+    base = []
+    for i in range(41):                                   # the cloud's three lobes, top edge
+        t = i / 40
+        base.append((-0.17 + 0.34 * t, 0.24 + 0.07 * math.sin(math.pi * t) + 0.03 * math.sin(3 * math.pi * t)))
+    base = base[::-1] + [(-0.13, 0.06), (-0.06, 0.1), (0.0, 0.08), (0.06, 0.1), (0.13, 0.06)]
+    parts.append(plate(coll, "SunBase" + tag, P(base), 0.02, 0.03))
+    parts.append(plate(coll, "SunDisc" + tag, P(circle(0, cy, 0.17, 40)), 0.03, 0.03))
+    parts.append(plate(coll, "SunRing" + tag, P(circle(0, cy, 0.125, 32)), 0.06, 0.012, bevel=0.004))
+    for k in range(12):
+        a = k * TAU / 12 + TAU / 24
+        if math.sin(a) < -0.6:          # no rays down into the cloud base
+            continue
+        long = k % 2 == 0
+        r0, r1 = 0.16, (0.37 if long else 0.29)
+        w = 0.038 if long else 0.028
+        c = lambda t, a=a, r0=r0, r1=r1: (math.cos(a) * (r0 + (r1 - r0) * t), cy + math.sin(a) * (r0 + (r1 - r0) * t))
+        width = lambda t, w=w: w * (1 - t) ** 1.3 * min(1, t * 6 + 0.4) + 0.002     # broad at the disc, needle-sharp tip
+        parts.append(plate(coll, f"Ray{k}{tag}", P(lens(c, width, n=10)), 0.025, 0.022, bevel=0))
+    parts.append(gem(coll, "SunGem" + tag, x0, cy * s, 0.08, 0.07 * s))
+    return parts
+
+
+def wing(coll, side, x0=0.0, s=1.0, tag=""):
+    """three layered swallow feathers sweeping up and back from beside the sun"""
+    parts = []
+    P = lambda pts: [(x0 + s * x, s * y) for x, y in pts]
+    feathers = [  # root, control, tip, width, depth (front-most first)
+        ((0.2, 0.2), (0.33, 0.78), (0.62, 1.02), 0.105, 0.05),
+        ((0.27, 0.15), (0.46, 0.6), (0.82, 0.8), 0.09, 0.03),
+        ((0.34, 0.1), (0.6, 0.4), (0.98, 0.52), 0.075, 0.012),
+    ]
+    for i, (p0, p1, p2, w, d) in enumerate(feathers):
+        p0, p1, p2 = (side * p0[0], p0[1]), (side * p1[0], p1[1]), (side * p2[0], p2[1])
+        c = bezier(p0, p1, p2)
+        width = lambda t, w=w: w * (math.sin(math.pi * min(0.98, 0.08 + 0.92 * t ** 0.85)) ** 0.75) + 0.003
+        # the outer (trailing) edge fuller than the leading one: a feather, not a leaf
+        parts.append(plate(coll, f"Feather{side}{i}{tag}", P(lens(c, width, n=24, asym=-0.25 * side)), d, 0.026))
+        vane = lambda t, w=w: w * 0.16 * math.sin(math.pi * min(1, 0.05 + t)) + 0.002
+        cv = lambda t, c=c: c(0.04 + 0.82 * t)
+        parts.append(plate(coll, f"Vane{side}{i}{tag}", P(lens(cv, vane, n=16)), d + 0.026, 0.014, bevel=0))
+    # a cloud scroll where the wing springs from the band
+    cx, cy = side * 0.2, 0.17
+    spiral = lambda t: (cx + side * 0.075 * (1 - 0.75 * t) * math.cos(math.pi * 0.5 + 2.6 * math.pi * t),
+                        cy + 0.075 * (1 - 0.75 * t) * math.sin(math.pi * 0.5 + 2.6 * math.pi * t))
+    parts.append(plate(coll, f"Scroll{side}{tag}", P(lens(spiral, lambda t: 0.017 * (1 - 0.6 * t) + 0.002, n=44)), 0.06, 0.02, bevel=0))
+    parts.append(gem(coll, f"WingGem{side}{tag}", x0 + s * side * 0.2, s * 0.17, 0.09, 0.028 * s))
+    return parts
+
+
+def back_emblem(coll):
+    """a small cloud emblem at the back"""
+    x0 = math.pi * R
+    top = [(x0 - 0.13 + 0.26 * (i / 40), 0.2 + 0.06 * math.sin(math.pi * i / 40) + 0.025 * math.sin(3 * math.pi * i / 40)) for i in range(41)]
+    pts = top[::-1] + [(x0 - 0.09, 0.08), (x0, 0.11), (x0 + 0.09, 0.08)]
+    return [plate(coll, "BackCloud", pts, 0.02, 0.025)]
 
 
 def build():
     coll = collection()
-    parts = [band(coll)]
-    for k in range(BLADES):
-        parts.append(blade(coll, k, tall=(k % 2 == 0)))
-        parts.append(bead(coll, k))
-    # one mesh: apply modifiers and transforms, join
+    back = math.pi * R
+    parts = (band(coll) + beads(coll) + sun(coll) + wing(coll, 1) + wing(coll, -1)
+             + sun(coll, back, 0.7, "Back") + wing(coll, 1, back, 0.7, "Back") + wing(coll, -1, back, 0.7, "Back"))
     bpy.ops.object.select_all(action="DESELECT")
     for o in parts:
         o.select_set(True)
-    bpy.context.view_layer.objects.active = parts[0]
-    for o in parts:
         bpy.context.view_layer.objects.active = o
         for m in list(o.modifiers):
             bpy.ops.object.modifier_apply(modifier=m.name)
@@ -178,8 +260,12 @@ def build():
     bpy.ops.object.join()
     crown = bpy.context.view_layer.objects.active
     crown.name = "AscendantCrown"
-    bpy.ops.object.shade_smooth()
-    # a neutral clay material for the form review
+    bm = bmesh.new()
+    bm.from_mesh(crown.data)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(crown.data)
+    bm.free()
+    bpy.ops.object.shade_smooth_by_angle(angle=math.radians(35))
     mat = bpy.data.materials.get("CrownClay") or bpy.data.materials.new("CrownClay")
     mat.use_nodes = True
     bsdf = next(n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
@@ -202,4 +288,5 @@ def export(crown):
     print("written", OUT)
 
 
-crown = build()
+if __name__ == "__main__":
+    crown = build()
