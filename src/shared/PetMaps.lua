@@ -1,0 +1,21 @@
+-- Each imported pet's colour map (ReplicatedStorage.PetMeshes: every part of a pet shares one).
+-- Read from the place's SurfaceAppearances (2026-11-03), because a game script can't read them:
+-- the client's pet portraits (UI/Portraits) need it, since a SurfaceAppearance renders black in a
+-- ViewportFrame. A pet missing here has no SurfaceAppearance (palette-textured or procedural).
+-- Re-read after re-importing a pet's maps.
+return {
+    AzureSkyDragon = "rbxassetid://102035306549567",
+    CloudSheep = "rbxassetid://129961768516291",
+    DawnPhoenix = "rbxassetid://125937144749128",
+    DreadfangCerberus = "rbxassetid://90383585387525",
+    GoldenKirin = "rbxassetid://74047466096461",
+    GoldenManeLion = "rbxassetid://89135149772900",
+    JadeAntlerDeer = "rbxassetid://70823879643174",
+    JadeSpiritPanda = "rbxassetid://81210826866538",
+    MagmaCub = "rbxassetid://106636941111453",
+    MossGolem = "rbxassetid://135523265460762",
+    MyceliumSprite = "rbxassetid://94221576326290",
+    RuneSphinx = "rbxassetid://125628324690653",
+    SpiritCrane = "rbxassetid://117737637798913",
+    SunscaleDragon = "rbxassetid://72856050814489",
+}

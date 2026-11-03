@@ -1,7 +1,8 @@
 -- The realm weapons' maps (assets/weapons/<WeaponId>_color/_normal/_roughness/_metalness.png). Colour
 -- and normal are the importer's uploads (read back and checked); roughness and metalness are ours, as
 -- the importer reads neither. A blank metalness map (no metal) is one asset, shared. Read by
--- OutfitBuilder.storeWeapon and setWeaponMaps.
+-- OutfitBuilder.storeWeapon and setWeaponMaps, and by the client's weapon portraits (UI/Portraits),
+-- which need the colour maps because a game script can't read a SurfaceAppearance's.
 return {
     Sword1 = { Color = "rbxassetid://126342512219806", Normal = "rbxassetid://114198418603711", Roughness = "rbxassetid://118152792561562", Metalness = "rbxassetid://115472245461841" },
     Sword2 = { Color = "rbxassetid://114957756239136", Normal = "rbxassetid://76004377119601", Roughness = "rbxassetid://74832818636900", Metalness = "rbxassetid://136220282728461" },

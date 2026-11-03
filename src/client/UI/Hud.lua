@@ -4,9 +4,10 @@
 --   Rail     left, centred: the menu buttons (Pets, Robes ...)
 --   Dock     bottom centre, bottom up: Cultivate, the breakthrough, the Qinggong strip
 --   Banner   top centre: messages (Toast)
--- Windows (the pets list, the altar, the shops) open in their own ScreenGuis.
+-- Windows (the pets list, the altar, the shops): Hud.window, one open at a time.
 -- Each region scales with the screen (HudScale). The first script to require this builds it.
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 
 local UiKit = require(script.Parent:WaitForChild("UiKit"))
 local UiTheme = require(script.Parent:WaitForChild("UiTheme"))
@@ -122,6 +123,68 @@ function Hud.railButton(name, image, word, order)
         badge.BackgroundColor3 = if tone == "Highlight" then UiTheme.Colors.Highlight else UiTheme.Colors.Accent
     end
     return button, setBadge
+end
+
+-- ---------- windows ----------
+-- A System window over the HUD: a [ TITLE ] header, a close button, and its Body. One is open at
+-- a time: opening one closes the other (its OnClose runs), so they never stack.
+-- props: Name, Title, Size (Vector2), AnchorPoint, Position (UDim2), OnClose (function)
+-- Returns { Frame, Body, open(), close(), isOpen(), setTitle(text) }.
+local windows = {}
+local SLIDE = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+function Hud.window(props)
+    local frame = UiKit.panel({
+        Name = props.Name, Size = UDim2.fromOffset(props.Size.X, props.Size.Y), AnchorPoint = props.AnchorPoint,
+        Position = props.Position, Visible = false, ZIndex = 10, Parent = gui,
+    })
+    frame.BackgroundTransparency = 0.06 -- near solid: the HUD under a window mustn't read through it
+    applyHudScale(frame)
+    local inner = UiKit.content(frame, 14, 10)
+    local _, title = UiKit.header(inner, props.Title, { TextSize = 14 })
+    local closeButton = UiKit.button({
+        Name = "Close", Tone = "Danger", Font = "Strong", Text = "X", TextSize = 14, AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, 4, 0, -4), Size = UDim2.fromOffset(28, 28), Parent = inner,
+    })
+    local body = Instance.new("Frame")
+    body.Name = "Body"
+    body.BackgroundTransparency = 1
+    body.Position = UDim2.fromOffset(0, 34)
+    body.Size = UDim2.new(1, 0, 1, -34)
+    body.Parent = inner
+
+    local win = { Frame = frame, Body = body }
+    local home = props.Position
+    function win.isOpen()
+        return frame.Visible
+    end
+    function win.close()
+        if not frame.Visible then
+            return
+        end
+        frame.Visible = false
+        if props.OnClose then
+            props.OnClose()
+        end
+    end
+    function win.open()
+        for _, other in windows do
+            if other ~= win then
+                other.close()
+            end
+        end
+        if not frame.Visible then
+            frame.Position = home + UDim2.fromOffset(0, 12) -- it rises into place
+            frame.Visible = true
+            TweenService:Create(frame, SLIDE, { Position = home }):Play()
+        end
+    end
+    function win.setTitle(text)
+        title.Text = "[  " .. text .. "  ]"
+    end
+    closeButton.Activated:Connect(win.close)
+    table.insert(windows, win)
+    return win
 end
 
 return Hud

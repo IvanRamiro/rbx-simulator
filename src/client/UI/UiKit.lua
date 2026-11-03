@@ -13,6 +13,12 @@
 --   keycap(key)                 a keyboard key's hint (hidden on touch screens)
 --   bar(props)                  a progress bar; setBar(bar, fraction) eases it
 --   list(parent, props)         a UIListLayout
+--   scroll(props)               a scrolling list (a thin glowing bar; its children laid out down it)
+--   card(props)                 a row in a window: raised glass, a quiet edge; Stripe = a colour
+--                               down its left side (a rarity, an element)
+--   tag(text, color)            a small outlined word: a rarity, a state ("EQUIPPED")
+--   textbox(props)              a text field in the System style
+--   empty(parent, text)         the muted line a list shows when it has nothing
 -- props: any Instance properties to set, plus the extras named per builder.
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -340,6 +346,92 @@ function UiKit.setBar(bar, fraction, instant)
     else
         TweenService:Create(fill, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = goal }):Play()
     end
+end
+
+function UiKit.scroll(props)
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.BackgroundTransparency = 1
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 3
+    scroll.ScrollBarImageColor3 = C.Edge
+    scroll.ScrollBarImageTransparency = 0.3
+    scroll.CanvasSize = UDim2.new()
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    scroll.ScrollingDirection = Enum.ScrollingDirection.Y
+    apply(scroll, props)
+    local pad = Instance.new("UIPadding") -- room for the bar, and for each card's edge
+    pad.PaddingRight = UDim.new(0, 8)
+    pad.PaddingTop, pad.PaddingBottom, pad.PaddingLeft = UDim.new(0, 2), UDim.new(0, 2), UDim.new(0, 2)
+    pad.Parent = scroll
+    UiKit.list(scroll, { Padding = UDim.new(0, 6) })
+    return scroll
+end
+
+function UiKit.card(props)
+    local copy = table.clone(props or {})
+    local stripeColor = copy.Stripe
+    copy.Stripe = nil
+    local card = Instance.new("Frame")
+    card.BackgroundColor3 = C.Raised
+    card.BackgroundTransparency = 0.35
+    card.BorderSizePixel = 0
+    corner(card)
+    stroke(card, C.EdgeDim, 0.35)
+    if stripeColor then
+        local stripe = Instance.new("Frame")
+        stripe.Name = "Stripe"
+        stripe.BorderSizePixel = 0
+        stripe.BackgroundColor3 = stripeColor
+        stripe.Size = UDim2.new(0, 3, 1, 0)
+        stripe.Parent = card
+    end
+    apply(card, copy)
+    return card
+end
+
+function UiKit.tag(text, color)
+    color = color or C.Accent
+    local tag = UiKit.label({
+        Name = "Tag", Font = "Strong", Text = string.upper(text), TextSize = 10, TextColor3 = color,
+        BackgroundColor3 = color, BackgroundTransparency = 0.85, AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.fromOffset(0, 16), TextXAlignment = Enum.TextXAlignment.Center,
+    })
+    corner(tag, 2)
+    stroke(tag, color, 0.4)
+    UiKit.padding(tag, 6, 0)
+    return tag
+end
+
+function UiKit.textbox(props)
+    local box = Instance.new("TextBox")
+    box.BackgroundColor3 = C.Well
+    box.BackgroundTransparency = 0.25
+    box.BorderSizePixel = 0
+    box.ClearTextOnFocus = false
+    box.FontFace = UiTheme.Fonts.Strong
+    box.TextSize = 15
+    box.TextColor3 = C.Text
+    box.PlaceholderColor3 = C.Muted
+    box.TextXAlignment = Enum.TextXAlignment.Left
+    corner(box)
+    local edge = stroke(box, C.EdgeDim, 0.2)
+    box.Focused:Connect(function()
+        edge.Color = C.Edge
+    end)
+    box.FocusLost:Connect(function()
+        edge.Color = C.EdgeDim
+    end)
+    UiKit.padding(box, 10, 0)
+    apply(box, props)
+    return box
+end
+
+function UiKit.empty(parent, text)
+    return UiKit.label({
+        Name = "Empty", Text = text, TextSize = 14, TextColor3 = C.Muted, TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Center, AutomaticSize = Enum.AutomaticSize.Y,
+        Size = UDim2.new(1, 0, 0, 0), Parent = parent,
+    })
 end
 
 return UiKit

@@ -195,9 +195,9 @@ function OutfitBuilder.storeSword(model)
     return result
 end
 
--- Sets every stored realm weapon's maps from Placements/WeaponMaps (after new uploads); the names set.
+-- Sets every stored realm weapon's maps from shared/WeaponMaps (after new uploads); the names set.
 function OutfitBuilder.setWeaponMaps()
-    local maps = require(ServerStorage.WorldBuild.Placements.WeaponMaps:Clone())
+    local maps = require(game:GetService("ReplicatedStorage").WeaponMaps:Clone())
     local set = {}
     for weaponId, ids in maps do
         local folder = ServerStorage:FindFirstChild("Weapons") and ServerStorage.Weapons:FindFirstChild(weaponId)
@@ -212,7 +212,7 @@ function OutfitBuilder.setWeaponMaps()
 end
 
 -- Stores a realm weapon (tools/blender/weapons; Placements/Weapons/<WeaponId>, its maps in
--- Placements/WeaponMaps) as ServerStorage.Weapons.<WeaponId>, with its Kind ("Sword" or "Spear") and
+-- shared/WeaponMaps) as ServerStorage.Weapons.<WeaponId>, with its Kind ("Sword" or "Spear") and
 -- its Hilt and Tip (where its blade or head starts, and its point, from its grip) as attributes.
 -- CombatService hands it to the clients, which show it striking (CombatFx).
 --   OB.storeWeapon("Sword1", workspace.Sword1)
@@ -220,7 +220,7 @@ function OutfitBuilder.storeWeapon(weaponId, model)
     local source = ServerStorage.WorldBuild.Placements.Weapons:FindFirstChild(weaponId)
     assert(source, "no placements for weapon " .. tostring(weaponId))
     local placements = require(source:Clone())
-    local maps = require(ServerStorage.WorldBuild.Placements.WeaponMaps:Clone())[weaponId]
+    local maps = require(game:GetService("ReplicatedStorage").WeaponMaps:Clone())[weaponId]
     local folder, result = storePieces(weaponId, placements, model, maps and { Body = maps })
     folder:SetAttribute("Kind", placements.Kind)
     folder:SetAttribute("Hilt", placements.Hilt)
