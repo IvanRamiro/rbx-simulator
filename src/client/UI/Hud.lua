@@ -1,11 +1,14 @@
 -- The HUD's one screen and its regions. Every controller puts its pieces into a region, in its
 -- LayoutOrder, instead of placing them by pixel, so they line up and never overlap:
---   Status   top left: the cultivator's plaque (Qi, rank, progress), then the resource chips
---   Rail     left, centred: the menu buttons (Pets, Robes ...)
+--   Status   top left, one column: the STATUS window, the resource chips, then the Rail
+--   Rail     a row under the chips: the menu buttons (Pets, Robes ...); in the column, so on a
+--            short phone screen it can't run into the STATUS window
 --   Dock     bottom centre, bottom up: Cultivate, the breakthrough, the Qinggong strip
 --   Banner   top centre: messages (Toast)
 -- Windows (the pets list, the altar, the shops): Hud.window, one open at a time.
--- Each region scales with the screen (HudScale). The first script to require this builds it.
+-- Each region scales with the screen (HudScale). Hud.isCompact() is true on a short screen (a
+-- phone in landscape), and Hud.CompactChanged fires when that changes: the STATUS window slims
+-- down. The first script to require this builds it.
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
@@ -29,6 +32,19 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = playerGui
 Hud.Gui = gui
 
+-- Windows get their own screen, drawn over the HUD and over the touch controls (Strike, Dash ...),
+-- which on a phone sit where a window opens
+local oldWindows = playerGui:FindFirstChild("HudWindows")
+if oldWindows then
+    oldWindows:Destroy()
+end
+local windowGui = Instance.new("ScreenGui")
+windowGui.Name = "HudWindows"
+windowGui.ResetOnSpawn = false
+windowGui.DisplayOrder = 20
+windowGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+windowGui.Parent = playerGui
+
 local function region(name, anchor, position, direction, horizontal, vertical, gap)
     local frame = Instance.new("Frame")
     frame.Name = name
@@ -48,8 +64,6 @@ end
 
 Hud.Status = region("Status", Vector2.new(0, 0), UDim2.fromOffset(M, M), Enum.FillDirection.Vertical,
     Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Top, 8)
-Hud.Rail = region("Rail", Vector2.new(0, 0.5), UDim2.new(0, M, 0.5, 0), Enum.FillDirection.Vertical,
-    Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center, 10)
 Hud.Dock = region("Dock", Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -M), Enum.FillDirection.Vertical,
     Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Bottom, 8)
 Hud.Banner = region("Banner", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, M), Enum.FillDirection.Vertical,
@@ -65,6 +79,49 @@ chips.LayoutOrder = 10
 chips.Parent = Hud.Status
 UiKit.list(chips, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), VerticalAlignment = Enum.VerticalAlignment.Center })
 Hud.Chips = chips
+
+-- The menu row, under the chips
+local rail = Instance.new("Frame")
+rail.Name = "Rail"
+rail.BackgroundTransparency = 1
+rail.AutomaticSize = Enum.AutomaticSize.XY
+rail.Size = UDim2.new()
+rail.LayoutOrder = 20
+rail.Parent = Hud.Status
+UiKit.list(rail, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8) })
+Hud.Rail = rail
+
+-- ---------- compact screens ----------
+local COMPACT_BELOW = 500 -- px on the screen's shorter side: phones in landscape
+local compactChanged = Instance.new("BindableEvent")
+Hud.CompactChanged = compactChanged.Event
+local compact = nil
+local function checkCompact()
+    local camera = workspace.CurrentCamera
+    if not camera then
+        return
+    end
+    local now = math.min(camera.ViewportSize.X, camera.ViewportSize.Y) < COMPACT_BELOW
+    if now ~= compact then
+        compact = now
+        compactChanged:Fire(now)
+    end
+end
+function Hud.isCompact()
+    checkCompact()
+    return compact == true
+end
+local watched
+local function watchCamera()
+    if watched then
+        watched:Disconnect()
+    end
+    local camera = workspace.CurrentCamera
+    watched = camera and camera:GetPropertyChangedSignal("ViewportSize"):Connect(checkCompact)
+    checkCompact()
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(watchCamera)
+watchCamera()
 
 -- A resource chip: its icon and a value. Returns the chip and its value label.
 function Hud.chip(name, image, order)
@@ -136,10 +193,10 @@ local SLIDE = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Ou
 function Hud.window(props)
     local frame = UiKit.panel({
         Name = props.Name, Size = UDim2.fromOffset(props.Size.X, props.Size.Y), AnchorPoint = props.AnchorPoint,
-        Position = props.Position, Visible = false, ZIndex = 10, Parent = gui,
+        Position = props.Position, Visible = false, ZIndex = 10, Parent = windowGui,
     })
     frame.BackgroundTransparency = 0.06 -- near solid: the HUD under a window mustn't read through it
-    applyHudScale(frame)
+    applyHudScale(frame, props.Size.Y) -- and never taller than the screen (a phone)
     local inner = UiKit.content(frame, 14, 10)
     local _, title = UiKit.header(inner, props.Title, { TextSize = 14 })
     local closeButton = UiKit.button({

@@ -41,8 +41,9 @@ local current = { shop = nil, contents = nil, openedAt = nil, tab = "Weapons", e
 local render
 
 local window = Hud.window({
-    Name = "ShopWindow", Title = "SHOP", Size = Vector2.new(580, 450), AnchorPoint = Vector2.new(0.5, 0.5),
-    Position = UDim2.fromScale(0.5, 0.45), OnClose = function() -- a little high: clear of the dock below
+    -- centred, and short enough to clear the dock below (and fit a phone: HudScale shrinks it)
+    Name = "ShopWindow", Title = "SHOP", Size = Vector2.new(580, 420), AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.fromScale(0.5, 0.5), OnClose = function()
         current.shop = nil
     end,
 })

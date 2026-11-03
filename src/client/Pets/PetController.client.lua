@@ -22,8 +22,8 @@ local RARITY_ORDER = { Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare =
 local toggleButton, setPetBadge = Hud.railButton("PetsButton", UiTheme.Icons.Pets, "Pets", 1)
 
 local window = Hud.window({
-    Name = "PetsWindow", Title = "PETS", Size = Vector2.new(330, 400), AnchorPoint = Vector2.new(0, 1),
-    Position = UDim2.new(0, UiTheme.Margin + 64 + 12, 1, -UiTheme.Margin), -- beside the rail, under the STATUS window
+    Name = "PetsWindow", Title = "PETS", Size = Vector2.new(330, 400), AnchorPoint = Vector2.new(0, 0),
+    Position = UDim2.fromOffset(UiTheme.Margin + 310 + 16, UiTheme.Margin), -- beside the left column (STATUS is 310 wide)
 })
 local body = window.Body
 

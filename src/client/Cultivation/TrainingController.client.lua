@@ -55,6 +55,21 @@ field("NAME", 74).Text = player.DisplayName
 local rankLabel = field("RANK", 92, C.Highlight)
 local realmLabel = field("REALM", 110)
 
+-- On a short screen (a phone in landscape) the window slims down to Qi, rank and progress: NAME
+-- and REALM go, and RANK moves up into NAME's place.
+local FULL_HEIGHT, COMPACT_HEIGHT = 178, 140
+local function fitStatus(compact)
+    statusFrame.Size = UDim2.fromOffset(310, if compact then COMPACT_HEIGHT else FULL_HEIGHT)
+    for _, key in { "NAME", "REALM" } do
+        status[key .. "Key"].Visible = not compact
+        status[key .. "Value"].Visible = not compact
+    end
+    status.RANKKey.Position = UDim2.fromOffset(0, if compact then 74 else 92)
+    status.RANKValue.Position = UDim2.fromOffset(60, if compact then 74 else 92)
+end
+Hud.CompactChanged:Connect(fitStatus)
+fitStatus(Hud.isCompact())
+
 local progressBar = UiKit.bar({ Name = "Progress", Position = UDim2.new(0, 0, 1, -22), Size = UDim2.new(1, 0, 0, 6), Parent = status })
 local nextRankLabel = UiKit.label({
     Name = "NextRankLabel", TextSize = 11, TextColor3 = C.Muted, AnchorPoint = Vector2.new(0, 1),
