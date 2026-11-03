@@ -7,6 +7,9 @@ Color sets the exact silver.
 
   SilverPillar.png  512  a tall thin shaft of light, white-hot core, soft silver falloff, fading at
                          both ends (FacingCameraWorldUp, Squash for height)
+  SoftLine.png      64x256  a glowing line that runs the full height without fading: a hot core
+                         and a soft falloff across. For Beams that join end to end (the sphere's
+                         rings), so no seam shows where they meet
 """
 import os
 import sys
@@ -47,4 +50,10 @@ streak = 0.75 + 0.25 * np.asarray(Image.fromarray((rng.random((48, 1)) * 255).as
 core = np.exp(-(u / 0.02) ** 2) * 1.8 + np.exp(-(u / 0.08) ** 2) * 0.6 + np.exp(-(u / 0.25) ** 2) * 0.2
 pillar = core * along * streak * (1 - smoothstep(0.9, 1.0, np.abs(u)))
 Image.fromarray(silverise(pillar)).save(os.path.join(OUT, "SilverPillar.png"))
-print("saved SilverPillar.png in", OUT)
+
+# the soft line: the same profile at every height, so beams can tile and join seamlessly
+LW, LH = 64, 256
+lu = (np.mgrid[0:LH, 0:LW][1].astype(float) - LW / 2 + 0.5) / (LW / 2)
+line = (np.exp(-(lu / 0.12) ** 2) * 1.6 + np.exp(-(lu / 0.45) ** 2) * 0.45) * (1 - smoothstep(0.85, 1.0, np.abs(lu)))
+Image.fromarray(silverise(line)).save(os.path.join(OUT, "SoftLine.png"))
+print("saved SilverPillar.png and SoftLine.png in", OUT)
