@@ -101,53 +101,90 @@ def streamer(a0):
     ribbon([np.array(polar(r, t)) for r, t in zip(rad2, ang2)], 0.012 * np.sin((k2 - 0.18) / 0.68 * math.pi) + 0.002)
 
 
+def _arc(c, r, a0, a1, n):
+    k = np.linspace(0, 1, n)
+    ang = a0 + (a1 - a0) * k
+    return np.stack([c[0] + r * np.cos(ang), c[1] + r * np.sin(ang)], 1)
+
+
+def _coil(c, r0, r1, a0, turns, direction, n):
+    """an even (Archimedean) coil from radius r0 at a0 down to r1"""
+    k = np.linspace(0, 1, n)
+    ang = a0 + direction * k * turns * TAU
+    rad = r0 + (r1 - r0) * k
+    return np.stack([c[0] + rad * np.cos(ang), c[1] + rad * np.sin(ang)], 1)
+
+
+CLEAR = []  # (centre, radius): the space round each cloud the wind lines leave open
+
+
 def cloud(r0, a, s):
-    """a large auspicious cloud riding the current: two scrolls curling in under a lobed crown,
-    its lobes facing outward"""
-    t = np.array([-math.sin(a), math.cos(a)])
-    n = np.array([math.cos(a), math.sin(a)])
+    """an auspicious cloud riding the current, drawn as the classic scroll is: one continuous,
+    calligraphic contour. Its tail rises straight into the back lobe, runs over the big lobe and
+    coils inward inside it, thinning as it tightens; the back lobe coils too; a short inner line
+    doubles the big lobe; a fine wisp runs under the tail. The owner found the first clouds ugly
+    (little even-width curls): the strokes now swell and taper. The lobes lead in the birds'
+    direction and face outward. Units: about 5 long and 2 tall, times s"""
+    fwd = np.array([-math.sin(a), math.cos(a)]) * FLIGHT
+    out = np.array([math.cos(a), math.sin(a)])
     base = np.array(polar(r0, a))
+    D = math.radians
+    CLEAR.append((base + s * (-1.3 * fwd + 0.05 * out), s * 2.9))
 
-    def Q(u, v):
-        return base + s * (u * t + v * n)
+    def place(pts, widths):
+        pts = np.asarray(pts)
+        ribbon([base + s * (u * fwd + v * out) for u, v in pts], np.asarray(widths) * s)
 
-    def spiral(cu, side):
-        pts = []
-        for i in range(90):
-            k = i / 89
-            ang = math.pi / 2 + side * k * TAU * 1.35
-            rad = 0.42 * (1 - 0.8 * k)
-            pts.append(Q(cu - side * rad * math.cos(ang), rad * math.sin(ang)))
-        return pts
-
-    for cu, side in ((-0.5, 1), (0.5, -1)):
-        pts = spiral(cu, side)
-        ribbon(pts, np.linspace(0.016, 0.009, len(pts)))
-    crown = [Q(-0.5 + k, 0.42 + 0.32 * math.sin(math.pi * k) + 0.08 * math.sin(3 * math.pi * k)) for k in np.linspace(0, 1, 70)]
-    ribbon(crown, np.full(70, 0.016))
-    # its tail streams with the wind, along the flight
-    tail = [Q(0.92 + 0.9 * k, -0.06 - 0.25 * k * k) for k in np.linspace(0, 1, 40)]
-    ribbon(tail, np.linspace(0.013, 0.002, 40))
+    k = np.linspace(0, 1, 120)
+    tail = np.stack([-4.0 + 2.5 * np.sin(k * math.pi / 2), -0.85 + 0.8 * (1 - np.cos(k * math.pi / 2))], 1)
+    back = _arc((-0.85, -0.05), 0.65, D(180), D(62), 90)
+    big = _arc((0.25, 0.15), 0.86, D(155), D(2), 110)
+    coil = _coil((0.42, 0.06), 0.68, 0.1, D(0), 1.35, -1, 220)
+    path = np.concatenate([tail, back[1:], big[1:], coil[1:]])
+    nt, nb, ng = len(tail), len(back) - 1, len(big) - 1
+    w = np.empty(len(path))
+    w[:nt] = 0.008 + 0.15 * np.linspace(0, 1, nt) ** 1.6
+    w[nt:nt + nb + ng] = 0.158
+    w[nt + nb + ng:] = 0.158 - 0.12 * np.linspace(0, 1, len(path) - nt - nb - ng) ** 0.9
+    place(path, w)
+    place(_coil((-0.85, -0.05), 0.42, 0.07, D(250), 1.15, -1, 160), 0.11 - 0.08 * np.linspace(0, 1, 160))
+    place(_arc((0.25, 0.15), 0.6, D(150), D(78), 60), 0.035 + 0.03 * np.sin(np.linspace(0, math.pi, 60)))
+    k = np.linspace(0, 1, 120)
+    place(np.stack([-1.6 - 2.2 * k, -0.42 - 0.21 * np.sin(k * math.pi) - 0.3 * k], 1), 0.045 * np.sin(k * math.pi) ** 0.8 + 0.005)
 
 
 def updraft():
-    """wind lines spiralling in toward the feet, turning the same way the birds fly"""
+    """wind lines spiralling in toward the feet, turning the same way the birds fly; each breaks
+    round the clouds, so the clouds sit in clear air with the wind flowing past"""
     arms = 9
     for j in range(arms):
         a0 = j * TAU / arms
-        k = np.linspace(0, 1, 120)
+        k = np.linspace(0, 1, 160)
         rad = 0.62 - 0.30 * k
         ang = a0 + FLIGHT * 1.6 * k
-        centre = [np.array(polar(r, t)) for r, t in zip(rad, ang)]
+        pts = np.array([polar(r, q) for r, q in zip(rad, ang)])
         width = 0.011 * np.sin(k * math.pi) ** 0.8 + 0.0015
-        ribbon(centre, width)
+        free = np.array([all(np.hypot(*(p - c)) > r for c, r in CLEAR) for p in pts])
+        i = 0
+        while i < len(pts):
+            if not free[i]:
+                i += 1
+                continue
+            j2 = i
+            while j2 < len(pts) and free[j2]:
+                j2 += 1
+            if j2 - i >= 8:
+                run = np.arange(i, j2)
+                ramp = np.sin(np.linspace(0, math.pi, len(run))) ** 0.35   # each piece tapers at both ends
+                ribbon(list(pts[run]), width[run] * ramp + 0.0008)
+            i = j2
 
 
 for b in range(BIRDS):
     a = -math.pi / 2 + b * TAU / BIRDS
     swallow(0.80, a, 0.21)
     streamer(a)
-    cloud(0.50, a - FLIGHT * TAU / BIRDS / 2, 0.17)
+    cloud(0.52, a - FLIGHT * TAU / BIRDS / 2, 0.125)
 updraft()
 # the eye of the updraft: one soft ring round the open centre, broken where the wind enters
 for j in range(9):
