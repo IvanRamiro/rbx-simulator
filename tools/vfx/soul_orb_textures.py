@@ -9,10 +9,14 @@ can't drop a black background); the game tints them.
                             (the owner: the first was "too long"), a hot core, a soft halo and
                             four faint diagonal glints
   SmokePuff.png  1024x1024  4x4 flipbook (OneShot): a puff of smoke billows out, tears into wisps
-                            and dissolves over its life; nothing touches a cell's edge
+                            and dissolves over its life, inside the middle 78% of its cell
+                            (a clear margin round every frame)
   SoulSeal.png   1024x1024  the ground circle under the Spirit Soul aura: a double rim with ticks,
                             three soul nodes (one under each orb) joined by a fine triangle, a ring
                             of curling soul flames, an inner ring; the centre is left open
+  SmokeRing.png  1024x1024  a ripple of smoke: wispy strands round a ring, broken and uneven,
+                            sampled on the circle (no seam), exactly zero well inside the border
+                            (a borrowed ring's faint border showed as a square at 19 studs)
 """
 import math
 import os
@@ -93,6 +97,10 @@ def smoke():
     C = 256
     v = np.linspace(-1, 1, C)
     x, y = np.meshgrid(v, v)
+    # the puff fills only the middle 78% of its cell: a clear margin round every frame, so the
+    # texture's lower-resolution copies (used at a distance) never blend a neighbour's smoke in
+    # and draw the cell's edge (a faint square on the ground mist, 2026-11-03)
+    x, y = x / 0.78, y / 0.78
     warp_a, warp_b = fbm(512, 4), fbm(512, 4)
     warp_a += 0.5 - warp_a.mean()                    # centred, so the puff stays mid-cell
     warp_b += 0.5 - warp_b.mean()
@@ -114,7 +122,7 @@ def smoke():
         erode = smoothstep(0.15 + 0.55 * t, 0.35 + 0.55 * t, sample(tear, wx, wy - t * 0.2) + (1 - shape) * 0.2)
         density *= 1 - (1 - erode) * min(1, t * 1.4)
         density *= (1 - t ** 1.6) * smoothstep(0, 0.12, t + 0.05)   # fades in fast, out slowly
-        density *= 1 - smoothstep(0.82, 0.98, np.hypot(x, y))      # never touches the cell's edge
+        density *= 1 - smoothstep(0.85, 1.0, np.hypot(x, y))       # zero from 78% of the cell out
         row, col = divmod(f, 4)
         sheet[row * C:(row + 1) * C, col * C:(col + 1) * C] = np.clip(density * 1.25, 0, 1)
     save(sheet, "SmokePuff.png", (1024, 1024))
@@ -195,7 +203,33 @@ def soul_seal():
     save(a, "SoulSeal.png", (1024, 1024))
 
 
+# ---------- the smoke ripple ring ----------
+def smoke_ring():
+    S = 1024
+    v = np.linspace(-1, 1, S)
+    x, y = np.meshgrid(v, v)
+    r = np.hypot(x, y)
+    th = np.arctan2(y, x)
+    cx, cy = np.cos(th), np.sin(th)                  # noise sampled on the circle: no seam at 180 deg
+    wobble, gaps = fbm(512, 4), fbm(512, 6)
+    a = np.zeros_like(r)
+    strands = ((0.72, 0.022, 1.0), (0.66, 0.016, 0.8), (0.78, 0.014, 0.7), (0.6, 0.012, 0.55), (0.75, 0.01, 0.6), (0.69, 0.009, 0.5))
+    for k, (base, width, power) in enumerate(strands):
+        # each strand wanders in and out round the ring, thins and breaks in places. Every lookup stays
+        # inside the noise field (|coord| < 0.9): past its edge the field wraps and leaves a seam
+        ox, oy = (k % 3 - 1) * 0.25, (k // 3 - 0.5) * 0.3
+        rr = base + (sample(wobble, cx * 0.5 + ox, cy * 0.5 + oy) - 0.5) * 0.22
+        strand = np.exp(-((r - rr) / width) ** 2)
+        strand *= smoothstep(0.38, 0.68, sample(gaps, cx * 0.55 - oy, cy * 0.55 + ox))
+        a = np.maximum(a, strand * power)
+    a = np.asarray(Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(2.5)), dtype=float) / 255
+    a *= 1 - smoothstep(0.86, 0.93, r)                   # exactly zero from 0.93 out
+    a *= smoothstep(0.4, 0.5, r)
+    save(np.clip(a * 1.6, 0, 1), "SmokeRing.png", (1024, 1024))
+
+
 star()
 smoke()
 soul_seal()
+smoke_ring()
 print("written:", sorted(os.listdir(OUT)))
