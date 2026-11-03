@@ -507,6 +507,12 @@ local function surge(aura, strength)
     end
 end
 
+-- Whether a pet has its own aura design (Tidecaller, Ember Crucible): those layer over the realm
+-- aura (RealmAura) while the player meditates; every other look is the realm aura's now.
+function CharacterAura.hasPetDesign(petId)
+    return petId ~= nil and DESIGNS[petId] ~= nil
+end
+
 function CharacterAura.build(player, character, rootPart, petId, rankId)
     local design = if petId then DESIGNS[petId] else VerdantGaleAura
     if design then

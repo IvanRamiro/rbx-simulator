@@ -419,6 +419,18 @@ Each kind has its own visual purpose. None is a recolour of another.
 
 ### Built so far
 
+**Realm auras (the cultivation aura, live since November 3, 2026)**
+
+- **Always on:** every player wears their realm's aura, built by `src/client/Auras/RealmAura.lua`. Realm 4's ground layers quicken while the player meditates.
+- **Twelve realms:** each has its own layers. Palettes come from the owner's `src/shared/AuraConfig.lua`, matched to the rank's `Realm` name. The sub-rank (`Level` 1–5) moves it along one continuous level, so a breakthrough never looks weaker.
+- **On every realm:** the owner's body aura (smoke, a dark shadow, sparks, star glints), fainter at low Qi and bigger at high Qi.
+- **Top-realm meshes** are templates in `ReplicatedStorage.AuraMeshes.TopTier`.
+- **Rebuilds** happen on rank-up and respawn; the aura goes on death.
+- **Culling:** other players' auras switch off past 120 studs from the camera. Roblox draws at most 31 Highlights per client.
+- **One source of truth:** the Studio test range (`workspace.AuraTestRange`) uses the same module, so a realm enhanced there is the realm the game shows.
+
+**Pet designs over the realm aura:** an equipped Aqua Wisp or Ember Wyrm adds its design (below) on top of the realm aura while the player meditates. The default (Verdant Gale) and the element-coloured flame aura no longer show; the realm aura is the cultivation look.
+
 **Character auras** (one module per aura, all on the `CharacterAura` interface: build, show, hide, pulse, update, destroy)
 
 - **Shared pieces:**

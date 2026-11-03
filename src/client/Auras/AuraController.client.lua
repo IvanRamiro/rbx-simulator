@@ -3,6 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local AuraConfig = require(ReplicatedStorage:WaitForChild("AuraConfig"))
+local RealmAura = require(script.Parent:WaitForChild("RealmAura"))
 local CharacterAura = require(script.Parent:WaitForChild("CharacterAura"))
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local BreakthroughEffect = require(script.Parent:WaitForChild("BreakthroughEffect"))
@@ -137,12 +139,59 @@ local function getAuraPetId(player)
     return if typeof(petId) == "string" then petId else nil
 end
 
+-- every player's realm aura (RealmAura), always on: built round the character for their realm and
+-- sub-rank, rebuilt when either changes or the character respawns, removed on death
+local realmAuras = {} -- [player] = { fx = the aura's folder, key = what it was built for }
+
+local function getRealm(rank)
+    for index, tier in AuraConfig.Tiers do
+        if tier.Name == rank.Realm then
+            return index
+        end
+    end
+    return nil
+end
+
+local function removeRealmAura(player)
+    local current = realmAuras[player]
+    if current then
+        realmAuras[player] = nil
+        RealmAura.destroy(current.fx) -- at once: a rebuild in the same frame dresses the same body parts
+    end
+end
+
+local function refreshRealmAura(player)
+    local character = player.Character
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    local rank = Ranks.getRank(Ranks.getPlayerRankName(player))
+    local realm = rank and getRealm(rank)
+    if not (rootPart and realm and isAlive(character)) then
+        removeRealmAura(player)
+        return
+    end
+
+    local current = realmAuras[player]
+    if current and current.fx.Parent and current.root == rootPart and current.realm == realm and current.sub == rank.Level then
+        return
+    end
+    removeRealmAura(player)
+    local fx = RealmAura.build(rootPart, realm, rank.Level, { isLocal = player == Players.LocalPlayer })
+    if fx then
+        realmAuras[player] = { fx = fx, root = rootPart, realm = realm, sub = rank.Level }
+    end
+end
+
+-- the pet layer: an aura pet with its own design (Tidecaller, Ember Crucible) over the realm aura,
+-- while the player meditates
 function refreshAura(player)
+    refreshRealmAura(player)
+
     local character = player.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
     local rankId = getRankId(player)
     local petId = getAuraPetId(player)
     local shouldShow = player:GetAttribute("IsCultivating") == true
+        and CharacterAura.hasPetDesign(petId)
         and rootPart ~= nil
         and rankId ~= nil
         and isAlive(character)
@@ -270,6 +319,10 @@ local function watchCharacter(player, character)
             if aura and aura.character == character then
                 destroyAura(aura)
             end
+            local realmAura = realmAuras[player]
+            if realmAura and realmAura.root.Parent == character then
+                removeRealmAura(player)
+            end
             stopBreakthrough(player)
         end))
     end)
@@ -326,6 +379,7 @@ local function unwatchPlayer(player)
         connections[player] = nil
     end
     disconnectCharacter(player)
+    removeRealmAura(player)
 
     for aura in liveAuras do
         if aura.player == player then
