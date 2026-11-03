@@ -1,5 +1,6 @@
-"""The top two realms' aura meshes (the owner's Tier 10 and Tier 12 brief, 2026-11-03), built as
-code (all of them are procedural: rings, a cone band, shards, an icosphere, torus knots, a halo)
+"""The high realms' aura meshes (the owner's Tier 10 and Tier 12 brief, 2026-11-03, then a
+signature piece for Divine, Cosmic, Void and Primordial), built as code (all of them are
+procedural: rings, a cone band, shards, an icosphere, torus knots, a halo, flames, orbits, coils)
 and written as OBJ for Studio's 3D Importer. Sizes are in studs, around the character's root
 (y = 0 at the root; the feet are at about y = -3). Rings and knots are unwrapped along their
 length (U from 0 to 1 round the circle or the knot), so a texture can scroll without a seam.
@@ -14,6 +15,10 @@ One file per mesh (the importer merges a file's objects into one mesh):
   Tier 12   EventHorizon.obj        an icosphere, double-sided (a void shell round the body)
             OrbitalHelices.obj      two interlocked torus knots (thin tubes) orbiting the body
             TranscendenceCrown.obj  a halo behind the head: two rings, twelve spokes, nodes
+  Tier 7    DivineFlameCrown.obj    ten curved flame tongues in a ring round the body
+  Tier 8    CosmicOrrery.obj        three tilted orbit rings, each carrying small planets
+  Tier 9    VoidShards.obj          jagged fragments of broken space floating in a ring
+  Tier 11   PrimordialCoils.obj     two flat ribbon coils spiralling from the feet past the head
 """
 import math
 import os
@@ -232,8 +237,129 @@ def crown():
     return m
 
 
+# ---------- signature pieces: Divine, Cosmic, Void, Primordial ----------
+def sweep(m, path, profile, scales, closed=False):
+    """a cross-section (2D points, x across, y through) swept along a path, scaled per sample;
+    U along the path, V round the section"""
+    n = len(path)
+    rings = []
+    for i in range(n):
+        p = path[i]
+        tangent = path[min(i + 1, n - 1)] - path[max(i - 1, 0)]
+        tangent /= np.linalg.norm(tangent)
+        side = np.cross(tangent, [0, 1, 0]) if abs(tangent[1]) < 0.95 else np.cross(tangent, [1, 0, 0])
+        side /= np.linalg.norm(side)
+        up = np.cross(side, tangent)
+        k = scales[i]
+        ring = [m.vert(tuple(p + (side * x + up * y) * k), (i / (n - 1), j / len(profile))) for j, (x, y) in enumerate(profile)]
+        rings.append(ring)
+    sides = len(profile)
+    for i in range(n - 1):
+        for j in range(sides):
+            m.quad(rings[i][j], rings[i + 1][j], rings[i + 1][(j + 1) % sides], rings[i][(j + 1) % sides])
+    if not closed:                                       # cap both ends with a point
+        for end, ring, step in ((path[0], rings[0], -1), (path[-1], rings[-1], 1)):
+            c = m.vert(tuple(end), (0.5, 0.5))
+            for j in range(sides):
+                a, b = ring[j], ring[(j + 1) % sides]
+                if step > 0:
+                    m.tri(a, b, c)
+                else:
+                    m.tri(b, a, c)
+
+
+def flame_crown():
+    m = Mesh("DivineFlameCrown")
+    lens = [(0.5, 0), (0.25, 0.07), (-0.25, 0.07), (-0.5, 0), (-0.25, -0.07), (0.25, -0.07)]   # a flattened blade
+    for k in range(10):
+        a0 = k / 10 * math.tau
+        tall = 1.0 if k % 2 == 0 else 0.78
+        path, scales = [], []
+        for i in range(10):
+            t = i / 9
+            a = a0 + 0.12 * math.sin(t * math.pi * 1.2)          # a slight sway as it rises
+            r = 2.5 + 0.3 * math.sin(t * math.pi) - 0.4 * t * t  # bulging out, then curling in at the tip
+            y = -1.4 + 4.8 * tall * t
+            path.append(np.array([math.cos(a) * r, y, math.sin(a) * r]))
+            scales.append(max(0.02, math.sin(min(t * 1.15, 1) * math.pi) ** 0.8 * (1 - 0.6 * t)))
+        sweep(m, path, lens, scales)
+    return m
+
+
+def icosphere(m, centre, radius):
+    t = (1 + 5 ** 0.5) / 2
+    verts = [np.array(v) / np.linalg.norm(v) for v in [(-1, t, 0), (1, t, 0), (-1, -t, 0), (1, -t, 0), (0, -1, t), (0, 1, t),
+             (0, -1, -t), (0, 1, -t), (t, 0, -1), (t, 0, 1), (-t, 0, -1), (-t, 0, 1)]]
+    faces = [(0, 11, 5), (0, 5, 1), (0, 1, 7), (0, 7, 10), (0, 10, 11), (1, 5, 9), (5, 11, 4), (11, 10, 2), (10, 7, 6),
+             (7, 1, 8), (3, 9, 4), (3, 4, 2), (3, 2, 6), (3, 6, 8), (3, 8, 9), (4, 9, 5), (2, 4, 11), (6, 2, 10), (8, 6, 7), (9, 8, 1)]
+    ids = [m.vert(tuple(centre + v * radius), (0.5 + math.atan2(v[2], v[0]) / math.tau, 0.5 + v[1] / 2)) for v in verts]
+    for a, b, c in faces:
+        m.tri(ids[a], ids[b], ids[c])
+
+
+def orrery():
+    m = Mesh("CosmicOrrery")
+    for k, (rx, rz, tilt, spin, planets) in enumerate(((3.3, 2.9, 0.35, 0.0, 2), (4.1, 3.6, -0.6, 1.1, 3), (4.9, 4.4, 1.05, 2.3, 2))):
+        rot = lambda v: np.array([
+            v[0] * math.cos(spin) - v[2] * math.sin(spin),
+            v[1],
+            v[0] * math.sin(spin) + v[2] * math.cos(spin)])
+        def orbit(t):
+            x, z = math.cos(t) * rx, math.sin(t) * rz
+            y, zz = z * math.sin(tilt), z * math.cos(tilt)
+            return rot(np.array([x, y + 0.6, zz]))
+        tube(m, [orbit(i / 48 * math.tau) for i in range(48)], 0.035, 4)
+        for j in range(planets):
+            icosphere(m, orbit((j / planets + 0.13 * k) * math.tau), 0.16 + 0.06 * ((j + k) % 2))
+    return m
+
+
+def void_shards():
+    m = Mesh("VoidShards")
+    rng = np.random.default_rng(9)
+    for k in range(14):
+        big = k < 8
+        a = k / 8 * math.tau if big else rng.uniform(0, math.tau)
+        r = 3.4 if big else rng.uniform(2.6, 4.6)
+        centre = np.array([math.cos(a) * r, rng.uniform(-1.6, 2.4), math.sin(a) * r])
+        length = rng.uniform(1.0, 1.7) if big else rng.uniform(0.35, 0.7)
+        width = length * rng.uniform(0.28, 0.4)
+        axis = rng.normal(size=3)
+        axis[1] = abs(axis[1]) + 1.2                     # mostly upright, each at its own lean
+        axis /= np.linalg.norm(axis)
+        side = np.cross(axis, [0, 0, 1]); side /= np.linalg.norm(side)
+        up = np.cross(axis, side)
+        ring = []
+        for j in range(5):                               # a jagged five-sided waist
+            b = j / 5 * math.tau + rng.uniform(-0.3, 0.3)
+            w = width * rng.uniform(0.6, 1.2)
+            ring.append(m.vert(tuple(centre + (side * math.cos(b) + up * math.sin(b)) * w + axis * rng.uniform(-0.15, 0.15) * length), (j / 5, 0.5)))
+        top = m.vert(tuple(centre + axis * length * rng.uniform(0.6, 1.0)), (0.5, 1))
+        bottom = m.vert(tuple(centre - axis * length * rng.uniform(0.3, 0.7)), (0.5, 0))
+        for j in range(5):
+            m.tri(ring[j], ring[(j + 1) % 5], top)
+            m.tri(ring[(j + 1) % 5], ring[j], bottom)
+    return m
+
+
+def primordial_coils():
+    m = Mesh("PrimordialCoils")
+    ribbon = [(0.32, 0.05), (0, 0.09), (-0.32, 0.05), (-0.32, -0.05), (0, -0.09), (0.32, -0.05)]   # a flat, rounded band
+    for k in range(2):
+        path, scales = [], []
+        for i in range(64):
+            t = i / 63
+            a = k * math.pi + t * 1.6 * math.tau             # a long, sweeping climb
+            r = 2.7 + 0.6 * t
+            path.append(np.array([math.cos(a) * r, -2.8 + 7.4 * t, math.sin(a) * r]))
+            scales.append(max(0.05, math.sin(min(t * 1.25, 1) * math.pi) ** 0.5 * (1.1 - 0.5 * t)))   # a tail, a body, a head
+        sweep(m, path, ribbon, scales)
+    return m
+
+
 # one file per mesh: Studio's importer merges the objects of one OBJ into a single mesh, and these
 # pieces turn on their own
-for m in (dao_outer(), dao_inner(), law_pillars(), event_horizon(), orbital_helices(), crown()):
+for m in (dao_outer(), dao_inner(), law_pillars(), event_horizon(), orbital_helices(), crown(),
+          flame_crown(), orrery(), void_shards(), primordial_coils()):
     write(os.path.join(OUT, m.name + ".obj"), [m])
     print("%-20s %5d triangles" % (m.name, m.tris()))
