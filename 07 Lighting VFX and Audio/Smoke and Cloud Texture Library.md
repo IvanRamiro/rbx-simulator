@@ -79,6 +79,18 @@ Related: [[Work in Progress]] (Realm 5 workbench), [[VFX AAA Technical Director]
 - 12830011666 (EnergyVfx47): small puffs.
 - 104492467711366 (erica_wave_thing): small horizontal glow waves, faint.
 
+## Second batch (2026-11-03)
+
+The owner also sent 16172858603 and 13655845087 again (both already above). The new ones:
+- 11355816590 (mera flame hand), 4x4: sparkly flame-smoke puffs breaking into embers; fire-lit
+  smoke, flame auras.
+- 92517106717850, 2x2: smoke jets streaking sideways; dash trails, wind-blown smoke, speed
+  lines.
+- 9171263549 (punch), 8x8: small puffs that grow and dissolve; punch and landing impacts.
+- 11597664950, 8x8: dense white puffs; thick small smoke, steam bursts.
+
+**In use:** 16172858603 is now the Realm 5 workbench ground mist (`MyAura.GroundMist`).
+
 ## Notes
 
 - 95274053372063 was sent twice; it is listed once.
