@@ -8,6 +8,8 @@ spans the ribbon once: it fades out at both ends and across its width, so no edg
   MistRibbon.png  1024x256  the ribbon: a soft body of smoke, denser along its middle, with wisps
                             streaming along its length and curling off its sides
   MistHaze.png    1024x256  a wider, fainter veil to lay under it, so the ribbon has depth
+  GlowLine.png     256x1024 a soft line, even along its length (upright, as a Beam reads it): the
+                            glow under procedural lightning
 """
 import math
 import os
@@ -73,6 +75,17 @@ def save(alpha, name):
     rgba.save(os.path.join(OUT, name))
 
 
+def glow_line():
+    """a soft line for beams that chain into lightning: full along its length (so segments join
+    without gaps), a gaussian falloff across, no edge anywhere"""
+    return np.clip(np.exp(-(y / 0.32) ** 2) * (1 - smoothstep(0.8, 1, np.abs(y))) + 0 * x, 0, 1)
+
+
 save(ribbon(), "MistRibbon.png")
 save(haze(), "MistHaze.png")
+# a Beam runs its texture top to bottom along its length (measured in Studio, 2026-11-03: drawn
+# left to right, the glow showed as ticks across each segment), so the glow line stands upright
+gl = Image.new("RGBA", (W, H), (255, 255, 255, 0))
+gl.putalpha(Image.fromarray((glow_line() * 255).astype(np.uint8)))
+gl.transpose(Image.Transpose.ROTATE_90).resize((256, 1024), Image.LANCZOS).save(os.path.join(OUT, "GlowLine.png"))
 print("written:", sorted(os.listdir(OUT)))
