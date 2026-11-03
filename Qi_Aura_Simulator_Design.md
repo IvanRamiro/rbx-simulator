@@ -57,6 +57,21 @@ The fantasy is becoming a cultivator whose growing power shows in ever more spec
 5. **Choose an aura pet** to style the aura.
 6. Qinggong to new islands, find relics and better eggs, and repeat.
 
+### First quests (built November 3, 2026)
+
+A new player is walked through the loop by the System's quests, one at a time in the [ QUEST ] tracker (top right), each paying a few Spirit Stones (270 in all; `GameConfig.Quests`):
+1. Gather 100 Qi.
+2. Equip the starter Aqua Wisp.
+3. Break through to Qi Gatherer.
+4. An air leap.
+5. Strike the Stone Lion.
+6. Steal an egg.
+7. Hatch it at the Hatching Altar.
+
+- **The server decides** (`server/Quests`): it checks the current quest against the player's Qi, rank, pets and carried egg, and the air leaps and guardian strikes it sees. The step is saved (`Quest`, save version 9).
+- **Skip:** a player can skip them all, which asks "SURE?" and pays nothing.
+- **Existing saves** start with the quests done (migration 8), so returning players never see them.
+
 ### Core loop (planned): guardians and egg theft
 
 Defeating a guardian is not the goal. **Stealing its egg and escaping with it is.**

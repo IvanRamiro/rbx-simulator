@@ -12,9 +12,10 @@ local Elements = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild(
 local Wallet = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Wallet"))
 local WeaponInventory = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("WeaponInventory"))
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
+local Quests = require(script.Parent.Parent:WaitForChild("Quests"):WaitForChild("Quests"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 8
+local SCHEMA_VERSION = 9
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -68,7 +69,7 @@ end
 -- added pets (the bump only stops older servers, which don't know them, from dropping them) and
 -- version 6 added Eggs, which sanitizeProgress starts empty; version 7 added SpiritStones, Weapons
 -- and EquippedWeapon (MIGRATIONS[6], below); version 8 added ForgeElements (the guardians' drops)
--- and a weapon's Element and Name, which start at none.
+-- and a weapon's Element and Name, which start at none; version 9 added Quest (MIGRATIONS[8]).
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -78,6 +79,13 @@ MIGRATIONS[6] = function(progress)
         progress.Weapons = { starter }
         progress.EquippedWeapon = starter.InstanceId
     end
+    return progress
+end
+
+-- A save from before the first quests has played the game already: its quests start done, so a
+-- returning player never sees the beginner's path (a new player starts at the first).
+MIGRATIONS[8] = function(progress)
+    progress.Quest = progress.Quest or Quests.DONE
     return progress
 end
 
@@ -108,6 +116,7 @@ local function sanitizeProgress(raw)
         SpiritStones = 0,
         Weapons = {},
         EquippedWeapon = nil,
+        Quest = 1,
         ForgeElements = {},
     }
 
@@ -184,6 +193,7 @@ local function sanitizeProgress(raw)
     progress.SpiritStones = Wallet.sanitize(raw.SpiritStones)
     progress.Weapons, progress.EquippedWeapon = WeaponInventory.sanitize(raw.Weapons, raw.EquippedWeapon)
     progress.ForgeElements = Elements.sanitize(raw.ForgeElements)
+    progress.Quest = Quests.sanitize(raw.Quest)
 
     return progress
 end
@@ -213,7 +223,8 @@ local function captureProgress(player)
     local stones = Wallet.exportData(player)
     local weapons = WeaponInventory.exportData(player)
     local elements = Elements.exportData(player)
-    if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements) then
+    local quest = Quests.exportData(player)
+    if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest) then
         return nil
     end
 
@@ -232,6 +243,7 @@ local function captureProgress(player)
         Weapons = weapons.Weapons,
         EquippedWeapon = weapons.Equipped,
         ForgeElements = elements,
+        Quest = quest,
     }
 end
 
@@ -455,6 +467,7 @@ function PlayerData.release(player)
     Wallet.removePlayer(player)
     WeaponInventory.removePlayer(player)
     Elements.removePlayer(player)
+    Quests.removePlayer(player)
 
     if not profile then
         return

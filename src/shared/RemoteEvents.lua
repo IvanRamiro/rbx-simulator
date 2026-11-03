@@ -19,6 +19,7 @@ local EVENT_NAMES = {
     "GuardianEvent",
     "ShopEvent",
     "HatchEggEvent",
+    "QuestEvent",
 }
 
 local RemoteEvents = {}

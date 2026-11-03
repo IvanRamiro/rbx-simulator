@@ -516,6 +516,29 @@ local GameConfig = {
         Secret = Color3.fromRGB(255, 255, 255),
     },
 
+    -- The System's first quests: a new player's guided path through the game's loop, one at a
+    -- time, each with a small reward (QuestService checks them; the QUEST tracker shows them).
+    -- Kind says what completes it: "Qi" (Qi at least Goal), "Equip" (a pet equipped), "Rank"
+    -- (this rank reached), "Leap" (an air leap), "GuardianHit" (a strike on a guardian),
+    -- "TakeEgg" (carrying a guardian's egg), "Hatch" (a pet hatched since the quest began).
+    -- Existing saves start with them done (PlayerData migration 8); a player can skip them.
+    Quests = {
+        { Id = "Cultivate", Kind = "Qi", Goal = 100, Reward = 20, Title = "Gather Qi",
+            Text = "Sit in meditation: press E, or tap CULTIVATE. Gather 100 Qi." },
+        { Id = "Companion", Kind = "Equip", Reward = 20, Title = "Your First Companion",
+            Text = "Open Pets and equip your Aqua Wisp. Equipped pets add to the Qi you gather." },
+        { Id = "Breakthrough", Kind = "Rank", Goal = "QiGatherer", Reward = 40, Title = "Break Through",
+            Text = "Gather 300 Qi, then press BREAK THROUGH to become a Qi Gatherer." },
+        { Id = "Leap", Kind = "Leap", Reward = 20, Title = "Walk on Air",
+            Text = "Jump, then jump again in mid-air: an air leap. Hold jump while falling to glide." },
+        { Id = "Guardian", Kind = "GuardianHit", Reward = 30, Title = "The Stone Lion",
+            Text = "Find the Awakened Stone Lion in the Egg Garden and strike it (click, or tap Strike)." },
+        { Id = "Egg", Kind = "TakeEgg", Reward = 60, Title = "Steal an Egg",
+            Text = "Weaken a guardian until it falters, then take an egg from its stands. It will chase you!" },
+        { Id = "Hatch", Kind = "Hatch", Reward = 80, Title = "Hatch It",
+            Text = "Carry the egg to the Hatching Altar and hatch it." },
+    },
+
     MaxOwnedPets = 50,
 
     StarterPetIds = { "AquaWisp" },

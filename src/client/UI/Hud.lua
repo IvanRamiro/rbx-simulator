@@ -5,6 +5,7 @@
 --            short phone screen it can't run into the STATUS window
 --   Dock     bottom centre, bottom up: Cultivate, the breakthrough, the Qinggong strip
 --   Banner   top centre: messages (Toast)
+--   Quest    top right: the System's current quest (QuestController)
 -- Windows (the pets list, the altar, the shops): Hud.window, one open at a time.
 -- Each region scales with the screen (HudScale). Hud.isCompact() is true on a short screen (a
 -- phone in landscape), and Hud.CompactChanged fires when that changes: the STATUS window slims
@@ -68,6 +69,8 @@ Hud.Dock = region("Dock", Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -M), Enum.Fi
     Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Bottom, 8)
 Hud.Banner = region("Banner", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, M), Enum.FillDirection.Vertical,
     Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top, 6)
+Hud.Quest = region("Quest", Vector2.new(1, 0), UDim2.new(1, -M, 0, M), Enum.FillDirection.Vertical,
+    Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Top, 6)
 
 -- A row in the Status region for the small resource chips (Spirit Stones, Relics ...)
 local chips = Instance.new("Frame")
