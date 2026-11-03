@@ -188,6 +188,18 @@ pillar = core * along * streak * (1 - smoothstep(0.9, 1.0, np.abs(u)))
 Image.fromarray(colourise(pillar)).save(os.path.join(OUT, "LightPillar.png"))
 
 
+# the crown's bloom: a soft halo of warm light behind it (Bloom is screen-wide in Roblox, so the
+# crown carries its own), with faint long rays
+H = 512
+hy, hx = np.mgrid[0:H, 0:H].astype(float)
+hu, hv = (hx - H / 2) / (H / 2), (hy - H / 2) / (H / 2)
+hr = np.hypot(hu, hv)
+ha = np.arctan2(hv, hu)
+halo = np.exp(-(hr / 0.32) ** 2) * 0.9 + np.exp(-(hr / 0.6) ** 2) * 0.35
+rays = (0.5 + 0.5 * np.cos(ha * 8)) ** 10 * np.exp(-(hr / 0.55) ** 2) * 0.12
+glow = (halo + rays) * (1 - smoothstep(0.85, 1.0, hr))
+Image.fromarray(colourise(glow * 0.9)).save(os.path.join(OUT, "CrownGlow.png"))
+
 # a preview of every sheet on a dark ground, for review
 def preview(name):
     a = np.asarray(Image.open(os.path.join(OUT, name)), dtype=float)
