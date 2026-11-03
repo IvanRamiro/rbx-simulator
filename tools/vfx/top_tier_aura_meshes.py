@@ -238,16 +238,21 @@ def crown():
 
 
 # ---------- signature pieces: Divine, Cosmic, Void, Primordial ----------
-def sweep(m, path, profile, scales, closed=False):
+def sweep(m, path, profile, scales, closed=False, across=None):
     """a cross-section (2D points, x across, y through) swept along a path, scaled per sample;
-    U along the path, V round the section"""
+    U along the path, V round the section. `across`, if given, is a direction per sample for the
+    section's x axis (made square to the path); otherwise it is found from the path"""
     n = len(path)
     rings = []
     for i in range(n):
         p = path[i]
         tangent = path[min(i + 1, n - 1)] - path[max(i - 1, 0)]
         tangent /= np.linalg.norm(tangent)
-        side = np.cross(tangent, [0, 1, 0]) if abs(tangent[1]) < 0.95 else np.cross(tangent, [1, 0, 0])
+        if across is not None:
+            side = np.array(across[i], dtype=float)
+            side -= tangent * np.dot(side, tangent)
+        else:
+            side = np.cross(tangent, [0, 1, 0]) if abs(tangent[1]) < 0.95 else np.cross(tangent, [1, 0, 0])
         side /= np.linalg.norm(side)
         up = np.cross(side, tangent)
         k = scales[i]
@@ -270,11 +275,11 @@ def sweep(m, path, profile, scales, closed=False):
 
 def flame_crown():
     m = Mesh("DivineFlameCrown")
-    lens = [(0.5, 0), (0.25, 0.07), (-0.25, 0.07), (-0.5, 0), (-0.25, -0.07), (0.25, -0.07)]   # a flattened blade
+    lens = [(0.75, 0), (0.38, 0.08), (-0.38, 0.08), (-0.75, 0), (-0.38, -0.08), (0.38, -0.08)]   # a flattened tongue
     for k in range(10):
         a0 = k / 10 * math.tau
         tall = 1.0 if k % 2 == 0 else 0.78
-        path, scales = [], []
+        path, scales, across = [], [], []
         for i in range(10):
             t = i / 9
             a = a0 + 0.12 * math.sin(t * math.pi * 1.2)          # a slight sway as it rises
@@ -282,7 +287,8 @@ def flame_crown():
             y = -1.4 + 4.8 * tall * t
             path.append(np.array([math.cos(a) * r, y, math.sin(a) * r]))
             scales.append(max(0.02, math.sin(min(t * 1.15, 1) * math.pi) ** 0.8 * (1 - 0.6 * t)))
-        sweep(m, path, lens, scales)
+            across.append((-math.sin(a), 0, math.cos(a)))         # broad side facing out from the body
+        sweep(m, path, lens, scales, across=across)
     return m
 
 
