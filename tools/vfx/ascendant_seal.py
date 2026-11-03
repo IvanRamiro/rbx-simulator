@@ -99,6 +99,12 @@ def streamer(a0):
     ang2 = a0 - FLIGHT * (0.16 + span * k2)
     rad2 = 0.74 + 0.22 * np.sin(np.minimum(k2 * 1.25, 1) * math.pi / 2) - 0.04 * k2 ** 3 + 0.045
     ribbon([np.array(polar(r, t)) for r, t in zip(rad2, ang2)], 0.012 * np.sin((k2 - 0.18) / 0.68 * math.pi) + 0.002)
+    # a second, thinner streamer inside it, swelling in the middle of its run (fills the band
+    # between the border and the updraft; the owner: "too many space on the circle")
+    k3 = np.linspace(0.05, 0.95, 150)
+    ang3 = a0 - FLIGHT * (0.3 + span * 0.9 * k3)
+    rad3 = 0.66 + 0.12 * np.sin(k3 * math.pi) ** 1.2
+    ribbon([np.array(polar(r, t)) for r, t in zip(rad3, ang3)], 0.024 * np.sin((k3 - 0.05) / 0.9 * math.pi) ** 1.3 + 0.002)
 
 
 def _arc(c, r, a0, a1, n):
@@ -129,7 +135,7 @@ def cloud(r0, a, s):
     out = np.array([math.cos(a), math.sin(a)])
     base = np.array(polar(r0, a))
     D = math.radians
-    CLEAR.append((base + s * (-1.3 * fwd + 0.05 * out), s * 2.9))
+    CLEAR.append((base + s * (-0.2 * fwd + 0.05 * out), s * 1.75))   # round the lobes; the thin tail may cross wind
 
     def place(pts, widths):
         pts = np.asarray(pts)
@@ -156,14 +162,14 @@ def cloud(r0, a, s):
 def updraft():
     """wind lines spiralling in toward the feet, turning the same way the birds fly; each breaks
     round the clouds, so the clouds sit in clear air with the wind flowing past"""
-    arms = 9
+    arms = 12
     for j in range(arms):
         a0 = j * TAU / arms
         k = np.linspace(0, 1, 160)
-        rad = 0.62 - 0.30 * k
-        ang = a0 + FLIGHT * 1.6 * k
+        rad = 0.47 - 0.17 * k                      # the updraft fills the ring inside the clouds
+        ang = a0 + FLIGHT * 1.1 * k
         pts = np.array([polar(r, q) for r, q in zip(rad, ang)])
-        width = 0.011 * np.sin(k * math.pi) ** 0.8 + 0.0015
+        width = 0.014 * np.sin(k * math.pi) ** 0.8 + 0.002
         free = np.array([all(np.hypot(*(p - c)) > r for c, r in CLEAR) for p in pts])
         i = 0
         while i < len(pts):
@@ -182,9 +188,10 @@ def updraft():
 
 for b in range(BIRDS):
     a = -math.pi / 2 + b * TAU / BIRDS
-    swallow(0.80, a, 0.21)
+    swallow(0.80, a, 0.25)
     streamer(a)
-    cloud(0.52, a - FLIGHT * TAU / BIRDS / 2, 0.125)
+    cloud(0.51, a - FLIGHT * TAU / BIRDS / 2, 0.15)
+    cloud(0.6, a - FLIGHT * TAU / BIRDS * 0.25, 0.08)     # a smaller companion, in the band behind the bird
 updraft()
 # the eye of the updraft: one soft ring round the open centre, broken where the wind enters
 for j in range(9):
