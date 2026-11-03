@@ -46,10 +46,12 @@ local function startLevitating()
     humanoid.WalkSpeed = 0
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
 
-    local legs = if humanoid.RigType == Enum.HumanoidRigType.R15 and GameConfig.MeditationAnimationId == 0
+    local owner = table.find(GameConfig.OwnerAura.UserIds, player.UserId) ~= nil
+    local legs = if humanoid.RigType == Enum.HumanoidRigType.R15 and GameConfig.MeditationAnimationId == 0 and not owner
         then normalHipHeight * LOTUS_HIP_HEIGHT
         else normalHipHeight
-    local hoverHeight = legs + GameConfig.LevitationHeight
+    -- the owner's floating pose lifts the body itself (PoseController's FLOAT), so it adds no height
+    local hoverHeight = legs + (if owner then 0 else GameConfig.LevitationHeight)
     tweenHipHeight(hoverHeight, RISE_INFO).Completed:Connect(function(playbackState)
         if playbackState == Enum.PlaybackState.Completed and isLevitating then
             tweenHipHeight(hoverHeight + GameConfig.LevitationBobHeight, BOB_INFO)

@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local AuraConfig = require(ReplicatedStorage:WaitForChild("AuraConfig"))
 local RealmAura = require(script.Parent:WaitForChild("RealmAura"))
+local OwnerAura = require(script.Parent:WaitForChild("OwnerAura"))
 local CharacterAura = require(script.Parent:WaitForChild("CharacterAura"))
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local BreakthroughEffect = require(script.Parent:WaitForChild("BreakthroughEffect"))
@@ -156,7 +157,12 @@ local function removeRealmAura(player)
     local current = realmAuras[player]
     if current then
         realmAuras[player] = nil
-        RealmAura.destroy(current.fx) -- at once: a rebuild in the same frame dresses the same body parts
+        -- at once: a rebuild in the same frame dresses the same body parts
+        if current.owner then
+            OwnerAura.destroy(current.fx)
+        else
+            RealmAura.destroy(current.fx)
+        end
     end
 end
 
@@ -170,8 +176,22 @@ local function refreshRealmAura(player)
         return
     end
 
+    -- the owner wears their own aura (OwnerAura) in place of the realm's
+    if OwnerAura.isOwner(player) then
+        local current = realmAuras[player]
+        if current and current.owner and current.fx.Parent and current.root == rootPart then
+            return
+        end
+        removeRealmAura(player)
+        local fx = OwnerAura.build(player, character, rootPart)
+        if fx then
+            realmAuras[player] = { fx = fx, root = rootPart, owner = true }
+            return
+        end
+    end
+
     local current = realmAuras[player]
-    if current and current.fx.Parent and current.root == rootPart and current.realm == realm and current.sub == rank.Level then
+    if current and not current.owner and current.fx.Parent and current.root == rootPart and current.realm == realm and current.sub == rank.Level then
         return
     end
     removeRealmAura(player)

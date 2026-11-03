@@ -172,12 +172,52 @@ local QINGGONG_BLEND_SPEED = 16 -- the leap poses snap in: a stride lasts only a
 
 local useLotus = GameConfig.MeditationAnimationId == 0
 
+-- The owner's meditation pose (GameConfig.OwnerAura): the Floating Ascension idle, a 4 s loop. The
+-- body reclines on the air, lifted a little, the head tipped far back to face the sky, the chest
+-- arched; the arms spread wide in a level wingspan; the right knee drawn up toward the sky, the left
+-- leg reaching down, its foot pointed at the ground. Every joint breathes on the loop a beat after
+-- the one it hangs from (hips, chest, head; shoulders, elbows, wrists), so the motion flows out
+-- through the body. Its values are the AuraWorkbench's KeyframeSequence (tools/roblox/
+-- floating_ascension_idle.lua), by joint. The table is rewritten each frame (floatPose).
+local FLOAT = {}
+local FLOAT_LOOP = 4
+
+local function floatPose(t)
+    local w = math.pi * 2 * t / FLOAT_LOOP
+    local function s(lag, amp)
+        return amp * math.sin(w - lag)
+    end
+    local function c(lag, amp)
+        return amp * math.cos(w - lag)
+    end
+    FLOAT.Root = CFrame.new(0, 1.3 + s(0, 0.22), 0) * deg(28 + s(0.4, 1.5), c(0, 1.5), 0)
+    FLOAT.Waist = deg(14 + s(0.6, 3), 0, c(0.6, 1.2))
+    FLOAT.Neck = deg(38 + s(1.0, 2.5), c(1.0, 3), 0)
+    FLOAT.LeftShoulder = deg(-6, 10, -84 + s(0.9, 4))
+    FLOAT.LeftElbow = deg(8 + s(1.5, 4), 0, -6)
+    FLOAT.LeftWrist = deg(0, 0, -10 + s(2.1, 6))
+    FLOAT.RightShoulder = deg(-6, -10, 84 - s(0.9, 4))
+    FLOAT.RightElbow = deg(8 + s(1.5, 4), 0, 6)
+    FLOAT.RightWrist = deg(0, 0, 10 - s(2.1, 6))
+    FLOAT.RightHip = deg(122 + s(0.5, 3), 0, 6)
+    FLOAT.RightKnee = deg(-118 + s(1.1, 4), 0, 0)
+    FLOAT.RightAnkle = deg(-25 + s(1.6, 3), 0, 0)
+    FLOAT.LeftHip = deg(-22 + s(0.8, 2), 0, -3)
+    FLOAT.LeftKnee = deg(-6 + s(1.4, 2), 0, 0)
+    FLOAT.LeftAnkle = deg(-42 + s(1.9, 4), 0, 0)
+end
+floatPose(0)
+
+local function isOwner(player)
+    return table.find(GameConfig.OwnerAura.UserIds, player.UserId) ~= nil
+end
+
 local rigs = {}
 
 local function findJoints(character)
     local joints = {}
     for _, joint in character:GetDescendants() do
-        if (joint:IsA("Motor6D") or joint:IsA("AnimationConstraint")) and joint.Name ~= "Root" then
+        if joint:IsA("Motor6D") or joint:IsA("AnimationConstraint") then
             joints[joint.Name] = joint
         end
     end
@@ -200,6 +240,9 @@ end
 
 local function choosePose(player, character)
     if player:GetAttribute("IsCultivating") == true then
+        if isOwner(player) then
+            return FLOAT
+        end
         return if useLotus then LOTUS else nil
     end
     local strike = STRIKES[CombatFx.pose(player)]
@@ -227,6 +270,7 @@ for _, pose in STRIKES do
 end
 
 local function updatePoses(deltaTime)
+    floatPose(os.clock())
     local normalStep = 1 - math.exp(-BLEND_SPEED * deltaTime)
     local quickStep = 1 - math.exp(-QINGGONG_BLEND_SPEED * deltaTime)
     -- characters that left the world (an old character isn't always destroyed on respawn)

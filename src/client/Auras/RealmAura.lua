@@ -465,6 +465,7 @@ local function bodyAura(root, fx, color, t)
         table.insert(record.cleanups, undress)
     end
     fx.Destroying:Connect(undress)
+    return undress
 end
 
 -- Realm 4, Spirit Soul: the owner's design (2026-11-03). Three spheres of black smoke revolve
@@ -1186,5 +1187,8 @@ end
 
 RealmAura.Textures = TEX
 RealmAura.realmCount = #AuraConfig.Tiers
+-- the body aura on its own (OwnerAura wears it): builds on root's character, cleaned up when fx goes;
+-- returns a function that removes it at once
+RealmAura.bodyAura = bodyAura
 
 return RealmAura

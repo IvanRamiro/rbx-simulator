@@ -353,6 +353,12 @@ local GameConfig = {
     LevitationBobHeight = 0.3,
     LevitationBobTime = 1.6,
     MeditationAnimationId = 0,
+    -- The owner's own aura (src/client/Auras/OwnerAura, built on the AuraWorkbench and kept in
+    -- ReplicatedStorage.AuraMeshes.OwnerAura): worn by these user ids in place of their realm aura,
+    -- with the floating meditation pose (Character/PoseController) instead of the lotus seat.
+    OwnerAura = {
+        UserIds = { 4993575280 },
+    },
 
     StartingRank = "Qi Initiate",
 
