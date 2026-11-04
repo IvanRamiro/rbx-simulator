@@ -143,6 +143,11 @@ local function lay(folder, centre, withMaps)
 							p.Material = Enum.Material.Neon
 							p.Color = Color3.fromHex(hex)
 							p.TextureID = ""
+							for _, ch in p:GetChildren() do
+								if ch:IsA("SurfaceAppearance") then
+									ch:Destroy()
+								end
+							end
 						elseif withMaps then
 							local sa = p:FindFirstChildOfClass("SurfaceAppearance")
 							if sa and MAPS[id] then
@@ -154,7 +159,14 @@ local function lay(folder, centre, withMaps)
 				end
 				m:ScaleTo(SCALE)
 				local cf, size = m:GetBoundingBox()
-				-- facing the board's front edge (+Z), standing on the surface
+				-- the importer turns models half way round, so new imports need turning back to face the
+				-- board's front edge (+Z); the eggs in EggMeshes were stored the other way round already
+				if withMaps then
+					local c = cf.Position
+					m:PivotTo(CFrame.new(c) * CFrame.Angles(0, math.pi, 0) * CFrame.new(-c) * m:GetPivot())
+					cf, size = m:GetBoundingBox()
+				end
+				-- standing on the surface
 				m:PivotTo(m:GetPivot() + (Vector3.new(x, topY + size.Y / 2, z) - cf.Position))
 				m.Parent = board
 				count += 1
