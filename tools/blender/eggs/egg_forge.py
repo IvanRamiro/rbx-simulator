@@ -761,7 +761,7 @@ def along_shell(a, b, off, steps=8):
     return out
 
 
-def bar(hi, path, width, height, mat=0, bevel=0.2, closed=False, foot=0.02):
+def bar(hi, path, width, height, mat=0, bevel=0.2, closed=False, foot=0.02, solid=False):
     """A forged bar along a path of (point, normal) pairs: a flat-topped section with chamfered
     shoulders, sitting on the surface with its feet sunk into it. Caps its ends. `width` may be a
     function of 0..1."""
@@ -782,6 +782,8 @@ def bar(hi, path, width, height, mat=0, bevel=0.2, closed=False, foot=0.02):
         r0, r1 = rings[i], rings[(i + 1) % n]
         for j in range(k - 1):
             hi.f([r0[j], r0[j + 1], r1[j + 1], r1[j]], [(j / 5, 0), ((j + 1) / 5, 0), ((j + 1) / 5, 1), (j / 5, 1)], mat)
+        if solid:       # for a bar in open air, not lying on anything: close its underside
+            hi.f([r0[k - 1], r0[0], r1[0], r1[k - 1]], [(0, 0), (1, 0), (1, 1), (0, 1)], mat)
     if not closed:
         for r, flip in ((rings[0], False), (rings[-1], True)):
             idx = list(r)[::-1] if flip else list(r)
@@ -917,3 +919,32 @@ def crystal(hi, base, direction, length, radius, sides=6, tip=0.26, seed=0, mat=
         hi.f([low[k], low[n], mid[n], mid[k]], uv, mat)
         hi.f([mid[k], mid[n], apex], uv[:3], mat)
     hi.f(low[::-1], [(0, 0)] * sides, mat)
+
+
+def box_loft(hi, rows, mat=0):
+    """A shaped block through rectangular sections [(y, x0, x1, z0, z1)], bottom to top, capped: for
+    anvils, seats and plinths, anything with a profile that flares and waists."""
+    rings = []
+    for y, x0, x1, z0, z1 in rows:
+        rings.append([hi.v((x0, y, z0)), hi.v((x1, y, z0)), hi.v((x1, y, z1)), hi.v((x0, y, z1))])
+    uv = [(0, 0), (1, 0), (1, 1), (0, 1)]
+    for a, b in zip(rings, rings[1:]):
+        for k in range(4):
+            n = (k + 1) % 4
+            hi.f([a[k], a[n], b[n], b[k]], uv, mat)
+    hi.f(rings[0][::-1], uv, mat)
+    hi.f(rings[-1], uv, mat)
+
+
+def circle_path(c, axis, radius, count=72, phase=0.0):
+    """Points round a circle with outward normals: for rings standing in air."""
+    axis = V(axis).normalized()
+    ref = V((0, 1, 0)) if abs(axis.y) < 0.9 else V((1, 0, 0))
+    e1 = axis.cross(ref).normalized()
+    e2 = axis.cross(e1)
+    out = []
+    for k in range(count):
+        a = phase + TAU * k / count
+        d = e1 * math.cos(a) + e2 * math.sin(a)
+        out.append((V(c) + d * radius, d))
+    return out

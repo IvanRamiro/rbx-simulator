@@ -6,11 +6,10 @@ pieces are long shards. Lava is white-hot at the break and thins with distance t
 far side clean black glass. At the centre five shards have blown clear: each is the real piece that fits
 the hole it left, thick, burning on its underside, and the hole is molten.
 
-Magma Heart Egg, "the heart in the stone": no spikes. The egg keeps its egg shape, cut into broad planes of
-crimson garnet that brighten toward a molten heart set in its front: a domed stone in a black iron setting,
-fire turning inside it. Arteries of lava branch out from it across the planes. A squat cut crystal sits low
-on the crown, flat tabular shards of garnet lie against the shoulders, and black crust still clings to the
-lower part, torn where the stone broke through.
+Magma Heart Egg, "fresh from the forge": a steel egg just pulled from the fire, two halves being forge-welded
+along a white-hot seam. Just the egg, all of it in the metal. The metal is hammered all over, and its colour is the
+real thing a smith reads: white-gold at the seam, through orange and crimson with black
+scale flaking off it, to dark steel on top, with bands of straw, purple and blue temper colours between.
 
 Phoenix Ash Egg, "folded wings": the bird has not hatched, it is wrapped round itself. Rows of
 overlapping crimson feather-scales in real relief, smaller toward the crown; two wings of layered
@@ -288,174 +287,56 @@ def inferno_build():
 
 
 # ---------- Magma Heart Egg ----------
-MH_VEIN = "ff3214"
-MH_HEART = (0.5, 0.48)
-# the arteries: (x, y) on a plane at the heart, each starting at the setting and branching outward
-MH_ARTERIES = (
-    ((0.28, 0.28), (0.44, 0.48), (0.42, 0.72), (0.58, 0.95)),
-    ((0.44, 0.48), (0.68, 0.5), (0.86, 0.66)),
-    ((-0.3, 0.26), (-0.5, 0.42), (-0.46, 0.68), (-0.62, 0.9)),
-    ((-0.5, 0.42), (-0.74, 0.4), (-0.92, 0.5)),
-    ((0.38, -0.08), (0.62, -0.02), (0.82, -0.14), (0.98, -0.06)),
-    ((-0.38, -0.1), (-0.6, -0.04), (-0.8, -0.18), (-0.96, -0.12)),
-    ((0.0, 0.38), (0.06, 0.62), (-0.04, 0.84)),
-    ((0.2, -0.32), (0.3, -0.5), (0.24, -0.66)),
-    ((-0.2, -0.32), (-0.34, -0.48), (-0.28, -0.62)),
-)
-# the shards: tabular plates lying on the shoulders, wide and low. (s, v, radius, roll)
-MH_SHARDS = ((0.23, 0.66, 0.2, 0.3), (0.31, 0.74, 0.14, 1.1), (0.16, 0.74, 0.12, 2.2), (0.77, 0.66, 0.2, -0.4), (0.69, 0.75, 0.13, 0.9), (0.85, 0.73, 0.12, 1.9),
-             (0.03, 0.6, 0.17, 0.7), (0.96, 0.7, 0.13, 2.6), (0.42, 0.82, 0.1, 1.5), (0.6, 0.83, 0.1, 0.2))
+MH_WELD = 0.2
 
 
 def magma_paint():
     f = F.Field()
-    P, Vv = f.P, f.V
-    warp = np.stack([F.fbm(P, 2.2, 3, seed=s) for s in (301, 302, 303)], -1) * 0.1
-    # the crust's torn edge: lower at the front so the heart is clear, higher behind
-    broken = 0.27 + 0.1 * np.cos(TAU * (f.S - 0.5) + math.pi) + 0.09 * F.fbm(P, 3.2, 3, seed=304) + 0.025 * F.fbm(P, 16.0, 2, seed=305)
-    stone = F.sstep(broken - 0.004, broken + 0.004, Vv)
-    # broad cut planes, each tilted its own way, sharp where they meet
-    _, wall, cid = F.voronoi(P + warp * 0.5, 2.7, seed=306, jitter=1.0, stretch=(1.0, 0.8, 1.0))
-    t1, t2, t3 = np.sin(cid * 917.3), np.cos(cid * 371.1), np.sin(cid * 113.7)
-    tilt = 0.042 * (t1 * P[..., 0] + t2 * P[..., 2] + t3 * (P[..., 1] - 1.3) * 0.5)
-    edge = 1 - F.sstep(0.0, 0.02, wall)
-    # the stone brightens toward the heart, as if lit from inside, and each plane disagrees a little
-    x, y, front = f.plane(*MH_HEART)
-    d_heart = np.hypot(x, y) + (1 - np.clip(front, 0, 1)) * 1.6
-    lit = np.exp(-(d_heart / 1.05) ** 2)
-    tone = np.clip(0.12 + 0.72 * lit + 0.42 * (cid - 0.5) + 0.12 * F.fbm(P, 3.0, 3, seed=307), 0, 1)
-    gem = F.ramp(tone, [(0.0, "1a0106"), (0.3, "4a040e"), (0.55, "8c0a18"), (0.8, "c81a1e"), (1.0, "ff5a2a")])
-    gem = F.mix(gem, gem * 1.8 + 0.06, edge * 0.55)
-    # the arteries, swelling toward the heart
-    best = np.full(x.shape, 9.0)
-    along = np.zeros(x.shape)
-    for a in MH_ARTERIES:
-        d, t = F.seg_dist(x, y, a)
-        closer = d < best
-        best = np.where(closer, d, best)
-        along = np.where(closer, t, along)
-    best = best + (front <= 0.05) * 9.0
-    w = 0.024 * (1 - 0.62 * along) + 0.006
-    art = 1 - F.sstep(w * 0.65, w, best)
-    hot = F.ramp(np.clip(best / w, 0, 1), [(0.0, "fff0a0"), (0.4, "ffb02e"), (0.8, "ff5a12"), (1.0, "c81e06")])
-    gem = gem + np.array((0.34, 0.05, 0.0)) * (np.exp(-(np.maximum(best - w, 0) / 0.07) ** 2) * (1 - art))[..., None]
-    gem = F.mix(gem, hot, art)
-    h_gem = (tilt + 0.03) * F.sstep(0.0, 0.05, wall) - 0.012 * art
-    # the crust: black, in small scaled plates, pulled away at its edge
-    f1, pl, pid = F.voronoi(P + warp, 6.5, seed=310, jitter=1.0, stretch=(1.0, 0.8, 1.0))
-    grain = F.fbm(P, 12.0, 4, seed=311)
-    crust = F.ramp(np.clip(0.3 + 0.5 * pid + 0.4 * grain, 0, 1), [(0.0, "070606"), (0.5, "151212"), (1.0, "2d2523")])
-    gap = 1 - F.sstep(0.0, 0.05, pl)
-    crust = F.mix(crust, F.ramp(np.clip(Vv / np.maximum(broken, 0.01), 0, 1), [(0.0, "230603"), (0.6, "6a1205"), (1.0, "e0420c")]), gap)
-    h_crust = 0.075 + 0.034 * (pid - 0.5) + 0.012 * grain - 0.045 * gap
-    col = F.mix(crust, gem, stone)
-    height = h_gem * stone + h_crust * (1 - stone) + 0.03 * np.exp(-((Vv - broken) / 0.03) ** 2) * (1 - stone)
-    col = F.mix(col, np.array((1.0, 0.36, 0.06)), np.exp(-((Vv - broken) / 0.006) ** 2) * 0.85)
-    rough = F.mix(0.75 + 0.1 * grain, 0.12 + 0.2 * art, stone)
-    return f, np.clip(col, 0, 1), np.clip(rough, 0, 1), np.zeros(f.S.shape), height
-
-
-def mh_heart_material():
-    """Fire turning inside a domed stone: hot at the middle, a slow swirl of molten bands, dark garnet at
-    its rim."""
-    g = Hm._Graph("MH_HeartStone")
-    co = g.coords()
-    wave = g.n("ShaderNodeTexNoise", **{"Scale": 3.0, "Detail": 5.0, "Roughness": 0.5, "Distortion": 2.2})
-    g.link(co, wave.inputs["Vector"])
-    geo = g.n("ShaderNodeNewGeometry")
-    c, n = F.on(*MH_HEART), F.normal(*MH_HEART)
-    facing = g.n("ShaderNodeVectorMath", operation="DOT_PRODUCT")
-    g.link(geo.outputs["Normal"], facing.inputs[0])
-    facing.inputs[1].default_value = tuple(W.rb(*n))
-    # a ruby lit from inside: dark at its rim, deep red, then orange and one small hot point, the fire
-    # only turning a little across those bands
-    centre = g.math("MAXIMUM", facing.outputs["Value"], 0.0)
-    v = g.math("ADD", g.math("POWER", centre, 2.2), g.math("MULTIPLY", g.math("SUBTRACT", wave.outputs["Fac"], 0.5), 0.34))
-    col = g.ramp(v, [(0.0, (0.03, 0.0, 0.003)), (0.3, (0.2, 0.002, 0.006)), (0.58, (0.62, 0.012, 0.01)), (0.78, (1.0, 0.1, 0.01)), (0.92, (1.0, 0.42, 0.04)), (1.0, (1.0, 0.86, 0.36))])
-    return g.finish(col, 0.09, 0.0)
-
-
-def iron_material(name):
-    g = Hm._Graph(name)
-    n = g.n("ShaderNodeTexNoise", **{"Scale": 30.0, "Detail": 4.0})
-    g.link(g.coords(), n.inputs["Vector"])
-    col = g.ramp(n.outputs["Fac"], [(0.35, (0.03, 0.028, 0.03)), (0.65, (0.075, 0.07, 0.072))])
-    col = g.ao(col, 0.05, 0.45)
-    return g.finish(col, g.math("ADD", 0.34, g.math("MULTIPLY", n.outputs["Fac"], 0.24)), 0.65, g.bump(n.outputs["Fac"], 0.2, 0.004))
-
-
-def mh_pieces(coll):
-    garnet = F.gem_material("MH_Garnet", (0.06, 0.0, 0.006), (0.5, 0.004, 0.018), (1.0, 0.14, 0.09), pane_weight=0.12, panes=9.0)
-    iron = iron_material("MH_Iron")
-    c, n = F.on(*MH_HEART), F.normal(*MH_HEART)
-    e1, e2 = O.frame(n)
-    # the heart: a smooth dome, set in iron with six low claws
-    h = Hm.Hi()
-    rows = []
-    R, dome = 0.34, 0.2
-    for j in range(13):
-        th = (math.pi / 2) * j / 12
-        rows.append([h.v(c + n * (0.05 + dome * math.sin(th)) + (e1 * math.cos(TAU * k / 40) + e2 * math.sin(TAU * k / 40) * 1.08) * R * math.cos(th)) for k in range(40)])
-    for j in range(12):
-        for k in range(40):
-            q = (k + 1) % 40
-            h.f([rows[j][k], rows[j][q], rows[j + 1][q], rows[j + 1][k]], [(0, 0), (1, 0), (1, 1), (0, 1)])
-    heart = F.fix_normals(h.object("MH_Heart", coll, [mh_heart_material()]))
-    heart["w"] = 2.5
-    s = Hm.Hi()
-    O.disc_steps(s, c, n, [(0.3, -0.34), (0.42, -0.34), (0.42, 0.015), (0.385, 0.06), (0.355, 0.06), (0.34, 0.03)], sides=48)
-    for k in range(6):
-        a = TAU * (k + 0.5) / 6
-        d = e1 * math.cos(a) + e2 * math.sin(a) * 1.08
-        pts = [(c + d * (0.42 - 0.13 * t / 8) + n * (0.09 + 0.08 * math.sin(math.pi * t / 8 * 0.7)), (n + d * 0.3).normalized()) for t in range(9)]
-        F.bar(s, pts, lambda t: 0.075 * (1 - 0.55 * t), 0.03, foot=0.03)
-    # the crown's setting
-    top = V((0, F.H, 0))
-    up = V((0, 1, 0))
-    O.disc_steps(s, top - up * 0.1, up, [(0.2, -0.06), (0.36, -0.03), (0.39, 0.05), (0.34, 0.12), (0.29, 0.12), (0.27, 0.08)], sides=40)
-    setting = s.object("MH_Iron", coll, [iron], smooth=False)
-    F.fix_normals(setting)
-    for p in setting.data.polygons:
-        p.use_smooth = False
-    setting["w"] = 1.6
-    # the crown: wide and low, a table-cut stone, never a point
-    g = Hm.Hi()
-    F.cut_gem(g, top + up * 0.03, up, (0, 0, 1), 0.28, 0.2, sides=8, base=0.12)
-    for k, (s_, v_, r, roll) in enumerate(MH_SHARDS):
-        p, nn = F.on(s_, v_, 0.008), F.normal(s_, v_)
-        u = V((math.sin(roll), math.cos(roll), 0.2 * math.sin(roll * 2)))
-        F.cut_gem(g, p, nn, u, r, r * 0.42, sides=5 + (k % 2), base=0.05, squash=0.72)
-    gems = F.fix_normals(g.object("MH_Shards", coll, [garnet], smooth=False))
-    gems["w"] = 3.0
-    return [heart, setting, gems]
-
-
-def mh_veins(coll):
-    hi = Hm.Hi()
-    fn = O.lay_on(*MH_HEART)
-    for a in MH_ARTERIES:
-        fine = W.catmull([(x, y, 0.0) for x, y in a], 7)
-        pts = [fn(p[0], p[1], -0.002) for p in fine]
-        F.prism(hi, pts, lambda t: 0.024 * (1 - 0.72 * t) + 0.004, height=lambda w: w * 0.4)
-    return hi.object("MH_Veins", coll, [K.glow_material(MH_VEIN)], smooth=False, weld=0)
+    P, S, Vv = f.P, f.S, f.V
+    warp = np.stack([F.fbm(P, 2.0, 2, seed=s) for s in (301, 302, 303)], -1) * 0.1
+    # hammer marks: shallow dished blows, overlapping, big then small
+    f1, edge, cid = F.voronoi(P + warp, 4.4, seed=306, jitter=1.0)
+    f2, _, _ = F.voronoi(P + warp, 10.0, seed=307, jitter=1.0)
+    fine = F.fbm(P, 30.0, 3, seed=308)
+    height = 0.034 * f1 ** 2 * (0.7 + 0.6 * cid) + 0.008 * f2 ** 2 + 0.0015 * fine
+    # the heat: hottest along the weld and below it, falling away up the egg, a little uneven, and each
+    # hammer facet taking it slightly differently
+    wob = F.fbm(P, 1.5, 3, seed=309)
+    heat = np.clip(1.06 - np.maximum(Vv - MH_WELD, 0) * 1.5 + 0.1 * wob + 0.05 * (cid - 0.5) + 0.05 * np.cos(TAU * (S - 0.5)), 0, 1)
+    col = F.ramp(heat, [(0.0, "14161b"), (0.1, "20232a"), (0.18, "2a3f7c"), (0.25, "5c3a94"), (0.32, "9a6a3c"), (0.38, "cfa862"), (0.44, "2e2520"),
+                        (0.52, "4c120a"), (0.62, "9a160c"), (0.74, "e0340a"), (0.86, "ff9020"), (1.0, "fff0b4")])
+    # bare steel shows its hammer facets as a slight change of tone
+    col = col * (0.86 + 0.28 * cid)[..., None]
+    # scale: black flakes lifting off the red-hot metal, with the glow in the cracks between them
+    _, flake_edge, flake = F.voronoi(P + warp * 0.5, 8.5, seed=310, jitter=1.0)
+    band = F.sstep(0.46, 0.56, heat) * (1 - F.sstep(0.74, 0.86, heat))
+    scale = band * (flake > 0.6) * F.sstep(0.02, 0.07, flake_edge)
+    col = F.mix(col, F.ramp(np.clip(fine + 0.5, 0, 1), [(0.0, "0f0b0a"), (1.0, "2a211e")]), scale * 0.92)
+    height = height + 0.007 * scale
+    # the weld: a bright wandering seam all the way round
+    line = MH_WELD + 0.008 * np.sin(TAU * S * 5 + 1.0) + 0.004 * np.sin(TAU * S * 13)
+    d = np.abs(Vv - line)
+    weld = 1 - F.sstep(0.004, 0.009, d)
+    col = F.mix(col, np.array((1.0, 0.97, 0.78)), weld)
+    height = height - 0.012 * weld + 0.014 * np.exp(-(d / 0.018) ** 2)
+    cool = 1 - F.sstep(0.38, 0.46, heat)
+    rough = np.clip(0.26 + 0.1 * cid * cool + (1 - cool) * 0.3 + 0.3 * scale, 0, 1)
+    metal = 0.88 * cool
+    return f, np.clip(col, 0, 1), rough, metal, height
 
 
 def magma_clay():
     coll = W.collection("MagmaHeartEggHi")
     f, col, rough, metal, height = magma_paint()
     shell = F.shell_mesh("MH_Shell", coll, 192, 120, height)
-    pieces = mh_pieces(coll)
-    v = mh_veins(coll)
-    return {o.name: F.tris(o) for o in [shell, v] + pieces}
+    return {shell.name: F.tris(shell)}
 
 
 def magma_build():
     coll = W.collection("MagmaHeartEggHi")
     f, col, rough, metal, height = magma_paint()
-    mat = F.shell_material("MH_Shell", col, rough, metal)
-    pieces = mh_pieces(coll)
-    v = mh_veins(coll)
-    return F.assemble("MagmaHeartEgg", coll, mat, height, pieces, {MH_VEIN: [v]}, budget=4500, shell_frac=0.74, low_nu=84, low_nv=56, hard=25, shell_ext=0.1, shell_ray=0.24, ao_floor=0.62)
+    mat = F.shell_material("MH_Steel", col, rough, metal)
+    return F.assemble("MagmaHeartEgg", coll, mat, height, [], {}, shell_frac=0.998, low_nu=96, low_nv=62, shell_ext=0.08, shell_ray=0.2, ao_floor=0.8)
 
 
 # ---------- Phoenix Ash Egg ----------
