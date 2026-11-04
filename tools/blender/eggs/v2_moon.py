@@ -5,15 +5,16 @@ small stars at their joints, a drift of mother-of-pearl where the Milky Way runs
 stands a great silver crescent, thick at its foot and tapering to two horns above the shoulders, the
 egg resting in its curve; from one horn a pearl hangs on a thread of silver.
 
-Astral Sanctum Egg, "the shrine": the egg as a building. A stepped plinth; six tall pointed windows
-set deep in moonstone walls, each with gold frame and tracery and violet light behind it; slim columns
-with capitals between them; a cornice; a ribbed gold dome on a drum, and a spire with an orb and a
-crescent at its point.
+Astral Sanctum Egg, "the egg is the shrine": it stays an egg. Six slim pointed windows are set deep into
+smooth moonstone, the blue sheen drifting across it, with violet light behind fine gold tracery and slim
+pilasters between them. Above a scalloped cornice the whole crown of the egg IS the gold dome, ribbed and
+following the shell's own curve, with a slender spire at the very top carrying an orb and a flame-shaped tip.
+No plinth, no onion, no symbol from any real faith, and nothing that hides the shape.
 
-Heavenly Throne Egg, "the enthroned": pearl with a soft fire in it, belted with a rail of gold and a
-row of small pearls. A coronet with eight points and four arches rising to an orb. It sits on a wide
-cushion of cloud, and behind it a pointed mandorla of gold, its rim a ring of flames, the sun's disc
-at its head.
+Heavenly Throne Egg, "the enthroned": pearl with a soft fire in it, belted with gold and small pearls. A
+small coronet sits on its crown. It rests on a three-tier cushion of carved cloud, each tier scalloped and
+edged in gold. Behind it, open air: a slim oval mandorla of gold, with a sunburst of broad wavy rays rising
+from its upper half. No backing plate, so the egg is what you see.
 """
 import math
 
@@ -220,13 +221,15 @@ def celestial_build():
 # ---------- Astral Sanctum Egg ----------
 AS_LIGHT = "643cff"
 AS_WINDOWS = 6
-AS_LOW, AS_HIGH = 0.26, 0.6      # the windows' sills and points, in v
-AS_WIDTH = 0.042                 # half a window's width, in s at its widest
+AS_LOW, AS_HIGH = 0.24, 0.6      # the windows' sills and points, in v
+AS_WIDTH = 0.034                 # half a window's width, in s at its widest
+AS_DOME = 0.69                   # where the gold crown starts, in v
+AS_RIBS = 12
 
 
 def as_window_half(v):
     """A window's half width at height v: straight sides, then a pointed Gothic head."""
-    spring = AS_LOW + (AS_HIGH - AS_LOW) * 0.62
+    spring = AS_LOW + (AS_HIGH - AS_LOW) * 0.64
     if v <= spring:
         return AS_WIDTH
     t = (v - spring) / (AS_HIGH - spring)
@@ -236,52 +239,63 @@ def as_window_half(v):
 def astral_paint():
     f = F.Field()
     P, S, Vv = f.P, f.S, f.V
-    # moonstone: milky white with a blue and lilac sheen drifting in it
-    warp = np.stack([F.fbm(P, 1.5, 3, seed=s) for s in (521, 522, 523)], -1) * 0.25
-    sheen = np.clip(F.fbm(P + warp, 1.8, 5, 0.55, seed=524) * 1.3 + 0.5, 0, 1)
-    hue = np.clip(F.fbm(P, 1.1, 2, seed=525) * 1.4 + 0.5, 0, 1)
-    tint = F.mix(np.array((0.56, 0.68, 0.98)), np.array((0.74, 0.6, 0.96)), hue)
-    col = F.mix(np.array((0.86, 0.88, 0.94)), tint, sheen * 0.8)
-    # ashlar courses: stone blocks, thin joints, each block very slightly its own tone
-    rows = 15
-    yy = Vv * rows
-    row = np.floor(yy)
-    xs = S * (32 - 0) + 0.5 * (row % 2)
-    cell = np.floor(xs)
-    joint = np.minimum(np.abs(yy - row - 0.5) * -1 + 0.5, np.abs(xs - cell - 0.5) * -1 + 0.5)
-    joint_m = 1 - F.sstep(0.0, 0.05, joint)
-    per = (np.sin((cell + row * 13.0) * 37.7) * 43758.5) % 1.0
-    col = col * (0.93 + 0.1 * per)[..., None]
-    col = F.mix(col, col * 0.6, joint_m * 0.65)
-    height = -0.004 * joint_m + 0.002 * (per - 0.5)
-    # the windows: cut deep into the wall, reveals darkened, sills lit violet from inside
+    # moonstone: milky white, with the blue sheen that gives it its name drifting across in soft clouds
+    warp = np.stack([F.fbm(P, 1.3, 3, seed=s) for s in (521, 522, 523)], -1) * 0.3
+    sheen = F.sstep(-0.05, 0.42, F.fbm(P + warp, 1.25, 4, 0.5, seed=524))
+    hue = np.clip(F.fbm(P, 0.8, 2, seed=525) * 1.4 + 0.5, 0, 1)
+    tint = F.mix(np.array((0.34, 0.56, 1.0)), np.array((0.62, 0.48, 1.0)), hue)
+    col = F.mix(np.array((0.93, 0.93, 0.96)), tint, sheen * 0.82)
+    wisp = 1 - F.sstep(0.0, 0.05, F.ridged(P + warp, 2.4, 3, seed=526))
+    col = F.mix(col, np.array((1.0, 1.0, 1.0)), wisp * 0.25)
+    height = np.zeros(S.shape)
+    # the windows, cut deep; the reveal's stone is lit violet from inside
     win = np.zeros(S.shape)
     glowing = np.zeros(S.shape)
-    half = np.vectorize(as_window_half)
     vs = np.linspace(0, 1, 512)
     table = np.array([as_window_half(v) for v in vs])
+    hw = np.interp(Vv, vs, table)
     for k in range(AS_WINDOWS):
         c = k / AS_WINDOWS
         ds = np.abs((S - c + 0.5) % 1.0 - 0.5)
-        hw = np.interp(Vv, vs, table)
         inside = (ds < hw) * (Vv > AS_LOW) * (Vv < AS_HIGH)
-        # a soft measure of how far in: for the reveal
-        depth = np.clip((hw - ds) / 0.012, 0, 1) * np.clip((Vv - AS_LOW) / 0.012, 0, 1) * inside
+        depth = np.clip((hw - ds) / 0.01, 0, 1) * np.clip((Vv - AS_LOW) / 0.01, 0, 1) * inside
         win = np.maximum(win, depth)
-        glowing = np.maximum(glowing, np.exp(-(np.maximum(ds - hw, 0) / 0.02) ** 2) * np.exp(-(np.maximum(AS_LOW - Vv, 0) / 0.04) ** 2) * np.exp(-(np.maximum(Vv - AS_HIGH, 0) / 0.03) ** 2))
-    col = F.mix(col, np.array((0.1, 0.05, 0.28)), win)
-    col = col + np.array((0.08, 0.03, 0.2)) * (glowing * (1 - win))[..., None]
-    height = height * (1 - win) - 0.11 * win
-    rough = np.clip(0.2 + 0.2 * joint_m + 0.1 * win, 0, 1)
-    return f, np.clip(col, 0, 1), rough, np.zeros(S.shape), height
+        glowing = np.maximum(glowing, np.exp(-(np.maximum(ds - hw, 0) / 0.016) ** 2) * np.exp(-(np.maximum(AS_LOW - Vv, 0) / 0.03) ** 2) * np.exp(-(np.maximum(Vv - AS_HIGH, 0) / 0.025) ** 2))
+    col = F.mix(col, np.array((0.14, 0.06, 0.34)), win)
+    col = col + np.array((0.05, 0.015, 0.16)) * (glowing * (1 - win))[..., None]
+    height = height - 0.09 * win
+    # the crown is the dome: gold, ribbed, its lower edge scalloped into one scallop per rib
+    xs = S * AS_RIBS
+    fx = xs - np.floor(xs) - 0.5
+    edge = AS_DOME + 0.017 * np.cos(fx * 2 * np.pi)
+    dome = F.sstep(edge - 0.0025, edge + 0.0025, Vv)
+    rib = np.abs(fx) * 2                                    # 0 mid-lobe, 1 on a rib line
+    lobe = np.cos(fx * np.pi) ** 0.7
+    fade = np.clip((0.985 - Vv) / 0.06, 0, 1)
+    height = height * (1 - dome) + dome * (0.045 + 0.034 * lobe * fade)
+    gold = F.mix(np.array((0.82, 0.56, 0.18)), np.array((1.0, 0.84, 0.42)), np.clip(0.55 + F.fbm(P, 20.0, 2, seed=527) * 0.7, 0, 1))
+    groove = (1 - F.sstep(0.0, 0.1, 1 - rib)) * fade
+    gold = gold * (1 - 0.55 * groove)[..., None]
+    col = F.mix(col, gold, dome)
+    # a row of small gold studs on the stone, just under the cornice
+    star = np.zeros(S.shape)
+    n = 24
+    sx = (S * n) % 1.0 - 0.5
+    sy = (Vv - 0.645) * 4.2 / (6.0 * 0.72 / n)
+    r = np.hypot(sx, sy)
+    star = (r < 0.15) * 1.0                # small round studs: a four-pointed star this small reads as a cross
+    col = F.mix(col, gold, star * (1 - dome))
+    height = height - 0.004 * star * (1 - dome)
+    rough = np.clip(0.11 + 0.1 * win + 0.2 * dome, 0, 1)
+    metal = np.maximum(0.82 * dome * (1 - 0.3 * groove), 0.82 * star * (1 - dome))
+    return f, np.clip(col, 0, 1), rough, metal, height
 
 
 def as_gold(coll, gold):
     hi = Hm.Hi()
-    # frames and tracery for each window
     for k in range(AS_WINDOWS):
         c = k / AS_WINDOWS
-        steps = 28
+        steps = 26
         left, right = [], []
         for i in range(steps + 1):
             v = AS_LOW + (AS_HIGH - AS_LOW) * i / steps
@@ -289,28 +303,21 @@ def as_gold(coll, gold):
             left.append((c - w, v))
             right.append((c + w, v))
         path = left + right[::-1][1:] + [left[0]]
-        pts = [(F.on(a % 1.0, b, 0.012), F.normal(a % 1.0, b)) for a, b in path]
-        F.bar(hi, pts, 0.032, 0.03, foot=0.04)
-        # a mullion up the middle, two crossbars, and a pointed trefoil in the head
-        F.bar(hi, F.along_shell((c, AS_LOW), (c, AS_HIGH - 0.015), -0.05, steps=10), 0.016, 0.02, foot=0.03)
-        for v in (AS_LOW + 0.09, AS_LOW + 0.18):
-            F.bar(hi, F.along_shell((c - AS_WIDTH, v), (c + AS_WIDTH, v), -0.05, steps=6), 0.012, 0.016, foot=0.03)
-        spring = AS_LOW + (AS_HIGH - AS_LOW) * 0.62
-        F.bar(hi, F.along_shell((c - AS_WIDTH, spring), (c, AS_HIGH - 0.03), -0.05, steps=6), 0.011, 0.015, foot=0.03)
-        F.bar(hi, F.along_shell((c + AS_WIDTH, spring), (c, AS_HIGH - 0.03), -0.05, steps=6), 0.011, 0.015, foot=0.03)
-        # the sill stands proud
-        F.bar(hi, F.along_shell((c - AS_WIDTH * 1.5, AS_LOW - 0.012), (c + AS_WIDTH * 1.5, AS_LOW - 0.012), 0.02, steps=8), 0.05, 0.04, foot=0.03)
-        # the column between this window and the next: a shaft, a capital and a base
+        pts = [(F.on(a % 1.0, b, 0.002), F.normal(a % 1.0, b)) for a, b in path]
+        F.bar(hi, pts, 0.022, 0.018, foot=0.03)
+        # one mullion and a simple pointed head inside it
+        F.bar(hi, F.along_shell((c, AS_LOW), (c, AS_HIGH - 0.02), -0.05, steps=10), 0.012, 0.018, foot=0.03)
+        for v in (AS_LOW + 0.12,):
+            F.bar(hi, F.along_shell((c - AS_WIDTH, v), (c + AS_WIDTH, v), -0.05, steps=6), 0.01, 0.015, foot=0.03)
+        # a slim sill
+        F.bar(hi, F.along_shell((c - AS_WIDTH * 1.35, AS_LOW - 0.008), (c + AS_WIDTH * 1.35, AS_LOW - 0.008), 0.0, steps=8), 0.028, 0.026, foot=0.03)
+        # a slim pilaster between this window and the next: flat against the wall
         cc = c + 0.5 / AS_WINDOWS
-        col_low, col_high = 0.17, 0.66
-        p0, p1 = F.on(cc % 1.0, col_low, 0.035), F.on(cc % 1.0, col_high, 0.035)
-        Hm.htube(hi, [F.on(cc % 1.0, col_low + (col_high - col_low) * t / 8, 0.035) for t in range(9)], lambda t: 0.032 * (1 - 0.12 * t), sides=10, per=3, wobble=0, tip=False)
-        for v, wid in ((col_low + 0.005, 0.1), (col_high, 0.12)):
-            F.bar(hi, F.along_shell((cc - 0.018, v), (cc + 0.018, v), 0.018, steps=4), 0.05, 0.06, foot=0.02)
-    # the cornice over the arches and the string course under them
-    F.bar(hi, F.along_shell((0, 0.675), (1, 0.675), 0.012, steps=72)[:-1], 0.05, 0.05, closed=True)
-    F.bar(hi, F.along_shell((0, 0.655), (1, 0.655), 0.012, steps=72)[:-1], 0.024, 0.028, closed=True)
-    F.bar(hi, F.along_shell((0, 0.205), (1, 0.205), 0.012, steps=64)[:-1], 0.05, 0.035, closed=True)
+        F.bar(hi, F.along_shell((cc, 0.16), (cc, AS_DOME - 0.012), 0.0, steps=16), lambda t: 0.03 * (1 - 0.2 * t), 0.022, foot=0.02)
+    # the thin bands that carry them: one at the foot, and the cornice under the dome
+    F.bar(hi, F.along_shell((0, 0.155), (1, 0.155), 0.0, steps=64)[:-1], 0.04, 0.03, closed=True)
+    F.bar(hi, F.along_shell((0, 0.125), (1, 0.125), 0.0, steps=64)[:-1], 0.022, 0.02, closed=True)
+    F.bar(hi, F.along_shell((0, AS_DOME - 0.018), (1, AS_DOME - 0.018), 0.012, steps=72)[:-1], 0.034, 0.035, closed=True)
     o = hi.object("AS_Frames", coll, [gold], smooth=False)
     F.fix_normals(o)
     for p in o.data.polygons:
@@ -319,68 +326,26 @@ def as_gold(coll, gold):
     return o
 
 
-def as_plinth(coll):
-    """The stepped base the shrine stands on: moonstone treads with gold risers."""
-    stone = Hm.mat_moonstone("AS_Stone")
+def as_spire(coll, gold):
+    """A slender spire on the very top: stem, orb, needle, and a flame-shaped tip."""
     hi = Hm.Hi()
-    y = 0.0
-    rings = []
-    for (r0, r1, h) in ((1.32, 1.28, 0.09), (1.14, 1.1, 0.09), (0.96, 0.92, 0.09)):
-        rings += [(r0, y), (r1, y + h), (r1 - 0.14, y + h)]
-        y += h
-    profile = [(0.0, 0.0)] + rings
-    lathe(hi, profile, sides=48)
-    o = hi.object("AS_Plinth", coll, [stone], smooth=False)
+    t = F.H
+    lathe(hi, [(0.16, t - 0.08), (0.13, t - 0.01), (0.1, t + 0.02), (0.09, t + 0.05), (0.045, t + 0.09), (0.03, t + 0.2), (0.02, t + 0.34)], sides=16)
+    lathe(hi, [(0.02, t + 0.42), (0.013, t + 0.68)], sides=10)
+    o = hi.object("AS_Spire", coll, [gold])
     F.fix_normals(o)
-    o["w"] = 1.2
-    return o
-
-
-def as_dome(coll, gold):
-    hi = Hm.Hi()
-    # the drum and the melon dome, seated over the crown
-    base_v = 0.7
-    y0 = F.on(0.0, base_v).y
-    r0 = V((F.on(0.0, base_v).x, 0, F.on(0.0, base_v).z)).length
-    prof = [(r0 + 0.05, y0 - 0.04), (r0 + 0.05, y0 + 0.02), (r0 - 0.03, y0 + 0.06), (r0 - 0.03, y0 + 0.14), (r0 + 0.02, y0 + 0.18)]
-    lathe(hi, prof, sides=48)
-    dome = []
-    R = r0 + 0.02
-    H_d = 1.05
-    for i in range(18):
-        t = i / 17
-        # an onion: swelling out a little, then drawing up to a point
-        rr = R * (1.0 + 0.1 * math.sin(math.pi * min(1.0, t * 2.2))) * (1 - t ** 1.5)
-        dome.append((max(rr, 0.015), y0 + 0.18 + H_d * t))
-    lathe(hi, dome, sides=48, ribs=12, rib_depth=0.09)
-    top = y0 + 0.18 + H_d
-    # the finial: a stem, an orb, a thinner stem and a crescent
-    lathe(hi, [(0.06, top - 0.12), (0.03, top - 0.04), (0.022, top + 0.1)], sides=12)
-    o = hi.object("AS_Dome", coll, [gold])
-    F.fix_normals(o)
-    o["w"] = 1.1
+    o["w"] = 1.5
     s = Hm.Hi()
-    sphere(s, (0, top + 0.17, 0), 0.085, rings=10, sides=16)
+    sphere(s, (0, t + 0.38, 0), 0.065, rings=10, sides=14)
     orb = s.object("AS_Orb", coll, [gold])
     orb["w"] = 2.0
-    # the crescent at its point
+    # the tip: a slim flame shape turned on the spire. A star up here read as a cross from the front
     c = Hm.Hi()
-    cy = top + 0.42
-    rows = []
-    for i in range(25):
-        t = i / 24
-        a = math.radians(-40 + 260 * t)
-        w = 0.05 * math.sin(math.pi * t) ** 0.8 + 0.003
-        rows.append((c.v((math.cos(a) * (0.13 + w), cy + math.sin(a) * (0.13 + w), 0.012)), c.v((math.cos(a) * (0.13), cy + math.sin(a) * 0.13, 0.012)),
-                     c.v((math.cos(a) * 0.13, cy + math.sin(a) * 0.13, -0.012)), c.v((math.cos(a) * (0.13 + w), cy + math.sin(a) * (0.13 + w), -0.012))))
-    for i in range(24):
-        for k in range(4):
-            n = (k + 1) % 4
-            c.f([rows[i][k], rows[i][n], rows[i + 1][n], rows[i + 1][k]], [(0, 0), (1, 0), (1, 1), (0, 1)])
-    lathe(c, [(0.02, top + 0.22), (0.014, top + 0.3)], sides=8)
-    cres = F.fix_normals(c.object("AS_Crescent", coll, [gold], smooth=False))
-    cres["w"] = 2.0
-    return o, orb, cres
+    cy = t + 0.66
+    lathe(c, [(0.008, cy), (0.042, cy + 0.05), (0.052, cy + 0.1), (0.036, cy + 0.17), (0.016, cy + 0.24), (0.002, cy + 0.31)], sides=12)
+    star = F.fix_normals(c.object("AS_Tip", coll, [gold]))
+    star["w"] = 2.0
+    return o, orb, star
 
 
 def as_light(coll):
@@ -393,7 +358,7 @@ def as_light(coll):
         for i in range(rows + 1):
             v = AS_LOW + (AS_HIGH - AS_LOW) * i / rows
             w = max(as_window_half(v), 0.001)
-            grid.append([hi.v(F.on((c + w * (-1 + 2 * j / 3)) % 1.0, v, -0.085)) for j in range(4)])
+            grid.append([hi.v(F.on((c + w * (-1 + 2 * j / 3)) % 1.0, v, -0.07)) for j in range(4)])
         for i in range(rows):
             for j in range(3):
                 hi.f([grid[i][j], grid[i][j + 1], grid[i + 1][j + 1], grid[i + 1][j]], [(0, 0), (1, 0), (1, 1), (0, 1)])
@@ -403,14 +368,14 @@ def as_light(coll):
 def astral_all(coll):
     gold = Hm.mat_gold("AS_Gold")
     fr = as_gold(coll, gold)
-    pl = as_plinth(coll)
-    d, orb, cres = as_dome(coll, gold)
-    return [fr, pl, d, orb, cres]
+    o, orb, star = as_spire(coll, gold)
+    return [fr, o, orb, star]
 
 
 def astral_clay():
     coll = W.collection("AstralSanctumEggHi")
-    shell = F.shell_mesh("AS_Shell", coll, 96, 64)
+    f, col, rough, metal, height = astral_paint()
+    shell = F.shell_mesh("AS_Shell", coll, 256, 160, height)
     pieces = astral_all(coll)
     g = as_light(coll)
     return {o.name: F.tris(o) for o in [shell, g] + pieces}
@@ -422,7 +387,7 @@ def astral_build():
     mat = F.shell_material("AS_Wall", col, rough, metal)
     pieces = astral_all(coll)
     g = as_light(coll)
-    return F.assemble("AstralSanctumEgg", coll, mat, height, pieces, {AS_LIGHT: [g]}, budget=7800, shell_frac=0.6, low_nu=72, low_nv=48, hard=35, shell_ext=0.14, shell_ray=0.3)
+    return F.assemble("AstralSanctumEgg", coll, mat, height, pieces, {AS_LIGHT: [g]}, budget=5000, shell_frac=0.72, low_nu=80, low_nv=50, hard=35, shell_ext=0.12, shell_ray=0.26)
 
 
 # ---------- Heavenly Throne Egg ----------
@@ -486,9 +451,9 @@ def ht_coronet(coll, gold):
         out = V((math.sin(a), 0, math.cos(a)))
         base = out * (r0 + 0.015) + V((0, y0 + 0.14, 0))
         tall = k % 2 == 0
-        h = 0.36 if tall else 0.22
+        h = 0.26 if tall else 0.17
         side = V((0, 1, 0)).cross(out).normalized()
-        w = 0.1 if tall else 0.07
+        w = 0.08 if tall else 0.06
         # a pointed leaf of metal: thick at the base
         rows = []
         for i in range(10):
@@ -505,18 +470,18 @@ def ht_coronet(coll, gold):
         hi.f(rows[0][::-1], [(0, 0), (1, 0), (1, 1), (0, 1)])
         hi.f(rows[-1], [(0, 0), (1, 0), (1, 1), (0, 1)])
     # four arches rising from the tall points to meet at the orb
-    top_y = y0 + 0.92
+    top_y = y0 + 0.72
     for k in range(4):
         a = TAU * k / 4
         out = V((math.sin(a), 0, math.cos(a)))
-        pts = [out * (r0 + 0.02) + V((0, y0 + 0.3, 0)), out * (r0 + 0.02) * 0.92 + V((0, y0 + 0.52, 0)), out * r0 * 0.62 + V((0, y0 + 0.76, 0)), out * r0 * 0.22 + V((0, y0 + 0.88, 0)), V((0, top_y, 0))]
-        Hm.htube(hi, pts, lambda t: 0.036 * (1 - 0.2 * t), sides=8, per=6, wobble=0, tip=False)
+        pts = [out * (r0 + 0.02) + V((0, y0 + 0.26, 0)), out * (r0 + 0.02) * 0.9 + V((0, y0 + 0.42, 0)), out * r0 * 0.58 + V((0, y0 + 0.6, 0)), out * r0 * 0.2 + V((0, y0 + 0.69, 0)), V((0, top_y, 0))]
+        Hm.htube(hi, pts, lambda t: 0.028 * (1 - 0.2 * t), sides=8, per=6, wobble=0, tip=False)
     lathe(hi, [(0.05, top_y - 0.06), (0.11, top_y - 0.01), (0.06, top_y + 0.03), (0.04, top_y + 0.05)], sides=20)
     o = hi.object("HT_Coronet", coll, [gold])
     F.fix_normals(o)
     o["w"] = 1.1
     s = Hm.Hi()
-    sphere(s, (0, top_y + 0.13, 0), 0.1, rings=12, sides=18)
+    sphere(s, (0, top_y + 0.1, 0), 0.075, rings=12, sides=18)
     orb = s.object("HT_Orb", coll, [gold])
     orb["w"] = 2.0
     return o, orb, top_y
@@ -540,113 +505,107 @@ def ht_beads(coll, gold):
     r0 = V((F.on(0.0, bv).x, 0, F.on(0.0, bv).z)).length + 0.012
     for k in range(1, 8, 2):
         a = TAU * k / 8
-        sphere(p, V((math.sin(a) * (r0 + 0.02), y0 + 0.385, math.cos(a) * (r0 + 0.02))), 0.055, rings=5, sides=8)
+        sphere(p, V((math.sin(a) * (r0 + 0.02), y0 + 0.335, math.cos(a) * (r0 + 0.02))), 0.05, rings=5, sides=8)
     beads = p.object("HT_Pearls", coll, [Hm.mat_pearl("HT_PearlMat")])
     beads["w"] = 4.0
     return rails, beads
 
 
-def ht_cushion(coll):
-    spheres = []
-    # a wide flat bed: broad billows in the middle, smaller ones crowding its edge, all melted together
-    for ring, (count, R, r, y, sy) in enumerate(((10, 0.74, 0.44, 0.3, 0.62), (14, 1.2, 0.3, 0.23, 0.72))):
-        for k in range(count):
-            a = TAU * (k + 0.37 * ring) / count
-            wob = math.sin(k * 2.3 + ring)
-            spheres.append((V((math.sin(a) * R * (1 + 0.04 * wob), y + 0.02 * wob, math.cos(a) * R * (1 + 0.04 * wob))), r * (0.92 + 0.14 * wob), (1.0, sy, 1.0)))
-    bed = F.lobes("HT_Cloud", coll, Hm.mat_cloud("HT_CloudMat"), spheres, voxel=0.024, smooth=10)
-    bed["w"] = 0.6
-    return bed
+def ht_cushion(coll, gold):
+    """Three tiers of carved cloud, each with a scalloped edge, soft like plaster and not a heap of
+    balls, each lip traced in gold."""
+    hi, trim = Hm.Hi(), Hm.Hi()
+    tiers = ((1.5, 0.0, 0.22, 11, 0.0), (1.2, 0.2, 0.38, 9, 0.2), (0.92, 0.36, 0.52, 7, 0.45))
+    for R, y0, y1, ribs, phase in tiers:
+        h = y1 - y0
+        profile = [(R * 0.62, y0), (R * 0.9, y0 + 0.005), (R * 0.98, y0 + h * 0.18), (R, y0 + h * 0.42), (R * 0.97, y0 + h * 0.7), (R * 0.88, y0 + h * 0.92), (R * 0.72, y1), (R * 0.5, y1 + 0.004)]
+        sides = ribs * 12
+        rows = []
+        for r, y in profile:
+            row = []
+            for k in range(sides):
+                a = TAU * k / sides + phase
+                # the scallop: full at the edge, gone by the tier's flat top
+                amount = max(0.0, min(1.0, (r / R - 0.5) / 0.4))
+                rr = r * (1 + 0.1 * amount * (abs(math.cos((a - phase) * ribs / 2)) ** 0.55 - 0.72))
+                row.append(hi.v((math.sin(a) * rr, y, math.cos(a) * rr)))
+            rows.append(row)
+        for j in range(len(rows) - 1):
+            for k in range(sides):
+                n = (k + 1) % sides
+                hi.f([rows[j][k], rows[j][n], rows[j + 1][n], rows[j + 1][k]], [(0, 0), (1, 0), (1, 1), (0, 1)])
+        # the gold line along this tier's widest edge
+        y_line = y0 + h * 0.42
+        pts = []
+        for k in range(sides + 1):
+            a = TAU * k / sides + phase
+            rr = R * (1 + 0.1 * (abs(math.cos((a - phase) * ribs / 2)) ** 0.55 - 0.72)) * 1.012
+            pts.append((math.sin(a) * rr, y_line, math.cos(a) * rr))
+        Hm.htube(trim, pts, lambda t: 0.017, sides=6, per=1, wobble=0, tip=False)
+    bed = hi.object("HT_Cloud", coll, [Hm.mat_cloud("HT_CloudMat")])
+    F.fix_normals(bed)
+    bed["w"] = 1.0
+    line = trim.object("HT_Trim", coll, [gold])
+    line["w"] = 2.6
+    return bed, line
 
 
 def ht_mandorla(coll, gold):
     hi = Hm.Hi()
-    z0 = -1.02
-    cx, cy = 0.0, 2.02
-    W_, H_ = 1.4, 1.86
+    z0 = -0.98
+    cx, cy = 0.0, 1.92
+    W_, H_ = 1.26, 1.72
     n = V((0, 0, 1))
 
     def rim(t, scale=1.0):
-        """A pointed oval (vesica): two arcs meeting at the top and bottom."""
         a = TAU * t
-        x = math.sin(a)
-        y = math.cos(a)
-        # sharpen toward the poles
-        xx = x * (abs(x) ** 0.25)
+        x, y = math.sin(a), math.cos(a)
+        xx = x * (abs(x) ** 0.18)
         return V((cx + xx * W_ * scale, cy + y * H_ * scale, z0))
-    outline = [(rim(k / 72), n) for k in range(72)]
-    F.bar(hi, outline, 0.09, 0.08, closed=True, foot=0.05)
-    inner = [(rim(k / 72, 0.9), n) for k in range(72)]
-    F.bar(hi, inner, 0.05, 0.05, closed=True, foot=0.04)
-    # the plate between them, slightly hollow, with rays
-    disc = []
-    rows = 8
-    rings = []
-    for j in range(rows + 1):
-        s = 0.9 * j / rows
-        rings.append([hi.v(rim(k / 48, max(s, 0.001)) + V((0, 0, -0.02 - 0.1 * (0.9 - s)))) for k in range(48)])
-    for j in range(rows):
-        for k in range(48):
-            q = (k + 1) % 48
-            hi.f([rings[j][k], rings[j][q], rings[j + 1][q], rings[j + 1][k]], [(0, 0), (1, 0), (1, 1), (0, 1)])
-    # the flames: tongues round the rim, licking outward and bending the same way, as fire in wind
-    flames = 26
-    for k in range(flames):
-        t = (k + 0.5) / flames
-        if abs(t - 0.5) < 0.06:
-            continue                 # none at the foot, where it meets the cloud
+    F.bar(hi, [(rim(k / 72), n) for k in range(72)], 0.05, 0.05, closed=True, foot=0.05)
+    # the sunburst: broad wavy rays rising from its upper part only, long and short in turn
+    rays = 21
+    for k in range(rays):
+        t = -0.3 + 0.6 * k / (rays - 1)
         p = rim(t)
         out = (p - V((cx, cy, z0))).normalized()
         side = V((-out.y, out.x, 0))
-        # bigger toward the head, each one a tongue that swells, then bends over to a point
-        high = 0.5 + 0.5 * math.cos(TAU * t)
-        L = (0.3 + 0.26 * high) * (1 + 0.14 * math.sin(k * 2.1))
-        sway = 1 if t < 0.5 else -1
+        long_ = k % 2 == 0
+        L = (0.62 if long_ else 0.42) * (1 - 0.25 * abs(t) / 0.3)
+        wavy = long_
         rows_ = []
-        for i in range(11):
-            q = i / 10
-            hw = (0.15 + 0.05 * high) * (1 - q ** 1.7) * (0.62 + 0.38 * math.sin(math.pi * min(1, q * 2.2)))
-            c = p - out * 0.02 + out * L * q + side * sway * (0.18 * q * q - 0.08 * math.sin(math.pi * q))
-            d = 0.04 * (1 - q)
+        for i in range(13):
+            q = i / 12
+            hw = (0.085 if long_ else 0.072) * (1 - q ** 1.4) + 0.004
+            sway = 0.055 * math.sin(q * TAU * 1.25) * (1 - 0.3 * q) if wavy else 0.0
+            c = p - out * 0.02 + out * L * q + side * sway
+            d = 0.024 * (1 - q) + 0.004
             rows_.append([hi.v(c - side * hw), hi.v(c + V((0, 0, d))), hi.v(c + side * hw), hi.v(c - V((0, 0, d)))])
-        for i in range(10):
+        for i in range(12):
             for r in range(4):
                 nx = (r + 1) % 4
                 hi.f([rows_[i][r], rows_[i][nx], rows_[i + 1][nx], rows_[i + 1][r]], [(0, 0), (1, 0), (1, 1), (0, 1)])
-    # the back is not left blank: rays run out over the plate from behind the egg
-    for k in range(24):
-        a = TAU * (k + 0.5) / 24
-        pts = []
-        for i in range(9):
-            q = 0.25 + 0.62 * i / 8
-            pts.append((rim(a / TAU, q) + V((0, 0, -0.1 * (0.9 - q) - 0.06)), V((0, 0, -1))))
-        F.bar(hi, pts, lambda t: 0.04 * (1 - 0.7 * t), 0.03, foot=0.02)
+        hi.f(rows_[0][::-1], [(0, 0), (1, 0), (1, 1), (0, 1)])
+        hi.f(rows_[-1], [(0, 0), (1, 0), (1, 1), (0, 1)])
     o = hi.object("HT_Mandorla", coll, [gold], smooth=False)
     F.fix_normals(o)
     for p in o.data.polygons:
         p.use_smooth = False
-    o["w"] = 1.7
-    # the Neon: a line round the mandorla's inner rim
+    o["w"] = 2.2
     glow = Hm.Hi()
-    pts = [(rim(k / 72, 0.945) + V((0, 0, 0.06)), n) for k in range(72)]
-    F.prism(glow, pts, 0.024, height=lambda w: w * 0.3, closed=True)
+    pts = [(rim(k / 72, 0.97) + V((0, 0, 0.03)), n) for k in range(72)]
+    F.prism(glow, pts, 0.018, height=lambda w: w * 0.3, closed=True)
     g = glow.object("HT_Halo", coll, [K.glow_material(HT_FLAME)], smooth=False, weld=0)
-    # a strut joining the mandorla to the egg's back
-    h2 = Hm.Hi()
-    a, b = F.on(0.0, 0.55, -0.02), V((0, F.on(0.0, 0.55).y, z0))
-    Hm.htube(h2, [a, a.lerp(b, 0.5), b], lambda t: 0.14, sides=10, per=3, wobble=0, tip=False)
-    strut = h2.object("HT_Strut", coll, [gold])
-    strut["w"] = 1.0
-    return o, g, strut
+    return o, g
 
 
 def heavenly_all(coll):
     gold = Hm.mat_gold("HT_Gold")
     co, orb, top = ht_coronet(coll, gold)
     rails, beads = ht_beads(coll, gold)
-    bed = ht_cushion(coll)
-    m, halo, strut = ht_mandorla(coll, gold)
-    return [co, orb, rails, beads, bed, m, strut], halo
+    bed, line = ht_cushion(coll, gold)
+    m, halo = ht_mandorla(coll, gold)
+    return [co, orb, rails, beads, bed, line, m], halo
 
 
 def heavenly_clay():
@@ -661,4 +620,4 @@ def heavenly_build():
     f, col, rough, metal, height = heavenly_paint()
     mat = F.shell_material("HT_Pearl", col, rough, metal)
     pieces, g = heavenly_all(coll)
-    return F.assemble("HeavenlyThroneEgg", coll, mat, height, pieces, {HT_FLAME: [g]}, budget=10000, shell_frac=0.56, low_nu=56, low_nv=36, hard=35, ao_floor=0.62, att_ext=0.09, att_ray=0.28)
+    return F.assemble("HeavenlyThroneEgg", coll, mat, height, pieces, {HT_FLAME: [g]}, budget=9500, shell_frac=0.56, low_nu=56, low_nv=36, hard=35, ao_floor=0.66, att_ext=0.09, att_ray=0.28)
