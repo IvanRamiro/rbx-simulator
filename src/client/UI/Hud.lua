@@ -31,7 +31,6 @@ gui.Name = "Hud"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = playerGui
-Hud.Gui = gui
 
 -- Windows get their own screen, drawn over the HUD and over the touch controls (Strike, Dash ...),
 -- which on a phone sit where a window opens
@@ -81,7 +80,6 @@ chips.Size = UDim2.new()
 chips.LayoutOrder = 10
 chips.Parent = Hud.Status
 UiKit.list(chips, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), VerticalAlignment = Enum.VerticalAlignment.Center })
-Hud.Chips = chips
 
 -- The menu row, under the chips
 local rail = Instance.new("Frame")
@@ -199,6 +197,7 @@ function Hud.window(props)
         Position = props.Position, Visible = false, ZIndex = 10, Parent = windowGui,
     })
     frame.BackgroundTransparency = 0.06 -- near solid: the HUD under a window mustn't read through it
+    frame.Active = true -- clicks on it stay on it: they mustn't swing the player's weapon behind it
     applyHudScale(frame, props.Size.Y) -- and never taller than the screen (a phone)
     local inner = UiKit.content(frame, 14, 10)
     local _, title = UiKit.header(inner, props.Title, { TextSize = 14 })

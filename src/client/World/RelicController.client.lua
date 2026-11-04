@@ -11,9 +11,7 @@ local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toas
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
 
-local HUD_NAME = "RelicHud"
 local RELIC_COLOR = Color3.fromRGB(170, 235, 255)
 local MESSAGE_SECONDS = 4
 local FOUND_TRANSPARENCY = 0.7
@@ -23,21 +21,10 @@ for _, relic in GameConfig.Relics do
     relicsById[relic.Id] = relic
 end
 
-local oldHud = playerGui:FindFirstChild(HUD_NAME)
-if oldHud then
-    oldHud:Destroy()
-end
-
-local hud = Instance.new("ScreenGui")
-hud.Name = HUD_NAME
-hud.ResetOnSpawn = false
-
 local _, counter = Hud.chip("RelicCounter", UiTheme.Icons.Relics, 2)
 counter.Text = "0 / " .. #GameConfig.Relics .. " Relics"
 
-local message = Toast.new(hud, "RelicMessage", 64, RELIC_COLOR, MESSAGE_SECONDS)
-
-hud.Parent = playerGui
+local message = Toast.new(nil, "RelicMessage", nil, RELIC_COLOR, MESSAGE_SECONDS)
 
 local function getFoundSet()
     local found = {}

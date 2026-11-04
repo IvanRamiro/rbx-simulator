@@ -10,9 +10,13 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local CombatFx = require(script.Parent:WaitForChild("CombatFx"))
+local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
+local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKit"))
 
 local player = Players.LocalPlayer
 local readyAt = 0
+local airNoted = false -- the note about striking from sword flight shows once a session
+local message = Toast.new(nil, "CombatMessage", nil, Color3.new(1, 1, 1), 4)
 
 -- "Palm", "Sword" or "Spear", and its cooldown
 local function strikeKind()
@@ -35,6 +39,10 @@ local function strike()
         return
     end
     readyAt = now + cooldown
+    if player:GetAttribute("IsFlying") == true and not airNoted then
+        airNoted = true
+        message:show("Guardians can't be struck from the air: land first.", Color3.new(1, 1, 1))
+    end
     CombatFx.play(player, kind)
     RemoteEvents.CombatEvent:FireServer()
 end
@@ -69,17 +77,8 @@ if UserInputService.TouchEnabled then
     button.AnchorPoint = Vector2.new(0.5, 0.5)
     button.Position = UDim2.new(1, -230, 1, -100)
     button.Size = UDim2.fromOffset(72, 72)
-    button.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    button.BackgroundTransparency = 0.3
-    button.Font = Enum.Font.GothamBold
-    button.TextScaled = true
-    button.TextColor3 = Color3.new(1, 1, 1)
-    button.Text = "Strike"
+    UiKit.touchButton(button, "Strike")
     button.Parent = gui
-    Instance.new("UICorner", button).CornerRadius = UDim.new(0.5, 0)
-    local padding = Instance.new("UIPadding")
-    padding.PaddingLeft, padding.PaddingRight = UDim.new(0, 10), UDim.new(0, 10)
-    padding.Parent = button
     button.Activated:Connect(strike)
     gui.Parent = player:WaitForChild("PlayerGui")
 end

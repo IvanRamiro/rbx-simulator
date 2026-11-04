@@ -13,7 +13,7 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
 
 local FX_KINDS = { Takeoff = true, Leap = true, Glide = true, Land = true, Dash = true }
-local FX_PER_SECOND = 20 -- far above what play produces (a leap every 0.2 s at most)
+local FX_PER_SECOND = 8 -- above what play produces (a leap every 0.2 s at most); each is sent to everyone
 local fxBudgets = {}
 
 local function applyLevel(player, rankValue)

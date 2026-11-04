@@ -488,17 +488,8 @@ if UserInputService.TouchEnabled then
         button.AnchorPoint = Vector2.new(0.5, 0.5)
         button.Position = position
         button.Size = UDim2.fromOffset(64, 64)
-        button.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-        button.BackgroundTransparency = 0.3
-        button.Font = Enum.Font.GothamBold
-        button.TextScaled = true
-        button.TextColor3 = Color3.new(1, 1, 1)
-        button.Text = text
+        UiKit.touchButton(button, text)
         button.Parent = touchGui
-        Instance.new("UICorner", button).CornerRadius = UDim.new(0.5, 0)
-        local padding = Instance.new("UIPadding")
-        padding.PaddingLeft, padding.PaddingRight = UDim.new(0, 10), UDim.new(0, 10)
-        padding.Parent = button
         return button
     end
     touchButton("Dash", "Dash", UDim2.new(1, -170, 1, -170)).Activated:Connect(dash)

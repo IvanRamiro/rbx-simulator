@@ -27,6 +27,7 @@ local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForCh
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
 local Elements = require(script.Parent:WaitForChild("Elements"))
 local Wallet = require(script.Parent:WaitForChild("Wallet"))
+local Quests = require(script.Parent.Parent:WaitForChild("Quests"):WaitForChild("Quests"))
 local WeaponInventory = require(script.Parent:WaitForChild("WeaponInventory"))
 
 local REACH = 45 -- studs from a shop's prompt
@@ -57,6 +58,8 @@ local function nearShop(player, shop)
 end
 
 -- How a message names a weapon: by the name its owner forged it with, or as "the <its name>".
+local MAX_RAW_NAME = 200 -- bytes a forged name may arrive with, before it's tidied
+
 local function nameOf(record)
     local weapon = Shop.weapon(record.WeaponId)
     return record.Name or ("the " .. (weapon and weapon.Name or "weapon"))
@@ -64,7 +67,8 @@ end
 
 -- A forged weapon's name, tidied and filtered; or nil and why not.
 local function filterName(player, raw)
-    if typeof(raw) ~= "string" then
+    -- the length first: stripping a huge run of spaces is slow enough to stall the server
+    if typeof(raw) ~= "string" or #raw > MAX_RAW_NAME then
         return nil, "Name your weapon first."
     end
     local name = string.gsub(string.gsub(string.gsub(raw, "^%s+", ""), "%s+$", ""), "%s+", " ")
@@ -108,6 +112,7 @@ function actions.Buy(player, weaponId)
         return false, "You need " .. weapon.Price .. " Spirit Stones."
     end
     WeaponInventory.equip(player, WeaponInventory.grant(player, weapon.Id))
+    Quests.Moment:Fire(player, "BuyWeapon")
     return true, "Forged the " .. weapon.Name .. "!"
 end
 
@@ -167,6 +172,10 @@ end
 function actions.SellPet(player, instanceId)
     if not nearShop(player, "BuySell") then
         return false, "Visit Buy & Sell to sell pets."
+    end
+    local pets = PetInventory.exportData(player)
+    if pets and #pets.Pets <= 1 then
+        return false, "You can't sell your last companion."
     end
     local petId = PetInventory.take(player, instanceId)
     if not petId then

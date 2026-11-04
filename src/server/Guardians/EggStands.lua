@@ -25,6 +25,7 @@ local EggStands = {}
 local AURA_TAG = "EggAura"
 local TAKE_DISTANCE = 12
 
+local slotsOf = {}       -- [island] = { [slot] = true }
 local looks = {}         -- [eggId] = { ring = Color3, light = PointLight template, extras = { Instance }, aura = Model, auraOffset = CFrame }
 local onTake             -- function(player, slot), set by GuardianService
 
@@ -138,6 +139,8 @@ local function register(island, stand, aurasFolder)
         island = island, stand = stand, name = stand.Name, rest = origin, eggId = stand:GetAttribute("EggId"),
         aurasFolder = aurasFolder, prompt = pedestal and pedestal:FindFirstChildWhichIsA("ProximityPrompt"),
     }
+    slotsOf[island] = slotsOf[island] or {}
+    slotsOf[island][slot] = true
     learnLook(slot, aurasFolder)
     setPrompt(slot)
     if slot.prompt then
@@ -194,7 +197,9 @@ function EggStands.restore(slot, eggId)
     end
 end
 
--- A theft succeeded: after the respawn time a random egg of `eggIds` appears on the stand.
+-- A theft succeeded: after the respawn time a random egg of `eggIds` appears on the stand, unless no
+-- other stand of the guardian holds the first of them, the lowest-rank egg: then that one, so a player
+-- who has just reached the island's rank always has an egg they can take.
 function EggStands.respawn(slot, eggIds)
     if slot.respawn then
         task.cancel(slot.respawn)
@@ -202,7 +207,11 @@ function EggStands.respawn(slot, eggIds)
     slot.respawn = task.delay(GameConfig.EggTheft.RespawnTime, function()
         slot.respawn = nil
         if slot.eggId == nil and slot.stand.Parent then
-            show(slot, eggIds[math.random(1, #eggIds)])
+            local lowestShown = false
+            for other in slotsOf[slot.island] do
+                lowestShown = lowestShown or (other ~= slot and other.eggId == eggIds[1])
+            end
+            show(slot, if lowestShown then eggIds[math.random(1, #eggIds)] else eggIds[1])
         end
     end)
 end

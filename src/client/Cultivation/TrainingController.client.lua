@@ -142,7 +142,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
         return
     end
 
-    if input.KeyCode == GameConfig.CultivationKeybind then
+    if input.KeyCode == GameConfig.CultivationKeybind or input.KeyCode == Enum.KeyCode.ButtonL1 then
         requestToggleCultivation()
     end
 end)
@@ -200,6 +200,11 @@ local function requestRankUp()
 end
 
 rankUpButton.Activated:Connect(requestRankUp)
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if not gameProcessedEvent and input.KeyCode == Enum.KeyCode.ButtonR1 then
+        requestRankUp()
+    end
+end)
 
 qiValue.Changed:Connect(function()
     updateQiLabel()

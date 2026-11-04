@@ -40,6 +40,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 
+local GuardianFx = require(script.Parent.Parent:WaitForChild("Guardians"):WaitForChild("GuardianFx"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RealmAura = require(script.Parent:WaitForChild("RealmAura"))
 
@@ -66,11 +67,11 @@ local RIM_TRANSPARENCY = 0.7
 
 local NEAR_LOD, FAR_LOD = 50, 110           -- studs from the camera, for other players' auras
 local LOD_CHECK = 0.5                       -- seconds between distance checks
+local FAR_CULL = 300                        -- studs from the camera past which another player's aura stops animating
 
 local records = {}
 local stepping = nil
 local grade = nil                           -- the viewer's colour grade, shared by every owner aura
-local shake = { since = -1, amp = 0, clock = 0 }
 
 function OwnerAura.isOwner(player)
     return player ~= nil and table.find(GameConfig.OwnerAura.UserIds, player.UserId) ~= nil
@@ -200,9 +201,7 @@ local function stepSurge(record, dt)
                 sound.PlaybackSpeed = 0.9 + math.random() * 0.2
                 sound:Play()
             end
-            if record.root == shake.root or shake.since < 0 or shake.since >= SURGE_SHAKE then
-                shake.since, shake.root = 0, record.root
-            end
+            GuardianFx.shake(record.root.Position, 0.9, SURGE_SHAKE)
         elseif surge.wait < SURGE_BUILD then   -- the build: an ease-in rise
             local k = 1 - surge.wait / SURGE_BUILD
             value, build = k * k, k * k
@@ -270,25 +269,6 @@ local function stepScreen()
     grade.TintColor = Color3.new(1, 1, 1):Lerp(Color3.fromRGB(222, 232, 255), flash)
 end
 
--- the camera shake runs after the camera has moved this frame
-local function shakeCamera(dt)
-    if shake.since < 0 or not shake.root then
-        return
-    end
-    shake.since += dt
-    shake.clock += dt
-    if shake.since >= SURGE_SHAKE or not shake.root.Parent then
-        shake.since = -1
-        return
-    end
-    local camera = workspace.CurrentCamera
-    local amp = math.rad(0.9) * (1 - shake.since / SURGE_SHAKE) ^ 2 * nearness(shake.root)
-    if camera and amp > 0 and not reducedEffects() then
-        local t = shake.clock * 40
-        camera.CFrame *= CFrame.Angles(math.noise(t, 1) * 2 * amp, math.noise(t, 2) * 2 * amp, math.noise(t, 3) * amp)
-    end
-end
-
 local function step(dt)
     if dt <= 0 then
         return
@@ -297,6 +277,11 @@ local function step(dt)
         local root = record.root
         if not root:IsDescendantOf(workspace) then
             OwnerAura.destroy(record.fx)
+            continue
+        end
+        -- far from the camera, another player's aura isn't worth animating
+        local camera = workspace.CurrentCamera
+        if record.player ~= Players.LocalPlayer and camera and (camera.CFrame.Position - root.Position).Magnitude > FAR_CULL then
             continue
         end
         record.clock += dt
@@ -608,7 +593,6 @@ function OwnerAura.build(player, character, root)
     end)
     if not stepping then
         stepping = RunService.RenderStepped:Connect(step)
-        RunService:BindToRenderStep("OwnerAuraShake", Enum.RenderPriority.Camera.Value + 2, shakeCamera)
     end
     return fx
 end
@@ -627,9 +611,6 @@ function OwnerAura.destroy(fx)
             for _, inst in record.made do
                 inst:Destroy()
             end
-            if shake.root == record.root then
-                shake.since, shake.root = -1, nil
-            end
         end
     end
     if fx.Parent then
@@ -638,7 +619,6 @@ function OwnerAura.destroy(fx)
     if next(records) == nil and stepping then
         stepping:Disconnect()
         stepping = nil
-        RunService:UnbindFromRenderStep("OwnerAuraShake")
         if grade then
             grade:Destroy()
             grade = nil

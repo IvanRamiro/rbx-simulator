@@ -50,6 +50,7 @@
 -- when their egg's stand is gone.
 local CollectionService = game:GetService("CollectionService")
 local ContentProvider = game:GetService("ContentProvider")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
@@ -668,7 +669,7 @@ local function updateScreen()
             end
         end
     end
-    if weight + flash <= 0.002 then
+    if weight + flash <= 0.002 or Players.LocalPlayer:GetAttribute("SettingReducedEffects") == true then
         if screen then
             screen.cc.Enabled, screen.bloom.Enabled = false, false
         end

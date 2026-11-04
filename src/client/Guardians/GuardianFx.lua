@@ -24,6 +24,7 @@
 --   steal / drop / secure (position, style)    the egg taken, dropped, secured
 --   beacon(eggModel)                           a pillar of light over a dropped egg, until removed
 local Debris = game:GetService("Debris")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
@@ -174,7 +175,7 @@ end)
 
 function GuardianFx.shake(origin, strength, time)
     local camera = Workspace.CurrentCamera
-    if not camera then
+    if not camera or Players.LocalPlayer:GetAttribute("SettingReducedEffects") == true then
         return
     end
     local distance = (camera.CFrame.Position - origin).Magnitude

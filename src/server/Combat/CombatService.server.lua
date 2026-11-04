@@ -8,10 +8,6 @@
 -- fires Combat.Hit; every strike is relayed to all clients (CombatEvent: striker, kind ("Palm",
 -- "Sword" or "Spear"), hit position or nil).
 --
--- The Qi skills (GameConfig.Combat.Skills): the client fires SkillEvent with a skill's Id; the server
--- checks its rank and cooldown, finds the target by the skill's own Range and Arc, and deals its Power
--- in the weapon's strength (a spear's slower, harder strike doesn't make its skills harder). Relayed to all clients (SkillEvent: caster, Id, hit position or nil).
---
 -- Every stored weapon (ServerStorage.Weapons: the flying sword and the realm weapons, OutfitBuilder)
 -- is copied to ReplicatedStorage.Weapons so clients can show it striking.
 local CollectionService = game:GetService("CollectionService")
@@ -21,17 +17,10 @@ local ServerStorage = game:GetService("ServerStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
-local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local Combat = require(script.Parent:WaitForChild("Combat"))
 
 local COOLDOWN_SLACK = 0.85 -- requests a little early are latency, not cheating
 local lastStrike = {}
-local lastSkill = {} -- [player] = { [skill Id] = when it was last cast }
-
-local skillsById = {}
-for _, skill in GameConfig.Combat.Skills do
-    skillsById[skill.Id] = skill
-end
 
 do
     local stored = ServerStorage:FindFirstChild("Weapons")
@@ -86,43 +75,18 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
         return
     end
     lastStrike[player] = now
-    local target, point = findTarget(rootPart, strike)
+    -- from sword flight a strike swings but can't land: guardians can't reach a flyer, so a flyer
+    -- can't reach them
+    local target, point = nil, nil
+    if player:GetAttribute("IsFlying") ~= true then
+        target, point = findTarget(rootPart, strike)
+    end
     if target then
         Combat.Hit:Fire(player, target, strike.Damage * Combat.powerOf(player), point)
     end
     RemoteEvents.CombatEvent:FireAllClients(player, strike.Kind, point)
 end)
 
-RemoteEvents.SkillEvent.OnServerEvent:Connect(function(player, skillId)
-    local skill = typeof(skillId) == "string" and skillsById[skillId]
-    local character = player.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    if not (skill and humanoid and rootPart) or humanoid.Health <= 0 or player:GetAttribute("IsCultivating") == true
-        or not Ranks.isAtLeast(Ranks.getPlayerRankName(player), skill.RankId) then
-        return
-    end
-    local casts = lastSkill[player]
-    if not casts then
-        casts = {}
-        lastSkill[player] = casts
-    end
-    local now = os.clock()
-    if casts[skill.Id] and now - casts[skill.Id] < skill.Cooldown * COOLDOWN_SLACK then
-        return
-    end
-    casts[skill.Id] = now
-    local target, point = findTarget(rootPart, skill)
-    if target then
-        local strike = Combat.strikeOf(player)
-        local kind = GameConfig.WeaponKinds[strike.Kind]
-        local strength = strike.Damage / (if kind then kind.DamageScale else 1)
-        Combat.Hit:Fire(player, target, strength * Combat.powerOf(player) * skill.Power, point)
-    end
-    RemoteEvents.SkillEvent:FireAllClients(player, skill.Id, point)
-end)
-
 Players.PlayerRemoving:Connect(function(player)
     lastStrike[player] = nil
-    lastSkill[player] = nil
 end)

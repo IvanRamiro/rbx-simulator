@@ -12,7 +12,7 @@ local PromptRules = require(script.Parent.Parent:WaitForChild("World"):WaitForCh
 local EggModel = require(script.Parent.Parent:WaitForChild("Guardians"):WaitForChild("EggModel"))
 
 local random = Random.new()
-local REQUEST_COOLDOWN = 0.2 -- seconds between a player's equip/unequip/aura requests
+local REQUEST_COOLDOWN = 0.5 -- seconds between a player's equip/unequip/aura requests: each rebuilds models on every client
 
 local lastRequest = {}
 

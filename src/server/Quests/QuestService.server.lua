@@ -28,15 +28,10 @@ local ready = {}    -- [player] = true once their quests are loaded
 local seen = {}     -- [player] = { [Kind] = true }: the moments seen during the current quest
 local baseline = {} -- [player] = pets owned when the current quest began (a "Hatch" counts new ones)
 
-local function petCount(player)
-    local data = PetInventory.exportData(player)
-    return data and #data.Pets or 0
-end
-
 -- the current quest starts afresh: no moments seen yet, pets counted from now
 local function begin(player)
     seen[player] = {}
-    baseline[player] = petCount(player)
+    baseline[player] = nil -- set on the first check, once the player's pets have loaded
 end
 
 -- whether the quest is done, and how far along it is (0 to 1)
@@ -59,10 +54,16 @@ local function check(player, quest)
     elseif kind == "TakeEgg" then
         return player:GetAttribute("CarryingEgg") ~= nil, 0
     elseif kind == "Hatch" then
-        return petCount(player) > (baseline[player] or math.huge), 0
+        local data = PetInventory.exportData(player)
+        if not data then
+            return false, 0
+        end
+        -- from the fewest pets held since the quest began, so selling one can't block it
+        baseline[player] = math.min(baseline[player] or #data.Pets, #data.Pets)
+        return #data.Pets > baseline[player], 0
     elseif kind == "BuyWeapon" then
         local data = WeaponInventory.exportData(player)
-        return data ~= nil and #data.Weapons >= 2, 0
+        return (data ~= nil and #data.Weapons >= 2) or (seen[player] ~= nil and seen[player].BuyWeapon == true), 0
     elseif kind == "Forge" then
         local data = WeaponInventory.exportData(player)
         for _, weapon in (if data then data.Weapons else {}) do

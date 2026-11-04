@@ -55,6 +55,7 @@ local DECIDE_EVERY = 0.1        -- seconds between decisions; movement runs ever
 local CHASE_STOP = 13           -- it stops this far from its prey (its face is ~20 studs ahead of the chest); config.ChaseStop overrides
 local KNOCK_IMMUNITY = 0.6      -- seconds
 local TELEPORT_JUMP = 40        -- a thief moving this far in one frame was returned by the world
+local CARRY_SLACK = 40          -- studs of allowance on the carry's speed check (knockbacks, falls)
 local SANCTUARY_MARGIN = 12     -- studs it keeps outside its safe zone's edge
 local TAKE_GRACE = 1.5          -- seconds a fresh thief can't be knocked: a blow already on its way would feel random
 local EGG_PROMPT_DISTANCE = 12
@@ -331,6 +332,7 @@ function Guardian:carry(player)
     egg.takenAt = os.clock()
     egg.lastGrounded = nil
     egg.lastPosition = root.Position
+    egg.takenFrom = root.Position
     self.knocked[player] = os.clock() + TAKE_GRACE
     player:SetAttribute("CarryingEgg", egg.eggId)
     player:SetAttribute("CarryingGuardian", self.id)
@@ -501,6 +503,13 @@ function Guardian:watchThief()
         return
     end
     egg.lastPosition = position
+    -- farther from where it was taken than the thief's fastest dash could carry it, the whole way: a
+    -- hacked client creeping along under TELEPORT_JUMP a frame. The egg falls where they stood
+    local dash = Ranks.getQinggong(Ranks.getPlayerRankName(player)).DashSpeed
+    if (position - egg.takenFrom).Magnitude > dash * (os.clock() - egg.takenAt) + CARRY_SLACK then
+        self:dropEgg(egg.takenFrom)
+        return
+    end
     if self:inSafeZone(position) then
         self:secure()
         return

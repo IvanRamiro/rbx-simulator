@@ -299,6 +299,20 @@ function UiKit.button(props)
     return button
 end
 
+-- A round on-screen button for touch players (Strike, Dash ...), in the System's colours.
+function UiKit.touchButton(button, text)
+    button.BackgroundColor3 = C.AccentDeep
+    button.BackgroundTransparency = 0.2
+    button.BorderSizePixel = 0
+    button.FontFace = UiTheme.Fonts.Title
+    button.TextScaled = true
+    button.TextColor3 = C.Text
+    button.Text = text
+    corner(button, 999)
+    stroke(button, C.Accent, 0.1, 2)
+    UiKit.padding(button, 10, 10)
+end
+
 function UiKit.keycap(key)
     local cap = UiKit.label({
         Name = "Keycap", Font = "Strong", Text = key, TextSize = 13, TextColor3 = C.AccentBright,

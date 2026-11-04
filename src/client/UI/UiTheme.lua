@@ -39,21 +39,18 @@ UiTheme.Margin = 16 -- from the screen's edges
 -- The icons: original line drawings (tools/ui/draw_icons.py, assets/ui/icons; ids in icons.json),
 -- white so the theme tints them. No text in any language on an icon.
 UiTheme.Icons = {
-    Qi = "rbxassetid://116032160082051",        -- a flame of energy
+    Qi = "rbxassetid://101372292588368", -- a rising spiral of energy
     Stones = "rbxassetid://126443684238250",    -- a faceted crystal
     Relics = "rbxassetid://86125750007333",     -- an ancient disc on its cord
-    Pets = "rbxassetid://138352937067209",      -- a paw
-    Robes = "rbxassetid://113627316257707",     -- a robe
-    Qinggong = "rbxassetid://138889530713701",  -- a feather
+    Pets = "rbxassetid://71615077567902", -- a spirit fox
+    Robes = "rbxassetid://85355853714545", -- a crossed-collar robe
+    Qinggong = "rbxassetid://106266801510792", -- a diving swallow
     Guardian = "rbxassetid://132576192303921",  -- a shield with a beast's eye
     Hatch = "rbxassetid://83100764073187",      -- a cracked egg
-    Shop = "rbxassetid://114603873515180",      -- a purse
+    Shop = "rbxassetid://80005118445258", -- the Jade Scale
     Forge = "rbxassetid://84883537666325",      -- hammer and anvil
-    Settings = "rbxassetid://108986189859228",  -- a gear
-    Rewards = "rbxassetid://82156154854095",                   -- a gift box
-    SkillPalm = "rbxassetid://105490838801087",               -- an open hand
-    SkillWave = "rbxassetid://125780361886599",               -- a double crescent
-    SkillNova = "rbxassetid://107506867988247",               -- a burst
+    Settings = "rbxassetid://102443682370509", -- a lotus dial
+    Rewards = "rbxassetid://96373560583865", -- a gold ingot
 }
 
 return UiTheme

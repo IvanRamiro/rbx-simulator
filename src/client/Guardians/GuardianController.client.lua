@@ -231,7 +231,7 @@ local function knock(velocity, stagger)
     end
     GuardianFx.shake(root.Position, 2.5, 0.5)
     task.delay(stagger, function()
-        if knockToken == token and humanoid.Parent then
+        if knockToken == token and humanoid.Parent and player:GetAttribute("IsFlying") ~= true then
             humanoid.PlatformStand = false
             humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
         end

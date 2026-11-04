@@ -25,7 +25,7 @@ local hasGroup = GROUP.GroupId > 0
 
 local toggleButton, setBadge = Hud.railButton("RewardsButton", UiTheme.Icons.Rewards, "Rewards", 3)
 local window = Hud.window({
-    Name = "RewardsWindow", Title = "REWARDS", Size = Vector2.new(440, if hasGroup then 318 else 268),
+    Name = "RewardsWindow", Title = "REWARDS", Size = Vector2.new(400, if hasGroup then 282 else 232),
     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 })
 local body = window.Body

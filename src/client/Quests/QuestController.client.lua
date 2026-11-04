@@ -67,7 +67,7 @@ local message = Toast.new(nil, "QuestMessage", nil, C.Highlight, 4)
 local function render()
     local step = player:GetAttribute("QuestStep")
     local quest = typeof(step) == "number" and QUESTS[step]
-    panel.Visible = quest ~= nil
+    panel.Visible = if quest then true else false
     if not quest then
         return
     end

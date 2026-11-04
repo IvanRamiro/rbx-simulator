@@ -1,7 +1,7 @@
 -- The game's sounds, client side. Every sound is named in SoundCatalog (its Creator Store ids, from
 -- Roblox's licensed libraries, and how it plays); this module plays them.
 --
---   Sfx.play(name, at)       a one-shot. `at` is a Vector3 or a BasePart / Attachment to sound from
+--   Sfx.play(name, at, pitch)  a one-shot, its pitch optionally scaled. `at` is a Vector3 or a BasePart / Attachment to sound from
 --                            (it fades with distance, and is skipped beyond its reach), or nil for a
 --                            flat sound (the interface, the local player's own feedback).
 --   Sfx.after(delay, name, at)  the same, `delay` seconds later (an attack's impact after its wind-up).
@@ -85,7 +85,7 @@ local function positionOf(at)
     return nil
 end
 
-function Sfx.play(name, at)
+function Sfx.play(name, at, pitch)
     local spec = SoundCatalog[name]
     if not spec then
         warn("Sfx: no sound named " .. tostring(name))
@@ -102,6 +102,7 @@ function Sfx.play(name, at)
     end
     lastPlayed[name] = now
     local sound = make(spec, name)
+    sound.PlaybackSpeed *= pitch or 1
     local holder
     if typeof(at) == "Instance" and position then
         sound.Parent = at

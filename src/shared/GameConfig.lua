@@ -51,17 +51,6 @@ local GameConfig = {
         TargetTag = "CombatTarget",
         RankPowerStep = 0.12,
         Palm = { Damage = 10, Range = 9, Cooldown = 0.45, Arc = 75 },
-        -- Qi skills (server/Combat/CombatService, client/Combat/SkillController), unlocked by rank.
-        -- Power: the damage in strikes of the player's current weapon. Together they add about 58% to a
-        -- player's damage over time, in big moments. Arc is each side of facing; 180 is all round.
-        Skills = {
-            { Id = "SurgingPalm", Name = "Surging Palm", RankId = "QiGatherer", Key = "R", Gamepad = "ButtonL1", Icon = "SkillPalm",
-                Cooldown = 8, Range = 34, Arc = 30, Power = 3, Hint = "Press R, or tap it: a great hand of Qi." },
-            { Id = "CrescentWave", Name = "Crescent Wave", RankId = "FoundationInitiate", Key = "F", Gamepad = "ButtonR1", Icon = "SkillWave",
-                Cooldown = 14, Range = 48, Arc = 35, Power = 5, Hint = "Press F, or tap it: a crescent that flies far." },
-            { Id = "QiNova", Name = "Qi Nova", RankId = "CoreInitiate", Key = "C", Gamepad = "ButtonX", Icon = "SkillNova",
-                Cooldown = 24, Range = 26, Arc = 180, Power = 8, Hint = "Press C, or tap it: a blast all around you." },
-        },
     },
 
     -- Weapons (src/server/Shop; the Blacksmith on Yggdrasil): a sword and a spear for every realm,
@@ -534,12 +523,13 @@ local GameConfig = {
         Secret = Color3.fromRGB(255, 255, 255),
     },
 
-    -- The System's first quests: a new player's guided path through the game's loop, one at a
-    -- time, each with a small reward (QuestService checks them; the QUEST tracker shows them).
-    -- Kind says what completes it: "Qi" (Qi at least Goal), "Equip" (a pet equipped), "Rank"
-    -- (this rank reached), "Leap" (an air leap), "GuardianHit" (a strike on a guardian),
-    -- "TakeEgg" (carrying a guardian's egg), "Hatch" (a pet hatched since the quest began).
-    -- Existing saves start with them done (PlayerData migration 8); a player can skip them.
+    -- The System's quests: a player's guided path, one at a time, each with a reward (QuestService
+    -- checks them; the QUEST tracker shows them). Kind says what completes it: "Qi" (Qi at least Goal),
+    -- "Equip" (a pet equipped), "Rank" (this rank reached), "Leap" (an air leap), "GuardianHit" (a strike
+    -- on a guardian), "TakeEgg" (carrying a guardian's egg), "Hatch" (a pet hatched since the quest
+    -- began), "BuyWeapon" (a weapon bought, or two owned), "Relic" (this relic found), "Visit" (standing
+    -- on this island), "Secure" (this guardian's egg secured), "Forge" (a forged weapon owned). Saves
+    -- from before the quests skip the first seven (PlayerData migration 8); a player can skip them all.
     Quests = {
         { Id = "Cultivate", Kind = "Qi", Goal = 100, Reward = 20, Title = "Gather Qi",
             Text = "Sit in meditation: press E, or tap CULTIVATE. Gather 100 Qi." },

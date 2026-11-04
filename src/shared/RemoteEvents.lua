@@ -21,7 +21,6 @@ local EVENT_NAMES = {
     "HatchEggEvent",
     "QuestEvent",
     "SettingsEvent",
-    "SkillEvent",
     "RewardEvent",
 }
 

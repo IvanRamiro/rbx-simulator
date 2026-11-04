@@ -43,15 +43,17 @@ def save(img, name):
     rgba.putalpha(img)
     rgba.resize((128, 128), Image.LANCZOS).save(os.path.join(OUT, name + ".png"))
 
-# Qi: a flame of energy rising, an inner flame within it
+# Qi: a spiral of energy rising into a flame's tip, not a generic fire
 img, d = canvas()
-outer = bez((512, 910), (190, 900), (150, 560), (330, 420)) + bez((330, 420), (380, 560), (450, 560), (450, 480))[1:] \
-      + bez((450, 480), (420, 300), (520, 160), (640, 90))[1:] + bez((640, 90), (590, 260), (860, 380), (840, 640))[1:] \
-      + bez((840, 640), (830, 820), (700, 910), (512, 910))[1:]
-path(d, outer)
-inner = bez((512, 800), (380, 790), (380, 640), (470, 560)) + bez((470, 560), (480, 640), (540, 640), (560, 560))[1:] \
-      + bez((560, 560), (680, 640), (650, 790), (512, 800))[1:]
-path(d, inner, W * 0.7)
+spiral = []
+for i in range(0, 121):
+    t = i / 120
+    a = math.tau * (1.55 * t) + 2.6
+    r = 50 + 300 * t
+    spiral.append((500 + r * math.cos(a), 600 + r * 0.9 * math.sin(a)))
+path(d, spiral)
+path(d, bez(spiral[-1], (880, 400), (760, 230), (640, 70)), W)
+path(d, bez((640, 70), (620, 220), (500, 250), (450, 300)), W * 0.8)
 save(img, "Qi")
 
 # Spirit Stones: a faceted crystal
@@ -76,35 +78,28 @@ for a in (45, 135, 225, 315):  # carved notches
     path(d, [(512 + 170 * c, 580 + 170 * s_), (512 + 240 * c, 580 + 240 * s_)], W * 0.55)
 save(img, "Relics")
 
-# Pets: a paw
+# Pets: a spirit fox's head, tall ears and a narrow muzzle, its eyes slanted
 img, d = canvas()
-d.ellipse([300, 500, 724, 880], fill=255)
-d.polygon([(330, 700), (512, 480), (694, 700)], fill=255)
-for (x, y, rx, ry) in [(250, 420, 90, 120), (420, 260, 95, 130), (604, 260, 95, 130), (774, 420, 90, 120)]:
-    d.ellipse([x - rx, y - ry, x + rx, y + ry], fill=255)
+path(d, [(170, 90), (350, 390), (674, 390), (854, 90), (880, 500), (512, 930), (144, 500)], closed=True)
+path(d, [(320, 560), (440, 620)], W * 1.1)
+path(d, [(704, 560), (584, 620)], W * 1.1)
+path(d, [(512, 930), (512, 800)], W * 0.8)
 save(img, "Pets")
 
-# Robes: a cultivator's robe, crossed collar and wide sleeves
+# Robes: a cultivator's robe: wide hanging sleeves, a crossed collar and a sash
 img, d = canvas()
-robe = [(392, 140), (632, 140), (900, 420), (790, 520), (690, 440), (700, 920), (324, 920), (334, 440), (234, 520), (124, 420)]
-path(d, robe, closed=True)
-path(d, [(392, 140), (512, 330), (632, 140)], W * 0.75)   # collar
-path(d, [(512, 330), (640, 560)], W * 0.75)              # the crossing fold
-path(d, [(334, 600), (690, 600)], W * 0.6)                # sash
+path(d, [(360, 130), (664, 130), (960, 430), (830, 620), (690, 470), (720, 920), (304, 920), (334, 470), (194, 620), (64, 430)], closed=True)
+path(d, [(360, 130), (610, 480)], W * 0.85)
+path(d, [(664, 130), (440, 400)], W * 0.85)
+path(d, [(330, 560), (694, 560)], W * 0.9)
 save(img, "Robes")
 
-# Qinggong: a feather in flight
+# Qinggong: a swallow diving, wings swept and its tail forked, as light as the art
 img, d = canvas()
-spine = bez((230, 860), (380, 620), (560, 300), (820, 150))
-path(d, spine)
-vane_top = bez((300, 720), (330, 420), (560, 200), (820, 150))
-vane_bot = bez((300, 720), (560, 700), (760, 440), (820, 150))
-path(d, vane_top, W * 0.8)
-path(d, vane_bot, W * 0.8)
-for t in (0.35, 0.55, 0.75):  # barbs
-    i = int(t * (len(spine) - 1))
-    x, y = spine[i]
-    path(d, [(x, y), (x + 110, y + 70)], W * 0.5)
+outline = [(512, 80)] + bez((590, 300), (720, 380), (860, 480), (960, 640)) + bez((960, 640), (820, 610), (700, 580), (600, 560))[1:] \
+    + [(668, 950), (512, 770), (356, 950), (424, 560)] + bez((424, 560), (324, 580), (204, 610), (64, 640))[1:] \
+    + bez((64, 640), (164, 480), (304, 380), (434, 300))[1:]
+path(d, outline, W * 0.9, closed=True)
 save(img, "Qinggong")
 
 # Guardian: a shield bearing a beast's slit eye
@@ -130,13 +125,17 @@ path(d, egg, closed=True)
 path(d, [(250, 520), (360, 450), (430, 560), (520, 470), (600, 570), (680, 480), (770, 540)], W * 0.65)
 save(img, "Hatch")
 
-# Shop: a purse of spirit stones
+# Shop: the Jade Scale of Buy & Sell, a balance with two hanging pans
 img, d = canvas()
-bag = bez((380, 330), (130, 520), (170, 900), (512, 900)) + bez((512, 900), (854, 900), (894, 520), (644, 330))[1:]
-path(d, bag)
-path(d, [(380, 330), (644, 330)], W * 0.8)
-path(d, [(400, 330), (330, 170), (512, 230), (694, 170), (624, 330)], W * 0.7)
-path(d, [(420, 640), (512, 540), (604, 640), (512, 740)], W * 0.6, closed=True)  # a stone on its side
+path(d, [(512, 150), (512, 860)])
+path(d, [(330, 890), (694, 890)])
+path(d, [(150, 260), (874, 260)])
+path(d, arc(512, 130, 55, 0, 360), W * 0.8)
+for x in (170, 854):
+    path(d, [(x, 260), (x - 120, 590)], W * 0.7)
+    path(d, [(x, 260), (x + 120, 590)], W * 0.7)
+    path(d, bez((x - 135, 590), (x - 100, 760), (x + 100, 760), (x + 135, 590)))
+    path(d, [(x - 135, 590), (x + 135, 590)], W * 0.7)
 save(img, "Shop")
 
 # Forge: a hammer over an anvil
@@ -147,50 +146,30 @@ path(d, [(330, 420), (640, 140)], W)          # handle
 path(d, [(560, 70), (760, 290), (690, 350), (490, 130)], W * 0.8, closed=True)  # head
 save(img, "Forge")
 
-# Settings: a gear
+# Settings: a dial of eight lotus petals round a ring
 img, d = canvas()
-cx, cy, teeth = 512, 512, 8
-gear = []
-for i in range(teeth):
-    a = i * math.tau / teeth
-    half = math.tau / teeth / 4.6
-    for r, da in ((300, -half * 1.5), (400, -half * 0.8), (400, half * 0.8), (300, half * 1.5)):
-        gear.append((cx + r * math.cos(a + da), cy + r * math.sin(a + da)))
-path(d, gear, closed=True)
-path(d, arc(cx, cy, 125, 0, 360), W)
+cx, cy, petals = 512, 512, 8
+outline = []
+for i in range(petals):
+    a0 = i * math.tau / petals
+    half = math.tau / petals / 2
+    p0 = (cx + 270 * math.cos(a0 - half), cy + 270 * math.sin(a0 - half))
+    p1 = (cx + 490 * math.cos(a0 - half * 0.55), cy + 490 * math.sin(a0 - half * 0.55))
+    p2 = (cx + 490 * math.cos(a0 + half * 0.55), cy + 490 * math.sin(a0 + half * 0.55))
+    p3 = (cx + 270 * math.cos(a0 + half), cy + 270 * math.sin(a0 + half))
+    outline += bez(p0, p1, p2, p3, 16)
+path(d, outline, W * 0.85, closed=True)
+path(d, arc(cx, cy, 130, 0, 360), W)
 save(img, "Settings")
 
-# Rewards: a gift box with a bow
+# Rewards: a gold ingot, boat-shaped with a domed heart, and a glint over it
 img, d = canvas()
-path(d, [(190, 470), (834, 470), (834, 880), (190, 880)], closed=True)
-path(d, [(130, 300), (894, 300), (894, 470), (130, 470)], closed=True)
-path(d, [(512, 300), (512, 880)])
-path(d, bez((512, 300), (300, 300), (250, 90), (400, 110)) + bez((400, 110), (470, 120), (500, 220), (512, 300)))
-path(d, bez((512, 300), (724, 300), (774, 90), (624, 110)) + bez((624, 110), (554, 120), (524, 220), (512, 300)))
+hull = bez((90, 470), (170, 900), (854, 900), (934, 470))
+rim = bez((934, 470), (850, 600), (760, 620), (700, 600)) + bez((700, 600), (690, 340), (334, 340), (324, 600))[1:] \
+    + bez((324, 600), (264, 620), (174, 600), (90, 470))[1:]
+path(d, hull + rim[1:], W * 0.9)
+path(d, [(760, 120), (760, 300)], W * 0.7)
+path(d, [(670, 210), (850, 210)], W * 0.7)
 save(img, "Rewards")
 
-# SkillPalm: an open hand, four fingers and a thumb over the palm
-img, d = canvas()
-for x, top in ((330, 240), (450, 150), (570, 150), (690, 240)):
-    path(d, [(x, 560), (x, top)], W * 1.25)
-path(d, [(800, 620), (880, 450)], W * 1.25)     # thumb
-path(d, bez((270, 560), (250, 800), (390, 930), (520, 930)) + bez((520, 930), (680, 930), (800, 800), (800, 600)))
-path(d, [(270, 560), (800, 560)], W * 0.8)
-save(img, "SkillPalm")
-
-# SkillWave: a crescent of sword light with a thinner one behind
-img, d = canvas()
-outer = bez((110, 620), (300, 180), (724, 180), (914, 620))
-inner = bez((914, 620), (724, 340), (300, 340), (110, 620))
-path(d, outer + inner, closed=True)
-path(d, bez((230, 830), (390, 610), (634, 610), (794, 830)), W * 1.1)
-save(img, "SkillWave")
-
-# SkillNova: a burst, a ring with rays
-img, d = canvas()
-path(d, arc(512, 512, 170, 0, 360), W * 1.1)
-for i in range(8):
-    a = i * math.tau / 8 + math.tau / 16
-    path(d, [(512 + 290 * math.cos(a), 512 + 290 * math.sin(a)), (512 + 440 * math.cos(a), 512 + 440 * math.sin(a))], W * 1.2)
-save(img, "SkillNova")
 print("drawn:", sorted(os.listdir(OUT)))
