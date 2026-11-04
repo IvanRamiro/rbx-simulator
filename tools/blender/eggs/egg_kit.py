@@ -7,8 +7,8 @@ bottom sits at the origin.
 
 Export convention (WorldBuilder.placeEgg relies on it): every egg is one FBX,
 assets/eggs/<EggId>.fbx, holding "<EggId>_Body" (atlas textured) and one "<EggId>_Glow_<rrggbb>"
-part per glowing colour (Neon in the game). The eggs' auras are not meshes: they are particle
-VFX built in Studio (src/worldbuild/EggAuraVFX.lua).
+part per glowing colour (Neon in the game). The eggs have no auras: only a Highlight and bloom
+(src/client/World/EggGlow.client.lua).
 """
 import math
 import os

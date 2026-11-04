@@ -154,6 +154,25 @@ local GameConfig = {
     HatchingAltar = { Island = "Yggdrasil", Centre = Vector3.new(100, -0.2, -130), Yaw = -1.4, Stage = 2.6 },
     -- the size of a stand's egg (and a carried one): studs per unit of its Blender model
     EggStudsPerUnit = 1.3,
+    EggGlowTag = "GlowingEgg",
+    -- Each egg's colour: its stand's ring and light, and its Highlight (src/client/World/EggGlow).
+    EggGlow = {
+        BeginnerQiEgg = Color3.fromRGB(50, 180, 255),
+        SpiritBreezeEgg = Color3.fromRGB(90, 190, 255),
+        ElementalCoreEgg = Color3.fromRGB(40, 220, 255),
+        JadeSpiritEgg = Color3.fromRGB(40, 225, 120),
+        BloomwoodEgg = Color3.fromRGB(255, 80, 180),
+        AncientGroveEgg = Color3.fromRGB(150, 240, 40),
+        InfernoEgg = Color3.fromRGB(255, 85, 15),
+        MagmaHeartEgg = Color3.fromRGB(255, 120, 20),
+        PhoenixAshEgg = Color3.fromRGB(255, 95, 20),
+        CelestialEgg = Color3.fromRGB(70, 130, 255),
+        AstralSanctumEgg = Color3.fromHex("643cff"),   -- bluer than it looks: Neon pales violet
+        HeavenlyThroneEgg = Color3.fromRGB(255, 185, 40),
+        ForbiddenOriginEgg = Color3.fromHex("643cff"),
+        VoidRiftEgg = Color3.fromHex("3c64ff"),
+        PrimordialAbyssEgg = Color3.fromHex("ff3cb4"),
+    },
     Guardians = {
         StoneLion = {
             DisplayName = "Awakened Stone Lion",

@@ -7,7 +7,7 @@
 --                 players' auras lose their Highlight and PointLight (your own keeps them)
 --   OwnerAura     half the emission
 --   WorldQuality  the islands' own emitters at 40%
---   EggAura       stands' auras switch off sooner, far ones step every third frame, no screen pulse
+--   EggGlow       eggs' Highlights switch off sooner
 --   GuardianAnim  coarser springs; GuardianController: animated within 150 studs, half rate at rest
 --   Pets          other players' pets hidden past 80 studs
 --   Poses, robes  other players' poses stop past 80 studs, robes' sway past 40

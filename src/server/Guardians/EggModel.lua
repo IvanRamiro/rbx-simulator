@@ -1,10 +1,15 @@
 -- A loose egg model (on a stand, carried, dropped or hatching), built from its mesh in
 -- ServerStorage.EggMeshes (stored by WorldBuilder.storeEgg). Parts are welded to the body ("Egg",
--- the PrimaryPart); glow pieces are Neon in their exported colour, as on the stands.
+-- the PrimaryPart); glow pieces are Neon in their exported colour, as on the stands. The body is
+-- tagged so every client gives it its Highlight (src/client/World/EggGlow.client.lua).
 --
 --   EggModel.build(eggId, height)  a Model `height` studs tall, its pivot at the egg's centre;
 --                                  every part non-colliding, unanchored and massless.
+local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
+
+local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 
 local EggModel = {}
 
@@ -52,6 +57,8 @@ function EggModel.build(eggId, height)
         end
     end
     body.Name = "Egg"
+    body:SetAttribute("EggId", eggId)
+    CollectionService:AddTag(body, GameConfig.EggGlowTag)
     model.PrimaryPart = body
     for _, part in parts do
         if part ~= body then

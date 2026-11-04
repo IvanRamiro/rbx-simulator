@@ -18,8 +18,7 @@
 --
 -- Bridges (assets/world/Bridges): WB.storeBridgeKit(<import>, theme), then WB.buildBridges().
 --
--- Eggs (assets/eggs/<EggId>.fbx): WB.storeEgg(<import>, eggId), then WB.buildEggStands(island)
--- and require(game.ServerStorage.WorldBuild.EggAuraVFX:Clone()).build(island).
+-- Eggs (assets/eggs_v2/<EggId>.fbx): WB.storeEgg(<import>, eggId), then WB.buildEggStands(island).
 -- Collision fidelity applies asynchronously; confirm with WB.checkCollision in a later call.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,7 +26,6 @@ local ServerStorage = game:GetService("ServerStorage")
 
 -- Modules are required as clones so Studio's require cache never serves a stale copy.
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"):Clone())
-local EggAuraVFX = require(ServerStorage:WaitForChild("WorldBuild"):WaitForChild("EggAuraVFX"):Clone())
 
 local WorldBuilder = {}
 
@@ -878,24 +876,7 @@ end
 -- ---------- egg stands ----------
 
 -- Saturated glow colours per egg (Neon blooms pale colours to white).
-WorldBuilder.EggGlow = {
-    BeginnerQiEgg = Color3.fromRGB(50, 180, 255),
-    SpiritBreezeEgg = Color3.fromRGB(30, 225, 165),
-    ElementalCoreEgg = Color3.fromRGB(140, 80, 255),
-    CelestialEgg = Color3.fromRGB(60, 150, 255),
-    AstralSanctumEgg = Color3.fromHex("643cff"), -- its windows' violet (bluer: Neon turns 8a4dff pink)
-    HeavenlyThroneEgg = Color3.fromRGB(255, 185, 40),
-    InfernoEgg = Color3.fromRGB(255, 85, 15),
-    MagmaHeartEgg = Color3.fromRGB(255, 160, 20),
-    PhoenixAshEgg = Color3.fromRGB(255, 40, 110),
-    JadeSpiritEgg = Color3.fromRGB(40, 225, 120),
-    BloomwoodEgg = Color3.fromRGB(255, 80, 180),
-    AncientGroveEgg = Color3.fromRGB(170, 240, 40),
-    -- Origin Abyss: their meshes' _Glow_ colours, deep enough that Neon doesn't turn them pink or lavender
-    ForbiddenOriginEgg = Color3.fromHex("643cff"),
-    VoidRiftEgg = Color3.fromHex("3c64ff"),
-    PrimordialAbyssEgg = Color3.fromHex("ff3cb4"),
-}
+WorldBuilder.EggGlow = GameConfig.EggGlow
 
 -- The egg's light per island ({ range, brightness }) where the default (12, 1.2) is too much: on
 -- Origin Abyss it painted the bronze thorn branches red and violet (seen in Play).
@@ -996,11 +977,8 @@ function WorldBuilder.buildEggStands(island)
         local egg = placeEgg(stand, entry.EggId, rest, frame.LookVector * -1)
         local eggLight = EGG_LIGHT[island] or { 12, 1.2 }
         addLight(egg, glow, eggLight[1], eggLight[2])
-        -- the egg's aura is built round this point, facing the egg's front (EggAuraVFX)
-        stand:SetAttribute("AuraOrigin", CFrame.lookAt(rest, rest - frame.LookVector))
-        if not EggAuraVFX.has(entry.EggId) then
-            addSparkles(egg, glow, 4)
-        end
+        -- where an egg rests on this stand, facing its front (EggStands puts any of the island's eggs here)
+        stand:SetAttribute("EggRest", CFrame.lookAt(rest, rest - frame.LookVector))
 
         local prompt = Instance.new("ProximityPrompt")
         prompt.ActionText = "Take" -- EggStands drives it in play

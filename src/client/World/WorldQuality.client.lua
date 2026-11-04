@@ -1,5 +1,5 @@
 -- On a phone (Quality.Low) the islands' own emitters run at a share of their rate: flames, spray, motes.
--- Eggs on their stands are left alone: EggAura sets those rates itself. With streaming on, parts arrive
+-- Eggs on their stands are left alone. With streaming on, parts arrive
 -- and leave as the player moves, and a part that returns is a new instance with its full rate, so
 -- every arrival is thinned once.
 local Workspace = game:GetService("Workspace")
@@ -11,7 +11,7 @@ if not Quality.Low then
 end
 
 local WORLD_RATE = 0.4
-local LEFT_ALONE = { "EggStands", "EggAuras" }
+local LEFT_ALONE = { "EggStands" }
 
 local function thin(instance)
     if not instance:IsA("ParticleEmitter") then

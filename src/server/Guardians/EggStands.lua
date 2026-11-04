@@ -1,6 +1,6 @@
 -- The egg stands behind each island's guardian: the eggs players carry off (Guardian.lua) and hatch
--- at Yggdrasil's Hatching Altar (PetService). A stand holds one egg, shown with its glow ring, its
--- light and its aura:
+-- at Yggdrasil's Hatching Altar (PetService). A stand holds one egg, shown with its glow ring and its
+-- light; each client adds its Highlight and bloom (src/client/World/EggGlow.client.lua):
 --   * taking it empties the stand (EggStands.take);
 --   * a dropped egg that times out, or a theft that fails, puts it back (EggStands.restore);
 --   * a secured one leaves the stand empty for GameConfig.EggTheft.RespawnTime seconds, then the
@@ -8,11 +8,8 @@
 --     its eggs (EggStands.respawn).
 -- Stands are found in Workspace.FloatingIslands.<Island>.EggStands (WorldBuilder.buildEggStands):
 -- a Model per stand (named after the egg it was built with: its slot's name, which stays) with a
--- Pedestal, a GlowRing, the egg's body "Egg" and its "<EggId>_Glow_<hex>" pieces, and the
--- AuraOrigin attribute (the egg's resting point, facing the stand's front). Each egg's aura (an
--- "EggAura" model in the island's EggAuras folder) is kept as a template when the server starts, so
--- any stand can show any of its island's eggs; the aura's Stand attribute names its stand for the
--- client (src/client/Auras/EggAura.client.lua).
+-- Pedestal, a GlowRing, the egg's body "Egg" and its "<EggId>_Glow_<hex>" pieces, and the EggRest
+-- attribute (the egg's resting point, facing the stand's front).
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -23,16 +20,11 @@ local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForCh
 
 local EggStands = {}
 
-local AURA_TAG = "EggAura"
 local TAKE_DISTANCE = 12
 
 local slotsOf = {}       -- [island] = { [slot] = true }
-local looks = {}         -- [eggId] = { ring = Color3, light = PointLight template, extras = { Instance }, aura = Model, auraOffset = CFrame }
+local looks = {}         -- [eggId] = { ring = Color3, extras = { Light templates } }
 local onTake             -- function(player, slot), set by GuardianService
-
-local templates = Instance.new("Folder")
-templates.Name = "EggStandTemplates"
-templates.Parent = ServerStorage
 
 -- The egg's pieces on a stand: everything but the stand's own pedestal and ring.
 local function eggParts(stand)
@@ -55,8 +47,8 @@ local function setPrompt(slot)
     prompt.ObjectText = slot.eggId and GameConfig.Eggs[slot.eggId].DisplayName or ""
 end
 
--- The egg's look as built on its first stand: its ring colour, its light and sparkles, its aura.
-local function learnLook(slot, aurasFolder)
+-- The egg's look as built on its first stand: its ring colour and its light.
+local function learnLook(slot)
     local eggId = slot.eggId
     if looks[eggId] then
         return
@@ -66,18 +58,8 @@ local function learnLook(slot, aurasFolder)
     look.ring = ring and ring.Color
     local body = slot.stand:FindFirstChild("Egg")
     for _, child in body and body:GetChildren() or {} do
-        if child:IsA("Light") or child:IsA("ParticleEmitter") then
+        if child:IsA("Light") then
             table.insert(look.extras, child:Clone())
-        end
-    end
-    for _, aura in aurasFolder and aurasFolder:GetChildren() or {} do
-        if CollectionService:HasTag(aura, AURA_TAG) and aura:GetAttribute("EggId") == eggId then
-            look.auraOffset = slot.rest:ToObjectSpace(aura:GetPivot())
-            local template = aura:Clone()
-            template.Parent = templates
-            look.aura = template
-            slot.aura = aura
-            aura:SetAttribute("Stand", slot.name)
         end
     end
     looks[eggId] = look
@@ -104,13 +86,6 @@ local function show(slot, eggId)
     if ring and look.ring then
         ring.Color = look.ring
     end
-    if look.aura then
-        local aura = look.aura:Clone()
-        aura:SetAttribute("Stand", slot.name)
-        aura:PivotTo(slot.rest * look.auraOffset)
-        aura.Parent = slot.aurasFolder
-        slot.aura = aura
-    end
     slot.eggId = eggId
     slot.stand:SetAttribute("EggId", eggId)
     setPrompt(slot)
@@ -120,29 +95,31 @@ local function clear(slot)
     for _, part in eggParts(slot.stand) do
         part:Destroy()
     end
-    if slot.aura then
-        slot.aura:Destroy()
-        slot.aura = nil
-    end
     slot.stand:SetAttribute("EggId", nil)
     slot.eggId = nil
     setPrompt(slot)
 end
 
-local function register(island, stand, aurasFolder)
-    local origin = stand:GetAttribute("AuraOrigin")
+local function register(island, stand)
+    local rest = stand:GetAttribute("EggRest")
     local pedestal = stand:FindFirstChild("Pedestal")
-    if typeof(origin) ~= "CFrame" or not GameConfig.Eggs[stand:GetAttribute("EggId") or ""] then
-        warn("EggStands: " .. stand:GetFullName() .. " has no AuraOrigin or egg; skipped")
+    if typeof(rest) ~= "CFrame" or not GameConfig.Eggs[stand:GetAttribute("EggId") or ""] then
+        warn("EggStands: " .. stand:GetFullName() .. " has no EggRest or egg; skipped")
         return
     end
     local slot = {
-        island = island, stand = stand, name = stand.Name, rest = origin, eggId = stand:GetAttribute("EggId"),
-        aurasFolder = aurasFolder, prompt = pedestal and pedestal:FindFirstChildWhichIsA("ProximityPrompt"),
+        island = island, stand = stand, name = stand.Name, rest = rest, eggId = stand:GetAttribute("EggId"),
+        prompt = pedestal and pedestal:FindFirstChildWhichIsA("ProximityPrompt"),
     }
     slotsOf[island] = slotsOf[island] or {}
     slotsOf[island][slot] = true
-    learnLook(slot, aurasFolder)
+    learnLook(slot)
+    -- the egg built with the stand gets its Highlight like any egg made since
+    local body = stand:FindFirstChild("Egg")
+    if body then
+        body:SetAttribute("EggId", slot.eggId)
+        CollectionService:AddTag(body, GameConfig.EggGlowTag)
+    end
     setPrompt(slot)
     if slot.prompt then
         slot.prompt.HoldDuration = 0.5
@@ -163,7 +140,7 @@ function EggStands.load()
         if stands then
             for _, stand in stands:GetChildren() do
                 if stand:IsA("Model") then
-                    register(island, stand, folder:FindFirstChild("EggAuras"))
+                    register(island, stand)
                 end
             end
         end
