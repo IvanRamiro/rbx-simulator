@@ -442,6 +442,7 @@ return {
         },
         Marketplace = {
             Sign = { Centre = Vector3.new(0, 11.9, 15.75), Size = Vector2.new(11, 1.7) },
+            Prompt = Vector3.new(0, 3.5, 8.2),
             Fx = {
                 { Kind = "Coins", Position = Vector3.new(0, 10.1, 3.6) },
                 { Kind = "Lantern", Position = Vector3.new(-9, 9.4, 8) },

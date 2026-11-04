@@ -121,6 +121,10 @@ local GameConfig = {
         -- rising smoothly between realms. An egg pays EggShare of its required rank's value when
         -- secured, a relic RelicShare of its own on first attunement, each at least MinReward
         EggShare = 0.25,
+        -- what the Marketplace asks for an egg, as a share of its required rank's value: 4 times what stealing
+        -- one pays, and with no Qi or element. On average its pet sells for under half this, so buying
+        -- eggs to sell their pets loses stones (checked against every egg's pool, 2026-11-04)
+        MarketEggShare = 1,
         RelicShare = 0.5,
         MinReward = 40,
         Max = 1e12,
@@ -137,6 +141,10 @@ local GameConfig = {
     GuardianTag = "Guardian",
     EggTheft = {
         RespawnTime = 180, -- seconds a stand stays empty after its egg is secured
+        -- to take an egg a player must have dealt this share of what weakening its guardian takes, so
+        -- nobody walks off with an egg someone else earned
+        TakeShare = 0.1,
+        RetakeCooldown = 30, -- seconds before a player whose egg went back can take another: no holding a guardian hostage
         SecureQiMinutes = 5, -- securing an egg pays this many minutes of cultivating (server/Cultivation/QiReward)
     },
     -- Yggdrasil's Hatching Altar (WorldBuilder.buildAltar, PetService): where every egg carried home is

@@ -10,6 +10,7 @@
 --   Shop.petValue(petId)      what a pet sells for
 --   Shop.rankValue(rankId)    the rewards' ladder: a weapon's price at its realm's first rank, between
 --   Shop.eggStones(eggId)     what securing this egg pays
+--   Shop.marketEggPrice(eggId)  what the Marketplace asks for this egg
 --   Shop.relicStones(relic)   what a relic's first attunement pays
 --   Shop.roundNice(n)         two significant figures (a price worth reading)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -108,6 +109,11 @@ function Shop.rankValue(rankId)
     local rank = Ranks.getRankById(rankId)
     local index = rank and Ranks.getIndex(rank.Name) or 1
     return GameConfig.WeaponTiers[1].Price * GameConfig.SpiritStones.RealmFactor ^ ((index - 1) / RANKS_PER_REALM)
+end
+
+function Shop.marketEggPrice(eggId)
+    local egg = GameConfig.Eggs[eggId]
+    return if egg then Shop.roundNice(Shop.rankValue(egg.RequiredRank) * GameConfig.SpiritStones.MarketEggShare) else 0
 end
 
 function Shop.eggStones(eggId)

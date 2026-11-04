@@ -194,6 +194,11 @@ local function onHatchResult(result)
         local text = if result.Busy then "An egg is already being carried off. Wait for " .. who .. " to calm."
             else "Weaken " .. who .. " first: its eggs can be taken once it falters."
         showMessage(text, Color3.new(1, 1, 1))
+    elseif result.Reason == "NoShare" then
+        local who = result.Called or ("the " .. tostring(result.Guardian))
+        showMessage("You haven't earned this egg: strike " .. who .. " yourself before you take one.", Color3.new(1, 1, 1))
+    elseif result.Reason == "Retake" then
+        showMessage("You just let an egg go back. You can take another in " .. tostring(result.Seconds) .. " s.", Color3.new(1, 1, 1))
     elseif result.Reason == "InventoryFull" then
         showMessage("Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets).", Color3.new(1, 1, 1))
     else

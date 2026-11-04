@@ -509,8 +509,7 @@ def write_placements(path=W.REPO + "/src/worldbuild/Placements/Yggdrasil.lua"):
         (sx, sy, sz), (sw, sh) = SH.SIGNS[name]
         lines.append("        %s = {" % name)
         lines.append("            Sign = { Centre = Vector3.new(%g, %g, %.2f), Size = Vector2.new(%g, %g) }," % (sx, sy, sz + 0.03, sw, sh))
-        if name in SH.PROMPTS:
-            lines.append("            Prompt = Vector3.new(%g, %g, %g)," % SH.PROMPTS[name])
+        lines.append("            Prompt = Vector3.new(%g, %g, %g)," % SH.PROMPTS[name])
         lines.append("            Fx = {")
         for kind, (fx, fy, fz) in SH.FX[name]:
             lines.append('                { Kind = "%s", Position = Vector3.new(%g, %g, %g) },' % (kind, fx, fy, fz))

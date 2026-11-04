@@ -13,8 +13,8 @@
   lanterns at the eave's corners, banners on the pillars, crates and sacks.
 - The Marketplace, the Coin-Tree Market: a three-tier pagoda of jade-glazed tiles at the back of a
   courtyard, striped stalls of goods down both sides, an arched gate on the lane, strings of red lanterns
-  overhead, and at the centre a bronze money tree hung with glowing coins. Its own FBX, since the other
-  two were imported first (build_market, export_market).
+  overhead, and at the centre a bronze money tree hung with glowing coins, its prompt at the foot of the
+  plinth. Its own FBX, since the other two were imported first (build_market, export_market).
 
 Each is authored round its plot's centre on the ground, its open front toward +Z (the lane). SIGNS
 gives each name board's face, PROMPTS where each shop's prompt stands, and FX where the game adds
@@ -50,7 +50,7 @@ SIGNS = {            # the name board over each entrance: face centre (x, y, z) 
 PROMPTS = {          # where each shop's prompt stands: at the anvil, at the foot of the scale
     "Blacksmith": (0.0, FLOOR + 2.6, 2.4),
     "BuySell": (0.0, FLOOR + 2.4, SCALE[1] + 3.2),
-    # the Marketplace has no prompt yet: what it sells isn't decided
+    "Marketplace": (0.0, FLOOR + 2.4, 8.2),   # at the foot of the money tree
 }
 # the Coin-Tree Market
 TOWER_Z = -9.0

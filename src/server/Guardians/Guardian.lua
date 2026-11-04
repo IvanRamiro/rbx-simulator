@@ -189,6 +189,8 @@ function Guardian.new(id, config, source, folder)
     self.nextDecision = 0
     self.lastEngaged = 0
     self.knocked = {}
+    self.damageBy = {}     -- [player] = the health they've really taken off it since it last healed
+    self.retakeAfter = {}  -- [player] = when they may take another egg, after theirs went back
     self.egg = { state = "None" }
     self:setState("Dormant")
     self:setEggState("Guarded")
@@ -216,6 +218,7 @@ end
 
 function Guardian:heal()
     self:setHealth(self.config.MaxHealth)
+    table.clear(self.damageBy)
 end
 
 function Guardian:awaken()
@@ -252,7 +255,9 @@ function Guardian:onHit(player, damage)
     if self.state == "Dormant" then
         self:awaken()
     end
+    local before = self.health
     self:setHealth(self.health - damage)
+    self.damageBy[player] = (self.damageBy[player] or 0) + (before - self.health)
     if self.state == "Guardian" and self.health < self.config.MaxHealth * self.config.WeakenedAt then
         self:weaken()
     end
@@ -374,6 +379,18 @@ function Guardian:takeFromStand(player, slot)
             Called = self.config.Called, Busy = self.egg.state == "Carried" or self.egg.state == "Dropped" })
         return
     end
+    -- it has to be earned: a share of the fight, and no straight retake after letting one go back
+    local need = self.config.MaxHealth * (1 - self.config.WeakenedAt) * GameConfig.EggTheft.TakeShare
+    if (self.damageBy[player] or 0) < need then
+        RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "NoShare", Guardian = self.config.DisplayName,
+            Called = self.config.Called })
+        return
+    end
+    if os.clock() < (self.retakeAfter[player] or 0) then
+        RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "Retake",
+            Seconds = math.ceil(self.retakeAfter[player] - os.clock()) })
+        return
+    end
     local required = GameConfig.Eggs[eggId].RequiredRank
     if not Ranks.isAtLeast(Ranks.getPlayerRankName(player), required) then
         RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "TakeLocked", RequiredRank = Ranks.getRankById(required).Name })
@@ -443,6 +460,9 @@ end
 -- The egg goes back to its stand and the guardian walks home.
 function Guardian:returnEgg()
     local egg = self.egg
+    if egg.owner then
+        self.retakeAfter[egg.owner] = os.clock() + GameConfig.EggTheft.RetakeCooldown
+    end
     self:clearThief()
     if egg.slot and egg.eggId then
         EggStands.restore(egg.slot, egg.eggId)
@@ -544,6 +564,8 @@ function Guardian:onPlayerRemoving(player)
         self:returnEgg()
     end
     self.knocked[player] = nil
+    self.damageBy[player] = nil
+    self.retakeAfter[player] = nil
 end
 
 -- Attacks ---------------------------------------------------------------------------------------
