@@ -19,6 +19,8 @@ local UiTheme = require(script.Parent:WaitForChild("UiTheme"))
 local applyHudScale = require(script.Parent:WaitForChild("HudScale"))
 
 local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+-- a phone stays sideways: the top corners' panels need the width, and in portrait they'd overlap
+playerGui.ScreenOrientation = Enum.ScreenOrientation.LandscapeSensor
 local M = UiTheme.Margin
 
 local Hud = {}

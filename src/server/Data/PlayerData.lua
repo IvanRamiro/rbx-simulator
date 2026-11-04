@@ -368,7 +368,10 @@ local function loadProfile(player, profile)
     else
         profile.status = "Failed"
         if player.Parent == Players then
-            player:Kick("Your saved progress couldn't be loaded. Please rejoin in a moment.")
+            -- a server still running an older version must not touch a newer save: this happens after a publish
+            player:Kick(if result == "TooNew"
+                then "This server runs an older version of the game. Your progress is safe: please rejoin in a moment."
+                else "Your saved progress couldn't be loaded. Please rejoin in a moment.")
         end
     end
 
