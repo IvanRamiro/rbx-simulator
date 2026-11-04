@@ -58,9 +58,12 @@ local GameConfig = {
     -- A strike's damage is the tier's Damage times the kind's DamageScale times the rank's power
     -- (Combat.powerOf). The sword strikes fast and wide; the spear slower, farther and harder, for
     -- the same damage over time. With none equipped a player strikes with the Qi Palm (Combat.Palm).
+    -- Strikes within ComboWindow seconds of the last continue the weapon's combo. The spear's combo is a
+    -- long straight thrust, then a sweeping slash (its Slash reach: shorter and much wider).
     WeaponKinds = {
-        Sword = { Range = 12, Arc = 80, Cooldown = 0.55, DamageScale = 1 },
-        Spear = { Range = 18, Arc = 35, Cooldown = 0.85, DamageScale = 0.85 / 0.55 },
+        Sword = { Range = 12, Arc = 80, Cooldown = 0.55, DamageScale = 1, ComboWindow = 1.1 },
+        Spear = { Range = 18, Arc = 35, Cooldown = 0.85, DamageScale = 0.85 / 0.55, ComboWindow = 1.7,
+            Slash = { Range = 13, Arc = 85 } },
     },
     WeaponTiers = { -- one per realm, in the order of Ranks' realms; Price in Spirit Stones
         { Realm = "Qi Awakening", Damage = 16, Price = 60, Sword = "Reedwhisper Sword", Spear = "Bamboo Thorn Spear" },

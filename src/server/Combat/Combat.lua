@@ -2,7 +2,7 @@
 -- other target listen for hits).
 --
 --   Combat.strikeOf(player)  the player's strike: { Kind = "Palm" | "Sword" | "Spear", Range, Arc,
---                            Cooldown, Damage (before rank power), WeaponId, Element }: their equipped
+--                            Cooldown, Damage (before rank power), WeaponId, Element, ComboWindow, Slash }: their equipped
 --                            weapon (WeaponInventory; a forged one GameConfig.Forge.DamageBonus harder),
 --                            or the Qi Palm with none
 --   Combat.powerOf(player)   the rank's damage multiplier (GameConfig.Combat.RankPowerStep a rank)
@@ -35,7 +35,7 @@ function Combat.strikeOf(player)
     local kind = GameConfig.WeaponKinds[weapon.Kind]
     local damage = weapon.Damage * (if element then 1 + GameConfig.Forge.DamageBonus else 1)
     return { Kind = weapon.Kind, Range = kind.Range, Arc = kind.Arc, Cooldown = kind.Cooldown, Damage = damage, WeaponId = weapon.Id,
-        Element = element }
+        Element = element, ComboWindow = kind.ComboWindow, Slash = kind.Slash }
 end
 
 function Combat.powerOf(player)

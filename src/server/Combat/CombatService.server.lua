@@ -4,7 +4,9 @@
 --
 -- A target is a Model tagged GameConfig.Combat.TargetTag with a PrimaryPart and a HitRadius
 -- attribute (studs round the PrimaryPart's centre). A strike lands on the nearest target within the
--- weapon's Arc of facing and Range, unless its "Invulnerable" attribute is set. A landing strike
+-- weapon's Arc of facing and Range, unless its "Invulnerable" attribute is set. A spear alternates a
+-- thrust and a sweeping slash with its own reach (WeaponKinds.Spear.Slash); the server keeps the count,
+-- so a client can't choose the wider reach. A landing strike
 -- fires Combat.Hit; every strike is relayed to all clients (CombatEvent: striker, kind ("Palm",
 -- "Sword" or "Spear"), hit position or nil).
 --
@@ -21,6 +23,7 @@ local Combat = require(script.Parent:WaitForChild("Combat"))
 
 local COOLDOWN_SLACK = 0.85 -- requests a little early are latency, not cheating
 local lastStrike = {}
+local spearSlashNext = {} -- [player] = true: their last strike was a thrust, inside the combo window
 
 do
     local stored = ServerStorage:FindFirstChild("Weapons")
@@ -74,12 +77,16 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
     if lastStrike[player] and now - lastStrike[player] < strike.Cooldown * COOLDOWN_SLACK then
         return
     end
+    local continuing = strike.ComboWindow and lastStrike[player] and now - lastStrike[player] < strike.ComboWindow
     lastStrike[player] = now
+    -- a spear's combo: a thrust, then a slash
+    local slashing = strike.Slash ~= nil and continuing and spearSlashNext[player] == true
+    spearSlashNext[player] = strike.Slash ~= nil and not slashing or nil
     -- from sword flight a strike swings but can't land: guardians can't reach a flyer, so a flyer
     -- can't reach them
     local target, point = nil, nil
     if player:GetAttribute("IsFlying") ~= true then
-        target, point = findTarget(rootPart, strike)
+        target, point = findTarget(rootPart, if slashing then strike.Slash else strike)
     end
     if target then
         Combat.Hit:Fire(player, target, strike.Damage * Combat.powerOf(player), point)
@@ -89,4 +96,5 @@ end)
 
 Players.PlayerRemoving:Connect(function(player)
     lastStrike[player] = nil
+    spearSlashNext[player] = nil
 end)

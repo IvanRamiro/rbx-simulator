@@ -196,19 +196,40 @@ local SPEAR_STANCES = {
           Vector3.new(0.62, -0.62, 0.47), deg(0, -60, 0), deg(-20), deg(30, 30, -50) }),
 }
 
--- writes into `pose` the combo's slash at `elapsed` seconds
-local function slashPose(pose, step, elapsed)
-    local keys = SLASH_KEYS[step]
+-- The spear's slash. The arms stay locked as they are in the guard, so both hands stay on the shaft and
+-- the whole body swings it: from coiled to the right, the tip behind the right shoulder's line, round to
+-- the left. Standing still the legs turn with it; moving, only the waist does (the arms-only guard).
+local SPEAR_SLASH_TIMES = { 0.1, 0.17, 0.3 } -- coiled, mid-sweep, the end of the sweep
+local function spearSlashKey(rootYaw, waistYaw, neckYaw)
+    local key = table.clone(SPEAR_STANCES.SpearReady)
+    key.Root = CFrame.new(0, -0.6, 0) * deg(0, rootYaw, 0)
+    key.Waist = deg(0, waistYaw, 0)
+    key.Neck = deg(0, neckYaw, 0)
+    return key
+end
+local function spearSlashMoving(waistYaw)
+    local key = table.clone(STRIKES.SpearReady)
+    key.Waist = deg(0, waistYaw, 0)
+    return key
+end
+local SPEAR_SLASH_KEYS = {
+    Still = { spearSlashKey(-105, -40, 60), spearSlashKey(-65, -12, 35), spearSlashKey(-18, 10, 5) },
+    Moving = { spearSlashMoving(-75), spearSlashMoving(-30), spearSlashMoving(30) },
+}
+
+-- writes into `pose` a slash's timeline at `elapsed` seconds
+local function slashPose(pose, keys, times, elapsed)
+    table.clear(pose)
     local from, to, t = keys[1], keys[1], 0
-    if elapsed >= SLASH_TIMES[3] then
+    if elapsed >= times[3] then
         from, to = keys[3], keys[3]
-    elseif elapsed >= SLASH_TIMES[2] then
+    elseif elapsed >= times[2] then
         -- slowing out of the blow; easing both ways here would stop the blade dead at the middle key
-        t = (elapsed - SLASH_TIMES[2]) / (SLASH_TIMES[3] - SLASH_TIMES[2])
+        t = (elapsed - times[2]) / (times[3] - times[2])
         from, to, t = keys[2], keys[3], 1 - (1 - t) * (1 - t)
-    elseif elapsed >= SLASH_TIMES[1] then
+    elseif elapsed >= times[1] then
         -- gathering speed into the blow
-        t = (elapsed - SLASH_TIMES[1]) / (SLASH_TIMES[2] - SLASH_TIMES[1])
+        t = (elapsed - times[1]) / (times[2] - times[1])
         from, to, t = keys[1], keys[2], t * t
     end
     for name, cframe in from do
@@ -347,6 +368,14 @@ local function withStrike(base, strike)
     return combined[key]
 end
 
+-- on the ground, hardly moving, not in sword flight: a spear's whole-body stances are for this
+local function standingStill(player, character)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    return humanoid ~= nil and rootPart ~= nil and humanoid.FloorMaterial ~= Enum.Material.Air
+        and rootPart.AssemblyLinearVelocity.Magnitude < STANCE_MAX_SPEED and player:GetAttribute("IsFlying") ~= true
+end
+
 local function choosePose(player, character, rig)
     if player:GetAttribute("IsCultivating") == true then
         if isOwner(player) then
@@ -357,17 +386,19 @@ local function choosePose(player, character, rig)
     local strikeName = CombatFx.pose(player)
     local strike = STRIKES[strikeName]
     if SPEAR_STANCES[strikeName] then
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        local rootPart = character:FindFirstChild("HumanoidRootPart")
-        local still = humanoid ~= nil and rootPart ~= nil and humanoid.FloorMaterial ~= Enum.Material.Air
-            and rootPart.AssemblyLinearVelocity.Magnitude < STANCE_MAX_SPEED
-        if still and player:GetAttribute("IsFlying") ~= true then
+        if standingStill(player, character) then
             return SPEAR_STANCES[strikeName]
         end
         strike = strike or STRIKES.SpearReady
     elseif strikeName == "Slash" then
+        local step, elapsed = CombatFx.slash(player)
         rig.slash = rig.slash or {}
-        slashPose(rig.slash, CombatFx.slash(player))
+        slashPose(rig.slash, SLASH_KEYS[step], SLASH_TIMES, elapsed)
+        strike = rig.slash
+    elseif strikeName == "SpearSlash" then
+        local _, elapsed = CombatFx.slash(player)
+        rig.slash = rig.slash or {}
+        slashPose(rig.slash, if standingStill(player, character) then SPEAR_SLASH_KEYS.Still else SPEAR_SLASH_KEYS.Moving, SPEAR_SLASH_TIMES, elapsed)
         strike = rig.slash
     end
     if player:GetAttribute("IsFlying") == true then
