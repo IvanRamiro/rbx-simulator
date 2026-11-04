@@ -578,6 +578,8 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 
 The older family designs (`tools/blender/eggs/Eggs.blend`) are no longer used by any egg.
 
+**Second generation (November 4, 2026, not in the game yet):** all 15 eggs rebuilt on the same designs and themes, with stronger ideas, for the owner to review on a flat board before any goes in. Scripts: `tools/blender/eggs/egg_forge.py` and `v2_<island>.py`, each with its idea written at the top. Output: `assets/eggs_v2/`. Board: `tools/roblox/egg_review_board.lua`. Bottom at the origin and the same part names as before (`<EggId>_Body`, `<EggId>_Glow_<hex>`), so `WB.storeEgg` and `placeEgg` will take them. Some are taller or wider than the first eggs (Ancient Grove carries a bonsai, Heavenly Throne a mandorla), so check stands and carrying before swapping any in.
+
 ### Egg auras
 
 Every egg on its stand has its own aura, built in the Workspace from particle emitters, trails, beams, billboards, glowing image planes and lights, with no meshes and no flipbooks, so it can be tuned in Studio and with VFX Studio.

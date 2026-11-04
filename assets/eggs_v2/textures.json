@@ -1,0 +1,56 @@
+{
+ "AncientGroveEgg": {
+  "roughness": 101248903530737
+ },
+ "AstralSanctumEgg": {
+  "metalness": 99527034272474,
+  "roughness": 93444807171414
+ },
+ "BeginnerQiEgg": {
+  "roughness": 81422875948724
+ },
+ "BloomwoodEgg": {
+  "metalness": 134761823431035,
+  "roughness": 108732093534715
+ },
+ "CelestialEgg": {
+  "metalness": 125465078506764,
+  "roughness": 97856533912471
+ },
+ "ElementalCoreEgg": {
+  "metalness": 108005921327136,
+  "roughness": 80014023375789
+ },
+ "ForbiddenOriginEgg": {
+  "metalness": 85702488942372,
+  "roughness": 131963581615558
+ },
+ "HeavenlyThroneEgg": {
+  "metalness": 131369971607987,
+  "roughness": 79616802336337
+ },
+ "InfernoEgg": {
+  "roughness": 103584733048288
+ },
+ "JadeSpiritEgg": {
+  "roughness": 114711020831126
+ },
+ "MagmaHeartEgg": {
+  "roughness": 100690162274173
+ },
+ "PhoenixAshEgg": {
+  "metalness": 74383836886984,
+  "roughness": 124469575162582
+ },
+ "PrimordialAbyssEgg": {
+  "metalness": 71211336983953,
+  "roughness": 72065620988271
+ },
+ "SpiritBreezeEgg": {
+  "metalness": 123149759733826,
+  "roughness": 127118763764394
+ },
+ "VoidRiftEgg": {
+  "roughness": 101879434802559
+ }
+}
