@@ -1,5 +1,6 @@
 -- OwnerAura: the owner's own aura, designed on the Studio AuraWorkbench (2026-11-03/04) and worn by
--- the user ids in GameConfig.OwnerAura in place of their realm aura. Its pieces are kept as a
+-- the user ids in GameConfig.OwnerAura in place of their realm aura, while they meditate (AuraController
+-- builds it when they start and removes it when they stop). Its pieces are kept as a
 -- template in ReplicatedStorage.AuraMeshes.OwnerAura:
 --   Ground  the energy circle (with the surge's ripple and dust ring), the gold and silver rising
 --           light, the rising silver, the drifting mist, the embers and the gold and silver ground
@@ -437,7 +438,7 @@ function OwnerAura.build(player, character, root)
     local record = { player = player, character = character, root = root, fx = fx, clock = 0, floorClock = 0,
         floorY = root.Position.Y - 3, ground = {}, body = {}, ribbons = {}, rods = {}, meditationItems = {},
         made = {}, meditating = nil, nextBurst = 0, sweeps = {}, jitters = {}, chainEnds = {}, rates = {},
-        lod = 1, lodClock = 0, settle = if player:GetAttribute("IsCultivating") == true then MEDITATION_SETTLE else 0,
+        lod = 1, lodClock = 0, settle = 0,
         surge = { value = 0, build = 0, after = 0, since = -1, wait = 3, bursts = {}, rattles = {}, rings = {} } }
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -600,7 +601,7 @@ function OwnerAura.build(player, character, root)
         end
     end
 
-    setMeditating(record, player:GetAttribute("IsCultivating") == true)
+    setMeditating(record, false) -- the chains wait for the arms (MEDITATION_SETTLE)
     records[record] = true
     record.fxConnection = fx.Destroying:Connect(function()
         OwnerAura.destroy(fx)

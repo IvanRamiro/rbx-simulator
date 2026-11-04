@@ -49,7 +49,11 @@ UiTheme.Icons = {
     Hatch = "rbxassetid://83100764073187",      -- a cracked egg
     Shop = "rbxassetid://114603873515180",      -- a purse
     Forge = "rbxassetid://84883537666325",      -- hammer and anvil
-    Settings = "rbxassetid://108986189859228",               -- a gear
+    Settings = "rbxassetid://108986189859228",  -- a gear
+    Rewards = "rbxassetid://82156154854095",                   -- a gift box
+    SkillPalm = "rbxassetid://105490838801087",               -- an open hand
+    SkillWave = "rbxassetid://125780361886599",               -- a double crescent
+    SkillNova = "rbxassetid://107506867988247",               -- a burst
 }
 
 return UiTheme

@@ -649,7 +649,7 @@ Five floating islands built from original Blender work: terrain tops, sculpted u
 | Yggdrasil | (0, 200, 0) | The World Tree and the spawn hub | Root of the Island (300 Qi, Qi Initiate) |
 | Jade Grove | (−384, 200, −448), 0 | Ancient forest | Grove Heart, Jade Seed, Whispering Spring (800 Qi each, Qi Gatherer) |
 | Ember Peak | (−128, 200, −696), 0 | Volcanic, lava pools | Ember Heart, Ashen Sigil, Caldera Crown (1,500 Qi each, Qi Awakener) |
-| Moonlit Isle | (192, 200, −804), 0 | Pale and celestial | Moon Mirror, Star Well (3,000 Qi each, Foundation Initiate) |
+| Moonlit Isle | (192, 200, −804), 0 | Pale and celestial | Moon Mirror, Star Well (20,000 Qi each, Soul Awakening) |
 | Origin Abyss | (596, 200, −856), 0 | Hidden endgame: dark slate, void crystals and rifts, broken ruins | Origin Altar (250K Qi, Divine Initiate); the Void Shard high above it (1M Qi, Void Walker) |
 
 **Bridge gates:** Jade Grove at Qi Gatherer, Ember Peak at Qi Awakener, Moonlit Isle at Soul Awakening, Origin Abyss at Divine Initiate. Moonlit's gate rose from Foundation Initiate on November 4, 2026 (the owner's decision): it opened about 90 minutes before the island's first egg and a guardian tuned for Soul Awakening could be used.
@@ -1031,7 +1031,8 @@ Build one complete encounter before expanding to every island.
 - `GameConfig.WeaponKinds` (Sword: 12 reach, 80° arc, 0.55 s; Spear: 18 reach, 35°, 0.85 s, ×1.55 damage), `WeaponTiers` (one per realm, named, Damage 16 to 69, Price 60 to 2.2M stones), `SpiritStones` (pet values, refunds, relic share). `shared/Shop.lua` turns them into the catalogue (`Sword<tier>`, `Spear<tier>`) and prices pets by rarity and their egg's realm.
 - `server/Shop`: `Wallet` (Spirit Stones), `WeaponInventory` (owned weapons, the one wielded; a player with none gets the Reedwhisper Sword), `ShopService` (the shops' prompts, buy / wield / sell, checked on the server: reach of the shop's plot, realm, price, throttled). Saved in `PlayerData` (schema 7).
 - **Combat** strikes with the wielded weapon (`Combat.strikeOf`), or the Qi Palm with none. The spear's thrust is a spear of Qi light in the realm's colour until the spears are modelled.
-- **Earning stones:** selling pets (Common 6 to Secret 600, ×2.6 per realm of the pet's egg) and weapons (40% back), securing a guardian's egg (Stone Lion 150, Mantis Sage 600) and a relic's first attunement (a fifth of its Qi reward).
+- **Earning stones:** selling pets (Common 6 to Secret 600, ×2.6 per realm of the pet's egg) and weapons (40% back), securing a guardian's egg and a relic's first attunement.
+- **The rewards' ladder (rebalanced November 4, 2026, the owner's request; `shared/Shop.lua`):** a rank's value is the price of a weapon of its realm, rising smoothly between realms. Securing an egg pays 25% of its required rank's value (at least 40), so 40 for the first eggs up to 210,000 for the Primordial Abyss Egg; it was a flat amount per guardian, which made early weapons nearly free (a Xuanwu egg paid for 25 of them) and late ones a grind (10 thefts at Heavenly Dao). A relic pays 50% (at least 40). With pet sales, a weapon of the player's realm now takes about 2 to 6 thefts at every stage. To be checked against real playtests. Moonlit's relics rose to 20,000 Qi and need Soul Awakening, like their island.
 - **Interface** (`client/Shop/ShopController`): a Stones counter by the Relics counter; the Blacksmith and Buy & Sell windows, opened at the Blacksmith's anvil and the foot of the Jade Scale (selling asks "Sure?" first; at first from the plots' notice boards). Tested in Play: buy, wield, sell, the refusals (far away, too dear, the wielded weapon), the spear strike, and saving across a restart.
 
 ### Still to build

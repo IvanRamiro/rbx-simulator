@@ -83,8 +83,11 @@ FLYING.Waist = deg(-6, 0, 0)
 
 -- Strikes (CombatFx) pose only the arms and waist, so they combine with whatever the legs are
 -- doing. Palm: the right palm thrust ahead, the left fist drawn back to the hip, the waist
--- turned into it. Sword: the right hand raised forward in a sword gesture, the left drawn back.
--- Spear: both hands driven forward low along the shaft, the waist turned hard into the thrust.
+-- turned into it. Sword: the right arm rises over the shoulder (SwordRise), then cuts down across the
+-- body (SwordCut), holding the sword in its hand (CombatFx), the waist winding up and turning through.
+-- Spear: held in both hands, the left shoulder leading, the left hand up the shaft (SpearReady): the
+-- hands draw back (SpearDraw), then drive forward together. The arm values were solved against an R15
+-- rig so both hands land on the shaft (within a quarter stud at rest).
 local STRIKES = {
     Palm = {
         RightShoulder = pointLimb(Vector3.new(-0.05, -0.12, -0.99)),
@@ -94,21 +97,65 @@ local STRIKES = {
         LeftElbow = deg(95, 0, 0),
         Waist = deg(0, -25, 0),
     },
-    Sword = {
-        RightShoulder = pointLimb(Vector3.new(0.05, 0.35, -0.94)),
-        RightElbow = deg(10, 0, 0),
-        RightWrist = deg(-20, 0, 0),
+    SwordRise = {
+        RightShoulder = pointLimb(Vector3.new(0.6, 0.72, 0.1)),
+        RightElbow = deg(55, 0, 0),
+        RightWrist = deg(-25, 0, 0),
+        LeftShoulder = pointLimb(Vector3.new(-0.2, -0.6, -0.75)),
+        LeftElbow = deg(40, 0, 0),
+        Waist = deg(0, 28, 0),
+    },
+    SwordCut = {
+        RightShoulder = pointLimb(Vector3.new(-0.5, -0.3, -0.81)),
+        RightElbow = deg(8, 0, 0),
+        RightWrist = deg(-30, 0, 0),
         LeftShoulder = pointLimb(Vector3.new(0.25, -0.8, 0.55)),
         LeftElbow = deg(60, 0, 0),
-        Waist = deg(0, 15, 0),
+        Waist = deg(0, -32, 0),
     },
     Spear = {
-        RightShoulder = pointLimb(Vector3.new(0.1, -0.25, -0.96)),
+        RightShoulder = pointLimb(Vector3.new(-0.29, -0.62, -0.73)),
+        RightElbow = deg(0, 45, 0),
+        RightWrist = deg(40, -20, -15),
+        LeftShoulder = pointLimb(Vector3.new(0.52, -0.32, -0.79)),
+        LeftElbow = deg(0, 15, 0),
+        Waist = deg(0, -22, 0),
+    },
+    SpearDraw = {
+        RightShoulder = pointLimb(Vector3.new(-0.28, -0.96, 0.06)),
+        RightElbow = deg(70, -15, 0),
+        RightWrist = deg(-10, 10, -60),
+        LeftShoulder = pointLimb(Vector3.new(0.6, -0.68, -0.43)),
+        LeftElbow = deg(40, -60, 0),
+        Waist = deg(0, -40, 0),
+    },
+    -- the ready stances, while a weapon is out after a strike. Sword: the right arm forward, the blade
+    -- up before the body, the left drawn back. Spear: side-on, the shaft level at the hip, both hands on it.
+    SwordReady = {
+        RightShoulder = pointLimb(Vector3.new(0.3, -0.75, -0.59)),
+        RightElbow = deg(55, 0, 0),
+        RightWrist = deg(-10, 0, 0),
+        LeftShoulder = pointLimb(Vector3.new(-0.32, -0.85, 0.42)),
+        LeftElbow = deg(30, 0, 0),
+        Waist = deg(0, 12, 0),
+    },
+    SpearReady = {
+        RightShoulder = pointLimb(Vector3.new(-0.29, -0.73, -0.62)),
+        RightElbow = deg(0, 30, 0),
+        RightWrist = deg(50, -10, -30),
+        LeftShoulder = pointLimb(Vector3.new(0.49, -0.42, -0.76)),
+        LeftElbow = deg(0, -30, 0),
+        Waist = deg(0, -30, 0),
+    },
+    -- Qi Nova: both arms flung out and down, palms open, the chest thrown back
+    Nova = {
+        RightShoulder = pointLimb(Vector3.new(0.88, -0.45, -0.15)),
         RightElbow = deg(5, 0, 0),
-        RightWrist = deg(-15, 0, 0),
-        LeftShoulder = pointLimb(Vector3.new(0.35, -0.4, -0.85)),
-        LeftElbow = deg(35, 0, 0),
-        Waist = deg(0, -35, 0),
+        RightWrist = deg(-25, 0, 0),
+        LeftShoulder = pointLimb(Vector3.new(-0.88, -0.45, -0.15)),
+        LeftElbow = deg(5, 0, 0),
+        LeftWrist = deg(-25, 0, 0),
+        Waist = deg(12, 0, 0),
     },
 }
 
@@ -268,8 +315,11 @@ for name, pose in QINGGONG_POSES do
         QUICK_POSES[pose] = true
     end
 end
-for _, pose in STRIKES do
-    QUICK_POSES[pose] = true
+for name, pose in STRIKES do
+    -- a stance settles at the normal pace; the blows snap
+    if name ~= "SwordReady" and name ~= "SpearReady" then
+        QUICK_POSES[pose] = true
+    end
 end
 
 local function updatePoses(deltaTime)

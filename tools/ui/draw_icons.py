@@ -159,4 +159,38 @@ for i in range(teeth):
 path(d, gear, closed=True)
 path(d, arc(cx, cy, 125, 0, 360), W)
 save(img, "Settings")
+
+# Rewards: a gift box with a bow
+img, d = canvas()
+path(d, [(190, 470), (834, 470), (834, 880), (190, 880)], closed=True)
+path(d, [(130, 300), (894, 300), (894, 470), (130, 470)], closed=True)
+path(d, [(512, 300), (512, 880)])
+path(d, bez((512, 300), (300, 300), (250, 90), (400, 110)) + bez((400, 110), (470, 120), (500, 220), (512, 300)))
+path(d, bez((512, 300), (724, 300), (774, 90), (624, 110)) + bez((624, 110), (554, 120), (524, 220), (512, 300)))
+save(img, "Rewards")
+
+# SkillPalm: an open hand, four fingers and a thumb over the palm
+img, d = canvas()
+for x, top in ((330, 240), (450, 150), (570, 150), (690, 240)):
+    path(d, [(x, 560), (x, top)], W * 1.25)
+path(d, [(800, 620), (880, 450)], W * 1.25)     # thumb
+path(d, bez((270, 560), (250, 800), (390, 930), (520, 930)) + bez((520, 930), (680, 930), (800, 800), (800, 600)))
+path(d, [(270, 560), (800, 560)], W * 0.8)
+save(img, "SkillPalm")
+
+# SkillWave: a crescent of sword light with a thinner one behind
+img, d = canvas()
+outer = bez((110, 620), (300, 180), (724, 180), (914, 620))
+inner = bez((914, 620), (724, 340), (300, 340), (110, 620))
+path(d, outer + inner, closed=True)
+path(d, bez((230, 830), (390, 610), (634, 610), (794, 830)), W * 1.1)
+save(img, "SkillWave")
+
+# SkillNova: a burst, a ring with rays
+img, d = canvas()
+path(d, arc(512, 512, 170, 0, 360), W * 1.1)
+for i in range(8):
+    a = i * math.tau / 8 + math.tau / 16
+    path(d, [(512 + 290 * math.cos(a), 512 + 290 * math.sin(a)), (512 + 440 * math.cos(a), 512 + 440 * math.sin(a))], W * 1.2)
+save(img, "SkillNova")
 print("drawn:", sorted(os.listdir(OUT)))

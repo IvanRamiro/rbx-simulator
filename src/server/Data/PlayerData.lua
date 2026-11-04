@@ -14,9 +14,10 @@ local WeaponInventory = require(script.Parent.Parent:WaitForChild("Shop"):WaitFo
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
 local Quests = require(script.Parent.Parent:WaitForChild("Quests"):WaitForChild("Quests"))
 local Settings = require(script.Parent:WaitForChild("Settings"))
+local Rewards = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("Rewards"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 10
+local SCHEMA_VERSION = 11
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -71,7 +72,7 @@ end
 -- version 6 added Eggs, which sanitizeProgress starts empty; version 7 added SpiritStones, Weapons
 -- and EquippedWeapon (MIGRATIONS[6], below); version 8 added ForgeElements (the guardians' drops)
 -- and a weapon's Element and Name, which start at none; version 9 added Quest (MIGRATIONS[8]);
--- version 10 added Settings, which sanitizeProgress starts at their defaults.
+-- version 10 added Settings and version 11 Rewards, which sanitizeProgress starts at their defaults.
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -121,6 +122,7 @@ local function sanitizeProgress(raw)
         Quest = 1,
         ForgeElements = {},
         Settings = Settings.sanitize(nil),
+        Rewards = Rewards.sanitize(nil),
     }
 
     if typeof(raw) ~= "table" then
@@ -198,6 +200,7 @@ local function sanitizeProgress(raw)
     progress.ForgeElements = Elements.sanitize(raw.ForgeElements)
     progress.Quest = Quests.sanitize(raw.Quest)
     progress.Settings = Settings.sanitize(raw.Settings)
+    progress.Rewards = Rewards.sanitize(raw.Rewards)
 
     return progress
 end
@@ -229,7 +232,8 @@ local function captureProgress(player)
     local elements = Elements.exportData(player)
     local quest = Quests.exportData(player)
     local settings = Settings.exportData(player)
-    if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings) then
+    local rewards = Rewards.exportData(player)
+    if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings and rewards) then
         return nil
     end
 
@@ -250,6 +254,7 @@ local function captureProgress(player)
         ForgeElements = elements,
         Quest = quest,
         Settings = settings,
+        Rewards = rewards,
     }
 end
 
@@ -475,6 +480,7 @@ function PlayerData.release(player)
     Elements.removePlayer(player)
     Quests.removePlayer(player)
     Settings.removePlayer(player)
+    Rewards.removePlayer(player)
 
     if not profile then
         return

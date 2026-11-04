@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Discoveries = require(script.Parent:WaitForChild("Discoveries"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
@@ -48,7 +49,7 @@ local function onRelicTriggered(player, relicId, crystal, maxDistance)
     end
 
     qi.Value += relic.QiReward
-    local stones = math.floor(relic.QiReward * GameConfig.SpiritStones.RelicShare)
+    local stones = Shop.relicStones(relic)
     Wallet.add(player, stones, "Relic", relicId)
     publishFound(player)
     PlayerData.saveSoon(player)

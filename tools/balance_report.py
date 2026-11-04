@@ -125,6 +125,8 @@ def main():
     for name, reward, required in config["relics"]:
         print(f"  {name:<22}{reward:>6} Qi   needs {required}")
 
+    print()
+    print("Spirit Stones: see shared/Shop.lua (rankValue, eggStones, relicStones) and GameConfig.SpiritStones")
     for egg in config["eggs"]:
         print()
         total_weight = sum(weight for _, weight in egg["pool"])

@@ -140,8 +140,9 @@ local function getAuraPetId(player)
     return if typeof(petId) == "string" then petId else nil
 end
 
--- every player's realm aura (RealmAura), always on: built round the character for their realm and
--- sub-rank, rebuilt when either changes or the character respawns, removed on death
+-- every player's realm aura (RealmAura), only while they meditate (the owner, 2026-11-04: "there
+-- should be no aura if the player is not meditating"): built round the character for their realm and
+-- sub-rank, rebuilt when either changes, removed when they stop or die
 local realmAuras = {} -- [player] = { fx = the aura's folder, key = what it was built for }
 
 local function getRealm(rank)
@@ -176,7 +177,8 @@ local function refreshRealmAura(player)
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
     local rank = Ranks.getRank(Ranks.getPlayerRankName(player))
     local realm = rank and getRealm(rank)
-    if not (rootPart and realm and isAlive(character)) or hiddenByReducedEffects(player) then
+    if not (rootPart and realm and isAlive(character)) or hiddenByReducedEffects(player)
+        or player:GetAttribute("IsCultivating") ~= true then
         removeRealmAura(player)
         return
     end

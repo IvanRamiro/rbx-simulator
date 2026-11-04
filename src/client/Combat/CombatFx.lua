@@ -2,11 +2,18 @@
 --
 --   Palm   a Qi Palm: the right palm thrusts forward and a great hand of Qi (the QiPalm print)
 --          flies from it, swelling and fading as it travels, with a ripple and wind streaks.
---   Sword  the striker's sword (their realm sword, or else the flying sword) darts out from over
---          the right shoulder and sweeps an arc in front, drawing a sheet of sword light behind it,
---          with a crescent of light at the arc's height; the hand directs it with a sword gesture.
---   Spear  the striker's spear (or a spear of Qi light) driven straight ahead from the right hip.
+--   Sword  the striker's sword (their realm sword, or else the flying sword) in their right hand: the
+--          arm rises over the shoulder and cuts down across the body, the blade drawing a sheet of
+--          light through the cut, with a crescent of light where it passes.
+--   Spear  the striker's spear in both hands: drawn back, then driven straight ahead, a lance of
+--          streaks running on to its reach.
 --   hit    where a strike lands: a burst of light, a shockwave and scattering sparks.
+--
+-- The Qi skills (CombatFx.skill, GameConfig.Combat.Skills), in the striker's colours, an element's if
+-- their weapon is forged:
+--   SurgingPalm   a great hand of Qi flies far ahead, swelling, with a wake of streaks.
+--   CrescentWave  a wide crescent of sword light flies far ahead, a gust behind it.
+--   QiNova        a ring of Qi races out across the ground from the caster, who flares with light.
 --
 -- A forged weapon (the striker's "WeaponElement", GameConfig.Forge) glows, trails and slashes in its
 -- element's colours and bursts with its element where it strikes: Fire rising embers and a lick of
@@ -43,7 +50,14 @@ local TEXTURES = {
     Smoke = "rbxasset://textures/particles/smoke_main.dds",
 }
 local MAX_DISTANCE = 250
-local POSE_TIME = { Palm = 0.3, Sword = 0.38, Spear = 0.42 }
+local WIND_UP = { Sword = 0.09, Spear = 0.1 } -- seconds before the blow lands
+local WIND_UP_POSE = { Sword = "SwordRise", Spear = "SpearDraw" }
+local BLOW_POSE = { Sword = "SwordCut", Spear = "Spear" }
+local HOLD_TIME = 5      -- seconds a weapon stays in the hand after the last strike
+-- a weapon's turn in the fist, from the hand's grip attachment (whose -Z runs down the forearm): a
+-- sword's blade rises out of the fist; a spear's shaft runs along the forearm
+local GRIP_TURN = { Sword = CFrame.Angles(math.rad(80), 0, 0), Spear = CFrame.identity }
+local POSE_TIME = { Palm = 0.3, Sword = 0.42, Spear = 0.42, Nova = 0.5 }
 local SWORD_TIME = 0.3
 local SPEAR_TIME = 0.36
 local SWING = { Palm = "PalmStrike", Sword = "SwordSwing", Spear = "SpearThrust" } -- each strike's sound (SoundCatalog)
@@ -302,6 +316,95 @@ local function elementBurst(name, cframe)
 end
 
 -- ---------- the sword strike ----------
+-- ---------- the weapon in the hand ----------
+-- A sword or spear is welded to the striker's right hand, so it moves exactly as the arm does, and
+-- stays there HOLD_TIME after the last strike, in that kind's ready stance (PoseController's SwordReady,
+-- SpearReady), put away sooner if they meditate, fly or die. The strike itself is the arm's motion:
+-- a short wind-up (SwordRise, SpearDraw), then the blow (SwordCut, Spear). CombatFx.pose picks by time.
+local held = {} -- [player] = { kind, model, trail, hand, source, untilTime }
+local holdWatch = nil
+
+local function putAway(player)
+    local entry = held[player]
+    if entry then
+        held[player] = nil
+        entry.model:Destroy()
+    end
+end
+
+local function watchHeld()
+    if holdWatch then
+        return
+    end
+    holdWatch = RunService.Heartbeat:Connect(function()
+        local now = os.clock()
+        for player, entry in held do
+            if now > entry.untilTime or not entry.hand:IsDescendantOf(Workspace)
+                or player:GetAttribute("IsCultivating") == true or player:GetAttribute("IsFlying") == true then
+                putAway(player)
+            end
+        end
+        if next(held) == nil then
+            holdWatch:Disconnect()
+            holdWatch = nil
+        end
+    end)
+end
+
+-- the weapon in this player's hand, drawing it if it isn't there. spec: the trail's two weapon-space
+-- points, its lifetime, whether it faces the camera, and its transparency
+local function hold(player, kind, source, flying, tint, spec, p)
+    local character = player.Character
+    local hand = character and (character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm"))
+    local gripPoint = hand and hand:FindFirstChild("RightGripAttachment")
+    if not gripPoint then
+        return nil
+    end
+    local entry = held[player]
+    if entry and entry.source == source and entry.hand == hand then
+        entry.untilTime = os.clock() + HOLD_TIME
+        return entry
+    end
+    putAway(player)
+    local model, parts = weaponModel(source, tint, flying)
+    -- a weapon's origin is its grip (its Hilt attribute is where the blade starts): in the fist,
+    -- turned for its kind (GRIP_TURN)
+    local origin = gripPoint.CFrame * GRIP_TURN[kind]
+    for part, offset in parts do
+        part.Anchored = false
+        part.Massless = true
+        part.CanCollide, part.CanTouch, part.CanQuery = false, false, false
+        local weld = Instance.new("Weld")
+        weld.Part0, weld.Part1 = hand, part
+        weld.C0 = origin * offset
+        weld.Parent = part
+    end
+    local body = model:FindFirstChild("Body")
+    local trail = weaponTrail(body, parts[body], spec.from, spec.to, p, spec.glow or p.Main, spec.life, spec.faceCamera, spec.transparency)
+    trail.Enabled = false
+    entry = { kind = kind, model = model, trail = trail, hand = hand, source = source, untilTime = os.clock() + HOLD_TIME }
+    held[player] = entry
+    watchHeld()
+    return entry
+end
+
+-- the blow lands after the wind-up: the trail draws through it, and `effect` plays
+local function afterWindUp(player, entry, windUp, duration, root, effect)
+    task.delay(windUp, function()
+        if entry and held[player] == entry then
+            entry.trail.Enabled = true
+            task.delay(duration, function()
+                if entry.trail.Parent then
+                    entry.trail.Enabled = false
+                end
+            end)
+        end
+        if root.Parent then
+            effect()
+        end
+    end)
+end
+
 local function sword(player, p, root)
     local source, flying = weaponSource(player, "Sword")
     if not source then
@@ -309,137 +412,54 @@ local function sword(player, p, root)
     end
     local elementName, element = elementOf(player, source, flying)
     p = strikePalette(p, element)
-    local model, parts = weaponModel(source, if flying then swordGlow(player) else element and element.Color, flying)
-    local body = model:FindFirstChild("Body")
-    -- the flying sword rides the arc by its origin; a realm sword by its blade's middle
-    local hilt = source:GetAttribute("Hilt") or Vector3.new(0, 0, 1.2)
-    local tip = source:GetAttribute("Tip") or Vector3.new(0, 0, -4.3)
-    local centre = if flying then Vector3.zero else (hilt + tip) / 2
-    local trail = weaponTrail(body, parts[body], hilt, tip, p, p.Main, 0.22, false, 0.2)
-
-    -- the path: from over the right shoulder, across the front, ending low on the left
-    local start = os.clock()
-    local function at(t)
-        local frame = root.CFrame
-        local a = math.rad(-75 + 180 * t)
-        local reach = 4.5 + 3 * math.sin(math.pi * t)
-        local local_ = Vector3.new(math.cos(a) * reach * -1, 2.4 - 1.8 * t, -math.abs(math.sin(a)) * reach - 1.5 * t)
-        return frame:PointToWorldSpace(local_)
-    end
-    local connection
-    connection = RunService.RenderStepped:Connect(function()
-        local t = math.clamp((os.clock() - start) / SWORD_TIME, 0, 1)
-        local position = at(t)
-        local ahead = at(math.min(1, t + 0.04))
-        local direction = ahead - position
-        if direction.Magnitude < 1e-3 then
-            direction = root.CFrame.LookVector
-        end
-        local origin = CFrame.lookAt(position, position + direction) * CFrame.Angles(0, 0, math.rad(90)) * CFrame.new(-centre)
-        for part, offset in parts do
-            part.CFrame = origin * offset
-        end
-        if t >= 1 then
-            connection:Disconnect()
-            trail.Enabled = false
-            Debris:AddItem(model, 0.3)
+    local entry = hold(player, "Sword", source, flying, if flying then swordGlow(player) else element and element.Color, {
+        from = source:GetAttribute("Hilt") or Vector3.new(0, 0, 1.2), to = source:GetAttribute("Tip") or Vector3.new(0, 0, -4.3),
+        life = 0.22, faceCamera = false, transparency = 0.2,
+    }, p)
+    afterWindUp(player, entry, WIND_UP.Sword, SWORD_TIME, root, function()
+        -- a crescent of light where the blade passes
+        local front = root.CFrame * CFrame.new(0, 0.8, -5)
+        local holder = host(front, Vector3.new(0.4, 0.4, 0.4), 0.8)
+        emitter(holder, {
+            Texture = TEXTURES.Slash, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.24), Rotation = NumberRange.new(-30, -10),
+            Size = numberSequence({ { 0, 5 }, { 1, 9 } }), Transparency = numberSequence({ { 0, 0.15 }, { 1, 1 } }),
+            Color = colorSequence({ { 0, p.Core }, { 1, p.Main } }), Brightness = 2,
+        }):Emit(1)
+        if elementName then
+            elementBurst(elementName, front)
         end
     end)
-    local front = root.CFrame * CFrame.new(0, 0.8, -5)
-    local holder = host(front, Vector3.new(0.4, 0.4, 0.4), 0.8)
-    emitter(holder, {
-        Texture = TEXTURES.Slash, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.24), Rotation = NumberRange.new(-12, 12),
-        Size = numberSequence({ { 0, 5 }, { 1, 9 } }), Transparency = numberSequence({ { 0, 0.15 }, { 1, 1 } }),
-        Color = colorSequence({ { 0, p.Core }, { 1, p.Main } }), Brightness = 2,
-    }):Emit(1)
-    if elementName then
-        elementBurst(elementName, front)
-    end
-end
-
--- ---------- the spear thrust ----------
--- The striker's spear (or, with none modelled, a spear of Qi light in the realm's colour): drawn
--- back at the right hip, driven straight ahead, held a beat and gone, a lance of streaks running on
--- to the spear's reach (GameConfig.WeaponKinds.Spear.Range). Positions are from the spear's grip.
-local function lightSpear(glow, p)
-    local function piece(size, color, transparency)
-        local part = Instance.new("Part")
-        part.Size = size
-        part.Color = color
-        part.Material = Enum.Material.Neon
-        part.Transparency = transparency
-        part.Anchored = true
-        part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = false, false, false, false
-        part.Parent = fxFolder
-        return part
-    end
-    local shaft = piece(Vector3.new(0.2, 0.2, 7), glow, 0.25)
-    local head = piece(Vector3.new(0.55, 0.55, 1.5), p.Core, 0)
-    return { [shaft] = CFrame.new(0, 0, -1.2), [head] = CFrame.new(0, 0, -5.4) * CFrame.Angles(0, 0, math.rad(45)) }, shaft,
-        Vector3.new(0, 0, 2.3), Vector3.new(0, 0, -6.2)
 end
 
 local function spear(player, p, root)
     local source = weaponSource(player, "Spear")
+    if not source then
+        return
+    end
     local elementName, element = elementOf(player, source, false)
     p = strikePalette(p, element)
     local glow = if element then element.Color else swordGlow(player)
-    local model, parts, anchor, tail, tip
-    if source then
-        model, parts = weaponModel(source, element and element.Color, false)
-        anchor = model:FindFirstChild("Body")
-        tip = source:GetAttribute("Tip")
-        tail = source:GetAttribute("Hilt") + Vector3.new(0, 0, 3.5)
-    else
-        parts, anchor, tail, tip = lightSpear(glow, p)
-    end
-    local base = {}
-    for part in parts do
-        base[part] = part.Transparency
-    end
-    weaponTrail(anchor, parts[anchor], tail, tip, p, glow, 0.12, true, 0.3)
-
-    local start = os.clock()
-    local struck = false
-    local connection
-    connection = RunService.RenderStepped:Connect(function()
-        local t = math.clamp((os.clock() - start) / SPEAR_TIME, 0, 1)
-        -- drawn back, then driven forward fast and eased out, held, then fading
-        local drive = math.clamp((t - 0.15) / 0.25, 0, 1)
-        local reach = -1.5 + 6.5 * (1 - (1 - drive) ^ 3)
-        local grip = root.CFrame * CFrame.new(0.9, 0.5, 0.2 - reach)
-        local fade = math.clamp((t - 0.7) / 0.3, 0, 1)
-        for part, offset in parts do
-            part.CFrame = grip * offset
-            part.Transparency = base[part] + (1 - base[part]) * fade
-        end
-        if drive >= 1 and not struck then
-            struck = true
-            local holder = host(grip * CFrame.new(tip), Vector3.new(0.4, 0.4, 0.4), 0.6)
-            emitter(holder, {
-                Texture = TEXTURES.Streak, EmissionDirection = Enum.NormalId.Front, Orientation = Enum.ParticleOrientation.VelocityParallel,
-                Speed = NumberRange.new(55, 70), SpreadAngle = Vector2.new(3, 3), Lifetime = NumberRange.new(0.16, 0.22), Drag = 2,
-                Size = numberSequence({ { 0, 1.6 }, { 1, 0.3 } }), Transparency = numberSequence({ { 0, 0 }, { 1, 1 } }),
-                Color = colorSequence({ { 0, p.Core }, { 1, glow } }), Brightness = 2.4,
-            }):Emit(6)
-            emitter(holder, {
-                Texture = TEXTURES.Glow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.16),
-                Size = numberSequence({ { 0, 1 }, { 1, 3.2 } }), Transparency = numberSequence({ { 0, 0.2 }, { 1, 1 } }),
-                Color = colorSequence({ { 0, p.Core }, { 1, glow } }), Brightness = 2,
-            }):Emit(1)
-            if elementName then
-                elementBurst(elementName, grip * CFrame.new(tip))
-            end
-        end
-        if t >= 1 then
-            connection:Disconnect()
-            if model then
-                model:Destroy()
-            else
-                for part in parts do
-                    part:Destroy()
-                end
-            end
+    local entry = hold(player, "Spear", source, false, element and element.Color, {
+        from = source:GetAttribute("Hilt") + Vector3.new(0, 0, 3.5), to = source:GetAttribute("Tip"),
+        glow = glow, life = 0.12, faceCamera = true, transparency = 0.3,
+    }, p)
+    afterWindUp(player, entry, WIND_UP.Spear, SPEAR_TIME, root, function()
+        -- a lance of streaks running on to the spear's reach
+        local tip = root.CFrame * CFrame.new(0.4, 0.5, -7)
+        local holder = host(tip, Vector3.new(0.4, 0.4, 0.4), 0.6)
+        emitter(holder, {
+            Texture = TEXTURES.Streak, EmissionDirection = Enum.NormalId.Front, Orientation = Enum.ParticleOrientation.VelocityParallel,
+            Speed = NumberRange.new(55, 70), SpreadAngle = Vector2.new(3, 3), Lifetime = NumberRange.new(0.16, 0.22),
+            Size = numberSequence({ { 0, 1.6 }, { 1, 0.3 } }), Transparency = numberSequence({ { 0, 0 }, { 1, 1 } }),
+            Color = colorSequence({ { 0, p.Core }, { 1, glow } }), Brightness = 2.4,
+        }):Emit(6)
+        emitter(holder, {
+            Texture = TEXTURES.Glow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.16),
+            Size = numberSequence({ { 0, 1 }, { 1, 3.2 } }), Transparency = numberSequence({ { 0, 0.2 }, { 1, 1 } }),
+            Color = colorSequence({ { 0, p.Core }, { 1, glow } }), Brightness = 2,
+        }):Emit(1)
+        if elementName then
+            elementBurst(elementName, tip)
         end
     end)
 end
@@ -467,13 +487,111 @@ function CombatFx.hit(player, position)
     }):Emit(10)
 end
 
+-- ---------- the Qi skills ----------
+-- a flat plate of light flying ahead of the caster, swelling and fading
+local function flyingPlate(frame, look, image, tone, fromSize, toSize, distance, time)
+    local plate = host(frame, fromSize, time + 0.2)
+    for _, face in { Enum.NormalId.Front, Enum.NormalId.Back } do
+        local gui, label = flat(face, image, tone, 0)
+        gui.Brightness = 3
+        gui.Parent = plate
+        TweenService:Create(label, TweenInfo.new(time * 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, time * 0.5),
+            { ImageTransparency = 1 }):Play()
+    end
+    TweenService:Create(plate, TweenInfo.new(time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        { Size = toSize, CFrame = frame + look * distance }):Play()
+end
+
+-- a burst of light and a wake of streaks at the caster's hand
+local function castBurst(frame, p, streaks)
+    local burst = host(frame, Vector3.new(0.4, 0.4, 0.4), 0.8)
+    emitter(burst, {
+        Texture = TEXTURES.Glow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.25),
+        Size = numberSequence({ { 0, 2 }, { 1, 6 } }), Transparency = numberSequence({ { 0, 0.25 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, p.Core }, { 1, p.Main } }), Brightness = 2,
+    }):Emit(1)
+    emitter(burst, {
+        Texture = TEXTURES.Streak, EmissionDirection = Enum.NormalId.Front, Orientation = Enum.ParticleOrientation.VelocityParallel,
+        Speed = NumberRange.new(40, 60), SpreadAngle = Vector2.new(12, 12), Lifetime = NumberRange.new(0.2, 0.3),
+        Size = numberSequence({ { 0, 2 }, { 1, 0.4 } }), Transparency = numberSequence({ { 0, 0.1 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, p.Core }, { 1, p.Main } }), Brightness = 2.2,
+    }):Emit(streaks)
+end
+
+local function surgingPalm(p, root)
+    local look = root.CFrame.LookVector
+    local start = root.Position + look * 2 + Vector3.new(0, 0.8, 0)
+    local frame = CFrame.lookAt(start, start + look)
+    flyingPlate(frame, look, TEXTURES.Palm, p.Main:Lerp(p.Deep, 0.45), Vector3.new(4, 4, 0.05), Vector3.new(16, 16, 0.05), 32, 0.55)
+    castBurst(frame, p, 14)
+end
+
+local function crescentWave(p, root, player)
+    -- with a sword in hand the wave leaves its swing
+    local own = ReplicatedStorage:FindFirstChild("Weapons")
+    own = own and own:FindFirstChild(player:GetAttribute("WeaponId") or "")
+    if own and own:GetAttribute("Kind") == "Sword" then
+        sword(player, p, root)
+    end
+    local look = root.CFrame.LookVector
+    local start = root.Position + look * 2 + Vector3.new(0, 0.8, 0)
+    local frame = CFrame.lookAt(start, start + look)
+    flyingPlate(frame, look, TEXTURES.Slash, p.Main:Lerp(p.Deep, 0.3), Vector3.new(8, 4, 0.05), Vector3.new(22, 8, 0.05), 46, 0.6)
+    castBurst(frame, p, 18)
+end
+
+local function qiNova(p, root)
+    -- the ring lies flat on the ground under the caster
+    local base = CFrame.new(root.Position - Vector3.new(0, 2.6, 0))
+    local plate = host(base, Vector3.new(4, 0.05, 4), 0.8)
+    local gui, label = flat(Enum.NormalId.Top, TEXTURES.Shockwave, p.Main, 0)
+    gui.Brightness = 3
+    gui.Parent = plate
+    TweenService:Create(plate, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(58, 0.05, 58) }):Play()
+    TweenService:Create(label, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.25), { ImageTransparency = 1 }):Play()
+    local burst = host(root.CFrame, Vector3.new(0.4, 0.4, 0.4), 1)
+    emitter(burst, {
+        Texture = TEXTURES.Glow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.32),
+        Size = numberSequence({ { 0, 4 }, { 1, 12 } }), Transparency = numberSequence({ { 0, 0.3 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, p.Core }, { 1, p.Main } }), Brightness = 2,
+    }):Emit(1)
+    emitter(burst, {
+        Texture = TEXTURES.Streak, Orientation = Enum.ParticleOrientation.VelocityParallel, SpreadAngle = Vector2.new(180, 20),
+        EmissionDirection = Enum.NormalId.Front, Speed = NumberRange.new(44, 64), Drag = 3, Lifetime = NumberRange.new(0.25, 0.4),
+        Size = numberSequence({ { 0, 2.2 }, { 1, 0.3 } }), Transparency = numberSequence({ { 0, 0 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, p.Core }, { 1, p.Main } }), Brightness = 2.4,
+    }):Emit(26)
+end
+
+local SKILLS = {
+    SurgingPalm = { pose = "Palm", sound = "SkillPalm", play = surgingPalm },
+    CrescentWave = { pose = "Sword", sound = "SkillWave", play = crescentWave },
+    QiNova = { pose = "Nova", sound = "SkillNova", play = qiNova },
+}
+
+function CombatFx.skill(player, skillId)
+    local skill = SKILLS[skillId]
+    local root = rootOf(player)
+    if not (skill and root) then
+        return
+    end
+    strikes[player] = { weapon = skill.pose, started = os.clock(), untilTime = os.clock() + (POSE_TIME[skill.pose] or 0.3) + 0.1 }
+    local camera = Workspace.CurrentCamera
+    if player ~= Players.LocalPlayer and (not camera or (camera.CFrame.Position - root.Position).Magnitude > MAX_DISTANCE) then
+        return
+    end
+    Sfx.play(skill.sound, root)
+    local element = GameConfig.Forge.Elements[player:GetAttribute("WeaponElement") or ""]
+    skill.play(strikePalette(QinggongFx.palette(player), element), root, player)
+end
+
 -- ---------- entry points ----------
 function CombatFx.play(player, weapon)
     local root = rootOf(player)
     if not root then
         return
     end
-    strikes[player] = { weapon = weapon, untilTime = os.clock() + (POSE_TIME[weapon] or 0.3) }
+    strikes[player] = { weapon = weapon, started = os.clock(), untilTime = os.clock() + (POSE_TIME[weapon] or 0.3) }
     local camera = Workspace.CurrentCamera
     if player ~= Players.LocalPlayer and (not camera or (camera.CFrame.Position - root.Position).Magnitude > MAX_DISTANCE) then
         return
@@ -489,17 +607,24 @@ function CombatFx.play(player, weapon)
     end
 end
 
--- The strike pose a player is in ("Palm", "Sword", "Spear") or nil; PoseController reads it.
+-- The pose a player is in, or nil; PoseController reads it. During a strike: "Palm", "SwordRise" then
+-- "SwordCut", "SpearDraw" then "Spear", or "Nova". With a weapon out after it: "SwordReady", "SpearReady".
 function CombatFx.pose(player)
     local strike = strikes[player]
     if strike and os.clock() < strike.untilTime then
+        local windUp = WIND_UP[strike.weapon]
+        if windUp then
+            return if os.clock() - strike.started < windUp then WIND_UP_POSE[strike.weapon] else BLOW_POSE[strike.weapon]
+        end
         return strike.weapon
     end
-    return nil
+    local entry = held[player]
+    return entry and entry.kind .. "Ready"
 end
 
 Players.PlayerRemoving:Connect(function(player)
     strikes[player] = nil
+    putAway(player)
 end)
 
 return CombatFx

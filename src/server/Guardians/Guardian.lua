@@ -37,6 +37,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local EggInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("EggInventory"))
 local EggModel = require(script.Parent:WaitForChild("EggModel"))
@@ -459,12 +460,13 @@ function Guardian:secure()
         self:returnEgg()
         return
     end
-    Wallet.add(player, self.config.SecureStones or 0, "SecureEgg", egg.eggId)
+    local stones = Shop.eggStones(egg.eggId)
+    Wallet.add(player, stones, "SecureEgg", egg.eggId)
     local qiGained = QiReward.grantEggBurst(player, egg.eggId)
     -- its relic: unlocks its element at the Blacksmith's forge (nil when the player already had it)
     local element = self.config.Element and Elements.unlock(player, self.config.Element) and self.config.Element or nil
     PlayerData.saveSoon(player)
-    RemoteEvents.GuardianEvent:FireClient(player, self.model, "Secured", egg.eggId, self.config.SecureStones, element, qiGained)
+    RemoteEvents.GuardianEvent:FireClient(player, self.model, "Secured", egg.eggId, stones, element, qiGained)
     Quests.Moment:Fire(player, "Secure", self.id)
     Analytics.event(player, "EggSecured", qiGained, self.id, egg.eggId)
     self:clearThief()

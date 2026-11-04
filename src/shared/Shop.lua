@@ -8,6 +8,10 @@
 --   Shop.forgePrice(id)       what forging a weapon with an element costs (GameConfig.Forge)
 --   Shop.element(name)        an element's GameConfig.Forge entry, or nil
 --   Shop.petValue(petId)      what a pet sells for
+--   Shop.rankValue(rankId)    the rewards' ladder: a weapon's price at its realm's first rank, between
+--   Shop.eggStones(eggId)     what securing this egg pays
+--   Shop.relicStones(relic)   what a relic's first attunement pays
+--   Shop.roundNice(n)         two significant figures (a price worth reading)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
@@ -88,6 +92,33 @@ function Shop.petValue(petId)
     end
     local rules = GameConfig.SpiritStones
     return math.floor((rules.PetValue[pet.Rarity] or 0) * rules.RealmFactor ^ ((petRealm[petId] or 1) - 1))
+end
+
+function Shop.roundNice(n)
+    if n < 100 then
+        return math.max(1, math.floor(n + 0.5))
+    end
+    local unit = 10 ^ (math.floor(math.log10(n)) - 1)
+    return math.floor(n / unit + 0.5) * unit
+end
+
+-- rises by the realm's price step over each realm's ranks, so rewards keep pace with prices
+local RANKS_PER_REALM = #GameConfig.Ranks / #realms
+function Shop.rankValue(rankId)
+    local rank = Ranks.getRankById(rankId)
+    local index = rank and Ranks.getIndex(rank.Name) or 1
+    return GameConfig.WeaponTiers[1].Price * GameConfig.SpiritStones.RealmFactor ^ ((index - 1) / RANKS_PER_REALM)
+end
+
+function Shop.eggStones(eggId)
+    local egg = GameConfig.Eggs[eggId]
+    local rules = GameConfig.SpiritStones
+    return if egg then Shop.roundNice(math.max(rules.MinReward, Shop.rankValue(egg.RequiredRank) * rules.EggShare)) else 0
+end
+
+function Shop.relicStones(relic)
+    local rules = GameConfig.SpiritStones
+    return Shop.roundNice(math.max(rules.MinReward, Shop.rankValue(relic.RequiredRank) * rules.RelicShare))
 end
 
 return Shop

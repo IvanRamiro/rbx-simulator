@@ -51,6 +51,17 @@ local GameConfig = {
         TargetTag = "CombatTarget",
         RankPowerStep = 0.12,
         Palm = { Damage = 10, Range = 9, Cooldown = 0.45, Arc = 75 },
+        -- Qi skills (server/Combat/CombatService, client/Combat/SkillController), unlocked by rank.
+        -- Power: the damage in strikes of the player's current weapon. Together they add about 58% to a
+        -- player's damage over time, in big moments. Arc is each side of facing; 180 is all round.
+        Skills = {
+            { Id = "SurgingPalm", Name = "Surging Palm", RankId = "QiGatherer", Key = "R", Gamepad = "ButtonL1", Icon = "SkillPalm",
+                Cooldown = 8, Range = 34, Arc = 30, Power = 3, Hint = "Press R, or tap it: a great hand of Qi." },
+            { Id = "CrescentWave", Name = "Crescent Wave", RankId = "FoundationInitiate", Key = "F", Gamepad = "ButtonR1", Icon = "SkillWave",
+                Cooldown = 14, Range = 48, Arc = 35, Power = 5, Hint = "Press F, or tap it: a crescent that flies far." },
+            { Id = "QiNova", Name = "Qi Nova", RankId = "CoreInitiate", Key = "C", Gamepad = "ButtonX", Icon = "SkillNova",
+                Cooldown = 24, Range = 26, Arc = 180, Power = 8, Hint = "Press C, or tap it: a blast all around you." },
+        },
     },
 
     -- Weapons (src/server/Shop; the Blacksmith on Yggdrasil): a sword and a spear for every realm,
@@ -108,13 +119,18 @@ local GameConfig = {
 
     -- Spirit Stones: the currency of the Blacksmith and Buy & Sell (Qi is never spent: ranks are
     -- reached by total Qi). Earned by selling pets and weapons, securing guardians' eggs
-    -- (Guardians.<Id>.SecureStones) and a relic's first attunement.
+    -- (by the egg: Shop.eggStones) and a relic's first attunement (Shop.relicStones).
     SpiritStones = {
         -- a pet's worth: its rarity's value times RealmFactor per realm of its egg's required rank
         PetValue = { Common = 6, Uncommon = 12, Rare = 25, Epic = 50, Legendary = 110, Mythical = 250, Secret = 600 },
         RealmFactor = 2.6, -- as weapon prices climb
         WeaponRefund = 0.4, -- the share of its price a weapon sells back for
-        RelicShare = 0.2, -- a relic's first attunement pays this share of its Qi reward in stones
+        -- the rewards' ladder (Shop.rankValue): a rank's value is the price of a weapon of its realm,
+        -- rising smoothly between realms. An egg pays EggShare of its required rank's value when
+        -- secured, a relic RelicShare of its own on first attunement, each at least MinReward
+        EggShare = 0.25,
+        RelicShare = 0.5,
+        MinReward = 40,
         Max = 1e12,
     },
 
@@ -147,7 +163,6 @@ local GameConfig = {
             Eggs = { "BeginnerQiEgg", "SpiritBreezeEgg", "ElementalCoreEgg" },
             -- its eggs are the Egg Garden's (Yggdrasil's own stands): carried to the Hatching Altar
             SafeZone = { Altar = true, Radius = 12, Name = "Hatching Altar" }, -- round HatchingAltar.Centre
-            SecureStones = 150,     -- Spirit Stones for securing its egg
             Element = "Earth",      -- the relic it drops when its egg is secured unlocks this element (Forge)
             MaxHealth = 1200,      -- a beginner's Qi Palm weakens it alone in ~108 strikes (about 50 seconds)
             WeakenedAt = 0.1,      -- share of health below which it falters and its stands' eggs can be taken
@@ -178,7 +193,6 @@ local GameConfig = {
             Facing = Vector3.new(81.7, 0.6, 96.4), -- toward the Grove Gate, where challengers arrive
             Eggs = { "JadeSpiritEgg", "BloomwoodEgg", "AncientGroveEgg" },
             SafeZone = { Island = "Yggdrasil", Name = "Yggdrasil" },   -- home across the bridge: secured on setting foot on the hub
-            SecureStones = 600,     -- Spirit Stones for securing its egg
             Element = "Wind",
             MaxHealth = 2000,      -- a Qi Gatherer's palm (11 a strike) weakens it alone in ~165 strikes
             WeakenedAt = 0.1,
@@ -211,7 +225,6 @@ local GameConfig = {
             Facing = Vector3.new(22.0, 0.5, 121.0), -- toward the Ember Gate, where challengers arrive
             Eggs = { "InfernoEgg", "MagmaHeartEgg", "PhoenixAshEgg" },
             SafeZone = { Island = "Yggdrasil", Name = "Yggdrasil" },   -- home across the bridge: secured on setting foot on the hub
-            SecureStones = 1500,    -- Spirit Stones for securing its egg
             Element = "Fire",
             MaxHealth = 3200,      -- a Qi Awakener's starter sword (~24 a strike) weakens it alone in ~120 strikes
             WeakenedAt = 0.1,
@@ -247,7 +260,6 @@ local GameConfig = {
             Facing = Vector3.new(-27, 1, 118.2),   -- toward the Crescent Arch, where challengers arrive
             Eggs = { "CelestialEgg", "AstralSanctumEgg", "HeavenlyThroneEgg" },
             SafeZone = { Island = "Yggdrasil", Name = "Yggdrasil" },   -- home across the bridge: secured on setting foot on the hub
-            SecureStones = 4000,
             Element = "Frost",
             MaxHealth = 11000,     -- a Soul Awakening's Spirit Soul sword (~84 a strike) weakens it alone in ~118 strikes
             WeakenedAt = 0.1,
@@ -282,7 +294,6 @@ local GameConfig = {
             Facing = Vector3.new(-85.8, 0.8, 122.8), -- toward the Gate of Descent, where challengers arrive
             Eggs = { "ForbiddenOriginEgg", "VoidRiftEgg", "PrimordialAbyssEgg" },
             SafeZone = { Island = "Yggdrasil", Name = "Yggdrasil" },   -- home across the bridge: secured on setting foot on the hub
-            SecureStones = 12000,
             Element = "Void",
             MaxHealth = 24000,     -- a Divine Initiate's Divine sword (~180 a strike) weakens him alone in ~120 strikes
             WeakenedAt = 0.1,
@@ -344,8 +355,8 @@ local GameConfig = {
         { Id = "EmberHeart", DisplayName = "Ember Heart", QiReward = 1500, RequiredRank = "QiAwakener", Element = "Fire" },
         { Id = "AshenSigil", DisplayName = "Ashen Sigil", QiReward = 1500, RequiredRank = "QiAwakener", Element = "Fire" },
         { Id = "CalderaCrown", DisplayName = "Caldera Crown", QiReward = 1500, RequiredRank = "QiAwakener", Element = "Fire" },
-        { Id = "MoonMirror", DisplayName = "Moon Mirror", QiReward = 3000, RequiredRank = "FoundationInitiate", Element = "Frost" },
-        { Id = "StarWell", DisplayName = "Star Well", QiReward = 3000, RequiredRank = "FoundationInitiate", Element = "Frost" },
+        { Id = "MoonMirror", DisplayName = "Moon Mirror", QiReward = 20000, RequiredRank = "SoulAwakening", Element = "Frost" },
+        { Id = "StarWell", DisplayName = "Star Well", QiReward = 20000, RequiredRank = "SoulAwakening", Element = "Frost" },
         { Id = "OriginAltar", DisplayName = "Origin Altar", QiReward = 250000, RequiredRank = "DivineInitiate", Element = "Void" },
         { Id = "VoidShard", DisplayName = "Void Shard", QiReward = 1000000, RequiredRank = "VoidWalker", Element = "Void" },
     },
@@ -577,6 +588,19 @@ local GameConfig = {
             Text = "Steal an egg from Pangu and carry it all the way home." },
         { Id = "Summit", Kind = "Rank", Goal = "EternalOrigin", Reward = 50000, Title = "Eternal Origin",
             Text = "The last rank of all. Nothing lies above it." },
+    },
+
+    -- reasons to come back (server/Rewards/RewardService, shared/RewardRules). Daily: each streak day's
+    -- Spirit Stones, times SpiritStones.RealmFactor per realm (a full week is worth about one weapon of
+    -- the player's realm), and any minutes of Qi. Offline: the share
+    -- of the cultivating rate paid for time away. Group: set GroupId to turn the group reward on.
+    Rewards = {
+        Daily = {
+            { Stones = 2 }, { Stones = 3 }, { Stones = 4, QiMinutes = 2 }, { Stones = 5 },
+            { Stones = 8, QiMinutes = 3 }, { Stones = 10 }, { Stones = 25, QiMinutes = 5 },
+        },
+        Offline = { Share = 0.2, MaxHours = 8, MinMinutes = 10 },
+        Group = { GroupId = 0, Stones = 200 },
     },
 
     -- each player's own view and sound (server/Data/Settings, client/UI/SettingsController)
