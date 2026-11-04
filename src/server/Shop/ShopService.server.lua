@@ -104,7 +104,7 @@ function actions.Buy(player, weaponId)
     if WeaponInventory.isFull(player) then
         return false, "Your weapon rack is full: sell one first."
     end
-    if not Wallet.spend(player, weapon.Price) then
+    if not Wallet.spend(player, weapon.Price, "BuyWeapon", weapon.Id) then
         return false, "You need " .. weapon.Price .. " Spirit Stones."
     end
     WeaponInventory.equip(player, WeaponInventory.grant(player, weapon.Id))
@@ -157,7 +157,7 @@ function actions.Forge(player, instanceId, spec)
     if not WeaponInventory.get(player, instanceId) then
         return false, "That weapon isn't yours."
     end
-    if not Wallet.spend(player, price) then
+    if not Wallet.spend(player, price, "Forge", element) then
         return false, "You need " .. price .. " Spirit Stones."
     end
     WeaponInventory.forge(player, instanceId, element, name)
@@ -173,7 +173,7 @@ function actions.SellPet(player, instanceId)
         return false, "That pet isn't yours."
     end
     local value = Shop.petValue(petId)
-    Wallet.add(player, value)
+    Wallet.add(player, value, "SellPet", petId)
     PetInventory.publish(player)
     return true, "Sold the " .. GameConfig.Pets[petId].DisplayName .. " for " .. value .. " Spirit Stones."
 end
@@ -187,7 +187,7 @@ function actions.SellWeapon(player, instanceId)
         return false, "Put the weapon down before selling it."
     end
     local value = Shop.weaponRefund(record.WeaponId, record.Element)
-    Wallet.add(player, value)
+    Wallet.add(player, value, "SellWeapon", record.WeaponId)
     return true, "Sold " .. nameOf(record) .. " for " .. value .. " Spirit Stones."
 end
 

@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
+local Analytics = require(script.Parent.Parent:WaitForChild("Analytics"):WaitForChild("Analytics"))
 
 local function tryRankUp(player)
     if player.Parent ~= Players then
@@ -26,6 +27,7 @@ local function tryRankUp(player)
 
     rank.Value = nextRank.Name
     PlayerData.saveSoon(player)
+    Analytics.event(player, "RankUp", Ranks.getIndex(nextRank.Name), nextRank.Id)
 end
 
 RemoteEvents.RankUpEvent.OnServerEvent:Connect(tryRankUp)

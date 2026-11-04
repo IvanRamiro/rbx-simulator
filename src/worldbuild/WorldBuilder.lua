@@ -1017,7 +1017,7 @@ end
 WorldBuilder.Waystones = {
     JadeRoute = { Island = "JadeGrove", Title = "Jade Grove", RankId = "QiGatherer", Color = Color3.fromRGB(40, 215, 110) },
     EmberRoute = { Island = "EmberPeak", Title = "Ember Peak", RankId = "QiAwakener", Color = Color3.fromRGB(255, 105, 25) },
-    MoonlitRoute = { Island = "MoonlitIsle", Title = "Moonlit Isle", RankId = "FoundationInitiate", Color = Color3.fromRGB(120, 100, 255) },
+    MoonlitRoute = { Island = "MoonlitIsle", Title = "Moonlit Isle", RankId = "SoulAwakening", Color = Color3.fromRGB(120, 100, 255) },
     OriginRoute = { Island = "OriginAbyss", Title = "Origin Abyss", RankId = "DivineInitiate", Color = Color3.fromRGB(175, 45, 255) },
     RootPath = { Title = "Root of the Island", Subtitle = "Climb down the great root", Color = Color3.fromRGB(255, 170, 40) },
 }

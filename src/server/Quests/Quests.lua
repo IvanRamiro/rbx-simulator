@@ -10,6 +10,9 @@ local Quests = {}
 
 Quests.DONE = #GameConfig.Quests + 1
 
+-- a moment another service saw, for QuestService: Fire(player, kind, goal)
+Quests.Moment = Instance.new("BindableEvent")
+
 local steps = {} -- [player] = step
 
 -- A saved step: a whole number from 1 to DONE; a new player (nil) starts at 1.

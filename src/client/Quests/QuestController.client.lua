@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
+local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
 local Toast = require(UI:WaitForChild("Toast"))
@@ -73,7 +74,7 @@ local function render()
     count.Text = step .. " / " .. #QUESTS
     title.Text = quest.Title
     body.Text = quest.Text
-    reward.Text = "REWARD  " .. quest.Reward .. " Spirit Stones"
+    reward.Text = "REWARD  " .. NumberFormat.compact(quest.Reward) .. " Spirit Stones"
     -- a bar only where there is a count to fill (Qi, a rank's Qi)
     bar.Visible = quest.Kind == "Qi" or quest.Kind == "Rank"
 end
@@ -109,7 +110,7 @@ RemoteEvents.QuestEvent.OnClientEvent:Connect(function(kind, step, stones)
         return
     end
     Sfx.play("Attune")
-    local paid = if typeof(stones) == "number" and stones > 0 then "  +" .. stones .. " Spirit Stones" else ""
+    local paid = if typeof(stones) == "number" and stones > 0 then "  +" .. NumberFormat.compact(stones) .. " Spirit Stones" else ""
     if step == #QUESTS then
         message:show("Quest complete: " .. QUESTS[step].Title .. "." .. paid .. "\nThe path is yours now, cultivator.", C.Highlight)
     else

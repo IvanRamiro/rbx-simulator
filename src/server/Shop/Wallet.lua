@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local Analytics = require(script.Parent.Parent:WaitForChild("Analytics"):WaitForChild("Analytics"))
 
 local Wallet = {}
 
@@ -29,23 +30,25 @@ function Wallet.balance(player)
     return stones[player] or 0
 end
 
--- Adds stones; false when the player isn't set up.
-function Wallet.add(player, amount)
+-- Adds stones; false when the player isn't set up. `kind` and `sku` say what paid them (analytics).
+function Wallet.add(player, amount, kind, sku)
     if stones[player] == nil or typeof(amount) ~= "number" or amount ~= amount or amount < 0 then
         return false
     end
     stones[player] = math.min(stones[player] + math.floor(amount), GameConfig.SpiritStones.Max)
     mirror(player)
+    Analytics.stones(player, "Source", math.floor(amount), stones[player], kind, sku)
     return true
 end
 
 -- Spends stones; false (and nothing spent) when the player hasn't enough.
-function Wallet.spend(player, amount)
+function Wallet.spend(player, amount, kind, sku)
     if stones[player] == nil or typeof(amount) ~= "number" or amount < 0 or stones[player] < amount then
         return false
     end
     stones[player] -= amount
     mirror(player)
+    Analytics.stones(player, "Sink", amount, stones[player], kind, sku)
     return true
 end
 

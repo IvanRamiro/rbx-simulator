@@ -1,6 +1,7 @@
--- The System's first quests (GameConfig.Quests), decided here on the server: each player's current
--- quest is checked a few times a second against what they really did (their Qi and rank, their
--- pets, the egg they carry) and the moments the server sees (an air leap, a strike on a guardian).
+-- The System's quests (GameConfig.Quests), from the first steps out across every island, decided
+-- here on the server: each player's current quest is checked a few times a second against what they
+-- really did (their Qi and rank, pets, weapons, relics, the island they're on, the egg they carry)
+-- and the moments the server sees (an air leap, a strike on a guardian, a secured egg).
 -- A finished quest pays its Spirit Stones, moves the player to the next (Quests) and tells their
 -- client (QuestEvent "Complete", step, reward). The client may only ask to skip them all
 -- (QuestEvent "Skip"). The player's "QuestProgress" attribute (0 to 1) feeds the tracker's bar.
@@ -17,6 +18,9 @@ local PlayerData = require(Server:WaitForChild("Data"):WaitForChild("PlayerData"
 local PetInventory = require(Server:WaitForChild("Pets"):WaitForChild("PetInventory"))
 local Wallet = require(Server:WaitForChild("Shop"):WaitForChild("Wallet"))
 local Combat = require(Server:WaitForChild("Combat"):WaitForChild("Combat"))
+local WeaponInventory = require(Server:WaitForChild("Shop"):WaitForChild("WeaponInventory"))
+local Discoveries = require(Server:WaitForChild("World"):WaitForChild("Discoveries"))
+local Analytics = require(Server:WaitForChild("Analytics"):WaitForChild("Analytics"))
 
 local CHECK_EVERY = 0.25
 
@@ -56,13 +60,30 @@ local function check(player, quest)
         return player:GetAttribute("CarryingEgg") ~= nil, 0
     elseif kind == "Hatch" then
         return petCount(player) > (baseline[player] or math.huge), 0
+    elseif kind == "BuyWeapon" then
+        local data = WeaponInventory.exportData(player)
+        return data ~= nil and #data.Weapons >= 2, 0
+    elseif kind == "Forge" then
+        local data = WeaponInventory.exportData(player)
+        for _, weapon in (if data then data.Weapons else {}) do
+            if weapon.Element then
+                return true, 0
+            end
+        end
+        return false, 0
+    elseif kind == "Relic" then
+        local found = Discoveries.exportData(player)
+        return found ~= nil and table.find(found, quest.Goal) ~= nil, 0
+    elseif kind == "Visit" then
+        return player:GetAttribute("Island") == quest.Goal, 0
     end
-    return seen[player] ~= nil and seen[player][kind] == true, 0 -- "Leap", "GuardianHit"
+    return seen[player] ~= nil and seen[player][kind] == true, 0 -- "Leap", "GuardianHit", "Secure"
 end
 
 local function complete(player, step)
     local quest = GameConfig.Quests[step]
-    Wallet.add(player, quest.Reward)
+    Wallet.add(player, quest.Reward, "Quest", quest.Id)
+    Analytics.questStep(player, step, quest.Id)
     Quests.set(player, step + 1)
     begin(player)
     player:SetAttribute("QuestProgress", 0)
@@ -71,10 +92,10 @@ local function complete(player, step)
 end
 
 -- a moment the server saw: it counts only toward the quest the player is on
-local function saw(player, kind)
+local function saw(player, kind, goal)
     local step = ready[player] and Quests.get(player)
     local quest = step and GameConfig.Quests[step]
-    if quest and quest.Kind == kind and seen[player] then
+    if quest and quest.Kind == kind and (quest.Goal == nil or quest.Goal == goal) and seen[player] then
         seen[player][kind] = true
     end
 end
@@ -92,8 +113,11 @@ Combat.Hit.Event:Connect(function(player, target)
     end
 end)
 
+Quests.Moment.Event:Connect(saw)
+
 RemoteEvents.QuestEvent.OnServerEvent:Connect(function(player, action)
     if action == "Skip" and ready[player] and Quests.get(player) < Quests.DONE then
+        Analytics.event(player, "QuestsSkipped", Quests.get(player))
         Quests.set(player, Quests.DONE)
         PlayerData.saveSoon(player)
     end

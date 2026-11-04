@@ -166,12 +166,17 @@ local function removeRealmAura(player)
     end
 end
 
+-- the Reduced Effects setting hides other players' auras on this client
+local function hiddenByReducedEffects(player)
+    return player ~= Players.LocalPlayer and Players.LocalPlayer:GetAttribute("SettingReducedEffects") == true
+end
+
 local function refreshRealmAura(player)
     local character = player.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
     local rank = Ranks.getRank(Ranks.getPlayerRankName(player))
     local realm = rank and getRealm(rank)
-    if not (rootPart and realm and isAlive(character)) then
+    if not (rootPart and realm and isAlive(character)) or hiddenByReducedEffects(player) then
         removeRealmAura(player)
         return
     end
@@ -211,6 +216,7 @@ function refreshAura(player)
     local rankId = getRankId(player)
     local petId = getAuraPetId(player)
     local shouldShow = player:GetAttribute("IsCultivating") == true
+        and not hiddenByReducedEffects(player)
         and CharacterAura.hasPetDesign(petId)
         and rootPart ~= nil
         and rankId ~= nil
@@ -415,3 +421,9 @@ Players.PlayerRemoving:Connect(unwatchPlayer)
 for _, player in Players:GetPlayers() do
     watchPlayer(player)
 end
+
+Players.LocalPlayer:GetAttributeChangedSignal("SettingReducedEffects"):Connect(function()
+    for _, player in Players:GetPlayers() do
+        refreshAura(player)
+    end
+end)

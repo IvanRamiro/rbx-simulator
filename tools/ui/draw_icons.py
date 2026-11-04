@@ -146,4 +146,17 @@ path(d, anvil, closed=True)
 path(d, [(330, 420), (640, 140)], W)          # handle
 path(d, [(560, 70), (760, 290), (690, 350), (490, 130)], W * 0.8, closed=True)  # head
 save(img, "Forge")
+
+# Settings: a gear
+img, d = canvas()
+cx, cy, teeth = 512, 512, 8
+gear = []
+for i in range(teeth):
+    a = i * math.tau / teeth
+    half = math.tau / teeth / 4.6
+    for r, da in ((300, -half * 1.5), (400, -half * 0.8), (400, half * 0.8), (300, half * 1.5)):
+        gear.append((cx + r * math.cos(a + da), cy + r * math.sin(a + da)))
+path(d, gear, closed=True)
+path(d, arc(cx, cy, 125, 0, 360), W)
+save(img, "Settings")
 print("drawn:", sorted(os.listdir(OUT)))

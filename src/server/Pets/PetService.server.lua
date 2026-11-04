@@ -7,6 +7,7 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local EggInventory = require(script.Parent:WaitForChild("EggInventory"))
 local PetInventory = require(script.Parent:WaitForChild("PetInventory"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
+local Analytics = require(script.Parent.Parent:WaitForChild("Analytics"):WaitForChild("Analytics"))
 local PromptRules = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("PromptRules"))
 local EggModel = require(script.Parent.Parent:WaitForChild("Guardians"):WaitForChild("EggModel"))
 
@@ -132,6 +133,7 @@ local function onHatchRequest(player, eggId)
     end)
     PetInventory.publish(player)
     PlayerData.saveSoon(player)
+    Analytics.event(player, "EggHatched", 1, eggId, petId)
     RemoteEvents.EggHatchResultEvent:FireClient(player, {
         EggId = eggId,
         PetId = petId,

@@ -8,8 +8,8 @@
 --   Sfx.loop(name, parent)   a loop on a part (or flat with no parent), faded in; returns a function
 --                            that fades it out and removes it, and the Sound.
 --
--- Sounds go through four SoundGroups in SoundService (Music, Ambience, Effects, Interface), so one
--- volume per kind can be changed later.
+-- Sounds go through four SoundGroups in SoundService (Music, Ambience, Effects, Interface).
+--   Sfx.setVolume(kind, share)  the player's setting, 0 to 1: "Music", or "Sound" for all the rest.
 local ContentProvider = game:GetService("ContentProvider")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
@@ -34,6 +34,14 @@ for name, volume in GROUP_VOLUME do
         group.Parent = SoundService
     end
     groups[name] = group
+end
+
+function Sfx.setVolume(kind, share)
+    for name, group in groups do
+        if (name == "Music") == (kind == "Music") then
+            group.Volume = GROUP_VOLUME[name] * share
+        end
+    end
 end
 
 local lastPlayed = {}

@@ -30,7 +30,7 @@
 --   "Awaken" | "Weaken" | <a Sweep's name> windUp | <a Wave's name> windUp radius waveSpeed arc |
 --   <a Pounce's name> windUp air from to | "Land" position | "Steal" position | "Drop" position |
 --   "Recover" | "Secure" position | "Return" position (where the egg was, or nil)
--- and the thief alone "Secured" eggId stones element (the element its relic unlocked, or nil) | "BagFull".
+-- and the thief alone "Secured" eggId stones element (the element its relic unlocked, or nil) qi | "BagFull".
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -44,6 +44,9 @@ local EggStands = require(script.Parent:WaitForChild("EggStands"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
 local Elements = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Elements"))
 local Wallet = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Wallet"))
+local QiReward = require(script.Parent.Parent:WaitForChild("Cultivation"):WaitForChild("QiReward"))
+local Quests = require(script.Parent.Parent:WaitForChild("Quests"):WaitForChild("Quests"))
+local Analytics = require(script.Parent.Parent:WaitForChild("Analytics"):WaitForChild("Analytics"))
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
 
 local FLAT = Vector3.new(1, 0, 1)
@@ -331,6 +334,7 @@ function Guardian:carry(player)
     player:SetAttribute("CarryingEgg", egg.eggId)
     player:SetAttribute("CarryingGuardian", self.id)
     self:setEggState("Carried")
+    Analytics.event(player, "EggTaken", 1, self.id, egg.eggId)
 end
 
 -- The dropped egg's prompt: only its thief can pick it up again.
@@ -421,6 +425,7 @@ function Guardian:dropEgg(near)
     egg.dropUntil = os.clock() + self.config.DropTime
     egg.model:SetAttribute("DropUntil", workspace:GetServerTimeNow() + self.config.DropTime)
     local owner = egg.owner
+    Analytics.event(owner, "EggDropped", 1, self.id, egg.eggId)
     self:clearThief()
     egg.owner = owner -- still theirs to recover
     self:setEggState("Dropped")
@@ -454,11 +459,14 @@ function Guardian:secure()
         self:returnEgg()
         return
     end
-    Wallet.add(player, self.config.SecureStones or 0)
+    Wallet.add(player, self.config.SecureStones or 0, "SecureEgg", egg.eggId)
+    local qiGained = QiReward.grantEggBurst(player, egg.eggId)
     -- its relic: unlocks its element at the Blacksmith's forge (nil when the player already had it)
     local element = self.config.Element and Elements.unlock(player, self.config.Element) and self.config.Element or nil
     PlayerData.saveSoon(player)
-    RemoteEvents.GuardianEvent:FireClient(player, self.model, "Secured", egg.eggId, self.config.SecureStones, element)
+    RemoteEvents.GuardianEvent:FireClient(player, self.model, "Secured", egg.eggId, self.config.SecureStones, element, qiGained)
+    Quests.Moment:Fire(player, "Secure", self.id)
+    Analytics.event(player, "EggSecured", qiGained, self.id, egg.eggId)
     self:clearThief()
     if egg.slot then
         EggStands.respawn(egg.slot, self.config.Eggs)

@@ -73,7 +73,7 @@ RISE = 0.025
 ROUTES = {
     "JadeRoute": {"island": "JadeGrove", "theme": "Jade", "rank": "QiGatherer"},
     "EmberRoute": {"island": "EmberPeak", "theme": "Ember", "rank": "QiAwakener"},
-    "MoonlitRoute": {"island": "MoonlitIsle", "theme": "Moon", "rank": "FoundationInitiate"},
+    "MoonlitRoute": {"island": "MoonlitIsle", "theme": "Moon", "rank": "SoulAwakening"},
     "OriginRoute": {"island": "OriginAbyss", "theme": "Origin", "rank": "DivineInitiate"},
 }
 

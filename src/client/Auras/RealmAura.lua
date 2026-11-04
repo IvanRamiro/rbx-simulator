@@ -1,5 +1,5 @@
 -- RealmAura: every player's realm aura, the owner's design (built and reviewed in the Studio test
--- range, workspace.AuraTestRange, which uses this same module: a realm enhanced there is the realm
+-- range, AuraTestRange, kept in ServerStorage.DevStage; drag it to Workspace to use it. It runs this same module: a realm enhanced there is the realm
 -- the game shows). Always on; Realm 4's ground layers quicken while the player meditates.
 --
 -- Each realm (1-12, AuraConfig's palettes) has its own layers; its sub-rank (1-5) moves it along one

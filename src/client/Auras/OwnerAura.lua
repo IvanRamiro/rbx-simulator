@@ -37,6 +37,7 @@ local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RealmAura = require(script.Parent:WaitForChild("RealmAura"))
@@ -244,9 +245,13 @@ end
 
 -- the viewer's screen: the strongest nearby surge darkens it through the build and flashes it at
 -- the strike
+local function reducedEffects()
+    return Players.LocalPlayer:GetAttribute("SettingReducedEffects") == true
+end
+
 local function stepScreen()
     local build, flash = 0, 0
-    for record in records do
+    for record in (if reducedEffects() then {} else records) do
         local near = nearness(record.root)
         local surge = record.surge
         local f = if surge.since >= 0 and surge.since < SURGE_FLASH then (1 - surge.since / SURGE_FLASH) ^ 2 else 0
@@ -277,7 +282,7 @@ local function shakeCamera(dt)
     end
     local camera = workspace.CurrentCamera
     local amp = math.rad(0.9) * (1 - shake.since / SURGE_SHAKE) ^ 2 * nearness(shake.root)
-    if camera and amp > 0 then
+    if camera and amp > 0 and not reducedEffects() then
         local t = shake.clock * 40
         camera.CFrame *= CFrame.Angles(math.noise(t, 1) * 2 * amp, math.noise(t, 2) * 2 * amp, math.noise(t, 3) * amp)
     end
@@ -510,6 +515,7 @@ function OwnerAura.build(player, character, root)
             table.insert(record.made, grip)
             local rattle = grip:FindFirstChildOfClass("Sound")
             if rattle then
+                rattle.SoundGroup = SoundService:FindFirstChild("Effects") -- so the Sound setting reaches it
                 table.insert(record.surge.rattles, rattle)
             end
             local chainEnd = portal:FindFirstChild("ChainEnd", true)

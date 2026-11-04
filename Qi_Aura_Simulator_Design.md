@@ -51,15 +51,15 @@ The fantasy is becoming a cultivator whose growing power shows in ever more spec
 ### Core loop (built)
 
 1. **Cultivate** to earn Qi. The Qi Spring and equipped pets increase it.
-2. **Rank up** when the next rank's Qi requirement is met. Qi is not spent.
+2. **Rank up** when the next rank's Qi requirement is met. Qi is not spent. Qi comes from cultivating, and in bursts from securing a guardian's egg (section 7).
 3. **Unlock** more air leaps, eggs, islands and relics as ranks rise.
 4. **Hatch eggs** for pets and **equip three** for their Qi bonuses.
 5. **Choose an aura pet** to style the aura.
 6. Qinggong to new islands, find relics and better eggs, and repeat.
 
-### First quests (built November 3, 2026)
+### The quest path (first steps November 3, 2026; the rest November 4, 2026)
 
-A new player is walked through the loop by the System's quests, one at a time in the [ QUEST ] tracker (top right), each paying a few Spirit Stones (270 in all; `GameConfig.Quests`):
+A new player is walked through the loop by the System's quests, one at a time in the [ QUEST ] tracker (top right), each paying Spirit Stones (`GameConfig.Quests`). The first seven (270 stones in all):
 1. Gather 100 Qi.
 2. Equip the starter Aqua Wisp.
 3. Break through to Qi Gatherer.
@@ -68,9 +68,12 @@ A new player is walked through the loop by the System's quests, one at a time in
 6. Steal an egg.
 7. Hatch it at the Hatching Altar.
 
-- **The server decides** (`server/Quests`): it checks the current quest against the player's Qi, rank, pets and carried egg, and the air leaps and guardian strikes it sees. The step is saved (`Quest`, save version 9).
+
+Then the path on, so a player always has a next goal (steps 8 to 23): buy a weapon; the Root of the Island's relic; cross to Jade Grove; secure a Mantis Sage egg; Qi Awakener; cross to Ember Peak; secure an Ember Xuanwu egg; forge a weapon; Foundation Initiate (sword flight); Soul Awakening; cross to Moonlit Isle; secure a Tiangou egg; Divine Initiate; cross to Origin Abyss; secure a Pangu egg; Eternal Origin. **Append only:** a save holds its step number.
+
+- **The server decides** (`server/Quests`): it checks the current quest against the player's Qi, rank, pets, weapons, relics, island and carried egg, and the air leaps, guardian strikes and secured eggs it sees. The step is saved (`Quest`, save version 9).
 - **Skip:** a player can skip them all, which asks "SURE?" and pays nothing.
-- **Existing saves** start with the quests done (migration 8), so returning players never see them.
+- **Existing saves** were marked done at step 8 (migration 8), so they skip the first seven and start the path on at step 8.
 
 ### Core loop (planned): guardians and egg theft
 
@@ -649,6 +652,8 @@ Five floating islands built from original Blender work: terrain tops, sculpted u
 | Moonlit Isle | (192, 200, −804), 0 | Pale and celestial | Moon Mirror, Star Well (3,000 Qi each, Foundation Initiate) |
 | Origin Abyss | (596, 200, −856), 0 | Hidden endgame: dark slate, void crystals and rifts, broken ruins | Origin Altar (250K Qi, Divine Initiate); the Void Shard high above it (1M Qi, Void Walker) |
 
+**Bridge gates:** Jade Grove at Qi Gatherer, Ember Peak at Qi Awakener, Moonlit Isle at Soul Awakening, Origin Abyss at Divine Initiate. Moonlit's gate rose from Foundation Initiate on November 4, 2026 (the owner's decision): it opened about 90 minutes before the island's first egg and a guardian tuned for Soul Awakening could be used.
+
 **Shared rules**
 
 - **Relics:** each Spirit Relic gives a one-time Qi reward, and finds are saved.
@@ -767,6 +772,10 @@ The hidden endgame island, about 320 studs across since the owner's upgrade, mov
 - **Hatching** happens only at the **Hatching Altar** on Yggdrasil (`ygg_altar.py`, `WorldBuilder.buildAltar`, `GameConfig.HatchingAltar`, on the north-east lawn between the bridges and the Egg Garden): its prompt opens the hatching window (`HatcheryController`), which lists the eggs carried home with their counts; each Hatch lays the egg in the altar's cradle, where it rises, glows and breaks open in gold light (`HatchCeremony`) as the pet is named. The window sits at the screen's right edge so the cradle stays in sight. The cradle's pool is a deep amber (Neon 255, 110, 0, a little clear): a paler gold blooms to a flat lemon disc. The stands no longer hatch. Each egg rests `HatchingAltar.Stage` (2.6 s) in the cradle and the Hatch button waits as long between presses (the server takes one egg at a time per player). The egg breaks at a server time sent with the result (`BreakAt`), so a late remote still breaks it before the server takes it away; the staged egg streams to everyone (Persistent).
 - **The altar:** five roots of the World Tree break out round a two-tier dais of pale stone and arch over it, curling in like a cupped hand; under them a jade lotus on a bronze stem opens round a pool of golden Qi, the cradle; between the roots five jade seal stones, one per island, each with a gem in that island's glow.
 - The guardians are full Blender models.
+
+### Securing an egg pays Qi (the owner's decision, November 4, 2026)
+
+Securing a stolen egg pays a burst of Qi worth `EggTheft.SecureQiMinutes` (5) minutes of cultivating, with the player's pets counted and the Qi Spring not (`server/Cultivation/QiReward`). The chase becomes the fastest way to grow, and cultivating stays the steady base. The realm multiplier is the lower of the player's and the egg's, so a high realm farming a beginner's guardian earns a beginner's Qi and the way forward is the next island. Tested in a real theft: Beginner Qi Egg, Eternal Origin owner with a Volt Fox: +4,500 Qi; the top egg's burst is 768,000 before pets.
 
 ### Combat (built)
 
@@ -1083,6 +1092,7 @@ Client and server scripts are grouped by feature in folders of the same names: `
 | The flying sword | `ServerStorage.Weapons.FlyingSword` (`WorldBuild.OutfitBuilder.storeSword`) |
 | Outfits | `ServerStorage.Outfits/<OutfitId>` (`WorldBuild.OutfitBuilder`) |
 | The islands themselves | `Workspace.FloatingIslands`, saved in the place |
+| Development tools (never shipped to players) | `ServerStorage.DevStage`: the PDS kit, `AuraTestRange`, `AuraWorkbench`. Drag one to Workspace to use it, and back before publishing |
 
 **What the server owns:** Qi rewards, rank-ups, Qinggong levels, hatching, inventory, relics, world safety (spawn, checkpoints, fall reset) and saving. It never trusts the client for Qi amounts, ranks, hatch results or inventory.
 
@@ -1101,6 +1111,11 @@ The game had no audio. Every sound comes from Roblox's licensed libraries only: 
   - the sword-flight wind for every player, the cultivation hum, and a click on every HUD button.
 - Each guardian has its own voice and blows (GuardianController `VOICES`), timed to the move's wind-up so the sound lands with the hit; and a weaken cry of its own.
 - The egg steals, drops, returns and secures; strikes and hits; leap, dash, glide and landing (QinggongFx); the hatch's rumble, crack and reveal (a bell for Legendary and up); the breakthrough gong; and the shop's open, coins and refusal.
+
+### Settings and analytics (November 4, 2026)
+
+- **Settings** (the Settings button on the rail; `client/UI/SettingsController`, `server/Data/Settings`, saved as `Settings`, save version 10): Music and Sound volume, and Reduced Effects, which hides other players' auras and turns off the owner aura's screen flash and camera shake on that player's own client.
+- **Analytics** (`server/Analytics/Analytics`, for the Creator Dashboard): the quest path as an onboarding funnel; every Spirit Stone in and out, by cause and item (through `Wallet`); and the moments RankUp, EggTaken, EggDropped, EggSecured, EggHatched and QuestsSkipped, each by guardian, egg or rank. Studio only prints these: real data needs a live server.
 
 ### Data and security
 

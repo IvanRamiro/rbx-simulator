@@ -49,7 +49,7 @@ local function onRelicTriggered(player, relicId, crystal, maxDistance)
 
     qi.Value += relic.QiReward
     local stones = math.floor(relic.QiReward * GameConfig.SpiritStones.RelicShare)
-    Wallet.add(player, stones)
+    Wallet.add(player, stones, "Relic", relicId)
     publishFound(player)
     PlayerData.saveSoon(player)
     -- Element: the forge element this relic unlocked, when the player didn't have it yet

@@ -129,6 +129,7 @@ local GameConfig = {
     GuardianTag = "Guardian",
     EggTheft = {
         RespawnTime = 180, -- seconds a stand stays empty after its egg is secured
+        SecureQiMinutes = 5, -- securing an egg pays this many minutes of cultivating (server/Cultivation/QiReward)
     },
     -- Yggdrasil's Hatching Altar (WorldBuilder.buildAltar, PetService): where every egg carried home is
     -- hatched. Centre is island-local (on the ground), Yaw turns its front (local +Z) toward the
@@ -543,7 +544,43 @@ local GameConfig = {
             Text = "Weaken a guardian until it falters, then take an egg from its stands. It will chase you!" },
         { Id = "Hatch", Kind = "Hatch", Reward = 80, Title = "Hatch It",
             Text = "Carry the egg to the Hatching Altar and hatch it." },
+        -- the path on, island by island. Append only: a save holds its step number
+        { Id = "Weapon", Kind = "BuyWeapon", Reward = 40, Title = "A Weapon of Your Own",
+            Text = "Visit the Blacksmith on Yggdrasil and buy a spear or a better sword." },
+        { Id = "Root", Kind = "Relic", Goal = "IslandRoot", Reward = 40, Title = "The Root of the Island",
+            Text = "Climb down the great root of the World Tree and attune the relic at its foot." },
+        { Id = "JadeBridge", Kind = "Visit", Goal = "JadeGrove", Reward = 40, Title = "The Jade Bridge",
+            Text = "Follow the jade waystone across the bridge to Jade Grove." },
+        { Id = "Mantis", Kind = "Secure", Goal = "MantisSage", Reward = 200, Title = "The Bamboo Mantis Sage",
+            Text = "Weaken the Sage, steal an egg and carry it home to Yggdrasil. A secured egg pays a burst of Qi." },
+        { Id = "Awakener", Kind = "Rank", Goal = "QiAwakener", Reward = 60, Title = "The Ember Gate",
+            Text = "Break through to Qi Awakener: the bridge to Ember Peak opens." },
+        { Id = "EmberBridge", Kind = "Visit", Goal = "EmberPeak", Reward = 60, Title = "Into the Fire",
+            Text = "Cross the basalt bridge to Ember Peak. Keep off the lava." },
+        { Id = "Xuanwu", Kind = "Secure", Goal = "EmberXuanwu", Reward = 400, Title = "The Ember Xuanwu",
+            Text = "Steal an egg from the Ember Xuanwu and carry it home. Jump its quake rings." },
+        { Id = "Forge", Kind = "Forge", Reward = 100, Title = "Forge a Weapon",
+            Text = "Secured eggs and relics unlock elements. Forge and name a weapon at the Blacksmith." },
+        { Id = "Flight", Kind = "Rank", Goal = "FoundationInitiate", Reward = 150, Title = "Sword Flight",
+            Text = "Break through to Foundation Initiate: you can ride your sword through the air." },
+        { Id = "MoonGate", Kind = "Rank", Goal = "SoulAwakening", Reward = 800, Title = "The Moonlit Gate",
+            Text = "Cultivate, and secure eggs for bursts of Qi. At Soul Awakening the bridge to Moonlit Isle opens." },
+        { Id = "MoonBridge", Kind = "Visit", Goal = "MoonlitIsle", Reward = 300, Title = "The Moonlit Isle",
+            Text = "Cross the moonstone bridge to Moonlit Isle." },
+        { Id = "Tiangou", Kind = "Secure", Goal = "Tiangou", Reward = 1500, Title = "Tiangou the Moon-Eater",
+            Text = "Steal an egg from Tiangou and carry it home. Its leaps are long and high." },
+        { Id = "AbyssGate", Kind = "Rank", Goal = "DivineInitiate", Reward = 6000, Title = "The Gate of Descent",
+            Text = "Reach Divine Initiate: the bridge to Origin Abyss opens." },
+        { Id = "AbyssBridge", Kind = "Visit", Goal = "OriginAbyss", Reward = 2000, Title = "Origin Abyss",
+            Text = "Cross the cracked bridge into Origin Abyss." },
+        { Id = "Pangu", Kind = "Secure", Goal = "Pangu", Reward = 8000, Title = "Pangu the World-Splitter",
+            Text = "Steal an egg from Pangu and carry it all the way home." },
+        { Id = "Summit", Kind = "Rank", Goal = "EternalOrigin", Reward = 50000, Title = "Eternal Origin",
+            Text = "The last rank of all. Nothing lies above it." },
     },
+
+    -- each player's own view and sound (server/Data/Settings, client/UI/SettingsController)
+    Settings = { Music = 1, Sound = 1, ReducedEffects = false },
 
     MaxOwnedPets = 50,
 

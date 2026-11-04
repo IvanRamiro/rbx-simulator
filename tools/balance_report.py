@@ -4,7 +4,8 @@
 
 Reads the ranks, pet bonuses, Qi Spring bonus, relic rewards, egg chances and Qinggong levels
 straight from src/shared/GameConfig.lua, so it always matches the game.
-Times are minutes of cultivating (Qi only comes from cultivation).
+Times are minutes of cultivating alone. Securing a guardian's egg also pays a burst worth
+EggTheft.SecureQiMinutes of cultivating, so real players who fight go faster than this.
 
 The "typical" player follows the pets they would usually own by then (see
 TYPICAL_PETS), always cultivating in the Qi Spring. From Spirit Soul on, each

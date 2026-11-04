@@ -52,7 +52,7 @@ return {
             { Position = Vector3.new(-99.21, 201.16, -537.53) },
             { Position = Vector3.new(-101.40, 200.00, -549.40) },
         } },
-        MoonlitRoute = { Theme = "Moon", RankId = "FoundationInitiate", Nodes = {
+        MoonlitRoute = { Theme = "Moon", RankId = "SoulAwakening", Nodes = {
             { Position = Vector3.new(57.30, 200.00, -238.20) },
             { Position = Vector3.new(60.13, 201.18, -249.98) },
             { Position = Vector3.new(62.97, 202.30, -261.76) },

@@ -13,9 +13,10 @@ local Wallet = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("W
 local WeaponInventory = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("WeaponInventory"))
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
 local Quests = require(script.Parent.Parent:WaitForChild("Quests"):WaitForChild("Quests"))
+local Settings = require(script.Parent:WaitForChild("Settings"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 9
+local SCHEMA_VERSION = 10
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -69,7 +70,8 @@ end
 -- added pets (the bump only stops older servers, which don't know them, from dropping them) and
 -- version 6 added Eggs, which sanitizeProgress starts empty; version 7 added SpiritStones, Weapons
 -- and EquippedWeapon (MIGRATIONS[6], below); version 8 added ForgeElements (the guardians' drops)
--- and a weapon's Element and Name, which start at none; version 9 added Quest (MIGRATIONS[8]).
+-- and a weapon's Element and Name, which start at none; version 9 added Quest (MIGRATIONS[8]);
+-- version 10 added Settings, which sanitizeProgress starts at their defaults.
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -118,6 +120,7 @@ local function sanitizeProgress(raw)
         EquippedWeapon = nil,
         Quest = 1,
         ForgeElements = {},
+        Settings = Settings.sanitize(nil),
     }
 
     if typeof(raw) ~= "table" then
@@ -194,6 +197,7 @@ local function sanitizeProgress(raw)
     progress.Weapons, progress.EquippedWeapon = WeaponInventory.sanitize(raw.Weapons, raw.EquippedWeapon)
     progress.ForgeElements = Elements.sanitize(raw.ForgeElements)
     progress.Quest = Quests.sanitize(raw.Quest)
+    progress.Settings = Settings.sanitize(raw.Settings)
 
     return progress
 end
@@ -224,7 +228,8 @@ local function captureProgress(player)
     local weapons = WeaponInventory.exportData(player)
     local elements = Elements.exportData(player)
     local quest = Quests.exportData(player)
-    if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest) then
+    local settings = Settings.exportData(player)
+    if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings) then
         return nil
     end
 
@@ -244,6 +249,7 @@ local function captureProgress(player)
         EquippedWeapon = weapons.Equipped,
         ForgeElements = elements,
         Quest = quest,
+        Settings = settings,
     }
 end
 
@@ -468,6 +474,7 @@ function PlayerData.release(player)
     WeaponInventory.removePlayer(player)
     Elements.removePlayer(player)
     Quests.removePlayer(player)
+    Settings.removePlayer(player)
 
     if not profile then
         return
