@@ -1,6 +1,6 @@
 -- Strike effects and poses (client-only, cosmetic: the server decides every hit, CombatService).
 --
---   Palm   a Qi Palm: the right palm thrusts forward and a great hand of Qi (the QiPalm print)
+--   Palm   bare hands: a punch, right then left (WeaponClips), and a great hand of Qi (the QiPalm print)
 --          flies from it, swelling and fading as it travels, with a ripple and wind streaks.
 --   Sword  the striker's sword (their realm sword, or else the flying sword) in their right hand, in
 --          a combo of three slashes, each with its own line (SLASHES): a diagonal cut down across the
@@ -78,7 +78,8 @@ local SPEAR_LOW_TIME = 1.4 -- seconds a spear stays in its low stance after a th
 -- a weapon's turn in the fist, from the hand's grip attachment (whose -Z runs down the forearm): a
 -- sword's blade rises out of the fist; a spear's shaft runs along the forearm
 local GRIP_TURN = { Sword = CFrame.Angles(math.rad(80), 0, 0), Spear = CFrame.identity }
-local PALM_POSE_TIME = 0.3
+local PUNCHES = { WeaponClips.Clips.PunchRight, WeaponClips.Clips.PunchLeft } -- bare hands: right, then left
+local PUNCH_WINDOW = 1.1 -- seconds in which the next punch uses the other hand
 local SWING = { Palm = "PalmStrike" } -- a strike's sound at once (SoundCatalog; a weapon's plays with its blow)
 
 local fxFolder = Instance.new("Folder")
@@ -574,15 +575,16 @@ function CombatFx.play(player, weapon, step)
         strike.step = step or if continuing then last.step % steps + 1 else 1
         combos[player] = { weapon = weapon, step = strike.step, at = now }
     else
-        combos[player] = nil
+        local last = combos[player]
+        strike.step = if last and last.weapon == weapon and now - last.at < PUNCH_WINDOW / CombatFx.TimeScale then last.step % 2 + 1 else 1
+        combos[player] = { weapon = weapon, step = strike.step, at = now }
         putAway(player) -- a palm strike is bare-handed
     end
     local clip = if weapon == "Sword" then SLASHES[strike.step].Clip
         elseif weapon == "Spear" then (if strike.step == 2 then SPEAR_SLASH.Clip else SPEAR_THRUST)
-        else nil
-    strike.hitAt = clip and clip.Hit
-    local poseTime = if clip then clip.Length else PALM_POSE_TIME
-    strike.untilTime = now + poseTime / CombatFx.TimeScale
+        else PUNCHES[strike.step]
+    strike.hitAt = clip.Hit
+    strike.untilTime = now + clip.Length / CombatFx.TimeScale
     strikes[player] = strike
     local camera = Workspace.CurrentCamera
     if player ~= Players.LocalPlayer and (not camera or (camera.CFrame.Position - root.Position).Magnitude > MAX_DISTANCE) then
@@ -597,7 +599,12 @@ function CombatFx.play(player, weapon, step)
     elseif weapon == "Spear" then
         spear(player, p, root, strike.step)
     else
-        palm(p, root)
+        -- the Qi print flies as the fist lands
+        task.delay(clip.Hit / CombatFx.TimeScale, function()
+            if root.Parent then
+                palm(p, root)
+            end
+        end)
     end
 end
 

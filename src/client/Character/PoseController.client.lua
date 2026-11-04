@@ -71,19 +71,10 @@ FLYING.LeftElbow = deg(15, 0, 0)
 FLYING.Waist = deg(-6, 0, 0)
 
 -- Strikes (CombatFx) pose only the arms and waist, so they combine with whatever the legs are
--- doing. Palm: the right palm thrust ahead, the left fist drawn back to the hip, the waist
--- turned into it. Spear: held in both hands, the left shoulder leading, the left hand up the shaft
+-- doing. Spear: held in both hands, the left shoulder leading, the left hand up the shaft
 -- (SpearReady). The arm values were solved against an R15 rig so both hands land on the shaft (within a
 -- quarter stud at rest). The sword's and spear's strikes themselves are keyed in Blender (WeaponClips).
 local STRIKES = {
-    Palm = {
-        RightShoulder = pointLimb(Vector3.new(-0.05, -0.12, -0.99)),
-        RightElbow = deg(0, 0, 0),
-        RightWrist = deg(-55, 0, 0),
-        LeftShoulder = pointLimb(Vector3.new(0.12, -0.75, 0.65)),
-        LeftElbow = deg(95, 0, 0),
-        Waist = deg(0, -25, 0),
-    },
     -- the ready stances, while a weapon is out after a strike. Sword: the right arm forward, the blade
     -- up before the body, the left drawn back. Spear: side-on, the shaft level at the hip, both hands on it.
     SwordReady = {
@@ -110,6 +101,7 @@ local STRIKES = {
 -- to what they're doing, and the chest takes the hips' turn too.
 local BODY_JOINTS = { Root = true, RightHip = true, RightKnee = true, RightAnkle = true, LeftHip = true, LeftKnee = true, LeftAnkle = true }
 local SWORD_CLIPS = { "SwordA", "SwordB", "SwordC" }
+local PUNCH_CLIPS = { "PunchRight", "PunchLeft" }
 local builtClips = {} -- [clip name] = { Length, joints = { [joint] = its CFrame per frame } }
 
 local function builtClip(name)
@@ -315,10 +307,11 @@ local function choosePose(player, character, rig)
             return SPEAR_STANCES[strikeName]
         end
         strike = strike or STRIKES.SpearReady
-    elseif strikeName == "Slash" or strikeName == "SpearSlash" or strikeName == "SpearThrust" then
+    elseif strikeName == "Slash" or strikeName == "SpearSlash" or strikeName == "SpearThrust" or strikeName == "Palm" then
         local step, elapsed = CombatFx.slash(player)
         rig.slash = rig.slash or {}
-        clipPose(rig.slash, if strikeName == "Slash" then SWORD_CLIPS[step] else strikeName, elapsed, standingStill(player, character))
+        local name = if strikeName == "Slash" then SWORD_CLIPS[step] elseif strikeName == "Palm" then PUNCH_CLIPS[step] else strikeName
+        clipPose(rig.slash, name, elapsed, standingStill(player, character))
         strike = rig.slash
     end
     if player:GetAttribute("IsFlying") == true then

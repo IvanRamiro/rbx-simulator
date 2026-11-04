@@ -52,6 +52,9 @@ WEAPON_IN_HAND = {
     "Spear": Matrix.Rotation(math.radians(-90), 3, "X"),
 }
 C = Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0)))  # Roblox -> Blender
+# False keeps the sword's and spear's clips exactly as the owner approved them, baked before this was found: their
+# hands land up to 0.4 studs from the keyed spot. The punches use the exact arms.
+EXACT_ARMS = False
 
 
 def rx(d): return Matrix.Rotation(math.radians(d), 3, "X")
@@ -227,8 +230,16 @@ def solve(controls, weapon_kind, left_rel=None):
         a = (V(JOINTS[sn][3]) - V((JOINTS[sn][3][0], 0, 0))).length + V(JOINTS[en][2]).length  # .365 + .309
         b = V(JOINTS[en][3]).length + V(JOINTS[wn][2]).length                                   # .239 + .463
         elbow, ratio = two_bone(shoulder, wrist, a, b, pole)
-        reach[side + "Arm"] = ratio
         upper, lower = limb_rots(shoulder, elbow, wrist, -1, pole)
+        if EXACT_ARMS:
+            # the shoulder joint sits at the torso's edge, to the side of the arm's own line, so the arm's line starts
+            # from there turned with the arm: a few passes put the hand where it was asked to be
+            side_offset = -V(JOINTS[sn][3]).x
+            for _ in range(4):
+                start = shoulder + upper @ V((side_offset, 0, 0))
+                elbow, ratio = two_bone(start, wrist, a, b, pole)
+                upper, lower = limb_rots(start, elbow, wrist, -1, pole)
+        reach[side + "Arm"] = ratio
         attach(sn, upper)
         attach(en, lower)
         # the arm's far joint lands where the solver put it; the hand keeps its rotation

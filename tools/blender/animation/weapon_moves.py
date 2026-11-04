@@ -1,4 +1,4 @@
-"""The sword's and spear's strikes, keyed in Blender on the R15 rig (r15_rig). One clip at a time:
+"""The sword's and spear's strikes and the bare-handed punches, keyed in Blender on the R15 rig (r15_rig). One clip at a time:
 build, bake, review, clear.
 
     import weapon_moves as M
@@ -261,7 +261,73 @@ def sword_c():
     return clip, 0.62, None, {"Hit": 0.235, "Swing": (0.18, 0.28)}
 
 
-CLIPS = {"SpearThrust": spear_thrust, "SpearSlash": spear_slash, "SwordA": sword_a, "SwordB": sword_b, "SwordC": sword_c}
+# ---------- bare hands ----------
+def shoulder_of(side, pelvis_pos, pelvis_rot, chest_rot):
+    pivot = V(R.JOINTS["Root"][2]) + pelvis_pos
+    lower = pivot - pelvis_rot @ V(R.JOINTS["Root"][3])
+    waist = lower + pelvis_rot @ V(R.JOINTS["Waist"][2])
+    upper = waist - chest_rot @ V(R.JOINTS["Waist"][3])
+    return upper + chest_rot @ V(R.JOINTS[side + "Shoulder"][2])
+
+
+def punch(side):
+    """A straight punch, for a player with no weapon: one hand, then the other on the next strike. The hips turn first,
+    the shoulder follows, and the fist arrives last, then snaps back to the guard. side: 1 the right hand, -1 the left."""
+    clip = Clip("Sword")
+    lead = {"pelvis": 0.014, "chest": 0.007}
+    # feet: the opposite foot ahead of the punching hand
+    front, back = foot(-0.42 * side, -0.62, -14 * side), foot(0.46 * side, 0.55, 28 * side)
+    ahead = foot(-0.42 * side, -0.95, -14 * side)
+
+    def pose(pelvis_pos, pelvis_yaw, chest_yaw, pitch, hit_hand, other_hand, step=False):
+        pelvis_pos = V(pelvis_pos)
+        pelvis_rot = R.ry(pelvis_yaw * side) @ R.rx(pitch * 0.5)
+        chest_rot = R.ry(chest_yaw * side) @ R.rx(pitch)
+        head_rot = R.ry(chest_yaw * side * 0.15) @ R.rx(-3)
+        hit_name = "Right" if side == 1 else "Left"
+        other_name = "Left" if side == 1 else "Right"
+
+        def hand(name, spot):
+            sign = 1 if name == "Right" else -1
+            centre = V((spot[0] * sign, spot[1], spot[2]))
+            direction = centre - shoulder_of(name, pelvis_pos, pelvis_rot, chest_rot)
+            return centre, R.point_limb(direction)
+
+        hands = {hit_name: hand(hit_name, hit_hand), other_name: hand(other_name, other_hand)}
+        wr = hands["Right"][1] @ R.WEAPON_IN_HAND["Sword"]
+        feet_left, feet_right = (front if side == 1 else back), (back if side == 1 else front)
+        if step:
+            feet_left, feet_right = (ahead if side == 1 else back), (back if side == 1 else ahead)
+        return {
+            "pelvis_pos": pelvis_pos, "pelvis_rot": pelvis_rot, "chest_rot": chest_rot, "head_rot": head_rot,
+            "wp": hands["Right"][0] + hands["Right"][1] @ R.GRIP_IN_HAND, "wr": wr, "lhand": hands["Left"],
+            "Right_pole": V((0.8, -0.6, 0.25)), "Left_pole": V((-0.8, -0.6, 0.25)),
+            "Right_knee": V((0.1, 0.2, -1)), "Left_knee": V((-0.1, 0.2, -1)),
+            "Right_foot": feet_right, "Left_foot": feet_left,
+        }
+
+    guard = pose((0, -0.38, 0), 0, 0, -6, (0.5, 0.42, -0.78), (0.5, 0.45, -0.72))
+    clip.pose(0.0, guard)
+    clip.pose(0.055, pose((0, -0.44, 0.1), -14, -24, -6, (0.74, 0.28, -0.22), (0.45, 0.46, -0.85)), lead)
+    clip.pose(0.11, pose((0, -0.5, -0.38), 20, 38, -10, (0.16, 0.5, -2.62), (0.68, 0.25, -0.12), step=True), lead)
+    clip.pose(0.165, pose((0, -0.52, -0.42), 22, 40, -11, (0.14, 0.48, -2.68), (0.68, 0.24, -0.1), step=True))
+    clip.pose(0.25, pose((0, -0.46, -0.2), 8, 14, -8, (0.42, 0.45, -1.5), (0.56, 0.36, -0.5), step=True))
+    clip.pose(0.4, guard)
+    return clip, 0.4, None, {"Hit": 0.1}
+
+
+def punch_right():
+    return punch(1)
+
+
+def punch_left():
+    return punch(-1)
+
+
+CLIPS = {"PunchRight": punch_right, "PunchLeft": punch_left, "SpearThrust": spear_thrust, "SpearSlash": spear_slash, "SwordA": sword_a, "SwordB": sword_b, "SwordC": sword_c}
+
+
+UNARMED = ("PunchRight", "PunchLeft")
 
 
 def fit_crescent(frames, swing):
@@ -289,10 +355,16 @@ def run(name, review=True, out=None, cam_from=(9, 3.5, -11), cam_to=(0, -0.6, -2
     R.clear()
     spec = CLIPS[name]
     kind = "Spear" if name.startswith("Spear") else "Sword"
+    R.EXACT_ARMS = name in UNARMED
     clip, length, left_rel, extra = spec()
     tip = SPEAR_TIP if kind == "Spear" else SWORD_TIP
     bake_frames, worst = R.bake(clip.c, kind, length, tip, left_rel)
-    result = {"frames": bake_frames, "extra": extra, "length": length, "worst": worst, "crescent": fit_crescent(bake_frames, extra["Swing"]), "kind": kind}
+    if "Cycle" in extra:     # a looping clip: only its middle cycle
+        a, b = int(round(extra["Cycle"][0] * R.FPS)), int(round(extra["Cycle"][1] * R.FPS))
+        bake_frames = bake_frames[a:b + 1]
+        length = (b - a) / R.FPS
+    result = {"frames": bake_frames, "extra": extra, "length": length, "worst": worst, "kind": kind,
+        "crescent": fit_crescent(bake_frames, extra["Swing"]) if "Swing" in extra else None}
     if review:
         path = out or "%s/assets/animation_review/%s.png" % (REPO, name)
         contact_sheet(result, kind, path, cam_from, cam_to, times)
@@ -304,12 +376,14 @@ def contact_sheet(result, kind, path, cam_from, cam_to, times=None, size=340):
     """A row of poses, with the tip's whole path drawn as a ribbon of small boxes."""
     frames = result["frames"]
     proxy = R.build_proxy(kind, SPEAR_TIP if kind == "Spear" else SWORD_TIP, SPEAR_BUTT if kind == "Spear" else SWORD_BUTT)
+    if R.EXACT_ARMS:     # the unarmed clips: no weapon to review
+        proxy["Weapon"].hide_render = True
     cam = R.setup_review(size)
     R.look_from(cam, cam_from, cam_to)
     scene = bpy.context.scene
     mat = R.proxy_material("Path", (1.0, 0.15, 0.1))
     for i, f in enumerate(frames):
-        if i % 2 == 0:
+        if i % 2 == 0 and not R.EXACT_ARMS:
             b = R.box_object("Tip%d" % i, (0.12, 0.12, 0.12), mat)
             b.location = R.C @ f["tip"]
     length = result["length"]
@@ -322,7 +396,8 @@ def contact_sheet(result, kind, path, cam_from, cam_to, times=None, size=340):
         # the weapon's frame
         g, tp = f["grip"], f["tip"]
         wr = None
-        scene.frame_set(int(round(t * R.FPS)) * (R.SCENE_FPS // R.FPS) + 1)
+        offset = result["extra"]["Cycle"][0] if "Cycle" in result["extra"] else 0
+        scene.frame_set(int(round((t + offset) * R.FPS)) * (R.SCENE_FPS // R.FPS) + 1)
         _, wr = R.read(bpy.data.objects["Weapon"])
         R.pose_proxy(proxy, f["rot"], f["pos"], g, wr)
         bpy.context.view_layer.update()
@@ -348,7 +423,8 @@ def contact_sheet(result, kind, path, cam_from, cam_to, times=None, size=340):
 
 def report(name, res):
     c = res["crescent"]
-    tips = [f["tip"] for f in res["frames"]]
+    if not c:
+        return "%s %.2fs worst %s" % (name, res["length"], {k: round(v, 2) for k, v in res["worst"].items()})
     return "%s %.2fs worst %s crescent centre %s r %.2f face %s bulge %s" % (
         name, res["length"], {k: round(v, 2) for k, v in res["worst"].items()},
         [round(float(x), 2) for x in c["Centre"]], c["Radius"], [round(float(x), 2) for x in c["Face"]], [round(float(x), 2) for x in c["Bulge"]])
@@ -361,6 +437,11 @@ def export_all(path=None):
     for name in CLIPS:
         res = run(name, review=False)
         c = res["crescent"]
+        if not c:
+            out[name] = {"frames": res["frames"], "extra": {"Hit": "%.3f" % res["extra"]["Hit"]} if "Hit" in res["extra"] else {}}
+            lines.append(report(name, res))
+            R.clear()
+            continue
         extra = dict(Hit="%.3f" % res["extra"]["Hit"], SwingStart="%.3f" % res["extra"]["Swing"][0], SwingEnd="%.3f" % res["extra"]["Swing"][1],
             Crescent="{ Centre = Vector3.new(%.2f, %.2f, %.2f), Radius = %.2f, Face = Vector3.new(%.3f, %.3f, %.3f), Bulge = Vector3.new(%.3f, %.3f, %.3f) }" % (
                 *[float(x) for x in c["Centre"]], float(c["Radius"]), *[float(x) for x in c["Face"]], *[float(x) for x in c["Bulge"]]))
