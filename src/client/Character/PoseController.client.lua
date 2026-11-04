@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local QinggongFx = require(script.Parent.Parent:WaitForChild("Qinggong"):WaitForChild("QinggongFx"))
 local CombatFx = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("CombatFx"))
 local MeditationPoses = require(script.Parent:WaitForChild("MeditationPoses"))
+local WeaponClips = require(script.Parent:WaitForChild("WeaponClips"))
 local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
 
 local BLEND_SPEED = 6
@@ -71,10 +72,9 @@ FLYING.Waist = deg(-6, 0, 0)
 
 -- Strikes (CombatFx) pose only the arms and waist, so they combine with whatever the legs are
 -- doing. Palm: the right palm thrust ahead, the left fist drawn back to the hip, the waist
--- turned into it. Sword: the three slashes of the combo (SLASH_KEYS, below).
--- Spear: held in both hands, the left shoulder leading, the left hand up the shaft (SpearReady): the
--- hands draw back (SpearDraw), then drive forward together. The arm values were solved against an R15
--- rig so both hands land on the shaft (within a quarter stud at rest).
+-- turned into it. Spear: held in both hands, the left shoulder leading, the left hand up the shaft
+-- (SpearReady). The arm values were solved against an R15 rig so both hands land on the shaft (within a
+-- quarter stud at rest). The sword's and spear's strikes themselves are keyed in Blender (WeaponClips).
 local STRIKES = {
     Palm = {
         RightShoulder = pointLimb(Vector3.new(-0.05, -0.12, -0.99)),
@@ -83,22 +83,6 @@ local STRIKES = {
         LeftShoulder = pointLimb(Vector3.new(0.12, -0.75, 0.65)),
         LeftElbow = deg(95, 0, 0),
         Waist = deg(0, -25, 0),
-    },
-    Spear = {
-        RightShoulder = pointLimb(Vector3.new(-0.29, -0.62, -0.73)),
-        RightElbow = deg(0, 45, 0),
-        RightWrist = deg(40, -20, -15),
-        LeftShoulder = pointLimb(Vector3.new(0.52, -0.32, -0.79)),
-        LeftElbow = deg(0, 15, 0),
-        Waist = deg(0, -22, 0),
-    },
-    SpearDraw = {
-        RightShoulder = pointLimb(Vector3.new(-0.28, -0.96, 0.06)),
-        RightElbow = deg(70, -15, 0),
-        RightWrist = deg(-10, 10, -60),
-        LeftShoulder = pointLimb(Vector3.new(0.6, -0.68, -0.43)),
-        LeftElbow = deg(40, -60, 0),
-        Waist = deg(0, -40, 0),
     },
     -- the ready stances, while a weapon is out after a strike. Sword: the right arm forward, the blade
     -- up before the body, the left drawn back. Spear: side-on, the shaft level at the hip, both hands on it.
@@ -120,89 +104,61 @@ local STRIKES = {
     },
 }
 
--- The sword's combo: each slash is a timeline of whole-body keys, so it has anticipation, a fast swing,
--- a follow-through past the blow and a settle. The body leads and the arm whips after it (SLASH_LAG):
--- hips and waist turn first, then the shoulder, the elbow and last the wrist, so nothing moves as one
--- stiff piece. Standing still, the whole body takes part: the turn, a lunge and planted feet; moving or
--- airborne, the legs and hips are left to what they're doing. 1: a diagonal cut, high right to low left.
--- 2: a backhand rising from there to high right. 3: the finisher, overhead and straight down.
--- The blade's arcs in CombatFx (SLASHES) were measured from these keys: re-measure if they change.
-local SLASH_TIMES = { 0.1, 0.16, 0.21, 0.31, 0.46 } -- coiled, mid-swing, the blow, the follow-through, settled
-local SLASH_LAG = { -- seconds behind the swing's clock
-    Root = -0.02, Waist = -0.012, Neck = -0.02,
-    RightHip = -0.02, RightKnee = -0.02, RightAnkle = -0.02, LeftHip = -0.02, LeftKnee = -0.02, LeftAnkle = -0.02,
-    RightShoulder = 0, RightElbow = 0.012, RightWrist = 0.024, LeftShoulder = 0.012, LeftElbow = 0.024,
-}
+-- The strikes of a sword and a spear, keyed in Blender on a copy of this rig (tools/blender/animation,
+-- WeaponClips): the weapon is animated through space and the body follows it. Standing still the whole
+-- body takes part: a step, the hips turning, planted feet. Moving or airborne, the legs and hips are left
+-- to what they're doing, and the chest takes the hips' turn too.
 local BODY_JOINTS = { Root = true, RightHip = true, RightKnee = true, RightAnkle = true, LeftHip = true, LeftKnee = true, LeftAnkle = true }
-local HIP_X, HIP_Y = 0.5, -0.9
-local STEP_FEET = { Right = Vector3.new(0.8, -2.63, -0.6), Left = Vector3.new(-0.8, -2.63, 0.5) } -- from the root: right foot forward
+local SWORD_CLIPS = { "SwordA", "SwordB", "SwordC" }
+local builtClips = {} -- [clip name] = { Length, joints = { [joint] = its CFrame per frame } }
 
-local function slashKey(rightArm, rightElbow, rightWrist, leftArm, leftElbow, waist, neck, root)
-    local key = {
-        RightShoulder = pointLimb(rightArm), RightElbow = rightElbow, RightWrist = rightWrist,
-        LeftShoulder = pointLimb(leftArm), LeftElbow = leftElbow,
-        Waist = waist, Neck = neck, Root = root,
-    }
-    -- the feet stay planted while the hips turn and sink over them
-    for side, foot in STEP_FEET do
-        local x = if side == "Right" then HIP_X else -HIP_X
-        local target = root.Rotation:Inverse() * (foot - root * Vector3.new(x, HIP_Y, 0))
-        local hip, knee = MeditationPoses.leg(target, Vector3.new(x * 0.6, 0, -1))
-        key[side .. "Hip"], key[side .. "Knee"] = hip, knee
-        key[side .. "Ankle"] = MeditationPoses.flatAnkle(root.Rotation * hip, knee)
+local function builtClip(name)
+    local built = builtClips[name]
+    if built then
+        return built
     end
-    return key
-end
-
--- the last key: part of the way back from the follow-through toward the ready stance
-local READY_ROOT = CFrame.new(0, -0.15, 0)
-local function settleKey(from)
-    local ready = slashKey(Vector3.new(0.3, -0.75, -0.59), deg(55), deg(-10), Vector3.new(-0.32, -0.85, 0.42), deg(30),
-        deg(0, 12, 0), deg(0, 0, 0), READY_ROOT)
-    local key = {}
-    for name, cframe in from do
-        key[name] = cframe:Lerp(ready[name] or CFrame.identity, 0.6)
+    local data = WeaponClips.Clips[name]
+    built = { joints = {} }
+    for joint, flat in data do
+        if type(flat) == "table" and joint ~= "RootPos" and joint ~= "Crescent" then
+            local frames = table.create(#flat // 4)
+            for i = 1, #flat, 4 do
+                local frame = (i - 1) // 4
+                local x, y, z = 0, 0, 0
+                if joint == "Root" then
+                    local p = data.RootPos
+                    x, y, z = p[frame * 3 + 1], p[frame * 3 + 2], p[frame * 3 + 3]
+                end
+                frames[frame + 1] = CFrame.new(x, y, z, flat[i], flat[i + 1], flat[i + 2], flat[i + 3])
+            end
+            built.joints[joint] = frames
+        end
     end
-    return key
+    builtClips[name] = built
+    return built
 end
 
-local function slashTimeline(keys)
-    table.insert(keys, settleKey(keys[#keys]))
-    return keys
+-- writes into `pose` a clip's frame at `elapsed` seconds. wholeBody false: the hips and legs stay out of it
+local function clipPose(pose, name, elapsed, wholeBody)
+    table.clear(pose)
+    local clip = builtClip(name)
+    local at = math.max(0, elapsed) * WeaponClips.Fps
+    local frame = math.floor(at)
+    local alpha = at - frame
+    local function sample(frames)
+        local a = frames[math.min(frame + 1, #frames)]
+        local b = frames[math.min(frame + 2, #frames)]
+        return a:Lerp(b, alpha)
+    end
+    for joint, frames in clip.joints do
+        if wholeBody or not BODY_JOINTS[joint] then
+            pose[joint] = sample(frames)
+        end
+    end
+    if not wholeBody then
+        pose.Waist = sample(clip.joints.Root).Rotation * pose.Waist
+    end
 end
-
-local SLASH_KEYS = {
-    slashTimeline({
-        slashKey(Vector3.new(0, 0.97, 0.24), deg(90), deg(-90, 15, 0), Vector3.new(-0.25, -0.75, -0.6), deg(60), deg(0, -16, 0), deg(0, 14, 0),
-            CFrame.new(0, -0.18, 0.1) * deg(4, -14, 0)),
-        slashKey(Vector3.new(-0.58, -0.58, -0.58), deg(60), deg(-90, -15, -15), Vector3.new(-0.2, -0.8, 0.1), deg(40), deg(0, 0, 0), deg(0, 0, 0),
-            CFrame.new(0, -0.24, -0.1) * deg(-4, 0, 0)),
-        slashKey(Vector3.new(-0.76, -0.46, -0.46), deg(0), deg(-90, 30, 0), Vector3.new(-0.45, -0.75, 0.5), deg(55), deg(0, 8, 0), deg(0, -8, 0),
-            CFrame.new(0, -0.3, -0.3) * deg(-8, 6, 0)),
-        slashKey(Vector3.new(-0.82, -0.42, -0.38), deg(12), deg(-85, 34, 0), Vector3.new(-0.5, -0.7, 0.5), deg(60), deg(0, 12, 0), deg(0, -12, 0),
-            CFrame.new(0, -0.32, -0.32) * deg(-9, 10, 0)),
-    }),
-    slashTimeline({
-        slashKey(Vector3.new(-0.81, -0.32, -0.49), deg(0), deg(-90, 15, 0), Vector3.new(-0.45, -0.75, 0.5), deg(55), deg(0, 13, 0), deg(0, -12, 0),
-            CFrame.new(0, -0.3, -0.1) * deg(-6, 11, 0)),
-        slashKey(Vector3.new(-0.66, -0.53, -0.53), deg(70), deg(-80, -15, 0), Vector3.new(-0.2, -0.8, 0.1), deg(40), deg(0, 5, 0), deg(0, -5, 0),
-            CFrame.new(0, -0.24, -0.1) * deg(-2, 5, 0)),
-        slashKey(Vector3.new(-0.15, 0.77, -0.62), deg(130), deg(-90, -35, 0), Vector3.new(0.1, -0.7, -0.7), deg(50), deg(4, 6, 0), deg(0, -6, 0),
-            CFrame.new(0, -0.14, -0.2) * deg(5, 6, 0)),
-        slashKey(Vector3.new(-0.05, 0.85, -0.52), deg(135), deg(-85, -40, 0), Vector3.new(0.15, -0.65, -0.72), deg(55), deg(6, 4, 0), deg(0, -4, 0),
-            CFrame.new(0, -0.12, -0.2) * deg(6, 4, 0)),
-    }),
-    slashTimeline({
-        slashKey(Vector3.new(0.75, 0.3, -0.6), deg(90), deg(-30, -45, 45), Vector3.new(-0.15, 0.85, -0.3), deg(70), deg(10, 10, 0), deg(-8, 0, 0),
-            CFrame.new(0, -0.1, 0.25) * deg(10, 0, 0)),
-        slashKey(Vector3.new(0.32, 0.95, 0), deg(100), deg(-90, 0, 0), Vector3.new(-0.25, -0.5, -0.6), deg(30), deg(-6, 0, 0), deg(0, 0, 0),
-            CFrame.new(0, -0.22, 0) * deg(-2, 0, 0)),
-        slashKey(Vector3.new(-0.76, -0.46, -0.46), deg(80), deg(-90, -30, 0), Vector3.new(-0.3, -0.8, 0.5), deg(50), deg(-8, 0, 0), deg(6, 0, 0),
-            CFrame.new(0, -0.38, -0.4) * deg(-4, 0, 0)),
-        slashKey(Vector3.new(-0.8, -0.42, -0.42), deg(60), deg(-80, -30, 0), Vector3.new(-0.32, -0.78, 0.52), deg(55), deg(-9, 0, 0), deg(7, 0, 0),
-            CFrame.new(0, -0.4, -0.42) * deg(-5, 0, 0)),
-    }),
-}
 
 -- The spearman's stances (the owner's reference, 2026-11-04), whole-body, for a player standing still
 -- on the ground: wide and low, side-on with the left leg leading, the head turned to look ahead, the
@@ -227,19 +183,8 @@ local SPEAR_STANCES = {
         { Vector3.new(-0.45, 0.89, 0), deg(130), deg(-45, 0, 45), Vector3.new(0.41, -0.41, -0.82), deg(30) },
         { Vector3.new(-0.83, 0, -0.55), deg(0, 60, 0), deg(-70), deg(-20, 0, 0),
           Vector3.new(0.87, -0.44, 0.22), deg(0, -60, 0), deg(-20), deg(-20, 15, -40) }),
-    SpearDraw = spearStance(-0.65, -72, deg(0, -14, 0), deg(0, 60, 0),
-        { Vector3.new(-0.44, -0.87, 0.22), deg(110), deg(-90, 0, -45), Vector3.new(0.49, -0.73, -0.49), deg(0) },
-        { Vector3.new(-0.91, -0.18, -0.37), deg(0, 60, 0), deg(-70), deg(-10, 0, 10),
-          Vector3.new(0.98, -0.2, 0), deg(0, -90, 0), deg(-60), deg(-20, 45, 0) }),
-    Spear = spearStance(-0.6, -30, deg(-6, -10, 0), deg(0, 30, 0),
-        { Vector3.new(-0.81, -0.32, -0.49), deg(20), deg(15, 30, -15), Vector3.new(0.24, -0.24, -0.94), deg(0) },
-        { Vector3.new(-0.18, -0.37, -0.91), deg(0, -15, 0), deg(-50), deg(-30, 30, 30),
-          Vector3.new(0.62, -0.62, 0.47), deg(0, -60, 0), deg(-20), deg(30, 30, -50) }),
 }
 
--- The spear's slash. The arms stay locked as they are in the guard, so both hands stay on the shaft and
--- the whole body swings it: from coiled to the right, the tip behind the right shoulder's line, round to
--- the left. Standing still the legs turn with it; moving, only the waist does (the arms-only guard).
 -- Carrying a guardian's egg: both arms round it, the hands under its sides, the chest leaning back a
 -- little under its weight (the egg is welded before the chest, Guardian:carry).
 local function carryArm(target, hint)
@@ -253,59 +198,6 @@ local CARRY_EGG = {
 }
 CARRY_EGG.RightShoulder, CARRY_EGG.RightElbow = carryArm(Vector3.new(-0.62, -1.0, -1.1), Vector3.new(1, -0.5, 0))
 CARRY_EGG.LeftShoulder, CARRY_EGG.LeftElbow = carryArm(Vector3.new(0.62, -1.0, -1.1), Vector3.new(-1, -0.5, 0))
-
-local SPEAR_SLASH_TIMES = { 0.1, 0.17, 0.3 } -- coiled, mid-sweep, the end of the sweep
-local function spearSlashKey(rootYaw, waistYaw, neckYaw)
-    local key = table.clone(SPEAR_STANCES.SpearReady)
-    key.Root = CFrame.new(0, -0.6, 0) * deg(0, rootYaw, 0)
-    key.Waist = deg(0, waistYaw, 0)
-    key.Neck = deg(0, neckYaw, 0)
-    return key
-end
-local function spearSlashMoving(waistYaw)
-    local key = table.clone(STRIKES.SpearReady)
-    key.Waist = deg(0, waistYaw, 0)
-    return key
-end
-local SPEAR_SLASH_KEYS = {
-    Still = { spearSlashKey(-105, -40, 60), spearSlashKey(-65, -12, 35), spearSlashKey(-18, 10, 5) },
-    Moving = { spearSlashMoving(-75), spearSlashMoving(-30), spearSlashMoving(30) },
-}
-
--- A timeline's value for one joint at one moment. The first stretch gathers speed, the next runs flat
--- through the blow (where a timeline has one), and the rest slow down: easing both ways on each would
--- stop the blade dead at every key.
-local function sampleKeys(keys, times, name, elapsed)
-    local count = #times
-    if elapsed <= times[1] then
-        return keys[1][name]
-    elseif elapsed >= times[count] then
-        return keys[count][name]
-    end
-    for index = 1, count - 1 do
-        if elapsed < times[index + 1] then
-            local t = (elapsed - times[index]) / (times[index + 1] - times[index])
-            if index == 1 then
-                t = t * t
-            elseif not (index == 2 and count > 3) then
-                t = 1 - (1 - t) * (1 - t)
-            end
-            return keys[index][name]:Lerp(keys[index + 1][name], t)
-        end
-    end
-    return keys[count][name]
-end
-
--- writes into `pose` a slash's timeline at `elapsed` seconds. lags: each joint's seconds behind the
--- clock, or nil for all together. wholeBody false: the hips and legs stay out of it.
-local function slashPose(pose, keys, times, elapsed, lags, wholeBody)
-    table.clear(pose)
-    for name in keys[1] do
-        if wholeBody or not BODY_JOINTS[name] then
-            pose[name] = sampleKeys(keys, times, name, elapsed - (if lags then lags[name] or 0 else 0))
-        end
-    end
-end
 
 -- The same pose for the other side of the body: every Right joint becomes the mirrored Left one
 -- and every Left joint the mirrored Right one.
@@ -364,7 +256,7 @@ local QINGGONG_POSES = {
     TuckLeft = flipSides(QINGGONG_TUCK_RIGHT),
 }
 local QINGGONG_BLEND_SPEED = 16 -- the leap poses snap in: a stride lasts only a fifth of a second
-local SLASH_BLEND_SPEED = 34    -- a slash follows its keys closely: its swing lasts a tenth of a second
+local SLASH_BLEND_SPEED = 60    -- a strike follows its keys closely: its swing lasts a tenth of a second
 local STANCE_MAX_SPEED = 3      -- studs a second: above this, a spear's stance gives way to arms only
 local JOINT_CHECK = 0.5         -- seconds between checks that a rig's joints are still its own
 local LOW_POSE_DISTANCE = 80    -- on a phone, other players farther than this from the camera aren't posed
@@ -423,16 +315,10 @@ local function choosePose(player, character, rig)
             return SPEAR_STANCES[strikeName]
         end
         strike = strike or STRIKES.SpearReady
-    elseif strikeName == "Slash" then
+    elseif strikeName == "Slash" or strikeName == "SpearSlash" or strikeName == "SpearThrust" then
         local step, elapsed = CombatFx.slash(player)
         rig.slash = rig.slash or {}
-        slashPose(rig.slash, SLASH_KEYS[step], SLASH_TIMES, elapsed, SLASH_LAG, standingStill(player, character))
-        strike = rig.slash
-    elseif strikeName == "SpearSlash" then
-        local _, elapsed = CombatFx.slash(player)
-        rig.slash = rig.slash or {}
-        -- no lag: the arms stay locked, both hands on the shaft
-        slashPose(rig.slash, if standingStill(player, character) then SPEAR_SLASH_KEYS.Still else SPEAR_SLASH_KEYS.Moving, SPEAR_SLASH_TIMES, elapsed, nil, true)
+        clipPose(rig.slash, if strikeName == "Slash" then SWORD_CLIPS[step] else strikeName, elapsed, standingStill(player, character))
         strike = rig.slash
     end
     if player:GetAttribute("IsFlying") == true then
@@ -474,8 +360,6 @@ for name, pose in STRIKES do
         QUICK_POSES[pose] = true
     end
 end
-QUICK_POSES[SPEAR_STANCES.SpearDraw] = true
-QUICK_POSES[SPEAR_STANCES.Spear] = true
 
 local function updatePoses(deltaTime)
     local now = os.clock()

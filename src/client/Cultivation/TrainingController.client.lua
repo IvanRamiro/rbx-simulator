@@ -8,6 +8,7 @@ local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
+local UiFx = require(UI:WaitForChild("UiFx"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 
@@ -20,6 +21,7 @@ local lastToggleRequestTime = 0
 -- ---------- the profile (top of the Status region): portrait, name, rank, realm, progress ----------
 local FULL_SIZE, MINIMIZED_SIZE = UDim2.fromOffset(270, 88), UDim2.fromOffset(84, 88)
 local statusFrame = UiKit.panel({ Name = "StatusWindow", Size = FULL_SIZE, LayoutOrder = 1, Parent = Hud.Status })
+UiFx.edgeLight(statusFrame, 11)
 
 -- the portrait: tapping it folds the rest away (the owner's minimize, saved in their settings)
 local portrait = Instance.new("ImageButton")
@@ -32,7 +34,7 @@ portrait.AutoButtonColor = false
 portrait.ZIndex = 2
 portrait.Parent = statusFrame
 UiKit.corner(portrait, 32)
-UiKit.stroke(portrait, C.Edge, 0, 2)
+UiKit.stroke(portrait, C.Highlight, 0, 3)
 task.spawn(function()
     local ok, image = pcall(function()
         return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
@@ -85,26 +87,20 @@ player:GetAttributeChangedSignal("SettingStatusMinimized"):Connect(fitStatus)
 fitStatus()
 
 -- the Qi, first of the currencies
-local _, qiLabel = Hud.chip("QiCounter", UiTheme.Icons.Qi, 0)
+local _, setQi = Hud.chip("QiCounter", UiTheme.Icons.Qi, 0, { Format = NumberFormat.compact, Color = C.Sky })
 
 -- ---------- the dock: the breakthrough (when it's ready), the station's bonus, Cultivate ----------
 local rankUpButton = UiKit.button({
     Name = "RankUpButton", Tone = "Highlight", Font = "Title", TextSize = 17, Text = "BREAK THROUGH",
-    Size = UDim2.fromOffset(Hud.DockWidth(), 40), AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 20, Visible = false,
+    Size = UDim2.fromOffset(Hud.DockWidth(), 40), LayoutOrder = 20, Visible = false,
     Parent = Hud.Dock,
 })
-UiKit.padding(rankUpButton, 16, 0)
--- a breakthrough waiting to be taken breathes, so it is seen
-local glow = rankUpButton:FindFirstChildOfClass("UIStroke")
-task.spawn(function()
-    while true do
-        local t = os.clock()
-        if rankUpButton.Visible then
-            glow.Thickness = 1.5 + math.sin(t * 4) * 1
-        end
-        task.wait(1 / 30)
-    end
+-- as wide as its words need: sized by hand, because its light and halo need a button that isn't sized by its contents
+rankUpButton:GetPropertyChangedSignal("TextBounds"):Connect(function()
+    rankUpButton.Size = UDim2.fromOffset(math.max(Hud.DockWidth(), rankUpButton.TextBounds.X + 32), 40)
 end)
+-- a breakthrough waiting to be taken breathes, so it is seen
+UiFx.attention(rankUpButton)
 
 local stationLabel = UiKit.label({
     Name = "StationLabel", Font = "Strong", TextSize = 13, TextColor3 = C.AccentBright,
@@ -117,21 +113,47 @@ UiKit.corner(stationLabel)
 UiKit.padding(stationLabel, 10, 0)
 
 local cultivateButton = UiKit.button({
-    Name = "CultivateButton", Tone = "Accent", Font = "Title", TextSize = 18, Text = "CULTIVATE",
-    Size = UDim2.fromOffset(Hud.DockWidth(), if Hud.isCompact() then 38 else 50), LayoutOrder = 30, Parent = Hud.Dock,
+    Name = "CultivateButton", Tone = "Primary", Font = "Title", Text = "CULTIVATE",
+    Size = UDim2.fromScale(1, 1), Parent = Hud.CultivationDock.Action,
 })
+-- a pill, and light that keeps to its curves; the dock's size can change once the screen's is known
+local function shapeCultivateButton(size)
+    local pill = size.Button // 2
+    cultivateButton.TextSize = size.TextSize + 7
+    cultivateButton:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, pill)
+    cultivateButton.Halo:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, pill + 3)
+    cultivateButton:SetAttribute("RoundLight", pill)
+    local layer = cultivateButton:FindFirstChild("LightLayer")
+    if layer then
+        layer:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, pill)
+    end
+    cultivateButton.Gloss.Position = UDim2.fromOffset(pill, 2)
+    cultivateButton.Gloss.Size = UDim2.new(1, -pill * 2, 0, 1)
+end
+Hud.CultivationDock.Resized:Connect(shapeCultivateButton)
+shapeCultivateButton(Hud.CultivationDock.Size)
 local cultivateKey = UiKit.keycap(keyName)
 cultivateKey.AnchorPoint = Vector2.new(1, 0.5)
-cultivateKey.Position = UDim2.new(1, -12, 0.5, 0)
+cultivateKey.Position = UDim2.new(1, -16, 0.5, 0)
 cultivateKey.Parent = cultivateButton
 
 local function isCultivating()
     return player:GetAttribute("IsCultivating") == true
 end
 
+-- the game's one main action catches the eye now and then, while it isn't being done
+task.spawn(function()
+    while cultivateButton.Parent do
+        task.wait(5)
+        if not isCultivating() and cultivateButton.Visible then
+            UiFx.sweep(cultivateButton, Color3.new(1, 1, 1), 0.7)
+        end
+    end
+end)
+
 local function updateCultivateButton()
     -- while cultivating it turns quiet and says how to stop: the aura itself is the feedback
-    cultivateButton:SetAttribute("Tone", if isCultivating() then "Quiet" else "Accent")
+    cultivateButton:SetAttribute("Tone", if isCultivating() then "Quiet" else "Primary")
     cultivateButton.Text = if isCultivating() then "STOP CULTIVATING" else "CULTIVATE"
 end
 
@@ -172,7 +194,7 @@ local qiValue = leaderstats:WaitForChild("Qi")
 local rankValue = leaderstats:WaitForChild("Rank")
 
 local function updateQiLabel()
-    qiLabel.Text = NumberFormat.compact(qiValue.Value)
+    setQi(qiValue.Value)
 end
 
 local function updateRankDisplay()
@@ -197,7 +219,8 @@ local function updateRankDisplay()
     nextRankLabel.Text = if canRankUp
         then "Ready to break through"
         else NumberFormat.compact(nextRank.QiRequired - qiValue.Value) .. " Qi to " .. target
-    nextRankLabel.TextColor3 = if canRankUp then C.Highlight else C.Text
+    nextRankLabel.TextColor3 = C.Text -- white either way: gold words would vanish on the gold bar
+    UiKit.setBarColor(progressBar, if canRankUp then C.Highlight else C.Accent)
     rankUpButton.Visible = canRankUp
     rankUpButton.Text = "BREAK THROUGH: " .. string.upper(target)
 end

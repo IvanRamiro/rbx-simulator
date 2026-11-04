@@ -27,12 +27,12 @@ local C = UiTheme.Colors
 local WALK_AWAY = 60 -- studs from where the window was opened
 
 -- ---------- the Spirit Stones counter ----------
-local stoneChip, counter = Hud.chip("StoneCounter", UiTheme.Icons.Stones, 1)
+local stoneChip, setStones = Hud.chip("StoneCounter", UiTheme.Icons.Stones, 1, { Format = NumberFormat.compact, Color = Color3.fromRGB(120, 240, 255) })
 
 local function updateCounter()
     local stones = player:GetAttribute("SpiritStones")
     stoneChip.Visible = stones ~= nil
-    counter.Text = NumberFormat.compact(stones or 0)
+    setStones(stones or 0)
 end
 player:GetAttributeChangedSignal("SpiritStones"):Connect(updateCounter)
 updateCounter()
@@ -358,7 +358,7 @@ local function renderMarket(contents)
         local open = rankName ~= "" and Ranks.isAtLeast(rankName, entry.egg.RequiredRank)
         local affordable = contents.Stones >= entry.price
         local r = card(index, 62)
-        local icon = UiKit.icon(UiTheme.Icons.Hatch, 44, if open then "Accent" else "Danger")
+        local icon = UiKit.icon(UiTheme.EggIcons[entry.id] or UiTheme.Icons.Hatch, 44, if open then "Accent" else "Danger")
         icon.Position = UDim2.fromOffset(10, 9)
         icon.Parent = r
         UiKit.label({
@@ -469,9 +469,6 @@ RemoteEvents.ShopEvent.OnClientEvent:Connect(function(kind, ...)
         local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         if shop ~= current.shop then
             current.tab = "Weapons"
-        end
-        if not window.isOpen() then
-            Sfx.play("Open")
         end
         window.open()
         current.shop, current.contents = shop, contents

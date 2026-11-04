@@ -17,7 +17,6 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
-local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Hud = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"))
 local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKit"))
@@ -28,8 +27,6 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local qinggong = GameConfig.Qinggong
 
-local PIP_READY = UiTheme.Colors.Sky
-local PIP_SPENT = Color3.fromRGB(48, 58, 62)
 local GLIDE_COLOR = UiTheme.Colors.AccentBright
 local STAMINA_COLOR = UiTheme.Colors.Highlight
 local STAMINA_LOW = UiTheme.Colors.Danger
@@ -37,49 +34,40 @@ local FLIGHT_COLOR = UiTheme.Colors.Highlight
 local NEW_PRESS_GAP = 0.18 -- jump requests closer than this are one held press
 local HARD_LANDING_SPEED = 25 -- a fall faster than this lands with an impact even without Qinggong
 local FULL_IMPACT_SPEED = 110 -- the fall speed of a full-strength landing
-local MAX_PIPS = GameConfig.Qinggong.Levels[#GameConfig.Qinggong.Levels].AirLeaps
 
--- the Qinggong strip, at the top of the HUD's dock: an icon, a diamond per air leap, the stamina
--- bar and a line of what's next (or the state: gliding, sword flight)
-local panel = UiKit.panel({ Name = "QinggongStrip", Size = UDim2.fromOffset(Hud.DockWidth(), 50), LayoutOrder = 10, Brackets = false, Parent = Hud.Dock })
-local icon = UiKit.icon(UiTheme.Icons.Qinggong, 30, "Accent")
-icon.AnchorPoint = Vector2.new(0, 0.5)
-icon.Position = UDim2.new(0, 9, 0.5, 0)
-icon.Parent = panel
-
-local pipRow = Instance.new("Frame")
-pipRow.BackgroundTransparency = 1
-pipRow.Position = UDim2.fromOffset(50, 7)
-pipRow.Size = UDim2.new(1, -60, 0, 10)
-pipRow.Parent = panel
-local PIP_GAP = 4
-UiKit.list(pipRow, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, PIP_GAP), VerticalAlignment = Enum.VerticalAlignment.Center })
-
-local pips = {}
-for index = 1, MAX_PIPS do
-    local slot = Instance.new("Frame") -- the most leaps any rank has (MAX_PIPS) always fit the row
-    slot.BackgroundTransparency = 1
-    slot.Size = UDim2.new(1 / MAX_PIPS, -PIP_GAP * (MAX_PIPS - 1) / MAX_PIPS, 1, 0)
-    slot.LayoutOrder = index
-    slot.Parent = pipRow
-    local pip = Instance.new("Frame") -- a diamond: a step of light
-    pip.AnchorPoint = Vector2.new(0.5, 0.5)
-    pip.Position = UDim2.fromScale(0.5, 0.5)
-    pip.Size = UDim2.fromOffset(7, 7)
-    pip.Rotation = 45
-    pip.BorderSizePixel = 0
-    pip.Parent = slot
-    pips[index] = pip
-end
-
-local staminaBack = UiKit.bar({ Name = "Stamina", Fill = STAMINA_COLOR, Position = UDim2.fromOffset(50, 22), Size = UDim2.new(1, -60, 0, 6), Parent = panel })
-local staminaFill = staminaBack:FindFirstChild("Fill")
-staminaFill.Size = UDim2.fromScale(1, 1)
-
-local info = UiKit.label({
-    Name = "Info", TextSize = 12, TextColor3 = UiTheme.Colors.Muted, Position = UDim2.fromOffset(50, 31),
-    Size = UDim2.new(1, -60, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = panel,
+-- the top of the Cultivation dock (Hud): its title, the air leaps left or the state (gliding, sword
+-- flight), and the stamina bar, ending in a diamond
+local dock = Hud.CultivationDock
+local dockTitle = UiKit.label({
+    Name = "Title", Font = "Title", Text = "Cultivation", Size = UDim2.fromScale(0.45, 1), Parent = dock.Top,
 })
+local info = UiKit.label({
+    Name = "Info", Font = "Strong", TextColor3 = UiTheme.Colors.AccentBright, AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.fromScale(1, 0), Size = UDim2.fromScale(0.55, 1), TextXAlignment = Enum.TextXAlignment.Right,
+    TextTruncate = Enum.TextTruncate.AtEnd, Parent = dock.Top,
+})
+local function sizeDockText(size)
+    dockTitle.TextSize = size.TextSize + 2
+    info.TextSize = size.TextSize
+end
+dock.Resized:Connect(sizeDockText)
+sizeDockText(dock.Size)
+local staminaBack = UiKit.bar({ Name = "Stamina", Fill = STAMINA_COLOR, Size = UDim2.fromScale(1, 1), Parent = dock.Bar })
+staminaBack:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
+local staminaFill = staminaBack:FindFirstChild("Fill")
+staminaFill:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
+staminaFill.Size = UDim2.fromScale(1, 1)
+local tip = Instance.new("Frame") -- the bar's end: outside the track, which clips what's inside it
+tip.Name = "Tip"
+tip.AnchorPoint = Vector2.new(0.5, 0.5)
+tip.Position = UDim2.new(1, 3, 0.5, 0)
+tip.Size = UDim2.fromOffset(11, 11)
+tip.Rotation = 45
+tip.BackgroundColor3 = UiTheme.Colors.Highlight
+tip.BorderSizePixel = 0
+tip.ZIndex = 3
+tip.Parent = dock.Bar
+UiKit.stroke(tip, Color3.fromRGB(70, 44, 10), 0, 1)
 
 local leapsUsed = 0
 local lastJumpRequest = 0
@@ -104,11 +92,6 @@ local function maxLeaps()
 end
 
 local function updateHud()
-    local total = maxLeaps()
-    for index, pip in pips do
-        pip.Visible = index <= total
-        pip.BackgroundColor3 = if index <= total - leapsUsed then PIP_READY else PIP_SPENT
-    end
     if flight then
         info.Text = "Sword flight"
         info.TextColor3 = FLIGHT_COLOR
@@ -119,10 +102,9 @@ local function updateHud()
         info.TextColor3 = GLIDE_COLOR
         return
     end
-    info.TextColor3 = UiTheme.Colors.Muted
-    local _, nextLevel = Ranks.getQinggong(Ranks.getPlayerRankName(player))
-    local nextRank = nextLevel and Ranks.getRankById(nextLevel.RankId)
-    info.Text = if nextRank then (nextLevel.AirLeaps .. " leaps at " .. nextRank.Name) else "Air leaps: " .. total
+    local total = maxLeaps()
+    info.TextColor3 = if leapsUsed >= total and total > 0 then UiTheme.Colors.Muted else UiTheme.Colors.AccentBright
+    info.Text = math.max(0, total - leapsUsed) .. " / " .. total .. " Air Leaps"
 end
 
 local function getCharacterParts()

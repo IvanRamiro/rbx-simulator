@@ -565,7 +565,7 @@ local GameConfig = {
         { Id = "Leap", Kind = "Leap", Reward = 20, Title = "Walk on Air",
             Text = "Jump, then jump again in mid-air: an air leap. Hold jump while falling to glide." },
         { Id = "Guardian", Kind = "GuardianHit", Reward = 30, Title = "The Stone Lion",
-            Text = "Cross the east bridge to the Beginner Isle, find the Awakened Stone Lion and strike it (click, or tap Strike)." },
+            Text = "Cross the west bridge to the Beginner Isle, find the Awakened Stone Lion and strike it (click, or tap Strike)." },
         { Id = "Egg", Kind = "TakeEgg", Reward = 60, Title = "Steal an Egg",
             Text = "Weaken a guardian until it falters, then take an egg from its stands. It will chase you!" },
         { Id = "Hatch", Kind = "Hatch", Reward = 80, Title = "Hatch It",

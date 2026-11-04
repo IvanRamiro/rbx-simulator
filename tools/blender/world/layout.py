@@ -2,8 +2,8 @@
 Coordinates are Roblox studs (X east, Y up, Z south; north is -Z).
 
 Since 2026-11-01 (the owner's map) Yggdrasil is the hub at the centre, about 500 studs across, and
-the four outer islands stand in a row north of it, west to east in unlock order (Jade Grove, Ember
-Peak, Moonlit Isle, Origin Abyss), every island's ground at Y 200. Each outer island keeps the shape
+the outer islands fan out round its west and north, left to right in unlock order (Beginner Isle,
+Jade Grove, Ember Peak, Moonlit Isle, Origin Abyss), every island's ground at Y 200. Each outer island keeps the shape
 it was authored with and is placed by its centre and `turns`: quarter turns, each adding 90 degrees
 of bearing ((x, z) -> (-z, x)), chosen so its gate faces Yggdrasil and its bridge runs straight.
 Quarter turns keep its terrain grid exact; every move is a whole number of 4-stud voxels.
@@ -25,9 +25,14 @@ ISLANDS = {
     "EmberPeak": {"centre": (-128, 200, -696), "radius": 150, "turns": 0},
     "MoonlitIsle": {"centre": (192, 200, -804), "radius": 125, "turns": 0},
     "OriginAbyss": {"centre": (596, 200, -856), "radius": 165, "turns": 0},
-    # east of the hub, the first island a player crosses to (the owner, 2026-11-04): open from the
-    # start, its bridge about five seconds' run at a beginner's speed
-    "BeginnerIsle": {"centre": (468, 200, -124), "radius": 140, "turns": 0},
+    # the first island a player crosses to (the owner, 2026-11-04): open from the start, its bridge
+    # about five seconds' run at a beginner's speed. West of the hub, so that from the hub the islands
+    # run left to right in realm order, Beginner to Origin (the owner: "left to right ... depends on realm").
+    # Its road leaves the Market lane through the gap between the Blacksmith and the Marketplace. Turned
+    # by exactly what puts its gate square on the bridge's line (the owner: "don't tilt the island"), so
+    # hub, bridge, Lion Gate and the lion stand in one straight line: not a whole number of quarter
+    # turns, so its terrain is written already turned (worldlib.export_heightfield, baked_turn).
+    "BeginnerIsle": {"centre": (-480, 200, 24), "radius": 140, "turns": 2.13292},
 }
 
 # Each island's arrival, where its bridge lands (island-local, before turning): just inside its gate
@@ -45,7 +50,10 @@ HUB_EXIT_RADIUS = 245    # bridges leave Yggdrasil's ground this far from its ce
 def turn(v, turns):
     """Island-local (x, y, z) turned by quarter turns, each adding 90 degrees of bearing."""
     x, y, z = v
-    for _ in range(turns % 4):
+    if turns != int(turns):
+        a = math.radians(turns * 90)
+        return (x * math.cos(a) - z * math.sin(a), y, x * math.sin(a) + z * math.cos(a))
+    for _ in range(int(turns) % 4):
         x, z = -z, x
     return (x, y, z)
 

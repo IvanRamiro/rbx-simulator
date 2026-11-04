@@ -1,15 +1,15 @@
--- Builds the interface's pieces in the UiTheme look (the cultivator's System), so every HUD and
--- window shares one style:
---   panel(props)                a System window: glass, a glowing edge, corner ticks
---                               (Brackets = false: no ticks)
+-- Builds the interface's pieces in the UiTheme look, so every HUD and window shares one style:
+--   panel(props)                a window: deep glass, gold trim, a small ornament on each corner
+--                               (Brackets = false: none)
 --   content(panel, x, y)        a padded frame inside a panel, for its content
 --   header(parent, text, props) a bracketed header: a line, [ TEXT ], a line
 --   glow(label, color)          a soft glow round a label's letters
 --   icon(image, size, tone)     a box holding a full-colour icon (UiTheme.Icons; "Accent", "Danger",
 --                               "Highlight")
 --   label(props)                text in a theme font (Font = a UiTheme.Fonts name)
---   button(props)               an action: "Accent" (primary), "Highlight" (a breakthrough),
---                               "Quiet", "Danger"; it glows on hover and sinks when pressed
+--   button(props)               an action: "Primary" (the one main action, with a halo), "Accent",
+--                               "Highlight" (a breakthrough, with a halo), "Quiet", "Danger"; on hover
+--                               it lifts and light crosses it, pressed it sinks with a ripple
 --   keycap(key)                 a keyboard key's hint (hidden on touch screens)
 --   bar(props)                  a progress bar; setBar(bar, fraction) eases it
 --   list(parent, props)         a UIListLayout
@@ -17,19 +17,21 @@
 --   card(props)                 a row in a window: raised glass, a quiet edge; Stripe = a colour
 --                               down its left side (a rarity, an element)
 --   tag(text, color)            a small outlined word: a rarity, a state ("EQUIPPED")
---   textbox(props)              a text field in the System style
+--   textbox(props)              a text field in the interface's style
 --   empty(parent, text)         the muted line a list shows when it has nothing
 -- props: any Instance properties to set, plus the extras named per builder.
 local ContentProvider = game:GetService("ContentProvider")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local UiFx = require(script.Parent:WaitForChild("UiFx"))
 local UiTheme = require(script.Parent:WaitForChild("UiTheme"))
 
 local C = UiTheme.Colors
 local UiKit = {}
 
-local EASE = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local EASE = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local BOUNCE = TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
 -- fetched as soon as the game starts, so a phone never shows an empty icon box for long
 task.spawn(function()
@@ -86,22 +88,20 @@ function UiKit.list(parent, props)
     return layout
 end
 
--- bright ticks on a window's four corners, over its edge
-function UiKit.brackets(frame, color, length)
-    length = length or 12
-    color = color or C.Edge
-    for _, spot in { Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) } do
-        for _, horizontal in { true, false } do
-            local arm = Instance.new("Frame")
-            arm.Name = "Tick"
-            arm.BorderSizePixel = 0
-            arm.BackgroundColor3 = color
-            arm.AnchorPoint = spot
-            arm.Size = if horizontal then UDim2.fromOffset(length, 2) else UDim2.fromOffset(2, length)
-            arm.Position = UDim2.new(spot.X, if spot.X == 0 then -1 else 1, spot.Y, if spot.Y == 0 then -1 else 1)
-            arm.ZIndex = frame.ZIndex + 2
-            arm.Parent = frame
-        end
+-- a small gold ornament on a window's four corners, over its edge: one drawing, turned for each
+local ORNAMENT_SIZE = 34
+function UiKit.brackets(frame)
+    for _, corner_ in { { 0, 0, 0 }, { 1, 0, 90 }, { 1, 1, 180 }, { 0, 1, 270 } } do
+        local piece = Instance.new("ImageLabel")
+        piece.Name = "Ornament"
+        piece.BackgroundTransparency = 1
+        piece.Image = UiTheme.Ornaments.Corner
+        piece.AnchorPoint = Vector2.new(corner_[1], corner_[2])
+        piece.Position = UDim2.new(corner_[1], if corner_[1] == 0 then -3 else 3, corner_[2], if corner_[2] == 0 then -3 else 3)
+        piece.Size = UDim2.fromOffset(ORNAMENT_SIZE, ORNAMENT_SIZE)
+        piece.Rotation = corner_[3]
+        piece.ZIndex = frame.ZIndex + 2
+        piece.Parent = frame
     end
 end
 
@@ -115,7 +115,7 @@ function UiKit.panel(props)
     copy.Brackets = nil
     apply(frame, copy)
     corner(frame)
-    stroke(frame, C.Edge, 0.25)
+    stroke(frame, C.Edge, 0.1)
     -- the glow: a soft wide rim just inside the edge
     local rim = Instance.new("Frame")
     rim.Name = "Glow"
@@ -125,11 +125,26 @@ function UiKit.panel(props)
     rim.Size = UDim2.new(1, -4, 1, -4)
     rim.Parent = frame
     corner(rim)
-    stroke(rim, C.Edge, 0.72, 5)
+    stroke(rim, C.Edge, 0.9, 4)
     local glass = Instance.new("UIGradient") -- deeper at the bottom, as light through glass
     glass.Rotation = 90
+    glass.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(120, 118, 160))
     glass.Transparency = NumberSequence.new(0, 0.12)
     glass.Parent = frame
+    -- a thread of light along the top, as a projected window's upper edge
+    local top = Instance.new("Frame")
+    top.Name = "TopLight"
+    top.BackgroundColor3 = C.AccentBright
+    top.BorderSizePixel = 0
+    top.AnchorPoint = Vector2.new(0.5, 0)
+    top.Position = UDim2.new(0.5, 0, 0, 1)
+    top.Size = UDim2.new(1, -8, 0, 1)
+    local thread = Instance.new("UIGradient")
+    thread.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.45), NumberSequenceKeypoint.new(1, 1),
+    })
+    thread.Parent = top
+    top.Parent = frame
     if brackets then
         UiKit.brackets(frame)
     end
@@ -171,11 +186,11 @@ function UiKit.glow(label, color)
     return halo
 end
 
--- A bracketed header across its parent: a fading line, [ TEXT ], a fading line. props: Color,
+-- A header across its parent: a fading line, TEXT, a fading line. props: Color,
 -- TextSize, and any Frame properties (Position, Size, LayoutOrder ...).
 function UiKit.header(parent, text, props)
     local copy = table.clone(props or {})
-    local color = copy.Color or C.Text
+    local color = copy.Color or C.AccentBright
     local size = copy.TextSize or 14
     copy.Color, copy.TextSize = nil, nil
     local row = Instance.new("Frame")
@@ -185,13 +200,10 @@ function UiKit.header(parent, text, props)
     apply(row, copy)
     row.Parent = parent
     local word = UiKit.label({
-        Name = "Text", Font = "Header", Text = "[  " .. text .. "  ]", TextSize = size, TextColor3 = color,
+        Name = "Text", Font = "Header", Text = text, TextSize = size, TextColor3 = color,
         AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), AutomaticSize = Enum.AutomaticSize.X,
         Size = UDim2.new(0, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, Parent = row,
     })
-    if size >= 13 then -- on smaller letters a halo fills their gaps
-        UiKit.glow(word)
-    end
     -- a line each side of the word, fading out toward the edges; they follow the word's width
     local lines = {}
     for side = 0, 1 do
@@ -246,8 +258,9 @@ function UiKit.icon(image, size, tone)
 end
 
 local BUTTON_TONES = {
-    Accent = { back = C.AccentDeep, edge = C.Accent, text = C.Text },
-    Highlight = { back = Color3.fromRGB(70, 52, 12), edge = C.Highlight, text = C.Highlight },
+    Primary = { back = C.AccentFill, edge = C.AccentBright, text = Color3.fromRGB(48, 28, 6), glow = C.Accent }, -- the one main action on screen
+    Accent = { back = Color3.fromRGB(58, 50, 122), edge = C.Accent, text = C.Text },
+    Highlight = { back = C.Highlight, edge = Color3.new(1, 1, 1), text = Color3.fromRGB(48, 28, 6), glow = C.Highlight },
     Quiet = { back = C.Raised, edge = C.EdgeDim, text = C.Text },
     Danger = { back = C.DangerDeep, edge = C.Danger, text = C.Text },
 }
@@ -270,18 +283,51 @@ function UiKit.button(props)
     local edge = stroke(button, C.Edge, 0.15)
     local glass = Instance.new("UIGradient")
     glass.Rotation = 90
-    glass.Transparency = NumberSequence.new(0, 0.25)
+    glass.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(226, 214, 200))
+    glass.Transparency = NumberSequence.new(0, 0.06)
     glass.Parent = button
     local scale = Instance.new("UIScale")
     scale.Parent = button
+    local canHover = UserInputService.MouseEnabled -- a touch never leaves, so a phone gets no hover state
+
+    -- a halo just outside a primary button, and a line of light along its top
+    local halo = Instance.new("Frame")
+    halo.Name = "Halo"
+    halo.BackgroundTransparency = 1
+    halo.AnchorPoint = Vector2.new(0.5, 0.5)
+    halo.Position = UDim2.fromScale(0.5, 0.5)
+    halo.Size = UDim2.new(1, 7, 1, 7)
+    halo.ZIndex = button.ZIndex
+    corner(halo, UiTheme.Corner + 3)
+    local haloEdge = stroke(halo, C.Accent, 0.65, 3)
+    halo.Parent = button
+    local gloss = Instance.new("Frame")
+    gloss.Name = "Gloss"
+    gloss.BackgroundColor3 = Color3.new(1, 1, 1)
+    gloss.BackgroundTransparency = 0.72
+    gloss.BorderSizePixel = 0
+    gloss.Position = UDim2.fromOffset(2, 1)
+    gloss.Size = UDim2.new(1, -4, 0, 1)
+    gloss.Parent = button
 
     local hovered = false
+    local function iconGrow(size)
+        local picture = button:FindFirstChild("Icon") and button.Icon:FindFirstChild("Image")
+        if picture then
+            TweenService:Create(picture, BOUNCE, { Size = UDim2.fromScale(size, size) }):Play()
+        end
+    end
     local function paint()
         local tone = BUTTON_TONES[button:GetAttribute("Tone")] or BUTTON_TONES.Quiet
         local lit = hovered and button.Active
         button.BackgroundColor3 = if lit then tone.back:Lerp(tone.edge, 0.25) else tone.back
-        button.BackgroundTransparency = 0.18
+        button.BackgroundTransparency = if tone.glow then 0 else 0.08
         button.TextColor3 = tone.text
+        halo.Visible = tone.glow ~= nil and button.Active and button.AutomaticSize == Enum.AutomaticSize.None
+        gloss.Visible = tone.glow ~= nil
+        if tone.glow then
+            haloEdge.Color = tone.glow
+        end
         edge.Color = tone.edge
         edge.Transparency = if button.Active then 0.05 else 0.6
         edge.Thickness = if lit then 2 else 1
@@ -290,22 +336,35 @@ function UiKit.button(props)
     button:GetAttributeChangedSignal("Tone"):Connect(paint)
     button:GetPropertyChangedSignal("Active"):Connect(paint)
     button.MouseEnter:Connect(function()
+        if not canHover then
+            return
+        end
         hovered = true
         paint()
+        if button.Active then
+            TweenService:Create(scale, BOUNCE, { Scale = 1.035 }):Play()
+            iconGrow(1.02)
+            UiFx.sweep(button, (BUTTON_TONES[button:GetAttribute("Tone")] or BUTTON_TONES.Quiet).edge:Lerp(Color3.new(1, 1, 1), 0.4))
+        end
     end)
     button.MouseLeave:Connect(function()
+        if not canHover then
+            return
+        end
         hovered = false
         paint()
         TweenService:Create(scale, EASE, { Scale = 1 }):Play()
+        iconGrow(0.86)
     end)
     button.InputBegan:Connect(function(input)
         if button.Active and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-            TweenService:Create(scale, EASE, { Scale = 0.95 }):Play()
+            TweenService:Create(scale, EASE, { Scale = 0.94 }):Play()
+            UiFx.ripple(button, input.Position.X, input.Position.Y, (BUTTON_TONES[button:GetAttribute("Tone")] or BUTTON_TONES.Quiet).edge)
         end
     end)
     button.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            TweenService:Create(scale, EASE, { Scale = 1 }):Play()
+            TweenService:Create(scale, BOUNCE, { Scale = if hovered then 1.035 else 1 }):Play()
         end
     end)
     apply(button, copy)
@@ -313,7 +372,7 @@ function UiKit.button(props)
     return button
 end
 
--- A round on-screen button for touch players (Strike, Dash ...), in the System's colours.
+-- A round on-screen button for touch players (Strike, Dash ...), in the interface's colours.
 function UiKit.touchButton(button, text)
     button.BackgroundColor3 = C.AccentDeep
     button.BackgroundTransparency = 0.2
@@ -362,8 +421,28 @@ function UiKit.bar(props)
     local sheen = Instance.new("UIGradient") -- brightest at the leading edge (it tints whatever fill colour is set)
     sheen.Color = ColorSequence.new(Color3.fromRGB(140, 140, 140), Color3.new(1, 1, 1))
     sheen.Parent = fill
+    -- a band of light running along what's been filled, so a bar is never quite still
+    fill.ClipsDescendants = true
+    local run = Instance.new("Frame")
+    run.Name = "Run"
+    run.BackgroundColor3 = Color3.new(1, 1, 1)
+    run.BorderSizePixel = 0
+    run.Position = UDim2.fromScale(-0.5, 0)
+    run.Size = UDim2.fromScale(0.4, 1)
+    local runFade = Instance.new("UIGradient")
+    runFade.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.55), NumberSequenceKeypoint.new(1, 1),
+    })
+    runFade.Parent = run
+    run.Parent = fill
+    TweenService:Create(run, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 1.4), { Position = UDim2.fromScale(1.1, 0) }):Play()
     apply(track, copy)
     return track
+end
+
+-- A bar's colour, eased: gold when what it counts is ready to be taken (a breakthrough)
+function UiKit.setBarColor(bar, color)
+    TweenService:Create(bar:FindFirstChild("Fill"), TweenInfo.new(0.3), { BackgroundColor3 = color }):Play()
 end
 
 function UiKit.setBar(bar, fraction, instant)
@@ -404,7 +483,18 @@ function UiKit.card(props)
     card.BackgroundTransparency = 0.35
     card.BorderSizePixel = 0
     corner(card)
-    stroke(card, C.EdgeDim, 0.35)
+    local edge = stroke(card, C.EdgeDim, 0.35)
+    if UserInputService.MouseEnabled then -- the row under the pointer lights up
+        local rest = card.BackgroundTransparency
+        card.MouseEnter:Connect(function()
+            TweenService:Create(card, EASE, { BackgroundTransparency = rest - 0.2 }):Play()
+            TweenService:Create(edge, EASE, { Color = C.Edge, Transparency = 0.05 }):Play()
+        end)
+        card.MouseLeave:Connect(function()
+            TweenService:Create(card, EASE, { BackgroundTransparency = rest }):Play()
+            TweenService:Create(edge, EASE, { Color = C.EdgeDim, Transparency = 0.35 }):Play()
+        end)
+    end
     if stripeColor then
         local stripe = Instance.new("Frame")
         stripe.Name = "Stripe"

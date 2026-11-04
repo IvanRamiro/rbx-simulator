@@ -4,13 +4,12 @@
 --          flies from it, swelling and fading as it travels, with a ripple and wind streaks.
 --   Sword  the striker's sword (their realm sword, or else the flying sword) in their right hand, in
 --          a combo of three slashes, each with its own line (SLASHES): a diagonal cut down across the
---          body, a backhand rising the other way, and an overhead finisher. The arm's motion is
---          PoseController's (SLASH_KEYS); here the blade draws a sheet of light through the swing and
+--          body, a backhand rising the other way, and an overhead finisher. The body's motion is a
+--          clip keyed in Blender (WeaponClips, played by PoseController); here the blade draws a sheet of light through the swing and
 --          a crescent of light sweeps out along the slash's plane.
---   Spear  the striker's spear in both hands, in a combo of two: a thrust, drawn back then driven
---          straight ahead with a lance of streaks running on to its reach; then a slash, the whole body
---          turning to sweep the shaft across the front (PoseController's SPEAR_SLASH_KEYS) with a wide
---          crescent of light along the tip's path.
+--   Spear  the striker's spear in both hands, in a combo of two, also clips: a thrust, coiled then
+--          lunging with a real step, holding its reach, a lance of streaks running on from its tip; then
+--          a slash, one wide sweep right to left round the body, with a crescent on the tip's true path.
 --   hit    where a strike lands: a burst of light, a shockwave and scattering sparks.
 --
 -- A forged weapon (the striker's "WeaponElement", GameConfig.Forge) glows, trails and slashes in its
@@ -52,24 +51,26 @@ local TEXTURES = {
     Smoke = "rbxasset://textures/particles/smoke_main.dds",
 }
 local MAX_DISTANCE = 250
-local WIND_UP = { Sword = 0.1, Spear = 0.1 } -- seconds before the blow lands
-local SLASH_SWING = 0.14 -- seconds the blade draws its light
 -- each slash of the combo. Its crescent lies on the arc the blade's tip really draws, measured from
--- the swing in root space (PoseController's SLASH_KEYS: re-measure if those change): the circle's
+-- the swing in root space (fitted by weapon_moves.py when the clips are baked): the circle's
 -- Centre and Radius, the way its plane faces (Face) and the way the arc bulges (Bulge). Then how much
 -- it swells and how far it carries ahead; the finisher is the biggest, and shakes the striker's camera.
+local WeaponClips = require(script.Parent.Parent:WaitForChild("Character"):WaitForChild("WeaponClips"))
+-- each strike's timing and the arc its weapon truly draws come from its clip (tools/blender/animation)
+local function fromClip(name, slash)
+    local clip = WeaponClips.Clips[name]
+    slash.Clip = clip
+    slash.Centre, slash.Radius, slash.Face, slash.Bulge = clip.Crescent.Centre, clip.Crescent.Radius, clip.Crescent.Face, clip.Crescent.Bulge
+    return slash
+end
 local SLASHES = {
-    { Centre = Vector3.new(-1.3, 1.74, -1.03), Radius = 5.08, Face = Vector3.new(0.73, -0.62, 0.28), Bulge = Vector3.new(0.16, -0.24, -0.96),
-        Grow = 1.35, Travel = 3, Pitch = 1.05 },
-    { Centre = Vector3.new(0.59, 0.22, -0.6), Radius = 5.61, Face = Vector3.new(-0.46, 0.62, 0.63), Bulge = Vector3.new(0.32, 0.78, -0.54),
-        Grow = 1.35, Travel = 3, Pitch = 1.2 },
-    { Centre = Vector3.new(2.16, -0.08, -0.13), Radius = 6.39, Face = Vector3.new(-0.44, -0.75, 0.49), Bulge = Vector3.new(-0.71, -0.03, -0.7),
-        Grow = 1.5, Travel = 4.5, Pitch = 0.82, Finisher = true },
+    fromClip("SwordA", { Grow = 1.35, Travel = 3, Pitch = 1.05 }),
+    fromClip("SwordB", { Grow = 1.35, Travel = 3, Pitch = 1.2 }),
+    fromClip("SwordC", { Grow = 1.5, Travel = 4.5, Pitch = 0.82, Finisher = true }),
 }
--- the spear's slash, on the same terms: a wide flat arc round the striker
-local SPEAR_SLASH = { Centre = Vector3.new(0, -0.7, 0), Radius = 6.8, Face = Vector3.new(0, 0.95, 0.31), Bulge = Vector3.new(0, 0.31, -0.95),
-    Grow = 1.25, Travel = 2.5 }
-local SPEAR_SWING = 0.2 -- seconds the spear's slash draws its light
+-- the spear's slash, on the same terms: one wide flat arc round the striker, right to left
+local SPEAR_SLASH = fromClip("SpearSlash", { Grow = 1.25, Travel = 2.5 })
+local SPEAR_THRUST = WeaponClips.Clips.SpearThrust
 -- the QiSlash texture's circle, as shares of the plate's half-width (tools/blender/vfx/combat_textures.py)
 local CRESCENT_RADIUS, CRESCENT_DROP = 0.92, 0.3
 local HOLD_TIME = 5      -- seconds a weapon stays in the hand after the last strike
@@ -77,8 +78,7 @@ local SPEAR_LOW_TIME = 1.4 -- seconds a spear stays in its low stance after a th
 -- a weapon's turn in the fist, from the hand's grip attachment (whose -Z runs down the forearm): a
 -- sword's blade rises out of the fist; a spear's shaft runs along the forearm
 local GRIP_TURN = { Sword = CFrame.Angles(math.rad(80), 0, 0), Spear = CFrame.identity }
-local POSE_TIME = { Palm = 0.3, Sword = 0.46, Spear = 0.42, SpearSlash = 0.5 }
-local SPEAR_TIME = 0.36
+local PALM_POSE_TIME = 0.3
 local SWING = { Palm = "PalmStrike" } -- a strike's sound at once (SoundCatalog; a weapon's plays with its blow)
 
 local fxFolder = Instance.new("Folder")
@@ -341,7 +341,7 @@ end
 -- stays there HOLD_TIME after the last strike, in that kind's ready stance (PoseController's SwordReady,
 -- SpearReady), put away sooner if they meditate, die, change weapon or strike with the palm, or once a
 -- strike made in flight is over. The strike itself is the arm's motion (PoseController): a sword's
--- SLASH_KEYS; a spear's SpearDraw and Spear, or its SPEAR_SLASH_KEYS.
+-- a clip in WeaponClips.
 local held = {} -- [player] = { kind, model, trail, hand, source, weaponId, untilTime }
 local holdWatch = nil
 
@@ -465,7 +465,8 @@ local function sword(player, p, root, step)
         from = source:GetAttribute("Hilt") or Vector3.new(0, 0, 1.2), to = source:GetAttribute("Tip") or Vector3.new(0, 0, -4.3),
         life = 0.22, faceCamera = false, transparency = 0.2,
     }, p)
-    afterWindUp(player, entry, WIND_UP.Sword / CombatFx.TimeScale, SLASH_SWING / CombatFx.TimeScale, root, function()
+    local clip, scale = slash.Clip, CombatFx.TimeScale
+    afterWindUp(player, entry, clip.SwingStart / scale, (clip.SwingEnd - clip.SwingStart) / scale, root, function()
         Sfx.play("SwordSwing", root, slash.Pitch)
         slashCrescent(slash, p, root)
         if slash.Finisher and player == Players.LocalPlayer then
@@ -487,11 +488,12 @@ local function spear(player, p, root, step)
     local glow = if element then element.Color else swordGlow(player)
     local entry = hold(player, "Spear", source, false, element and element.Color, {
         from = source:GetAttribute("Hilt") + Vector3.new(0, 0, 3.5), to = source:GetAttribute("Tip"),
-        glow = glow, life = 0.12, faceCamera = true, transparency = 0.3,
+        glow = glow, life = 0.2, faceCamera = true, transparency = 0.3,
     }, p)
     local scale = CombatFx.TimeScale
     if step == 2 then
-        afterWindUp(player, entry, WIND_UP.Spear / scale, SPEAR_SWING / scale, root, function()
+        local clip = SPEAR_SLASH.Clip
+        afterWindUp(player, entry, clip.SwingStart / scale, (clip.SwingEnd - clip.SwingStart) / scale, root, function()
             Sfx.play("SwordSwing", root, 0.72)
             slashCrescent(SPEAR_SLASH, p, root)
             if elementName then
@@ -500,10 +502,10 @@ local function spear(player, p, root, step)
         end)
         return
     end
-    Sfx.play("SpearThrust", root)
-    afterWindUp(player, entry, WIND_UP.Spear / scale, SPEAR_TIME / scale, root, function()
-        -- a lance of streaks running on to the spear's reach
-        local tip = root.CFrame * CFrame.new(0.4, 0.5, -7)
+    afterWindUp(player, entry, SPEAR_THRUST.SwingStart / scale, (SPEAR_THRUST.SwingEnd - SPEAR_THRUST.SwingStart) / scale, root, function()
+        Sfx.play("SpearThrust", root)
+        -- a lance of streaks running on from the spear's tip at full reach
+        local tip = root.CFrame * CFrame.new(0, -0.3, -7.9)
         local holder = host(tip, Vector3.new(0.4, 0.4, 0.4), 0.6)
         emitter(holder, {
             Texture = TEXTURES.Streak, EmissionDirection = Enum.NormalId.Front, Orientation = Enum.ParticleOrientation.VelocityParallel,
@@ -523,7 +525,7 @@ local function spear(player, p, root, step)
 end
 
 -- ---------- where a strike lands ----------
-function CombatFx.hit(player, position)
+local function landHit(player, position)
     Sfx.play("QiImpact", position)
     local p = QinggongFx.palette(player)
     local holder = host(CFrame.new(position), Vector3.new(0.4, 0.4, 0.4), 1)
@@ -545,6 +547,17 @@ function CombatFx.hit(player, position)
     }):Emit(10)
 end
 
+-- The server answers at once, but the blow lands part way through the strike's clip: the impact waits for it.
+function CombatFx.hit(player, position)
+    local strike = strikes[player]
+    local wait = strike and strike.hitAt and (strike.hitAt - (os.clock() - strike.started) * CombatFx.TimeScale) / CombatFx.TimeScale or 0
+    if wait > 0.01 then
+        task.delay(wait, landHit, player, position)
+    else
+        landHit(player, position)
+    end
+end
+
 -- ---------- entry points ----------
 -- step: which strike of the combo it is, when the server says (another player's spear); else counted here
 function CombatFx.play(player, weapon, step)
@@ -564,7 +577,11 @@ function CombatFx.play(player, weapon, step)
         combos[player] = nil
         putAway(player) -- a palm strike is bare-handed
     end
-    local poseTime = if weapon == "Spear" and strike.step == 2 then POSE_TIME.SpearSlash else POSE_TIME[weapon] or 0.3
+    local clip = if weapon == "Sword" then SLASHES[strike.step].Clip
+        elseif weapon == "Spear" then (if strike.step == 2 then SPEAR_SLASH.Clip else SPEAR_THRUST)
+        else nil
+    strike.hitAt = clip and clip.Hit
+    local poseTime = if clip then clip.Length else PALM_POSE_TIME
     strike.untilTime = now + poseTime / CombatFx.TimeScale
     strikes[player] = strike
     local camera = Workspace.CurrentCamera
@@ -593,7 +610,7 @@ function CombatFx.syncCombo(player, weapon, step)
 end
 
 -- The pose a player is in, or nil; PoseController reads it. During a strike: "Palm", "Slash" or
--- "SpearSlash" (ask CombatFx.slash where in it they are), or "SpearDraw" then "Spear". With a weapon out after it:
+-- "SpearSlash" or "SpearThrust" (ask CombatFx.slash where in it they are). With a weapon out after it:
 -- "SwordReady"; a spear stays low a moment ("SpearLow"), then rises to its guard ("SpearReady").
 function CombatFx.pose(player)
     local strike = strikes[player]
@@ -604,7 +621,7 @@ function CombatFx.pose(player)
             if strike.step == 2 then
                 return "SpearSlash"
             end
-            return if (os.clock() - strike.started) * CombatFx.TimeScale < WIND_UP.Spear then "SpearDraw" else "Spear"
+            return "SpearThrust"
         end
         return strike.weapon
     end

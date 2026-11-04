@@ -11,6 +11,7 @@ local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
 local Toast = require(UI:WaitForChild("Toast"))
+local UiFx = require(UI:WaitForChild("UiFx"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
@@ -53,12 +54,20 @@ footer.BackgroundTransparency = 1
 footer.Size = UDim2.new(1, 0, 0, 22)
 footer.LayoutOrder = 5
 footer.Parent = inner
+local rewardIcon = Instance.new("ImageLabel")
+rewardIcon.Name = "RewardIcon"
+rewardIcon.BackgroundTransparency = 1
+rewardIcon.Image = UiTheme.Icons.Stones
+rewardIcon.AnchorPoint = Vector2.new(0, 0.5)
+rewardIcon.Position = UDim2.fromScale(0, 0.5)
+rewardIcon.Size = UDim2.fromOffset(18, 18)
+rewardIcon.Parent = footer
 local reward = UiKit.label({
-    Name = "Reward", Font = "Strong", TextSize = 11, TextColor3 = C.AccentBright, Size = UDim2.new(1, -70, 1, 0),
-    Parent = footer,
+    Name = "Reward", Font = "Strong", TextSize = 12, TextColor3 = C.AccentBright, Position = UDim2.fromOffset(23, 0),
+    Size = UDim2.new(1, -93, 1, 0), Parent = footer,
 })
 local skip = UiKit.button({
-    Name = "Skip", Font = "Strong", TextSize = 10, Text = "SKIP", Tone = "Quiet", AnchorPoint = Vector2.new(1, 0),
+    Name = "Skip", Font = "Strong", TextSize = 11, Text = "Skip", Tone = "Quiet", AnchorPoint = Vector2.new(1, 0),
     Position = UDim2.fromScale(1, 0), Size = UDim2.fromOffset(62, 22), Parent = footer,
 })
 
@@ -75,6 +84,7 @@ local function questAllowed()
     return chosen == true
 end
 
+local lastStep = nil
 local function render()
     local step = player:GetAttribute("QuestStep")
     local quest = typeof(step) == "number" and QUESTS[step]
@@ -85,7 +95,13 @@ local function render()
     count.Text = step .. " / " .. #QUESTS
     title.Text = quest.Title
     body.Text = quest.Text
-    reward.Text = "REWARD  " .. NumberFormat.compact(quest.Reward) .. " Spirit Stones"
+    if lastStep and lastStep ~= step and panel.Visible then -- a new quest writes itself on
+        UiFx.flash(panel, C.Highlight)
+        UiFx.typeIn(title, 0.25)
+        UiFx.typeIn(body, 0.55)
+    end
+    lastStep = step
+    reward.Text = NumberFormat.compact(quest.Reward) .. " Spirit Stones"
     -- a bar only where there is a count to fill (Qi, a rank's Qi)
     bar.Visible = quest.Kind == "Qi" or quest.Kind == "Rank"
 end

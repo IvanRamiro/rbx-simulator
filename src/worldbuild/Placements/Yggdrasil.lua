@@ -390,7 +390,7 @@ return {
         { Route = "EmberRoute", Position = Vector3.new(-15.15, 0.03, -236.15), Yaw = 0.1827 },
         { Route = "MoonlitRoute", Position = Vector3.new(82.18, -0.04, -221.93), Yaw = -0.2361 },
         { Route = "OriginRoute", Position = Vector3.new(157.17, -0.05, -176.90), Yaw = -0.6078 },
-        { Route = "BeginnerRoute", Position = Vector3.new(234.31, -0.52, -33.18), Yaw = -1.3118 },
+        { Route = "BeginnerRoute", Position = Vector3.new(-236.11, -0.05, -16.26), Yaw = 1.6206 },
         { Route = "RootPath", Position = Vector3.new(-7.50, -0.15, 236.00), Yaw = -3.1416 },
     },
     WaystonePanel = { Centre = Vector3.new(0, 4.25, 0.42), Size = Vector2.new(1.7, 4.1) },

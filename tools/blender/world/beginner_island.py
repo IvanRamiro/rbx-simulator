@@ -153,4 +153,11 @@ MATERIALS = ["Grass", "Ground", "Rock", "Cobblestone"]
 def export_terrain(path=None):
     import worldlib as W
     path = path or W.REPO + "/src/worldbuild/Terrain/%s.lua" % NAME
-    return W.export_heightfield(NAME, CENTRE, 4, 156, height, MATERIALS, path, priority=[("Cobblestone", 2)], turns=TURNS)
+    # the island is turned by a fraction of a quarter turn: each world cell asks for the height at its
+    # place on the unturned island
+    a = math.radians(TURNS * 90)
+    ca, sa = math.cos(a), math.sin(a)
+
+    def turned(x, z):
+        return height(x * ca + z * sa, -x * sa + z * ca)
+    return W.export_heightfield(NAME, CENTRE, 4, 160, turned, MATERIALS, path, priority=[("Cobblestone", 2)], turns=TURNS, baked_turn=True)

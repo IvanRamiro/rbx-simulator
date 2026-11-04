@@ -1,10 +1,11 @@
--- A System notification at the top of the screen: a small window headed [ NOTIFICATION ] with
+-- A notification at the top of the screen: a small window headed NOTIFICATION with
 -- the message under it, in the HUD's Banner region where every Toast stacks (two never overlap).
 -- It fades in, hides itself after a few seconds, and a newer message replaces the one showing.
 -- Toast.new(name, textColor, seconds), then :show(text, color).
 local TweenService = game:GetService("TweenService")
 
 local Hud = require(script.Parent:WaitForChild("Hud"))
+local UiFx = require(script.Parent:WaitForChild("UiFx"))
 local UiKit = require(script.Parent:WaitForChild("UiKit"))
 local UiTheme = require(script.Parent:WaitForChild("UiTheme"))
 
@@ -28,7 +29,7 @@ function Toast.new(name, textColor, seconds)
     group.Parent = Hud.Banner
     UiKit.padding(group, 3, 3)
 
-    local window = UiKit.panel({ Name = "Window", AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0), Parent = group })
+    local window = UiKit.panel({ Name = "Window", Brackets = false, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0), Parent = group })
     local inner = Instance.new("Frame")
     inner.Name = "Inner"
     inner.BackgroundTransparency = 1
@@ -51,6 +52,7 @@ function Toast:show(text, color)
     local this = self.shown
     local group = self.group
     self.label.Text = text
+    UiFx.typeIn(self.label, 0.22)
     if color then
         self.label.TextColor3 = color
     end

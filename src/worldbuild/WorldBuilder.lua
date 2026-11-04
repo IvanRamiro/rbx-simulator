@@ -79,7 +79,7 @@ WorldBuilder.TerrainSettings = {
 local function terrainData(island)
     local data = require(ServerStorage.WorldBuild.Terrain:FindFirstChild(island):Clone())
     local turns = (data.Turns or 0) % 4
-    if turns == 0 then
+    if turns == 0 or data.BakedTurn then -- BakedTurn: the generator wrote the grid already turned
         return data
     end
     local n, cell = data.Size, data.Cell

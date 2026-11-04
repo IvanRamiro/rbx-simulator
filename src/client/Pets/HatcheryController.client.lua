@@ -98,7 +98,7 @@ function render()
     for index, entry in eggs do
         local open = rankName ~= "" and Ranks.isAtLeast(rankName, entry.egg.RequiredRank)
         local card = UiKit.card({ Name = "EggCard", LayoutOrder = index, Size = UDim2.new(1, 0, 0, 70), Parent = list })
-        local icon = UiKit.icon(UiTheme.Icons.Hatch, 44, if open then "Accent" else "Danger")
+        local icon = UiKit.icon(UiTheme.EggIcons[entry.id] or UiTheme.Icons.Hatch, 44, if open then "Accent" else "Danger")
         icon.Position = UDim2.fromOffset(12, 13)
         icon.Parent = card
         UiKit.label({
@@ -146,9 +146,6 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt, who)
         return
     end
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not window.isOpen() then
-        Sfx.play("Open")
-    end
     window.open()
     openedAt = root and root.Position
     render()

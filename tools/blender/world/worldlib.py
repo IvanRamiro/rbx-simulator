@@ -85,7 +85,7 @@ def gauss(dx, dz, r):
 
 
 # ---------- heightfield export ----------
-def export_heightfield(island, centre, cell, half_extent, sample, materials, path, priority=None, water=None, turns=0):
+def export_heightfield(island, centre, cell, half_extent, sample, materials, path, priority=None, water=None, turns=0, baked_turn=False):
     """Sample the island top on a grid of `cell`-stud columns and write a Lua data module.
 
     sample(x, z) -> (height or None, material name) in island-local studs (x east, z south).
@@ -93,7 +93,9 @@ def export_heightfield(island, centre, cell, half_extent, sample, materials, pat
     The module holds Origin (world corner), Cell, Size, Heights (row-major, y offsets, 0 = none)
     and Materials (indices into the Materials list). Heights are stored relative to centre.Y.
     The grid is written unturned; `turns` (quarter turns, layout.py) is recorded for the builder,
-    which turns the grid about the centre when it fills the terrain.
+    which turns the grid about the centre when it fills the terrain. With `baked_turn`, for an island
+    turned by something other than whole quarter turns, `sample` already answers in world axes: the
+    grid is written turned and the builder leaves it alone.
     """
     # Terrain:WriteVoxels needs the region on the world's 4-stud voxel grid, so each axis's grid
     # corner is snapped down to it independently (the grid then covers the half extent and a bit)
@@ -133,7 +135,8 @@ def export_heightfield(island, centre, cell, half_extent, sample, materials, pat
         "return {",
         '    Island = "%s",' % island,
         "    Centre = Vector3.new(%g, %g, %g)," % centre,
-        "    Turns = %d, -- quarter turns about the centre, each adding 90 degrees of bearing" % turns,
+        "    Turns = %s, -- quarter turns about the centre, each adding 90 degrees of bearing" % ("%g" % turns),
+    ] + (["    BakedTurn = true, -- the grid below is already turned"] if baked_turn else []) + [
         "    Origin = Vector2.new(%g, %g), -- world X/Z of the grid's first corner" % (corner_x, corner_z),
         "    Cell = %d," % cell,
         "    Size = %d," % n,

@@ -15,6 +15,8 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
+local UiFx = require(script.Parent:WaitForChild("UiFx"))
 local UiKit = require(script.Parent:WaitForChild("UiKit"))
 local UiTheme = require(script.Parent:WaitForChild("UiTheme"))
 local applyHudScale = require(script.Parent:WaitForChild("HudScale"))
@@ -136,8 +138,9 @@ end
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(watchCamera)
 watchCamera()
 
--- A resource chip: its icon and a value. Returns the chip and its value label.
-function Hud.chip(name, image, order)
+-- A resource chip: its icon and a value. Returns the chip and a function that sets its number: it rolls
+-- there, and what changed floats off under the chip. opts: Format (number to text), FloatFormat, Color.
+function Hud.chip(name, image, order, opts)
     local chip = UiKit.panel({
         Name = name, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 34),
         LayoutOrder = order, Brackets = false, Parent = Hud.Currency,
@@ -151,7 +154,8 @@ function Hud.chip(name, image, order)
     row.Parent = chip
     UiKit.padding(row, 5, 5)
     UiKit.list(row, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), VerticalAlignment = Enum.VerticalAlignment.Center })
-    UiKit.icon(image, 24).Parent = row
+    local icon = UiKit.icon(image, 24)
+    icon.Parent = row
     local value = UiKit.label({
         Name = "Value", Font = "Strong", TextSize = 16, AutomaticSize = Enum.AutomaticSize.X,
         Size = UDim2.fromOffset(0, 24), LayoutOrder = 2, Parent = row,
@@ -159,7 +163,9 @@ function Hud.chip(name, image, order)
     local pad = Instance.new("UIPadding")
     pad.PaddingRight = UDim.new(0, 6)
     pad.Parent = value
-    return chip, value
+    return chip, UiFx.counter(value, opts.Format, {
+        Color = opts.Color, FloatIn = chip, Icon = icon:FindFirstChild("Image"), FloatFormat = opts.FloatFormat,
+    })
 end
 
 local function addBadge(button)
@@ -172,7 +178,13 @@ local function addBadge(button)
     })
     UiKit.corner(badge, 9)
     UiKit.padding(badge, 6, 0)
+    local scale = Instance.new("UIScale")
+    scale.Parent = badge
     return function(text, tone)
+        if text ~= nil and text ~= badge.Text then -- something new: it jumps
+            scale.Scale = 1.5
+            UiFx.tween(scale, 0.32, { Scale = 1 }, Enum.EasingStyle.Back)
+        end
         badge.Visible = text ~= nil
         badge.Text = text or ""
         badge.BackgroundColor3 = if tone == "Highlight" then UiTheme.Colors.Highlight else UiTheme.Colors.Accent
@@ -198,6 +210,7 @@ end
 function Hud.topButton(name, image, order)
     local button = UiKit.button({ Name = name, Text = "", Size = UDim2.fromOffset(42, 42), LayoutOrder = order, Tone = "Quiet", Parent = Hud.TopRight })
     button:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
+    button:SetAttribute("NoSheen", true) -- a band of light would show this round button's square corners
     local icon = UiKit.icon(image, 32)
     icon.BackgroundTransparency = 1
     icon:FindFirstChildOfClass("UIStroke"):Destroy()
@@ -208,7 +221,7 @@ function Hud.topButton(name, image, order)
 end
 
 -- ---------- windows ----------
--- A System window over the HUD: a [ TITLE ] header, a close button, and its Body. One is open at
+-- A window over the HUD: a TITLE header, a close button, and its Body. One is open at
 -- a time: opening one closes the other (its OnClose runs), so they never stack.
 -- props: Name, Title, Size (Vector2), AnchorPoint, Position (UDim2), OnClose (function)
 -- Returns { Frame, Body, open(), close(), isOpen(), setTitle(text) }.
@@ -220,7 +233,8 @@ function Hud.window(props)
         Name = props.Name, Size = UDim2.fromOffset(props.Size.X, props.Size.Y), AnchorPoint = props.AnchorPoint,
         Position = props.Position, Visible = false, ZIndex = 10, Parent = windowGui,
     })
-    frame.BackgroundTransparency = 0.06 -- near solid: the HUD under a window mustn't read through it
+    frame.BackgroundTransparency = 0.03 -- near solid, all the way down: the HUD under a window mustn't read through it
+    frame:FindFirstChildOfClass("UIGradient").Transparency = NumberSequence.new(0)
     frame.Active = true -- clicks on it stay on it: they mustn't swing the player's weapon behind it
     applyHudScale(frame, props.Size.Y) -- and never taller than the screen (a phone)
     local inner = UiKit.content(frame, 14, 10)
@@ -239,14 +253,28 @@ function Hud.window(props)
 
     local win = { Frame = frame, Body = body }
     local home = props.Position
+    local opened = false
+    local shown = 0 -- which opening or closing is the latest: a quick reopen cancels a closing
+    local hudScale = frame:FindFirstChildOfClass("UIScale")
+    local restScale = hudScale.Scale -- read only while it's hidden: mid-animation the scale isn't its rest
+    UiFx.edgeLight(frame)
     function win.isOpen()
-        return frame.Visible
+        return opened
     end
     function win.close()
-        if not frame.Visible then
+        if not opened then
             return
         end
-        frame.Visible = false
+        opened = false
+        shown += 1
+        local this = shown
+        UiFx.tween(hudScale, 0.09, { Scale = restScale * 0.95 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        task.delay(0.09, function()
+            if shown == this then
+                frame.Visible = false
+                hudScale.Scale = restScale
+            end
+        end)
         if props.OnClose then
             props.OnClose()
         end
@@ -257,18 +285,140 @@ function Hud.window(props)
                 other.close()
             end
         end
-        if not frame.Visible then
-            frame.Position = home + UDim2.fromOffset(0, 12) -- it rises into place
+        if not opened then
+            opened = true
+            shown += 1
+            if not frame.Visible then
+                restScale = hudScale.Scale
+            end
+            Sfx.play("Open")
+            frame.Position = home + UDim2.fromOffset(0, 14) -- it rises into place, unfolding
             frame.Visible = true
+            hudScale.Scale = restScale * 0.93
+            UiFx.tween(hudScale, 0.24, { Scale = restScale }, Enum.EasingStyle.Back)
             TweenService:Create(frame, SLIDE, { Position = home }):Play()
+            UiFx.flash(frame)
+            UiFx.scan(frame)
+            task.defer(UiFx.stagger, body) -- once whoever opened it has filled its list
         end
     end
     function win.setTitle(text)
-        title.Text = "[  " .. text .. "  ]"
+        title.Text = text
     end
     closeButton.Activated:Connect(win.close)
     table.insert(windows, win)
     return win
 end
+
+-- ---------- the Cultivation dock ----------
+-- The bottom of the screen's main piece (the owner's reference, 2026-11-04): one plate, a cultivator in the
+-- lotus in the circle on its left, the air leaps and stamina bar above the Cultivate button. Hud builds the
+-- frame; QinggongController fills Top and Bar, TrainingController puts its button in Action.
+-- Two sizes, and it follows the screen: the screen's size may not be known yet when this first runs.
+local DOCK_SIZES = {
+    [true] = { Width = 310, Height = 90, Emblem = 80, Button = 38, TextSize = 12, Top = 4, Bar = 24, BarHeight = 7, Bottom = -6 },
+    [false] = { Width = 380, Height = 108, Emblem = 100, Button = 48, TextSize = 13, Top = 7, Bar = 28, BarHeight = 9, Bottom = -8 },
+}
+
+local dock = Instance.new("Frame")
+dock.Name = "CultivationDock"
+dock.BackgroundTransparency = 1
+dock.LayoutOrder = 30
+dock.Parent = Hud.Dock
+
+local plate = UiKit.panel({
+    Name = "Plate", Brackets = false, ZIndex = 2, Parent = dock,
+})
+plate.BackgroundTransparency = 0.04
+plate:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 12)
+plate.Glow:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 11)
+UiFx.edgeLight(plate, 9)
+
+-- the emblem: a round well of silver (the owner), the figure in deep gold on it, the gold ring round it
+local emblem = Instance.new("Frame")
+emblem.Name = "Emblem"
+emblem.AnchorPoint = Vector2.new(0, 0.5)
+emblem.Position = UDim2.new(0, 0, 0.5, 0)
+emblem.BackgroundTransparency = 1
+emblem.ZIndex = 3
+emblem.Parent = dock
+local well = Instance.new("Frame")
+well.Name = "Well"
+well.AnchorPoint = Vector2.new(0.5, 0.5)
+well.Position = UDim2.fromScale(0.5, 0.5)
+well.Size = UDim2.fromScale(0.8, 0.8)
+well.BackgroundColor3 = Color3.fromRGB(236, 239, 245)
+well.BorderSizePixel = 0
+well.Parent = emblem
+UiKit.corner(well, 999)
+local wellDepth = Instance.new("UIGradient")
+wellDepth.Rotation = 90
+wellDepth.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(176, 180, 190))
+wellDepth.Parent = well
+local emblemIcon = Instance.new("ImageLabel")
+emblemIcon.Name = "Icon"
+emblemIcon.BackgroundTransparency = 1
+emblemIcon.Image = UiTheme.Ornaments.LotusSit -- a cultivator in the lotus (the owner)
+emblemIcon.ImageColor3 = Color3.fromRGB(240, 205, 110) -- the drawing is pale gold: this deepens it, to stand out on silver
+emblemIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+emblemIcon.Position = UDim2.fromScale(0.5, 0.5)
+emblemIcon.Size = UDim2.fromScale(0.68, 0.68)
+emblemIcon.Parent = emblem
+local ring = Instance.new("ImageLabel")
+ring.Name = "Ring"
+ring.BackgroundTransparency = 1
+ring.Image = UiTheme.Ornaments.EmblemRing
+ring.Size = UDim2.fromScale(1, 1)
+ring.Parent = emblem
+
+local top = Instance.new("Frame")
+top.Name = "Top"
+top.BackgroundTransparency = 1
+top.Parent = plate
+local barSlot = Instance.new("Frame")
+barSlot.Name = "BarSlot"
+barSlot.BackgroundTransparency = 1
+barSlot.Parent = plate
+local action = Instance.new("Frame")
+action.Name = "Action"
+action.BackgroundTransparency = 1
+action.AnchorPoint = Vector2.new(0, 1)
+action.Parent = plate
+
+local dockResized = Instance.new("BindableEvent")
+Hud.CultivationDock = { Top = top, Bar = barSlot, Action = action, Emblem = emblemIcon, Resized = dockResized.Event, Size = nil }
+
+local function layoutDock(compact)
+    local size = DOCK_SIZES[compact]
+    local plateLeft = math.floor(size.Emblem * 0.45)
+    local contentLeft = size.Emblem - plateLeft + 8
+    dock.Size = UDim2.fromOffset(size.Width, size.Height)
+    plate.Position = UDim2.fromOffset(plateLeft, 3)
+    plate.Size = UDim2.new(1, -plateLeft, 1, -6)
+    emblem.Size = UDim2.fromOffset(size.Emblem, size.Emblem)
+    top.Position = UDim2.fromOffset(contentLeft, size.Top)
+    top.Size = UDim2.new(1, -contentLeft - 14, 0, 18)
+    barSlot.Position = UDim2.fromOffset(contentLeft, size.Bar)
+    barSlot.Size = UDim2.new(1, -contentLeft - 22, 0, size.BarHeight)
+    action.Position = UDim2.new(0, contentLeft, 1, size.Bottom)
+    action.Size = UDim2.new(1, -contentLeft - 10, 0, size.Button)
+    Hud.CultivationDock.Size = size
+    dockResized:Fire(size, compact)
+end
+Hud.CompactChanged:Connect(layoutDock)
+layoutDock(Hud.isCompact())
+
+-- ---------- the first moment ----------
+-- The HUD arrives from the screen's edges, once, instead of being there already.
+local function arrive(frame, from, delay)
+    local home = frame.Position
+    frame.Position = home + from
+    UiFx.tween(frame, 0.55, { Position = home }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, 0, false, delay)
+end
+arrive(Hud.Status, UDim2.fromOffset(-300, 0), 0.5)
+arrive(Hud.Currency, UDim2.fromOffset(0, -70), 0.58)
+arrive(Hud.TopRight, UDim2.fromOffset(0, -70), 0.62)
+arrive(Hud.Quest, UDim2.fromOffset(340, 0), 0.66)
+arrive(Hud.Dock, UDim2.fromOffset(0, 260), 0.72)
 
 return Hud

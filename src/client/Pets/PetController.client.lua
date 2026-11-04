@@ -45,7 +45,6 @@ toggleButton.Activated:Connect(function()
     if window.isOpen() then
         window.close()
     else
-        Sfx.play("Open")
         window.open()
     end
 end)
