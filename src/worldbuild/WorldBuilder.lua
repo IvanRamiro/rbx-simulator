@@ -1270,7 +1270,7 @@ local function placeKitPiece(theme, piece, frame, parent, stretch)
     return placed
 end
 
-local SUPPORT_EVERY = { Jade = 3, Ember = 2, Moon = 4, Origin = 3 } -- deck pieces between supports
+local SUPPORT_EVERY = { Jade = 3, Ember = 2, Moon = 4, Lion = 3, Origin = 3 } -- deck pieces between supports
 local SUPPORT_CLEAR = 24 -- studs from either end with no support (they would sink into the islands)
 
 -- Dress a built bridge with its theme's kit, if the kit is stored: a deck (or stair) section on every
