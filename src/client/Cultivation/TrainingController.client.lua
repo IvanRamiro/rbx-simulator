@@ -39,7 +39,7 @@ local powerTag = UiKit.label({
     Text = "", Parent = status,
 })
 
--- the System's fields: a muted key, its value
+-- the panel's fields: a muted key, its value
 local function field(key, y, color)
     UiKit.label({
         Name = key .. "Key", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = key,

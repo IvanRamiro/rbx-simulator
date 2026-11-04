@@ -90,7 +90,7 @@ local function plantedFoot(x, z, drop, shift)
     return Vector3.new(x, FOOT_Y - HIP_Y - drop, z) - (shift or Vector3.zero)
 end
 
--- ---------- the idles: (pose, s, c, w, t), s and c a sine and a cosine with a lag and an amount ----------
+-- ---------- the idles: (pose, s, c, w), s and c a sine and a cosine with a lag and an amount, w the phase ----------
 local IDLES = {}
 
 -- 1: the lotus seat. Sits right on the ground, the hands resting on the knees, the back straight;

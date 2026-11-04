@@ -56,8 +56,9 @@ local Workspace = game:GetService("Workspace")
 
 
 local TAG = "EggAura"
-local NEAR = 90   -- full emission rates within this distance of the camera
-local FAR = 200   -- half rates out to here; switched off beyond
+local LOW = require(script.Parent.Parent:WaitForChild("Quality")).Low
+local NEAR = if LOW then 45 else 90   -- full emission rates within this distance of the camera
+local FAR = if LOW then 110 else 200  -- half rates out to here; switched off beyond
 local TAU = 2 * math.pi
 local RIPPLE_GAP = 0.22 -- seconds between ripples fired together
 
@@ -724,8 +725,16 @@ RunService.RenderStepped:Connect(function(dt)
         if state.level == 0 then
             continue
         end
-        step(state, dt, now)
+        -- on a phone a far aura steps every third frame, with the time it missed
+        state.waited = (state.waited or 0) + dt
+        state.frame = (state.frame or 0) % 3 + 1
+        if not (LOW and state.level == 1 and state.frame ~= 1) then
+            step(state, state.waited, now)
+            state.waited = 0
+        end
     end
-    updateScreen()
+    if not LOW then
+        updateScreen()
+    end
 end)
 

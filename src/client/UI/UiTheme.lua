@@ -6,7 +6,6 @@
 local UiTheme = {}
 
 UiTheme.Colors = {
-    Panel = Color3.fromRGB(58, 32, 130),       -- the deep colour dark text and badges use
     Well = Color3.fromRGB(26, 14, 66),         -- bar tracks, wells, text fields
     Edge = Color3.fromRGB(255, 255, 255),      -- light edges
     EdgeDim = Color3.fromRGB(190, 170, 245),   -- quiet edges, separators

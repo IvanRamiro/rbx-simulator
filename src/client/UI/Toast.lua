@@ -1,8 +1,7 @@
 -- A notification at the top of the screen: a small window headed NOTIFICATION with
 -- the message under it, in the HUD's Banner region where every Toast stacks (two never overlap).
 -- It fades in, hides itself after a few seconds, and a newer message replaces the one showing.
--- Toast.new(_, name, _, textColor, seconds): the first and third arguments (a parent and a height)
--- are kept for the callers but no longer used.
+-- Toast.new(name, textColor, seconds), then :show(text, color).
 local TweenService = game:GetService("TweenService")
 
 local Hud = require(script.Parent:WaitForChild("Hud"))
@@ -16,7 +15,7 @@ local FADE = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local WIDTH = if Hud.isCompact() then 340 else 420 -- fits between the STATUS and QUEST windows
 local created = 0
 
-function Toast.new(_, name, _, textColor, seconds)
+function Toast.new(name, textColor, seconds)
     created += 1
     -- a CanvasGroup fades the whole window at once; its padding keeps the window's edge inside it
     local group = Instance.new("CanvasGroup")

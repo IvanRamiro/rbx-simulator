@@ -31,9 +31,13 @@ GuardianAnim.__index = GuardianAnim
 
 local Players = game:GetService("Players")
 
+local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+
 -- A joint not in rig.Springs: quick and a little springy (limbs), no drag.
 local DEFAULT_SPRING = { Freq = 9, Damping = 0.75, Drag = 0 }
-local SUBSTEP = 1 / 240      -- the springs' integration step (stable for any frequency used here)
+-- the springs' integration step (stable for any frequency used here). A slow frame runs more of them,
+-- so on a phone it's coarser, or the slowest phones would pay the most
+local SUBSTEP = if Quality.Low then 1 / 120 else 1 / 240
 local MAX_SWING = 60         -- degrees a dragged joint may lag its target
 local SNAP_GAP = 0.25        -- seconds without an update (off-screen, a hitch) after which springs snap
 local TURN_STEP = 0.1        -- studs of stepping per degree turned: turning on the spot steps its feet

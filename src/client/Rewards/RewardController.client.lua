@@ -29,7 +29,7 @@ local window = Hud.window({
     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 })
 local body = window.Body
-local message = Toast.new(nil, "RewardMessage", nil, C.Highlight, 5)
+local message = Toast.new("RewardMessage", C.Highlight, 5)
 
 -- the seven days
 local cards = {}

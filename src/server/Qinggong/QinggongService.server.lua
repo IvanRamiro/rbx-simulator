@@ -1,7 +1,7 @@
 -- Grants each player their rank's Qinggong level as attributes: "QinggongAirLeaps",
 -- "QinggongRunSpeed", "QinggongMaxStamina", "QinggongDashSpeed" and "QinggongFlightSpeed" (0 before
--- sword flight unlocks). Sets WalkSpeed, except while meditating, when the client's hover holds it
--- at 0 and restores the run speed afterwards.
+-- sword flight unlocks). Sets WalkSpeed, except while meditating, when the client holds it at 0 and
+-- restores the run speed afterwards (MeditationStillness).
 --
 -- Also relays each player's Qinggong effects to everyone else. They are cosmetic, so the server
 -- only checks for a known kind, a sane value and no flooding.

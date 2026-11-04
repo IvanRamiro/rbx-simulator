@@ -355,7 +355,7 @@ local GameConfig = {
 
     -- The owner's own aura (src/client/Auras/OwnerAura, built on the AuraWorkbench and kept in
     -- ReplicatedStorage.AuraMeshes.OwnerAura): worn by these user ids in place of their realm aura,
-    -- with the floating meditation pose (Character/PoseController) instead of the lotus seat.
+    -- with the floating meditation pose (Character/MeditationPoses, Realm 5's) instead of their realm's.
     OwnerAura = {
         UserIds = { 4993575280 },
     },
@@ -522,13 +522,13 @@ local GameConfig = {
         Secret = Color3.fromRGB(255, 255, 255),
     },
 
-    -- The System's quests: a player's guided path, one at a time, each with a reward (QuestService
+    -- The quests: a player's guided path, one at a time, each with a reward (QuestService
     -- checks them; the QUEST tracker shows them). Kind says what completes it: "Qi" (Qi at least Goal),
     -- "Equip" (a pet equipped), "Rank" (this rank reached), "Leap" (an air leap), "GuardianHit" (a strike
     -- on a guardian), "TakeEgg" (carrying a guardian's egg), "Hatch" (a pet hatched since the quest
     -- began), "BuyWeapon" (a weapon bought, or two owned), "Relic" (this relic found), "Visit" (standing
     -- on this island), "Secure" (this guardian's egg secured), "Forge" (a forged weapon owned). Saves
-    -- from before the quests skip the first seven (PlayerData migration 8); a player can skip them all.
+    -- from before the quests skip them all (PlayerData migration 8), and a player can too.
     Quests = {
         { Id = "Cultivate", Kind = "Qi", Goal = 100, Reward = 20, Title = "Gather Qi",
             Text = "Sit in meditation: press E, or tap CULTIVATE. Gather 100 Qi." },

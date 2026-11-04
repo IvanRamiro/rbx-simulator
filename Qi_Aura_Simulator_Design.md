@@ -59,7 +59,7 @@ The fantasy is becoming a cultivator whose growing power shows in ever more spec
 
 ### The quest path (first steps November 3, 2026; the rest November 4, 2026)
 
-A new player is walked through the loop by the System's quests, one at a time in the [ QUEST ] tracker (top right), each paying Spirit Stones (`GameConfig.Quests`). The first seven (270 stones in all):
+A new player is walked through the loop by the quests, one at a time in the QUEST panel (top right), each paying Spirit Stones (`GameConfig.Quests`). The first seven (270 stones in all):
 1. Gather 100 Qi.
 2. Equip the starter Aqua Wisp.
 3. Break through to Qi Gatherer.
@@ -460,7 +460,7 @@ Each kind has its own visual purpose. None is a recolour of another.
 
 ### The twelve meditation idles (the owner, November 4, 2026)
 
-"Make 12 unique and different idle, there should be no similar or reuse idle", and "the beginner idle should be lotus sit". Each realm has its own (`client/Character/MeditationPoses.lua`, played by `PoseController`, easing in over 3 seconds). The pose places the body itself, on the ground or up on the air; the character's own height doesn't change, and a cultivator can't walk or jump (`LevitationController`).
+"Make 12 unique and different idle, there should be no similar or reuse idle", and "the beginner idle should be lotus sit". Each realm has its own (`client/Character/MeditationPoses.lua`, played by `PoseController`, easing in over 3 seconds). The pose places the body itself, on the ground or up on the air; the character's own height doesn't change, and a cultivator can't walk or jump (`MeditationStillness`).
 
 | Realm | Idle |
 |---|---|
@@ -1102,7 +1102,7 @@ Build one complete encounter before expanding to every island.
 | `src/shared` | ReplicatedStorage |
 | `src/server` | ServerScriptService |
 | `src/client` | StarterPlayerScripts |
-| `src/worldbuild` | `ServerStorage.WorldBuild` (build-time only, never required by game scripts) |
+| `src/worldbuild` | `ServerStorage.WorldBuild` (build-time, except `Placements.Bridges`, which `server/World/WorldConfig` reads at runtime for the bridge landings) |
 
 Client and server scripts are grouped by feature in folders of the same names: `Auras` (client), `Pets`, `Guardians`, `Combat`, `Qinggong`, `Cultivation`, `World`, `Character`, `UI` and `Audio` (client), `Data` and `Outfits` (server). A script requires a module in its own folder as `script.Parent:WaitForChild("Name")`, and one in another folder as `script.Parent.Parent:WaitForChild("Folder"):WaitForChild("Name")`.
 
@@ -1158,6 +1158,19 @@ Tested in Play: codes (invalid, valid, repeated, a table sent instead of text), 
 
 Our own line drawings, white so the interface tints them: `tools/ui/draw_icons.py` writes `assets/ui/icons/`, and the uploaded ids are in `icons.json` and `UiTheme.Icons`. The owner asked for unique ones, so none is a stock symbol: a spiral of Qi, a spirit fox, a crossed-collar robe, a diving swallow, the Jade Scale, a lotus dial, a gold ingot.
 
+### The phone tier (November 4, 2026)
+
+`client/Quality.lua`: `Quality.Low` is true on a touch screen with no keyboard. On a PC it's false and nothing changes. Tested in Studio with it forced on: no errors, and the owner's meditating aura came to 62 emitters at 186 particles a second.
+
+- **Auras:** half the emission and half the distance. The body aura sits on 6 parts instead of 15, without its ash layer, at 40% (75 emitters become 24 per meditating player, counted from the code). Other players' auras drop their Highlight and PointLight; a player's own keeps them.
+- **World** (`World/WorldQuality`): the islands' own emitters run at 40%, except eggs on stands. Ember Peak alone asks for about 1,250 particles a second at full rate.
+- **Egg auras:** off past 110 studs instead of 200, far ones step every third frame, no screen pulse.
+- **Guardians:** animated within 150 studs instead of 400, every other frame at rest, springs at 1/120 s. Waking each of the five showed no instability, against the same test on PC settings.
+- **Others' pets:** hidden past 80 studs instead of 250. **Others' poses:** stop past 80 studs. **Robes:** sway within 40 instead of 120.
+- **Everyone, PC too:** the pose loop no longer allocates a table per joint per frame, a robe still loading looks for its pieces once a second instead of every frame, and the rounded interface dropped a glow stroke and eight tick frames per panel.
+
+Not yet measured on a real phone. The owner's account wears `OwnerAura`, the costliest, so a normal account should be tested too.
+
 ### Anti-cheat fixes (November 4, 2026)
 
 Found by a read-only security audit and tested through the real remotes unless noted:
@@ -1167,8 +1180,9 @@ Found by a read-only security audit and tested through the real remotes unless n
 - **Carrying an egg:** moving faster than a dash can carry drops it, with no reward (`CARRY_SLACK` in `Guardian`).
 - **Air strikes:** swing but don't land.
 - **Floods:** `PetService` takes a request per half second; Qinggong effects relay at most 8 a second (rates read in code, not flooded live).
+- **Strike rate:** the server moves a player's next strike on from when the last was due, not from when it arrived, so coming early can't add up to about 18% more strikes.
 
-Known and accepted: position is trusted at relics and for the Leap quest step (once a save), and stamina is client-side.
+Known and accepted: the server trusts a client's reported position, as Roblox replicates it: a modified client could teleport to a relic, the Leap quest step, or next to a guardian or shop. Full movement checking is a larger job. Stamina is client-side.
 
 ### Data and security
 

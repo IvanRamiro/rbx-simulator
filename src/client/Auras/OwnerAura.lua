@@ -43,6 +43,7 @@ local SoundService = game:GetService("SoundService")
 local GuardianFx = require(script.Parent.Parent:WaitForChild("Guardians"):WaitForChild("GuardianFx"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RealmAura = require(script.Parent:WaitForChild("RealmAura"))
+local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
 
 local OwnerAura = {}
 
@@ -583,6 +584,16 @@ function OwnerAura.build(player, character, root)
             record.rates[inst] = inst.Rate
         else
             noteRates(inst)
+        end
+    end
+
+    if Quality.Low then -- half the emission on a phone, the surge's rings included
+        for emitter, rate in record.rates do
+            emitter.Rate = rate * 0.5
+            record.rates[emitter] = rate * 0.5
+        end
+        for _, ring in record.surge.rings do
+            ring.rate *= 0.5
         end
     end
 

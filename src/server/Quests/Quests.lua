@@ -1,4 +1,4 @@
--- Where each player is in the System's first quests (GameConfig.Quests): the step they're on, from
+-- Where each player is in the first quests (GameConfig.Quests): the step they're on, from
 -- 1 to #Quests, and Quests.DONE (#Quests + 1) once all are done or skipped. Saved in PlayerData as
 -- Quest; mirrored to the player's "QuestStep" attribute for their QUEST tracker. QuestService
 -- moves it on.

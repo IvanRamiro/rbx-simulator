@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local QinggongFx = require(script.Parent.Parent:WaitForChild("Qinggong"):WaitForChild("QinggongFx"))
 local CombatFx = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("CombatFx"))
 local MeditationPoses = require(script.Parent:WaitForChild("MeditationPoses"))
+local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
 
 local BLEND_SPEED = 6
 local FLYING_MOVE_SPEED = 4
@@ -283,6 +284,7 @@ local QINGGONG_POSES = {
 local QINGGONG_BLEND_SPEED = 16 -- the leap poses snap in: a stride lasts only a fifth of a second
 local SLASH_BLEND_SPEED = 34    -- a slash follows its keys closely: its swing lasts a tenth of a second
 local STANCE_MAX_SPEED = 3      -- studs a second: above this, a spear's stance gives way to arms only
+local LOW_POSE_DISTANCE = 80    -- on a phone, other players farther than this from the camera aren't posed
 
 -- A meditation idle eases in slowly, on a smooth curve rather than the other poses' quick blend, so
 -- the body settles into it (the owner, 2026-11-04: "keep the animation slow").
@@ -404,9 +406,17 @@ local function updatePoses(deltaTime)
             continue
         end
 
+        if Quality.Low and player ~= Players.LocalPlayer then
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            local camera = workspace.CurrentCamera
+            if not rootPart or not camera or (rootPart.Position - camera.CFrame.Position).Magnitude > LOW_POSE_DISTANCE then
+                continue
+            end
+        end
+
         local rig = rigs[character]
         if not rig then
-            rig = { joints = findJoints(character), weights = {}, written = {} }
+            rig = { joints = findJoints(character), weights = {}, written = {}, names = {} }
             rigs[character] = rig
         end
 
@@ -434,7 +444,8 @@ local function updatePoses(deltaTime)
         if next(rig.weights) == nil and next(rig.written) == nil then
             continue
         end
-        local names = {}
+        local names = rig.names -- one table per rig, reused: this runs every frame
+        table.clear(names)
         for pose in rig.weights do
             for name in pose do
                 names[name] = true
@@ -462,7 +473,13 @@ local function updatePoses(deltaTime)
                 end
             end
             joint.Transform = cframe
-            rig.written[name] = if cframe == base then nil else { cframe = cframe, base = base }
+            if cframe == base then
+                rig.written[name] = nil
+            else
+                local entry = last or {}
+                entry.cframe, entry.base = cframe, base
+                rig.written[name] = entry
+            end
         end
     end
 end

@@ -1,4 +1,4 @@
--- The System's quests (GameConfig.Quests), from the first steps out across every island, decided
+-- The quests (GameConfig.Quests), from the first steps out across every island, decided
 -- here on the server: each player's current quest is checked a few times a second against what they
 -- really did (their Qi and rank, pets, weapons, relics, the island they're on, the egg they carry)
 -- and the moments the server sees (an air leap, a strike on a guardian, a secured egg).

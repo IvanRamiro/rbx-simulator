@@ -27,7 +27,8 @@ local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Ui
 
 local player = Players.LocalPlayer
 
-local ANIMATE_DISTANCE = 400
+local LOW = require(script.Parent.Parent:WaitForChild("Quality")).Low
+local ANIMATE_DISTANCE = if LOW then 150 else 400
 local BAR_DISTANCE = 130
 
 local GOLD = Color3.fromRGB(232, 200, 120) -- the in-world waypoint to the safe zone
@@ -37,7 +38,7 @@ local STATE_LOOK = {
     Weakened = { Text = "WEAKENED · TAKE AN EGG", Color = Color3.fromRGB(255, 196, 70) },
     Enraged = { Text = "ENRAGED", Color = Color3.fromRGB(255, 96, 50) },
 }
-local FILL = { -- the System's blue while it guards; red once enraged
+local FILL = { -- the HUD's blue while it guards; red once enraged
     Calm = { Color3.fromRGB(120, 214, 255), Color3.fromRGB(26, 104, 196) },
     Rage = { Color3.fromRGB(255, 110, 120), Color3.fromRGB(176, 22, 44) },
 }
@@ -102,7 +103,7 @@ local function guardianModel(guardianId)
 end
 
 -- ---------- the HUD ----------
-local message = Toast.new(nil, "GuardianMessage", nil, Color3.new(1, 1, 1), 4)
+local message = Toast.new("GuardianMessage", Color3.new(1, 1, 1), 4)
 
 -- the health bar of the guardian being fought: first in the HUD's top-centre stack, so the
 -- messages (Toast) fall in below it instead of under it
@@ -496,7 +497,15 @@ RunService.RenderStepped:Connect(function(dt)
             anims[model] = nil
             rigs[model] = nil
         elseif camera and model.PrimaryPart and (model.PrimaryPart.Position - camera.CFrame.Position).Magnitude <= ANIMATE_DISTANCE then
-            anim:update(dt)
+            -- on a phone a guardian at rest updates every other frame, with the time it missed
+            local state = model:GetAttribute("State")
+            local atRest = state == nil or state == "Dormant" or state == "Resting"
+            anim.waited = (anim.waited or 0) + dt
+            anim.odd = not anim.odd
+            if not (LOW and atRest and anim.odd) then
+                anim:update(anim.waited)
+                anim.waited = 0
+            end
         end
     end
     updateBar(dt)

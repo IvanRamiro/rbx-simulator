@@ -58,7 +58,7 @@ local TABS_HEIGHT, FORGE_HEIGHT = 32, 106
 
 local list = UiKit.scroll({ Name = "List", Parent = body }) -- render() places it under what the shop shows above it
 
-local message = Toast.new(nil, "ShopMessage", nil, Color3.new(1, 1, 1), 3)
+local message = Toast.new("ShopMessage", Color3.new(1, 1, 1), 3)
 
 local function ask(action, id, extra)
     RemoteEvents.ShopEvent:FireServer(action, id, extra)

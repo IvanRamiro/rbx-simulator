@@ -337,13 +337,13 @@ local function elementBurst(name, cframe)
     end
 end
 
--- ---------- the sword strike ----------
 -- ---------- the weapon in the hand ----------
 -- A sword or spear is welded to the striker's right hand, so it moves exactly as the arm does, and
 -- stays there HOLD_TIME after the last strike, in that kind's ready stance (PoseController's SwordReady,
--- SpearReady), put away sooner if they meditate or die, or once a strike made in flight is over. The
--- strike itself is the arm's motion (PoseController): a sword's SLASH_KEYS; a spear's SpearDraw, then Spear.
-local held = {} -- [player] = { kind, model, trail, hand, source, untilTime }
+-- SpearReady), put away sooner if they meditate, die, change weapon or strike with the palm, or once a
+-- strike made in flight is over. The strike itself is the arm's motion (PoseController): a sword's
+-- SLASH_KEYS; a spear's SpearDraw and Spear, or its SPEAR_SLASH_KEYS.
+local held = {} -- [player] = { kind, model, trail, hand, source, weaponId, untilTime }
 local holdWatch = nil
 
 local function putAway(player)
@@ -365,7 +365,8 @@ local function watchHeld()
             local stale = now > entry.untilTime or player:GetAttribute("IsFlying") == true
             local humanoid = entry.hand.Parent and entry.hand.Parent:FindFirstChildOfClass("Humanoid")
             if not entry.hand:IsDescendantOf(Workspace) or not humanoid or humanoid.Health <= 0
-                or player:GetAttribute("IsCultivating") == true or (stale and not striking) then
+                or player:GetAttribute("IsCultivating") == true or player:GetAttribute("WeaponId") ~= entry.weaponId
+                or (stale and not striking) then
                 putAway(player)
             end
         end
@@ -407,7 +408,8 @@ local function hold(player, kind, source, flying, tint, spec, p)
     local body = model:FindFirstChild("Body")
     local trail = weaponTrail(body, parts[body], spec.from, spec.to, p, spec.glow or p.Main, spec.life, spec.faceCamera, spec.transparency)
     trail.Enabled = false
-    entry = { kind = kind, model = model, trail = trail, hand = hand, source = source, untilTime = os.clock() + HOLD_TIME }
+    entry = { kind = kind, model = model, trail = trail, hand = hand, source = source, weaponId = player:GetAttribute("WeaponId"),
+        untilTime = os.clock() + HOLD_TIME }
     held[player] = entry
     watchHeld()
     return entry
@@ -544,7 +546,8 @@ function CombatFx.hit(player, position)
 end
 
 -- ---------- entry points ----------
-function CombatFx.play(player, weapon)
+-- step: which strike of the combo it is, when the server says (another player's spear); else counted here
+function CombatFx.play(player, weapon, step)
     local root = rootOf(player)
     if not root then
         return
@@ -555,8 +558,11 @@ function CombatFx.play(player, weapon)
     if steps then
         local last = combos[player]
         local continuing = last and last.weapon == weapon and now - last.at < GameConfig.WeaponKinds[weapon].ComboWindow / CombatFx.TimeScale
-        strike.step = if continuing then last.step % steps + 1 else 1
+        strike.step = step or if continuing then last.step % steps + 1 else 1
         combos[player] = { weapon = weapon, step = strike.step, at = now }
+    else
+        combos[player] = nil
+        putAway(player) -- a palm strike is bare-handed
     end
     local poseTime = if weapon == "Spear" and strike.step == 2 then POSE_TIME.SpearSlash else POSE_TIME[weapon] or 0.3
     strike.untilTime = now + poseTime / CombatFx.TimeScale
@@ -575,6 +581,14 @@ function CombatFx.play(player, weapon)
         spear(player, p, root, strike.step)
     else
         palm(p, root)
+    end
+end
+
+-- The server's count of a spear's combo (it decides the slash's reach): the next strike follows on from it.
+function CombatFx.syncCombo(player, weapon, step)
+    local combo = combos[player]
+    if combo and combo.weapon == weapon then
+        combo.step = step
     end
 end
 

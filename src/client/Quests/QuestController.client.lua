@@ -1,4 +1,4 @@
--- The QUEST tracker (the HUD's top right): the System's current quest (GameConfig.Quests, at the
+-- The QUEST tracker (the HUD's top right): the current quest (GameConfig.Quests, at the
 -- player's "QuestStep" attribute, which the server moves on), its goal, a bar for one with a
 -- count (the "QuestProgress" attribute), its reward, and SKIP (asks once more). A finished
 -- quest is announced with its reward (QuestEvent "Complete"); after the last, the tracker goes.
@@ -62,7 +62,7 @@ local skip = UiKit.button({
     Position = UDim2.fromScale(1, 0), Size = UDim2.fromOffset(62, 22), Parent = footer,
 })
 
-local message = Toast.new(nil, "QuestMessage", nil, C.Highlight, 4)
+local message = Toast.new("QuestMessage", C.Highlight, 4)
 
 local function render()
     local step = player:GetAttribute("QuestStep")

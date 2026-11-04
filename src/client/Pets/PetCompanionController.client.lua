@@ -18,7 +18,7 @@ local ORBIT_RADIUS = 6.5
 local ORBIT_HEIGHT = 1.6
 local ORBIT_SPEED = 0.6
 local NOVA_INTERVAL = 25
-local CULL_DISTANCE = 250 -- studs from the camera: other players' pets farther away are hidden and not animated
+local CULL_DISTANCE = if require(script.Parent.Parent:WaitForChild("Quality")).Low then 80 else 250 -- studs from the camera: other players' pets farther away are hidden and not animated
 local RANK_CHECK_INTERVAL = 0.5
 
 local container = Instance.new("Folder")

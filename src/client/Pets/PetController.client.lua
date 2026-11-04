@@ -38,7 +38,7 @@ local bonusLabel = UiKit.label({
 })
 local petList = UiKit.scroll({ Name = "PetList", Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 1, -24), Parent = body })
 
-local hatchMessage = Toast.new(nil, "HatchMessage", nil, Color3.new(1, 1, 1), 3.5)
+local hatchMessage = Toast.new("HatchMessage", Color3.new(1, 1, 1), 3.5)
 
 toggleButton.Activated:Connect(function()
     if window.isOpen() then

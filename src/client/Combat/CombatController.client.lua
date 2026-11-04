@@ -16,7 +16,7 @@ local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKi
 local player = Players.LocalPlayer
 local readyAt = 0
 local airNoted = false -- the note about striking from sword flight shows once a session
-local message = Toast.new(nil, "CombatMessage", nil, Color3.new(1, 1, 1), 4)
+local message = Toast.new("CombatMessage", Color3.new(1, 1, 1), 4)
 
 -- "Palm", "Sword" or "Spear", and its cooldown
 local function strikeKind()
@@ -56,12 +56,14 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-RemoteEvents.CombatEvent.OnClientEvent:Connect(function(source, kind, position)
+RemoteEvents.CombatEvent.OnClientEvent:Connect(function(source, kind, position, step)
     if typeof(source) ~= "Instance" or not source:IsA("Player") then
         return
     end
     if source ~= player then
-        CombatFx.play(source, kind)
+        CombatFx.play(source, kind, step)
+    elseif step then
+        CombatFx.syncCombo(player, kind, step) -- a press the server dropped can't leave the count wrong
     end
     if typeof(position) == "Vector3" then
         CombatFx.hit(source, position)

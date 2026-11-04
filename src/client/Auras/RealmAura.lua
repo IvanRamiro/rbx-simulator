@@ -23,9 +23,13 @@
 -- the camera (Roblox draws at most 31 Highlights per client).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+
 local RealmAura = {}
 
-local CULL_DISTANCE_LIVE = 120 -- studs from the camera
+local LOW = Quality.Low
+local RATE_SCALE = if LOW then 0.5 else 1 -- every emitter's rate, on a phone
+local CULL_DISTANCE_LIVE = if LOW then 60 else 120 -- studs from the camera
 local CULL_CHECK = 0.25        -- seconds between distance checks
 local CULLED_CLASSES = { "ParticleEmitter", "Beam", "Trail", "Highlight", "Light", "SurfaceGui", "BillboardGui" }
 
@@ -128,7 +132,7 @@ local SIGNATURE = {
     [11] = { mesh = "PrimordialCoils", material = Enum.Material.Neon, color = Color3.fromRGB(210, 40, 25), transparency = 0.1, kind = "mesh", speed = 1.1 },
 }
 local VOID_CORE = { [8] = true, [9] = true, [12] = true }
-local MAX_RATE = 60
+local MAX_RATE = if LOW then 30 else 60
 
 local function seq(points)
     local keys = {}
@@ -147,6 +151,7 @@ local function emitter(parent, props)
     for k, v in props do
         e[k] = v
     end
+    e.Rate *= RATE_SCALE
     e.Parent = parent
     return e
 end
@@ -230,6 +235,9 @@ end
 -- fainter fill, and a soft PointLight on the body and the ground; all breathe together (4 s in,
 -- 4 s out)
 local function bodyGlow(root, fx, main, line, fill, glow, range)
+    if LOW and building and not building.isLocal then
+        return -- on a phone only your own aura has these: a Highlight is costly, and there's a limit of 31
+    end
     local centre = Instance.new("Attachment")
     centre.Name = "AuraCentre"
     centre.Parent = root
@@ -392,6 +400,11 @@ local BODY_COLOR = {
 }
 
 -- a at the first realm (t = 0), b at Realm 4's middle sub-rank (the approved look), c at t = 1
+-- on a phone: the fewest parts that still surround the whole body, and a share of the rate
+local LOW_BODY_PARTS = { Head = true, UpperTorso = true, LeftUpperArm = true, RightUpperArm = true, LeftUpperLeg = true, RightUpperLeg = true,
+    Torso = true, ["Left Arm"] = true, ["Right Arm"] = true, ["Left Leg"] = true, ["Right Leg"] = true }
+local LOW_BODY_RATE = 0.4
+
 local function byLevel(t, a, b, c)
     if t <= 0.31 then
         return a + (b - a) * t / 0.31
@@ -434,13 +447,16 @@ local function bodyAura(root, fx, color, t)
     local record = building                -- the aura being built: its culling also covers parts dressed later
     local function dress(part)
         local share = BODY_SHARE[part.Name]
-        if not share or not part:IsA("BasePart") or part:FindFirstChild("BodySmoke") then
+        if not share or not part:IsA("BasePart") or part:FindFirstChild("BodySmoke") or (LOW and not LOW_BODY_PARTS[part.Name]) then
             return
         end
         for _, layer in layers do
+            if LOW and layer[1] == "BodyAsh" then
+                continue
+            end
             local e = emitter(part, layer[3])
             e.Name = layer[1]
-            e.Rate = math.floor(layer[2] * share * 10 + 0.5) / 10
+            e.Rate = math.floor(layer[2] * share * 10 + 0.5) / 10 * (if LOW then LOW_BODY_RATE else 1)
             table.insert(made, e)
             if record then
                 table.insert(record.items, e)
@@ -1038,14 +1054,14 @@ local function step(dt)
             if math.abs(k - s.k) > 0.002 then
                 s.k = k
                 local function mix(a, b) return a + (b - a) * k end
-                s.ripple.Rate = mix(2 + 0.3 * s.p, 3.5 + 0.5 * s.p)                -- the owner: "faster loop ripple"
+                s.ripple.Rate = RATE_SCALE * mix(2 + 0.3 * s.p, 3.5 + 0.5 * s.p)                -- the owner: "faster loop ripple"
                 s.ripple.Lifetime = NumberRange.new(mix(1.5, 0.9), mix(1.7, 1.1))
-                s.mist.Rate = mix(9 + 2 * s.p, 16 + 3 * s.p)                      -- denser (the owner)
+                s.mist.Rate = RATE_SCALE * mix(9 + 2 * s.p, 16 + 3 * s.p)                      -- denser (the owner)
                 s.mist.Lifetime = NumberRange.new(mix(3.2, 1.9), mix(3.8, 2.3))   -- shorter: swells out faster
                 local spin = mix(20, 55)
                 s.mist.RotSpeed = NumberRange.new(-spin, spin)
                 if s.vortex then                                              -- the owner's vortex quickens and spins up
-                    s.vortex.Rate = mix(22 + 4 * s.p, 30 + 5 * s.p)
+                    s.vortex.Rate = RATE_SCALE * mix(22 + 4 * s.p, 30 + 5 * s.p)
                     s.vortex.Lifetime = NumberRange.new(mix(0.8, 0.6), mix(3, 2.2))
                     s.vortex.RotSpeed = NumberRange.new(mix(5, 12))
                 end

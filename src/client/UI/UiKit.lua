@@ -281,7 +281,12 @@ function UiKit.touchButton(button, text, hueName)
     button.Text = text
     corner(button, 999)
     stroke(button, hue.Edge, 0.05, 3)
-    fillGradient(button, hue.Top, hue.Bottom)
+    -- a gradient on a text button tints its words too, so the colour goes on the button and this stays light
+    button.BackgroundColor3 = hue.Top
+    local gloss = Instance.new("UIGradient")
+    gloss.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(226, 226, 226))
+    gloss.Rotation = 90
+    gloss.Parent = button
     UiKit.padding(button, 10, 10)
 end
 

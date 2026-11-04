@@ -19,7 +19,8 @@ local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Ui
 local player = Players.LocalPlayer
 
 local OUTFIT_TAG = "WornOutfit"
-local SWAY_DISTANCE = 120
+local SWAY_DISTANCE = if require(script.Parent.Parent:WaitForChild("Quality")).Low then 40 else 120
+local COLLECT_RETRY = 1 -- seconds between looks for a robe's pieces that haven't all arrived
 local UP = Vector3.new(0, 1, 0)
 
 -- ---------- the Robes button (on the HUD's rail, under Pets; a gold "On" while worn) ----------
@@ -226,7 +227,8 @@ RunService.RenderStepped:Connect(function(dt)
         elseif not rootPart then
             continue -- the wearer streamed out or is respawning: the outfit is rebuilt or comes back
         elseif (rootPart.Position - camera.CFrame.Position).Magnitude < SWAY_DISTANCE then
-            if not state.ready then
+            if not state.ready and now >= (state.nextCollect or 0) then
+                state.nextCollect = now + COLLECT_RETRY
                 collect(state)
             end
             if state.ready then

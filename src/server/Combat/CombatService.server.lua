@@ -8,7 +8,7 @@
 -- thrust and a sweeping slash with its own reach (WeaponKinds.Spear.Slash); the server keeps the count,
 -- so a client can't choose the wider reach. A landing strike
 -- fires Combat.Hit; every strike is relayed to all clients (CombatEvent: striker, kind ("Palm",
--- "Sword" or "Spear"), hit position or nil).
+-- "Sword" or "Spear"), hit position or nil, a spear's step in its combo or nil).
 --
 -- Every stored weapon (ServerStorage.Weapons: the flying sword and the realm weapons, OutfitBuilder)
 -- is copied to ReplicatedStorage.Weapons so clients can show it striking.
@@ -21,8 +21,12 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Combat = require(script.Parent:WaitForChild("Combat"))
 
-local COOLDOWN_SLACK = 0.85 -- requests a little early are latency, not cheating
+local COOLDOWN_SLACK = 0.15 -- the share of a cooldown a request may come early: latency, not cheating
 local lastStrike = {}
+-- [player] = when their next strike is due. It moves on by a whole cooldown from when the last was
+-- due, not from when it arrived, so coming early can't add up: a client firing as early as the slack
+-- allows gets the same strikes a second as anyone else.
+local nextStrike = {}
 local spearSlashNext = {} -- [player] = true: their last strike was a thrust, inside the combo window
 
 do
@@ -74,9 +78,11 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
     end
     local strike = Combat.strikeOf(player)
     local now = os.clock()
-    if lastStrike[player] and now - lastStrike[player] < strike.Cooldown * COOLDOWN_SLACK then
+    local due = nextStrike[player]
+    if due and now < due - strike.Cooldown * COOLDOWN_SLACK then
         return
     end
+    nextStrike[player] = math.max(now, due or 0) + strike.Cooldown
     local continuing = strike.ComboWindow and lastStrike[player] and now - lastStrike[player] < strike.ComboWindow
     lastStrike[player] = now
     -- a spear's combo: a thrust, then a slash
@@ -91,10 +97,11 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
     if target then
         Combat.Hit:Fire(player, target, strike.Damage * Combat.powerOf(player), point)
     end
-    RemoteEvents.CombatEvent:FireAllClients(player, strike.Kind, point)
+    RemoteEvents.CombatEvent:FireAllClients(player, strike.Kind, point, if strike.Slash then (if slashing then 2 else 1) else nil)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
     lastStrike[player] = nil
+    nextStrike[player] = nil
     spearSlashNext[player] = nil
 end)

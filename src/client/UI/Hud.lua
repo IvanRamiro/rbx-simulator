@@ -5,13 +5,14 @@
 --            short phone screen it can't run into the STATUS window
 --   Dock     bottom centre, bottom up: Cultivate, the breakthrough, the Qinggong strip
 --   Banner   top centre: messages (Toast)
---   Quest    top right: the System's current quest (QuestController)
+--   Quest    top right: the current quest (QuestController)
 -- Windows (the pets list, the altar, the shops): Hud.window, one open at a time.
 -- Each region scales with the screen (HudScale). Hud.isCompact() is true on a short screen (a
 -- phone in landscape), and Hud.CompactChanged fires when that changes: the STATUS window slims
 -- down. The first script to require this builds it.
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local UiKit = require(script.Parent:WaitForChild("UiKit"))
 local UiTheme = require(script.Parent:WaitForChild("UiTheme"))
@@ -204,7 +205,8 @@ function Hud.window(props)
     local _, title = UiKit.header(inner, props.Title, { TextSize = 14 })
     local closeButton = UiKit.button({
         Name = "Close", Tone = "Danger", Font = "Strong", Text = "X", TextSize = 14, AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, 4, 0, -4), Size = UDim2.fromOffset(28, 28), Parent = inner,
+        Position = UDim2.new(1, 4, 0, -4), Size = if UserInputService.TouchEnabled then UDim2.fromOffset(38, 38) else UDim2.fromOffset(28, 28),
+        Parent = inner,
     })
     local body = Instance.new("Frame")
     body.Name = "Body"
