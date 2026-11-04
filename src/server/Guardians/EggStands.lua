@@ -3,8 +3,9 @@
 -- light and its aura:
 --   * taking it empties the stand (EggStands.take);
 --   * a dropped egg that times out, or a theft that fails, puts it back (EggStands.restore);
---   * a secured one leaves the stand empty for GameConfig.EggTheft.RespawnTime seconds, then a
---     random egg of its island's guardian's eggs appears there (EggStands.respawn).
+--   * a secured one leaves the stand empty for GameConfig.EggTheft.RespawnTime seconds, then the
+--     island's lowest-rank egg appears there unless another stand shows it, else a random one of
+--     its eggs (EggStands.respawn).
 -- Stands are found in Workspace.FloatingIslands.<Island>.EggStands (WorldBuilder.buildEggStands):
 -- a Model per stand (named after the egg it was built with: its slot's name, which stays) with a
 -- Pedestal, a GlowRing, the egg's body "Egg" and its "<EggId>_Glow_<hex>" pieces, and the

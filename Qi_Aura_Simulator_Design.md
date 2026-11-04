@@ -22,7 +22,7 @@ These never change without an explicit decision from the project owner.
 - **Aura concept** stays as designed (section 4). The bar is not "looks like Sol's RNG": it is to genuinely compete with, and aim to surpass, Sol's RNG's most impressive auras.
 - **No generic style.** Islands, pets and effects are original Blender work with their own silhouette and identity. Nothing is a recoloured copy of another piece.
 - **No Chinese text** anywhere in the game: not in the UI, icons, signs or names ("people might not want to play the game because there is chinese text", November 3, 2026). The wuxia feel comes from art, effects and English names.
-- **The interface is the cultivator's System** (November 3, 2026: "make it more like a game system status from solo leveling"). It is an original take on the genre, nothing copied: translucent blue windows with a glowing edge, bracketed headers such as [ STATUS ] and [ NOTIFICATION ], and line icons (`client/UI`: UiTheme, UiKit, Hud).
+- **The interface is bright and colourful** (November 4, 2026: "use a colorful UI/UX, because I don't think the player will enjoy looking at the current design"; it replaces the blue "System" look of November 3). Rounded gradient panels, a chunky font, and each part of the game in its own colour: Status violet, Quest blue, Pets orange, Robes rose, Rewards gold, Settings teal, the Hatching Altar green, the Blacksmith crimson, Cultivate green (`client/UI`: UiTheme, UiKit, Hud).
 - **Weapons:** players purchase or request a **forged weapon**, and their Qi mastery decides which weapons they can get.
 - **Sword flight:** a sword can also be ridden for flight. It is the only free flight in the game; everywhere else, players move with Qinggong.
 
@@ -424,7 +424,7 @@ Each kind has its own visual purpose. None is a recolour of another.
 
 **Realm auras (the cultivation aura, live since November 3, 2026)**
 
-- **Always on:** every player wears their realm's aura, built by `src/client/Auras/RealmAura.lua`. Realm 4's ground layers quicken while the player meditates.
+- **Only while meditating** (the owner, November 4, 2026: "there should be no aura, if the player is not meditating"): a cultivating player wears their realm's aura, built by `src/client/Auras/RealmAura.lua`. It builds up when they start and clears when they stop. Realm 4's ground layers quicken with it.
 - **Twelve realms:** each has its own layers. Palettes come from the owner's `src/shared/AuraConfig.lua`, matched to the rank's `Realm` name. The sub-rank (`Level` 1–5) moves it along one continuous level, so a breakthrough never looks weaker.
 - **On every realm:** the owner's body aura (smoke, a dark shadow, sparks, star glints), fainter at low Qi and bigger at high Qi.
 - **Top-realm meshes** are templates in `ReplicatedStorage.AuraMeshes.TopTier`.
@@ -453,10 +453,31 @@ Each kind has its own visual purpose. None is a recolour of another.
 
 **Poses and breakthroughs**
 
-- A lotus pose and levitation while cultivating, and a flying pose while airborne.
+- A flying pose while airborne, and each realm's own meditation idle while cultivating (below).
 - A burst effect on every rank-up, bigger at milestones.
 
 **Next:** every remaining element gets its own aura concept. Aqua Wisp's water aura is the model for this, not a shared aura recoloured.
+
+### The twelve meditation idles (the owner, November 4, 2026)
+
+"Make 12 unique and different idle, there should be no similar or reuse idle", and "the beginner idle should be lotus sit". Each realm has its own (`client/Character/MeditationPoses.lua`, played by `PoseController`, easing in over 3 seconds). The pose places the body itself, on the ground or up on the air; the character's own height doesn't change, and a cultivator can't walk or jump (`LevitationController`).
+
+| Realm | Idle |
+|---|---|
+| Qi Awakening | The lotus seat on the ground, hands on the knees, a slow deep breath |
+| Qi Foundation | Standing post: knees soft, the arms rounded as if round a tree, sinking and rising |
+| Spirit Core | Kneeling, the hands circling each other round the core at the belly, head bowed |
+| Spirit Soul | The crane: on one leg, the knee drawn high, the arms spread low like wings |
+| Ascendant Realm | Floating Ascension (the owner's): reclined on the air, a wide wingspan, a knee to the sky |
+| Immortal Realm | Standing on air: sword fingers at the chest, a hand behind the back, chin up |
+| Divine Realm | On one knee in the air, an arm driven straight at the heavens |
+| Cosmic Realm | Upside down, legs crossed above, the arms spread, orbiting slowly |
+| Void Realm | Curled tight, knees to chest, tumbling end over end |
+| Heavenly Dao | Cloud hands: a low stance, the hands passing in unbroken circles |
+| Primordial Realm | Holding up the sky: a wide squat, both palms pressing up, the strain trembling through the body |
+| Eternal Transcendence | Spread as a star, face to the sky, turning high up |
+
+The owner's account always takes Floating Ascension, which their own aura was built round. To review any idle on any account, set `MeditationPoses.Preview` to its realm number. Tested in Play: all twelve run with no errors, planted feet stay flat within 0.07 studs of the floor, and walking and jumping return on stopping.
 
 ### Aura VFX brief (the project owner's requirements, kept verbatim)
 
@@ -619,7 +640,7 @@ Every egg on its stand has its own aura, built in the Workspace from particle em
 | Primordial Abyss | 8 s, the slowest | **Deep time.** Three soft lights sweep round it at three heights like a clock's hands, each a third the speed of the one below and drawing a short arc of light; the ammonite's mouth breathes magenta and faint pink motes drift out of its spiral. |
 | Phoenix Ash | a 15 s cycle | **The Ash Cycle:** the egg dies and is reborn every 15 seconds. **Ash:** its veins and phoenix emblem dim to a smoulder under a dull ember rim, pale ash falls round it (the one aura on the altar where things fall) and a thin curl of smoke rises from its crown. **Kindling:** embers wink awake round it and the glow climbs back. **Rebirth:** the ash rushes up catching fire gold, two wings of gold light sweep open behind its own sculpted wings shedding golden feathers, a sunburst blooms over its crown, its rim races through the prism's colours (its rarest pet is the Prismatic Phoenix), its light blazes gold and a nearby player's screen flashes warm. **Burning down:** the wings fold, their feathers greying into ash as they fall, and the cycle begins again. The wings keep 1.76 studs clear of the Magma Heart egg (a raycast sweep over the whole wing path). |
 
-**Egg stands today** (section 7): each island's three stands stand behind its guardian; their eggs are what a thief carries home. A taken egg's stand stays empty, then respawns a random one of the island's eggs.
+**Egg stands today** (section 7): each island's three stands stand behind its guardian; their eggs are what a thief carries home. A taken egg's stand stays empty, then respawns (section 7).
 
 ---
 
@@ -768,7 +789,7 @@ The hidden endgame island, about 320 studs across since the owner's upgrade, mov
 - **No guardian holds an egg.** Each guards its island's three egg stands, behind it (`server/Guardians/EggStands.lua`).
 - **Below 10% health** (`WeakenedAt` 0.1) a guardian falters and one of its stands' eggs can be taken (F, half a second), if the thief's rank can hatch it; otherwise "needs <rank>". One theft at a time. Taking it empties the stand and enrages the guardian.
 - **Home is Yggdrasil:** the egg is secured the moment the thief sets foot on the hub, across the island's bridge (`SafeZone = { Island = "Yggdrasil" }`; the waypoint is the bridge's hub end). The guardian can't follow off its island. The Stone Lion's eggs are already on Yggdrasil (the Egg Garden's stands): its thief carries the egg to the Hatching Altar. (A separate island for the beginner eggs is planned.)
-- **The stands:** a dropped egg that times out goes back to its stand. A secured egg leaves the stand empty for 3 minutes (`EggTheft.RespawnTime`), then a random one of the island's three eggs appears there, so two stands may show the same egg. Each stand shows its egg's glow ring, light and aura (the auras are kept as templates; an aura names its stand by the attribute `Stand`).
+- **The stands:** a dropped egg that times out goes back to its stand. A secured egg leaves the stand empty for 3 minutes (`EggTheft.RespawnTime`). Then the island's lowest-rank egg appears there unless another stand already shows it, so an island is never left with only eggs a new player can't take; otherwise a random one of its three eggs appears, so two stands may show the same egg. Each stand shows its egg's glow ring, light and aura (the auras are kept as templates; an aura names its stand by the attribute `Stand`).
 - **Hatching** happens only at the **Hatching Altar** on Yggdrasil (`ygg_altar.py`, `WorldBuilder.buildAltar`, `GameConfig.HatchingAltar`, on the north-east lawn between the bridges and the Egg Garden): its prompt opens the hatching window (`HatcheryController`), which lists the eggs carried home with their counts; each Hatch lays the egg in the altar's cradle, where it rises, glows and breaks open in gold light (`HatchCeremony`) as the pet is named. The window sits at the screen's right edge so the cradle stays in sight. The cradle's pool is a deep amber (Neon 255, 110, 0, a little clear): a paler gold blooms to a flat lemon disc. The stands no longer hatch. Each egg rests `HatchingAltar.Stage` (2.6 s) in the cradle and the Hatch button waits as long between presses (the server takes one egg at a time per player). The egg breaks at a server time sent with the result (`BreakAt`), so a late remote still breaks it before the server takes it away; the staged egg streams to everyone (Persistent).
 - **The altar:** five roots of the World Tree break out round a two-tier dais of pale stone and arch over it, curling in like a cupped hand; under them a jade lotus on a bronze stem opens round a pool of golden Qi, the cradle; between the roots five jade seal stones, one per island, each with a gem in that island's glow.
 - The guardians are full Blender models.
@@ -788,7 +809,11 @@ The server decides every hit; the client only sends "strike" and shows it.
 - **Targets:** any Model tagged `CombatTarget` with a PrimaryPart and a `HitRadius` attribute. The nearest one in range and in the arc in front is hit; an `Invulnerable` attribute skips it.
 - **Validation:** cooldown (with 15% slack for latency), alive, not cultivating.
 - **Output:** `ServerStorage.CombatHit` (a BindableEvent: player, target, damage, position) for the guardian code, and `CombatEvent` to every client for the effects.
-- **Effects** (`CombatFx`): the Qi Palm throws a great palm print of Qi (`QiPalm` texture) in the realm's colour; the sword strike swings a copy of the player's flying sword in an arc with a crescent of sword light (`QiSlash`). Strike poses are mixed into `PoseController`, the sword one on top of the riding pose.
+- **Effects** (`CombatFx`): the Qi Palm throws a great palm print of Qi (`QiPalm` texture) in the realm's colour.
+- **Weapons are held in the hand** (the owner, November 4, 2026): welded to the right hand's grip, out for 5 seconds after the last strike, and put away on death or on starting to cultivate. A held weapon has a stance (`SwordReady`; for a spear a low stance, then its guard).
+- **Sword, a combo of three** (the owner: "focus solely on slashes animation"): a diagonal cut down across the body, a backhand rising the other way, an overhead finisher that shakes the striker's camera. Strikes within 1.1 seconds continue it (`WeaponKinds.Sword.ComboWindow`). Each swing is a timeline of whole-upper-body keys (`SLASH_KEYS`); its crescent (`QiSlash`) lies on the arc the blade's tip really draws, measured from the swing, so re-measure `SLASHES` if the keys change.
+- **Spear, thrust then slash** (the owner: "the spear should have slash and thrust"): held in both hands in the owner's stances, wide and low and side-on. The first strike is a long straight thrust with a lance of streaks; a strike within 1.7 seconds is a sweeping slash, the whole body turning with the arms locked so both hands stay on the shaft. The thrust reaches 18 studs in a narrow 35-degree arc; the slash reaches 13 studs in a wide 85-degree one (`WeaponKinds.Spear.Slash`). The server keeps the count, so a client can't choose the wider reach. Tested through the real remote: a target 60 degrees to the side is hit only by the slash, one 15 studs ahead only by the thrust.
+- **Strikes from sword flight swing but don't land** (November 4, 2026): guardians can't reach a flyer, so a flyer can't reach them. A note says so once a session.
 - Input: left mouse, R2 or the touch "Strike" button.
 
 ### Encounter
@@ -1053,7 +1078,7 @@ Build one complete encounter before expanding to every island.
     - **Primordial** (violet): **Chaos Origin Sword**, a great rough-hewn obsidian blade with violet veins and glyphs, an ammonite coiled round its foot; **Primeval Dragon Spear**, a horned dragon skull whose long spiralled horn is the point, its spine down the ancient wooden shaft.
     - **Eternal Transcendence** (gold, violet and azure): **Eternity Sword**, a radiant blade with threads of three lights, an infinity-sign guard, three coloured rings orbiting it with beads of light; **Eternal Sun Spear**, a white gold flame rising from a sun of curling flames, an azure rim and a violet orbit.
   - All 24 imported and stored (November 2, 2026); every strike tested in Play with its own model.
-  - **In game:** each realm weapon is stored as `ServerStorage.Weapons.<WeaponId>` (`OutfitBuilder.storeWeapon`; Kind, Hilt and Tip attributes) and copied to the clients by `CombatService`. A sword strike shows the striker's own sword darting out (the flying sword when theirs isn't modelled yet), a spear thrust their own spear (else the spear of Qi light).
+  - **In game:** each realm weapon is stored as `ServerStorage.Weapons.<WeaponId>` (`OutfitBuilder.storeWeapon`; Kind, Hilt and Tip attributes) and copied to the clients by `CombatService`. A strike puts the striker's own weapon in their hand (the flying sword when theirs isn't modelled yet; section 7, Combat).
 - **Exclusive weapons:** later (the owner's call).
 
 ### Built (phase 3: the relic forge, November 2, 2026)
@@ -1117,6 +1142,33 @@ The game had no audio. Every sound comes from Roblox's licensed libraries only: 
 
 - **Settings** (the Settings button on the rail; `client/UI/SettingsController`, `server/Data/Settings`, saved as `Settings`, save version 10): Music and Sound volume, and Reduced Effects, which hides other players' auras and turns off the owner aura's screen flash and camera shake on that player's own client.
 - **Analytics** (`server/Analytics/Analytics`, for the Creator Dashboard): the quest path as an onboarding funnel; every Spirit Stone in and out, by cause and item (through `Wallet`); and the moments RankUp, EggTaken, EggDropped, EggSecured, EggHatched and QuestsSkipped, each by guardian, egg or rank. Studio only prints these: real data needs a live server.
+
+### Rewards (November 4, 2026)
+
+A window on the rail (`server/Rewards`, `client/Rewards/RewardController`, `shared/RewardRules`), the rules in `GameConfig.Rewards`:
+
+- **Daily:** a seven-day streak of Spirit Stones scaled by realm, 2, 3, 4, 5, 8, 10 and 25 times 2.6^(realm - 1), with minutes of Qi on days 3, 5 and 7 (2, 3 and 5). Missing a day restarts it at day 1; the same day is refused.
+- **Offline Qi:** 20% of the rate for time away, up to 8 hours, from 10 minutes.
+- **Codes:** `Codes.lua`, each once per player. `QIAWAKENS` pays 100 stones.
+- **Group:** 200 stones for joining. Off until the owner gives a group id (`Rewards.Group.GroupId`).
+
+Tested in Play: every code path, the streak, and the offline toast. Not tested: the group reward, which needs a real group.
+
+### Icons (November 4, 2026)
+
+Our own line drawings, white so the interface tints them: `tools/ui/draw_icons.py` writes `assets/ui/icons/`, and the uploaded ids are in `icons.json` and `UiTheme.Icons`. The owner asked for unique ones, so none is a stock symbol: a spiral of Qi, a spirit fox, a crossed-collar robe, a diving swallow, the Jade Scale, a lotus dial, a gold ingot.
+
+### Anti-cheat fixes (November 4, 2026)
+
+Found by a read-only security audit and tested through the real remotes unless noted:
+
+- **Forge names:** a raw name over 200 characters is refused before any filtering (a huge one used to hold the server for 48.5 seconds; now 0.05, and nothing charged).
+- **Selling:** a player's last companion can't be sold.
+- **Carrying an egg:** moving faster than a dash can carry drops it, with no reward (`CARRY_SLACK` in `Guardian`).
+- **Air strikes:** swing but don't land.
+- **Floods:** `PetService` takes a request per half second; Qinggong effects relay at most 8 a second (rates read in code, not flooded live).
+
+Known and accepted: position is trusted at relics and for the Leap quest step (once a save), and stamina is client-side.
 
 ### Data and security
 

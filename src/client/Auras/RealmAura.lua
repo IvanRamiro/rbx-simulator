@@ -648,7 +648,7 @@ local function realm4(root, fx, tint, p)
     table.insert(spinners, { kind = "ground", root = root, fx = fx, rayParams = rayParams,
         grounded = { { seal, 0.03, true }, { mistHost, 0.08, false }, { rippleHost, 0.15, false } },
         rayClock = 0, speed = 0, angle = 0 })
-    -- the ground smoke follows meditation (the owner): calm while idle, the ripple quickening and the
+    -- the ground smoke follows meditation (the owner): calm as it starts, the ripple quickening and the
     -- mist rushing out while the player cultivates (the player's IsCultivating; a test dummy's own
     -- attribute), easing between the two
     table.insert(spinners, { kind = "meditate", root = root, model = root.Parent, ripple = ripple, mist = mist, vortex = vortex, k = -1,
