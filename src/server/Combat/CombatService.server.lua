@@ -20,6 +20,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Combat = require(script.Parent:WaitForChild("Combat"))
+local MovementGuard = require(script.Parent.Parent:WaitForChild("Security"):WaitForChild("MovementGuard"))
 
 local COOLDOWN_SLACK = 0.15 -- the share of a cooldown a request may come early: latency, not cheating
 local lastStrike = {}
@@ -73,7 +74,8 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
     local character = player.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    if not (humanoid and rootPart) or humanoid.Health <= 0 or player:GetAttribute("IsCultivating") == true then
+    if not (humanoid and rootPart) or humanoid.Health <= 0 or player:GetAttribute("IsCultivating") == true
+        or player:GetAttribute("CarryingEgg") ~= nil then -- both hands are round the egg
         return
     end
     local strike = Combat.strikeOf(player)
@@ -91,7 +93,7 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
     -- from sword flight a strike swings but can't land: guardians can't reach a flyer, so a flyer
     -- can't reach them
     local target, point = nil, nil
-    if player:GetAttribute("IsFlying") ~= true then
+    if player:GetAttribute("IsFlying") ~= true and not MovementGuard.isSuspect(player) then
         target, point = findTarget(rootPart, if slashing then strike.Slash else strike)
     end
     if target then

@@ -58,13 +58,12 @@ local SLASH_SWING = 0.14 -- seconds the blade draws its light
 -- the swing in root space (PoseController's SLASH_KEYS: re-measure if those change): the circle's
 -- Centre and Radius, the way its plane faces (Face) and the way the arc bulges (Bulge). Then how much
 -- it swells and how far it carries ahead; the finisher is the biggest, and shakes the striker's camera.
--- The first's radius reaches past the tip (3.26), or the body hides its low arc from the player's camera
 local SLASHES = {
-    { Centre = Vector3.new(-1.38, 1.95, -3.9), Radius = 4.4, Face = Vector3.new(0.56, -0.27, 0.78), Bulge = Vector3.new(0.51, -0.63, -0.58),
+    { Centre = Vector3.new(-1.3, 1.74, -1.03), Radius = 5.08, Face = Vector3.new(0.73, -0.62, 0.28), Bulge = Vector3.new(0.16, -0.24, -0.96),
         Grow = 1.35, Travel = 3, Pitch = 1.05 },
-    { Centre = Vector3.new(2.02, -0.45, -2.25), Radius = 4.59, Face = Vector3.new(-0.54, 0.5, 0.68), Bulge = Vector3.new(0.11, 0.84, -0.53),
+    { Centre = Vector3.new(0.59, 0.22, -0.6), Radius = 5.61, Face = Vector3.new(-0.46, 0.62, 0.63), Bulge = Vector3.new(0.32, 0.78, -0.54),
         Grow = 1.35, Travel = 3, Pitch = 1.2 },
-    { Centre = Vector3.new(-0.92, -1.1, -0.73), Radius = 5.31, Face = Vector3.new(0.83, 0.51, 0.23), Bulge = Vector3.new(0.21, 0.09, -0.97),
+    { Centre = Vector3.new(2.16, -0.08, -0.13), Radius = 6.39, Face = Vector3.new(-0.44, -0.75, 0.49), Bulge = Vector3.new(-0.71, -0.03, -0.7),
         Grow = 1.5, Travel = 4.5, Pitch = 0.82, Finisher = true },
 }
 -- the spear's slash, on the same terms: a wide flat arc round the striker
@@ -366,6 +365,7 @@ local function watchHeld()
             local humanoid = entry.hand.Parent and entry.hand.Parent:FindFirstChildOfClass("Humanoid")
             if not entry.hand:IsDescendantOf(Workspace) or not humanoid or humanoid.Health <= 0
                 or player:GetAttribute("IsCultivating") == true or player:GetAttribute("WeaponId") ~= entry.weaponId
+                or player:GetAttribute("CarryingEgg") ~= nil
                 or (stale and not striking) then
                 putAway(player)
             end

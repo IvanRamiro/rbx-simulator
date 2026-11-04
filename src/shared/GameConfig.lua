@@ -4,7 +4,7 @@ local GameConfig = {
 
     CultivationQiReward = 10,
     CultivationInterval = 1,
-    CultivationToggleCooldown = 0.5,
+    CultivationToggleCooldown = 1, -- also limits how often a client can make everyone rebuild its aura
     CultivationKeybind = Enum.KeyCode.E,
 
     TrainingStation = {
@@ -167,7 +167,7 @@ local GameConfig = {
             WalkSpeed = 12,
             ChaseSpeed = 21,       -- below a beginner's run (22): dashes and its pounces decide it
             TurnSpeed = 140,       -- degrees per second
-            Egg = { CarriedHeight = 2.6 }, -- carried over the thief's head
+            Egg = { CarriedHeight = 2.6 }, -- its height, carried in the thief's arms
             WeakenedHint = "falters: take an egg from the Egg Garden and carry it to the Hatching Altar!",
             Stagger = 1.1,         -- seconds a knocked-back player is off their feet
             WeakenedSlowdown = 1.7, -- attack cooldown multiplier while weakened
@@ -593,7 +593,7 @@ local GameConfig = {
     },
 
     -- each player's own view and sound (server/Data/Settings, client/UI/SettingsController)
-    Settings = { Music = 1, Sound = 1, ReducedEffects = false },
+    Settings = { Music = 1, Sound = 1, ReducedEffects = false, StatusMinimized = false },
 
     MaxOwnedPets = 50,
 

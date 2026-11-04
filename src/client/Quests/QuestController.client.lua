@@ -21,7 +21,7 @@ local QUESTS = GameConfig.Quests
 local CONFIRM_SECONDS = 3
 
 -- ---------- the tracker ----------
-local panel = UiKit.panel({ Name = "QuestTracker", AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.fromOffset(270, 0), Visible = false, Hue = "Blue", Parent = Hud.Quest })
+local panel = UiKit.panel({ Name = "QuestTracker", AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.fromOffset(270, 0), Visible = false, Parent = Hud.Quest })
 local inner = Instance.new("Frame")
 inner.Name = "Inner"
 inner.BackgroundTransparency = 1

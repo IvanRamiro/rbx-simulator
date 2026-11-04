@@ -1,20 +1,23 @@
--- Builds the interface's pieces in the UiTheme look, so every HUD and window shares one style:
---   panel(props)                a rounded window in a colour: props.Hue, a UiTheme.Hues name
+-- Builds the interface's pieces in the UiTheme look (the cultivator's System), so every HUD and
+-- window shares one style:
+--   panel(props)                a System window: glass, a glowing edge, corner ticks
+--                               (Brackets = false: no ticks)
 --   content(panel, x, y)        a padded frame inside a panel, for its content
---   header(parent, text, props) a title across its parent: a line, TEXT, a line
---   icon(image, size, tone)     a box with its icon (UiTheme.Icons; "Accent", "Danger", "Highlight")
+--   header(parent, text, props) a bracketed header: a line, [ TEXT ], a line
+--   glow(label, color)          a soft glow round a label's letters
+--   icon(image, size, tone)     an outlined box with its icon (UiTheme.Icons; "Accent", "Danger",
+--                               "Highlight")
 --   label(props)                text in a theme font (Font = a UiTheme.Fonts name)
---   button(props)               an action: Tone = "Accent", "Go", "Highlight", "Quiet", "Danger" or a
---                               UiTheme.Hues name; it brightens on hover and sinks when pressed
---   touchButton(button, text, hue)  a round on-screen button for touch players
+--   button(props)               an action: "Accent" (primary), "Highlight" (a breakthrough),
+--                               "Quiet", "Danger"; it glows on hover and sinks when pressed
 --   keycap(key)                 a keyboard key's hint (hidden on touch screens)
 --   bar(props)                  a progress bar; setBar(bar, fraction) eases it
 --   list(parent, props)         a UIListLayout
---   scroll(props)               a scrolling list (its children laid out down it)
---   card(props)                 a row in a window: a lighter tint of the window's colour; Stripe = a
---                               colour down its left side (a rarity, an element)
---   tag(text, color)            a small filled word: a rarity, a state ("EQUIPPED")
---   textbox(props)              a text field
+--   scroll(props)               a scrolling list (a thin glowing bar; its children laid out down it)
+--   card(props)                 a row in a window: raised glass, a quiet edge; Stripe = a colour
+--                               down its left side (a rarity, an element)
+--   tag(text, color)            a small outlined word: a rarity, a state ("EQUIPPED")
+--   textbox(props)              a text field in the System style
 --   empty(parent, text)         the muted line a list shows when it has nothing
 -- props: any Instance properties to set, plus the extras named per builder.
 local TweenService = game:GetService("TweenService")
@@ -69,31 +72,58 @@ function UiKit.list(parent, props)
     return layout
 end
 
--- a top-to-bottom gradient: the instance's own colour is white, so this is its colour
-local function fillGradient(instance, top, bottom)
-    instance.BackgroundColor3 = Color3.new(1, 1, 1)
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new(top, bottom)
-    gradient.Rotation = 90
-    gradient.Parent = instance
-    return gradient
+-- bright ticks on a window's four corners, over its edge
+function UiKit.brackets(frame, color, length)
+    length = length or 12
+    color = color or C.Edge
+    for _, spot in { Vector2.new(0, 0), Vector2.new(1, 0), Vector2.new(0, 1), Vector2.new(1, 1) } do
+        for _, horizontal in { true, false } do
+            local arm = Instance.new("Frame")
+            arm.Name = "Tick"
+            arm.BorderSizePixel = 0
+            arm.BackgroundColor3 = color
+            arm.AnchorPoint = spot
+            arm.Size = if horizontal then UDim2.fromOffset(length, 2) else UDim2.fromOffset(2, length)
+            arm.Position = UDim2.new(spot.X, if spot.X == 0 then -1 else 1, spot.Y, if spot.Y == 0 then -1 else 1)
+            arm.ZIndex = frame.ZIndex + 2
+            arm.Parent = frame
+        end
+    end
 end
 
 function UiKit.panel(props)
     local frame = Instance.new("Frame")
+    frame.BackgroundColor3 = C.Panel
     frame.BackgroundTransparency = UiTheme.PanelTransparency
     frame.BorderSizePixel = 0
     local copy = table.clone(props or {})
-    local hue = UiTheme.Hues[copy.Hue or "Violet"]
-    copy.Hue = nil
+    local brackets = copy.Brackets ~= false
+    copy.Brackets = nil
     apply(frame, copy)
     corner(frame)
-    stroke(frame, hue.Edge, 0.05, 2)
-    fillGradient(frame, hue.Top, hue.Bottom)
+    stroke(frame, C.Edge, 0.25)
+    -- the glow: a soft wide rim just inside the edge
+    local rim = Instance.new("Frame")
+    rim.Name = "Glow"
+    rim.BackgroundTransparency = 1
+    rim.AnchorPoint = Vector2.new(0.5, 0.5)
+    rim.Position = UDim2.fromScale(0.5, 0.5)
+    rim.Size = UDim2.new(1, -4, 1, -4)
+    rim.Parent = frame
+    corner(rim)
+    stroke(rim, C.Edge, 0.72, 5)
+    local glass = Instance.new("UIGradient") -- deeper at the bottom, as light through glass
+    glass.Rotation = 90
+    glass.Transparency = NumberSequence.new(0, 0.12)
+    glass.Parent = frame
+    if brackets then
+        UiKit.brackets(frame)
+    end
     return frame
 end
 
--- A padded frame filling a panel, for its content
+-- A padded frame filling a panel, for its content: a UIPadding on the panel itself would push the
+-- corner ticks inward onto the content.
 function UiKit.content(panel, x, y)
     local inner = Instance.new("Frame")
     inner.Name = "Content"
@@ -111,8 +141,6 @@ function UiKit.label(props)
     label.FontFace = UiTheme.Fonts.Body
     label.TextSize = 16
     label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextStrokeColor3 = C.TextShadow
-    label.TextStrokeTransparency = 0.55
     local copy = table.clone(props or {})
     if copy.Font then
         label.FontFace = UiTheme.Fonts[copy.Font]
@@ -122,24 +150,34 @@ function UiKit.label(props)
     return label
 end
 
--- A title across its parent: a fading line, TEXT, a fading line. props: Color, TextSize, and any Frame
--- properties (Position, Size, LayoutOrder ...).
+-- A soft glow round a label's letters, as projected light (the header font is thin)
+function UiKit.glow(label, color)
+    local halo = stroke(label, color or C.Edge, 0.6, 1)
+    halo.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+    return halo
+end
+
+-- A bracketed header across its parent: a fading line, [ TEXT ], a fading line. props: Color,
+-- TextSize, and any Frame properties (Position, Size, LayoutOrder ...).
 function UiKit.header(parent, text, props)
     local copy = table.clone(props or {})
     local color = copy.Color or C.Text
-    local size = (copy.TextSize or 14) + 3 -- the chunky font reads better a little larger
+    local size = copy.TextSize or 14
     copy.Color, copy.TextSize = nil, nil
     local row = Instance.new("Frame")
     row.Name = "Header"
     row.BackgroundTransparency = 1
-    row.Size = UDim2.new(1, 0, 0, size + 5)
+    row.Size = UDim2.new(1, 0, 0, size + 8)
     apply(row, copy)
     row.Parent = parent
     local word = UiKit.label({
-        Name = "Text", Font = "Header", Text = text, TextSize = size, TextColor3 = color,
+        Name = "Text", Font = "Header", Text = "[  " .. text .. "  ]", TextSize = size, TextColor3 = color,
         AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), AutomaticSize = Enum.AutomaticSize.X,
         Size = UDim2.new(0, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, Parent = row,
     })
+    if size >= 13 then -- on smaller letters a halo fills their gaps
+        UiKit.glow(word)
+    end
     -- a line each side of the word, fading out toward the edges; they follow the word's width
     local lines = {}
     for side = 0, 1 do
@@ -150,14 +188,14 @@ function UiKit.header(parent, text, props)
         line.Position = UDim2.fromScale(side, 0.5)
         line.Parent = row
         local fade = Instance.new("UIGradient")
-        fade.Transparency = if side == 0 then NumberSequence.new(1, 0.35) else NumberSequence.new(0.35, 1)
+        fade.Transparency = if side == 0 then NumberSequence.new(1, 0.2) else NumberSequence.new(0.2, 1)
         fade.Parent = line
         lines[side] = line
     end
     local function fit()
         local gap = word.AbsoluteSize.X / 2 + 10
         for _, line in lines do
-            line.Size = UDim2.new(0.5, -gap, 0, 2)
+            line.Size = UDim2.new(0.5, -gap, 0, 1)
         end
     end
     word:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
@@ -165,11 +203,10 @@ function UiKit.header(parent, text, props)
     return row, word
 end
 
--- an icon's box: a light tint of whatever it sits on, or a warning or reward colour
 local TONES = {
-    Accent = { back = Color3.new(1, 1, 1), clear = 0.8 },
-    Danger = { back = C.Danger, clear = 0.1 },
-    Highlight = { back = C.Highlight, clear = 0.15 },
+    Accent = { C.AccentDeep, C.Accent, C.AccentBright },
+    Danger = { C.DangerDeep, C.Danger, C.Text },
+    Highlight = { Color3.fromRGB(80, 60, 16), C.Highlight, C.Highlight },
 }
 
 function UiKit.icon(image, size, tone)
@@ -177,33 +214,29 @@ function UiKit.icon(image, size, tone)
     local box = Instance.new("Frame")
     box.Name = "Icon"
     box.Size = UDim2.fromOffset(size, size)
-    box.BackgroundColor3 = colors.back
-    box.BackgroundTransparency = colors.clear
+    box.BackgroundColor3 = colors[1]
+    box.BackgroundTransparency = 0.3
     box.BorderSizePixel = 0
-    corner(box, 8)
-    stroke(box, C.Edge, 0.45, 1)
+    corner(box, 2)
+    stroke(box, colors[2], 0.1, 1)
     local picture = Instance.new("ImageLabel")
     picture.Name = "Image"
     picture.BackgroundTransparency = 1
     picture.Image = image
-    picture.ImageColor3 = C.Text
+    picture.ImageColor3 = colors[3]
     picture.AnchorPoint = Vector2.new(0.5, 0.5)
     picture.Position = UDim2.fromScale(0.5, 0.5)
-    picture.Size = UDim2.fromScale(0.76, 0.76)
+    picture.Size = UDim2.fromScale(0.7, 0.7)
     picture.Parent = box
     return box
 end
 
 local BUTTON_TONES = {
-    Accent = { back = Color3.fromRGB(30, 140, 245), edge = Color3.fromRGB(180, 230, 255), clear = 0 },
-    Go = { back = Color3.fromRGB(30, 190, 105), edge = Color3.fromRGB(200, 255, 205), clear = 0 },
-    Highlight = { back = Color3.fromRGB(245, 160, 20), edge = Color3.fromRGB(255, 238, 160), clear = 0 },
-    Quiet = { back = Color3.new(1, 1, 1), edge = Color3.new(1, 1, 1), clear = 0.78 },
-    Danger = { back = Color3.fromRGB(235, 45, 95), edge = Color3.fromRGB(255, 190, 210), clear = 0 },
+    Accent = { back = C.AccentDeep, edge = C.Accent, text = C.Text },
+    Highlight = { back = Color3.fromRGB(70, 52, 12), edge = C.Highlight, text = C.Highlight },
+    Quiet = { back = C.Raised, edge = C.EdgeDim, text = C.Text },
+    Danger = { back = C.DangerDeep, edge = C.Danger, text = C.Text },
 }
-for name, hue in UiTheme.Hues do
-    BUTTON_TONES[name] = { back = hue.Top, edge = hue.Edge, clear = 0 }
-end
 
 -- props.Tone picks the colours; button:SetAttribute("Tone", name) changes them later
 function UiKit.button(props)
@@ -219,14 +252,12 @@ function UiKit.button(props)
         button.FontFace = UiTheme.Fonts[copy.Font]
         copy.Font = nil
     end
-    button.TextStrokeColor3 = C.TextShadow
-    button.TextStrokeTransparency = 0.55
-    corner(button, 10)
-    local edge = stroke(button, C.Edge, 0.1, 2)
-    local gloss = Instance.new("UIGradient") -- lit from above. It tints the button's words too: keep it light
-    gloss.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(226, 226, 226))
-    gloss.Rotation = 90
-    gloss.Parent = button
+    corner(button)
+    local edge = stroke(button, C.Edge, 0.15)
+    local glass = Instance.new("UIGradient")
+    glass.Rotation = 90
+    glass.Transparency = NumberSequence.new(0, 0.25)
+    glass.Parent = button
     local scale = Instance.new("UIScale")
     scale.Parent = button
 
@@ -234,12 +265,12 @@ function UiKit.button(props)
     local function paint()
         local tone = BUTTON_TONES[button:GetAttribute("Tone")] or BUTTON_TONES.Quiet
         local lit = hovered and button.Active
-        button.BackgroundColor3 = if lit then tone.back:Lerp(Color3.new(1, 1, 1), 0.2) else tone.back
-        button.BackgroundTransparency = if button.Active then tone.clear else math.max(tone.clear, 0.45)
-        button.TextColor3 = C.Text
+        button.BackgroundColor3 = if lit then tone.back:Lerp(tone.edge, 0.25) else tone.back
+        button.BackgroundTransparency = 0.18
+        button.TextColor3 = tone.text
         edge.Color = tone.edge
-        edge.Transparency = if button.Active then 0.1 else 0.6
-        edge.Thickness = if lit then 3 else 2
+        edge.Transparency = if button.Active then 0.05 else 0.6
+        edge.Thickness = if lit then 2 else 1
     end
     button:SetAttribute("Tone", toneName)
     button:GetAttributeChangedSignal("Tone"):Connect(paint)
@@ -268,67 +299,55 @@ function UiKit.button(props)
     return button
 end
 
--- A round on-screen button for touch players (Strike, Dash ...), in a UiTheme.Hues colour.
-function UiKit.touchButton(button, text, hueName)
-    local hue = UiTheme.Hues[hueName or "Blue"]
-    button.BackgroundTransparency = 0.05
+-- A round on-screen button for touch players (Strike, Dash ...), in the System's colours.
+function UiKit.touchButton(button, text)
+    button.BackgroundColor3 = C.AccentDeep
+    button.BackgroundTransparency = 0.2
     button.BorderSizePixel = 0
     button.FontFace = UiTheme.Fonts.Title
     button.TextScaled = true
     button.TextColor3 = C.Text
-    button.TextStrokeColor3 = C.TextShadow
-    button.TextStrokeTransparency = 0.55
     button.Text = text
     corner(button, 999)
-    stroke(button, hue.Edge, 0.05, 3)
-    -- a gradient on a text button tints its words too, so the colour goes on the button and this stays light
-    button.BackgroundColor3 = hue.Top
-    local gloss = Instance.new("UIGradient")
-    gloss.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(226, 226, 226))
-    gloss.Rotation = 90
-    gloss.Parent = button
-    UiKit.padding(button, 10, 10)
+    stroke(button, C.Accent, 0.1, 2)
+    UiKit.padding(button, 7, 7)
 end
 
 function UiKit.keycap(key)
     local cap = UiKit.label({
-        Name = "Keycap", Font = "Strong", Text = key, TextSize = 13, TextColor3 = C.Text,
-        TextXAlignment = Enum.TextXAlignment.Center, BackgroundTransparency = 0.35,
+        Name = "Keycap", Font = "Strong", Text = key, TextSize = 13, TextColor3 = C.AccentBright,
+        TextXAlignment = Enum.TextXAlignment.Center, BackgroundTransparency = 0.3,
         BackgroundColor3 = C.Well, Size = UDim2.fromOffset(24, 22),
     })
-    corner(cap, 6)
-    stroke(cap, C.Edge, 0.5)
+    corner(cap, 2)
+    stroke(cap, C.Accent, 0.35)
     cap.Visible = not UserInputService.TouchEnabled or UserInputService.KeyboardEnabled
     return cap
 end
 
--- props.Fill: the fill colour (default a sweep of colours). UiKit.setBar(bar, t) eases the fill there.
+-- props.Fill: the fill colour (default the accent). UiKit.setBar(bar, t) eases the fill there.
 function UiKit.bar(props)
     local copy = table.clone(props or {})
-    local fillColor = copy.Fill
+    local fillColor = copy.Fill or C.Accent
     copy.Fill = nil
     local track = Instance.new("Frame")
     track.Name = "Bar"
     track.BackgroundColor3 = C.Well
-    track.BackgroundTransparency = 0.25
+    track.BackgroundTransparency = 0.2
     track.BorderSizePixel = 0
     track.ClipsDescendants = true
-    corner(track, 4)
+    corner(track, 1)
+    stroke(track, C.EdgeDim, 0.2)
     local fill = Instance.new("Frame")
     fill.Name = "Fill"
     fill.BorderSizePixel = 0
-    fill.BackgroundColor3 = fillColor or Color3.new(1, 1, 1)
+    fill.BackgroundColor3 = fillColor
     fill.Size = UDim2.fromScale(0, 1)
     fill.Parent = track
-    corner(fill, 4)
-    local sweep = Instance.new("UIGradient") -- it tints whatever fill colour is set: brightest at the leading edge
-    sweep.Color = if fillColor then ColorSequence.new(Color3.fromRGB(170, 170, 170), Color3.new(1, 1, 1))
-        else ColorSequence.new({
-            ColorSequenceKeypoint.new(0, C.Accent),
-            ColorSequenceKeypoint.new(0.55, Color3.fromRGB(150, 110, 255)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 110, 190)),
-        })
-    sweep.Parent = fill
+    corner(fill, 1)
+    local sheen = Instance.new("UIGradient") -- brightest at the leading edge (it tints whatever fill colour is set)
+    sheen.Color = ColorSequence.new(Color3.fromRGB(140, 140, 140), Color3.new(1, 1, 1))
+    sheen.Parent = fill
     apply(track, copy)
     return track
 end
@@ -347,9 +366,9 @@ function UiKit.scroll(props)
     local scroll = Instance.new("ScrollingFrame")
     scroll.BackgroundTransparency = 1
     scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 5
+    scroll.ScrollBarThickness = 3
     scroll.ScrollBarImageColor3 = C.Edge
-    scroll.ScrollBarImageTransparency = 0.35
+    scroll.ScrollBarImageTransparency = 0.3
     scroll.CanvasSize = UDim2.new()
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
     scroll.ScrollingDirection = Enum.ScrollingDirection.Y
@@ -367,20 +386,18 @@ function UiKit.card(props)
     local stripeColor = copy.Stripe
     copy.Stripe = nil
     local card = Instance.new("Frame")
-    card.BackgroundColor3 = Color3.new(1, 1, 1)
-    card.BackgroundTransparency = 0.84
+    card.BackgroundColor3 = C.Raised
+    card.BackgroundTransparency = 0.35
     card.BorderSizePixel = 0
-    corner(card, 10)
-    stroke(card, C.Edge, 0.65)
+    corner(card)
+    stroke(card, C.EdgeDim, 0.35)
     if stripeColor then
         local stripe = Instance.new("Frame")
         stripe.Name = "Stripe"
         stripe.BorderSizePixel = 0
         stripe.BackgroundColor3 = stripeColor
-        stripe.Position = UDim2.fromOffset(3, 6)
-        stripe.Size = UDim2.new(0, 4, 1, -12)
+        stripe.Size = UDim2.new(0, 3, 1, 0)
         stripe.Parent = card
-        corner(stripe, 2)
     end
     apply(card, copy)
     return card
@@ -389,11 +406,12 @@ end
 function UiKit.tag(text, color)
     color = color or C.Accent
     local tag = UiKit.label({
-        Name = "Tag", Font = "Strong", Text = string.upper(text), TextSize = 10, TextColor3 = C.Text,
-        BackgroundColor3 = color, BackgroundTransparency = 0.1, AutomaticSize = Enum.AutomaticSize.X,
+        Name = "Tag", Font = "Strong", Text = string.upper(text), TextSize = 10, TextColor3 = color,
+        BackgroundColor3 = color, BackgroundTransparency = 0.85, AutomaticSize = Enum.AutomaticSize.X,
         Size = UDim2.fromOffset(0, 16), TextXAlignment = Enum.TextXAlignment.Center,
     })
-    corner(tag, 6)
+    corner(tag, 2)
+    stroke(tag, color, 0.4)
     UiKit.padding(tag, 6, 0)
     return tag
 end
@@ -409,8 +427,8 @@ function UiKit.textbox(props)
     box.TextColor3 = C.Text
     box.PlaceholderColor3 = C.Muted
     box.TextXAlignment = Enum.TextXAlignment.Left
-    corner(box, 10)
-    local edge = stroke(box, C.EdgeDim, 0.3)
+    corner(box)
+    local edge = stroke(box, C.EdgeDim, 0.2)
     box.Focused:Connect(function()
         edge.Color = C.Edge
     end)

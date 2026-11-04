@@ -35,6 +35,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local MovementGuard = require(script.Parent.Parent:WaitForChild("Security"):WaitForChild("MovementGuard"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
@@ -61,6 +62,7 @@ local TAKE_GRACE = 1.5          -- seconds a fresh thief can't be knocked: a blo
 local EGG_PROMPT_DISTANCE = 12
 local POUNCE_HEIGHT = 9
 local POUNCE_LEAD = 0.85        -- how far ahead it aims: a straight runner is caught, one who turns or dashes is not
+local MAX_AIRBORNE = 12         -- seconds a thief may stay off the ground: every air leap and a long glide fit
 local MAX_CARRY = 300           -- seconds a thief may carry the egg (home across the longest bridge); nobody hides it forever
 
 local Guardian = {}
@@ -313,19 +315,19 @@ function Guardian:clearThief()
     self.egg.owner = nil
 end
 
--- Welds the egg above the thief's head.
+-- Welds the egg before the thief's chest, for their arms to hold (PoseController's CARRY_EGG).
 function Guardian:carry(player)
     local root = rootOf(player)
-    local head = player.Character:FindFirstChild("Head") or root
+    local chest = player.Character:FindFirstChild("UpperTorso") or player.Character:FindFirstChild("Torso") or root
     local egg = self.egg
     anchorEgg(egg.model, false)
-    local height = self.config.Egg.CarriedHeight
     local body = egg.model.PrimaryPart
-    local offset = CFrame.new(0, head.Size.Y / 2 + height / 2 + 0.6, 0)
-    body.CFrame = head.CFrame * offset * body.PivotOffset:Inverse()
+    local depth = egg.model:GetExtentsSize().Z
+    local offset = CFrame.new(0, -0.35, -(chest.Size.Z / 2 + depth / 2 + 0.1))
+    body.CFrame = chest.CFrame * offset * body.PivotOffset:Inverse()
     local weld = Instance.new("Weld")
     weld.Name = "CarryWeld"
-    weld.Part0, weld.Part1 = head, body
+    weld.Part0, weld.Part1 = chest, body
     weld.C0 = offset * body.PivotOffset:Inverse()
     weld.Parent = body
     egg.owner = player
@@ -333,6 +335,7 @@ function Guardian:carry(player)
     egg.lastGrounded = nil
     egg.lastPosition = root.Position
     egg.takenFrom = root.Position
+    egg.airborneSince = nil
     self.knocked[player] = os.clock() + TAKE_GRACE
     player:SetAttribute("CarryingEgg", egg.eggId)
     player:SetAttribute("CarryingGuardian", self.id)
@@ -362,7 +365,7 @@ function Guardian:takeFromStand(player, slot)
     local root = rootOf(player)
     local eggId = slot.eggId
     if not (root and eggId) or player:GetAttribute("IsFlying") == true or player:GetAttribute("CarryingEgg")
-        or not EggStands.within(slot, root.Position) then
+        or not EggStands.within(slot, root.Position) or MovementGuard.isSuspect(player) then
         return
     end
     if self.state ~= "Weakened" or self.egg.state ~= "Available" then
@@ -503,11 +506,15 @@ function Guardian:watchThief()
         return
     end
     egg.lastPosition = position
-    -- farther from where it was taken than the thief's fastest dash could carry it, the whole way: a
-    -- hacked client creeping along under TELEPORT_JUMP a frame. The egg falls where they stood
-    local dash = Ranks.getQinggong(Ranks.getPlayerRankName(player)).DashSpeed
-    if (position - egg.takenFrom).Magnitude > dash * (os.clock() - egg.takenAt) + CARRY_SLACK then
+    -- farther from where it was taken than the thief could honestly get: a hacked client creeping along
+    -- under TELEPORT_JUMP a frame. The egg falls where they stood
+    if (position - egg.takenFrom).Magnitude > MovementGuard.maxTravel(player, os.clock() - egg.takenAt) + CARRY_SLACK then
         self:dropEgg(egg.takenFrom)
+        return
+    end
+    -- hanging in the air too long: a hacked client staying over the guardian's reach
+    if egg.airborneSince and os.clock() - egg.airborneSince > MAX_AIRBORNE then
+        self:dropEgg(egg.lastGrounded or egg.takenFrom)
         return
     end
     if self:inSafeZone(position) then
@@ -523,6 +530,9 @@ function Guardian:watchThief()
         egg.nextGroundCheck = now + 0.2
         if isGrounded(root, humanoid) then
             egg.lastGrounded = position
+            egg.airborneSince = nil
+        else
+            egg.airborneSince = egg.airborneSince or now
         end
     end
 end
@@ -556,6 +566,7 @@ function Guardian:knock(player, origin, power)
         return
     end
     self.knocked[player] = now + KNOCK_IMMUNITY
+    MovementGuard.allow(player, power * 3) -- the throw, which the client carries out
     local away = flat(root.Position - origin)
     away = if away.Magnitude > 0.1 then away.Unit else flat(self.root.CFrame.LookVector).Unit
     RemoteEvents.GuardianEvent:FireClient(player, self.model, "Knock", away * power + Vector3.new(0, power * 0.5, 0), self.config.Stagger)

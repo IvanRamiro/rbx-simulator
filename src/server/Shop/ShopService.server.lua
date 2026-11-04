@@ -32,9 +32,12 @@ local WeaponInventory = require(script.Parent:WaitForChild("WeaponInventory"))
 
 local REACH = 45 -- studs from a shop's prompt
 local REQUEST_COOLDOWN = 0.25
+local FORGE_COOLDOWN = 2 -- seconds between name checks: they use Roblox's filter, which has a quota
 local SHOPS = { Blacksmith = true, BuySell = true }
 
 local lastRequest = {}
+local lastForge = {}
+local MovementGuard = require(script.Parent.Parent:WaitForChild("Security"):WaitForChild("MovementGuard"))
 local ready = {}
 
 local function snapshot(player)
@@ -54,7 +57,7 @@ local function nearShop(player, shop)
     spot = spot and spot:FindFirstChild(shop)
     spot = spot and spot:FindFirstChild("Prompt")
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    return spot ~= nil and root ~= nil and (root.Position - spot.Position).Magnitude <= REACH
+    return spot ~= nil and root ~= nil and not MovementGuard.isSuspect(player) and (root.Position - spot.Position).Magnitude <= REACH
 end
 
 -- How a message names a weapon: by the name its owner forged it with, or as "the <its name>".
@@ -152,6 +155,10 @@ function actions.Forge(player, instanceId, spec)
     if Wallet.balance(player) < price then
         return false, "You need " .. price .. " Spirit Stones."
     end
+    if os.clock() - (lastForge[player] or -FORGE_COOLDOWN) < FORGE_COOLDOWN then
+        return false, "The forge is still cooling. Try again in a moment."
+    end
+    lastForge[player] = os.clock()
     forging[player] = true
     local name, why = filterName(player, spec.Name)
     forging[player] = nil
@@ -254,6 +261,7 @@ end
 Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(function(player)
     lastRequest[player] = nil
+    lastForge[player] = nil
     forging[player] = nil
     ready[player] = nil
 end)

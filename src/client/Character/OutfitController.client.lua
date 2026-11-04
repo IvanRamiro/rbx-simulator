@@ -24,7 +24,7 @@ local COLLECT_RETRY = 1 -- seconds between looks for a robe's pieces that haven'
 local UP = Vector3.new(0, 1, 0)
 
 -- ---------- the Robes button (on the HUD's rail, under Pets; a gold "On" while worn) ----------
-local button, setRobesBadge = Hud.railButton("RobesButton", UiTheme.Icons.Robes, "Robes", 2, "Rose")
+local button, setRobesBadge = Hud.railButton("RobesButton", UiTheme.Icons.Robes, "Robes", 2)
 button.Visible = false
 
 local function owned()

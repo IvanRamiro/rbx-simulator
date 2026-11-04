@@ -12,6 +12,7 @@ local Hud = require(UI:WaitForChild("Hud"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Portraits = require(UI:WaitForChild("Portraits"))
+local PetPreload = require(script.Parent:WaitForChild("PetPreload"))
 local HatchCeremony = require(script.Parent:WaitForChild("HatchCeremony"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
@@ -19,10 +20,10 @@ local C = UiTheme.Colors
 local GRAND_REVEAL = { Legendary = true, Mythical = true, Secret = true } -- rarities revealed with the grander sound
 local RARITY_ORDER = { Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }
 
-local toggleButton, setPetBadge = Hud.railButton("PetsButton", UiTheme.Icons.Pets, "Pets", 1, "Orange")
+local toggleButton, setPetBadge = Hud.railButton("PetsButton", UiTheme.Icons.Pets, "Pets", 1)
 
 local window = Hud.window({
-    Name = "PetsWindow", Title = "PETS", Hue = "Orange", Size = Vector2.new(330, 400), AnchorPoint = Vector2.new(0, 0),
+    Name = "PetsWindow", Title = "PETS", Size = Vector2.new(330, 400), AnchorPoint = Vector2.new(0, 0),
     Position = UDim2.fromOffset(UiTheme.Margin + 310 + 16, UiTheme.Margin), -- beside the left column (STATUS is 310 wide)
 })
 local body = window.Body
@@ -119,6 +120,9 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
 end
 
 local function renderInventory(snapshot)
+    for _, pet in if snapshot then snapshot.Pets else {} do
+        PetPreload.soon(pet.PetId) -- ready before their portraits or their first walk
+    end
     if not snapshot then
         return
     end

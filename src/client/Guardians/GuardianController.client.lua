@@ -107,13 +107,14 @@ local message = Toast.new("GuardianMessage", Color3.new(1, 1, 1), 4)
 
 -- the health bar of the guardian being fought: first in the HUD's top-centre stack, so the
 -- messages (Toast) fall in below it instead of under it
-local bar = UiKit.panel({ Name = "GuardianBar", Size = UDim2.fromOffset(460, 66), LayoutOrder = 0, Visible = false, Hue = "Crimson", Parent = Hud.Banner })
+local SMALL_BAR = Hud.isCompact() -- on a phone it has to fit between the STATUS and QUEST windows
+local bar = UiKit.panel({ Name = "GuardianBar", Size = UDim2.fromOffset(if SMALL_BAR then 300 else 460, 66), LayoutOrder = 0, Visible = false, Parent = Hud.Banner })
 local barIcon = UiKit.icon(UiTheme.Icons.Guardian, 34, "Danger")
 barIcon.Position = UDim2.fromOffset(14, 16)
 barIcon.Parent = bar
 
 local nameLabel = UiKit.label({
-    Font = "Title", TextSize = 16, TextColor3 = NAME_COLOR, Position = UDim2.fromOffset(58, 9),
+    Font = "Title", TextSize = if SMALL_BAR then 14 else 16, TextColor3 = NAME_COLOR, Position = UDim2.fromOffset(58, 9),
     Size = UDim2.new(0.6, -58, 0, 20), TextTruncate = Enum.TextTruncate.AtEnd, Parent = bar,
 })
 
@@ -203,7 +204,7 @@ local function updateBar(dt)
     local share = math.clamp(health / maxHealth, 0, 1)
     nameLabel.Text = config and config.DisplayName or best.Name
     local look = STATE_LOOK[state]
-    stateLabel.Text = look.Text
+    stateLabel.Text = if SMALL_BAR then string.split(look.Text, " ·")[1] else look.Text
     stateLabel.TextColor3 = look.Color
     setFill(if state == "Enraged" then FILL.Rage else FILL.Calm)
     fill.Size = UDim2.fromScale(share, 1)

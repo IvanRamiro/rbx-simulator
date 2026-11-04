@@ -15,6 +15,8 @@ local random = Random.new()
 local REQUEST_COOLDOWN = 0.5 -- seconds between a player's equip/unequip/aura requests: each rebuilds models on every client
 
 local lastRequest = {}
+local lastHatchRequest = {}
+local HATCH_REQUEST_COOLDOWN = 0.25
 
 local function setupPlayer(player)
     local progress, isNewPlayer = PlayerData.waitForData(player)
@@ -97,6 +99,11 @@ local function stageEgg(altar, eggId)
 end
 
 local function onHatchRequest(player, eggId)
+    local now = os.clock()
+    if now - (lastHatchRequest[player] or -1) < HATCH_REQUEST_COOLDOWN then
+        return
+    end
+    lastHatchRequest[player] = now
     local egg = typeof(eggId) == "string" and GameConfig.Eggs[eggId]
     local altar, promptPart, prompt = altarParts()
     if not egg or hatching[player] or player.Parent ~= Players or not promptPart
@@ -152,6 +159,7 @@ handleRequest(RemoteEvents.SetAuraPetEvent, PetInventory.setAuraPet)
 Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(function(player)
     lastRequest[player] = nil
+    lastHatchRequest[player] = nil
     hatching[player] = nil
 end)
 

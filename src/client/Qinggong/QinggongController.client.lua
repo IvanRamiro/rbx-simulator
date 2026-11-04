@@ -29,7 +29,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local qinggong = GameConfig.Qinggong
 
 local PIP_READY = UiTheme.Colors.Sky
-local PIP_SPENT = Color3.fromRGB(8, 60, 76)
+local PIP_SPENT = Color3.fromRGB(48, 58, 62)
 local GLIDE_COLOR = UiTheme.Colors.AccentBright
 local STAMINA_COLOR = UiTheme.Colors.Highlight
 local STAMINA_LOW = UiTheme.Colors.Danger
@@ -41,7 +41,7 @@ local MAX_PIPS = GameConfig.Qinggong.Levels[#GameConfig.Qinggong.Levels].AirLeap
 
 -- the Qinggong strip, at the top of the HUD's dock: an icon, a diamond per air leap, the stamina
 -- bar and a line of what's next (or the state: gliding, sword flight)
-local panel = UiKit.panel({ Name = "QinggongStrip", Size = UDim2.fromOffset(240, 50), LayoutOrder = 10, Hue = "Teal", Parent = Hud.Dock })
+local panel = UiKit.panel({ Name = "QinggongStrip", Size = UDim2.fromOffset(Hud.DockWidth(), 50), LayoutOrder = 10, Brackets = false, Parent = Hud.Dock })
 local icon = UiKit.icon(UiTheme.Icons.Qinggong, 30, "Accent")
 icon.AnchorPoint = Vector2.new(0, 0.5)
 icon.Position = UDim2.new(0, 9, 0.5, 0)
@@ -482,18 +482,19 @@ if UserInputService.TouchEnabled then
     local touchGui = Instance.new("ScreenGui")
     touchGui.Name = "QinggongTouch"
     touchGui.ResetOnSpawn = false
-    local function touchButton(name, text, position, hue)
+    -- round the jump button, whose centre Roblox keeps about 60 from the right and 55 from the bottom
+    local function touchButton(name, text, position)
         local button = Instance.new("TextButton")
         button.Name = name
         button.AnchorPoint = Vector2.new(0.5, 0.5)
         button.Position = position
-        button.Size = UDim2.fromOffset(64, 64)
-        UiKit.touchButton(button, text, hue)
+        button.Size = UDim2.fromOffset(52, 52)
+        UiKit.touchButton(button, text)
         button.Parent = touchGui
         return button
     end
-    touchButton("Dash", "Dash", UDim2.new(1, -170, 1, -170), "Teal").Activated:Connect(dash)
-    local swordButton = touchButton("Sword", "Sword", UDim2.new(1, -95, 1, -220), "Violet")
+    touchButton("Dash", "Dash", UDim2.new(1, -122, 1, -122)).Activated:Connect(dash)
+    local swordButton = touchButton("Sword", "Sword", UDim2.new(1, -52, 1, -132))
     swordButton.Activated:Connect(requestFlight)
     local function showSword()
         swordButton.Visible = (player:GetAttribute("QinggongFlightSpeed") or 0) > 0

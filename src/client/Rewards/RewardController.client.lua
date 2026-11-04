@@ -23,9 +23,9 @@ local DAYS = #GameConfig.Rewards.Daily
 local GROUP = GameConfig.Rewards.Group
 local hasGroup = GROUP.GroupId > 0
 
-local toggleButton, setBadge = Hud.railButton("RewardsButton", UiTheme.Icons.Rewards, "Rewards", 3, "Gold")
+local toggleButton, setBadge = Hud.railButton("RewardsButton", UiTheme.Icons.Rewards, "Rewards", 3)
 local window = Hud.window({
-    Name = "RewardsWindow", Title = "REWARDS", Hue = "Gold", Size = Vector2.new(400, if hasGroup then 282 else 232),
+    Name = "RewardsWindow", Title = "REWARDS", Size = Vector2.new(400, if hasGroup then 282 else 232),
     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 })
 local body = window.Body
@@ -44,12 +44,12 @@ for day = 1, DAYS do
         Position = UDim2.fromOffset(0, 6), Size = UDim2.new(1, 0, 0, 14), TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
     local amount = UiKit.label({ Name = "Amount", Font = "Title", TextSize = 14, TextColor3 = C.Text,
         Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
-    local extra = UiKit.label({ Name = "Extra", Font = "Strong", TextSize = 10, TextColor3 = C.Text,
+    local extra = UiKit.label({ Name = "Extra", Font = "Strong", TextSize = 10, TextColor3 = C.AccentBright,
         Position = UDim2.fromOffset(0, 48), Size = UDim2.new(1, 0, 0, 14), TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
     cards[day] = { card = card, word = word, amount = amount, extra = extra }
 end
 
-local claim = UiKit.button({ Name = "Claim", Tone = "Go", Font = "Title", TextSize = 16, Text = "CLAIM",
+local claim = UiKit.button({ Name = "Claim", Tone = "Highlight", Font = "Title", TextSize = 16, Text = "CLAIM",
     Position = UDim2.fromOffset(0, 84), Size = UDim2.new(1, 0, 0, 38), Parent = body })
 claim.Activated:Connect(function()
     if claim.Active then
@@ -96,14 +96,13 @@ local function render()
         c.extra.Text = if minutes > 0 then "+" .. minutes .. " MIN QI" else ""
         local claimed = day < current or (day == current and not isReady)
         local isNext = day == current and isReady
-        c.word.TextColor3 = if claimed then C.AccentBright else C.Text
-        c.card.BackgroundTransparency = if isNext then 0.55 elseif claimed then 0.92 else 0.84
+        c.word.TextColor3 = if isNext then C.Highlight elseif claimed then C.AccentBright else C.Muted
         c.amount.TextColor3 = if claimed then C.Muted else C.Text
         c.word.Text = if claimed then "DONE" else "DAY " .. day
     end
     claim.Active = isReady
     claim.AutoButtonColor = false
-    claim:SetAttribute("Tone", if isReady then "Go" else "Quiet")
+    claim:SetAttribute("Tone", if isReady then "Highlight" else "Quiet")
     claim.Text = if isReady then "CLAIM DAY " .. current else "COME BACK TOMORROW"
     setBadge(if isReady then "!" else nil, "Highlight")
     if groupButton then

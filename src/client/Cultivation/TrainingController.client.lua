@@ -57,9 +57,38 @@ local realmLabel = field("REALM", 110)
 
 -- On a short screen (a phone in landscape) the window slims down to Qi, rank and progress: NAME
 -- and REALM go, and RANK moves up into NAME's place.
+-- Minimized (the player's choice, saved in their settings), it shrinks to the Qi alone.
 local FULL_HEIGHT, COMPACT_HEIGHT = 178, 140
-local function fitStatus(compact)
+local MINIMIZED_SIZE = UDim2.fromOffset(176, 46)
+local minimizeButton = UiKit.button({
+    Name = "Minimize", Tone = "Quiet", Font = "Strong", Text = "-", TextSize = 16, AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.new(1, 6, 0, -5), Size = if UserInputService.TouchEnabled then UDim2.fromOffset(32, 32) else UDim2.fromOffset(24, 24),
+    ZIndex = 3, Parent = status,
+})
+local function fitStatus()
+    local compact = Hud.isCompact()
+    local minimized = player:GetAttribute("SettingStatusMinimized") == true
+    for _, child in status:GetChildren() do
+        if child:IsA("GuiObject") then
+            child.Visible = not minimized or child == qiIcon or child == qiLabel or child == minimizeButton
+        end
+    end
+    minimizeButton.Text = if minimized then "+" else "-"
+    if minimized then
+        statusFrame.Size = MINIMIZED_SIZE
+        qiIcon.Position = UDim2.fromOffset(0, 0)
+        qiIcon.Size = UDim2.fromOffset(26, 26)
+        qiLabel.Position = UDim2.fromOffset(32, 0)
+        qiLabel.Size = UDim2.new(1, -60, 0, 26)
+        qiLabel.TextSize = 20
+        return
+    end
     statusFrame.Size = UDim2.fromOffset(310, if compact then COMPACT_HEIGHT else FULL_HEIGHT)
+    qiIcon.Position = UDim2.fromOffset(0, 30)
+    qiIcon.Size = UDim2.fromOffset(34, 34)
+    qiLabel.Position = UDim2.fromOffset(44, 38)
+    qiLabel.Size = UDim2.new(1, -120, 0, 28)
+    qiLabel.TextSize = 26
     for _, key in { "NAME", "REALM" } do
         status[key .. "Key"].Visible = not compact
         status[key .. "Value"].Visible = not compact
@@ -67,8 +96,15 @@ local function fitStatus(compact)
     status.RANKKey.Position = UDim2.fromOffset(0, if compact then 74 else 92)
     status.RANKValue.Position = UDim2.fromOffset(60, if compact then 74 else 92)
 end
+minimizeButton.Activated:Connect(function()
+    -- the attribute changes at once, so the window answers without waiting for the server's copy
+    local minimized = player:GetAttribute("SettingStatusMinimized") ~= true
+    player:SetAttribute("SettingStatusMinimized", minimized)
+    RemoteEvents.SettingsEvent:FireServer("StatusMinimized", minimized)
+end)
+player:GetAttributeChangedSignal("SettingStatusMinimized"):Connect(fitStatus)
 Hud.CompactChanged:Connect(fitStatus)
-fitStatus(Hud.isCompact())
+fitStatus()
 
 local progressBar = UiKit.bar({ Name = "Progress", Position = UDim2.new(0, 0, 1, -22), Size = UDim2.new(1, 0, 0, 6), Parent = status })
 local nextRankLabel = UiKit.label({
@@ -80,7 +116,7 @@ local nextRankLabel = UiKit.label({
 -- ---------- the dock: the breakthrough (when it's ready), the station's bonus, Cultivate ----------
 local rankUpButton = UiKit.button({
     Name = "RankUpButton", Tone = "Highlight", Font = "Title", TextSize = 17, Text = "BREAK THROUGH",
-    Size = UDim2.fromOffset(240, 40), AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 20, Visible = false,
+    Size = UDim2.fromOffset(Hud.DockWidth(), 40), AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 20, Visible = false,
     Parent = Hud.Dock,
 })
 UiKit.padding(rankUpButton, 16, 0)
@@ -98,7 +134,7 @@ end)
 
 local stationLabel = UiKit.label({
     Name = "StationLabel", Font = "Strong", TextSize = 13, TextColor3 = C.AccentBright,
-    BackgroundTransparency = 0.15, BackgroundColor3 = C.Well, AutomaticSize = Enum.AutomaticSize.X,
+    BackgroundTransparency = 0.15, BackgroundColor3 = C.AccentDeep, AutomaticSize = Enum.AutomaticSize.X,
     Size = UDim2.fromOffset(0, 24), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 25, Visible = false,
     Text = GameConfig.TrainingStation.DisplayName .. "  +" .. GameConfig.TrainingStation.QiBonusPercent .. "% Qi",
     Parent = Hud.Dock,
@@ -107,8 +143,8 @@ UiKit.corner(stationLabel)
 UiKit.padding(stationLabel, 10, 0)
 
 local cultivateButton = UiKit.button({
-    Name = "CultivateButton", Tone = "Go", Font = "Title", TextSize = 18, Text = "CULTIVATE",
-    Size = UDim2.fromOffset(240, 50), LayoutOrder = 30, Parent = Hud.Dock,
+    Name = "CultivateButton", Tone = "Accent", Font = "Title", TextSize = 18, Text = "CULTIVATE",
+    Size = UDim2.fromOffset(Hud.DockWidth(), if Hud.isCompact() then 38 else 50), LayoutOrder = 30, Parent = Hud.Dock,
 })
 local cultivateKey = UiKit.keycap(keyName)
 cultivateKey.AnchorPoint = Vector2.new(1, 0.5)
@@ -120,8 +156,8 @@ local function isCultivating()
 end
 
 local function updateCultivateButton()
-    -- while cultivating it says how to stop, in the colour of stopping
-    cultivateButton:SetAttribute("Tone", if isCultivating() then "Danger" else "Go")
+    -- while cultivating it turns quiet and says how to stop: the aura itself is the feedback
+    cultivateButton:SetAttribute("Tone", if isCultivating() then "Quiet" else "Accent")
     cultivateButton.Text = if isCultivating() then "STOP CULTIVATING" else "CULTIVATE"
 end
 

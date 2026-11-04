@@ -26,8 +26,14 @@ end
 
 local stationCenter = nil
 
+-- where each player began cultivating: walking or teleporting off ends it, on the server's own word
+local cultivatingFrom = {}
+local STILL_RADIUS = 8
+
 local function setCultivating(player, isCultivating)
     cultivatingPlayers[player] = if isCultivating then true else nil
+    local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    cultivatingFrom[player] = if isCultivating and rootPart then rootPart.Position else nil
     player:SetAttribute("IsCultivating", isCultivating)
     if not isCultivating then
         player:SetAttribute("AtTrainingStation", false)
@@ -111,7 +117,7 @@ local function onCultivationRequest(player, wantsToCultivate)
             return
         end
 
-        if player:GetAttribute("IsFlying") == true then
+        if player:GetAttribute("IsFlying") == true or player:GetAttribute("CarryingEgg") ~= nil then
             return
         end
     end
@@ -123,6 +129,12 @@ end
 local function awardCultivationQi(player)
     local qi = getQiValue(player)
     if not (qi and hasAliveCharacter(player)) then
+        setCultivating(player, false)
+        return
+    end
+    local from = cultivatingFrom[player]
+    local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
+    if (from and rootPart and (rootPart.Position - from).Magnitude > STILL_RADIUS) or player:GetAttribute("CarryingEgg") ~= nil then
         setCultivating(player, false)
         return
     end
@@ -145,6 +157,7 @@ Players.PlayerAdded:Connect(setupPlayer)
 
 Players.PlayerRemoving:Connect(function(player)
     cultivatingPlayers[player] = nil
+    cultivatingFrom[player] = nil
     lastToggleTime[player] = nil
 end)
 

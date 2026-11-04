@@ -30,7 +30,8 @@ end
 local function strike()
     local character = player.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    if not humanoid or humanoid.Health <= 0 or player:GetAttribute("IsCultivating") == true then
+    if not humanoid or humanoid.Health <= 0 or player:GetAttribute("IsCultivating") == true
+        or player:GetAttribute("CarryingEgg") ~= nil then -- both hands are round the egg
         return
     end
     local now = os.clock()
@@ -77,9 +78,9 @@ if UserInputService.TouchEnabled then
     local button = Instance.new("TextButton")
     button.Name = "Strike"
     button.AnchorPoint = Vector2.new(0.5, 0.5)
-    button.Position = UDim2.new(1, -230, 1, -100)
-    button.Size = UDim2.fromOffset(72, 72)
-    UiKit.touchButton(button, "Strike", "Crimson")
+    button.Position = UDim2.new(1, -148, 1, -52)
+    button.Size = UDim2.fromOffset(62, 62)
+    UiKit.touchButton(button, "Strike")
     button.Parent = gui
     button.Activated:Connect(strike)
     gui.Parent = player:WaitForChild("PlayerGui")
