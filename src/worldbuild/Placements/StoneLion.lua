@@ -1,4 +1,4 @@
--- Yggdrasil's guardian, the Awakened Stone Lion (tools/blender/guardians/stone_lion.py): its
+-- The Beginner Isle's guardian, the Awakened Stone Lion (tools/blender/guardians/stone_lion.py): its
 -- pieces' centres as authored, in studs from its origin, the ground under its chest (front toward
 -- -Z, its left toward -X). Each piece rides a segment, which turns about its pivot. Orb, Eyes and
 -- Pupils are the glow pieces, found by colour (Hex; the dark Neon pupils render black). Used by

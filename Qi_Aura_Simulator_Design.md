@@ -590,17 +590,18 @@ The older family designs (`tools/blender/eggs/Eggs.blend`) are no longer used by
 
 ## 6. World
 
-Five floating islands built from original Blender work: terrain tops, sculpted undersides, landmarks and set pieces. **Yggdrasil** is the hub at the centre, about 500 studs across (three times the others), and a bridge leaves it for each other island.
+Six floating islands built from original Blender work: terrain tops, sculpted undersides, landmarks and set pieces. **Yggdrasil** is the hub at the centre, about 500 studs across (three times the others), and a bridge leaves it for each other island. The **Beginner Isle** (November 4, 2026) lies just east of it, on a short bridge open from the start.
 
 **Layout** (since November 1, 2026, the owner's map; `tools/blender/world/layout.py` is the one source):
 - Every island's ground is at Y 200. The four outer islands fan out north of Yggdrasil, west to east in unlock order, and the harder an island, the farther it stands (the owner's rule, November 2, 2026): each bridge takes about four seconds longer to run than the last at its unlock rank's run speed. Each island is turned by quarter turns so its gate faces the hub (terrain grids stay exact; `Turns` in the terrain data, `WorldBuilder.islandFrame` and `WorldConfig.frame` carry island-local positions into the world).
-- Yggdrasil replaced the Starting Island, which carried its content over: the Beginner eggs, the Stone Lion, the Qi Spring, the Root of the Island and all its kit pieces (stored in Studio as `WorldKit.Yggdrasil`).
+- Yggdrasil replaced the Starting Island, which carried its content over: the Qi Spring, the Root of the Island and all its kit pieces (stored in Studio as `WorldKit.Yggdrasil`).
 
 **Bridges:**
 - Paths in `layout.py` (`BRIDGES`; `--write` generates `src/worldbuild/Placements/Bridges.lua`), built by `WorldBuilder.buildBridges()` into `FloatingIslands.Bridges`. They fan out from Yggdrasil's north rim as on the owner's map, each one straight span from Yggdrasil's ground to just inside its island's gate (no landings: the owner's call). Level, with a gentle arch (at most about 6°): Jade 191 studs, Ember 314, Moonlit 461, Origin 649, about 8, 12, 16 and 20 seconds to run at each unlock rank's speed (24 to 32 studs/s); the sword flies the last two in about 10.
 - A deck 40 studs wide (doubled twice at the owner's request; room to ride the sword along it) with rails. Both ends are carried onto their islands by a solid abutment.
 - At each bridge's start a gate holds a **Qi barrier** (tagged `QiBarrier`, with the destination's `RankId`): solid until the player reaches that rank, then open to them (`BridgeBarriers.client`). A player below the rank found on the bridge past the gate, or on the island it leads to, is put back in front of the gate (`WorldService`).
 - Each bridge wears its island's kit, modelled in Blender (`tools/blender/world/bridge_kits.py` → `assets/world/Bridges/<Theme>Bridge.fbx`, piece offsets in `Placements/BridgeKits.lua`), laid by `buildBridges` over the walkable blockout:
+  - **Beginner Isle:** plain stone deck; at the hub's end a gate of two lacquered posts on stone drums under a tiled lintel with upswept ends, lower and plainer than the Lion Gate it leads to.
   - **Jade Grove:** plank deck with lattice rails, carved jade posts, vines; a jade gate under a two-tier curved roof.
   - **Ember Peak:** hexagonal basalt column tops with lava in the seams; a gate of basalt column clusters.
   - **Moonlit Isle:** moonstone treads with gold handrails and crescent-topped posts; a gate under a great gold crescent.
@@ -612,12 +613,13 @@ Five floating islands built from original Blender work: terrain tops, sculpted u
 | Island | Centre (studs), quarter turns | Feel | Relics |
 |---|---|---|---|
 | Yggdrasil | (0, 200, 0) | The World Tree and the spawn hub | Root of the Island (300 Qi, Qi Initiate) |
+| Beginner Isle | (468, 200, −124), 0 | The outer court of a cultivation sect | None: the Stone Lion and the three Beginner eggs |
 | Jade Grove | (−384, 200, −448), 0 | Ancient forest | Grove Heart, Jade Seed, Whispering Spring (800 Qi each, Qi Gatherer) |
 | Ember Peak | (−128, 200, −696), 0 | Volcanic, lava pools | Ember Heart, Ashen Sigil, Caldera Crown (1,500 Qi each, Qi Awakener) |
 | Moonlit Isle | (192, 200, −804), 0 | Pale and celestial | Moon Mirror, Star Well (20,000 Qi each, Soul Awakening) |
 | Origin Abyss | (596, 200, −856), 0 | Hidden endgame: dark slate, void crystals and rifts, broken ruins | Origin Altar (250K Qi, Divine Initiate); the Void Shard high above it (1M Qi, Void Walker) |
 
-**Bridge gates:** Jade Grove at Qi Gatherer, Ember Peak at Qi Awakener, Moonlit Isle at Soul Awakening, Origin Abyss at Divine Initiate. Moonlit's gate rose from Foundation Initiate on November 4, 2026 (the owner's decision): it opened about 90 minutes before the island's first egg and a guardian tuned for Soul Awakening could be used.
+**Bridge gates:** the Beginner Isle at Qi Initiate (open to all), Jade Grove at Qi Gatherer, Ember Peak at Qi Awakener, Moonlit Isle at Soul Awakening, Origin Abyss at Divine Initiate. Moonlit's gate rose from Foundation Initiate on November 4, 2026 (the owner's decision): it opened about 90 minutes before the island's first egg and a guardian tuned for Soul Awakening could be used.
 
 **Shared rules**
 
@@ -640,11 +642,20 @@ The World Tree stands at the centre; everything else rings it. Scripts: `ygg_isl
   - **The Blacksmith, the Dragon-Kiln Forge:** a smoke-dark timber and stone smithy whose forge is a dragon's head of pale carved stone bursting from the dark back wall, fire licking inside its open jaws round a burning pearl, its eyes alight, its horns, mane and long whiskers bronze. Its bronze body coils up the round chimney and out through the roof, the tail curled over the smoking mouth. Before it an anvil with a half-forged blade glowing on it (the shop's prompt), a quench trough, bellows and coals; a rack of swords and spears along one wall.
   - **Buy & Sell, the Jade Scale:** a merchant's hall behind an open forecourt where a great bronze balance scale stands on jade paving, glowing Spirit Stones heaped in one pan and a spirit egg in the other (pets traded for stones); the shop's prompt is at its foot. Under the roof, a jade-topped counter before a wall of drawers; red paper lanterns at the eave's corners; the merchant's great bronze coin on the back wall.
   - Tested in Play (November 2, 2026): both prompts open their shops; walked from the lane to each prompt; buying and selling pass the reach check at the new prompt spots and are refused from across the island.
-- **East:** the **Egg Garden** (Beginner Qi, Spirit Breeze and Elemental Core on the Starting Island's lotus pedestals, 10 studs apart), the **Stone Lion**'s lair north-west of it, and the **Qi Spring** on the rim, its waterfall pouring off the edge (the Starting Island's spring, carried over whole).
+- **East:** the **Qi Spring** on the rim, its waterfall pouring off the edge (the Starting Island's spring, carried over whole), and the paved road and waystone to the Beginner Isle's bridge. The Egg Garden and the Stone Lion's lair stood here until November 4, 2026 (the owner: "there should be no boss in the main hub"); no guardian and no egg stands are on the hub now.
 - **North:** a paved bridgehead and a waystone for each bridge.
 - **Underside:** the Starting Island's stacked strata at Yggdrasil's scale, gripped by roots that climb out of the meadow, over the rim and down the strata to a taproot. Its lowest point stays above world Y 75: the PDS kit lies below.
 - **Root of the Island:** from the south rim the great root winds down the cliffs, sixteen bracket-fungus shelves along it, to a bowl of roots under the strata holding the relic.
 - **Nature:** spirit pines crowning low knolls near the rim, plum blossoms, mossy rocks and flowers.
+
+### Beginner Isle (the owner, November 4, 2026)
+
+"Create the beginner island so you can transfer the eggs there, and there should be no boss in the main hub." The first island a new player crosses to, in the first ten minutes: the outer court of a cultivation sect. Scripts: `beginner_island.py` (terrain and layout), `beginner_meshes.py` (underside), `beginner_props.py` (kit and placements). About 280 studs across. It shares Yggdrasil's terrain materials (Grass, Ground, Rock, Cobblestone).
+
+- **The route:** Yggdrasil's east side → a 121-stud Lion-themed bridge (`BeginnerRoute`, -15° bearing, the gap between two of Yggdrasil's grip roots) → the Lion Gate → a cobbled path → the Lion Court.
+- **The Lion Court:** cobblestone paving 52 studs in radius at the island's centre. The Stone Lion stands in the middle, facing the gate, its three stands (Beginner Qi, Spirit Breeze, Elemental Core) in an arc behind it at radius 31.
+- **Round it:** a hall behind the court, a training yard with dummies, a weapon rack and lifting stones to the south, a pavilion and bell on a knoll to the north, spirit pines from Yggdrasil's kit.
+- **Ground under the bridge:** cut a little below the abutment and bare (Ground, not Grass), so no terrain or grass blades come through the deck. Looking at this from far away, or in a capture whose camera only moved for a moment, coarse distant terrain can draw across the deck; it is gone once the camera is really there.
 
 ### Jade Grove (built; doubled November 2, 2026)
 
@@ -710,7 +721,7 @@ The hidden endgame island, about 320 studs across since the owner's upgrade, mov
 - **Exports:** the scripts write FBX files to `assets/world/<Island>/` and data modules to `src/worldbuild/`.
 - **Assembly:** `src/worldbuild/WorldBuilder.lua` builds each island in Studio, under `Workspace.FloatingIslands.<Island>`, and the result is saved in the place. The steps are listed at the top of that file.
 - **Terrain:** each island uses its own terrain materials, because terrain colours are global to the place:
-  - Yggdrasil: Grass, Ground, Rock and Cobblestone (the Starting Island's).
+  - Yggdrasil and the Beginner Isle: Grass, Ground, Rock and Cobblestone (the Starting Island's).
   - Jade Grove: LeafyGrass, Mud and Sandstone.
   - Ember Peak: Basalt, CrackedLava, Asphalt (ash) and Sand (paths).
   - Moonlit Isle: Limestone, Snow (frost), Salt (paths) and Pavement.
@@ -733,9 +744,9 @@ The hidden endgame island, about 320 studs across since the owner's upgrade, mov
 
 - **No guardian holds an egg.** Each guards its island's three egg stands, behind it (`server/Guardians/EggStands.lua`).
 - **Below 10% health** (`WeakenedAt` 0.1) a guardian falters and one of its stands' eggs can be taken (F, half a second), if the thief's rank can hatch it; otherwise "needs <rank>". One theft at a time. Taking it empties the stand and enrages the guardian.
-- **Home is Yggdrasil:** the egg is secured the moment the thief sets foot on the hub, across the island's bridge (`SafeZone = { Island = "Yggdrasil" }`; the waypoint is the bridge's hub end). The guardian can't follow off its island. The Stone Lion's eggs are already on Yggdrasil (the Egg Garden's stands): its thief carries the egg to the Hatching Altar. (A separate island for the beginner eggs is planned.)
+- **Home is Yggdrasil:** the egg is secured the moment the thief sets foot on the hub, across the island's bridge (`SafeZone = { Island = "Yggdrasil" }`; the waypoint is the bridge's hub end). The guardian can't follow off its island. The Stone Lion's eggs are on the Beginner Isle (November 4, 2026), so its thief too carries the egg home over a bridge.
 - **The stands:** a dropped egg that times out goes back to its stand. A secured egg leaves the stand empty for 3 minutes (`EggTheft.RespawnTime`). Then the island's lowest-rank egg appears there unless another stand already shows it, so an island is never left with only eggs a new player can't take; otherwise a random one of its three eggs appears, so two stands may show the same egg. Each stand shows its egg's glow ring, light and aura (the auras are kept as templates; an aura names its stand by the attribute `Stand`).
-- **Hatching** happens only at the **Hatching Altar** on Yggdrasil (`ygg_altar.py`, `WorldBuilder.buildAltar`, `GameConfig.HatchingAltar`, on the north-east lawn between the bridges and the Egg Garden): its prompt opens the hatching window (`HatcheryController`), which lists the eggs carried home with their counts; each Hatch lays the egg in the altar's cradle, where it rises, glows and breaks open in gold light (`HatchCeremony`) as the pet is named. The window sits at the screen's right edge so the cradle stays in sight. The cradle's pool is a deep amber (Neon 255, 110, 0, a little clear): a paler gold blooms to a flat lemon disc. The stands no longer hatch. Each egg rests `HatchingAltar.Stage` (2.6 s) in the cradle and the Hatch button waits as long between presses (the server takes one egg at a time per player). The egg breaks at a server time sent with the result (`BreakAt`), so a late remote still breaks it before the server takes it away; the staged egg streams to everyone (Persistent).
+- **Hatching** happens only at the **Hatching Altar** on Yggdrasil (`ygg_altar.py`, `WorldBuilder.buildAltar`, `GameConfig.HatchingAltar`, on the north-east lawn, east of the bridges): its prompt opens the hatching window (`HatcheryController`), which lists the eggs carried home with their counts; each Hatch lays the egg in the altar's cradle, where it rises, glows and breaks open in gold light (`HatchCeremony`) as the pet is named. The window sits at the screen's right edge so the cradle stays in sight. The cradle's pool is a deep amber (Neon 255, 110, 0, a little clear): a paler gold blooms to a flat lemon disc. The stands no longer hatch. Each egg rests `HatchingAltar.Stage` (2.6 s) in the cradle and the Hatch button waits as long between presses (the server takes one egg at a time per player). The egg breaks at a server time sent with the result (`BreakAt`), so a late remote still breaks it before the server takes it away; the staged egg streams to everyone (Persistent).
 - **The altar:** five roots of the World Tree break out round a two-tier dais of pale stone and arch over it, curling in like a cupped hand; under them a jade lotus on a bronze stem opens round a pool of golden Qi, the cradle; between the roots five jade seal stones, one per island, each with a gem in that island's glow.
 - The guardians are full Blender models.
 
@@ -828,16 +839,16 @@ Tuning lives in each rig: `Rig.Springs`, `Rig.Lean`, `Rig.Legs`, the gait number
 
 | Island | Guardian | Encounter direction |
 |---|---|---|
-| Yggdrasil | The Awakened Stone Lion | Introductory fight, basic Qinggong escape |
+| Beginner Isle | The Awakened Stone Lion | Introductory fight, basic Qinggong escape |
 | Jade Grove | The Bamboo Mantis Sage | Escape routes through trees and elevated terrain |
 | Ember Peak | The Ember Xuanwu | Escape routes around lava and volcanic hazards; jump its quake rings |
 | Moonlit Isle | Tiangou the Moon-Eater | More demanding aerial movement: its leaps are long and high |
 | Origin Abyss | Pangu the World-Splitter | The most demanding encounter: a fissure to dodge, a nova to jump, a titan's leap |
 
 
-### The Awakened Stone Lion (Yggdrasil)
+### The Awakened Stone Lion (Beginner Isle)
 
-A granite temple guardian lion come to life: a mane of carved spiral curls, spiral brows and whisker curls, glowing Qi-blue eyes, a gold collar with a jade orb and gold tassels, moss in the crevices, and a tail of five stone flame tongues ending in curls. It stands about 30 studs tall, in its lair on Yggdrasil's east side, north-west of the Egg Garden, facing the World Tree (`GameConfig.Guardians.StoneLion`).
+A granite temple guardian lion come to life: a mane of carved spiral curls, spiral brows and whisker curls, glowing Qi-blue eyes, a gold collar with a jade orb and gold tassels, moss in the crevices, and a tail of five stone flame tongues ending in curls. It stands about 30 studs tall, in the Lion Court at the middle of the Beginner Isle, its egg stands behind it, facing the Lion Gate (`GameConfig.Guardians.StoneLion`).
 
 **Its eyes and orb tell its state.** The eyes (rebuilt November 2, 2026 with `guardian_kit.eye`) are a temple lion's: bulging almond irises with dark cat pupils under carved stone lids set in a frown. Asleep, carved stone eyes (the pupil cut a shade darker) and a dull jade orb; awake, Neon Qi blue (`006eff`) and jade (`00a05f`), blinking every few seconds; weakened, flickering and wide; enraged, red-orange and wider still. Darker Neon renders as a flat black disc (the pupils use that), so the sleeping look is stone and glass, not dim Neon.
 

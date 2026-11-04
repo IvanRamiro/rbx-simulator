@@ -137,7 +137,8 @@ PATHS = [
     [(-11.0, COMPASS[1] - 13.0), (-24.0, 102.0), polar(106, COURT_R)],   # Compass -> Root Court, either side of the leaderboard
     [(11.0, COMPASS[1] - 13.0), (24.0, 102.0), polar(74, COURT_R)],
     [(0.0, SLOT_R), (0.0, ROOT_EXIT[1] - 6)],                        # Spawn Walk -> the great root
-    [polar(0, COURT_R), (EGG_GARDEN[0] - EGG_GARDEN[2], EGG_GARDEN[1])],   # Root Court -> Egg Garden
+    [polar(0, COURT_R), (EGG_GARDEN[0] - EGG_GARDEN[2], EGG_GARDEN[1])],   # Root Court -> the old Egg Garden
+    [(EGG_GARDEN[0] - EGG_GARDEN[2], EGG_GARDEN[1]), EXITS["BeginnerRoute"]],   # ... and on to the Beginner Isle's bridge
     [polar(12, SLOT_R), (150.0, 26.0), (EGG_GARDEN[0] - 8, EGG_GARDEN[1] + 16)],   # Spawn Walk -> Egg Garden
     [polar(24, SLOT_R), SPRING_PATH_END],                            # Spawn Walk -> Qi Spring
     [polar(192, COURT_R), polar(192, LANE_R)],                       # Root Court -> Market Terrace

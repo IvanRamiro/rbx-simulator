@@ -17,6 +17,11 @@ return {
         SupportGlow = { Hex = "38d97a", Offset = Vector3.new(0.000, -13.300, -0.000), Size = Vector3.new(2.400, 4.600, 2.078) },
         Gate = { Offset = Vector3.new(0.000, 11.584, 0.291), Size = Vector3.new(53.000, 25.168, 4.479) },
     },
+    Lion = {
+        Deck = { Offset = Vector3.new(0.000, 0.510, 0.350), Size = Vector3.new(39.300, 6.420, 12.700) },
+        Support = { Offset = Vector3.new(0.000, -9.400, -0.000), Size = Vector3.new(38.000, 13.600, 5.202) },
+        Gate = { Offset = Vector3.new(0.000, 10.950, -0.000), Size = Vector3.new(55.400, 22.500, 6.995) },
+    },
     Moon = {
         Stair = { Offset = Vector3.new(0.000, 1.408, 0.053), Size = Vector3.new(40.120, 6.217, 12.156) },
         Support = { Offset = Vector3.new(0.001, -8.051, -0.020), Size = Vector3.new(9.634, 14.398, 2.409) },

@@ -150,5 +150,18 @@ return {
             { Position = Vector3.new(503.34, 201.18, -723.35) },
             { Position = Vector3.new(510.20, 200.00, -733.20) },
         } },
+        BeginnerRoute = { Theme = "Lion", RankId = "QiInitiate", Nodes = {
+            { Position = Vector3.new(236.80, 200.00, -62.80) },
+            { Position = Vector3.new(248.51, 201.09, -65.90) },
+            { Position = Vector3.new(260.22, 201.94, -69.00) },
+            { Position = Vector3.new(271.93, 202.54, -72.10) },
+            { Position = Vector3.new(283.64, 202.91, -75.20) },
+            { Position = Vector3.new(295.35, 203.03, -78.30) },
+            { Position = Vector3.new(307.06, 202.91, -81.40) },
+            { Position = Vector3.new(318.77, 202.54, -84.50) },
+            { Position = Vector3.new(330.48, 201.94, -87.60) },
+            { Position = Vector3.new(342.19, 201.09, -90.70) },
+            { Position = Vector3.new(353.90, 200.00, -93.80) },
+        } },
     },
 }

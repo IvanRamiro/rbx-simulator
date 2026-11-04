@@ -291,15 +291,9 @@ EGG_IDS = ["BeginnerQiEgg", "SpiritBreezeEgg", "ElementalCoreEgg"]
 
 
 def egg_layout():
-    """The three pedestals on an arc across the garden's east side, facing the paths in, 10 studs
-    apart as on the Starting Island (their auras were tuned to that spacing)."""
-    cx, cz, _ = Y.EGG_GARDEN
-    out = []
-    for eid, rel in zip(EGG_IDS, (-42, 0, 42)):
-        a = math.radians(rel)
-        x, z = cx + math.cos(a) * 14, cz + math.sin(a) * 14
-        out.append((eid, x, z, face_yaw(cx - 6 - x, cz - z)))
-    return out
+    """None: the hub has no guardian (the owner, 2026-11-04). The eggs and the lion moved to the
+    Beginner Isle (beginner_props)."""
+    return []
 
 
 def waystone_layout():

@@ -25,6 +25,9 @@ ISLANDS = {
     "EmberPeak": {"centre": (-128, 200, -696), "radius": 150, "turns": 0},
     "MoonlitIsle": {"centre": (192, 200, -804), "radius": 125, "turns": 0},
     "OriginAbyss": {"centre": (596, 200, -856), "radius": 165, "turns": 0},
+    # east of the hub, the first island a player crosses to (the owner, 2026-11-04): open from the
+    # start, its bridge about five seconds' run at a beginner's speed
+    "BeginnerIsle": {"centre": (468, 200, -124), "radius": 140, "turns": 0},
 }
 
 # Each island's arrival, where its bridge lands (island-local, before turning): just inside its gate
@@ -34,6 +37,7 @@ ARRIVALS = {
     "EmberPeak": (26.6, 0.0, 146.6),    # since the island doubled (2026-11-02): its old bridge end
     "MoonlitIsle": (-27.0, 0.0, 118.2),    # since the island doubled (2026-11-02): its old bridge end
     "OriginAbyss": (-85.8, 0.0, 122.8),    # since the island doubled (2026-11-02): its old bridge end
+    "BeginnerIsle": (-114.1, 0.0, 30.2),   # on the line from the hub to the island's centre
 }
 HUB_EXIT_RADIUS = 245    # bridges leave Yggdrasil's ground this far from its centre
 
@@ -75,6 +79,7 @@ ROUTES = {
     "EmberRoute": {"island": "EmberPeak", "theme": "Ember", "rank": "QiAwakener"},
     "MoonlitRoute": {"island": "MoonlitIsle", "theme": "Moon", "rank": "SoulAwakening"},
     "OriginRoute": {"island": "OriginAbyss", "theme": "Origin", "rank": "DivineInitiate"},
+    "BeginnerRoute": {"island": "BeginnerIsle", "theme": "Lion", "rank": "QiInitiate"},
 }
 
 

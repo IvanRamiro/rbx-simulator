@@ -384,15 +384,13 @@ return {
         },
     },
     EggStands = {
-        { EggId = "BeginnerQiEgg", Position = Vector3.new(180.40, -1.50, -3.37), Yaw = -1.0519, EggRest = 3.85 },
-        { EggId = "SpiritBreezeEgg", Position = Vector3.new(184.00, -1.50, 6.00), Yaw = -1.5708, EggRest = 3.85 },
-        { EggId = "ElementalCoreEgg", Position = Vector3.new(180.40, -1.50, 15.37), Yaw = -2.0897, EggRest = 3.85 },
     },
     Waystones = {
         { Route = "JadeRoute", Position = Vector3.new(-132.05, 0.03, -196.38), Yaw = 0.7106 },
         { Route = "EmberRoute", Position = Vector3.new(-15.15, 0.03, -236.15), Yaw = 0.1827 },
         { Route = "MoonlitRoute", Position = Vector3.new(82.18, -0.04, -221.93), Yaw = -0.2361 },
         { Route = "OriginRoute", Position = Vector3.new(157.17, -0.05, -176.90), Yaw = -0.6078 },
+        { Route = "BeginnerRoute", Position = Vector3.new(234.31, -0.52, -33.18), Yaw = -1.3118 },
         { Route = "RootPath", Position = Vector3.new(-7.50, -0.15, 236.00), Yaw = -3.1416 },
     },
     WaystonePanel = { Centre = Vector3.new(0, 4.25, 0.42), Size = Vector2.new(1.7, 4.1) },

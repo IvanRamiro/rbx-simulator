@@ -2,7 +2,7 @@
 --
 -- Joints: Body (from the root), Head, Jaw, Tail, and an upper and lower piece per leg. A negative X
 -- turn on the Jaw opens the mouth.
---   Dormant   a statue before the Egg Garden;
+--   Dormant   a statue in the middle of the Lion Court;
 --   Weakened  a forepaw drawn up, head low, panting;
 --   Enraged   crouched, tail up, snarling.
 -- It walks with diagonal legs together, breaking into a gallop as it speeds up. Its eyes and orb

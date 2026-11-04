@@ -176,12 +176,11 @@ local GameConfig = {
     Guardians = {
         StoneLion = {
             DisplayName = "Awakened Stone Lion",
-            Island = "Yggdrasil",
-            Lair = Vector3.new(128, 0.4, -62),
-            Facing = Vector3.new(0, 0.4, 0), -- toward the World Tree
+            Island = "BeginnerIsle",
+            Lair = Vector3.new(0, 0, 0),         -- the middle of the Lion Court, its three egg stands behind it
+            Facing = Vector3.new(-99.6, 0, 26.4), -- toward the Lion Gate, where challengers arrive
             Eggs = { "BeginnerQiEgg", "SpiritBreezeEgg", "ElementalCoreEgg" },
-            -- its eggs are the Egg Garden's (Yggdrasil's own stands): carried to the Hatching Altar
-            SafeZone = { Altar = true, Radius = 12, Name = "Hatching Altar" }, -- round HatchingAltar.Centre
+            SafeZone = { Island = "Yggdrasil", Name = "Yggdrasil" },   -- home across the bridge: secured on setting foot on the hub
             Element = "Earth",      -- the relic it drops when its egg is secured unlocks this element (Forge)
             MaxHealth = 1200,      -- a beginner's Qi Palm weakens it alone in ~108 strikes (about 50 seconds)
             WeakenedAt = 0.1,      -- share of health below which it falters and its stands' eggs can be taken
@@ -195,7 +194,7 @@ local GameConfig = {
             ChaseSpeed = 21,       -- below a beginner's run (22): dashes and its pounces decide it
             TurnSpeed = 140,       -- degrees per second
             Egg = { CarriedHeight = 2.6 }, -- its height, carried in the thief's arms
-            WeakenedHint = "falters: take an egg from the Egg Garden and carry it to the Hatching Altar!",
+            WeakenedHint = "falters: take an egg from the stands behind it and carry it home to Yggdrasil!",
             Stagger = 1.1,         -- seconds a knocked-back player is off their feet
             WeakenedSlowdown = 1.7, -- attack cooldown multiplier while weakened
             Attacks = {
@@ -566,11 +565,11 @@ local GameConfig = {
         { Id = "Leap", Kind = "Leap", Reward = 20, Title = "Walk on Air",
             Text = "Jump, then jump again in mid-air: an air leap. Hold jump while falling to glide." },
         { Id = "Guardian", Kind = "GuardianHit", Reward = 30, Title = "The Stone Lion",
-            Text = "Find the Awakened Stone Lion in the Egg Garden and strike it (click, or tap Strike)." },
+            Text = "Cross the east bridge to the Beginner Isle, find the Awakened Stone Lion and strike it (click, or tap Strike)." },
         { Id = "Egg", Kind = "TakeEgg", Reward = 60, Title = "Steal an Egg",
             Text = "Weaken a guardian until it falters, then take an egg from its stands. It will chase you!" },
         { Id = "Hatch", Kind = "Hatch", Reward = 80, Title = "Hatch It",
-            Text = "Carry the egg to the Hatching Altar and hatch it." },
+            Text = "Carry the egg home across the bridge to Yggdrasil, then hatch it at the Hatching Altar." },
         -- the path on, island by island. Append only: a save holds its step number
         { Id = "Weapon", Kind = "BuyWeapon", Reward = 40, Title = "A Weapon of Your Own",
             Text = "Visit the Blacksmith on Yggdrasil and buy a spear or a better sword." },

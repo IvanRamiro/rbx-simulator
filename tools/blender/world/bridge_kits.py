@@ -707,6 +707,124 @@ def origin_gate(ox, mats):
     return objs, [glow.object("OriginGate_Glow_" + VOID_GLOW, mats.coll, [K.glow_material(VOID_GLOW)], smooth=False)]
 
 
+# ---------- the Beginner Isle's bridge ----------
+def plain_stone(name, tones):
+    """Worn dressed stone: Hm.mat_obsidian's plates and mottling with nothing glowing in its veins or
+    crevices (they take the stone's own colours)."""
+    mid = tones[1][1]
+    low = tuple(c * 0.55 for c in tones[0][1])
+    return rescale(Hm.mat_obsidian(name, tones=tones, vein=mid, vein_hot=mid, heat=low, heat_reach=0.02), 2.5)
+
+
+def lion_deck(ox, mats):
+    """One deck section: three courses of worn pale flagstones between dark kerbs, on a stone body;
+    a low stone parapet with red-lacquered timber rails, a post at the section's end with a bronze
+    cap. Plain and well kept: the first bridge a student crosses."""
+    rnd = random.Random(601)
+    stone, kerb, lacquer, bronze = Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi()
+    half = SECTION / 2
+    inner = DECK_WIDTH - 4.4
+    for r in range(3):
+        z = half - SECTION * (r + 0.5) / 3
+        x = -inner / 2
+        offset = (r % 2) * 2.4
+        widths = []
+        left = inner
+        first = True
+        while left > 0.01:
+            w = min(left, rnd.uniform(4.6, 7.2) - (offset if first else 0))
+            if left - w < 2.2:
+                w = left
+            widths.append(w)
+            left -= w
+            first = False
+        for w in widths:
+            box(stone, (ox + x + w / 2, -0.45 + rnd.uniform(-0.03, 0.03), z), (w - 0.14, 0.9, SECTION / 3 - 0.14), yaw=rnd.uniform(-0.002, 0.002))
+            x += w
+    box(stone, (ox, -1.8, 0), (DECK_WIDTH - 1.2, 1.8, SECTION))
+    for side in (-1, 1):
+        x = ox + side * (DECK_WIDTH / 2 - 1.3)
+        box(kerb, (x, -0.2, 0), (1.5, 1.2, SECTION))
+        box(stone, (x, 0.75, 0), (1.1, 1.1, SECTION - 1.3))             # the parapet's low wall
+        for k in range(4):                                               # a carved recess run along it
+            box(kerb, (x + side * 0.56, 0.72, half - 1.5 - k * 3.0), (0.06, 0.6, 2.2))
+        box(lacquer, (x, 2.2, 0), (0.42, 0.34, SECTION))                 # the rail
+        for dz in (-3.0, 3.0):
+            box(lacquer, (x, 1.7, dz), (0.3, 1.0, 0.3))
+        prism(stone, (x, 0.1, half - 0.25), 0.95, 3.0, sides=8, taper=0.92)
+        prism(bronze, (x, 3.05, half - 0.25), 0.95, 0.3, sides=8, taper=0.8)
+        prism(bronze, (x, 3.32, half - 0.25), 0.6, 0.4, sides=8, taper=0.3)
+    objs = [stone.object("LionDeck_Stone", mats.coll, [mats.stone], smooth=False),
+            kerb.object("LionDeck_Kerb", mats.coll, [mats.kerb], smooth=False),
+            lacquer.object("LionDeck_Lacquer", mats.coll, [mats.lacquer], smooth=False),
+            bronze.object("LionDeck_Bronze", mats.coll, [mats.bronze], smooth=False)]
+    chamfer(objs[0], 0.07)
+    chamfer(objs[1], 0.05)
+    return objs, []
+
+
+def lion_support(ox, mats):
+    """Under the deck every few sections: two stone piers on a cross-beam, a shallow arch between."""
+    stone, kerb = Hm.Hi(), Hm.Hi()
+    box(stone, (ox, -3.4, 0), (DECK_WIDTH - 2.0, 1.6, 3.2))
+    for side in (-1, 1):
+        x = ox + side * 13.0
+        box(stone, (x, -8.2, 0), (5.4, 8.4, 3.0))
+        box(kerb, (x, -4.3, 0), (6.0, 0.5, 3.4))
+        box(kerb, (x, -12.5, 0), (6.2, 0.6, 3.6))
+        prism(stone, (x, -16.2, 0), 2.7, 3.4, sides=8, taper=0.1)        # the pier's tapering foot
+    curved_beam(stone, ox, 20.6, -5.8, 2.0, 1.4, 2.6, segments=14)
+    objs = [stone.object("LionSupport_Stone", mats.coll, [mats.stone], smooth=False),
+            kerb.object("LionSupport_Kerb", mats.coll, [mats.kerb], smooth=False)]
+    chamfer(objs[0], 0.1)
+    chamfer(objs[1], 0.05)
+    return objs, []
+
+
+def lion_gate_kit(ox, mats):
+    """The gate at the hub's end: two lacquered posts on stone drums under a tiled lintel with
+    upswept ends. Lower and plainer than the Lion Gate it leads to."""
+    stone, lacquer, bronze, tile = Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi()
+    px = DECK_WIDTH / 2 + 1.0
+    for side in (-1, 1):
+        x = ox + side * px
+        box(stone, (x, 0.5, 0), (4.2, 1.6, 4.2))
+        prism(stone, (x, 1.3, 0), 2.0, 1.4, sides=10, taper=0.72)
+        prism(lacquer, (x, 2.4, 0), 1.2, 12.6, sides=10, taper=0.94)
+        prism(bronze, (x, 2.3, 0), 1.36, 0.5, sides=10, taper=1.0)
+        prism(bronze, (x, 14.7, 0), 1.34, 0.6, sides=10, taper=1.0)
+    box(lacquer, (ox, 15.7, 0), (DECK_WIDTH + 6.4, 1.2, 1.5))
+    box(bronze, (ox, 16.5, 0), (DECK_WIDTH + 7.0, 0.3, 1.8))
+    for k in range(21):                                                 # bracket blocks along the beam
+        x = ox + (k - 10) * 2.2
+        box(lacquer, (x, 17.0, 0), (1.0, 0.7, 1.2))
+    box(lacquer, (ox, 17.5, 0), (DECK_WIDTH + 8.0, 0.5, 3.4))
+    # the roof: a row of tile courses either side of a ridge, the ends sweeping up
+    half = DECK_WIDTH / 2 + 7.0
+    n = 40
+    for side in (-1, 1):
+        for i in range(n):
+            x = -half + 2 * half * (i + 0.5) / n
+            lift = 1.8 * (abs(x) / half) ** 4
+            z0, z1 = 0.0, 3.4
+            for j in range(4):
+                t0, t1 = j / 4, (j + 1) / 4
+                y = 20.2 - 2.2 * (t0 + t1) / 2 + lift * ((t0 + t1) / 2) ** 1.5
+                box(tile, (ox + x, y, side * (z0 + (z1 - z0) * (t0 + t1) / 2)), (2 * half / n - 0.07, 0.34, 3.6 / 4 + 0.12),
+                    pitch=side * 0.56)
+    box(bronze, (ox, 20.5, 0), (2 * half + 0.4, 0.5, 0.6))
+    for side in (-1, 1):
+        box(bronze, (ox + side * (half - 0.4), 21.3, 0), (0.6, 1.4, 0.6))
+        box(bronze, (ox + side * (half + 0.1), 22.0, 0), (1.2, 0.4, 0.6))
+    objs = [stone.object("LionGate_Stone", mats.coll, [mats.stone], smooth=False),
+            lacquer.object("LionGate_Lacquer", mats.coll, [mats.lacquer], smooth=False),
+            bronze.object("LionGate_Bronze", mats.coll, [mats.bronze], smooth=False),
+            tile.object("LionGate_Tile", mats.coll, [mats.kerb], smooth=False)]
+    chamfer(objs[0], 0.1)
+    chamfer(objs[1], 0.05)
+    return objs, []
+
+
 class _Mats:
     pass
 
@@ -745,6 +863,7 @@ KITS = {
     "Ember": [("Deck", ember_deck), ("Support", ember_support), ("Gate", ember_gate)],
     "Origin": [("Deck", origin_deck), ("Support", origin_support), ("Gate", origin_gate)],
     "Moon": [("Stair", moon_stair), ("Support", moon_support), ("Gate", moon_gate)],
+    "Lion": [("Deck", lion_deck), ("Support", lion_support), ("Gate", lion_gate_kit)],
 }
 
 # The pieces added after the kits were baked, each theme's baked on its own (<Theme>BridgeExtra.fbx)
@@ -771,6 +890,11 @@ def materials(theme, coll):
     elif theme == "Origin":
         m.stone = ruin_stone("OriginBridgeStone")
         m.bronze = mat_bronze("OriginBridgeBronze")
+    elif theme == "Lion":
+        m.stone = plain_stone("LionBridgeStone", [(0.0, (0.34, 0.3, 0.24)), (0.5, (0.48, 0.43, 0.35)), (1.0, (0.62, 0.57, 0.48))])
+        m.kerb = plain_stone("LionBridgeKerb", [(0.0, (0.06, 0.06, 0.07)), (0.5, (0.1, 0.1, 0.12)), (1.0, (0.16, 0.16, 0.18))])
+        m.lacquer = mat_planks("LionBridgeLacquer", "X", tones=[(0.0, (0.28, 0.025, 0.02)), (1.0, (0.5, 0.05, 0.03))])
+        m.bronze = mat_bronze("LionBridgeBronze")
     elif theme == "Ember":
         m.rock = basalt("EmberBridgeBasalt", tones=[(0.0, (0.02, 0.018, 0.017)), (0.5, (0.045, 0.04, 0.037)), (1.0, (0.08, 0.07, 0.065))])
     return m
@@ -789,7 +913,7 @@ def build(theme, extra=False):
 
 
 # ---------- bake and export ----------
-BUDGET = {"Jade": 16000, "Ember": 16000, "Moon": 12000, "Origin": 14000}      # triangles for the whole kit's game meshes (the deck repeats dozens of times)
+BUDGET = {"Jade": 16000, "Ember": 16000, "Moon": 12000, "Origin": 14000, "Lion": 11000}      # triangles for the whole kit's game meshes (the deck repeats dozens of times)
 EXTRA_BUDGET = 14000
 
 

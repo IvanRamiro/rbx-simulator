@@ -70,6 +70,8 @@ WorldBuilder.TerrainSettings = {
     MoonlitIsle = { ShellDepth = 22, SubMaterial = "Limestone", KeepThrough = { Pavement = true } },
     -- the void crust is only the lip's top layer; the rift walls below are dark slate
     OriginAbyss = { ShellDepth = 14, SubMaterial = "Slate", KeepThrough = {} },
+    -- on Yggdrasil's palette: terrain colours are global to the place
+    BeginnerIsle = { ShellDepth = 9, SubMaterial = "Ground", KeepThrough = { Rock = true } },
 }
 
 -- An island's terrain data, its grids turned by its quarter turns (Turns, layout.py) about its
@@ -223,6 +225,14 @@ local IMPORT_TURN = CFrame.Angles(0, math.pi, 0)
 -- their hull doesn't swallow the ledges along them; rocks and flat ledges are simple shapes.
 WorldBuilder.Collision = {
     { Prefix = "SI_RootShelf", Fidelity = Enum.CollisionFidelity.Box },
+    -- the Beginner Isle: what you walk under or through keeps its shape
+    { Prefix = "BI_LionGate", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "BI_Hall", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "BI_Pavilion", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "BI_Bell", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "BI_Dummy", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "BI_WeaponRack", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "BI_LiftingStones", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "SI_CradleFloor", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "SI_StoneLantern", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "SI_EggPedestal", Fidelity = Enum.CollisionFidelity.Hull },
@@ -390,6 +400,8 @@ WorldBuilder.Appearance = {
     YG_AltarGemMoonlit = table.clone(GLOW),
     YG_AltarGemOrigin = table.clone(GLOW),
 }
+-- the Lion Court's flagstones lie on level terrain: decoration underfoot, so nothing catches on them
+WorldBuilder.Appearance.BI_CourtPaving = { CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance.SI_QiCompassGlow.Color = Color3.fromRGB(40, 210, 235)
 WorldBuilder.Appearance.SI_LanternLight.Color = Color3.fromRGB(255, 150, 60)
 WorldBuilder.Appearance.SI_SpringWater.Color = Color3.fromRGB(40, 165, 180)
@@ -817,6 +829,8 @@ WorldBuilder.ClearOfBridges = {
     JG_JadeOutcrop = true, JG_FallenLog = true, JG_Fern = true, JG_Mushrooms = true,
     JG_AncientTreeA = true, JG_AncientTreeB = true, JG_BambooClump = true,
     OA_SlateRock = true, OA_VoidCrystals = true, OA_VoidCrystalGlow = true,
+    SI_SpiritPineA = true, SI_SpiritPineB = true, SI_BlossomTreeA = true, SI_BlossomTreeB = true,
+    SI_MossRockA = true, SI_MossRockB = true, SI_FlowersWarm = true, SI_FlowersWhite = true, SI_FlowersViolet = true,
 }
 
 -- Each bridge's span, flat, to 10 studs past its end (its abutment).
@@ -1003,6 +1017,7 @@ WorldBuilder.Waystones = {
     JadeRoute = { Island = "JadeGrove", Title = "Jade Grove", RankId = "QiGatherer", Color = Color3.fromRGB(40, 215, 110) },
     EmberRoute = { Island = "EmberPeak", Title = "Ember Peak", RankId = "QiAwakener", Color = Color3.fromRGB(255, 105, 25) },
     MoonlitRoute = { Island = "MoonlitIsle", Title = "Moonlit Isle", RankId = "SoulAwakening", Color = Color3.fromRGB(120, 100, 255) },
+    BeginnerRoute = { Island = "BeginnerIsle", Title = "Beginner Isle", Subtitle = "The Stone Lion waits\nOpen to all", RankId = "QiInitiate", Color = Color3.fromRGB(255, 170, 60) },
     OriginRoute = { Island = "OriginAbyss", Title = "Origin Abyss", RankId = "DivineInitiate", Color = Color3.fromRGB(175, 45, 255) },
     RootPath = { Title = "Root of the Island", Subtitle = "Climb down the great root", Color = Color3.fromRGB(255, 170, 40) },
 }
@@ -1121,6 +1136,7 @@ WorldBuilder.BridgeThemes = {
     Jade = { Deck = Color3.fromRGB(150, 110, 70), DeckMaterial = Enum.Material.WoodPlanks, Rail = Color3.fromRGB(80, 160, 110), Glow = Color3.fromRGB(40, 215, 110) },
     Ember = { Deck = Color3.fromRGB(55, 48, 46), DeckMaterial = Enum.Material.Basalt, Rail = Color3.fromRGB(35, 30, 30), Glow = Color3.fromRGB(255, 105, 25) },
     Moon = { Deck = Color3.fromRGB(225, 225, 235), DeckMaterial = Enum.Material.Marble, Rail = Color3.fromRGB(215, 185, 110), Glow = Color3.fromRGB(120, 100, 255) },
+    Lion = { Deck = Color3.fromRGB(176, 164, 142), DeckMaterial = Enum.Material.Slate, Rail = Color3.fromRGB(150, 40, 30), Glow = Color3.fromRGB(255, 170, 60) },
     Origin = { Deck = Color3.fromRGB(60, 58, 70), DeckMaterial = Enum.Material.Slate, Rail = Color3.fromRGB(40, 38, 50), Glow = Color3.fromRGB(175, 45, 255) },
 }
 local BRIDGE = { Segment = 12, Thickness = 2, RailHeight = 3, RailWidth = 0.8, GateHeight = 14.4, GateInset = 5, ZoneHeight = 16,
@@ -1177,6 +1193,7 @@ WorldBuilder.BridgeKitMaps = {
     Ember = { Roughness = "rbxassetid://123446572117201", Metalness = "rbxassetid://87497595865816" },
     Moon = { Roughness = "rbxassetid://108481130424902", Metalness = "rbxassetid://116564473666370" },
     Origin = { Roughness = "rbxassetid://70728910964549", Metalness = "rbxassetid://104078115058483" },
+    Lion = { Roughness = "rbxassetid://79869889500676", Metalness = "rbxassetid://125423838770868" },
     -- Moon's extra kit (MoonBridgeExtra.fbx: its level deck), baked apart
     MoonExtra = { Roughness = "rbxassetid://108002843043070", Metalness = "rbxassetid://118382741100339" },
 }
@@ -1328,12 +1345,23 @@ local function dressBridge(model, theme)
     return count
 end
 
-function WorldBuilder.buildBridges()
+-- With `only` (a route's name) just that bridge is rebuilt; the others stay as they are.
+function WorldBuilder.buildBridges(only)
     local data = require(ServerStorage.WorldBuild.Placements.Bridges:Clone())
     kitInfo = require(ServerStorage.WorldBuild.Placements.BridgeKits:Clone())
     local folder = WorldBuilder.islandFolder("Bridges")
-    folder:ClearAllChildren()
+    if only then
+        local old = folder:FindFirstChild(only)
+        if old then
+            old:Destroy()
+        end
+    else
+        folder:ClearAllChildren()
+    end
     for route, bridge in data.Bridges do
+        if only and route ~= only then
+            continue
+        end
         local theme = WorldBuilder.BridgeThemes[bridge.Theme]
         local info = WorldBuilder.Waystones[route]
         local width = data.DeckWidth
