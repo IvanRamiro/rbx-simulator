@@ -155,7 +155,7 @@ local function slashKey(rightArm, rightElbow, rightWrist, leftArm, leftElbow, wa
 end
 
 -- the last key: part of the way back from the follow-through toward the ready stance
-local READY_ROOT = CFrame.new(0, -0.35, 0)
+local READY_ROOT = CFrame.new(0, -0.15, 0)
 local function settleKey(from)
     local ready = slashKey(Vector3.new(0.3, -0.75, -0.59), deg(55), deg(-10), Vector3.new(-0.32, -0.85, 0.42), deg(30),
         deg(0, 12, 0), deg(0, 0, 0), READY_ROOT)
@@ -174,33 +174,33 @@ end
 local SLASH_KEYS = {
     slashTimeline({
         slashKey(Vector3.new(0, 0.97, 0.24), deg(90), deg(-90, 15, 0), Vector3.new(-0.25, -0.75, -0.6), deg(60), deg(0, -16, 0), deg(0, 14, 0),
-            CFrame.new(0, -0.35, 0.1) * deg(4, -14, 0)),
+            CFrame.new(0, -0.18, 0.1) * deg(4, -14, 0)),
         slashKey(Vector3.new(-0.58, -0.58, -0.58), deg(60), deg(-90, -15, -15), Vector3.new(-0.2, -0.8, 0.1), deg(40), deg(0, 0, 0), deg(0, 0, 0),
-            CFrame.new(0, -0.45, -0.1) * deg(-4, 0, 0)),
+            CFrame.new(0, -0.24, -0.1) * deg(-4, 0, 0)),
         slashKey(Vector3.new(-0.76, -0.46, -0.46), deg(0), deg(-90, 30, 0), Vector3.new(-0.45, -0.75, 0.5), deg(55), deg(0, 8, 0), deg(0, -8, 0),
-            CFrame.new(0, -0.55, -0.3) * deg(-8, 6, 0)),
+            CFrame.new(0, -0.3, -0.3) * deg(-8, 6, 0)),
         slashKey(Vector3.new(-0.82, -0.42, -0.38), deg(12), deg(-85, 34, 0), Vector3.new(-0.5, -0.7, 0.5), deg(60), deg(0, 12, 0), deg(0, -12, 0),
-            CFrame.new(0, -0.6, -0.32) * deg(-9, 10, 0)),
+            CFrame.new(0, -0.32, -0.32) * deg(-9, 10, 0)),
     }),
     slashTimeline({
         slashKey(Vector3.new(-0.81, -0.32, -0.49), deg(0), deg(-90, 15, 0), Vector3.new(-0.45, -0.75, 0.5), deg(55), deg(0, 13, 0), deg(0, -12, 0),
-            CFrame.new(0, -0.55, -0.1) * deg(-6, 11, 0)),
+            CFrame.new(0, -0.3, -0.1) * deg(-6, 11, 0)),
         slashKey(Vector3.new(-0.66, -0.53, -0.53), deg(70), deg(-80, -15, 0), Vector3.new(-0.2, -0.8, 0.1), deg(40), deg(0, 5, 0), deg(0, -5, 0),
-            CFrame.new(0, -0.45, -0.1) * deg(-2, 5, 0)),
+            CFrame.new(0, -0.24, -0.1) * deg(-2, 5, 0)),
         slashKey(Vector3.new(-0.15, 0.77, -0.62), deg(130), deg(-90, -35, 0), Vector3.new(0.1, -0.7, -0.7), deg(50), deg(4, 6, 0), deg(0, -6, 0),
-            CFrame.new(0, -0.3, -0.2) * deg(5, 6, 0)),
+            CFrame.new(0, -0.14, -0.2) * deg(5, 6, 0)),
         slashKey(Vector3.new(-0.05, 0.85, -0.52), deg(135), deg(-85, -40, 0), Vector3.new(0.15, -0.65, -0.72), deg(55), deg(6, 4, 0), deg(0, -4, 0),
-            CFrame.new(0, -0.25, -0.2) * deg(6, 4, 0)),
+            CFrame.new(0, -0.12, -0.2) * deg(6, 4, 0)),
     }),
     slashTimeline({
         slashKey(Vector3.new(0.75, 0.3, -0.6), deg(90), deg(-30, -45, 45), Vector3.new(-0.15, 0.85, -0.3), deg(70), deg(10, 10, 0), deg(-8, 0, 0),
-            CFrame.new(0, -0.2, 0.25) * deg(10, 0, 0)),
+            CFrame.new(0, -0.1, 0.25) * deg(10, 0, 0)),
         slashKey(Vector3.new(0.32, 0.95, 0), deg(100), deg(-90, 0, 0), Vector3.new(-0.25, -0.5, -0.6), deg(30), deg(-6, 0, 0), deg(0, 0, 0),
-            CFrame.new(0, -0.4, 0) * deg(-2, 0, 0)),
+            CFrame.new(0, -0.22, 0) * deg(-2, 0, 0)),
         slashKey(Vector3.new(-0.76, -0.46, -0.46), deg(80), deg(-90, -30, 0), Vector3.new(-0.3, -0.8, 0.5), deg(50), deg(-8, 0, 0), deg(6, 0, 0),
-            CFrame.new(0, -0.6, -0.4) * deg(-4, 0, 0)),
+            CFrame.new(0, -0.38, -0.4) * deg(-4, 0, 0)),
         slashKey(Vector3.new(-0.8, -0.42, -0.42), deg(60), deg(-80, -30, 0), Vector3.new(-0.32, -0.78, 0.52), deg(55), deg(-9, 0, 0), deg(7, 0, 0),
-            CFrame.new(0, -0.62, -0.42) * deg(-5, 0, 0)),
+            CFrame.new(0, -0.4, -0.42) * deg(-5, 0, 0)),
     }),
 }
 

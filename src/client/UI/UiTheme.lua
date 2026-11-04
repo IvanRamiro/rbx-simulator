@@ -36,21 +36,21 @@ UiTheme.PanelTransparency = 0.3 -- glass: the world shows through
 UiTheme.Corner = 2 -- sharp, like a projected window
 UiTheme.Margin = 16 -- from the screen's edges
 
--- The icons: original line drawings (tools/ui/draw_icons.py, assets/ui/icons; ids in icons.json),
--- white so the theme tints them. No text in any language on an icon.
+-- The icons: original full-colour pictures (tools/ui/draw_icons.py, assets/ui/icons; ids in icons.json),
+-- shown untinted. No text in any language on an icon.
 UiTheme.Icons = {
-    Qi = "rbxassetid://101372292588368", -- a rising spiral of energy
-    Stones = "rbxassetid://126443684238250",    -- a faceted crystal
-    Relics = "rbxassetid://86125750007333",     -- an ancient disc on its cord
-    Pets = "rbxassetid://71615077567902", -- a spirit fox
-    Robes = "rbxassetid://85355853714545", -- a crossed-collar robe
-    Qinggong = "rbxassetid://106266801510792", -- a diving swallow
-    Guardian = "rbxassetid://132576192303921",  -- a shield with a beast's eye
-    Hatch = "rbxassetid://83100764073187",      -- a cracked egg
-    Shop = "rbxassetid://80005118445258", -- the Jade Scale
-    Forge = "rbxassetid://84883537666325",      -- hammer and anvil
-    Settings = "rbxassetid://102443682370509", -- a lotus dial
-    Rewards = "rbxassetid://96373560583865", -- a gold ingot
+    Qi = "rbxassetid://92441554457364", -- a flame of energy
+    Stones = "rbxassetid://115509307959601",    -- a faceted crystal
+    Relics = "rbxassetid://120244333350364",     -- a jade disc on its cord
+    Pets = "rbxassetid://86159942849787", -- a spirit fox
+    Robes = "rbxassetid://74536498666359", -- a crossed-collar robe
+    Qinggong = "rbxassetid://115713809878403", -- a diving swallow
+    Guardian = "rbxassetid://87780403658411",  -- a shield with a beast's eye
+    Hatch = "rbxassetid://93316116947603",      -- a cracked egg
+    Shop = "rbxassetid://86121773247188", -- the Jade Scale
+    Forge = "rbxassetid://83033475878685",      -- hammer and anvil
+    Settings = "rbxassetid://92494124873013", -- a dial of lotus petals
+    Rewards = "rbxassetid://119590867507093", -- a gold ingot
 }
 
 return UiTheme

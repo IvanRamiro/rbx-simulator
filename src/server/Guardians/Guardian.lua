@@ -332,6 +332,7 @@ function Guardian:carry(player)
     weld.Parent = body
     egg.owner = player
     egg.takenAt = os.clock()
+    egg.carryStarted = egg.carryStarted or egg.takenAt -- dropping and retaking it doesn't restart MAX_CARRY
     egg.lastGrounded = nil
     egg.lastPosition = root.Position
     egg.takenFrom = root.Position
@@ -381,6 +382,7 @@ function Guardian:takeFromStand(player, slot)
     local position = slot.rest.Position
     EggStands.take(slot)
     self.egg.slot = slot
+    self.egg.carryStarted = nil
     self:makeEgg(eggId, self.config.Egg.CarriedHeight)
     self:carry(player)
     self.egg.model.Parent = eggsFolder
@@ -522,7 +524,7 @@ function Guardian:watchThief()
         return
     end
     local now = os.clock()
-    if now - egg.takenAt > MAX_CARRY then
+    if now - egg.carryStarted > MAX_CARRY then
         self:returnEgg()
         return
     end

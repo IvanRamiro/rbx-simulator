@@ -12,7 +12,7 @@ local Toast = {}
 Toast.__index = Toast
 
 local FADE = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local WIDTH = if Hud.isCompact() then 300 else 420 -- fits between the STATUS and QUEST windows
+local WIDTH = if Hud.isCompact() then 262 else 420 -- fits between the STATUS and QUEST windows
 local created = 0
 
 function Toast.new(name, textColor, seconds)

@@ -5,7 +5,7 @@
 --   content(panel, x, y)        a padded frame inside a panel, for its content
 --   header(parent, text, props) a bracketed header: a line, [ TEXT ], a line
 --   glow(label, color)          a soft glow round a label's letters
---   icon(image, size, tone)     an outlined box with its icon (UiTheme.Icons; "Accent", "Danger",
+--   icon(image, size, tone)     a box holding a full-colour icon (UiTheme.Icons; "Accent", "Danger",
 --                               "Highlight")
 --   label(props)                text in a theme font (Font = a UiTheme.Fonts name)
 --   button(props)               an action: "Accent" (primary), "Highlight" (a breakthrough),
@@ -20,6 +20,7 @@
 --   textbox(props)              a text field in the System style
 --   empty(parent, text)         the muted line a list shows when it has nothing
 -- props: any Instance properties to set, plus the extras named per builder.
+local ContentProvider = game:GetService("ContentProvider")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -29,6 +30,19 @@ local C = UiTheme.Colors
 local UiKit = {}
 
 local EASE = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+-- fetched as soon as the game starts, so a phone never shows an empty icon box for long
+task.spawn(function()
+    local images = {}
+    for _, id in UiTheme.Icons do
+        local picture = Instance.new("ImageLabel")
+        picture.Image = id
+        table.insert(images, picture)
+    end
+    pcall(function()
+        ContentProvider:PreloadAsync(images)
+    end)
+end)
 
 local function apply(instance, props)
     for key, value in props or {} do
@@ -223,10 +237,10 @@ function UiKit.icon(image, size, tone)
     picture.Name = "Image"
     picture.BackgroundTransparency = 1
     picture.Image = image
-    picture.ImageColor3 = colors[3]
+    picture.ImageColor3 = Color3.new(1, 1, 1) -- full colour, as drawn
     picture.AnchorPoint = Vector2.new(0.5, 0.5)
     picture.Position = UDim2.fromScale(0.5, 0.5)
-    picture.Size = UDim2.fromScale(0.7, 0.7)
+    picture.Size = UDim2.fromScale(0.86, 0.86)
     picture.Parent = box
     return box
 end
