@@ -1,134 +1,53 @@
+-- While a player cultivates they stay put: no walking and no jumping. The body itself is placed by
+-- their realm's meditation idle (MeditationPoses): on the ground, or up on the air.
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
-
-local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 
 local player = Players.LocalPlayer
 
-local RISE_INFO = TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-local DESCEND_INFO = TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.In)
-local LOTUS_HIP_HEIGHT = 0.6
-local BOB_INFO = TweenInfo.new(GameConfig.LevitationBobTime, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
-
 local humanoid = nil
-local normalHipHeight = nil
 local normalWalkSpeed = nil
-local meditationTrack = nil
-local activeTween = nil
-local isLevitating = false
+local isStill = false
 
-local function cancelTween()
-    if activeTween then
-        activeTween:Cancel()
-        activeTween = nil
-    end
-end
-
-local function tweenHipHeight(targetHeight, tweenInfo)
-    cancelTween()
-    activeTween = TweenService:Create(humanoid, tweenInfo, { HipHeight = targetHeight })
-    activeTween:Play()
-    return activeTween
-end
-
-local function startLevitating()
-    if isLevitating or not humanoid or humanoid.Health <= 0 then
+local function hold()
+    if isStill or not humanoid or humanoid.Health <= 0 then
         return
     end
-    isLevitating = true
-
-    if normalHipHeight == nil then
-        normalHipHeight = humanoid.HipHeight
-    end
+    isStill = true
     normalWalkSpeed = humanoid.WalkSpeed
-
     humanoid.WalkSpeed = 0
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-
-    local owner = table.find(GameConfig.OwnerAura.UserIds, player.UserId) ~= nil
-    local legs = if humanoid.RigType == Enum.HumanoidRigType.R15 and GameConfig.MeditationAnimationId == 0 and not owner
-        then normalHipHeight * LOTUS_HIP_HEIGHT
-        else normalHipHeight
-    -- the owner's floating pose lifts the body itself (PoseController's FLOAT), so it adds no height
-    local hoverHeight = legs + (if owner then 0 else GameConfig.LevitationHeight)
-    tweenHipHeight(hoverHeight, RISE_INFO).Completed:Connect(function(playbackState)
-        if playbackState == Enum.PlaybackState.Completed and isLevitating then
-            tweenHipHeight(hoverHeight + GameConfig.LevitationBobHeight, BOB_INFO)
-        end
-    end)
-
-    if meditationTrack then
-        meditationTrack:Play()
-    end
 end
 
-local function stopLevitating()
-    if not isLevitating then
+local function release()
+    if not isStill then
         return
     end
-    isLevitating = false
-
-    if meditationTrack then
-        meditationTrack:Stop()
-    end
-
-    tweenHipHeight(normalHipHeight, DESCEND_INFO)
+    isStill = false
     -- the rank may have changed while meditating, so prefer the current Qinggong run speed
     humanoid.WalkSpeed = player:GetAttribute("QinggongRunSpeed") or normalWalkSpeed
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
 end
 
-local function updateLevitation()
+local function update()
     if player:GetAttribute("IsCultivating") == true then
-        startLevitating()
+        hold()
     else
-        stopLevitating()
+        release()
     end
-end
-
-local function loadMeditationTrack()
-    if GameConfig.MeditationAnimationId == 0 then
-        return nil
-    end
-
-    local animator = humanoid:WaitForChild("Animator", 5)
-    if not animator then
-        return nil
-    end
-
-    local animation = Instance.new("Animation")
-    animation.AnimationId = "rbxassetid://" .. GameConfig.MeditationAnimationId
-
-    local track = animator:LoadAnimation(animation)
-    track.Priority = Enum.AnimationPriority.Action
-    track.Looped = true
-    return track
 end
 
 local function onCharacterAdded(character)
-    cancelTween()
     humanoid = nil
-    normalHipHeight = nil
-    meditationTrack = nil
-    isLevitating = false
-
+    isStill = false
     local newHumanoid = character:WaitForChild("Humanoid")
     if player.Character ~= character then
         return
     end
     humanoid = newHumanoid
-    meditationTrack = loadMeditationTrack()
-
-    humanoid.Died:Connect(function()
-        cancelTween()
-        isLevitating = false
-    end)
-
-    updateLevitation()
+    update()
 end
 
-player:GetAttributeChangedSignal("IsCultivating"):Connect(updateLevitation)
+player:GetAttributeChangedSignal("IsCultivating"):Connect(update)
 player.CharacterAdded:Connect(onCharacterAdded)
 
 if player.Character then

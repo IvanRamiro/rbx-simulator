@@ -1,14 +1,13 @@
 -- Blends whole-body poses into every R15 character's joints, before physics each frame: the
 -- Qinggong poses (QinggongFx.pose: steps, tucks, the crane glide), the combat poses (CombatFx.pose)
--- and the lotus seat while cultivating. Each pose is a table of joint name -> target Transform;
+-- and each realm's meditation idle while cultivating (MeditationPoses). Each pose is a table of joint name -> target Transform;
 -- poses fade in and out by weight, and the default animations stay underneath.
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local QinggongFx = require(script.Parent.Parent:WaitForChild("Qinggong"):WaitForChild("QinggongFx"))
 local CombatFx = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("CombatFx"))
+local MeditationPoses = require(script.Parent:WaitForChild("MeditationPoses"))
 
 local BLEND_SPEED = 6
 local FLYING_MOVE_SPEED = 4
@@ -41,18 +40,6 @@ local function symmetric(pose)
     end
     return pose
 end
-
-local LOTUS_HIP = deg(0, -50, 0) * deg(85, 0, 0)
-local LOTUS = symmetric({
-    RightHip = LOTUS_HIP,
-    RightKnee = pointLimb(LOTUS_HIP:VectorToObjectSpace(Vector3.new(-0.95, -0.12, 0.25))),
-    RightAnkle = deg(-20, 0, 0),
-    RightShoulder = pointLimb(Vector3.new(0.16, -0.85, -0.5)),
-    RightElbow = deg(25, 0, 0),
-    RightWrist = deg(-15, 0, 0),
-    Waist = deg(4, 0, 0),
-    Neck = deg(-6, 0, 0),
-})
 
 -- Riding the flying sword: right foot forward, left back, both drawn in to stay on the blade;
 -- the right hand before the chest in a sword gesture, the left behind the back. Moving, the
@@ -297,50 +284,9 @@ local QINGGONG_BLEND_SPEED = 16 -- the leap poses snap in: a stride lasts only a
 local SLASH_BLEND_SPEED = 34    -- a slash follows its keys closely: its swing lasts a tenth of a second
 local STANCE_MAX_SPEED = 3      -- studs a second: above this, a spear's stance gives way to arms only
 
-local useLotus = GameConfig.MeditationAnimationId == 0
-
--- The owner's meditation pose (GameConfig.OwnerAura): the Floating Ascension idle, a 4 s loop. The
--- body reclines on the air, lifted a little, the head tipped far back to face the sky, the chest
--- arched; the arms spread wide in a level wingspan; the right knee drawn up toward the sky, the left
--- leg reaching down, its foot pointed at the ground. Every joint breathes on the loop a beat after
--- the one it hangs from (hips, chest, head; shoulders, elbows, wrists), so the motion flows out
--- through the body. Its values are the AuraWorkbench's KeyframeSequence (tools/roblox/
--- floating_ascension_idle.lua), by joint. The table is rewritten each frame (floatPose).
--- It eases in slowly, on a smooth curve rather than the other poses' quick blend, so the body settles
--- onto the air (the owner, 2026-11-04: "keep the animation slow").
-local FLOAT = {}
-local FLOAT_LOOP = 4
-local FLOAT_ENTER, FLOAT_LEAVE = 3, 1.2     -- seconds
-
-local function floatPose(t)
-    local w = math.pi * 2 * t / FLOAT_LOOP
-    local function s(lag, amp)
-        return amp * math.sin(w - lag)
-    end
-    local function c(lag, amp)
-        return amp * math.cos(w - lag)
-    end
-    FLOAT.Root = CFrame.new(0, 1.3 + s(0, 0.22), 0) * deg(28 + s(0.4, 1.5), c(0, 1.5), 0)
-    FLOAT.Waist = deg(14 + s(0.6, 3), 0, c(0.6, 1.2))
-    FLOAT.Neck = deg(38 + s(1.0, 2.5), c(1.0, 3), 0)
-    FLOAT.LeftShoulder = deg(-6, 10, -84 + s(0.9, 4))
-    FLOAT.LeftElbow = deg(8 + s(1.5, 4), 0, -6)
-    FLOAT.LeftWrist = deg(0, 0, -10 + s(2.1, 6))
-    FLOAT.RightShoulder = deg(-6, -10, 84 - s(0.9, 4))
-    FLOAT.RightElbow = deg(8 + s(1.5, 4), 0, 6)
-    FLOAT.RightWrist = deg(0, 0, 10 - s(2.1, 6))
-    FLOAT.RightHip = deg(122 + s(0.5, 3), 0, 6)
-    FLOAT.RightKnee = deg(-118 + s(1.1, 4), 0, 0)
-    FLOAT.RightAnkle = deg(-25 + s(1.6, 3), 0, 0)
-    FLOAT.LeftHip = deg(-22 + s(0.8, 2), 0, -3)
-    FLOAT.LeftKnee = deg(-6 + s(1.4, 2), 0, 0)
-    FLOAT.LeftAnkle = deg(-42 + s(1.9, 4), 0, 0)
-end
-floatPose(0)
-
-local function isOwner(player)
-    return table.find(GameConfig.OwnerAura.UserIds, player.UserId) ~= nil
-end
+-- A meditation idle eases in slowly, on a smooth curve rather than the other poses' quick blend, so
+-- the body settles into it (the owner, 2026-11-04: "keep the animation slow").
+local MEDITATION_ENTER, MEDITATION_LEAVE = 3, 1.2 -- seconds
 
 local rigs = {}
 
@@ -378,10 +324,7 @@ end
 
 local function choosePose(player, character, rig)
     if player:GetAttribute("IsCultivating") == true then
-        if isOwner(player) then
-            return FLOAT
-        end
-        return if useLotus then LOTUS else nil
+        return MeditationPoses.forPlayer(player)
     end
     local strikeName = CombatFx.pose(player)
     local strike = STRIKES[strikeName]
@@ -444,7 +387,7 @@ QUICK_POSES[SPEAR_STANCES.SpearDraw] = true
 QUICK_POSES[SPEAR_STANCES.Spear] = true
 
 local function updatePoses(deltaTime)
-    floatPose(os.clock())
+    local now = os.clock()
     local normalStep = 1 - math.exp(-BLEND_SPEED * deltaTime)
     local quickStep = 1 - math.exp(-QINGGONG_BLEND_SPEED * deltaTime)
     local slashStep = 1 - math.exp(-SLASH_BLEND_SPEED * deltaTime)
@@ -473,11 +416,13 @@ local function updatePoses(deltaTime)
             rig.weights[wanted] = 0
         end
         for pose, weight in rig.weights do
-            if pose == FLOAT then
-                local rate = if wanted == FLOAT then 1 / FLOAT_ENTER else -1 / FLOAT_LEAVE
-                local progress = math.clamp((rig.floatProgress or 0) + rate * deltaTime, 0, 1)
-                rig.floatProgress = progress
-                rig.weights[pose] = if wanted ~= FLOAT and progress <= 0 then nil else progress * progress * (3 - 2 * progress)
+            if MeditationPoses.isPose(pose) then
+                MeditationPoses.refresh(pose, now)
+                local rate = if wanted == pose then 1 / MEDITATION_ENTER else -1 / MEDITATION_LEAVE
+                rig.settling = rig.settling or {}
+                local progress = math.clamp((rig.settling[pose] or 0) + rate * deltaTime, 0, 1)
+                rig.settling[pose] = progress
+                rig.weights[pose] = if wanted ~= pose and progress <= 0 then nil else progress * progress * (3 - 2 * progress)
                 continue
             end
             local step = if slashing or pose == rig.slash or pose == rig.slashRide then slashStep
