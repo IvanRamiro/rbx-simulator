@@ -1152,7 +1152,7 @@ A window on the rail (`server/Rewards`, `client/Rewards/RewardController`, `shar
 - **Codes:** `Codes.lua`, each once per player. `QIAWAKENS` pays 100 stones.
 - **Group:** 200 stones for joining. Off until the owner gives a group id (`Rewards.Group.GroupId`).
 
-Tested in Play: every code path, the streak, and the offline toast. Not tested: the group reward, which needs a real group.
+Tested in Play: codes (invalid, valid, repeated, a table sent instead of text), the streak (next day, same day, a missed day) and the offline toast. Not tested: the group reward, which needs a real group.
 
 ### Icons (November 4, 2026)
 
