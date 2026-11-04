@@ -162,8 +162,8 @@ local function lay(folder, centre, withMaps)
 				-- the importer turns models half way round, so new imports need turning back to face the
 				-- board's front edge (+Z); the eggs in EggMeshes were stored the other way round already
 				if withMaps then
-					local c = cf.Position
-					m:PivotTo(CFrame.new(c) * CFrame.Angles(0, math.pi, 0) * CFrame.new(-c) * m:GetPivot())
+					local middle = cf.Position
+					m:PivotTo(CFrame.new(middle) * CFrame.Angles(0, math.pi, 0) * CFrame.new(-middle) * m:GetPivot())
 					cf, size = m:GetBoundingBox()
 				end
 				-- standing on the surface
