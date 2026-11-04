@@ -6,18 +6,13 @@ platform: "TikTok"
 media_id: "7669662006101773582"
 fetched: "2026-11-04"
 source_project: "qi-aura-simulator"
-language: "en"
-transcript_source: "whisper"
-transcription_engine: "mlx_whisper"
-transcription_model: "mlx-community/whisper-large-v3-turbo"
 duration: "0m 20s"
 upload_date: "2026-08-03"
-vocabulary_hint: "Roblox, Roblox Studio, Blender, Moon Animator, keyframe, rig, R15"
 frames: "oblivion vfx jjs roblox skillbuilding solsrng.frames.jpg"
 aliases:
   - Oblivion VFX
 tags:
-  - media-transcript
+  - video-note
   - tiktok
   - roblox
   - vfx
@@ -28,7 +23,7 @@ tags:
 # oblivion vfx #jjs #roblox #skillbuilding #solsrng
 
 > [!note] How this was summarised
-> Whisper picked up no speech in this video, so the summary and timeline come from a sheet of 24 frames, not
+> There is no speech in this video, so the summary and timeline come from a sheet of 24 frames, not
 > from anything the creator said. It is a visual reading: no project files, settings or methods are known.
 
 **Original TikTok:** https://www.tiktok.com/@supercoolguy_32/video/7669662006101773582
@@ -37,8 +32,7 @@ tags:
 
 A 20-second showcase of a purple Roblox effect called "oblivion", posted with the tags jjs, roblox, skillbuilding
 and solsrng. A small character stands on a night rooftop under a huge burst of violet light that floats above
-them, with a ripple spreading across the ground beneath. There is no narration or tutorial in what was
-transcribed.
+them, with a ripple spreading across the ground beneath. There is no narration or tutorial.
 
 ## Timeline
 
@@ -81,8 +75,6 @@ What the frames show, read as lessons for our auras. These are my interpretation
 | Uploaded | 2026-08-03 |
 | Fetched | 2026-11-04 |
 | Source | qi-aura-simulator |
-| Language | en (machine transcription) |
-| Transcription | mlx_whisper, mlx-community/whisper-large-v3-turbo |
 
 ## Description
 
@@ -102,9 +94,3 @@ Tiles read left to right, top to bottom: 1 00:00 · 2 00:00 · 3 00:01 · 4 00:0
 - [[VFX Editing Mode]]
 - [[Aura Full Toolkit]]
 - [[Egg Aura Studio Lessons]]
-
-## Transcript
-
-> Machine transcription (Whisper). Names and terms may be misheard.
-
-[00:00] .
