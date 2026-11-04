@@ -14,9 +14,10 @@
 -- the shins to above the head.
 --
 -- What moves, every frame:
---   the sphere follows the head on an underdamped spring, pulses with the torso's speed, trembles on
---     sharp moves, breathes at rest, and swells with the surge; its one-particle layers re-emit on a
---     timer and scale with the pulse; three stars orbit it
+--   the sphere (the owner's own: nebula fog, two spiked bursts, and the four-point star, brightest,
+--     on top) follows the head on an underdamped spring, pulses with the torso's speed, trembles on
+--     sharp moves, breathes at rest, and swells with the surge; every layer's size curve scales with
+--     the pulse, and a layer with an EmitEvery attribute is emitted on that timer
 --   the rising silver's emitters sweep: each one's Acceleration swings on smooth noise (its Sweep,
 --     Lift and Tempo attributes)
 --   the chains shake: each hand beam's curve trembles round its base (Curve0, Curve1, Jitter), and
@@ -27,8 +28,9 @@
 --     near the aura darkens through the build, flashes at the strike and shakes, scaled by the
 --     camera's distance
 --
--- The portals, chains and their smoke and glitter show only while the owner meditates, when the
--- floating pose spreads the arms toward them (Character/PoseController).
+-- The portals, chains and their smoke and glitter show only while the owner meditates, once the
+-- floating pose has eased in and spread the arms toward them (MEDITATION_SETTLE after it starts;
+-- Character/PoseController takes 3 s).
 -- Other players see a lighter aura with distance: beyond NEAR_LOD studs every emitter's rate halves,
 -- and beyond FAR_LOD it drops to a fifth. The owner always sees their own in full.
 local Lighting = game:GetService("Lighting")
@@ -48,11 +50,11 @@ local RIBBON_SPIN = 2.6
 local RIBBON_WIDTH = 1.8
 local FLOOR_CHECK = 0.1                     -- seconds between floor checks
 local MEDITATION_ONLY = { PortalLeft = true, PortalRight = true, ChainSmokeLeft = true, ChainSmokeRight = true }
+local MEDITATION_SETTLE = 2.2               -- seconds into the slow float pose before the chains appear
 
 local SPHERE_STIFF = 38                                   -- the spring's pull
 local SPHERE_DAMP = 2 * math.sqrt(SPHERE_STIFF) * 0.55    -- under 1: a little overshoot, then settle
-local SPHERE_CYCLE = 3.6                    -- the one-particle layers re-emit this often (4 s lives)
-local SPHERE_LAYERS = { "LuminousOrb", "OuterSwirl", "ShineRays" }
+local SPHERE_LAYERS = { "SphereFog", "SpikeOuter", "SpikeInner", "Star" }
 
 local SURGE_BUILD, SURGE_SETTLE, SURGE_AFTER = 1.1, 1.6, 1.2   -- seconds
 local SURGE_FLASH, SURGE_SHAKE = 0.35, 0.45                    -- seconds: the screen flash, the shake
@@ -146,34 +148,32 @@ local function stepSphere(record, dt)
     local scale = 1 + 0.035 * math.sin(clock * 2.2) + 0.12 * s.energy + 0.14 * surge
     local size = s.base * scale
     s.part.Size = Vector3.new(size, size, size)
-    s.part.CFrame = CFrame.new(s.pos + tremble) * CFrame.Angles(0, clock * 0.25, 0)
+    s.part.CFrame = CFrame.new(s.pos + tremble)
     if s.tether then
-        s.tether.Position = Vector3.new(0, -size * 0.48, 0)
+        s.tether.Position = Vector3.new(0, -size * 0.3, 0)
     end
     -- the star and its light: brighter with motion and the surge
     local lift = 1 + 0.5 * s.energy + 0.9 * surge
     if s.star then
-        s.star.Brightness = 3 * lift
+        s.star.Brightness = s.starBrightness * lift
     end
     if s.light then
         s.light.Brightness = 1.6 * lift
     end
-    -- the one-particle layers: one always showing, growing with the pulse
-    s.layerClock += dt
-    local fire = s.layerClock >= SPHERE_CYCLE
-    if fire then
-        s.layerClock -= SPHERE_CYCLE
-    end
+    -- every layer grows with the pulse, keeping its own size curve
     for _, layer in s.layers do
-        layer.emitter.Size = NumberSequence.new(layer.size * scale)
-        if fire then
-            layer.emitter:Emit(1)
+        local scaled = table.create(#layer.keys)
+        for i, key in layer.keys do
+            scaled[i] = NumberSequenceKeypoint.new(key.Time, key.Value * scale)
         end
-    end
-    -- the orbiting stars, quicker in a surge
-    for _, orb in s.orbs do
-        local angle = orb.phase + clock * orb.speed * (1 + 0.5 * surge)
-        orb.attachment.Position = orb.frame * Vector3.new(orb.radius * math.cos(angle), 0, orb.radius * math.sin(angle))
+        layer.emitter.Size = NumberSequence.new(scaled)
+        if layer.every then
+            layer.clock += dt
+            if layer.clock >= layer.every then
+                layer.clock -= layer.every
+                layer.emitter:Emit(1)
+            end
+        end
     end
     -- aim the tether's motes at the sphere (their emitter shoots along the attachment's up)
     if s.motes and s.tether then
@@ -295,7 +295,9 @@ local function step(dt)
         end
         record.clock += dt
         local clock = record.clock
-        setMeditating(record, record.player:GetAttribute("IsCultivating") == true)
+        local cultivating = record.player:GetAttribute("IsCultivating") == true
+        record.settle = if cultivating then record.settle + dt else 0
+        setMeditating(record, cultivating and record.settle >= MEDITATION_SETTLE)
         updateLod(record, dt)
 
         -- the ribbons: up and down on a smooth cosine, a quarter period apart, alternate ways round
@@ -371,29 +373,26 @@ local function buildSphere(record, part, character)
     end
     local core = part:FindFirstChild("Core")
     local s = { part = part, head = head, torso = torso, height = part:GetAttribute("Height") or 8,
-        base = part:GetAttribute("BaseSize") or part.Size.X, layers = {}, orbs = {}, layerClock = 0,
+        base = part:GetAttribute("BaseSize") or part.Size.X, layers = {},
         energy = 0, jolt = 0, vel = Vector3.zero, lastTorso = torso.Position, lastV = Vector3.zero,
         star = core and core:FindFirstChild("Star"), light = core and core:FindFirstChild("CoreLight"),
         tether = part:FindFirstChild("Tether") }
     s.pos = head.Position + Vector3.new(0, s.height, 0)
+    s.starBrightness = if s.star then s.star.Brightness else 1
     if core then
         for _, name in SPHERE_LAYERS do
             local emitter = core:FindFirstChild(name)
             if emitter then
-                table.insert(s.layers, { emitter = emitter, size = emitter:GetAttribute("BaseParticleSize") or 5 })
-                emitter:Emit(1)
+                local every = emitter:GetAttribute("EmitEvery")
+                table.insert(s.layers, { emitter = emitter, keys = emitter.Size.Keypoints, every = every, clock = 0 })
+                if every then
+                    emitter:Emit(1)
+                end
             end
         end
         local sparkle = core:FindFirstChild("SurgeSparkle")
         if sparkle then
             table.insert(record.surge.bursts, { e = sparkle, count = 8 })
-        end
-    end
-    for i = 1, 3 do
-        local orb = part:FindFirstChild("Orb" .. i)
-        if orb and orb:GetAttribute("RingFrame") then
-            table.insert(s.orbs, { attachment = orb, frame = orb:GetAttribute("RingFrame"), radius = orb:GetAttribute("Radius") or 5,
-                speed = orb:GetAttribute("Speed") or 1, phase = i * 2.1 })
         end
     end
     -- the tether's end on the upper torso, its beams relinked to it
@@ -433,7 +432,7 @@ function OwnerAura.build(player, character, root)
     local record = { player = player, character = character, root = root, fx = fx, clock = 0, floorClock = 0,
         floorY = root.Position.Y - 3, ground = {}, body = {}, ribbons = {}, rods = {}, meditationItems = {},
         made = {}, meditating = nil, nextBurst = 0, sweeps = {}, jitters = {}, chainEnds = {}, rates = {},
-        lod = 1, lodClock = 0,
+        lod = 1, lodClock = 0, settle = if player:GetAttribute("IsCultivating") == true then MEDITATION_SETTLE else 0,
         surge = { value = 0, build = 0, after = 0, since = -1, wait = 3, bursts = {}, rattles = {}, rings = {} } }
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude

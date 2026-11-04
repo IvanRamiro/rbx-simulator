@@ -179,8 +179,11 @@ local useLotus = GameConfig.MeditationAnimationId == 0
 -- the one it hangs from (hips, chest, head; shoulders, elbows, wrists), so the motion flows out
 -- through the body. Its values are the AuraWorkbench's KeyframeSequence (tools/roblox/
 -- floating_ascension_idle.lua), by joint. The table is rewritten each frame (floatPose).
+-- It eases in slowly, on a smooth curve rather than the other poses' quick blend, so the body settles
+-- onto the air (the owner, 2026-11-04: "keep the animation slow").
 local FLOAT = {}
 local FLOAT_LOOP = 4
+local FLOAT_ENTER, FLOAT_LEAVE = 3, 1.2     -- seconds
 
 local function floatPose(t)
     local w = math.pi * 2 * t / FLOAT_LOOP
@@ -297,6 +300,13 @@ local function updatePoses(deltaTime)
             rig.weights[wanted] = 0
         end
         for pose, weight in rig.weights do
+            if pose == FLOAT then
+                local rate = if wanted == FLOAT then 1 / FLOAT_ENTER else -1 / FLOAT_LEAVE
+                local progress = math.clamp((rig.floatProgress or 0) + rate * deltaTime, 0, 1)
+                rig.floatProgress = progress
+                rig.weights[pose] = if wanted ~= FLOAT and progress <= 0 then nil else progress * progress * (3 - 2 * progress)
+                continue
+            end
             local step = if QUICK_POSES[pose] or (wanted and QUICK_POSES[wanted]) then quickStep else normalStep
             weight += ((if pose == wanted then 1 else 0) - weight) * step
             rig.weights[pose] = if pose ~= wanted and weight < 0.01 then nil else weight
