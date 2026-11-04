@@ -126,7 +126,9 @@ function WorldBuilder.applyMaterialColors()
 end
 
 -- Clears the terrain inside an island's grid footprint (plus a margin), from below the shell
--- to well above the highest ground.
+-- to well above the highest ground. Footprints are squares and islands can sit in each other's
+-- corners: Ember Peak's overlaps Jade Grove's, and clearing it once took 71 columns off Jade Grove
+-- (found by a phone test, 2026-11-04). After clearing an island, rebuild any neighbour it overlaps.
 function WorldBuilder.clearTerrain(island)
     local data = terrainData(island)
     local span = data.Size * data.Cell
