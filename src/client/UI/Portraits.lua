@@ -28,8 +28,8 @@ local function view(size)
     frame.LightColor = Color3.new(1, 1, 1)
     frame.LightDirection = Vector3.new(-0.4, -1, -0.6)
     frame.Size = UDim2.fromOffset(size, size)
-    UiKit.corner(frame)
-    UiKit.stroke(frame, C.EdgeDim, 0.4)
+    UiKit.corner(frame, 8)
+    UiKit.stroke(frame, C.Edge, 0.6)
     return frame
 end
 

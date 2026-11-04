@@ -106,7 +106,7 @@ local message = Toast.new(nil, "GuardianMessage", nil, Color3.new(1, 1, 1), 4)
 
 -- the health bar of the guardian being fought: first in the HUD's top-centre stack, so the
 -- messages (Toast) fall in below it instead of under it
-local bar = UiKit.panel({ Name = "GuardianBar", Size = UDim2.fromOffset(460, 66), LayoutOrder = 0, Visible = false, Parent = Hud.Banner })
+local bar = UiKit.panel({ Name = "GuardianBar", Size = UDim2.fromOffset(460, 66), LayoutOrder = 0, Visible = false, Hue = "Crimson", Parent = Hud.Banner })
 local barIcon = UiKit.icon(UiTheme.Icons.Guardian, 34, "Danger")
 barIcon.Position = UDim2.fromOffset(14, 16)
 barIcon.Parent = bar

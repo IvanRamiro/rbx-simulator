@@ -19,10 +19,10 @@ local C = UiTheme.Colors
 local GRAND_REVEAL = { Legendary = true, Mythical = true, Secret = true } -- rarities revealed with the grander sound
 local RARITY_ORDER = { Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }
 
-local toggleButton, setPetBadge = Hud.railButton("PetsButton", UiTheme.Icons.Pets, "Pets", 1)
+local toggleButton, setPetBadge = Hud.railButton("PetsButton", UiTheme.Icons.Pets, "Pets", 1, "Orange")
 
 local window = Hud.window({
-    Name = "PetsWindow", Title = "PETS", Size = Vector2.new(330, 400), AnchorPoint = Vector2.new(0, 0),
+    Name = "PetsWindow", Title = "PETS", Hue = "Orange", Size = Vector2.new(330, 400), AnchorPoint = Vector2.new(0, 0),
     Position = UDim2.fromOffset(UiTheme.Margin + 310 + 16, UiTheme.Margin), -- beside the left column (STATUS is 310 wide)
 })
 local body = window.Body

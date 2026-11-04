@@ -17,9 +17,9 @@ local C = UiTheme.Colors
 local STEP = 0.1
 local ROW = 58
 
-local toggleButton = Hud.railButton("SettingsButton", UiTheme.Icons.Settings, "Settings", 4)
+local toggleButton = Hud.railButton("SettingsButton", UiTheme.Icons.Settings, "Settings", 4, "Teal")
 local window = Hud.window({
-    Name = "SettingsWindow", Title = "SETTINGS", Size = Vector2.new(340, 250), AnchorPoint = Vector2.new(0.5, 0.5),
+    Name = "SettingsWindow", Title = "SETTINGS", Hue = "Teal", Size = Vector2.new(340, 250), AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.fromScale(0.5, 0.5),
 })
 local body = window.Body

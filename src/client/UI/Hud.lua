@@ -1,6 +1,6 @@
 -- The HUD's one screen and its regions. Every controller puts its pieces into a region, in its
 -- LayoutOrder, instead of placing them by pixel, so they line up and never overlap:
---   Status   top left, one column: the STATUS window, the resource chips, then the Rail
+--   Status   top left, one column: the STATUS panel, the resource chips, then the Rail
 --   Rail     a row under the chips: the menu buttons (Pets, Robes ...); in the column, so on a
 --            short phone screen it can't run into the STATUS window
 --   Dock     bottom centre, bottom up: Cultivate, the breakthrough, the Qinggong strip
@@ -124,13 +124,13 @@ end
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(watchCamera)
 watchCamera()
 
--- A resource chip: its icon and a value. Returns the chip and its value label.
-function Hud.chip(name, image, order)
+-- A resource chip: its icon and a value, in a UiTheme.Hues colour. Returns the chip and its value label.
+function Hud.chip(name, image, order, hue)
     local chip = UiKit.panel({
         Name = name, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 34),
-        LayoutOrder = order, Brackets = false, Parent = chips,
+        LayoutOrder = order, Hue = hue, Parent = chips,
     })
-    -- the row is its own frame: a list on the panel would also line up the panel's glow
+    -- the row is its own frame, inset from the panel's rounded corners
     local row = Instance.new("Frame")
     row.Name = "Row"
     row.BackgroundTransparency = 1
@@ -150,11 +150,12 @@ function Hud.chip(name, image, order)
     return chip, value
 end
 
--- A menu button on the rail: its icon over its word, with an optional badge (a count, or a dot).
--- Returns the button and a function that sets the badge text (nil hides it).
-function Hud.railButton(name, image, word, order)
+-- A menu button on the rail, in its part of the game's colour (a UiTheme.Hues name): its icon over its
+-- word, with an optional badge (a count, or a dot). Returns the button and a function that sets the
+-- badge text (nil hides it).
+function Hud.railButton(name, image, word, order, hue)
     local button = UiKit.button({
-        Name = name, Text = "", Size = UDim2.fromOffset(64, 70), LayoutOrder = order, Tone = "Quiet",
+        Name = name, Text = "", Size = UDim2.fromOffset(64, 70), LayoutOrder = order, Tone = hue,
         Parent = Hud.Rail,
     })
     local icon = UiKit.icon(image, 34)
@@ -167,7 +168,7 @@ function Hud.railButton(name, image, word, order)
         TextXAlignment = Enum.TextXAlignment.Center, Parent = button,
     })
     local badge = UiKit.label({
-        Name = "Badge", Font = "Strong", TextSize = 11, TextColor3 = UiTheme.Colors.Panel,
+        Name = "Badge", Font = "Strong", TextSize = 11, TextColor3 = UiTheme.Colors.Well, TextStrokeTransparency = 1,
         BackgroundTransparency = 0, BackgroundColor3 = UiTheme.Colors.Accent,
         AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 6, 0, -6), Size = UDim2.fromOffset(0, 18),
         AutomaticSize = Enum.AutomaticSize.X, TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
@@ -184,9 +185,9 @@ function Hud.railButton(name, image, word, order)
 end
 
 -- ---------- windows ----------
--- A System window over the HUD: a [ TITLE ] header, a close button, and its Body. One is open at
--- a time: opening one closes the other (its OnClose runs), so they never stack.
--- props: Name, Title, Size (Vector2), AnchorPoint, Position (UDim2), OnClose (function)
+-- A window over the HUD: a title, a close button, and its Body. One is open at a time: opening one
+-- closes the other (its OnClose runs), so they never stack.
+-- props: Name, Title, Size (Vector2), AnchorPoint, Position (UDim2), OnClose (function), Hue (a UiTheme.Hues name)
 -- Returns { Frame, Body, open(), close(), isOpen(), setTitle(text) }.
 local windows = {}
 local SLIDE = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -194,9 +195,9 @@ local SLIDE = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Ou
 function Hud.window(props)
     local frame = UiKit.panel({
         Name = props.Name, Size = UDim2.fromOffset(props.Size.X, props.Size.Y), AnchorPoint = props.AnchorPoint,
-        Position = props.Position, Visible = false, ZIndex = 10, Parent = windowGui,
+        Position = props.Position, Visible = false, ZIndex = 10, Hue = props.Hue, Parent = windowGui,
     })
-    frame.BackgroundTransparency = 0.06 -- near solid: the HUD under a window mustn't read through it
+    frame.BackgroundTransparency = 0 -- solid: the HUD under a window mustn't read through it
     frame.Active = true -- clicks on it stay on it: they mustn't swing the player's weapon behind it
     applyHudScale(frame, props.Size.Y) -- and never taller than the screen (a phone)
     local inner = UiKit.content(frame, 14, 10)
@@ -239,7 +240,7 @@ function Hud.window(props)
         end
     end
     function win.setTitle(text)
-        title.Text = "[  " .. text .. "  ]"
+        title.Text = text
     end
     closeButton.Activated:Connect(win.close)
     table.insert(windows, win)

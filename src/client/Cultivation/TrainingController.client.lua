@@ -98,7 +98,7 @@ end)
 
 local stationLabel = UiKit.label({
     Name = "StationLabel", Font = "Strong", TextSize = 13, TextColor3 = C.AccentBright,
-    BackgroundTransparency = 0.15, BackgroundColor3 = C.AccentDeep, AutomaticSize = Enum.AutomaticSize.X,
+    BackgroundTransparency = 0.15, BackgroundColor3 = C.Well, AutomaticSize = Enum.AutomaticSize.X,
     Size = UDim2.fromOffset(0, 24), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 25, Visible = false,
     Text = GameConfig.TrainingStation.DisplayName .. "  +" .. GameConfig.TrainingStation.QiBonusPercent .. "% Qi",
     Parent = Hud.Dock,
@@ -107,7 +107,7 @@ UiKit.corner(stationLabel)
 UiKit.padding(stationLabel, 10, 0)
 
 local cultivateButton = UiKit.button({
-    Name = "CultivateButton", Tone = "Accent", Font = "Title", TextSize = 18, Text = "CULTIVATE",
+    Name = "CultivateButton", Tone = "Go", Font = "Title", TextSize = 18, Text = "CULTIVATE",
     Size = UDim2.fromOffset(240, 50), LayoutOrder = 30, Parent = Hud.Dock,
 })
 local cultivateKey = UiKit.keycap(keyName)
@@ -120,8 +120,8 @@ local function isCultivating()
 end
 
 local function updateCultivateButton()
-    -- while cultivating it turns quiet and says how to stop: the aura itself is the feedback
-    cultivateButton:SetAttribute("Tone", if isCultivating() then "Quiet" else "Accent")
+    -- while cultivating it says how to stop, in the colour of stopping
+    cultivateButton:SetAttribute("Tone", if isCultivating() then "Danger" else "Go")
     cultivateButton.Text = if isCultivating() then "STOP CULTIVATING" else "CULTIVATE"
 end
 

@@ -77,7 +77,7 @@ if UserInputService.TouchEnabled then
     button.AnchorPoint = Vector2.new(0.5, 0.5)
     button.Position = UDim2.new(1, -230, 1, -100)
     button.Size = UDim2.fromOffset(72, 72)
-    UiKit.touchButton(button, "Strike")
+    UiKit.touchButton(button, "Strike", "Crimson")
     button.Parent = gui
     button.Activated:Connect(strike)
     gui.Parent = player:WaitForChild("PlayerGui")

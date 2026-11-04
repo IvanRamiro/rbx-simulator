@@ -21,7 +21,7 @@ for _, relic in GameConfig.Relics do
     relicsById[relic.Id] = relic
 end
 
-local _, counter = Hud.chip("RelicCounter", UiTheme.Icons.Relics, 2)
+local _, counter = Hud.chip("RelicCounter", UiTheme.Icons.Relics, 2, "Orange")
 counter.Text = "0 / " .. #GameConfig.Relics .. " Relics"
 
 local message = Toast.new(nil, "RelicMessage", nil, RELIC_COLOR, MESSAGE_SECONDS)

@@ -26,7 +26,7 @@ local C = UiTheme.Colors
 local WALK_AWAY = 60 -- studs from where the window was opened
 
 -- ---------- the Spirit Stones counter ----------
-local stoneChip, counter = Hud.chip("StoneCounter", UiTheme.Icons.Stones, 1)
+local stoneChip, counter = Hud.chip("StoneCounter", UiTheme.Icons.Stones, 1, "Teal")
 
 local function updateCounter()
     local stones = player:GetAttribute("SpiritStones")
@@ -42,7 +42,7 @@ local render
 
 local window = Hud.window({
     -- centred, and short enough to clear the dock below (and fit a phone: HudScale shrinks it)
-    Name = "ShopWindow", Title = "SHOP", Size = Vector2.new(580, 420), AnchorPoint = Vector2.new(0.5, 0.5),
+    Name = "ShopWindow", Title = "SHOP", Hue = "Crimson", Size = Vector2.new(580, 420), AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.fromScale(0.5, 0.5), OnClose = function()
         current.shop = nil
     end,

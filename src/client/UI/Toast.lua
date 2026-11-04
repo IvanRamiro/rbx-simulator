@@ -1,4 +1,4 @@
--- A System notification at the top of the screen: a small window headed [ NOTIFICATION ] with
+-- A notification at the top of the screen: a small window headed NOTIFICATION with
 -- the message under it, in the HUD's Banner region where every Toast stacks (two never overlap).
 -- It fades in, hides itself after a few seconds, and a newer message replaces the one showing.
 -- Toast.new(_, name, _, textColor, seconds): the first and third arguments (a parent and a height)
@@ -18,7 +18,7 @@ local created = 0
 
 function Toast.new(_, name, _, textColor, seconds)
     created += 1
-    -- a CanvasGroup fades the whole window at once; its padding keeps the glow and ticks inside it
+    -- a CanvasGroup fades the whole window at once; its padding keeps the window's edge inside it
     local group = Instance.new("CanvasGroup")
     group.Name = name
     group.BackgroundTransparency = 1

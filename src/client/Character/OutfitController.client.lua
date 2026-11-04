@@ -23,7 +23,7 @@ local SWAY_DISTANCE = 120
 local UP = Vector3.new(0, 1, 0)
 
 -- ---------- the Robes button (on the HUD's rail, under Pets; a gold "On" while worn) ----------
-local button, setRobesBadge = Hud.railButton("RobesButton", UiTheme.Icons.Robes, "Robes", 2)
+local button, setRobesBadge = Hud.railButton("RobesButton", UiTheme.Icons.Robes, "Robes", 2, "Rose")
 button.Visible = false
 
 local function owned()
