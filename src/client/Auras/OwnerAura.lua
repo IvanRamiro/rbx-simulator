@@ -14,7 +14,7 @@
 -- the shins to above the head.
 --
 -- What moves, every frame:
---   the sphere (the owner's own: nebula fog, two spiked bursts, and the four-point star, brightest,
+--   the sphere (the owner's own: nebula fog, a soft light orb, two spiked bursts, and the four-point star, brightest,
 --     on top) follows the head on an underdamped spring, pulses with the torso's speed, trembles on
 --     sharp moves, breathes at rest, and swells with the surge; every layer's size curve scales with
 --     the pulse, and a layer with an EmitEvery attribute is emitted on that timer
@@ -54,7 +54,7 @@ local MEDITATION_SETTLE = 2.2               -- seconds into the slow float pose 
 
 local SPHERE_STIFF = 38                                   -- the spring's pull
 local SPHERE_DAMP = 2 * math.sqrt(SPHERE_STIFF) * 0.55    -- under 1: a little overshoot, then settle
-local SPHERE_LAYERS = { "SphereFog", "SpikeOuter", "SpikeInner", "Star" }
+local SPHERE_LAYERS = { "SphereFog", "LightOrb", "SpikeOuter", "SpikeInner", "Star" }
 
 local SURGE_BUILD, SURGE_SETTLE, SURGE_AFTER = 1.1, 1.6, 1.2   -- seconds
 local SURGE_FLASH, SURGE_SHAKE = 0.35, 0.45                    -- seconds: the screen flash, the shake
