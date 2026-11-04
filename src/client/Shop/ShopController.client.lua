@@ -32,7 +32,7 @@ local stoneChip, counter = Hud.chip("StoneCounter", UiTheme.Icons.Stones, 1)
 local function updateCounter()
     local stones = player:GetAttribute("SpiritStones")
     stoneChip.Visible = stones ~= nil
-    counter.Text = NumberFormat.compact(stones or 0) .. " Spirit Stones"
+    counter.Text = NumberFormat.compact(stones or 0)
 end
 player:GetAttributeChangedSignal("SpiritStones"):Connect(updateCounter)
 updateCounter()

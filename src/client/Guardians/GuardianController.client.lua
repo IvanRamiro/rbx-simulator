@@ -107,8 +107,8 @@ local message = Toast.new("GuardianMessage", Color3.new(1, 1, 1), 4)
 
 -- the health bar of the guardian being fought: first in the HUD's top-centre stack, so the
 -- messages (Toast) fall in below it instead of under it
-local SMALL_BAR = Hud.isCompact() -- on a phone it has to fit between the STATUS and QUEST windows
-local bar = UiKit.panel({ Name = "GuardianBar", Size = UDim2.fromOffset(if SMALL_BAR then 268 else 460, 66), LayoutOrder = 0, Visible = false, Parent = Hud.Banner })
+local SMALL_BAR = Hud.isCompact() -- on a phone it has to fit between the profile and the QUEST panel
+local bar = UiKit.panel({ Name = "GuardianBar", Size = UDim2.fromOffset(if SMALL_BAR then 340 else 460, 66), LayoutOrder = 0, Visible = false, Parent = Hud.Banner })
 local barIcon = UiKit.icon(UiTheme.Icons.Guardian, 34, "Danger")
 barIcon.Position = UDim2.fromOffset(14, 16)
 barIcon.Parent = bar

@@ -1,17 +1,16 @@
--- The HUD's one screen and its regions. Every controller puts its pieces into a region, in its
--- LayoutOrder, instead of placing them by pixel, so they line up and never overlap:
---   Status   top left, one column: the STATUS window, the resource chips, then the Rail
---   Rail     a row under the chips: the menu buttons (Pets, Robes ...)
---   Phone    on a short screen the HUD folds away behind one Settings button (the owner, 2026-11-04: "the
---            UI still big in mobile"). Pressing it shows the Rail, where the player picks what they want:
---            Status, Quest, Pets, Robes, Rewards, Options
---   Dock     bottom centre, bottom up: Cultivate, the breakthrough, the Qinggong strip
---   Banner   top centre: messages (Toast)
---   Quest    top right: the current quest (QuestController)
--- Windows (the pets list, the altar, the shops): Hud.window, one open at a time.
--- Each region scales with the screen (HudScale). Hud.isCompact() is true on a short screen (a
--- phone in landscape), and Hud.CompactChanged fires when that changes: the STATUS window slims
--- down. The first script to require this builds it.
+-- The HUD's regions, laid out from the owner's reference (2026-11-04). Every controller puts its pieces
+-- into a region, in its LayoutOrder, instead of placing them by pixel, so they line up and never overlap:
+--   Status    top left, one column: the player's profile, then the Rail
+--   Rail      the menu down the left: Pets, Robes, Quests, Settings
+--   Currency  top centre, in the row beside Roblox's own buttons: Qi, Spirit Stones, Relics
+--   TopRight  top right, in that row: small round buttons (Rewards)
+--   Quest     right, under them: the current quest (QuestController)
+--   Banner    top centre, under the currencies: the guardian's bar and messages (Toast)
+--   Dock      bottom centre, bottom up: Cultivate, the breakthrough, the Qinggong strip
+-- Strike, Dash and Sword stand round Roblox's jump button, bottom right. Roblox's chat stays where Roblox
+-- puts it, at the top. Windows (the pets list, the altar, the shops): Hud.window, one open at a time.
+-- Each region scales with the screen (HudScale). Hud.isCompact() is true on a short screen (a phone in
+-- landscape). The first script to require this builds it.
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -35,6 +34,18 @@ gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = playerGui
 
+-- The row beside Roblox's own buttons: a screen of its own, since the Hud's starts below them
+local oldTop = playerGui:FindFirstChild("HudTop")
+if oldTop then
+    oldTop:Destroy()
+end
+local topGui = Instance.new("ScreenGui")
+topGui.Name = "HudTop"
+topGui.ResetOnSpawn = false
+topGui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+topGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+topGui.Parent = playerGui
+
 -- Windows get their own screen, drawn over the HUD and over the touch controls (Strike, Dash ...),
 -- which on a phone sit where a window opens
 local oldWindows = playerGui:FindFirstChild("HudWindows")
@@ -48,7 +59,7 @@ windowGui.DisplayOrder = 20
 windowGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 windowGui.Parent = playerGui
 
-local function region(name, anchor, position, direction, horizontal, vertical, gap)
+local function region(name, anchor, position, direction, horizontal, vertical, gap, parent)
     local frame = Instance.new("Frame")
     frame.Name = name
     frame.BackgroundTransparency = 1
@@ -56,7 +67,7 @@ local function region(name, anchor, position, direction, horizontal, vertical, g
     frame.Position = position
     frame.AutomaticSize = Enum.AutomaticSize.XY
     frame.Size = UDim2.new()
-    frame.Parent = gui
+    frame.Parent = parent or gui
     UiKit.list(frame, {
         FillDirection = direction, HorizontalAlignment = horizontal, VerticalAlignment = vertical,
         Padding = UDim.new(0, gap),
@@ -73,19 +84,12 @@ Hud.Banner = region("Banner", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, M), Enum
     Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top, 6)
 Hud.Quest = region("Quest", Vector2.new(1, 0), UDim2.new(1, -M, 0, M), Enum.FillDirection.Vertical,
     Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Top, 6)
+Hud.Currency = region("Currency", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 8), Enum.FillDirection.Horizontal,
+    Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center, 8, topGui)
+Hud.TopRight = region("TopRight", Vector2.new(1, 0), UDim2.new(1, -M, 0, 6), Enum.FillDirection.Horizontal,
+    Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center, 8, topGui)
 
--- A row in the Status region for the small resource chips (Spirit Stones, Relics ...)
-local chips = Instance.new("Frame")
-chips.Name = "Chips"
-chips.BackgroundTransparency = 1
-chips.AutomaticSize = Enum.AutomaticSize.XY
-chips.Size = UDim2.new()
-chips.LayoutOrder = 10
-chips.Parent = Hud.Status
-Hud.Chips = chips
-UiKit.list(chips, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), VerticalAlignment = Enum.VerticalAlignment.Center })
-
--- The menu row, under the chips
+-- The menu down the left, under the profile
 local rail = Instance.new("Frame")
 rail.Name = "Rail"
 rail.BackgroundTransparency = 1
@@ -93,7 +97,7 @@ rail.AutomaticSize = Enum.AutomaticSize.XY
 rail.Size = UDim2.new()
 rail.LayoutOrder = 20
 rail.Parent = Hud.Status
-UiKit.list(rail, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8) })
+UiKit.list(rail, { FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 6) })
 Hud.Rail = rail
 
 -- ---------- compact screens ----------
@@ -132,64 +136,11 @@ end
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(watchCamera)
 watchCamera()
 
--- ---------- the phone's menu ----------
-local menuRow = Instance.new("Frame")
-menuRow.Name = "MenuRow"
-menuRow.BackgroundTransparency = 1
-menuRow.AutomaticSize = Enum.AutomaticSize.XY
-menuRow.Size = UDim2.new()
-menuRow.LayoutOrder = 0
-menuRow.Visible = false
-menuRow.Parent = Hud.Status
-UiKit.list(menuRow, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8) })
-local menuButton = UiKit.button({ Name = "MenuButton", Text = "", Size = UDim2.fromOffset(52, 52), Tone = "Accent", Parent = menuRow })
-local menuIcon = UiKit.icon(UiTheme.Icons.Settings, 28)
-menuIcon.AnchorPoint = Vector2.new(0.5, 0)
-menuIcon.Position = UDim2.new(0.5, 0, 0, 4)
-menuIcon.Parent = menuButton
-UiKit.label({
-    Name = "Word", Font = "Strong", Text = "Settings", TextSize = 11, TextColor3 = UiTheme.Colors.Text,
-    AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -3), Size = UDim2.new(1, 0, 0, 14),
-    TextXAlignment = Enum.TextXAlignment.Center, Parent = menuButton,
-})
--- something inside is waiting (a daily reward): it shows on the closed menu too
-local menuDot = UiKit.label({
-    Name = "Badge", Font = "Strong", TextSize = 11, Text = "!", TextColor3 = UiTheme.Colors.Panel,
-    BackgroundTransparency = 0, BackgroundColor3 = UiTheme.Colors.Highlight, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, 6, 0, -6), Size = UDim2.fromOffset(18, 18), TextXAlignment = Enum.TextXAlignment.Center,
-    Visible = false, ZIndex = 5, Parent = menuButton,
-})
-UiKit.corner(menuDot, 9)
-
-local menuOpen = false
-local waiting = {} -- [button name] = true while its badge asks for attention
-
-local function applyMenu()
-    local phone = Hud.isCompact()
-    menuRow.Visible = phone
-    local parent = if phone then menuRow else Hud.Status
-    if rail.Parent ~= parent then
-        rail.Parent = parent
-    end
-    rail.Visible = not phone or menuOpen
-    menuDot.Visible = phone and not menuOpen and next(waiting) ~= nil
-end
-function Hud.closeMenu()
-    menuOpen = false
-    applyMenu()
-end
-menuButton.Activated:Connect(function()
-    menuOpen = not menuOpen
-    applyMenu()
-end)
-compactChanged.Event:Connect(applyMenu)
-applyMenu()
-
 -- A resource chip: its icon and a value. Returns the chip and its value label.
 function Hud.chip(name, image, order)
     local chip = UiKit.panel({
         Name = name, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 34),
-        LayoutOrder = order, Brackets = false, Parent = chips,
+        LayoutOrder = order, Brackets = false, Parent = Hud.Currency,
     })
     -- the row is its own frame: a list on the panel would also line up the panel's glow
     local row = Instance.new("Frame")
@@ -211,24 +162,7 @@ function Hud.chip(name, image, order)
     return chip, value
 end
 
--- A menu button on the rail: its icon over its word, with an optional badge (a count, or a dot).
--- Returns the button and a function that sets the badge text (nil hides it).
--- keepMenu: choosing it leaves a phone's menu open (a panel switched on or off, not a window).
-function Hud.railButton(name, image, word, order, keepMenu)
-    local small = Hud.isCompact()
-    local button = UiKit.button({
-        Name = name, Text = "", Size = if small then UDim2.fromOffset(52, 52) else UDim2.fromOffset(64, 70), LayoutOrder = order, Tone = "Quiet",
-        Parent = Hud.Rail,
-    })
-    local icon = UiKit.icon(image, if small then 28 else 34)
-    icon.AnchorPoint = Vector2.new(0.5, 0)
-    icon.Position = UDim2.new(0.5, 0, 0, if small then 4 else 8)
-    icon.Parent = button
-    UiKit.label({
-        Name = "Word", Font = "Strong", Text = word, TextSize = if small then 11 else 12, TextColor3 = UiTheme.Colors.Text,
-        AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, if small then -3 else -5), Size = UDim2.new(1, 0, 0, 14),
-        TextXAlignment = Enum.TextXAlignment.Center, Parent = button,
-    })
+local function addBadge(button)
     local badge = UiKit.label({
         Name = "Badge", Font = "Strong", TextSize = 11, TextColor3 = UiTheme.Colors.Panel,
         BackgroundTransparency = 0, BackgroundColor3 = UiTheme.Colors.Accent,
@@ -238,17 +172,39 @@ function Hud.railButton(name, image, word, order, keepMenu)
     })
     UiKit.corner(badge, 9)
     UiKit.padding(badge, 6, 0)
-    if not keepMenu then
-        button.Activated:Connect(Hud.closeMenu)
-    end
-    local function setBadge(text, tone)
-        waiting[name] = if text == "!" then true else nil
-        applyMenu()
+    return function(text, tone)
         badge.Visible = text ~= nil
         badge.Text = text or ""
         badge.BackgroundColor3 = if tone == "Highlight" then UiTheme.Colors.Highlight else UiTheme.Colors.Accent
     end
-    return button, setBadge
+end
+
+-- A menu button on the rail: its icon beside its word, with an optional badge (a count, or a dot).
+-- Returns the button and a function that sets the badge text (nil hides it).
+function Hud.railButton(name, image, word, order)
+    local button = UiKit.button({ Name = name, Text = "", Size = UDim2.fromOffset(150, 42), LayoutOrder = order, Tone = "Quiet", Parent = Hud.Rail })
+    local icon = UiKit.icon(image, 32)
+    icon.AnchorPoint = Vector2.new(0, 0.5)
+    icon.Position = UDim2.new(0, 6, 0.5, 0)
+    icon.Parent = button
+    UiKit.label({
+        Name = "Word", Font = "Strong", Text = word, TextSize = 15, TextColor3 = UiTheme.Colors.Text,
+        AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 46, 0.5, 0), Size = UDim2.new(1, -50, 0, 18), Parent = button,
+    })
+    return button, addBadge(button)
+end
+
+-- A small round button in the top row, with the same badge.
+function Hud.topButton(name, image, order)
+    local button = UiKit.button({ Name = name, Text = "", Size = UDim2.fromOffset(42, 42), LayoutOrder = order, Tone = "Quiet", Parent = Hud.TopRight })
+    button:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
+    local icon = UiKit.icon(image, 32)
+    icon.BackgroundTransparency = 1
+    icon:FindFirstChildOfClass("UIStroke"):Destroy()
+    icon.AnchorPoint = Vector2.new(0.5, 0.5)
+    icon.Position = UDim2.fromScale(0.5, 0.5)
+    icon.Parent = button
+    return button, addBadge(button)
 end
 
 -- ---------- windows ----------

@@ -23,7 +23,7 @@ local DAYS = #GameConfig.Rewards.Daily
 local GROUP = GameConfig.Rewards.Group
 local hasGroup = GROUP.GroupId > 0
 
-local toggleButton, setBadge = Hud.railButton("RewardsButton", UiTheme.Icons.Rewards, "Rewards", 3)
+local toggleButton, setBadge = Hud.topButton("RewardsButton", UiTheme.Icons.Rewards, 1)
 local window = Hud.window({
     Name = "RewardsWindow", Title = "REWARDS", Size = Vector2.new(400, if hasGroup then 282 else 232),
     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),

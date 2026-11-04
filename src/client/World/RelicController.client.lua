@@ -22,7 +22,7 @@ for _, relic in GameConfig.Relics do
 end
 
 local _, counter = Hud.chip("RelicCounter", UiTheme.Icons.Relics, 2)
-counter.Text = "0 / " .. #GameConfig.Relics .. " Relics"
+counter.Text = "0 / " .. #GameConfig.Relics
 
 local message = Toast.new("RelicMessage", RELIC_COLOR, MESSAGE_SECONDS)
 
@@ -71,7 +71,7 @@ local function updateAll()
     for _ in found do
         foundCount += 1
     end
-    counter.Text = foundCount .. " / " .. #GameConfig.Relics .. " Relics"
+    counter.Text = foundCount .. " / " .. #GameConfig.Relics
 
     local rankName = Ranks.getPlayerRankName(player)
     for _, model in CollectionService:GetTagged(GameConfig.RelicTag) do

@@ -24,7 +24,7 @@ local toggleButton, setPetBadge = Hud.railButton("PetsButton", UiTheme.Icons.Pet
 
 local window = Hud.window({
     Name = "PetsWindow", Title = "PETS", Size = Vector2.new(330, 400), AnchorPoint = Vector2.new(0, 0),
-    Position = UDim2.fromOffset(UiTheme.Margin + 310 + 16, UiTheme.Margin), -- beside the left column (STATUS is 310 wide)
+    Position = UDim2.fromOffset(UiTheme.Margin + 270 + 16, UiTheme.Margin), -- beside the left column (the profile is 270 wide)
 })
 local body = window.Body
 

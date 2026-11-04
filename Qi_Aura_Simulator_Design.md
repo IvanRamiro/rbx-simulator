@@ -1177,9 +1177,9 @@ Not yet measured on a real phone. The owner's account wears `OwnerAura`, the cos
 
 A pet is many mesh pieces fetched on first use, so on a phone it came in slowly, a piece at a time. `client/Pets/PetPreload` now downloads a pet before it's built (for 8 seconds at most, so one can't go missing) and fetches a player's other pets in the background once their inventory arrives. HUD icons load at start too.
 
-### The phone's Settings menu (the owner, November 4, 2026)
+### The HUD's layout (the owner, November 4, 2026)
 
-"The UI still big in mobile... when they pressed setting the icons will show and they can choose." On a short screen (`Hud.isCompact`) the HUD folds behind one Settings button, top left, with a "!" on it when a reward is waiting. Pressing it shows Status, Quest, Pets, Robes, Rewards and Options. Status and Quest switch their panels on and off and the choice is saved (`PhoneStatus`, off to start, its panel bringing the Stones and Relics chips; `PhoneQuest`, on to start, because the quests guide new players). The rest open their windows. Larger screens keep the full HUD. Seen in Studio with the phone layout forced on, not yet on a phone.
+Laid out from a reference image the owner sent ("I mean the position"), leaving out its teleport and skill bar, with Roblox's chat left at the top. On every screen: the profile top left (portrait, name, rank, realm, progress; tapping the portrait folds it, and that's saved); the menu down the left (Pets, Robes, Quests, Settings); Qi, Spirit Stones and Relics top centre, beside Roblox's own buttons; Rewards as a round button top right; the quest panel on the right, which the Quests button shows or hides (saved as `ShowQuest`); the guardian's bar and messages under the currencies; Cultivate and the Qinggong strip bottom centre; Strike, Dash and Sword round the jump button. It replaced a folding phone menu built an hour before. Seen in Play at desktop size; the fit on a phone is worked out from the owner's screenshots, not yet seen there.
 
 ### Anti-cheat fixes (November 4, 2026)
 

@@ -17,122 +17,75 @@ local C = UiTheme.Colors
 local keyName = GameConfig.CultivationKeybind.Name
 local lastToggleRequestTime = 0
 
--- ---------- the STATUS window (the Status region): Qi, name, rank, realm, progress ----------
-local statusFrame = UiKit.panel({ Name = "StatusWindow", Size = UDim2.fromOffset(310, 178), LayoutOrder = 1, Parent = Hud.Status })
-local status = UiKit.content(statusFrame, 14, 10)
-UiKit.header(status, "STATUS", { TextSize = 13 })
+-- ---------- the profile (top of the Status region): portrait, name, rank, realm, progress ----------
+local FULL_SIZE, MINIMIZED_SIZE = UDim2.fromOffset(270, 88), UDim2.fromOffset(84, 88)
+local statusFrame = UiKit.panel({ Name = "StatusWindow", Size = FULL_SIZE, LayoutOrder = 1, Parent = Hud.Status })
 
-local qiIcon = UiKit.icon(UiTheme.Icons.Qi, 34, "Accent")
-qiIcon.Position = UDim2.fromOffset(0, 30)
-qiIcon.Parent = status
+-- the portrait: tapping it folds the rest away (the owner's minimize, saved in their settings)
+local portrait = Instance.new("ImageButton")
+portrait.Name = "Portrait"
+portrait.AnchorPoint = Vector2.new(0, 0.5)
+portrait.Position = UDim2.new(0, 10, 0.5, 0)
+portrait.Size = UDim2.fromOffset(64, 64)
+portrait.BackgroundColor3 = C.Well
+portrait.AutoButtonColor = false
+portrait.ZIndex = 2
+portrait.Parent = statusFrame
+UiKit.corner(portrait, 32)
+UiKit.stroke(portrait, C.Edge, 0, 2)
+task.spawn(function()
+    local ok, image = pcall(function()
+        return Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+    end)
+    if ok then
+        portrait.Image = image
+    end
+end)
+
+local details = Instance.new("Frame")
+details.Name = "Details"
+details.BackgroundTransparency = 1
+details.Position = UDim2.fromOffset(84, 6)
+details.Size = UDim2.new(1, -94, 1, -12)
+details.Parent = statusFrame
 UiKit.label({
-    Name = "QiCaption", Font = "Strong", TextSize = 10, TextColor3 = C.Muted, Text = "QI",
-    Position = UDim2.fromOffset(44, 28), Size = UDim2.fromOffset(40, 12), Parent = status,
-})
-local qiLabel = UiKit.label({
-    Name = "QiLabel", Font = "Number", TextSize = 26, TextColor3 = C.AccentBright,
-    Position = UDim2.fromOffset(44, 38), Size = UDim2.new(1, -120, 0, 28), Text = "...", Parent = status,
+    Name = "NameLabel", Font = "Strong", TextSize = 13, Text = player.DisplayName, TextTruncate = Enum.TextTruncate.AtEnd,
+    Size = UDim2.new(1, -66, 0, 16), Parent = details,
 })
 local powerTag = UiKit.label({
     Name = "Power", Font = "Strong", TextSize = 12, TextColor3 = C.Highlight, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, 0, 0, 44), Size = UDim2.fromOffset(80, 16), TextXAlignment = Enum.TextXAlignment.Right,
-    Text = "", Parent = status,
+    Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(64, 16), TextXAlignment = Enum.TextXAlignment.Right, Text = "", Parent = details,
+})
+local rankLabel = UiKit.label({
+    Name = "RankLabel", Font = "Title", TextSize = 15, TextColor3 = C.Highlight, Position = UDim2.fromOffset(0, 16),
+    Size = UDim2.new(1, 0, 0, 18), TextTruncate = Enum.TextTruncate.AtEnd, Parent = details,
+})
+local realmLabel = UiKit.label({
+    Name = "RealmLabel", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Position = UDim2.fromOffset(0, 34),
+    Size = UDim2.new(1, 0, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = details,
+})
+local progressBar = UiKit.bar({ Name = "Progress", Position = UDim2.new(0, 0, 1, -18), Size = UDim2.new(1, 0, 0, 18), Parent = details })
+local nextRankLabel = UiKit.label({
+    Name = "NextRankLabel", Font = "Strong", TextSize = 11, Size = UDim2.fromScale(1, 1), Text = "", ZIndex = 3,
+    TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.AtEnd, TextStrokeTransparency = 0.5, Parent = progressBar,
 })
 
--- the panel's fields: a muted key, its value
-local function field(key, y, color)
-    UiKit.label({
-        Name = key .. "Key", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = key,
-        Position = UDim2.fromOffset(0, y), Size = UDim2.fromOffset(58, 16), Parent = status,
-    })
-    return UiKit.label({
-        Name = key .. "Value", Font = "Strong", TextSize = 13, TextColor3 = color or C.Text, Text = "",
-        Position = UDim2.fromOffset(60, y), Size = UDim2.new(1, -60, 0, 16), TextTruncate = Enum.TextTruncate.AtEnd,
-        Parent = status,
-    })
-end
-field("NAME", 74).Text = player.DisplayName
-local rankLabel = field("RANK", 92, C.Highlight)
-local realmLabel = field("REALM", 110)
-
--- On a short screen (a phone in landscape) the window slims down to Qi, rank and progress: NAME
--- and REALM go, and RANK moves up into NAME's place.
--- Minimized (the player's choice, saved in their settings), it shrinks to the Qi alone.
-local FULL_HEIGHT, COMPACT_HEIGHT = 178, 140
-local MINIMIZED_SIZE = UDim2.fromOffset(176, 46)
-local minimizeButton = UiKit.button({
-    Name = "Minimize", Tone = "Quiet", Font = "Strong", Text = "-", TextSize = 16, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, 6, 0, -5), Size = if UserInputService.TouchEnabled then UDim2.fromOffset(32, 32) else UDim2.fromOffset(24, 24),
-    ZIndex = 3, Parent = status,
-})
--- On a phone the panel and its chips show only when the player picks Status in the Settings menu.
-local statusButton = Hud.railButton("StatusButton", UiTheme.Icons.Qi, "Status", -2, true)
-local function phoneStatusShown()
-    local chosen = player:GetAttribute("SettingPhoneStatus")
-    if chosen == nil then
-        chosen = GameConfig.Settings.PhoneStatus
-    end
-    return chosen == true
-end
 local function fitStatus()
-    local compact = Hud.isCompact()
-    local shown = not compact or phoneStatusShown()
-    statusFrame.Visible = shown
-    Hud.Chips.Visible = shown
-    statusButton.Visible = compact
-    statusButton:SetAttribute("Tone", if shown then "Accent" else "Quiet")
-    local minimized = not compact and player:GetAttribute("SettingStatusMinimized") == true
-    for _, child in status:GetChildren() do
-        if child:IsA("GuiObject") then
-            child.Visible = not minimized or child == qiIcon or child == qiLabel or child == minimizeButton
-        end
-    end
-    minimizeButton.Text = if minimized then "+" else "-"
-    minimizeButton.Visible = not compact -- a phone's menu does this job
-    if minimized then
-        statusFrame.Size = MINIMIZED_SIZE
-        qiIcon.Position = UDim2.fromOffset(0, 0)
-        qiIcon.Size = UDim2.fromOffset(26, 26)
-        qiLabel.Position = UDim2.fromOffset(32, 0)
-        qiLabel.Size = UDim2.new(1, -60, 0, 26)
-        qiLabel.TextSize = 20
-        return
-    end
-    statusFrame.Size = UDim2.fromOffset(310, if compact then COMPACT_HEIGHT else FULL_HEIGHT)
-    qiIcon.Position = UDim2.fromOffset(0, 30)
-    qiIcon.Size = UDim2.fromOffset(34, 34)
-    qiLabel.Position = UDim2.fromOffset(44, 38)
-    qiLabel.Size = UDim2.new(1, -120, 0, 28)
-    qiLabel.TextSize = 26
-    for _, key in { "NAME", "REALM" } do
-        status[key .. "Key"].Visible = not compact
-        status[key .. "Value"].Visible = not compact
-    end
-    status.RANKKey.Position = UDim2.fromOffset(0, if compact then 74 else 92)
-    status.RANKValue.Position = UDim2.fromOffset(60, if compact then 74 else 92)
+    local minimized = player:GetAttribute("SettingStatusMinimized") == true
+    statusFrame.Size = if minimized then MINIMIZED_SIZE else FULL_SIZE
+    details.Visible = not minimized
 end
-minimizeButton.Activated:Connect(function()
-    -- the attribute changes at once, so the window answers without waiting for the server's copy
+portrait.Activated:Connect(function()
+    -- the attribute changes at once, so it answers without waiting for the server's copy
     local minimized = player:GetAttribute("SettingStatusMinimized") ~= true
     player:SetAttribute("SettingStatusMinimized", minimized)
     RemoteEvents.SettingsEvent:FireServer("StatusMinimized", minimized)
 end)
-statusButton.Activated:Connect(function()
-    local shown = not phoneStatusShown()
-    player:SetAttribute("SettingPhoneStatus", shown)
-    RemoteEvents.SettingsEvent:FireServer("PhoneStatus", shown)
-end)
-player:GetAttributeChangedSignal("SettingPhoneStatus"):Connect(fitStatus)
 player:GetAttributeChangedSignal("SettingStatusMinimized"):Connect(fitStatus)
-Hud.CompactChanged:Connect(fitStatus)
 fitStatus()
 
-local progressBar = UiKit.bar({ Name = "Progress", Position = UDim2.new(0, 0, 1, -22), Size = UDim2.new(1, 0, 0, 6), Parent = status })
-local nextRankLabel = UiKit.label({
-    Name = "NextRankLabel", TextSize = 11, TextColor3 = C.Muted, AnchorPoint = Vector2.new(0, 1),
-    Position = UDim2.new(0, 0, 1, 0), Size = UDim2.new(1, 0, 0, 14), Text = "", TextTruncate = Enum.TextTruncate.AtEnd,
-    Parent = status,
-})
+-- the Qi, first of the currencies
+local _, qiLabel = Hud.chip("QiCounter", UiTheme.Icons.Qi, 0)
 
 -- ---------- the dock: the breakthrough (when it's ready), the station's bonus, Cultivate ----------
 local rankUpButton = UiKit.button({
@@ -230,7 +183,7 @@ local function updateRankDisplay()
 
     local nextRank = Ranks.getNextRank(rankValue.Value)
     if not nextRank then
-        nextRankLabel.Text = "The highest rank: nothing above you"
+        nextRankLabel.Text = "The highest rank"
         UiKit.setBar(progressBar, 1)
         rankUpButton.Visible = false
         return
@@ -242,9 +195,9 @@ local function updateRankDisplay()
     UiKit.setBar(progressBar, (qiValue.Value - from) / math.max(1, nextRank.QiRequired - from))
     local target = if rank and nextRank.Realm ~= rank.Realm then nextRank.Realm else nextRank.Name
     nextRankLabel.Text = if canRankUp
-        then target .. ": ready to break through"
-        else target .. " at " .. NumberFormat.compact(nextRank.QiRequired) .. "  ·  " .. NumberFormat.compact(nextRank.QiRequired - qiValue.Value) .. " to go"
-    nextRankLabel.TextColor3 = if canRankUp then C.Highlight else C.Muted
+        then "Ready to break through"
+        else NumberFormat.compact(nextRank.QiRequired - qiValue.Value) .. " Qi to " .. target
+    nextRankLabel.TextColor3 = if canRankUp then C.Highlight else C.Text
     rankUpButton.Visible = canRankUp
     rankUpButton.Text = "BREAK THROUGH: " .. string.upper(target)
 end

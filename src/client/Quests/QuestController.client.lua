@@ -64,20 +64,15 @@ local skip = UiKit.button({
 
 local message = Toast.new("QuestMessage", C.Highlight, 4)
 
--- On a phone the player chooses whether it shows, in the Settings menu.
-local questButton = Hud.railButton("QuestButton", UiTheme.Icons.Quest, "Quest", -1, true)
-local function phoneQuestShown()
-    local chosen = player:GetAttribute("SettingPhoneQuest")
-    if chosen == nil then
-        chosen = GameConfig.Settings.PhoneQuest
-    end
-    return chosen == true
-end
+-- The Quests button on the rail shows or hides it, and the choice is saved.
+local questButton = Hud.railButton("QuestButton", UiTheme.Icons.Quest, "Quests", 3)
 local function questAllowed()
-    local shown = not Hud.isCompact() or phoneQuestShown()
-    questButton.Visible = Hud.isCompact()
-    questButton:SetAttribute("Tone", if shown then "Accent" else "Quiet")
-    return shown
+    local chosen = player:GetAttribute("SettingShowQuest")
+    if chosen == nil then
+        chosen = GameConfig.Settings.ShowQuest
+    end
+    questButton:SetAttribute("Tone", if chosen then "Accent" else "Quiet")
+    return chosen == true
 end
 
 local function render()
@@ -135,10 +130,9 @@ RemoteEvents.QuestEvent.OnClientEvent:Connect(function(kind, step, stones)
 end)
 
 questButton.Activated:Connect(function()
-    local shown = not phoneQuestShown()
-    player:SetAttribute("SettingPhoneQuest", shown)
-    RemoteEvents.SettingsEvent:FireServer("PhoneQuest", shown)
+    local shown = not questAllowed()
+    player:SetAttribute("SettingShowQuest", shown)
+    RemoteEvents.SettingsEvent:FireServer("ShowQuest", shown)
 end)
-player:GetAttributeChangedSignal("SettingPhoneQuest"):Connect(render)
-Hud.CompactChanged:Connect(render)
+player:GetAttributeChangedSignal("SettingShowQuest"):Connect(render)
 questAllowed()
