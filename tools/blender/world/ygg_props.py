@@ -505,11 +505,12 @@ def write_placements(path=W.REPO + "/src/worldbuild/Placements/Yggdrasil.lua"):
     lines.append("    -- the shops' buildings (ygg_shops.py), in their plots' frames: the name board's face over the")
     lines.append("    -- entrance, where the shop's prompt stands, and where its fire, smoke and lights go")
     lines.append("    Shops = {")
-    for name in ("Blacksmith", "BuySell"):
+    for name in ("Blacksmith", "BuySell", "Marketplace"):
         (sx, sy, sz), (sw, sh) = SH.SIGNS[name]
         lines.append("        %s = {" % name)
         lines.append("            Sign = { Centre = Vector3.new(%g, %g, %.2f), Size = Vector2.new(%g, %g) }," % (sx, sy, sz + 0.03, sw, sh))
-        lines.append("            Prompt = Vector3.new(%g, %g, %g)," % SH.PROMPTS[name])
+        if name in SH.PROMPTS:
+            lines.append("            Prompt = Vector3.new(%g, %g, %g)," % SH.PROMPTS[name])
         lines.append("            Fx = {")
         for kind, (fx, fy, fz) in SH.FX[name]:
             lines.append('                { Kind = "%s", Position = Vector3.new(%g, %g, %g) },' % (kind, fx, fy, fz))

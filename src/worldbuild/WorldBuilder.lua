@@ -290,6 +290,7 @@ WorldBuilder.Collision = {
     { Prefix = "YG_Stele", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_Blacksmith", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_BuySell", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "YG_Market", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_MoundRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_GripRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_PathRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
@@ -382,6 +383,8 @@ WorldBuilder.Appearance = {
     YG_BlacksmithGlow = table.clone(GLOW),
     YG_BuySellStones = table.clone(GLOW),
     YG_BuySellLanterns = table.clone(GLOW),
+    YG_MarketCoins = table.clone(GLOW),
+    YG_MarketLanterns = table.clone(GLOW),
     YG_AltarPool = table.clone(GLOW),
     YG_AltarGemYggdrasil = table.clone(GLOW),
     YG_AltarGemJade = table.clone(GLOW),
@@ -424,6 +427,8 @@ WorldBuilder.Appearance.YG_SeedLanterns.Color = Color3.fromRGB(255, 170, 40)
 WorldBuilder.Appearance.YG_BlacksmithGlow.Color = Color3.fromRGB(255, 105, 20)
 WorldBuilder.Appearance.YG_BuySellStones.Color = Color3.fromRGB(30, 215, 170) -- the Spirit Stones' jade
 WorldBuilder.Appearance.YG_BuySellLanterns.Color = Color3.fromRGB(235, 60, 30)
+WorldBuilder.Appearance.YG_MarketCoins.Color = Color3.fromRGB(255, 170, 40)
+WorldBuilder.Appearance.YG_MarketLanterns.Color = Color3.fromRGB(235, 60, 30)
 -- the Hatching Altar's pool of golden Qi, and its seals' gems in each island's glow (the waystones')
 -- a deep amber, a little clear: Neon blooms a paler gold to a flat lemon disc, and the jade heart
 -- showing through reads as liquid in the lotus
@@ -1455,7 +1460,7 @@ end
 WorldBuilder.Plots = {
     Leaderboard = { Title = "Leaderboard", Subtitle = "The greatest cultivators, carved here soon", Built = "Ascension Stele" },
     Blacksmith = { Title = "Blacksmith", Subtitle = "Swords and spears for every realm", Built = "Dragon-Kiln Forge" },
-    Marketplace = { Title = "Marketplace", Subtitle = "Opening soon" },
+    Marketplace = { Title = "Marketplace", Subtitle = "Opening soon", Built = "Coin-Tree Market", Sign = "Marketplace: Opening Soon" },
     BuySell = { Title = "Buy & Sell", Subtitle = "Sell pets and weapons for Spirit Stones", Built = "Jade Scale" },
 }
 WorldBuilder.PlotCordColor = Color3.fromRGB(190, 30, 25)
@@ -1612,6 +1617,8 @@ end
 WorldBuilder.Shops = {
     Blacksmith = { Plot = "Blacksmith", Pieces = { "YG_Blacksmith", "YG_BlacksmithGlow" }, Action = "Browse" },
     BuySell = { Plot = "BuySell", Pieces = { "YG_BuySell", "YG_BuySellStones", "YG_BuySellLanterns" }, Action = "Trade" },
+    -- no Action, no prompt: the building stands, and what it sells isn't decided yet
+    Marketplace = { Plot = "Marketplace", Pieces = { "YG_Market", "YG_MarketCoins", "YG_MarketLanterns" } },
 }
 WorldBuilder.ForgeLight = Color3.fromRGB(255, 120, 40)
 WorldBuilder.LanternLight = Color3.fromRGB(255, 130, 70) -- warm: a red light tints the paving pink
@@ -1641,6 +1648,9 @@ local SHOP_FX = {
     Lantern = function(part)
         addLight(part, WorldBuilder.LanternLight, 12, 0.5)
     end,
+    Coins = function(part)
+        addLight(part, WorldBuilder.Appearance.YG_MarketCoins.Color, 14, 0.7)
+    end,
 }
 
 -- The shops on their plots (FloatingIslands.<island>.Shops.<Shop>): the building's pieces, the name
@@ -1664,18 +1674,20 @@ function WorldBuilder.buildShops(island)
 
         local _, signGui = textPanel("Sign", spots.Sign.Size, frame * CFrame.new(spots.Sign.Centre), model, 60)
         steleLabel("Text", signGui, UDim2.fromScale(0.96, 0.9), UDim2.fromScale(0.02, 0.05), Enum.TextXAlignment.Center,
-            Color3.fromRGB(240, 222, 170)).Text = plotInfo.Title
+            Color3.fromRGB(240, 222, 170)).Text = plotInfo.Sign or plotInfo.Title
 
-        local holder = marker("Prompt", Vector3.new(1, 1, 1), frame * CFrame.new(spots.Prompt), model)
-        local prompt = Instance.new("ProximityPrompt")
-        prompt.ActionText = info.Action
-        prompt.ObjectText = plotInfo.Title
-        prompt.KeyboardKeyCode = Enum.KeyCode.F
-        prompt.HoldDuration = 0
-        prompt.MaxActivationDistance = 12
-        prompt.RequiresLineOfSight = false
-        prompt:SetAttribute("Shop", shop)
-        prompt.Parent = holder
+        if info.Action then
+            local holder = marker("Prompt", Vector3.new(1, 1, 1), frame * CFrame.new(spots.Prompt), model)
+            local prompt = Instance.new("ProximityPrompt")
+            prompt.ActionText = info.Action
+            prompt.ObjectText = plotInfo.Title
+            prompt.KeyboardKeyCode = Enum.KeyCode.F
+            prompt.HoldDuration = 0
+            prompt.MaxActivationDistance = 12
+            prompt.RequiresLineOfSight = false
+            prompt:SetAttribute("Shop", shop)
+            prompt.Parent = holder
+        end
 
         local fx = Instance.new("Folder")
         fx.Name = "Fx"

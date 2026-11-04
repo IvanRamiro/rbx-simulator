@@ -22,7 +22,7 @@ These never change without an explicit decision from the project owner.
 - **Aura concept** stays as designed (section 4). The bar is not "looks like Sol's RNG": it is to genuinely compete with, and aim to surpass, Sol's RNG's most impressive auras.
 - **No generic style.** Islands, pets and effects are original Blender work with their own silhouette and identity. Nothing is a recoloured copy of another piece.
 - **No Chinese text** anywhere in the game: not in the UI, icons, signs or names ("people might not want to play the game because there is chinese text", November 3, 2026). The wuxia feel comes from art, effects and English names.
-- **The interface is bright and colourful** (November 4, 2026: "use a colorful UI/UX, because I don't think the player will enjoy looking at the current design"; it replaces the blue "System" look of November 3). Rounded gradient panels, a chunky font, and each part of the game in its own colour: Status violet, Quest blue, Pets orange, Robes rose, Rewards gold, Settings teal, the Hatching Altar green, the Blacksmith crimson, Cultivate green (`client/UI`: UiTheme, UiKit, Hud).
+- **The interface is the cultivator's System** (November 3, 2026: "make it more like a game system status from solo leveling"). It is an original take on the genre, nothing copied: translucent blue windows with a glowing edge and bracketed headers such as [ STATUS ] (`client/UI`: UiTheme, UiKit, Hud). The owner tried a colourful version on their phone on November 4, 2026, and chose this one: "the UI is way too colorful, I'd actually preferred the blue one". The icons stay full colour ("too transparent and no life at all" as thin lines), so they carry the colour on the blue.
 - **Weapons:** players purchase or request a **forged weapon**, and their Qi mastery decides which weapons they can get.
 - **Sword flight:** a sword can also be ridden for flight. It is the only free flight in the game; everywhere else, players move with Qinggong.
 
@@ -59,7 +59,7 @@ The fantasy is becoming a cultivator whose growing power shows in ever more spec
 
 ### The quest path (first steps November 3, 2026; the rest November 4, 2026)
 
-A new player is walked through the loop by the quests, one at a time in the QUEST panel (top right), each paying Spirit Stones (`GameConfig.Quests`). The first seven (270 stones in all):
+A new player is walked through the loop by the quests, one at a time in the [ QUEST ] panel (top right), each paying Spirit Stones (`GameConfig.Quests`). The first seven (270 stones in all):
 1. Gather 100 Qi.
 2. Equip the starter Aqua Wisp.
 3. Break through to Qi Gatherer.
@@ -691,7 +691,8 @@ The World Tree stands at the centre; everything else rings it. Scripts: `ygg_isl
 - **West, the Market Terrace:** plots for the **Blacksmith** (exclusive weapons), the **Marketplace** and **Buy & Sell**, along a lane.
 - **Plots** (`WorldBuilder.buildPlots`): each is paved, marked out by talisman stakes strung with sagging red cord, with a roofed notice board naming what is coming. A plot whose building stands (`WorldBuilder.Plots.<Name>.Built`) is left to it.
 - **The Ascension Stele** (the leaderboard, built November 2, 2026, `WorldBuilder.buildLeaderboard`, `LeaderboardService`): an honour board like a memorial archway's, a dark slate board in a bronze frame on a stepped plinth between red-lacquered pillars, under a tiled roof whose corners sweep up, a pearl of Qi in a bronze cup on the ridge. It lists the ten cultivators with the most Qi across every server (an OrderedDataStore, `WorldConfig.Leaderboard`), with their rank; the top three in gold, silver and bronze. A player's Qi is written as their data loads, every two minutes while it changes, and as they leave; the board re-reads every minute. Without DataStores it ranks the players in the server. Tested in Play: the owner listed first at 4.18B.
-- **The shops** (phase 2 of the weapons, `ygg_shops.py`, `Yggdrasil_Shops.fbx`, `WorldBuilder.buildShops`), under the Stele's roof (`ygg_props.tiled_roof`) but each with its own idea:
+- **The shops** (phase 2 of the weapons, `ygg_shops.py`, `Yggdrasil_Shops.fbx`, `Yggdrasil_Market.fbx`, `WorldBuilder.buildShops`), under the Stele's roof (`ygg_props.tiled_roof`) but each with its own idea:
+  - **The Marketplace, the Coin-Tree Market** (November 4, 2026): a three-tier pagoda of jade-glazed tiles at the back of a courtyard; three striped stalls down each side, selling spirit peaches, silk, scrolls, elixir jars, uncut stones and gourds; a lacquer gate on the lane under a glazed roof; strings of red lanterns overhead; and at the centre a bronze money tree hung with glowing coins. Its board reads "Marketplace: Opening Soon": it has no prompt, because what it sells isn't decided.
   - **The Blacksmith, the Dragon-Kiln Forge:** a smoke-dark timber and stone smithy whose forge is a dragon's head of pale carved stone bursting from the dark back wall, fire licking inside its open jaws round a burning pearl, its eyes alight, its horns, mane and long whiskers bronze. Its bronze body coils up the round chimney and out through the roof, the tail curled over the smoking mouth. Before it an anvil with a half-forged blade glowing on it (the shop's prompt), a quench trough, bellows and coals; a rack of swords and spears along one wall.
   - **Buy & Sell, the Jade Scale:** a merchant's hall behind an open forecourt where a great bronze balance scale stands on jade paving, glowing Spirit Stones heaped in one pan and a spirit egg in the other (pets traded for stones); the shop's prompt is at its foot. Under the roof, a jade-topped counter before a wall of drawers; red paper lanterns at the eave's corners; the merchant's great bronze coin on the back wall.
   - Tested in Play (November 2, 2026): both prompts open their shops; walked from the lane to each prompt; buying and selling pass the reach check at the new prompt spots and are refused from across the island.
@@ -811,8 +812,9 @@ The server decides every hit; the client only sends "strike" and shows it.
 - **Output:** `ServerStorage.CombatHit` (a BindableEvent: player, target, damage, position) for the guardian code, and `CombatEvent` to every client for the effects.
 - **Effects** (`CombatFx`): the Qi Palm throws a great palm print of Qi (`QiPalm` texture) in the realm's colour.
 - **Weapons are held in the hand** (the owner, November 4, 2026): welded to the right hand's grip, out for 5 seconds after the last strike, and put away on death or on starting to cultivate. A held weapon has a stance (`SwordReady`; for a spear a low stance, then its guard).
-- **Sword, a combo of three** (the owner: "focus solely on slashes animation"): a diagonal cut down across the body, a backhand rising the other way, an overhead finisher that shakes the striker's camera. Strikes within 1.1 seconds continue it (`WeaponKinds.Sword.ComboWindow`). Each swing is a timeline of whole-upper-body keys (`SLASH_KEYS`); its crescent (`QiSlash`) lies on the arc the blade's tip really draws, measured from the swing, so re-measure `SLASHES` if the keys change.
+- **Sword, a combo of three** (the owner: "focus solely on slashes animation", then after a phone test "way too stiff"): a diagonal cut down across the body, a backhand rising the other way, an overhead finisher that shakes the striker's camera. Strikes within 1.1 seconds continue it (`WeaponKinds.Sword.ComboWindow`). Each swing is a timeline of whole-body keys (`SLASH_KEYS`): coiled, mid-swing, the blow, a follow-through past it, and a settle toward the ready stance. The body leads and the arm whips after it, each joint a beat behind the last (`SLASH_LAG`). Standing still, the hips turn and lunge over planted feet; moving or in the air, only the upper body swings. Its crescent (`QiSlash`) lies on the arc the blade's tip really draws, measured from the swing, so re-measure `SLASHES` if the keys change.
 - **Spear, thrust then slash** (the owner: "the spear should have slash and thrust"): held in both hands in the owner's stances, wide and low and side-on. The first strike is a long straight thrust with a lance of streaks; a strike within 1.7 seconds is a sweeping slash, the whole body turning with the arms locked so both hands stay on the shaft. The thrust reaches 18 studs in a narrow 35-degree arc; the slash reaches 13 studs in a wide 85-degree one (`WeaponKinds.Spear.Slash`). The server keeps the count, so a client can't choose the wider reach. Tested through the real remote: a target 60 degrees to the side is hit only by the slash, one 15 studs ahead only by the thrust.
+- **Carrying an egg takes both arms** (the owner, November 4, 2026: eggs used to ride on the head): it's welded before the chest with the arms round it (`CARRY_EGG`), the weapon is put away, and the carrier can't strike or cultivate.
 - **Strikes from sword flight swing but don't land** (November 4, 2026): guardians can't reach a flyer, so a flyer can't reach them. A note says so once a session.
 - Input: left mouse, R2 or the touch "Strike" button.
 
@@ -1160,7 +1162,7 @@ Our own line drawings, white so the interface tints them: `tools/ui/draw_icons.p
 
 ### The phone tier (November 4, 2026)
 
-`client/Quality.lua`: `Quality.Low` is true on a touch screen with no keyboard. On a PC it's false and nothing changes. Tested in Studio with it forced on: no errors, and the owner's meditating aura came to 62 emitters at 186 particles a second.
+`client/Quality.lua`: `Quality.Low` is true on a touch screen with no keyboard. On a PC it's false and nothing changes. Tested in Studio with it forced on: no errors, and the owner's meditating aura came to 62 emitters at 186 particles a second. The owner's phone test found flying and meditating free of issues. Sizes on a phone come from `Hud.isCompact()`: smaller rail and dock, Strike, Dash and Sword grouped round the jump button, and the STATUS panel can be minimized to the Qi alone (saved as a setting).
 
 - **Auras:** half the emission and half the distance. The body aura sits on 6 parts instead of 15, without its ash layer, at 40% (75 emitters become 24 per meditating player, counted from the code). Other players' auras drop their Highlight and PointLight; a player's own keeps them.
 - **World** (`World/WorldQuality`): the islands' own emitters run at 40%, except eggs on stands. Ember Peak alone asks for about 1,250 particles a second at full rate.
@@ -1171,6 +1173,10 @@ Our own line drawings, white so the interface tints them: `tools/ui/draw_icons.p
 
 Not yet measured on a real phone. The owner's account wears `OwnerAura`, the costliest, so a normal account should be tested too.
 
+### Pets arrive whole (November 4, 2026)
+
+A pet is many mesh pieces fetched on first use, so on a phone it came in slowly, a piece at a time. `client/Pets/PetPreload` now downloads a pet before showing it (for 8 seconds at most, so one can't go missing) and fetches a player's other pets in the background once their inventory arrives. HUD icons load at start too.
+
 ### Anti-cheat fixes (November 4, 2026)
 
 Found by a read-only security audit and tested through the real remotes unless noted:
@@ -1180,9 +1186,14 @@ Found by a read-only security audit and tested through the real remotes unless n
 - **Carrying an egg:** moving faster than a dash can carry drops it, with no reward (`CARRY_SLACK` in `Guardian`).
 - **Air strikes:** swing but don't land.
 - **Floods:** `PetService` takes a request per half second; Qinggong effects relay at most 8 a second (rates read in code, not flooded live).
+- **Movement** (`server/Security/MovementGuard`): Roblox lets each client report its own position, so the server keeps a travel allowance per player, filled at the fastest their rank can honestly go, with room for the dashes and air leaps in hand. Falling is free, and the server's own moves and a guardian's knockback are allowed for. A player who overdraws it, or jumps too far at once, is "suspect" for 5 seconds: prompts, shops, stands and strikes refuse them and it's logged. It never kicks or drags anyone back, so a wrong guess costs seconds. Tested: a run with dashes and air leaps, and sword flight at 131 studs a second, raised nothing; a 500-stud teleport beside a guardian was refused. A jump within what the top rank can honestly cover isn't caught, by design.
+- **Egg thieves** can't carry an egg farther than `MovementGuard.maxTravel` allows, stay off the ground over 12 seconds, or restart the 5-minute carry limit by dropping and retaking it.
+- **Fling:** players don't collide with each other (`server/Security/CharacterCollision`), so a spinning hacked character can't throw anyone off an island.
+- **Cultivating** ends on the server if the player moves over 8 studs from where they began, or holds an egg. The on/off cooldown rose to 1 second, because each cycle makes every client rebuild an aura.
+- **Hatching and forge names** are rate limited, 0.25 and 2 seconds.
 - **Strike rate:** the server moves a player's next strike on from when the last was due, not from when it arrived, so coming early can't add up to about 18% more strikes.
 
-Known and accepted: the server trusts a client's reported position, as Roblox replicates it: a modified client could teleport to a relic, the Leap quest step, or next to a guardian or shop. Full movement checking is a larger job. Stamina is client-side.
+Known and accepted, the owner to decide: a player who never struck can take an egg another player's fight weakened, and keep a guardian busy by returning it (it needs damage tracking per player). One forged "Leap" completes that quest step, worth 20 stones. Stamina is client-side, and the movement allowance assumes full stamina.
 
 ### Data and security
 
