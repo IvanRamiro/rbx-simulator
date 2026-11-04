@@ -1,8 +1,10 @@
 -- The HUD's one screen and its regions. Every controller puts its pieces into a region, in its
 -- LayoutOrder, instead of placing them by pixel, so they line up and never overlap:
 --   Status   top left, one column: the STATUS window, the resource chips, then the Rail
---   Rail     a row under the chips: the menu buttons (Pets, Robes ...); in the column, so on a
---            short phone screen it can't run into the STATUS window
+--   Rail     a row under the chips: the menu buttons (Pets, Robes ...)
+--   Phone    on a short screen the HUD folds away behind one Settings button (the owner, 2026-11-04: "the
+--            UI still big in mobile"). Pressing it shows the Rail, where the player picks what they want:
+--            Status, Quest, Pets, Robes, Rewards, Options
 --   Dock     bottom centre, bottom up: Cultivate, the breakthrough, the Qinggong strip
 --   Banner   top centre: messages (Toast)
 --   Quest    top right: the current quest (QuestController)
@@ -80,6 +82,7 @@ chips.AutomaticSize = Enum.AutomaticSize.XY
 chips.Size = UDim2.new()
 chips.LayoutOrder = 10
 chips.Parent = Hud.Status
+Hud.Chips = chips
 UiKit.list(chips, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), VerticalAlignment = Enum.VerticalAlignment.Center })
 
 -- The menu row, under the chips
@@ -129,6 +132,59 @@ end
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(watchCamera)
 watchCamera()
 
+-- ---------- the phone's menu ----------
+local menuRow = Instance.new("Frame")
+menuRow.Name = "MenuRow"
+menuRow.BackgroundTransparency = 1
+menuRow.AutomaticSize = Enum.AutomaticSize.XY
+menuRow.Size = UDim2.new()
+menuRow.LayoutOrder = 0
+menuRow.Visible = false
+menuRow.Parent = Hud.Status
+UiKit.list(menuRow, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8) })
+local menuButton = UiKit.button({ Name = "MenuButton", Text = "", Size = UDim2.fromOffset(52, 52), Tone = "Accent", Parent = menuRow })
+local menuIcon = UiKit.icon(UiTheme.Icons.Settings, 28)
+menuIcon.AnchorPoint = Vector2.new(0.5, 0)
+menuIcon.Position = UDim2.new(0.5, 0, 0, 4)
+menuIcon.Parent = menuButton
+UiKit.label({
+    Name = "Word", Font = "Strong", Text = "Settings", TextSize = 11, TextColor3 = UiTheme.Colors.Text,
+    AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -3), Size = UDim2.new(1, 0, 0, 14),
+    TextXAlignment = Enum.TextXAlignment.Center, Parent = menuButton,
+})
+-- something inside is waiting (a daily reward): it shows on the closed menu too
+local menuDot = UiKit.label({
+    Name = "Badge", Font = "Strong", TextSize = 11, Text = "!", TextColor3 = UiTheme.Colors.Panel,
+    BackgroundTransparency = 0, BackgroundColor3 = UiTheme.Colors.Highlight, AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.new(1, 6, 0, -6), Size = UDim2.fromOffset(18, 18), TextXAlignment = Enum.TextXAlignment.Center,
+    Visible = false, ZIndex = 5, Parent = menuButton,
+})
+UiKit.corner(menuDot, 9)
+
+local menuOpen = false
+local waiting = {} -- [button name] = true while its badge asks for attention
+
+local function applyMenu()
+    local phone = Hud.isCompact()
+    menuRow.Visible = phone
+    local parent = if phone then menuRow else Hud.Status
+    if rail.Parent ~= parent then
+        rail.Parent = parent
+    end
+    rail.Visible = not phone or menuOpen
+    menuDot.Visible = phone and not menuOpen and next(waiting) ~= nil
+end
+function Hud.closeMenu()
+    menuOpen = false
+    applyMenu()
+end
+menuButton.Activated:Connect(function()
+    menuOpen = not menuOpen
+    applyMenu()
+end)
+compactChanged.Event:Connect(applyMenu)
+applyMenu()
+
 -- A resource chip: its icon and a value. Returns the chip and its value label.
 function Hud.chip(name, image, order)
     local chip = UiKit.panel({
@@ -157,7 +213,8 @@ end
 
 -- A menu button on the rail: its icon over its word, with an optional badge (a count, or a dot).
 -- Returns the button and a function that sets the badge text (nil hides it).
-function Hud.railButton(name, image, word, order)
+-- keepMenu: choosing it leaves a phone's menu open (a panel switched on or off, not a window).
+function Hud.railButton(name, image, word, order, keepMenu)
     local small = Hud.isCompact()
     local button = UiKit.button({
         Name = name, Text = "", Size = if small then UDim2.fromOffset(52, 52) else UDim2.fromOffset(64, 70), LayoutOrder = order, Tone = "Quiet",
@@ -181,7 +238,12 @@ function Hud.railButton(name, image, word, order)
     })
     UiKit.corner(badge, 9)
     UiKit.padding(badge, 6, 0)
+    if not keepMenu then
+        button.Activated:Connect(Hud.closeMenu)
+    end
     local function setBadge(text, tone)
+        waiting[name] = if text == "!" then true else nil
+        applyMenu()
         badge.Visible = text ~= nil
         badge.Text = text or ""
         badge.BackgroundColor3 = if tone == "Highlight" then UiTheme.Colors.Highlight else UiTheme.Colors.Accent

@@ -217,6 +217,20 @@ a.line([(780, 590), (930, 540)], 28, "FFE27A", "FF7A1E")
 a.line([(640, 500), (660, 390)], 26, "FFE27A", "FF7A1E")
 a.save("Forge")
 
+# Quest: an open scroll with a red seal
+a = Art()
+a.poly([(230, 170), (794, 170), (794, 860), (230, 860)], "FFF6D8", "E8CC90")
+for y in (300, 410, 520):
+    a.line([(330, y), (694, y)], 30, "8A6A3C")
+a.line([(330, 630), (560, 630)], 30, "8A6A3C")
+a.ellipse(650, 720, 92, 92, "F0433C", "A81830")
+a.ellipse(650, 720, 48, 48, "FF7A6A", "D8303A")
+for y in (150, 880):
+    a.line([(150, y), (874, y)], 92, "C88A3C", "8A5420")
+    a.ellipse(130, y, 62, 62, "FFE27A", "E89A18")
+    a.ellipse(894, y, 62, 62, "FFE27A", "E89A18")
+a.save("Quest")
+
 # Settings: a dial of eight lotus petals round a gold heart
 a = Art()
 for i in range(8):
@@ -247,4 +261,4 @@ for cx, cy, r in [(800, 170, 110), (250, 240, 60)]:
     a.poly([(cx, cy - r), (cx + r * 0.2, cy - r * 0.2), (cx + r, cy), (cx + r * 0.2, cy + r * 0.2),
             (cx, cy + r), (cx - r * 0.2, cy + r * 0.2), (cx - r, cy), (cx - r * 0.2, cy - r * 0.2)], "FFFFFF", "FFF0A0")
 a.save("Rewards")
-print("drew 12 icons in", OUT)
+print("drew 13 icons in", OUT)

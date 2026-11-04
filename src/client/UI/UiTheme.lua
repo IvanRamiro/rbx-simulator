@@ -49,6 +49,7 @@ UiTheme.Icons = {
     Hatch = "rbxassetid://93316116947603",      -- a cracked egg
     Shop = "rbxassetid://86121773247188", -- the Jade Scale
     Forge = "rbxassetid://83033475878685",      -- hammer and anvil
+    Quest = "rbxassetid://95203744242297", -- an open scroll with a seal
     Settings = "rbxassetid://92494124873013", -- a dial of lotus petals
     Rewards = "rbxassetid://119590867507093", -- a gold ingot
 }

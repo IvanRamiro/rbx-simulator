@@ -1,5 +1,5 @@
--- A player's settings (GameConfig.Settings): Music and Sound volume (0 to 1), ReducedEffects and
--- StatusMinimized (the STATUS window kept small).
+-- A player's settings (GameConfig.Settings): Music and Sound volume (0 to 1), ReducedEffects,
+-- StatusMinimized (the STATUS window kept small), and PhoneStatus and PhoneQuest (the panels a phone shows).
 -- Saved in PlayerData as Settings, mirrored to the player's attributes (SettingMusic, SettingSound,
 -- SettingReducedEffects) for their client. They change only that player's own view and sound.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

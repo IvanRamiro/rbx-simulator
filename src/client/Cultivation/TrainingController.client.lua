@@ -65,15 +65,30 @@ local minimizeButton = UiKit.button({
     Position = UDim2.new(1, 6, 0, -5), Size = if UserInputService.TouchEnabled then UDim2.fromOffset(32, 32) else UDim2.fromOffset(24, 24),
     ZIndex = 3, Parent = status,
 })
+-- On a phone the panel and its chips show only when the player picks Status in the Settings menu.
+local statusButton = Hud.railButton("StatusButton", UiTheme.Icons.Qi, "Status", -2, true)
+local function phoneStatusShown()
+    local chosen = player:GetAttribute("SettingPhoneStatus")
+    if chosen == nil then
+        chosen = GameConfig.Settings.PhoneStatus
+    end
+    return chosen == true
+end
 local function fitStatus()
     local compact = Hud.isCompact()
-    local minimized = player:GetAttribute("SettingStatusMinimized") == true
+    local shown = not compact or phoneStatusShown()
+    statusFrame.Visible = shown
+    Hud.Chips.Visible = shown
+    statusButton.Visible = compact
+    statusButton:SetAttribute("Tone", if shown then "Accent" else "Quiet")
+    local minimized = not compact and player:GetAttribute("SettingStatusMinimized") == true
     for _, child in status:GetChildren() do
         if child:IsA("GuiObject") then
             child.Visible = not minimized or child == qiIcon or child == qiLabel or child == minimizeButton
         end
     end
     minimizeButton.Text = if minimized then "+" else "-"
+    minimizeButton.Visible = not compact -- a phone's menu does this job
     if minimized then
         statusFrame.Size = MINIMIZED_SIZE
         qiIcon.Position = UDim2.fromOffset(0, 0)
@@ -102,6 +117,12 @@ minimizeButton.Activated:Connect(function()
     player:SetAttribute("SettingStatusMinimized", minimized)
     RemoteEvents.SettingsEvent:FireServer("StatusMinimized", minimized)
 end)
+statusButton.Activated:Connect(function()
+    local shown = not phoneStatusShown()
+    player:SetAttribute("SettingPhoneStatus", shown)
+    RemoteEvents.SettingsEvent:FireServer("PhoneStatus", shown)
+end)
+player:GetAttributeChangedSignal("SettingPhoneStatus"):Connect(fitStatus)
 player:GetAttributeChangedSignal("SettingStatusMinimized"):Connect(fitStatus)
 Hud.CompactChanged:Connect(fitStatus)
 fitStatus()

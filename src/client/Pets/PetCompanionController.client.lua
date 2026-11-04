@@ -86,14 +86,14 @@ local function syncPetAura(player, pet, cultivating)
 end
 
 -- `hidden`: its owner is culled (far away), so it waits out of the world like their other pets.
--- It stays out of the world until its meshes have arrived, so it appears whole (PetPreload).
-local function buildPet(petId, rootPart, entry)
+local function buildPet(petId, rootPart, hidden)
     local model, petRoot = PetModels.build(petId)
     if not model then
         return nil
     end
+    model.Parent = if hidden then nil else container
     petRoot.CFrame = rootPart.CFrame
-    local pet = {
+    return {
         model = model,
         rootPart = petRoot,
         cframe = rootPart.CFrame,
@@ -101,18 +101,7 @@ local function buildPet(petId, rootPart, entry)
         rig = PetModels.getRig(model),
         speed = 0,
         fading = {},
-        loading = true,
     }
-    PetPreload.whenReady(petId, function()
-        -- deferred: an already-fetched pet answers at once, before syncPets has listed it
-        task.defer(function()
-            pet.loading = false
-            if table.find(entry.pets, pet) and not entry.culled then
-                model.Parent = container
-            end
-        end)
-    end)
-    return pet
 end
 
 -- Keeps a player's pets matching their EquippedPetIds: pets still equipped stay where they are,
@@ -120,8 +109,27 @@ end
 local function syncPets(player, entry)
     local character = player.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    local key = player:GetAttribute("EquippedPetIds")
-    key = if typeof(key) == "string" and rootPart then key else ""
+    local equipped = player:GetAttribute("EquippedPetIds")
+    equipped = if typeof(equipped) == "string" and rootPart then equipped else ""
+    if equipped == entry.equipped and entry.settled and rootPart == entry.rootPart then
+        return
+    end
+    entry.equipped = equipped
+
+    -- a pet joins once its meshes have arrived, so it appears whole (PetPreload)
+    local shown = {}
+    entry.settled = true
+    for _, petId in string.split(equipped, ",") do
+        if petId ~= "" then
+            if PetPreload.isReady(petId) then
+                table.insert(shown, petId)
+            else
+                PetPreload.want(petId)
+                entry.settled = false
+            end
+        end
+    end
+    local key = table.concat(shown, ",")
 
     if key == entry.key and rootPart == entry.rootPart then
         return
@@ -140,7 +148,7 @@ local function syncPets(player, entry)
     entry.pets = {}
     if key ~= "" then
         for _, petId in string.split(key, ",") do
-            local pet = spare[petId] and table.remove(spare[petId]) or buildPet(petId, rootPart, entry)
+            local pet = spare[petId] and table.remove(spare[petId]) or buildPet(petId, rootPart, entry.culled)
             if pet then
                 table.insert(entry.pets, pet)
             end
@@ -158,7 +166,7 @@ local function setCulled(entry, culled)
     entry.culled = culled
     local parent = if culled then nil else container
     for _, pet in entry.pets do
-        pet.model.Parent = if pet.loading then nil else parent
+        pet.model.Parent = parent
         if pet.aura then
             pet.aura.model.Parent = parent
         end
@@ -253,7 +261,7 @@ local function updateCompanions(deltaTime)
         local cultivating = player:GetAttribute("IsCultivating") == true
         for _, pet in entry.pets do
             local rig = pet.rig
-            if not rig or pet.loading then
+            if not rig then
                 continue
             end
             if cultivating then
@@ -279,9 +287,6 @@ local function updateCompanions(deltaTime)
         end
         local cultivating = player:GetAttribute("IsCultivating") == true
         for _, pet in entry.pets do
-            if pet.loading then
-                continue
-            end
             syncPetAura(player, pet, cultivating)
             if pet.aura then
                 AuraBuilder.update(pet.aura, now, auraParts, auraCFrames)

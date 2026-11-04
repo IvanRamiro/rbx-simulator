@@ -1175,7 +1175,11 @@ Not yet measured on a real phone. The owner's account wears `OwnerAura`, the cos
 
 ### Pets arrive whole (November 4, 2026)
 
-A pet is many mesh pieces fetched on first use, so on a phone it came in slowly, a piece at a time. `client/Pets/PetPreload` now downloads a pet before showing it (for 8 seconds at most, so one can't go missing) and fetches a player's other pets in the background once their inventory arrives. HUD icons load at start too.
+A pet is many mesh pieces fetched on first use, so on a phone it came in slowly, a piece at a time. `client/Pets/PetPreload` now downloads a pet before it's built (for 8 seconds at most, so one can't go missing) and fetches a player's other pets in the background once their inventory arrives. HUD icons load at start too.
+
+### The phone's Settings menu (the owner, November 4, 2026)
+
+"The UI still big in mobile... when they pressed setting the icons will show and they can choose." On a short screen (`Hud.isCompact`) the HUD folds behind one Settings button, top left, with a "!" on it when a reward is waiting. Pressing it shows Status, Quest, Pets, Robes, Rewards and Options. Status and Quest switch their panels on and off and the choice is saved (`PhoneStatus`, off to start, its panel bringing the Stones and Relics chips; `PhoneQuest`, on to start, because the quests guide new players). The rest open their windows. Larger screens keep the full HUD. Seen in Studio with the phone layout forced on, not yet on a phone.
 
 ### Anti-cheat fixes (November 4, 2026)
 

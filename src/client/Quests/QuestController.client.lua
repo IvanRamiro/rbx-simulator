@@ -64,10 +64,26 @@ local skip = UiKit.button({
 
 local message = Toast.new("QuestMessage", C.Highlight, 4)
 
+-- On a phone the player chooses whether it shows, in the Settings menu.
+local questButton = Hud.railButton("QuestButton", UiTheme.Icons.Quest, "Quest", -1, true)
+local function phoneQuestShown()
+    local chosen = player:GetAttribute("SettingPhoneQuest")
+    if chosen == nil then
+        chosen = GameConfig.Settings.PhoneQuest
+    end
+    return chosen == true
+end
+local function questAllowed()
+    local shown = not Hud.isCompact() or phoneQuestShown()
+    questButton.Visible = Hud.isCompact()
+    questButton:SetAttribute("Tone", if shown then "Accent" else "Quiet")
+    return shown
+end
+
 local function render()
     local step = player:GetAttribute("QuestStep")
     local quest = typeof(step) == "number" and QUESTS[step]
-    panel.Visible = if quest then true else false
+    panel.Visible = quest ~= nil and questAllowed()
     if not quest then
         return
     end
@@ -117,3 +133,12 @@ RemoteEvents.QuestEvent.OnClientEvent:Connect(function(kind, step, stones)
         message:show("Quest complete: " .. QUESTS[step].Title .. "." .. paid, C.Highlight)
     end
 end)
+
+questButton.Activated:Connect(function()
+    local shown = not phoneQuestShown()
+    player:SetAttribute("SettingPhoneQuest", shown)
+    RemoteEvents.SettingsEvent:FireServer("PhoneQuest", shown)
+end)
+player:GetAttributeChangedSignal("SettingPhoneQuest"):Connect(render)
+Hud.CompactChanged:Connect(render)
+questAllowed()

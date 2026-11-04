@@ -601,7 +601,8 @@ local GameConfig = {
     },
 
     -- each player's own view and sound (server/Data/Settings, client/UI/SettingsController)
-    Settings = { Music = 1, Sound = 1, ReducedEffects = false, StatusMinimized = false },
+    -- PhoneStatus and PhoneQuest: which panels a phone shows (the Settings menu, Hud)
+    Settings = { Music = 1, Sound = 1, ReducedEffects = false, StatusMinimized = false, PhoneStatus = false, PhoneQuest = true },
 
     MaxOwnedPets = 50,
 
