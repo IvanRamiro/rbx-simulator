@@ -1245,5 +1245,6 @@ Outfits are worn over the player's own avatar (`GameConfig.Outfits`). They are c
 - Per-element and per-realm aura looks.
 - Blender models for the remaining procedural pets.
 - Balance tuning from playtests.
+- **No rebirth** (the owner, November 4, 2026): breaking through to the next realm is the progression. A small area with a Qi multiplier may come later.
 
 **North star:** players feel like cultivators who earned their power and their movement. They train Qi to grow stronger and master Qinggong to move beyond ordinary limits. They will challenge guardians for their eggs and survive the pursuit that follows. Failure is a recoverable setback, never an unfair loss.
