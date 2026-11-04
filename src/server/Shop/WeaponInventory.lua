@@ -164,17 +164,7 @@ function WeaponInventory.snapshot(player)
 end
 
 -- For saving (nil until the player is set up).
-function WeaponInventory.exportData(player)
-    local data = held[player]
-    if not data then
-        return nil
-    end
-    local weapons = {}
-    for _, weapon in data.weapons do
-        table.insert(weapons, record(weapon))
-    end
-    return { Weapons = weapons, Equipped = data.equipped }
-end
+WeaponInventory.exportData = WeaponInventory.snapshot
 
 function WeaponInventory.removePlayer(player)
     held[player] = nil

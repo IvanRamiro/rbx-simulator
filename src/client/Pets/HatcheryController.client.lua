@@ -16,7 +16,6 @@ local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
-local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
 local C = UiTheme.Colors

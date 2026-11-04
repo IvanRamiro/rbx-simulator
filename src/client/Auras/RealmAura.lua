@@ -492,8 +492,7 @@ end
 -- are on a billboard, so they draw over the smoke (the owner: "the lightning should be the edge
 -- of the cloud, not the cloud overlapping it"). Spiral wisps rise round the body; nothing sits
 -- on its middle. On the ground, inside the still Soul Seal: the owner's vortex ripple, a smoke
--- ripple and a rolling mist, all quickening while the player meditates. (The earlier rune and
--- spirit build and the owner's first layout are in tools/vfx/archive/AuraTestController_before_port.lua.)
+-- ripple and a rolling mist, all quickening while the player meditates.
 local function realm4(root, fx, tint, p)
     local main = lastColor(tint)
     local black = ColorSequence.new(Color3.fromRGB(18, 10, 28))
@@ -900,11 +899,9 @@ function topTier(root, tier, fx, tint, sizeK, speedK, p)
     end
 end
 
--- the auras alive now (and each folder's), and the time scale (1; the test range's slow motion
--- lowers it)
+-- the auras alive now (and each folder's)
 local records = {}
 local recordOf = {}
-local timeScale = 1
 
 -- removes everything an aura made, once. Run at once when an aura is replaced or removed: Destroying
 -- handlers run deferred, too late for a rebuild in the same frame
@@ -959,7 +956,6 @@ local function setCulled(record, culled)
 end
 
 local function step(dt)
-    dt *= timeScale
     local camera = workspace.CurrentCamera
     local eye = camera and camera.CFrame.Position
     for record in records do
@@ -1183,22 +1179,6 @@ function RealmAura.build(root, realm, sub, options)
         stepping = RunService.RenderStepped:Connect(step)
     end
     return fx
-end
-
--- the animated pieces of one aura (the test range's measuring hook reads them)
-function RealmAura.spinnersOf(fx)
-    local out = {}
-    for _, s in spinners do
-        if s.record and s.record.fx == fx then
-            table.insert(out, s)
-        end
-    end
-    return out
-end
-
--- 1 is normal speed; the test range's slow motion sets 0.05 to 1
-function RealmAura.setTimeScale(k)
-    timeScale = math.clamp(k, 0.05, 1)
 end
 
 RealmAura.Textures = TEX

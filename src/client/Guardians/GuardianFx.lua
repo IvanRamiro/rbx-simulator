@@ -92,6 +92,7 @@ local function emitter(parent, properties)
     e.Parent = parent
     return e
 end
+GuardianFx.emitter = emitter
 
 local function debris(parent, style, properties)
     local base

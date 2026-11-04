@@ -18,15 +18,7 @@ local function deg(x, y, z)
     return CFrame.Angles(math.rad(x or 0), math.rad(y or 0), math.rad(z or 0))
 end
 
-local function pointLimb(direction)
-    local down = Vector3.new(0, -1, 0)
-    direction = direction.Unit
-    local axis = down:Cross(direction)
-    if axis.Magnitude < 1e-4 then
-        return CFrame.identity
-    end
-    return CFrame.fromAxisAngle(axis.Unit, math.acos(math.clamp(down:Dot(direction), -1, 1)))
-end
+local pointLimb = MeditationPoses.pointLimb
 
 local function mirror(cframe)
     local x, y, z, r00, r01, r02, r10, r11, r12, r20, r21, r22 = cframe:GetComponents()

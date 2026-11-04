@@ -106,17 +106,7 @@ local function host(cframe, size, life)
     return part
 end
 
-local function emitter(parent, properties)
-    local e = Instance.new("ParticleEmitter")
-    e.Rate = 0
-    e.LightInfluence = 0
-    e.LightEmission = 1
-    for k, v in properties do
-        e[k] = v
-    end
-    e.Parent = parent
-    return e
-end
+local emitter = GuardianFx.emitter
 
 local function flat(face, image, color, transparency)
     local gui = Instance.new("SurfaceGui")

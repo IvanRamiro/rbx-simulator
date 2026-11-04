@@ -384,6 +384,7 @@ end
 MeditationPoses.arm = arm
 MeditationPoses.leg = leg
 MeditationPoses.flatAnkle = flatAnkle
+MeditationPoses.pointLimb = pointLimb
 
 -- brings a pose in use up to this frame (`now`: the frame's clock, so several players share one write)
 MeditationPoses.refresh = write

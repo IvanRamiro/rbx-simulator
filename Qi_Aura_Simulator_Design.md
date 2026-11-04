@@ -547,8 +547,8 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 
 ### Egg designs
 
-- **Source:** the 15-egg concept sheet. Each island's eggs are modelled in Blender by a script (`tools/blender/eggs/eggs_<island>.py`, shared helpers in `egg_kit.py`, preview renders by `egg_render.py`) and exported to `assets/eggs/<EggId>.fbx` (second generation: `assets/eggs_v2/`, below). An export holds an `<EggId>_Body` mesh coloured by an atlas (`<EggId>_atlas.png`) and `<EggId>_Glow_<hex>` parts, which become Neon in that colour.
-- **Detailed eggs (Jade Grove onward), built like the sculpted pets** (`eggs_jade.py`, `eggs_ember.py`):
+- **Source:** the 15-egg concept sheet. The designs in the table below were the first generation; its scripts and exports were removed from the project on November 5, 2026 and remain in git history. Eggs are modelled in Blender by a script (second generation, below; shared helpers in `egg_kit.py`) and exported to `assets/eggs_v2/<EggId>.fbx`. An export holds an `<EggId>_Body` mesh coloured by an atlas (`<EggId>_atlas.png`) and `<EggId>_Glow_<hex>` parts, which become Neon in that colour.
+- **Detailed eggs, built like the sculpted pets:**
   - High-detail pieces with procedural Cycles shaders (`egg_hi.py`): knotted bark with grain, veined leaves, marbled jade, gold-veined crystal, carved wood planks, leafy crowns.
   - Baked by `egg_bake.py` onto one game mesh of about 14,000 triangles, with `<EggId>_color.png` (ambient occlusion included), `_normal.png`, `_roughness.png` and `_metalness.png`.
   - Studio's importer turns the colour and normal maps into a SurfaceAppearance. Roughness and metalness are set on it in Studio.
@@ -556,7 +556,7 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
   - Gold is 0.6 metallic, not 1: fully metallic gold shows black wherever it has nothing bright to reflect.
   - The shaders' ambient occlusion is local to each piece. While baking, the game mesh lies on the high-detail surface, and a scene-wide AO sees it everywhere: the whole egg then bakes as one deep crevice (too dark, or red-hot on the lava shaders).
 - **In Studio:** an imported egg is stored with `WorldBuilder.storeEgg(model, eggId)` in `ServerStorage.EggMeshes.<EggId>`. `buildEggStands` places it at `GameConfig.EggStudsPerUnit` (1.3) studs per egg unit; the server's stand eggs and the auras use the same value.
-- **All fifteen eggs are recreated.** The Moonlit Isle and Origin Abyss eggs are their own designs (`eggs_moon.py`, `eggs_origin.py`, November 1, 2026): the owner asked for each to be invented after its name, not the sheet's family designs.
+- **All fifteen eggs are recreated.** The Moonlit Isle and Origin Abyss eggs are their own designs (November 1, 2026): the owner asked for each to be invented after its name, not the sheet's family designs.
 
 | Egg | Design |
 |---|---|
@@ -576,9 +576,7 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 | Primordial Abyss Egg | The first egg: primordial stone in warped dark layers with thin ochre seams, a great fossil ammonite coiled on its front with magenta light in its spiral seam and its mouth, a bronze clockwork belt of gear teeth round its base and a small gear set in each shoulder |
 | Ancient Grove Egg | Carved wood planks in fourteen upright columns, each split at its own heights, every plank its own tone; dark bark in the grooves, pale heartwood showing at the crown. A mossy trunk behind it sends roots gripping the egg and branches spreading into lumpy crowns of leaves, and a spiral of Qi glows on its front |
 
-The older family designs (`tools/blender/eggs/Eggs.blend`) are no longer used by any egg.
-
-**Second generation (in the game since November 4, 2026):** all 15 eggs rebuilt, each with its own idea written at the top of its script, reviewed and passed by the owner on a flat board. Scripts: `tools/blender/eggs/egg_forge.py` and `v2_<island>.py`. Output: `assets/eggs_v2/` (the first generation stays in `assets/eggs/`, and its meshes in `ServerStorage.DevStage.EggMeshesV1`). Magma Heart ("fresh from the forge"), Astral Sanctum ("the astrolabe") and Heavenly Throne ("the sky itself") are **just an egg**, the whole idea on the shell, on the owner's word; they replace those three eggs' earlier designs in the table above. Magma Heart has no Neon part. `File > Import 3D` reads all four maps from these FBX files.
+**Second generation (in the game since November 4, 2026):** all 15 eggs rebuilt, each with its own idea written at the top of its script, reviewed and passed by the owner on a flat board. Scripts: `tools/blender/eggs/egg_forge.py` and `v2_<island>.py`. Output: `assets/eggs_v2/` (the first generation's meshes stay in `ServerStorage.DevStage.EggMeshesV1`). Magma Heart ("fresh from the forge"), Astral Sanctum ("the astrolabe") and Heavenly Throne ("the sky itself") are **just an egg**, the whole idea on the shell, on the owner's word; they replace those three eggs' earlier designs in the table above. Magma Heart has no Neon part. `File > Import 3D` reads all four maps from these FBX files.
 
 ### Egg effects
 
