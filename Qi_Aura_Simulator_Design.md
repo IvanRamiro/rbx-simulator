@@ -240,7 +240,7 @@ Hatching can give a pet the player already has, so a spare always has a use (`sh
 A book of every beast (the Codex button on the HUD's rail; `client/Pets/CodexController`, `server/Pets/Codex`, `shared/CodexRules`, `shared/PetLore`, saved as `Codex`), so collecting stays worth it after a stronger companion. An entry stays for good: selling or fusing the pet leaves it in the book. Every pet owned before the Codex existed is entered when the player loads.
 
 - **Pages:** one per egg, in the order they unlock, drawing only that page's portraits. A **Lost Lineages** page appears for a retired beast the player owns (Nine-Tail Moonfox); those don't count toward the goals.
-- **An undiscovered beast** is a black silhouette named "???", with its rarity and the eggs that hatch it. A Secret beast hides its eggs too.
+- **An undiscovered beast** is a black silhouette named "???", with its rarity and the eggs that hatch it.
 - **A discovered beast's entry:** a turning portrait, theme, Qi bonus, the player's best level, its description, each egg that hatches it with the chance, and its special, with **Watch it**: a copy appears before the player and performs the special, seen only by them.
 - **Rewards, claimed once:**
 
@@ -554,7 +554,9 @@ The owner's account always takes Floating Ascension, which their own aura was bu
 Fifteen eggs, **three on every island**, each needing a higher rank than the last.
 
 - **Hatching** (since November 2, 2026, section 7): only at Yggdrasil's **Hatching Altar**, from the player's **egg inventory** (`EggInventory`, saved as `Eggs`, at most 99 of each), filled by carrying eggs home from the guardians' stands. The stands no longer hatch; their prompt is "Take". (Before: free stand hatches with a 45-second cooldown.)
-- **Chances:** follow the rarity scale: Common 45%, Uncommon 27%, Rare 15%, Epic 8%, Legendary 4%, Mythical 0.9%, Secret 0.1%.
+- **Three separate numbers** (`GameConfig`; the owner's request, November 5, 2026): a pet's **Rarity** is its classification (colour, sell value, what's protected), its **QiBonus** what it adds to cultivation, and its **HatchChance** how likely one egg is to hatch it, set per egg in percent. None is worked out from another, so an egg can be balanced without changing what a rarity means. Each egg's chances must add up to 100, or the server refuses to start. `tools/balance_report.py` prints each egg's average Qi and any rarer pet that's the weaker.
+- **Chances:** the usual scale is a starting point, not a rule: Common 45%, Uncommon 27%, Rare 15%, Epic 8%, Legendary 4%, Mythical 0.9%, Secret 0.1%.
+- **The altar shows them:** each egg at the Hatching Altar opens to list everything it can hatch, with each pet's rarity and its exact chance. A beast not yet in the player's Codex stays a silhouette named "???", marked New (the owner's choice); the others show their name, Qi bonus and how many the player holds.
 - **Missing rarities:** when an egg has no pet of some rarity, its share goes to the next pet that has one. So later eggs give rarer pets far more often.
 - **Inferno and Phoenix Ash, rebalanced (the owner's decision, November 5, 2026):** the Inferno Egg gave half its hatches to Ember Wyrm with nothing Rare or Epic, and the Phoenix Ash Egg 87% Magma Cub or Ember Wyrm with its Epic better than its Legendary, so both paid less Qi on average than the eggs before them. They now follow the scale, at about +26% and +35%, and within each egg a rarer pet is never the weaker one.
 
@@ -691,13 +693,14 @@ The World Tree stands at the centre; everything else rings it. Scripts: `ygg_isl
 
 **The owner's upgrade** (November 2, 2026, for every outer island, Yggdrasil unchanged): twice the size; the boss in the middle of the island guarding its three eggs; no obstacle in the middle, props round the sides; the bridges as they are. Jade Grove was rebuilt first for review. It is about 300 studs across, and moved out along its unchanged bridge (the bridge file regenerates byte-identical); the other islands fan apart the same way when they double (planned: each one's centre on its bridge's line, about its new radius past the bridge end; all four then clear each other by 45 studs or more).
 
-- **Mantis Arena** (the middle): a dead-level ring of grass bordered by jade flagstones (radius 50), a path ringing it. The **Bamboo Mantis Sage**'s lair is its centre, facing the Grove Gate; the **three egg stands** (Jade Spirit, Bloomwood, Ancient Grove) stand in an arc 31 studs behind it, just past its engage radius. Nothing solid stands in it; jade lanterns and standing stones ring its edge between the paths.
+- **Mantis Arena** (the middle): a dead-level ring of grass bordered by jade flagstones (radius 50), a path ringing it. The **Bamboo Mantis Sage**'s lair is its centre, facing the Grove Gate; the **three egg stands** (Jade Spirit, Bloomwood, Ancient Grove) stand in an arc 31 studs behind it, just past its engage radius. Nothing solid stands in it; jade lanterns and standing stones ring its edge between the paths. **Since November 5, 2026** (the owner: keep the arena in the middle and the eggs, improve the rest to the Beginner Isle's standard) it is paved: `JG_ArenaFloor`, ring on ring of worn stone with jade slabs among them, a jade kerb and a jade-and-gold star at the centre.
 - **Grove Gate** and the arrival terrace on the south-east rim, where the Jade bridge lands; a path leads straight into the arena.
 - **Elder Jade Tree** to the north-east (Grove Heart in its hollow, Jade Seed in its crown, the fungus-shelf climb).
 - **Whispering Hollow** to the north-west (the spring pool and the Whispering Spring).
-- **Bloom Glade** to the south-west: the flagstone sanctuary ringed by standing stones, opening toward the arena. It is the Mantis Sage's safe zone, where a stolen egg is secured.
+- **Bloom Glade** to the south-west: the flagstone sanctuary ringed by standing stones, opening toward the arena. (A stolen egg is now carried home to Yggdrasil, not here.)
+- **The Sage's Hermitage** (`JG_Hermitage`, November 5, 2026) behind the eggs, on the line from the gate through the arena (radius 82), on its own level pad: a bamboo hut on stilts under a double roof of living leaves, open toward the arena, with stone steps and a low shrine inside. You can walk in.
 - **Ruin Court** to the south: broken pillars round a clearing.
-- **Forest** ringing everything: ancient trees, bamboo, jade outcrops, ruin pillars, fallen logs, ferns and glowing mushrooms (about three times the old count).
+- **Forest** ringing everything: six groves of ancient trees and bamboo round the rim (thinned out and gathered on November 5, 2026: 30 trees in groves instead of 46 scattered), so the way in and the view across the arena stay open; jade outcrops, ruin pillars, fallen logs, ferns and glowing mushrooms between them.
 - **Underside:** the faceted dark-jade mass, deeper (130 studs) with larger hanging jade crystals, moss curtains and vines round the longer rim.
 - **Tested in Play:** walked from the bridge into the arena (3 s); the Sage woke at its engage radius, its attacks knocked back without throwing anyone off; weakened in 14 strikes; the egg stolen, the Sage leapt after the thief, and the egg was secured in the Bloom Glade after a 5.6 s run (it dropped its relic: Wind unlocked).
 
@@ -705,7 +708,7 @@ The World Tree stands at the centre; everything else rings it. Scripts: `ygg_isl
 
 Columnar basalt is the island's signature, used for the cliffs, the climb, the altar and the underside. Doubled for the owner's upgrade like Jade Grove: about 300 studs across, moved out along its unchanged bridge.
 
-- **Cinder Arena** (the middle): a dead-level basalt ring bordered by glowing cracked lava rock (radius 50), a path ringing it, braziers and basalt column clusters round its edge. Its centre is kept for Ember Peak's guardian (the Fire Guardian, still to design). At its back, the **Phoenix Altar**: three cinnabar-topped column pedestals, each on a pad of hexagonal basalt, holding the Inferno, Phoenix Ash (tallest, in the middle) and Magma Heart eggs.
+- **Cinder Arena** (the middle): a dead-level basalt ring bordered by glowing cracked lava rock (radius 50), a path ringing it, braziers and basalt column clusters round its edge. Its centre is kept for Ember Peak's guardian (the Fire Guardian, still to design). At its back, the **Phoenix Altar**: three cinnabar-topped column pedestals, each on a pad of hexagonal basalt, holding the Inferno, Phoenix Ash (tallest, in the middle) and Magma Heart eggs. **Since November 5, 2026** it has a floor (`EP_ArenaFloor`, `EP_ArenaGlow`): hexagonal column tops with lava glowing in the seams, an obsidian kerb, a broken channel of fire outside it, a cinnabar sun at the centre. Four **fire pylons** (`EP_FirePylon`, `EP_PylonFire`) hold fire high at its corners, either side of the way in and of the volcano.
 - **Ember Gate:** the arrival on the south rim, two bundles of basalt columns with iron fire braziers under an obsidian lintel with a cinnabar plaque; braziers inside it; the path runs straight into the arena.
 - **The volcano** (north, looming behind the eggs):
   - a crown of basalt columns rings its crater;
@@ -715,35 +718,38 @@ Columnar basalt is the island's signature, used for the cliffs, the climb, the a
 - **Ember Forge** (east): ruined walls of stacked basalt blocks with a sooty chimney and anvils. The **Ember Heart** hovers over a hearth of glowing coals.
 - **Ash Plain** (west): petrified trees around a cracked obsidian monolith carved with the glowing **Ashen Sigil**.
 - **Underside:** hanging hexagonal basalt columns, like organ pipes (wider and deeper at the new size), with a magma core glowing through the gaps.
-- **Dressing:** fire crystals, ember vents throwing sparks, basalt clusters and obsidian shards, about three times the old count, all round the arena.
+- **Dressing:** fire crystals, ember vents throwing sparks, basalt clusters and obsidian shards, all round the arena, thinned out on November 5, 2026 so each can be seen.
 - **Tested in Play:** from the bridge to the egg pedestals in 5 s, the prompt in reach; the lava river returns the player to the new checkpoint.
 
 ### Moonlit Isle (built; doubled November 2, 2026)
 
 Seen from above, the island is a crescent moon: a full disc (about 250 studs across since the owner's upgrade) with a deep bay of sky cut out of its north, its horns curling around it. Moved out along its unchanged bridge.
 
-- **Lunar Court** (the middle, a little south of the disc's centre): a level ring of moon paving bordered in salt-white stone (radius 50), ringed by hovering star lanterns along its path. Its centre is kept for Moonlit Isle's guardian (the Celestial Guardian, still to design). At its back, looking out over the bay, the three porcelain egg pedestals (a wide blue dish with gold bands at the lip and foot) hold the Celestial, Astral Sanctum and Heavenly Throne eggs.
+- **Lunar Court** (the middle, a little south of the disc's centre): a level ring of moon paving bordered in salt-white stone (radius 50), ringed by hovering star lanterns along its path. Its centre is kept for Moonlit Isle's guardian (the Celestial Guardian, still to design). At its back, looking out over the bay, the three porcelain egg pedestals (a wide blue dish with gold bands at the lip and foot) hold the Celestial, Astral Sanctum and Heavenly Throne eggs. **Since November 5, 2026** it is a moon dial (`MI_ArenaFloor`): pale marble inside, a band of the night sky holding the eight phases of the moon, gold rings and a gold star at the centre. The eggs' glow rings stand 0.2 higher here (`RingLift`) to clear it.
 - **Arrival:** the bridge lands on the south rim through the gold Crescent Arch; the path runs straight to the court.
+- **The Moon Gate** (`MI_MoonGate`, November 5, 2026) on the lip of the bay behind the eggs, on the line from the arch through the lair: a great ring of blue porcelain and gold on a stepped dais, framing the open sky, a crescent on its crown. You can climb the dais and stand under it.
 - **Moon Mirror** (west): a dark reflective pool you can walk on, in a marble-and-gold rim. A curved bridge leads from its court-side bank to a moonstone lotus holding the **Moon Mirror** relic.
 - **Star Well** (west horn): a marble well with a gold lip, brimming with glowing starlight, with the **Star Well** relic above it.
 - **Celestial Pavilion** (east horn): eight porcelain pillars with gold crescent finials on a stepped marble platform, under a floating golden armillary (the eggs stood here before the upgrade).
 - **Underside and cliffs:** marble cliffs with a gold band under the lip step inward into a belt of soft cloud, deeper at the new size. Moonstone geode crystals hang beneath, some of them glowing.
-- **Dressing:** hovering porcelain star lanterns along every path, glowing frost lilies, moonstone shards, lunar rocks and spires on the horns, about three times the old count.
+- **Dressing:** hovering porcelain star lanterns along every path, frost lilies in drifts, spires standing round the court like the hours of a dial, moonstone shards and lunar rocks (thinned out on November 5, 2026).
 - **Tested in Play:** from the bridge to the egg pedestals in 4 s, the prompt in reach; across the Moon Mirror's bridge to its relic; a step into the bay returns the player to the checkpoint.
 
 ### Origin Abyss (built; doubled November 2, 2026)
 
 The hidden endgame island, about 320 studs across since the owner's upgrade, moved out along its unchanged bridge. A void rift tears a chord across its far side; the court's side is level and open, the shelf beyond the rift raised and tilting up toward its far edge.
 
-- **Void Court** (the middle): a level court of worn temple stone bordered by void-crystal crust (radius 50). Its centre is kept for Origin Abyss's guardian (the Primordial Guardian, still to design). At its back, the **egg plinths**: three obsidian plinths cracked with void light, each cradled by thorny bronze branches and set on a pad of hewn paving, holding the Forbidden Origin, Void Rift and Primordial Abyss eggs; each stand glows in its egg's own colour. The **Thorn Crown**, seven great bronze branches (one snapped) rooted on the court's rim behind them, hooks up and inward over them.
+- **Void Court** (the middle): a level court of worn temple stone bordered by void-crystal crust (radius 50). Its centre is kept for Origin Abyss's guardian (the Primordial Guardian, still to design). At its back, the **egg plinths**: three obsidian plinths cracked with void light, each cradled by thorny bronze branches and set on a pad of hewn paving, holding the Forbidden Origin, Void Rift and Primordial Abyss eggs; each stand glows in its egg's own colour. The **Thorn Crown**, seven great bronze branches (one snapped) rooted on the court's rim behind them, hooks up and inward over them. **Since November 5, 2026** it has a broken temple floor (`OA_ArenaFloor`, `OA_ArenaGlow`): rings of worn slabs, void light in the cracks running out from a spiral at the centre, a kerb of dark crystal. **What is left of a colonnade** (`OA_Colonnade`) rounds its flanks at radius 70: some columns whole, runs of them still carrying their stone, the rest broken at different heights, open on the gate's side and at the back. You can walk between them.
 - **Gate of Descent** on the south-west rim, where the bridge lands: two carved pillars, one snapped, the lintel fallen onto the stump. A ruined avenue lined with snapped columns and fallen drums leads from it to the court.
 - **Fallen colossus** (west of the court): a giant carved stone head sunk into the ground, its face turned toward the path to it, void light in its eyes and through a crack across its face.
 - **The Rift** (behind the eggs): it pinches and gapes along a chord across the far side, open sky through it; it never comes within 82 studs of the court's centre. An **ancient broken bridge** crosses it where it narrows (pinched for it), its middle fallen away but for one hanging block: a run and a jump.
 - **Origin Altar** (on the shelf): a ring of nine leaning obsidian slabs carved with glowing seal-script glyphs (one snapped, its top fallen outside the ring) around a stepped dais with a glowing spiral sigil; a gap in the ring faces the path from the bridge. The **Origin Altar** relic floats above it.
 - **Void Shard:** a great obsidian-glass crystal with a glowing core, chained to a floating temple floor about 150 studs above the altar. Floating temple fragments climb to it, each rising 49 studs, so Void Walker clears every stage and Divine Initiate falls short. The **Void Shard** relic floats on the top floor.
 - **Underside:** separate angular chunks (broader and deeper at the new size) with gaps between them, void light glowing through from a great lobe under the court and a smaller one under the shelf. Iron chains bind the halves beneath the rift, a glowing veil hangs deep in it, and broken-off debris drifts below.
-- **Dressing:** void crystals of dark glass around glowing cores (many along the rift's lips, with rising motes), slate rocks, about three times the old count, all round the court.
+- **Dressing:** void crystals of dark glass around glowing cores (many along the rift's lips, with rising motes), in patches on the open ground as if the void were coming up through it (November 5, 2026), and slate rocks.
 - **Tested in Play:** from the bridge to the egg plinths in 5 s, the prompt in reach; across the broken bridge with a jump; from the shelf to the altar, its prompt in reach (after the ring was turned to open toward the path); a fall into the rift returns the player to the checkpoint.
+
+- **Tested in Play (November 5, 2026), all four islands:** walked from the gate to the arena's centre and to every egg stand; into the Hermitage, onto the Moon Gate's dais and through the colonnade on both sides; over Origin's broken bridge with one jump at walking speed 16; the lava river still returns a player to the checkpoint; guardians wake and hold their ground. Passability scan (real collision, 4-stud grid, gate to lair): each island has a clear route, every stand within 8 studs of walkable ground. A guardian chasing a thief across the new floors was not tested, as it means stealing a real egg.
 
 ### How islands are built
 
@@ -755,7 +761,8 @@ The hidden endgame island, about 320 studs across since the owner's upgrade, mov
   - Jade Grove: LeafyGrass, Mud and Sandstone.
   - Ember Peak: Basalt, CrackedLava, Asphalt (ash) and Sand (paths).
   - Moonlit Isle: Limestone, Snow (frost), Salt (paths) and Pavement.
-  - Origin Abyss: Slate, Concrete (paths) and Glacier (void-crystal crust). Brick is not used: Studio snaps Brick terrain to the 4-stud voxel grid, so paving is built from meshes.
+  - Origin Abyss: Slate, Concrete (paths) and Glacier (void-crystal crust). Brick is not used: Studio snaps Brick terrain to the 4-stud voxel grid, so paving is built from meshes. Sand also lies under the court's floor, out of sight.
+  - **Under a mesh floor, use a terrain material that renders level at its height.** Basalt, CrackedLava and Glacier render about a stud of bumps, which come through a floor; Concrete snaps to the voxel grid as Brick does. Sand, LeafyGrass and Pavement stay level.
 - **Meshes:** each island has one texture atlas and reusable kits, and every piece gets its own collision setting.
 
 ---
@@ -1195,6 +1202,17 @@ The owner sent a reference of dark ornate panels with gold, and said: "something
 ### The HUD's layout (the owner, November 4, 2026)
 
 Laid out from a reference image the owner sent ("I mean the position"), leaving out its teleport and skill bar, with Roblox's chat left at the top. On every screen: the profile top left (portrait, name, rank, realm, progress; tapping the portrait folds it, and that's saved); the menu down the left (Pets, Robes, Quests, Settings); Qi, Spirit Stones and Relics top centre, beside Roblox's own buttons; Rewards as a round button top right; the quest panel on the right, which the Quests button shows or hides (saved as `ShowQuest`); the guardian's bar and messages under the currencies; Cultivate and the Qinggong strip bottom centre; Strike, Dash and Sword round the jump button. It replaced a folding phone menu built an hour before. Seen in Play at desktop size; the fit on a phone is worked out from the owner's screenshots, not yet seen there.
+
+### The HUD at any screen size, and what it shows (the owner's list, November 5, 2026)
+
+- **Screen sizes (`client/UI/HudMetrics`):** a screen is a Phone (under 500 px on its shorter side), Tablet (under 800) or Desktop, and pieces change their layout for it instead of the whole interface only shrinking. The scale runs from 0.8 up to 1.6, so a big monitor keeps the same share of HUD. Text is never drawn under 10 px, whatever the scale. A window on a small screen keeps the scale and gets shorter, its list scrolling. On a phone the menu is a row of icons under the profile, leaving the thumbstick's corner free. In Studio, the player's `HudTestViewport` attribute stands in for the screen's size.
+- **Counters:** Qi, Spirit Stones and Relics share one slim strip.
+- **Touch buttons (`client/UI/TouchActions`):** never more than two beside the jump button. Near something to fight: Strike and Dash. Otherwise: Sword (once it can be ridden) and Dash. Riding: Sword, to land. Cultivating: none.
+- **Cultivate:** while running, the button turns from gold to jade and reads CULTIVATING - STOP, a band of light keeps crossing it, the emblem's ring turns and its well glows.
+- **Quest panel:** its header folds it to the quest's title. It starts folded on a phone, and a new quest opens it for 8 seconds.
+- **Stamina:** the dock keeps its Cultivation title (the owner's choice); the bar has STAMINA and a percentage written on it, ticks mark what a dash costs so the dashes left can be counted, it pulses red when there isn't enough for one, and it shakes when a dash is refused for that reason.
+- **Guardian's bar:** a taller bar with larger numbers. Weakened, it fills gold, its edge pulses, and the guardian is outlined in gold through anything in the way.
+- **Taking an egg:** while a player really can take one (the server's `CanTakeEgg` attribute, by the same rules as the take itself), a panel says so and points to the nearest stand, then names the key to hold, and each stand holding an egg their rank can carry is marked TAKE on the screen. The marks stand clear of the eggs, which keep only their Highlight and bloom.
 
 ### Anti-cheat fixes (November 4, 2026)
 

@@ -292,8 +292,9 @@ def arena_ring():
         bearing = 11.25 + 22.5 * k
         if any(abs((bearing - b + 180) % 360 - 180) < 13 for b in SPOKE_BEARINGS):
             continue
-        x, z = E._polar(bearing, E.ARENA_EDGE + 3.5)
-        out.append(("EP_Brazier" if k % 2 == 0 else "Cluster", x, z, face_yaw(-x, -z)))
+        brazier = k % 2 == 0
+        x, z = E._polar(bearing, E.ARENA_EDGE + (5.5 if brazier else 13.0))  # the fire channel runs just inside the braziers, the columns stand past the path
+        out.append(("EP_Brazier" if brazier else "Cluster", x, z, face_yaw(-x, -z)))
     return out
 
 
@@ -345,6 +346,14 @@ def kit_entries():
              (E.ARRIVAL[0], E.ARRIVAL[1], 14)]   # where the bridge from Yggdrasil lands, 20 studs wide
     for x, z in scatter(rnd, 16, 8, 4, 6, taken, accept=lambda x, z, r: math.hypot(x - AX, z - AZ) < AR + 22):
         add(rnd.choice(("EP_PetrifiedTreeA", "EP_PetrifiedTreeB")), x, ground(x, z) - 0.4, z, rnd.uniform(0, TAU), rnd.uniform(0.85, 1.25))
+    # the arena's floor and its fire (island_upgrades.py); pylons holding fire high at its four corners, either side of the gate's way in and of the volcano
+    add("EP_ArenaFloor", 0, ground(0, 0), 0)
+    add("EP_ArenaGlow", 0, ground(0, 0), 0)
+    for bearing in (E.ARRIVAL_BEARING - 26, E.ARRIVAL_BEARING + 26, E.VOLCANO_BEARING - 52, E.VOLCANO_BEARING + 52):
+        x, z = E._polar(bearing, E.ARENA_EDGE + 15.0)
+        add("EP_FirePylon", x, ground(x, z) - 0.2, z, rnd.uniform(0, TAU))
+        add("EP_PylonFire", x, ground(x, z) - 0.2, z)
+        taken.append((x, z, 9))
     # the altar's pads under the egg pedestals, and the ring round the arena
     add("EP_AltarFloor", 0, 0, 0)
     for name, x, z, yaw in arena_ring():
@@ -364,16 +373,16 @@ def kit_entries():
         add("EP_Brazier", gx, ground(gx, gz), gz)
         add("EP_BrazierFire", gx, ground(gx, gz), gz)
     # dressing, over four times the old ground
-    for x, z in scatter(rnd, 30, 12, 4, 3, taken):
+    for x, z in scatter(rnd, 18, 20, 4, 3, taken):
         add(rnd.choice(("EP_BasaltClusterA", "EP_BasaltClusterB")), x, ground(x, z) - 0.6, z, rnd.uniform(0, TAU), rnd.uniform(0.8, 1.4))
-    for x, z in scatter(rnd, 20, 10, 3, 4, taken):
+    for x, z in scatter(rnd, 16, 10, 3, 4, taken):
         add("EP_FireCrystal", x, ground(x, z) - 0.3, z, rnd.uniform(0, TAU), rnd.uniform(0.85, 1.3))
-    for x, z in scatter(rnd, 22, 10, 3, 5, taken):
+    for x, z in scatter(rnd, 14, 12, 3, 5, taken):
         y = ground(x, z) - 0.2
         yaw = rnd.uniform(0, TAU)
         add("EP_EmberVent", x, y, z, yaw)
         add("EP_VentGlow", x, y, z, yaw)
-    for x, z in scatter(rnd, 26, 8, 3, 3, taken):
+    for x, z in scatter(rnd, 14, 10, 3, 3, taken):
         add("EP_ObsidianShard", x, ground(x, z) - 0.3, z, rnd.uniform(0, TAU), rnd.uniform(0.8, 1.3))
     return kit
 

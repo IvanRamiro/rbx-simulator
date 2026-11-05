@@ -181,8 +181,8 @@ def height(x, z):
         return None, None
     from worldlib import fbm
     a = arena_distance(x, z)
-    if a < ARENA_EDGE:   # the arena: level basalt inside a glowing border of cracked lava rock
-        return h, "CrackedLava" if a > ARENA_R else "Basalt"
+    if a < ARENA_EDGE + 4:   # under the arena's floor (r52): Sand, which renders level. Basalt and CrackedLava render about a stud of bumps, which came through the floor
+        return h, "Sand"
     vx, vz, vr = VOLCANO
     dv = math.hypot(x - vx, z - vz)
     if path_distance(x, z) < 3.6:

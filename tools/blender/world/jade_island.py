@@ -59,6 +59,7 @@ ELDER = (*_polar(-62, 104), 24)            # Elder Jade Tree knoll: top +7
 HOLLOW = (*_polar(-148, 100), 15)          # Whispering Hollow: floor -7
 HOLLOW_POOL = (HOLLOW[0] + 2, HOLLOW[1] - 2, 6.5)
 POOL_BED, POOL_WATER = -8.6, -7.2
+HERMITAGE = (*_polar(ARRIVAL_BEARING + 180, 82), 13)   # the Sage's hermitage, on the line from the gate through the arena; flat at +1
 RUINS = (*_polar(100, 108), 16)            # the Ruin Court
 
 # Rim radius by bearing (theta = atan2(z, x); east 0, south +90, north -90): lobes and bays, pulled
@@ -147,7 +148,7 @@ def _base(x, z):
         w = 1 - smoothstep(-2.0, 0.8, dp)
         h = h * (1 - w) + POOL_BED * w
     # flat terraces: the arrival, the glade, the ruin court and the arena (wide and dead level)
-    for (cx, cz, rad), lift, soft in ((LANDING, 0.4, 7), (GLADE, 1.0, 8), (RUINS, 0.5, 8), ((*ARENA, RING_R + 2), ARENA_Y, 12)):
+    for (cx, cz, rad), lift, soft in ((LANDING, 0.4, 7), (GLADE, 1.0, 8), (RUINS, 0.5, 8), (HERMITAGE, 1.0, 8), ((*ARENA, RING_R + 2), ARENA_Y, 12)):
         w = 1 - smoothstep(rad, rad + soft, math.hypot(x - cx, z - cz))
         h = h * (1 - w) + lift * w
     # paths worn in (not in the arena, which stays level)

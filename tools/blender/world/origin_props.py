@@ -461,13 +461,18 @@ def kit_entries():
     def add(name, x, y, z, yaw=0.0, scale=1.0):
         kit.setdefault(name, []).append(((x, y, z), yaw, scale))
     add("OA_ThornCrown", 0, 0, 0)
+    # the court's floor and the light in its cracks; what's left of the colonnade round its flanks (island_upgrades.py)
+    add("OA_ArenaFloor", 0, ground(0, 0), 0)
+    add("OA_ArenaGlow", 0, ground(0, 0), 0)
+    add("OA_Colonnade", 0, 0, 0)
     cx, cz = O.COLOSSUS
     look = O.PATHS[2][-1]   # the head faces the path that leads to it
     head_yaw = math.atan2(look[0] - cx, look[1] - cz)
     head_y, _ = seat(cx, cz, 5.5)
     add("OA_Colossus", cx, head_y, cz, head_yaw)
     add("OA_ColossusEyes", cx, head_y, cz, head_yaw)
-    taken = []
+    import island_upgrades as U
+    taken = [(math.cos(math.radians(b)) * 70.0, math.sin(math.radians(b)) * 70.0, 7) for _, _, b in U._colonnade_bearings()]
     # the avenue from the gate to the bridge, lined with what is left of its colonnade
     line = O.PATHS[0]
     k = 0
@@ -505,21 +510,28 @@ def kit_entries():
         add("OA_VoidCrystalGlow", x, y, z, yaw, scale)
         taken.append((x, z, 9))
         placed += 1
+    # and in patches on the open ground, where the void is coming up through it: a big one with smaller ones round it
+    patches = 0
     for _ in range(4000):
-        if placed >= 40:
+        if patches >= 7:
             break
-        x, z = rnd.uniform(-170, 170), rnd.uniform(-170, 170)
-        if not free(x, z, taken, 12, 5.0):
+        cx, cz = rnd.uniform(-150, 150), rnd.uniform(-150, 150)
+        if not (90 < math.hypot(cx, cz) < 150) or not free(cx, cz, taken, 26, 8.0):
             continue
-        yaw, scale = rnd.uniform(0, TAU), rnd.uniform(0.7, 1.2)
-        y = seat(x, z, 1.4 * scale)[0] - 0.2
-        add("OA_VoidCrystals", x, y, z, yaw, scale)
-        add("OA_VoidCrystalGlow", x, y, z, yaw, scale)
-        taken.append((x, z, 12))
-        placed += 1
+        patches += 1
+        for j in range(4):
+            a, d = rnd.uniform(0, TAU), 0.0 if j == 0 else rnd.uniform(6, 11)
+            x, z = cx + math.cos(a) * d, cz + math.sin(a) * d
+            if j and (O.edge_distance(x, z) < 4 or O.path_distance(x, z) < 3.5):
+                continue
+            yaw, scale = rnd.uniform(0, TAU), (1.5 if j == 0 else rnd.uniform(0.6, 1.0))
+            y = seat(x, z, 1.4 * scale)[0] - 0.2
+            add("OA_VoidCrystals", x, y, z, yaw, scale)
+            add("OA_VoidCrystalGlow", x, y, z, yaw, scale)
+            taken.append((x, z, 8))
     rocks = 0
     for _ in range(4000):
-        if rocks >= 30:
+        if rocks >= 22:
             break
         x, z = rnd.uniform(-170, 170), rnd.uniform(-170, 170)
         if not free(x, z, taken, 9, 3.0):

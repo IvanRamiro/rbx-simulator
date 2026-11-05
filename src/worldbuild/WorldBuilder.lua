@@ -242,6 +242,11 @@ WorldBuilder.Collision = {
     -- Yggdrasil: the Hatching Altar's dais must be walkable, under its arching roots
     { Prefix = "YG_AltarRoots", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_Altar", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    -- the outer islands' landmarks: you walk in and through them
+    { Prefix = "JG_Hermitage", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "MI_MoonGate", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "OA_Colonnade", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "EP_FirePylon", Fidelity = Enum.CollisionFidelity.Hull },
     -- Jade Grove: the hollow, the walk-under root and the gate opening must stay passable
     { Prefix = "JG_ElderTrunk", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "JG_ElderPads", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
@@ -402,6 +407,14 @@ WorldBuilder.Appearance = {
 }
 -- the Lion Court's flagstones lie on level terrain: decoration underfoot, so nothing catches on them
 WorldBuilder.Appearance.BI_CourtPaving = { CanCollide = false, CastShadow = false }
+-- The outer islands' arena floors (tools/blender/world/island_upgrades.py): decoration on level ground, like the Lion Court's
+WorldBuilder.Appearance.JG_ArenaFloor = { CanCollide = false, CastShadow = false }
+WorldBuilder.Appearance.EP_ArenaFloor = { CanCollide = false, CastShadow = false }
+WorldBuilder.Appearance.MI_ArenaFloor = { CanCollide = false, CastShadow = false }
+WorldBuilder.Appearance.OA_ArenaFloor = { CanCollide = false, CastShadow = false }
+WorldBuilder.Appearance.EP_ArenaGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 78, 14), CanCollide = false, CastShadow = false }
+WorldBuilder.Appearance.EP_PylonFire = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 120, 20), Transparency = 0.35, CanCollide = false, CastShadow = false }
+WorldBuilder.Appearance.OA_ArenaGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(115, 40, 255), CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance.SI_QiCompassGlow.Color = Color3.fromRGB(40, 210, 235)
 WorldBuilder.Appearance.SI_LanternLight.Color = Color3.fromRGB(255, 150, 60)
 WorldBuilder.Appearance.SI_SpringWater.Color = Color3.fromRGB(40, 165, 180)
@@ -459,12 +472,14 @@ WorldBuilder.Lights = {
     EP_ForgeCoals = { Range = 18, Brightness = 1.5 },
     MI_StarLanternCore = { Range = 14, Brightness = 0.9 },
     OA_ColossusEyes = { Range = 16, Brightness = 1.4 },
+    EP_PylonFire = { Range = 26, Brightness = 1.6 },
 }
 
 -- Kit pieces that throw off particles (one or more presets each).
 WorldBuilder.Emitters = {
     EP_GateFire = { "Flames", "EmberSparks" },
     EP_BrazierFire = { "Flames", "EmberSparks" },
+    EP_PylonFire = { "Flames", "EmberSparks" },
     EP_ForgeCoals = { "EmberSparks" },
     EP_VentGlow = { "EmberSparks" },
     OA_ColossusEyes = { "VoidWisps" },
@@ -777,6 +792,48 @@ local function placeTemplate(island, name, frame, parent, scale)
     return part
 end
 
+-- The new pieces for the outer islands come in one import (assets/world/IslandUpgrades.fbx, with no textures of its own): each goes to its
+-- island's kit by its name's prefix, painted with the atlas that island's kit already has uploaded.
+local UPGRADE_ISLANDS = {
+    JG = { Island = "JadeGrove", Atlas = "JG_AncientTreeA" },
+    EP = { Island = "EmberPeak", Atlas = "EP_BasaltClusterA" },
+    MI = { Island = "MoonlitIsle", Atlas = "MI_LunarRock" },
+    OA = { Island = "OriginAbyss", Atlas = "OA_SlateRock" },
+}
+function WorldBuilder.storeUpgrades(model)
+    local anchor = model:FindFirstChild("IU_Anchor")
+    assert(anchor, "import is missing its anchor IU_Anchor")
+    local origin = anchor.CFrame
+    anchor:Destroy()
+    local stored = {}
+    for _, part in model:GetChildren() do
+        if part:IsA("MeshPart") then
+            local where = UPGRADE_ISLANDS[string.sub(part.Name, 1, 2)]
+            assert(where, "no island for the piece " .. part.Name)
+            local folder = ServerStorage.WorldKit[where.Island]
+            local old = folder:FindFirstChild(part.Name)
+            if old then
+                old:Destroy()
+            end
+            part.CFrame = IMPORT_TURN * origin:ToObjectSpace(part.CFrame)
+            part.TextureID = folder[where.Atlas].TextureID
+            for _, child in part:GetChildren() do
+                if child:IsA("SurfaceAppearance") then
+                    child:Destroy()
+                end
+            end
+            prepareMesh(part)
+            part.Parent = folder
+            table.insert(stored, part.Name)
+        end
+    end
+    model:Destroy()
+    for _, where in UPGRADE_ISLANDS do
+        WorldBuilder.applyCollision(ServerStorage.WorldKit[where.Island])
+    end
+    return stored
+end
+
 -- Points templates that were exported with the same atlas at one uploaded copy of it, so the
 -- texture is loaded once (each FBX import uploads its own copy).
 function WorldBuilder.shareTexture(island, sourceName, names)
@@ -985,6 +1042,7 @@ function WorldBuilder.buildEggStands(island)
         pedestal.Name = "Pedestal"
         local ring = placeTemplate(island, pieces.GlowRing, frame, stand, entry.Scale)
         ring.Name = "GlowRing"
+        ring.Position += Vector3.new(0, pieces.RingLift or 0, 0)
         ring.Color = glow
 
         local rest = frame.Position + Vector3.new(0, entry.EggRest, 0)

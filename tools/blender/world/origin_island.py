@@ -218,8 +218,10 @@ def height(x, z):
     if h is None:
         return None, None
     a = arena_distance(x, z)
-    if a < ARENA_EDGE:   # the court: worn temple stone inside a border of void-crystal crust
-        return h, "Glacier" if a > ARENA_R else "Concrete"
+    if a < ARENA_EDGE + 0.5:   # under the court's floor (r52): Sand, which renders level at its height, kept well inside the kerb because its colour is wrong for this island. Glacier's bumps came through the floor, and Concrete snaps to the voxel grid, a stud under it
+        return h, "Sand"
+    if a < ARENA_EDGE + 4:
+        return h, "Concrete"
     lip = abs(side(x, z)) - rift_half(x, z)
     if path_distance(x, z) < 3.4:
         mat = "Concrete"
@@ -232,7 +234,7 @@ def height(x, z):
     return h, mat
 
 
-MATERIALS = ["Slate", "Concrete", "Glacier"]
+MATERIALS = ["Slate", "Concrete", "Glacier", "Sand"]
 
 
 def export_terrain(path=None):

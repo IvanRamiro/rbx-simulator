@@ -236,6 +236,20 @@ def kit_entries():
     add("MI_Pavilion", 0, 0, 0)
     add("MI_Armillary", 0, 0, 0)
     taken = [(M.ARRIVAL[0], M.ARRIVAL[1], 14)]   # where the bridge from Yggdrasil lands, 20 studs wide
+    # the court's floor (island_upgrades.py), and the Moon Gate on the lip of the bay, behind the eggs, on the line from the arch through the lair
+    add("MI_ArenaFloor", M.ARENA[0], ground(*M.ARENA), M.ARENA[1])
+    back = M._LAIR_FACING + 180
+    gate_r = next(r for r in range(74, 40, -2) if M.edge_distance(*M.court_point(back, r)) >= 9)
+    gx, gz = M.court_point(back, gate_r)
+    add("MI_MoonGate", gx, ground(gx, gz), gz, face_yaw(M.ARENA[0] - gx, M.ARENA[1] - gz))
+    taken.append((gx, gz, 20))
+    # spires standing round the court, like a dial's hours, clear of the paths and the gate
+    for k in range(14):
+        b = back + 12.5 + k * 25.7
+        x, z = M.court_point(b, M.RING_R + 13)
+        if M.edge_distance(x, z) > 5 and M.path_distance(x, z) > 6 and all(math.hypot(x - tx, z - tz) > tg for tx, tz, tg in taken):
+            add("MI_MoonstoneSpire", x, ground(x, z) - 0.2, z, rnd.uniform(0, TAU), rnd.uniform(0.85, 1.05))
+            taken.append((x, z, 8))
     # star lanterns along the paths
     for line in M.PATHS:
         for (ax, az), (bx, bz) in zip(line, line[1:]):
@@ -260,14 +274,21 @@ def kit_entries():
             add("MI_StarLantern", x, ground(x, z), z, a)
             add("MI_StarLanternCore", x, ground(x, z), z)
             taken.append((x, z, 4))
-    for x, z in scatter(rnd, 50, 6, taken):
-        y = ground(x, z) - 0.1
-        yaw = rnd.uniform(0, TAU)
-        add("MI_FrostLilies", x, y, z, yaw)
-        add("MI_LilyGlow", x, y, z, yaw)
-    for x, z in scatter(rnd, 28, 9, taken):
+    # the lilies grow in drifts, not evenly: a few centres, a handful round each
+    for cx, cz in scatter(rnd, 8, 34, taken):
+        for _ in range(16):
+            a, d = rnd.uniform(0, TAU), rnd.uniform(0, 11)
+            x, z = cx + math.cos(a) * d, cz + math.sin(a) * d
+            if M.edge_distance(x, z) > 3 and M.path_distance(x, z) > 3 and math.hypot(x - M.ARENA[0], z - M.ARENA[1]) > M.RING_R + 5 \
+                    and all(math.hypot(x - tx, z - tz) >= 3 for tx, tz, tg in taken if tg < 34):
+                y = ground(x, z) - 0.1
+                yaw = rnd.uniform(0, TAU)
+                add("MI_FrostLilies", x, y, z, yaw)
+                add("MI_LilyGlow", x, y, z, yaw)
+                taken.append((x, z, 3))
+    for x, z in scatter(rnd, 16, 12, taken):
         add("MI_MoonstoneShards", x, ground(x, z) - 0.2, z, rnd.uniform(0, TAU), rnd.uniform(0.8, 1.3))
-    for x, z in scatter(rnd, 24, 9, taken, edge_min=2.0):
+    for x, z in scatter(rnd, 14, 12, taken, edge_min=2.0):
         add("MI_LunarRock", x, ground(x, z) - 0.4, z, rnd.uniform(0, TAU), rnd.uniform(0.8, 1.4))
     # more spires along both horns
     for deg in (192, 200, 210, 222, 330, 340, 352, 5, 18, 160, 140, 45):
@@ -280,7 +301,7 @@ def kit_entries():
 
 
 def write_all():
-    lines = ['    EggStandPieces = { Pedestal = "MI_EggPedestal", GlowRing = "MI_EggGlowRing" },', "    EggStands = {"]
+    lines = ['    EggStandPieces = { Pedestal = "MI_EggPedestal", GlowRing = "MI_EggGlowRing", RingLift = 0.2 }, -- above the floor', "    EggStands = {"]
     for eid, x, z, yaw in egg_layout():
         lines.append('        { EggId = "%s", Position = Vector3.new(%.2f, %.2f, %.2f), Yaw = %.4f, EggRest = %.2f },'
                      % (eid, x, ground(x, z), z, yaw, PEDESTAL_TOP))

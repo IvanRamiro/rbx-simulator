@@ -302,6 +302,7 @@ def build():
 
 # ---------- placement ----------
 EGG_IDS = ["JadeSpiritEgg", "BloomwoodEgg", "AncientGroveEgg"]
+GROVE_BEARINGS = (12, 80, 122, 176, 262, 330)  # between the island's named places
 
 
 def face_yaw(fx, fz):
@@ -407,6 +408,10 @@ def placements():
     rnd = random.Random(2027)
     items = []
     eggs = arena_eggs()
+    # the floor of the arena and the landmark behind the eggs, on the line from the gate through the lair (island_upgrades.py)
+    items.append(("JG_ArenaFloor", J.ARENA[0], J.ARENA_Y, J.ARENA[1], 0.0, 1.0))
+    hx, hz = J.HERMITAGE[0], J.HERMITAGE[1]
+    items.append(("JG_Hermitage", hx, ground(hx, hz), hz, face_yaw(J.ARENA[0] - hx, J.ARENA[1] - hz), 1.0))
     gx, gz = J.GLADE[0], J.GLADE[1]
     items.append(("JG_GladeFloor", gx, 1.02, gz, 0.0, 1.0))  # the glade terrace is flat at +1
     for x, z, yaw in glade_stones():
@@ -433,29 +438,32 @@ def placements():
         yaw = face_yaw(-x, -z)
         items.append(("JG_JadeLantern", x, y, z, yaw, 1.0))
         items.append(("JG_JadeLanternLight", x, y, z, yaw, 1.0))
-    zones = keepouts()
-    taken = [(x, z, 3) for _, x, _, z, *_ in items]
-    # the forest ringing the arena: four times the ground of the old island, so about three times the trees
-    for x, z in scatter(rnd, 46, 17, 6, 8, taken, zones):
+    zones = keepouts() + [(hx, hz, 24)]
+    taken = [(x, z, 3) for _, x, _, z, *_ in items if (x, z) != (J.ARENA[0], J.ARENA[1])]
+    # groves round the rim, the ground between them open, the way into the arena and the view across it clear: a forest you can see
+    centres = [J._polar(b, 104) for b in GROVE_BEARINGS]
+    grove_ok = lambda x, z: any(math.hypot(x - a, z - b) < 30 for a, b in centres) and J.path_distance(x, z) > 11 \
+        and math.hypot(x - J.ARENA[0], z - J.ARENA[1]) > J.RING_R + 14 and all(math.hypot(x - zx, z - zz) > zr for zx, zz, zr in zones)
+    for x, z in scatter(rnd, 30, 15, 6, 8, taken, zones, inside=grove_ok):
         items.append((rnd.choice(("JG_AncientTreeA", "JG_AncientTreeB")), x, ground(x, z) - 0.4, z, rnd.uniform(0, TAU), rnd.uniform(0.85, 1.25)))
-    for x, z in scatter(rnd, 28, 11, 4, 6, taken, zones):
+    for x, z in scatter(rnd, 22, 9, 4, 6, taken, zones, inside=grove_ok):
         items.append(("JG_BambooClump", x, ground(x, z), z, rnd.uniform(0, TAU), rnd.uniform(0.85, 1.15)))
-    for x, z in scatter(rnd, 20, 12, 3, 4, taken, zones):
+    for x, z in scatter(rnd, 14, 12, 3, 4, taken, zones):
         items.append(("JG_JadeOutcrop", x, ground(x, z) - 0.3, z, rnd.uniform(0, TAU), rnd.uniform(0.9, 1.4)))
-    for x, z in scatter(rnd, 10, 14, 4, 6, taken, zones):
+    for x, z in scatter(rnd, 6, 14, 4, 6, taken, zones):
         items.append(("JG_RuinPillar", x, ground(x, z), z, rnd.uniform(0, TAU), rnd.uniform(0.9, 1.2)))
-    for x, z in scatter(rnd, 12, 14, 4, 6, taken, zones):
+    for x, z in scatter(rnd, 8, 14, 4, 6, taken, zones):
         items.append(("JG_FallenLog", x, ground(x, z) - 0.6, z, rnd.uniform(0, TAU), rnd.uniform(0.9, 1.2)))
     # ferns and mushrooms everywhere outside the arena, including the hollow and the Elder Tree knoll (but not paths)
     small_ok = lambda x, z: all(math.hypot(x - zx, z - zz) > zr for zx, zz, zr in
                                 ((J.GLADE[0], J.GLADE[1], 14), (J.LANDING[0], J.LANDING[1], 12), (J.GATE[0], J.GATE[1], 10),
-                                 (J.ARENA[0], J.ARENA[1], J.RING_R + 3), (J.RUINS[0], J.RUINS[1], J.RUINS[2] - 2)))
-    for x, z in scatter(rnd, 40, 7, 2.6, 4, taken, zones, inside=small_ok):
+                                 (J.ARENA[0], J.ARENA[1], J.RING_R + 3), (J.RUINS[0], J.RUINS[1], J.RUINS[2] - 2), (hx, hz, 16)))
+    for x, z in scatter(rnd, 30, 7, 2.6, 4, taken, zones, inside=small_ok):
         y = ground(x, z)
         yaw = rnd.uniform(0, TAU)
         items.append(("JG_Mushrooms", x, y, z, yaw, 1.0))
         items.append(("JG_MushroomCaps", x, y, z, yaw, 1.0))
-    for x, z in scatter(rnd, 130, 5, 2.6, 3, taken, zones, inside=small_ok):
+    for x, z in scatter(rnd, 80, 5, 2.6, 3, taken, zones, inside=small_ok):
         items.append(("JG_Fern", x, ground(x, z) - 0.1, z, rnd.uniform(0, TAU), rnd.uniform(0.9, 1.4)))
     return items, eggs
 
