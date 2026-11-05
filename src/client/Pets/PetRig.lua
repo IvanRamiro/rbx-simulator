@@ -1,4 +1,5 @@
 local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local PetRig = {}
@@ -466,6 +467,159 @@ local function animateSheep(rig, s, moving, fly, nova)
     end
 
     pose(m.Tail, CFrame.Angles(0.08 * math.sin(t * 0.9) + 0.15 * bloom, 0.18 * math.sin(t * 0.6), 0.06 * math.sin(t * 0.75)))
+end
+
+-- The Wind Sprite is one smooth skin on a skeleton, so its joints are Bones (PetRig.buildSkinned). Axes as everywhere: -Z ahead, +X to its right; its left is -X.
+local WIND_LID_HINGE = { L = Vector3.new(0.9574, -0.1218, -0.2618), R = Vector3.new(0.9574, 0.1218, 0.2618) } -- both lids of an eye turn on this line
+local WIND_BLINK_UPPER, WIND_BLINK_LOWER = math.rad(72), math.rad(22)
+local WIND_CREST_TURN = math.rad(35) -- both hair bones turned at rest: built side-on its curl reads from the front as a stump; turned, as a curled topknot
+local WIND_FAR = 90 -- studs from the camera past which nobody can see it fidget: its bones rest
+
+local function windLids(m, side, upper, lower)
+    local hinge = WIND_LID_HINGE[side]
+    pose(m["LidU" .. side], CFrame.fromAxisAngle(hinge, -upper))
+    pose(m["LidL" .. side], CFrame.fromAxisAngle(hinge, lower))
+end
+
+local function animateWindSprite(rig, s, moving, fly, nova)
+    local camera = workspace.CurrentCamera
+    if camera and (camera.CFrame.Position - rig.rootPart.Position).Magnitude > WIND_FAR then
+        return
+    end
+    local m, u, t, dt = rig.motors, rig.meters, s.time, rig.deltaTime
+    local pace = math.max(moving, fly)
+
+    -- the special: it fills its cheeks, leaning back, then blows the gale out at the moment of the burst
+    local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+    local inhale = smoothstep(0, 0.36, progress) * (1 - smoothstep(0.41, 0.47, progress))
+    local blow = smoothstep(0.4, 0.45, progress) * (1 - smoothstep(0.74, 0.92, progress))
+
+    -- blinks, now and then a double
+    s.nextBlink = s.nextBlink or t + 1 + math.random() * 2
+    local blink = 0
+    if t >= s.nextBlink then
+        local a = (t - s.nextBlink) / 0.17
+        if a >= 1 then
+            s.nextBlink = t + (if math.random() < 0.18 then 0.12 else 2.2 + math.random() * 3.6)
+        else
+            blink = 1 - math.abs(2 * a - 1)
+        end
+    end
+
+    -- its eyes dart about; its head follows them, late
+    s.nextGaze = s.nextGaze or 0
+    if t >= s.nextGaze then
+        s.nextGaze = t + 0.8 + math.random() * 2.4
+        s.gazeYawTo, s.gazePitchTo = (math.random() - 0.5) * 0.62, (math.random() - 0.45) * 0.24
+    end
+    local calm = (1 - pace * 0.7) * (1 - nova)
+    s.gazeYaw = (s.gazeYaw or 0) + ((s.gazeYawTo or 0) * calm - (s.gazeYaw or 0)) * math.min(1, dt * 24)
+    s.gazePitch = (s.gazePitch or 0) + ((s.gazePitchTo or 0) * calm - (s.gazePitch or 0)) * math.min(1, dt * 24)
+    s.headYaw = (s.headYaw or 0) + (s.gazeYaw * 0.65 - (s.headYaw or 0)) * math.min(1, dt * 3.5)
+
+    -- the look it gets when it is up to something: a raised brow, narrowed eyes, a crooked smile
+    s.nextSly = s.nextSly or t + 5 + math.random() * 6
+    local sly = 0
+    if t >= s.nextSly then
+        local a = (t - s.nextSly) / 2.6
+        if a >= 1 then
+            s.nextSly = t + 7 + math.random() * 9
+            s.slySide = if math.random() < 0.5 then 1 else -1
+        else
+            sly = smoothstep(0, 0.14, a) * (1 - smoothstep(0.82, 1, a))
+        end
+    end
+    sly *= (1 - nova)
+    local slySide = s.slySide or 1
+
+    -- every so often it reaches out with one sleeve and tugs, twice, to get your attention
+    s.nextTug = s.nextTug or t + 8 + math.random() * 8
+    local reach, tug, tugSide = 0, 0, s.tugSide or 1
+    if t >= s.nextTug then
+        local a = (t - s.nextTug) / 2.1
+        if a >= 1 then
+            s.nextTug = t + 14 + math.random() * 12
+            s.tugSide = -tugSide
+        elseif pace < 0.25 and nova == 0 then
+            reach = smoothstep(0, 0.2, a) * (1 - smoothstep(0.82, 1, a))
+            tug = reach * math.max(0, math.sin((a - 0.22) * math.pi * 2 * 3.2)) * (if a > 0.22 and a < 0.85 then 1 else 0)
+        end
+    end
+    local tugBody = reach * tugSide
+
+    -- body and head
+    local hover = 0.03 * math.sin(t * 1.9) + 0.012 * math.sin(t * 3.3 + 1) + 0.03 * fly + 0.2 * nova
+    pose(m.Body, CFrame.new(0, hover * u, 0)
+        * CFrame.Angles(0.03 * math.sin(t * 1.9 - 0.7) - 0.26 * moving - 0.5 * fly + 0.3 * inhale - 0.2 * blow - 0.1 * tug,
+            0.05 * math.sin(t * 0.43) + 0.12 * tugBody,
+            0.035 * math.sin(t * 0.71) - 0.09 * tugBody))
+    pose(m.Head, CFrame.Angles(0.04 * math.sin(t * 1.9 - 1.6) + s.gazePitch * 0.4 + 0.14 * moving + 0.3 * fly - 0.12 * inhale + 0.2 * blow,
+        s.headYaw + 0.2 * tugBody, 0.05 * math.sin(t * 0.37) * calm - 0.1 * tugBody + 0.07 * sly * slySide))
+
+    -- the face
+    local gazePitch = s.gazePitch
+    local squeeze = math.max(blink, 0.82 * blow)
+    local rest = math.rad(6 - 8 * inhale + 14 * sly + 5 * tug)
+    local upper = rest + (WIND_BLINK_UPPER - rest) * squeeze - gazePitch * 0.35
+    local lower = math.rad(7) * sly + WIND_BLINK_LOWER * squeeze
+    for _, side in { "L", "R" } do
+        pose(m["Eye" .. side], CFrame.Angles(gazePitch, s.gazeYaw, 0))
+        windLids(m, side, upper, lower)
+    end
+    local browL = 0.008 * sly * (if slySide > 0 then 1.5 else -0.4) + 0.012 * inhale - 0.012 * blow
+    local browR = 0.008 * sly * (if slySide < 0 then 1.5 else -0.4) + 0.012 * inhale - 0.012 * blow
+    pose(m.BrowL, CFrame.new(0, browL * u, 0))
+    pose(m.BrowR, CFrame.new(0, browR * u, 0))
+    local pucker = math.max(inhale * 0.55, blow)
+    pose(m.Smile, CFrame.new(0.006 * sly * slySide * u, 0.004 * sly * u, 0.03 * pucker * u) * CFrame.Angles(0, 0, 0.14 * sly * slySide))
+    pose(m.Blow, CFrame.new(0, 0, -0.036 * pucker * u))
+    local puff = inhale + 0.45 * blow
+    pose(m.CheekL, CFrame.new(-0.032 * puff * u, 0, -0.026 * puff * u))
+    pose(m.CheekR, CFrame.new(0.032 * puff * u, 0, -0.026 * puff * u))
+
+    -- ears and hair take the wind
+    for _, side in { "L", "R" } do
+        local sign = if side == "L" then -1 else 1
+        local offset = if side == "L" then 0 else 2.3
+        local flick = math.max(0, math.sin(t * 1.1 + offset)) ^ 14
+        pose(m["Ear" .. side], CFrame.Angles(0.38 * pace + 0.35 * blow + 0.04 * math.sin(t * 2.1 + offset), 0,
+            sign * (0.05 * math.sin(t * 0.9 + offset) + 0.32 * flick + 0.22 * inhale - 0.14 * pace)))
+    end
+    pose(m.Crest1, CFrame.Angles(0.05 * math.sin(t * 1.4) + 0.2 * pace + 0.3 * blow, WIND_CREST_TURN, 0.05 * math.sin(t * 0.9)))
+    pose(m.Crest2, CFrame.Angles(0.09 * math.sin(t * 1.4 - 0.9) + 0.26 * pace + 0.4 * blow, WIND_CREST_TURN, 0.08 * math.sin(t * 0.9 - 1)))
+
+    -- the sleeves: trailing when it flies, and the tug
+    for _, side in { "L", "R" } do
+        local sign = if side == "L" then -1 else 1
+        local mine = if (side == "L") == (tugSide < 0) then 1 else 0
+        local idle = 0.06 * math.sin(t * 1.9 - 1 + sign)
+        local lift = mine * reach * 1.15 - mine * tug * 0.42
+        local trail = -0.75 * moving - 1.05 * fly + 0.5 * inhale - 0.6 * blow
+        pose(m["Arm" .. side .. "1"], CFrame.Angles(idle + trail + lift, sign * -0.35 * mine * reach, sign * 0.1 * math.sin(t * 1.3) * (1 - pace)))
+        pose(m["Arm" .. side .. "2"], CFrame.Angles(idle * 0.7 + trail * 0.45 + mine * reach * 0.45 - mine * tug * 0.3, 0, 0))
+    end
+    pose(m.Tassel, CFrame.Angles(-0.42 * pace - 0.5 * blow + 0.08 * math.sin(t * 1.9 - 1.4) + 0.3 * tug, 0, 0.1 * math.sin(t * 1.17)))
+
+    -- its wings flutter all the time, too fast to count
+    s.flap = (s.flap or 0) + dt * (42 + 14 * moving + 22 * fly + 18 * nova)
+    local amplitude = 0.085 + 0.2 * moving + 0.36 * fly + 0.42 * nova
+    local beat = amplitude * math.sin(s.flap)
+    local flex = amplitude * 0.75 * math.sin(s.flap - 1)
+    local rise = 0.05 + 0.08 * fly + 0.22 * nova
+    local sweep = 0.22 * moving + 0.42 * fly - 0.2 * inhale
+    pose(m.WingL, CFrame.Angles(0, -sweep, -(rise + beat)))
+    pose(m.WingR, CFrame.Angles(0, sweep, rise + beat))
+    pose(m.WingMidL, CFrame.Angles(0, 0, -flex))
+    pose(m.WingMidR, CFrame.Angles(0, 0, flex))
+
+    -- the curl: a wave running down it; speed and the blow unwind it, and an in-breath winds it tight
+    local open = math.rad(10) * moving + math.rad(15) * fly + math.rad(17) * blow - math.rad(4) * inhale
+    for k = 1, 7 do
+        local f = k / 7
+        pose(m["Tail" .. k], CFrame.Angles(open + 0.05 * (0.4 + f) * math.sin(t * 1.6 - k * 0.6),
+            0.045 * (0.5 + f) * (1 + moving) * math.sin(t * 1.15 - k * 0.5), 0.025 * math.sin(t * 0.8 - k * 0.45)))
+    end
+    pose(m.TailTip, CFrame.Angles(open + 0.1 * math.sin(t * 1.6 - 5), 0, 0.05 * math.sin(t * 2.1)))
 end
 
 local LION_LEGS = { LegFL = 0, LegBR = 0.15, LegFR = math.pi, LegBL = math.pi + 0.15 }
@@ -1089,10 +1243,47 @@ PetRig.Profiles.GoldenManeLion = {
 PetRig.NOVA_TIME = 2.6
 local NOVA_BURST_AT = 0.42
 
+PetRig.Profiles.WindSprite = {
+    Skinned = true,
+    AuthoredLength = 1.71, -- its longest side as built, in the Blender units its poses are written in
+    Bones = {
+        "Body", "Head", "Crest1", "Crest2", "EarL", "EarR", "EyeL", "EyeR", "LidUL", "LidUR", "LidLL", "LidLR", "BrowL", "BrowR", "CheekL", "CheekR",
+        "Smile", "Blow", "ArmL1", "ArmL2", "ArmR1", "ArmR2", "WingL", "WingR", "WingMidL", "WingMidR", "Tail1", "Tail2", "Tail3", "Tail4", "Tail5", "Tail6", "Tail7", "TailTip", "Tassel",
+    },
+    Points = { "TailTip", "WingTipL", "WingTipR", "Blow" },
+    SkinTint = Color3.fromRGB(238, 250, 228), -- its pale maps run a little hot under the game's light
+    GlowColors = {
+        ["1eebb4"] = Color3.fromRGB(30, 235, 180),
+        ["ffffff"] = Color3.fromRGB(165, 190, 190), -- catch-lights: full white blooms over the whole eye
+    },
+    Effects = {
+        Motes = "Body", -- no Light: a light inside a body this pale washes all its shading out
+        Pulse = "Channels",
+        Burst = "Body",
+        Sparks = { "WingTipL", "WingTipR" },
+        Trail = "TailTip",
+        TrailWidth = 0.07, -- a thread of wind off the tail's tip, not a plank
+        TrailTaper = true,
+        Blast = "TuggingGale",
+        NovaLight = 3,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(60, 235, 190),
+        Amber = Color3.fromRGB(240, 110, 90),
+        Orange = Color3.fromRGB(25, 190, 170),
+        Sun = Color3.fromRGB(170, 255, 230),
+        Ivory = Color3.fromRGB(235, 255, 250),
+    },
+    Animate = animateWindSprite,
+}
+
 function PetRig.isRigged(petId, template)
     local profile = PetRig.Profiles[petId]
     if not profile then
         return false
+    end
+    if profile.Skinned then
+        return template:FindFirstChildWhichIsA("Bone", true) ~= nil
     end
     for name in profile.Joints do
         if template:FindFirstChild(petId .. "_Pivot_" .. name, true) then
@@ -1212,7 +1403,7 @@ local function addEffects(rig)
         end
         local upper = Instance.new("Attachment")
         upper.Name = "TrailTop"
-        upper.CFrame = tip.CFrame * CFrame.new(0, 0.25 * u, 0)
+        upper.CFrame = tip.CFrame * CFrame.new(0, (effects.TrailWidth or 0.25) * u, 0)
         upper.Parent = tip.Parent
         local trail = Instance.new("Trail")
         trail.Name = "FlightTrail"
@@ -1224,6 +1415,9 @@ local function addEffects(rig)
         trail.FaceCamera = true
         trail.Color = ColorSequence.new(colors.Sun, colors.Orange)
         trail.Transparency = NumberSequence.new(0.35, 1)
+        if effects.TrailTaper then
+            trail.WidthScale = NumberSequence.new(1, 0)
+        end
         trail.Enabled = false
         trail.Parent = tip.Parent
         table.insert(rig.trails, trail)
@@ -1339,6 +1533,122 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
     local controller = Instance.new("AnimationController")
     controller.Parent = model
     Instance.new("Animator").Parent = controller
+
+    addEffects(rig)
+    return rig
+end
+
+-- A pet that is one skin on a skeleton. Its joints are Bones; rig.motors holds a stand-in for each, so animations pose it exactly as they
+-- pose a jointed pet: a pose in the pet's axes, turned into the bone's own (a bone may rest at any angle): rest:Inverse() * pose * rest.
+-- rig.unit keeps effects the size they are on other pets; rig.meters is studs per Blender unit, what its own poses are written in.
+function PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, longest, length)
+    local profile = PetRig.Profiles[petId]
+    local prefix = petId .. "_"
+    local rig = {
+        profile = profile,
+        model = model,
+        rootPart = rootPart,
+        unit = length / 3,
+        meters = longest * scale / profile.AuthoredLength,
+        parts = {},
+        motors = {},
+        sides = {},
+        points = {},
+        pointPositions = {},
+        pulseGlow = {},
+        trails = {},
+        deltaTime = 0,
+        state = { walk = 0, fly = 0, time = math.random() * 10 },
+    }
+
+    local skin = template:Clone()
+    skin.Name = "Skin"
+    local box = skin:GetBoundingBox()
+    local bones = {}
+    for _, d in skin:GetDescendants() do
+        if d:IsA("Bone") then
+            bones[d.Name] = d
+            d.CFrame = d.CFrame.Rotation + d.CFrame.Position * scale
+        elseif d:IsA("BasePart") then
+            local from = d.CFrame
+            d.Size *= scale
+            d.CFrame = turn * (from.Rotation + (from.Position - box.Position) * scale)
+            prepare(d)
+            local name = if string.sub(d.Name, 1, #prefix) == prefix then string.sub(d.Name, #prefix + 1) else d.Name
+            local owner, hex = string.match(name, "^(.+)_Glow_(%x%x%x%x%x%x)$")
+            if hex then
+                d.Color = (profile.GlowColors and profile.GlowColors[string.lower(hex)]) or Color3.fromHex(hex)
+                d.Material = Enum.Material.Neon
+                if d:IsA("MeshPart") then
+                    d.TextureID = ""
+                end
+                rig.parts[owner] = d
+                if owner == profile.Effects.Pulse then
+                    table.insert(rig.pulseGlow, { part = d, color = d.Color })
+                end
+            elseif d.Name == "RootPart" then
+                d.Transparency = 1 -- the importer's holder of the bones
+            else
+                d.Material = Enum.Material.SmoothPlastic
+                rig.parts[name] = d
+                local look = d:FindFirstChildOfClass("SurfaceAppearance")
+                if look and profile.SkinTint then
+                    look.Color = profile.SkinTint
+                end
+            end
+            -- a Weld, not a WeldConstraint: its offset is fixed now, so the root can be placed before the model is in the world
+            local joint = Instance.new("Weld")
+            joint.Part0 = rootPart
+            joint.Part1 = d
+            joint.C0 = rootPart.CFrame:ToObjectSpace(d.CFrame)
+            joint.Parent = d
+        end
+    end
+    -- Each mesh needs a Motor6D from the part that holds the bones, as the importer made them: without one the skin stays in its bind pose,
+    -- whatever the bones do (seen in Studio, 2026-11-05).
+    local holder = bones.Root and bones.Root.Parent
+    for _, d in skin:GetChildren() do
+        if d:IsA("MeshPart") and holder then
+            local motor = Instance.new("Motor6D")
+            motor.Name = d.Name .. "Motor6D"
+            motor.Part0 = holder
+            motor.Part1 = d
+            motor.C0 = holder.CFrame:ToObjectSpace(d.CFrame)
+            motor.Parent = d
+        end
+    end
+    for _, child in skin:GetChildren() do
+        child.Parent = model
+    end
+    skin:Destroy()
+
+    local function worldOf(bone)
+        local cframe = bone.CFrame
+        local up = bone.Parent
+        while up:IsA("Bone") do
+            cframe = up.CFrame * cframe
+            up = up.Parent
+        end
+        return up.CFrame * cframe
+    end
+    for _, name in profile.Bones do
+        local bone = bones[name]
+        if bone then
+            local rest = worldOf(bone).Rotation
+            local restInverse = rest:Inverse()
+            rig.motors[name] = setmetatable({}, {
+                __newindex = function(_, _, cframe)
+                    bone.Transform = restInverse * cframe * rest
+                end,
+            })
+        else
+            warn("PetRig: " .. petId .. " has no bone " .. name)
+            rig.motors[name] = {} -- poses of a missing bone land nowhere
+        end
+    end
+    for _, name in profile.Points do
+        rig.points[name] = bones[name]
+    end
 
     addEffects(rig)
     return rig
@@ -2275,6 +2585,119 @@ function Blasts.CloudBloom(rig, fx)
     TweenService:Create(light, TweenInfo.new(1.2), { Brightness = 0 }):Play()
     if rig.burst then
         rig.burst:Emit(20)
+    end
+end
+
+-- Three ribbons of wind leave its mouth, wind round each other as they run ahead of it, and curl up and away; rings of breath and a scatter of
+-- tumbling leaves go with them.
+function Blasts.TuggingGale(rig, fx)
+    local colors, u, facing, neon = rig.profile.Colors, rig.unit, fx.facing, fx.neon
+    local mouthBone = rig.points.Blow
+    local mouth = if mouthBone then mouthBone.TransformedWorldCFrame.Position else fx.origin
+    local ahead = facing:VectorToWorldSpace(Vector3.new(0, 0, -1))
+    local right = facing:VectorToWorldSpace(Vector3.new(1, 0, 0))
+    local up = Vector3.yAxis
+    local function along(angle, f)
+        local out = 1 - (1 - f) ^ 2
+        local a = angle + f * 8.5
+        local radius = (0.14 + 1.05 * f ^ 1.4) * u
+        return mouth + ahead * (3.7 * out * u) + up * (2.6 * f ^ 2.2 * u) + right * (math.cos(a) * radius) + up * (math.sin(a) * radius)
+    end
+
+    local ribbons = {}
+    for index = 1, 3 do
+        local head = neon(Vector3.one * 0.05 * u, CFrame.new(mouth), colors.Sun)
+        head.Shape = Enum.PartType.Ball
+        head.Transparency = 1 -- only its ribbon shows
+        local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
+        a0.Position = Vector3.new(0, 0.11 * u, 0)
+        a1.Position = Vector3.new(0, -0.11 * u, 0)
+        a0.Parent, a1.Parent = head, head
+        local trail = Instance.new("Trail")
+        trail.Attachment0, trail.Attachment1 = a0, a1
+        trail.Lifetime = 0.42
+        trail.FaceCamera = true
+        trail.LightEmission = 0.7
+        trail.LightInfluence = 0
+        trail.Color = ColorSequence.new(colors.Sun, if index == 2 then colors.Gold else colors.Orange)
+        trail.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.1),
+            NumberSequenceKeypoint.new(0.6, 0.45),
+            NumberSequenceKeypoint.new(1, 1),
+        })
+        trail.WidthScale = NumberSequence.new(1, 0.15)
+        trail.Parent = head
+        table.insert(ribbons, { part = head, angle = index / 3 * 2 * math.pi })
+    end
+    local started = os.clock()
+    local stepper
+    stepper = RunService.RenderStepped:Connect(function()
+        local f = (os.clock() - started) / 1.25
+        if f >= 1 or not ribbons[1].part.Parent then
+            stepper:Disconnect()
+            for _, ribbon in ribbons do
+                if ribbon.part.Parent then
+                    ribbon.part:FindFirstChildOfClass("Trail").Enabled = false
+                end
+            end
+            return
+        end
+        for _, ribbon in ribbons do
+            ribbon.part.CFrame = CFrame.new(along(ribbon.angle, f))
+        end
+    end)
+
+    -- rings of breath, each wider and later than the last
+    for index = 1, 3 do
+        local delay = (index - 1) * 0.11
+        local start = CFrame.lookAt(mouth + ahead * 0.2 * u, mouth + ahead * 2 * u) * CFrame.Angles(0, math.pi / 2, 0)
+        local ring = neon(Vector3.new(0.05 * u, 0.3 * u, 0.3 * u), start, colors.Gold)
+        ring.Shape = Enum.PartType.Cylinder
+        ring.Transparency = 1
+        -- (a second tween on the same property cancels the first, even one still waiting out its delay: so one tween each, started late)
+        task.delay(delay, function()
+            if ring.Parent then
+                ring.Transparency = 0.45
+                TweenService:Create(ring, TweenInfo.new(0.62, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    CFrame = start + ahead * (1.8 + index * 0.6) * u,
+                    Size = Vector3.new(0.015 * u, (1.1 + index * 0.55) * u, (1.1 + index * 0.55) * u),
+                    Transparency = 1,
+                }):Play()
+            end
+        end)
+    end
+
+    -- the leaves it has picked up, coral among the green, tumbling along and lifting away
+    for index = 1, 12 do
+        local angle = math.random() * 2 * math.pi
+        local f = 0.45 + math.random() * 0.5
+        local petal = (0.09 + math.random() * 0.07) * u
+        local leaf = neon(Vector3.new(0.012 * u, petal, petal), CFrame.new(mouth), if index % 4 == 0 then colors.Amber elseif index % 2 == 0 then colors.Gold else colors.Sun)
+        leaf.Shape = Enum.PartType.Cylinder -- a thin disc: a petal, not a chip
+        leaf.Transparency = 1
+        local spin = CFrame.Angles(math.random() * 9 - 4.5, math.random() * 9 - 4.5, math.random() * 9 - 4.5)
+        local goal = CFrame.new(along(angle, f) + right * (math.random() - 0.5) * 1.2 * u) * spin
+        task.delay(0.02 + math.random() * 0.2, function()
+            if leaf.Parent then
+                leaf.Transparency = 0.05
+                TweenService:Create(leaf, TweenInfo.new(1.05, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), { CFrame = goal }):Play()
+                task.delay(0.8, function()
+                    if leaf.Parent then
+                        TweenService:Create(leaf, TweenInfo.new(0.25), { Transparency = 1 }):Play()
+                    end
+                end)
+            end
+        end)
+    end
+
+    local light = Instance.new("PointLight")
+    light.Color = colors.Gold
+    light.Range = 5 * u
+    light.Brightness = 0.8
+    light.Parent = ribbons[1].part
+    TweenService:Create(light, TweenInfo.new(1), { Brightness = 0 }):Play()
+    if rig.burst then
+        rig.burst:Emit(14)
     end
 end
 

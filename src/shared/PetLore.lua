@@ -43,7 +43,10 @@ return {
         Lore = "An upright firebird the colour of first light. Wherever it rests, the night there ends a little early.",
         Special = { Name = "Sunrise Rebirth", Text = "Flares its wings and bursts a rising sun with rays and spiralling flame plumes." },
     },
-    WindSprite = { Lore = "A curl of breeze that decided to stay. It tugs at sleeves when it wants attention." },
+    WindSprite = {
+        Lore = "A curl of breeze that decided to stay. It tugs at sleeves when it wants attention.",
+        Special = { Name = "Tugging Gale", Text = "Fills its cheeks and blows three ribbons of wind that wind round each other and carry leaves away." },
+    },
     CloudSheep = {
         Lore = "A satin sheep under a mantle of scroll-curl clouds, always half asleep. It paddles its hooves on the air as if it were swimming.",
         Special = { Name = "Cloud Bloom", Text = "Lifts with its legs tucked and blooms a ring of cloud puffs while luminous droplets rain onto a widening sky ring." },

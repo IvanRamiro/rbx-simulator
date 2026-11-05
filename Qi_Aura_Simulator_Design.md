@@ -261,6 +261,7 @@ A book of every beast (the Codex button on the HUD's rail; `client/Pets/CodexCon
 **How they're built**
 
 - Animated pets are exported as separate jointed parts (`tools/blender/export_pet.py --rig`).
+- The recreated pets are one smooth skin on a skeleton instead, starting with the Wind Sprite (`tools/blender/pets/wind_sprite.py`). `PetRig.buildSkinned` builds them and poses their Bones through the same `rig.motors` the jointed pets use. Each mesh keeps a Motor6D from the part that holds the bones, or it stays in its bind pose.
 - Each one is animated in code by `src/client/Pets/PetRig.lua`, with an idle pose, a moving pose, a flying pose and a special.
 
 **When specials play**
@@ -286,6 +287,7 @@ Specials are visual only.
 | Magma Cub | Young volcanic beast on huge basalt forearms, molten core glowing through cracked chest plates; knuckle-walks and tilts its head | **Magma Pop:** winds up, slams both fists down and hops, bursting basalt spikes and lava blobs out of a molten pool |
 | Azure Sky Dragon | Lean upright sapphire wyvern with silver crest blades, crystal-studded wings with crescent tips, wind ribbons and a layered tail fan; strides on two legs | **Skyburst:** spreads its wings and throws up three rising wind spirals, gust rings and sky-crystal shards |
 | Spirit Crane | Tall pearl-and-silver celestial crane, misty slate flight feathers, three pearl plumes from a turquoise lotus crown, gold eyes ringed in turquoise, spiralling tail streamers | **Halo Ascension:** lifts its neck skyward as three luminous rings rise from feet to crown and burst into drifting pearl feathers |
+| Wind Sprite | A baby wind spirit whose body runs into one great scroll of wind: big teal eyes, a sly one-fanged smile, a curled topknot, seed-key wings, little robe sleeves with coral cuffs, a jade bead on a cord; blinks, glances about, raises a brow and reaches out a sleeve to tug twice | **Tugging Gale:** fills its cheeks, then blows three ribbons of wind that wind round each other and carry petals away while its tail unwinds |
 | Cloud Sheep | Satin celestial sheep under a mantle of scroll-curl clouds, a breaking-wave forelock, ivory-to-sky ribbon horns, heavy-lidded sky-blue eyes; hovers and paddles its hooves | **Cloud Bloom:** lifts with its legs tucked and blooms a ring of cloud puffs while luminous droplets rain onto a widening sky ring |
 | Golden Mane Lion | High-shouldered royal lion, a tiered mane of flame-tipped locks in bronze, gold and champagne, a crest of reddish-gold locks, deep-set amber eyes; heavy, deliberate stride | **Sovereign Roar:** opens its jaw as golden shockwave rings roll out, solar rays flare behind its crest and a ring spreads beneath its paws |
 
@@ -307,7 +309,7 @@ Specials are visual only.
 
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
-| Wind Sprite | Common | Wind | +10% |
+| Wind Sprite ★ | Common | Wind | +10% |
 | Cloud Sheep ★ | Uncommon | Clouds | +25% |
 | Spirit Crane ★ | Rare | Spiritual energy | +40% |
 | Azure Sky Dragon ★ | Epic | Wind and sky | +60% |

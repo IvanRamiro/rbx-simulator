@@ -18,4 +18,5 @@ return {
     RuneSphinx = "rbxassetid://125628324690653",
     SpiritCrane = "rbxassetid://117737637798913",
     SunscaleDragon = "rbxassetid://72856050814489",
+    WindSprite = "rbxassetid://100955540073927",
 }
