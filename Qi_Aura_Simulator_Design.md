@@ -225,6 +225,36 @@ Pets give **Qi bonuses** (every equipped pet) and **aura style** (the one chosen
 - **Unmarked pets** use procedural low-poly models (`src/client/Pets/PetArchetypes.lua`) until they get their own Blender model.
 - **Every pet is its own species**, with its own anatomy, silhouette and face. No two share a body plan or head design, and every pet has expressive eyes.
 
+### Duplicates
+
+Hatching can give a pet the player already has, so a spare always has a use (`shared/PetRules`, `GameConfig.PetFusion`):
+
+- **Fuse (Pets window):** a spare copy goes into another of its kind, and their levels add up to Level 5. Each level past the first adds 10% of the pet's base Qi bonus, so a Level 5 pet gives 1.4 times its bonus. The server picks the copy, the lowest level free one.
+- **Sell (Buy & Sell):** a pet sells for its value times its level, so fusing never loses what its copies were worth. **Sell all spares** sells every extra copy up to Epic in one go and keeps the best of each kind; Legendary and rarer only ever sell one by one.
+- **Lock (the padlock on each pet's card):** a locked pet can't be sold or fused away. Mythical and Secret pets hatch locked.
+- **Equipped pets** can't be sold or fused away either.
+- **Secret pets** take one more step: a dialog naming what is being given up, its button waiting 3 seconds. The server refuses to sell or fuse one without that confirmation.
+
+### Spirit Beast Codex
+
+A book of every beast (the Codex button on the HUD's rail; `client/Pets/CodexController`, `server/Pets/Codex`, `shared/CodexRules`, `shared/PetLore`, saved as `Codex`), so collecting stays worth it after a stronger companion. An entry stays for good: selling or fusing the pet leaves it in the book. Every pet owned before the Codex existed is entered when the player loads.
+
+- **Pages:** one per egg, in the order they unlock, drawing only that page's portraits. A **Lost Lineages** page appears for a retired beast the player owns (Nine-Tail Moonfox); those don't count toward the goals.
+- **An undiscovered beast** is a black silhouette named "???", with its rarity and the eggs that hatch it. A Secret beast hides its eggs too.
+- **A discovered beast's entry:** a turning portrait, theme, Qi bonus, the player's best level, its description, each egg that hatches it with the chance, and its special, with **Watch it**: a copy appears before the player and performs the special, seen only by them.
+- **Rewards, claimed once:**
+
+| Goal | Lasting Qi | Spirit Stones (share of a weapon of the player's realm) |
+|---|---|---|
+| Discover 5 | +2% | 0.25 |
+| Discover 10 | +3% | 0.5 |
+| Discover 20 | +5% | 0.75 |
+| Discover 30 | +5% | 1 |
+| Discover 40 | +10% | 1.5 |
+| Discover 50 | +10% | 2 |
+| Discover every beast | +25% | 5 |
+| An egg's full page | none | 0.25 up to Legendary, 0.5 with a Mythical, 1 with a Secret |
+
 ### Animated pets and their specials
 
 **How they're built**
@@ -328,6 +358,8 @@ Specials are visual only.
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
 | Magma Cub ★ | Common | Lava | +10% |
+| Obsidian Guardian | Rare | Darkness and crystal | +55% |
+| Golden Mane Lion ★ | Epic | Solar energy | +75% |
 | Sunscale Dragon ★ | Legendary | Solar | +60% |
 | Dawn Phoenix ★ | Legendary | Fire | +60% |
 
@@ -337,8 +369,6 @@ Specials are visual only.
 |---|---|---|---|
 | Sand Phantom | Common | Sand | +15% |
 | Solar Butterfly | Uncommon | Solar energy | +30% |
-| Obsidian Guardian | Rare | Darkness and crystal | +55% |
-| Golden Mane Lion ★ | Epic | Solar energy | +75% |
 | Bonefire Dragon ★ | Legendary | Spectral fire | +90% |
 
 **Phoenix Ash Egg (Ember Peak)**
@@ -526,6 +556,7 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 - **Hatching** (since November 2, 2026, section 7): only at Yggdrasil's **Hatching Altar**, from the player's **egg inventory** (`EggInventory`, saved as `Eggs`, at most 99 of each), filled by carrying eggs home from the guardians' stands. The stands no longer hatch; their prompt is "Take". (Before: free stand hatches with a 45-second cooldown.)
 - **Chances:** follow the rarity scale: Common 45%, Uncommon 27%, Rare 15%, Epic 8%, Legendary 4%, Mythical 0.9%, Secret 0.1%.
 - **Missing rarities:** when an egg has no pet of some rarity, its share goes to the next pet that has one. So later eggs give rarer pets far more often.
+- **Inferno and Phoenix Ash, rebalanced (the owner's decision, November 5, 2026):** the Inferno Egg gave half its hatches to Ember Wyrm with nothing Rare or Epic, and the Phoenix Ash Egg 87% Magma Cub or Ember Wyrm with its Epic better than its Legendary, so both paid less Qi on average than the eggs before them. They now follow the scale, at about +27% and +35%.
 
 | Island | Egg | Needs | Chances |
 |---|---|---|---|
@@ -535,9 +566,9 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 | Jade Grove | Jade Spirit Egg | Qi Gatherer | Moss Golem 45%, Mycelium Sprite 27%, Jade Spirit Panda 15%, Jade Antler Deer 8%, Golden Kirin 5% |
 | Jade Grove | Bloomwood Egg | Foundation Adept | Dream Moth 45%, Crystal Snail 27%, Prism Armadillo 15%, Lantern Warden 8%, Jade Wyrm Turtle 5% |
 | Jade Grove | Ancient Grove Egg | Core Initiate | Echo Bat 45%, Qi Clockwork Finch 27%, Moonfang Tiger 15%, Thousand-Eyed Guardian 8%, Ninefold Spirit Serpent 4%, Worldroot Colossus 1% |
-| Ember Peak | Inferno Egg | Qi Awakener | Magma Cub 45%, Ember Wyrm 50%, Sunscale Dragon 2.5%, Dawn Phoenix 2.5% |
+| Ember Peak | Inferno Egg | Qi Awakener | Magma Cub 45%, Ember Wyrm 27%, Obsidian Guardian 15%, Golden Mane Lion 8%, Sunscale Dragon 2.5%, Dawn Phoenix 2.5% |
 | Ember Peak | Magma Heart Egg | Perfect Foundation | Sand Phantom 45%, Solar Butterfly 27%, Obsidian Guardian 15%, Golden Mane Lion 8%, Bonefire Dragon 5% |
-| Ember Peak | Phoenix Ash Egg | Core Adept | Magma Cub 45%, Ember Wyrm 42%, Dreadfang Cerberus 8%, Sunscale Dragon 2%, Bonefire Dragon 2%, Prismatic Phoenix 1% |
+| Ember Peak | Phoenix Ash Egg | Core Adept | Sand Phantom 45%, Solar Butterfly 27%, Obsidian Guardian 15%, Dreadfang Cerberus 8%, Bonefire Dragon 4%, Prismatic Phoenix 1% |
 | Moonlit Isle | Celestial Egg | Soul Awakening | Starfall Fox 45%, Cosmic Jellyfish 27%, Nebula Owl 15%, Celestial Snow Leopard 8%, Comet Stag 4%, Celestial Pearl Dragon 1% |
 | Moonlit Isle | Astral Sanctum Egg | Ascendant Initiate | Starfall Fox 45%, Cosmic Jellyfish 27%, Nebula Owl 15%, Eclipse Cat 8%, Timekeeper Tortoise 4%, Galaxy Manta 1% |
 | Moonlit Isle | Heavenly Throne Egg | Lesser Immortal | Celestial Snow Leopard 47.5%, Eclipse Cat 47.5%, Comet Stag 2%, Timekeeper Tortoise 2%, Celestial Pearl Dragon 0.5%, Galaxy Manta 0.5% |

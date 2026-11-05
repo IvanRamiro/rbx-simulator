@@ -12,12 +12,14 @@ local Elements = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild(
 local Wallet = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Wallet"))
 local WeaponInventory = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("WeaponInventory"))
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
+local Codex = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("Codex"))
+local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local Quests = require(script.Parent.Parent:WaitForChild("Quests"):WaitForChild("Quests"))
 local Settings = require(script.Parent:WaitForChild("Settings"))
 local Rewards = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("Rewards"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 11
+local SCHEMA_VERSION = 12
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -72,7 +74,8 @@ end
 -- version 6 added Eggs, which sanitizeProgress starts empty; version 7 added SpiritStones, Weapons
 -- and EquippedWeapon (MIGRATIONS[6], below); version 8 added ForgeElements (the guardians' drops)
 -- and a weapon's Element and Name, which start at none; version 9 added Quest (MIGRATIONS[8]);
--- version 10 added Settings and version 11 Rewards, which sanitizeProgress starts at their defaults.
+-- version 10 added Settings and version 11 Rewards, which sanitizeProgress starts at their defaults;
+-- version 12 added Codex and a pet's Level and Locked, which start empty, at 1 and unlocked (PetInventory enters owned pets in the Codex).
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -123,6 +126,7 @@ local function sanitizeProgress(raw)
         ForgeElements = {},
         Settings = Settings.sanitize(nil),
         Rewards = Rewards.sanitize(nil),
+        Codex = Codex.sanitize(nil),
     }
 
     if typeof(raw) ~= "table" then
@@ -160,7 +164,9 @@ local function sanitizeProgress(raw)
 
             if isValid and not ownedIds[pet.InstanceId] then
                 ownedIds[pet.InstanceId] = true
-                table.insert(progress.Pets, { InstanceId = pet.InstanceId, PetId = pet.PetId })
+                table.insert(progress.Pets, {
+                    InstanceId = pet.InstanceId, PetId = pet.PetId, Level = PetRules.level(pet), Locked = pet.Locked == true,
+                })
             end
         end
     end
@@ -201,6 +207,7 @@ local function sanitizeProgress(raw)
     progress.Quest = Quests.sanitize(raw.Quest)
     progress.Settings = Settings.sanitize(raw.Settings)
     progress.Rewards = Rewards.sanitize(raw.Rewards)
+    progress.Codex = Codex.sanitize(raw.Codex)
 
     return progress
 end
@@ -233,7 +240,8 @@ local function captureProgress(player)
     local quest = Quests.exportData(player)
     local settings = Settings.exportData(player)
     local rewards = Rewards.exportData(player)
-    if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings and rewards) then
+    local codex = Codex.exportData(player)
+    if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings and rewards and codex) then
         return nil
     end
 
@@ -255,6 +263,7 @@ local function captureProgress(player)
         Quest = quest,
         Settings = settings,
         Rewards = rewards,
+        Codex = codex,
     }
 end
 

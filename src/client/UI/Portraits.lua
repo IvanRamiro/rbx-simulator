@@ -1,10 +1,13 @@
 -- Portraits for the windows' cards: a pet or a weapon as it really is, in a ViewportFrame. Each
 -- kind is built once and copied after.
 --   Portraits.pet(petId, size)              the pet from the front, a little above and to the side
+--   Portraits.silhouette(petId, size)       the same pet as a solid black shape, for a beast not yet discovered
+--   Portraits.spin(frame)                   turns a pet portrait slowly round; returns a function that stops it
 --   Portraits.weapon(weaponId, tint, size)  the weapon on the diagonal, tip up and to the right;
 --                                            tint (a forged element's colour) lights its glow pieces
 -- Both return the ViewportFrame (position and parent it), or a plain frame if the model is missing.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local PetMaps = require(ReplicatedStorage:WaitForChild("PetMaps"))
 local WeaponMaps = require(ReplicatedStorage:WaitForChild("WeaponMaps"))
@@ -73,6 +76,61 @@ function Portraits.pet(petId, size)
         shoot(frame, pets[petId]:Clone(), Vector3.new(0.45, 0.35, -1), 0.82) -- pets face -Z
     end
     return frame
+end
+
+-- Unlit and unpainted: the shape, and nothing a player could read the beast from.
+local NO_SHOW = { "Decal", "Texture", "Light", "ParticleEmitter", "Beam", "Trail", "Highlight", "Fire", "Smoke", "Sparkles" }
+function Portraits.silhouette(petId, size)
+    local frame = view(size)
+    frame.Ambient = Color3.new(0, 0, 0)
+    frame.LightColor = Color3.new(0, 0, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(86, 104, 190) -- a lit page, so the black shape reads against it
+    frame.BackgroundTransparency = 0.35
+    if pets[petId] == nil then
+        local model = PetModels.build(petId)
+        pets[petId] = if model then flatten(model, PetMaps[petId]) else false
+    end
+    if pets[petId] then
+        local copy = pets[petId]:Clone()
+        for _, piece in copy:GetDescendants() do
+            if piece:IsA("BasePart") then
+                piece.Color = Color3.new(0, 0, 0)
+                piece.Material = Enum.Material.SmoothPlastic
+                if piece:IsA("MeshPart") then
+                    piece.TextureID = ""
+                end
+            elseif piece:IsA("SpecialMesh") then
+                piece.TextureId = ""
+            else
+                for _, kind in NO_SHOW do
+                    if piece:IsA(kind) then
+                        piece:Destroy()
+                        break
+                    end
+                end
+            end
+        end
+        shoot(frame, copy, Vector3.new(0.45, 0.35, -1), 0.82)
+    end
+    return frame
+end
+
+local SPIN_SPEED = 0.5 -- radians a second
+function Portraits.spin(frame)
+    local camera = frame.CurrentCamera
+    local model = frame:FindFirstChildOfClass("Model")
+    if not (camera and model) then
+        return function() end
+    end
+    local centre = model:GetBoundingBox().Position
+    local from = camera.CFrame.Position - centre
+    local connection = RunService.RenderStepped:Connect(function()
+        local turned = CFrame.Angles(0, os.clock() * SPIN_SPEED, 0) * from
+        camera.CFrame = CFrame.lookAt(centre + turned, centre)
+    end)
+    return function()
+        connection:Disconnect()
+    end
 end
 
 -- a stored weapon (ReplicatedStorage.Weapons/<id>: pieces placed by their Offset) as one model

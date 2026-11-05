@@ -9,7 +9,9 @@
 --                             at the Blacksmith: gives an owned weapon an unlocked element (Elements) and
 --                             a name (run through Roblox's text filter), for Shop.forgePrice
 --   "Equip" instanceId        anywhere: an owned weapon, or nil for the Qi Palm
---   "SellPet" instanceId      at Buy & Sell, for Shop.petValue
+--   "SellPet" instanceId, { ConfirmSecret }
+--                             at Buy & Sell, for Shop.petValue: never a locked or equipped pet, and a Secret one only when confirmed
+--   "SellSpares"              at Buy & Sell: every duplicate PetRules.spares names
 --   "SellWeapon" instanceId   at Buy & Sell, for Shop.weaponRefund (never the equipped one)
 --   "BuyEgg" eggId            at the Marketplace: an egg the player's rank can carry, for Shop.marketEggPrice
 -- and is answered ShopEvent("Result", ok, message, snapshot). Buying and selling need the player
@@ -24,6 +26,7 @@ local TextService = game:GetService("TextService")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
@@ -185,7 +188,7 @@ function actions.Forge(player, instanceId, spec)
     return true, "Forged " .. name .. ", a " .. info.DisplayName .. " " .. Shop.weapon(record.WeaponId).Name .. "!"
 end
 
-function actions.SellPet(player, instanceId)
+function actions.SellPet(player, instanceId, extra)
     if not nearShop(player, "BuySell") then
         return false, "Visit Buy & Sell to sell pets."
     end
@@ -193,14 +196,44 @@ function actions.SellPet(player, instanceId)
     if pets and #pets.Pets <= 1 then
         return false, "You can't sell your last companion."
     end
-    local petId = PetInventory.take(player, instanceId)
-    if not petId then
+    local pet = PetInventory.get(player, instanceId)
+    if not pet then
         return false, "That pet isn't yours."
     end
-    local value = Shop.petValue(petId)
-    Wallet.add(player, value, "SellPet", petId)
+    if pet.Locked then
+        return false, "That pet is locked: unlock it in your Pets window first."
+    end
+    if pet.Equipped then
+        return false, "Unequip that pet before selling it."
+    end
+    local definition = GameConfig.Pets[pet.PetId]
+    if definition.Rarity == "Secret" and not (typeof(extra) == "table" and extra.ConfirmSecret == true) then
+        return false, "A Secret pet needs your confirmation to sell."
+    end
+    PetInventory.take(player, instanceId)
+    local value = Shop.petValue(pet.PetId, PetRules.level(pet))
+    Wallet.add(player, value, "SellPet", pet.PetId)
     PetInventory.publish(player)
-    return true, "Sold the " .. GameConfig.Pets[petId].DisplayName .. " for " .. value .. " Spirit Stones."
+    return true, "Sold the " .. definition.DisplayName .. " for " .. value .. " Spirit Stones."
+end
+
+function actions.SellSpares(player)
+    if not nearShop(player, "BuySell") then
+        return false, "Visit Buy & Sell to sell pets."
+    end
+    local snapshot = PetInventory.getSnapshot(player)
+    local spares = if snapshot then PetRules.spares(snapshot.Pets) else {}
+    if #spares == 0 then
+        return false, "You have no spare pets to sell."
+    end
+    local total = 0
+    for _, pet in spares do
+        PetInventory.take(player, pet.InstanceId)
+        total += Shop.petValue(pet.PetId, PetRules.level(pet))
+    end
+    Wallet.add(player, total, "SellPet", "Spares")
+    PetInventory.publish(player)
+    return true, "Sold " .. #spares .. " spare " .. (if #spares == 1 then "pet" else "pets") .. " for " .. total .. " Spirit Stones."
 end
 
 function actions.SellWeapon(player, instanceId)

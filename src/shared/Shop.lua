@@ -7,7 +7,7 @@
 --   Shop.weaponRefund(id, element)  what a weapon sells back for (a forged one returns part of its forging too)
 --   Shop.forgePrice(id)       what forging a weapon with an element costs (GameConfig.Forge)
 --   Shop.element(name)        an element's GameConfig.Forge entry, or nil
---   Shop.petValue(petId)      what a pet sells for
+--   Shop.petValue(petId, level)  what a pet sells for: a fused pet is worth every copy it took in
 --   Shop.rankValue(rankId)    the rewards' ladder: a weapon's price at its realm's first rank, between
 --   Shop.eggStones(eggId)     what securing this egg pays
 --   Shop.marketEggPrice(eggId)  what the Marketplace asks for this egg
@@ -86,13 +86,13 @@ for _, egg in GameConfig.Eggs do
     end
 end
 
-function Shop.petValue(petId)
+function Shop.petValue(petId, level)
     local pet = GameConfig.Pets[petId]
     if not pet then
         return 0
     end
     local rules = GameConfig.SpiritStones
-    return math.floor((rules.PetValue[pet.Rarity] or 0) * rules.RealmFactor ^ ((petRealm[petId] or 1) - 1))
+    return math.floor((rules.PetValue[pet.Rarity] or 0) * rules.RealmFactor ^ ((petRealm[petId] or 1) - 1)) * (level or 1)
 end
 
 function Shop.roundNice(n)

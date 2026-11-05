@@ -1,12 +1,16 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local CodexRules = require(ReplicatedStorage:WaitForChild("CodexRules"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
+local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
+local Codex = require(script.Parent:WaitForChild("Codex"))
 local EggInventory = require(script.Parent:WaitForChild("EggInventory"))
 local PetInventory = require(script.Parent:WaitForChild("PetInventory"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
+local Wallet = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Wallet"))
 local Analytics = require(script.Parent.Parent:WaitForChild("Analytics"):WaitForChild("Analytics"))
 local PromptRules = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("PromptRules"))
 local EggModel = require(script.Parent.Parent:WaitForChild("Guardians"):WaitForChild("EggModel"))
@@ -142,6 +146,7 @@ local function onHatchRequest(player, eggId)
         return
     end
     local petId, chance = rollEggPet(egg)
+    local isNew = not Codex.isFound(player, petId)
     if not PetInventory.grantPet(player, petId) then
         EggInventory.grant(player, eggId)
         return
@@ -157,6 +162,7 @@ local function onHatchRequest(player, eggId)
         EggId = eggId,
         PetId = petId,
         ChancePercent = math.round(chance * 1000) / 10,
+        IsNew = isNew,
         Staged = stageEgg(altar, eggId),
         BreakAt = workspace:GetServerTimeNow() + HATCH_STAGE, -- server time: the client breaks it on time, however late this arrives
     })
@@ -167,6 +173,53 @@ RemoteEvents.HatchEggEvent.OnServerEvent:Connect(onHatchRequest)
 handleRequest(RemoteEvents.EquipPetEvent, PetInventory.equip)
 handleRequest(RemoteEvents.UnequipPetEvent, PetInventory.unequip)
 handleRequest(RemoteEvents.SetAuraPetEvent, PetInventory.setAuraPet)
+
+-- ---------- duplicates and the Codex ----------
+-- Each changes what's saved, so an accepted one saves soon. Every reply is sent after the new inventory, so the window has redrawn by then.
+local function throttled(player)
+    local now = os.clock()
+    if now - (lastRequest[player] or 0) < REQUEST_COOLDOWN then
+        return true
+    end
+    lastRequest[player] = now
+    return false
+end
+
+RemoteEvents.TogglePetLockEvent.OnServerEvent:Connect(function(player, instanceId)
+    if not throttled(player) and PetInventory.toggleLock(player, instanceId) then
+        PetInventory.publish(player)
+        PlayerData.saveSoon(player)
+    end
+end)
+
+RemoteEvents.FusePetEvent.OnServerEvent:Connect(function(player, instanceId, confirmSecret)
+    if throttled(player) then
+        return
+    end
+    local ok, message, fused = PetInventory.fuse(player, instanceId, confirmSecret)
+    if ok then
+        PetInventory.publish(player)
+        PlayerData.saveSoon(player)
+        Analytics.event(player, "PetFused", fused.Level, fused.PetId)
+    end
+    RemoteEvents.PetActionResultEvent:FireClient(player, ok, message, fused)
+end)
+
+RemoteEvents.CodexEvent.OnServerEvent:Connect(function(player, action, rewardId)
+    if action ~= "Claim" or throttled(player) or Wallet.balance(player) == nil then
+        return
+    end
+    local reward = Codex.claim(player, rewardId)
+    if not reward then
+        return
+    end
+    local stones = CodexRules.stones(reward, Shop.playerRealmIndex(player))
+    Wallet.add(player, stones, "Codex", reward.Id)
+    PetInventory.publish(player) -- its Qi bonus shows in the pets window, the claim in the Codex
+    PlayerData.saveSoon(player)
+    Analytics.event(player, "CodexReward", stones, reward.Id)
+    RemoteEvents.CodexEvent:FireClient(player, "Claimed", { Id = reward.Id, Stones = stones, QiPercent = reward.QiPercent })
+end)
 
 Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(function(player)

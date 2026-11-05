@@ -1,14 +1,17 @@
 -- The pets window (the Pets button on the HUD's rail) and the hatch results. Each pet is a card:
--- its portrait (the pet itself, in a ViewportFrame), name, rarity and Qi bonus, and its Equip and
--- Aura buttons. Equipped pets come first, then by rarity. The server owns the inventory
--- (PetInventoryUpdatedEvent sends it; Equip / Unequip / SetAura ask).
+-- its portrait (the pet itself, in a ViewportFrame), name, rarity, level and Qi bonus, its lock, and its Equip and
+-- Aura buttons, and Fuse when a spare copy can go into it. Equipped pets come first, then by rarity. The server owns the
+-- inventory (PetInventoryUpdatedEvent sends it; Equip / Unequip / SetAura / TogglePetLock / FusePet ask).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Toast = require(UI:WaitForChild("Toast"))
 local Hud = require(UI:WaitForChild("Hud"))
+local ConfirmDialog = require(UI:WaitForChild("ConfirmDialog"))
+local UiFx = require(UI:WaitForChild("UiFx"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Portraits = require(UI:WaitForChild("Portraits"))
@@ -27,7 +30,7 @@ local onWindowClosed -- set below, with the pets it redraws
 local window = Hud.window({
     Name = "PetsWindow", Title = "PETS", OnClose = function()
         onWindowClosed()
-    end, Size = Vector2.new(330, 400), AnchorPoint = Vector2.new(0, 0),
+    end, Size = Vector2.new(372, 400), AnchorPoint = Vector2.new(0, 0),
     Position = UDim2.fromOffset(UiTheme.Margin + 270 + 16, UiTheme.Margin), -- beside the left column (the profile is 270 wide)
 })
 local body = window.Body
@@ -60,6 +63,9 @@ local known = nil -- [InstanceId] = true: the pets seen so far (nil until the fi
 local fresh = {}  -- [InstanceId] = true: new since the player last looked
 
 -- ---------- a pet's card ----------
+local CONFIRM_SECONDS = 3
+local lastSnapshot = nil
+
 local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
     local definition = GameConfig.Pets[pet.PetId]
     if not definition then
@@ -68,14 +74,32 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
     local isAuraPet = pet.InstanceId == auraPetInstanceId
     local rarityColor = GameConfig.PetRarityColors[definition.Rarity] or C.Text
 
+    local level = PetRules.level(pet)
     local card = UiKit.card({ Name = "PetCard", LayoutOrder = layoutOrder, Size = UDim2.new(1, 0, 0, 76), Stripe = rarityColor, Parent = petList })
+    card:SetAttribute("InstanceId", pet.InstanceId)
     local picture = Portraits.pet(pet.PetId, 58)
     picture.Position = UDim2.fromOffset(10, 9)
     picture.Parent = card
     UiKit.label({
         Name = "PetName", Font = "Title", TextSize = 15, Text = definition.DisplayName, TextTruncate = Enum.TextTruncate.AtEnd,
-        Position = UDim2.fromOffset(78, 7), Size = UDim2.new(1, -86, 0, 18), Parent = card,
+        Position = UDim2.fromOffset(78, 7), Size = UDim2.new(1, -112, 0, 18), Parent = card,
     })
+    -- the lock: gold while it's on, faint while it's off
+    local lock = UiKit.button({
+        Name = "Lock", Text = "", Tone = if pet.Locked then "Highlight" else "Quiet", AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -6, 0, 5), Size = UDim2.fromOffset(24, 24), Parent = card,
+    })
+    local padlock = Instance.new("ImageLabel")
+    padlock.BackgroundTransparency = 1
+    padlock.Image = UiTheme.Icons.Lock
+    padlock.ImageTransparency = if pet.Locked then 0 else 0.6
+    padlock.AnchorPoint = Vector2.new(0.5, 0.5)
+    padlock.Position = UDim2.fromScale(0.5, 0.5)
+    padlock.Size = UDim2.fromOffset(18, 18)
+    padlock.Parent = lock
+    lock.Activated:Connect(function()
+        RemoteEvents.TogglePetLockEvent:FireServer(pet.InstanceId)
+    end)
     local tags = Instance.new("Frame")
     tags.Name = "Tags"
     tags.BackgroundTransparency = 1
@@ -89,8 +113,13 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
         new.Parent = tags
     end
     UiKit.tag(definition.Rarity, rarityColor).Parent = tags
+    if level > 1 then
+        local levelTag = UiKit.tag("Lv " .. level, C.AccentBright)
+        levelTag.LayoutOrder = 0
+        levelTag.Parent = tags
+    end
     UiKit.label({
-        Font = "Strong", TextSize = 11, TextColor3 = C.AccentBright, Text = "+" .. definition.QiBonusPercent .. "% Qi",
+        Font = "Strong", TextSize = 11, TextColor3 = C.AccentBright, Text = "+" .. PetRules.qiBonus(pet.PetId, level) .. "% Qi",
         AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 16), LayoutOrder = 1, Parent = tags,
     })
     if isAuraPet then
@@ -99,11 +128,14 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
         aura.Parent = tags
     end
 
-    -- two buttons side by side, from the portrait's edge to the card's (78 px in, 8 px short, 4 apart)
-    local function action(text, tone, x, onClick)
+    -- buttons side by side, from the portrait's edge to the card's (78 px in, 8 px short, 4 apart)
+    local material = PetRules.findMaterial(lastSnapshot.Pets, pet)
+    local buttons = if material then 3 else 2
+    local function action(text, tone, slot, onClick)
+        local share = -(86 + (buttons - 1) * 4) / buttons
         local b = UiKit.button({
             Font = "Strong", TextSize = 11, Text = text, Tone = tone, Active = onClick ~= nil,
-            Position = UDim2.new(x, if x == 0 then 78 else 37, 0, 49), Size = UDim2.new(0.5, -45, 0, 22),
+            Position = UDim2.new(slot / buttons, 78 + slot * (share + 4), 0, 49), Size = UDim2.new(1 / buttons, share, 0, 22),
             Parent = card,
         })
         if onClick then
@@ -123,17 +155,42 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
         action("SLOTS FULL", "Quiet", 0, nil)
     end
     if isAuraPet then
-        action("AURA ON", "Highlight", 0.5, function()
+        action("AURA ON", "Highlight", 1, function()
             RemoteEvents.SetAuraPetEvent:FireServer(nil)
         end)
     else
-        action("SET AURA", "Quiet", 0.5, if pet.Equipped then function()
+        action("SET AURA", "Quiet", 1, if pet.Equipped then function()
             RemoteEvents.SetAuraPetEvent:FireServer(pet.InstanceId)
         end else nil)
     end
+    -- Fuse asks once more, naming the level it reaches; a Secret copy asks properly, with a wait
+    if material then
+        local reaches = level + PetRules.level(material)
+        local fuse
+        local armedUntil = 0
+        fuse = action("FUSE", "Accent", 2, function()
+            if definition.Rarity == "Secret" then
+                ConfirmDialog.show({
+                    Title = "FUSE A SECRET PET", Picture = Portraits.pet(pet.PetId, 72), ConfirmText = "FUSE IT",
+                    Text = "This spends another " .. definition.DisplayName .. " to raise this one to Level " .. reaches .. ". It can't be undone.",
+                    OnConfirm = function()
+                        RemoteEvents.FusePetEvent:FireServer(pet.InstanceId, true)
+                    end,
+                })
+            elseif os.clock() < armedUntil then
+                RemoteEvents.FusePetEvent:FireServer(pet.InstanceId)
+            else
+                armedUntil = os.clock() + CONFIRM_SECONDS
+                fuse.Text = "TO LV " .. reaches .. "?"
+                task.delay(CONFIRM_SECONDS, function()
+                    if fuse.Parent and os.clock() >= armedUntil then
+                        fuse.Text = "FUSE"
+                    end
+                end)
+            end
+        end)
+    end
 end
-
-local lastSnapshot = nil
 
 local function renderInventory(snapshot)
     for _, pet in if snapshot then snapshot.Pets else {} do
@@ -166,9 +223,10 @@ local function renderInventory(snapshot)
         local definition = GameConfig.Pets[pet.PetId]
         if pet.Equipped and definition then
             equippedCount += 1
-            bonusPercent += definition.QiBonusPercent
+            bonusPercent += PetRules.qiBonus(pet.PetId, PetRules.level(pet))
         end
     end
+    bonusPercent += snapshot.CodexQiPercent or 0
     local equippedText = equippedCount .. "/" .. GameConfig.MaxEquippedPets
     setPetBadge(equippedText)
     equippedLabel.Text = "EQUIPPED  " .. equippedCount .. " / " .. GameConfig.MaxEquippedPets
@@ -203,6 +261,25 @@ local function renderInventory(snapshot)
 end
 
 RemoteEvents.PetInventoryUpdatedEvent.OnClientEvent:Connect(renderInventory)
+
+-- a fusion's answer: the inventory has already redrawn, so the card it raised can be found and lit
+RemoteEvents.PetActionResultEvent.OnClientEvent:Connect(function(ok, text, fused)
+    if not ok then
+        Sfx.play("Error")
+        hatchMessage:show(tostring(text), Color3.new(1, 1, 1))
+        return
+    end
+    local definition = fused and GameConfig.Pets[fused.PetId]
+    local color = definition and GameConfig.PetRarityColors[definition.Rarity] or Color3.new(1, 1, 1)
+    Sfx.play("RareReveal")
+    hatchMessage:show(tostring(text), color)
+    for _, card in petList:GetChildren() do
+        if card:IsA("GuiObject") and fused and card:GetAttribute("InstanceId") == fused.InstanceId then
+            UiFx.pop(card, 1.04, 0.3)
+            UiFx.sweep(card, color, 0.5)
+        end
+    end
+end)
 
 -- once the player has looked, new pets take their usual places
 function onWindowClosed()
@@ -249,7 +326,7 @@ local function onHatchResult(result)
     elseif result.Reason == "NoEgg" then
         showMessage("You don't have that egg any more.", Color3.new(1, 1, 1))
     elseif result.Reason == "InventoryFull" then
-        showMessage("Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets).", Color3.new(1, 1, 1))
+        showMessage("Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets). Fuse or sell your spares.", Color3.new(1, 1, 1))
     else
         local definition = GameConfig.Pets[result.PetId]
         -- the egg rises from the altar's cradle and breaks; the pet is named as it does
@@ -261,6 +338,7 @@ local function onHatchResult(result)
                 local article = if string.find(definition.DisplayName, "^[AEIOUaeiou]") then "an " else "a "
                 local text = "You hatched " .. article .. definition.DisplayName .. "! ("
                     .. definition.Rarity .. ", " .. tostring(result.ChancePercent) .. "% chance)"
+                    .. (if result.IsNew then " New in the Codex!" else " A duplicate: fuse or sell it.")
                 showMessage(text, rarityColor)
             end
         end)

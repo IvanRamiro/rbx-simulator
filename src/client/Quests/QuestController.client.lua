@@ -74,7 +74,7 @@ local skip = UiKit.button({
 local message = Toast.new("QuestMessage", C.Highlight, 4)
 
 -- The Quests button on the rail shows or hides it, and the choice is saved.
-local questButton = Hud.railButton("QuestButton", UiTheme.Icons.Quest, "Quests", 3)
+local questButton = Hud.railButton("QuestButton", UiTheme.Icons.Quest, "Quests", 4)
 local function questAllowed()
     local chosen = player:GetAttribute("SettingShowQuest")
     if chosen == nil then

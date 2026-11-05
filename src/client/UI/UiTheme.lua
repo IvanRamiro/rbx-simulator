@@ -57,6 +57,8 @@ UiTheme.Icons = {
     Quest = "rbxassetid://95203744242297", -- an open scroll with a seal
     Settings = "rbxassetid://92494124873013", -- a dial of lotus petals
     Rewards = "rbxassetid://119590867507093", -- a gold ingot
+    Codex = "rbxassetid://77528485832233", -- an open book with a spirit's paw print
+    Lock = "rbxassetid://125417292249654", -- a gold padlock
 }
 
 -- Each egg's own picture, rendered from its 3D model (tools/blender/eggs/egg_icons.py, assets/ui/egg_icons)

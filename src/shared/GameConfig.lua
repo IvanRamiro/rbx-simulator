@@ -624,6 +624,32 @@ local GameConfig = {
 
     MaxOwnedPets = 50,
 
+    -- Duplicates (shared/PetRules): a spare copy can be fused into another of its kind, its levels adding on. Each
+    -- level past the first adds QiPerLevel of the pet's base bonus. "Sell spares" at Buy & Sell only ever takes SpareRarities;
+    -- a hatched AutoLock rarity starts locked, so it can't be sold or fused by accident.
+    PetFusion = {
+        MaxLevel = 5,
+        QiPerLevel = 0.1,
+        SpareRarities = { Common = true, Uncommon = true, Rare = true, Epic = true },
+        AutoLock = { Mythical = true, Secret = true },
+    },
+
+    -- The Spirit Beast Codex's milestones (shared/CodexRules): discover Count beasts (no Count: all of them) for a lasting
+    -- Qi bonus and Spirit Stones worth WeaponShare of a weapon of the player's realm. Each egg's full page pays too, by the rarest beast
+    -- on it (PageShare), so a page that takes a Secret pays for the hunt however early its egg is.
+    Codex = {
+        PageShare = { Legendary = 0.25, Mythical = 0.5, Secret = 1 },
+        Milestones = {
+            { Count = 5, QiPercent = 2, WeaponShare = 0.25 },
+            { Count = 10, QiPercent = 3, WeaponShare = 0.5 },
+            { Count = 20, QiPercent = 5, WeaponShare = 0.75 },
+            { Count = 30, QiPercent = 5, WeaponShare = 1 },
+            { Count = 40, QiPercent = 10, WeaponShare = 1.5 },
+            { Count = 50, QiPercent = 10, WeaponShare = 2 },
+            { QiPercent = 25, WeaponShare = 5 },
+        },
+    },
+
     StarterPetIds = { "AquaWisp" },
 
     GrantDevTestPets = false,
@@ -659,7 +685,9 @@ local GameConfig = {
             RequiredRank = "QiAwakener",
             Pool = {
                 { PetId = "MagmaCub", Weight = 45 },
-                { PetId = "EmberWyrm", Weight = 50 },
+                { PetId = "EmberWyrm", Weight = 27 },
+                { PetId = "ObsidianGuardian", Weight = 15 },
+                { PetId = "GoldenManeLion", Weight = 8 },
                 { PetId = "SunscaleDragon", Weight = 2.5 },
                 { PetId = "DawnPhoenix", Weight = 2.5 },
             },
@@ -726,11 +754,11 @@ local GameConfig = {
             DisplayName = "Phoenix Ash Egg",
             RequiredRank = "CoreAdept",
             Pool = {
-                { PetId = "MagmaCub", Weight = 45 },
-                { PetId = "EmberWyrm", Weight = 42 },
+                { PetId = "SandPhantom", Weight = 45 },
+                { PetId = "SolarButterfly", Weight = 27 },
+                { PetId = "ObsidianGuardian", Weight = 15 },
                 { PetId = "DreadfangCerberus", Weight = 8 },
-                { PetId = "SunscaleDragon", Weight = 2 },
-                { PetId = "BonefireDragon", Weight = 2 },
+                { PetId = "BonefireDragon", Weight = 4 },
                 { PetId = "PrismaticPhoenix", Weight = 1 },
             },
         },

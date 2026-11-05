@@ -3,7 +3,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
+local Codex = require(script.Parent:WaitForChild("Codex"))
 
 local PetInventory = {}
 
@@ -20,9 +22,12 @@ local function findOwnedPet(data, instanceId)
 end
 
 local function addPet(data, petId)
+    local definition = GameConfig.Pets[petId]
     table.insert(data.ownedPets, {
         InstanceId = HttpService:GenerateGUID(false),
         PetId = petId,
+        Level = 1,
+        Locked = GameConfig.PetFusion.AutoLock[definition.Rarity] == true,
     })
 end
 
@@ -37,29 +42,40 @@ function PetInventory.setupPlayer(player, savedProgress)
         auraPetInstanceId = nil,
     }
     playerData[player] = data
+    Codex.setupPlayer(player, savedProgress)
 
     if savedProgress then
         for _, pet in savedProgress.Pets do
-            table.insert(data.ownedPets, { InstanceId = pet.InstanceId, PetId = pet.PetId })
+            table.insert(data.ownedPets, {
+                InstanceId = pet.InstanceId,
+                PetId = pet.PetId,
+                Level = PetRules.level(pet),
+                Locked = pet.Locked == true,
+            })
         end
         data.equipped = table.clone(savedProgress.EquippedPetIds)
         data.auraPetInstanceId = savedProgress.AuraPetInstanceId
-        return
-    end
-
-    for _, petId in GameConfig.StarterPetIds do
-        addPet(data, petId)
-    end
-
-    if GameConfig.GrantDevTestPets and RunService:IsStudio() then
-        for _, petId in GameConfig.DevTestPetIds do
+    else
+        for _, petId in GameConfig.StarterPetIds do
             addPet(data, petId)
         end
+
+        if GameConfig.GrantDevTestPets and RunService:IsStudio() then
+            for _, petId in GameConfig.DevTestPetIds do
+                addPet(data, petId)
+            end
+        end
+    end
+
+    -- whatever they hold is in the book, including every pet from before the Codex existed
+    for _, pet in data.ownedPets do
+        Codex.discover(player, pet.PetId)
     end
 end
 
 function PetInventory.removePlayer(player)
     playerData[player] = nil
+    Codex.removePlayer(player)
 end
 
 function PetInventory.isFull(player)
@@ -73,6 +89,7 @@ function PetInventory.grantPet(player, petId)
     end
 
     addPet(playerData[player], petId)
+    Codex.discover(player, petId)
     return true
 end
 
@@ -118,6 +135,59 @@ function PetInventory.unequip(player, instanceId)
     return true
 end
 
+-- Locks or unlocks a pet: a locked pet can't be sold or fused away.
+function PetInventory.toggleLock(player, instanceId)
+    local data = playerData[player]
+    if not data or typeof(instanceId) ~= "string" then
+        return false
+    end
+    local pet = findOwnedPet(data, instanceId)
+    if not pet then
+        return false
+    end
+    pet.Locked = not pet.Locked
+    return true
+end
+
+-- One pet's snapshot record ({ InstanceId, PetId, Equipped, Level, Locked }), or nil when it isn't theirs.
+function PetInventory.get(player, instanceId)
+    local snapshot = PetInventory.getSnapshot(player)
+    for _, pet in if snapshot then snapshot.Pets else {} do
+        if pet.InstanceId == instanceId then
+            return pet
+        end
+    end
+    return nil
+end
+
+-- Fuses a spare copy into a pet: returns ok, a message to show, and on success { InstanceId, PetId, Level }.
+-- The server picks the copy (PetRules.findMaterial): never a locked or equipped one, and a Secret one only when confirmed.
+function PetInventory.fuse(player, targetId, confirmSecret)
+    local data = playerData[player]
+    local target = PetInventory.get(player, targetId)
+    if not (data and target) then
+        return false, "That pet isn't yours."
+    end
+    local material, reason = PetRules.findMaterial(PetInventory.getSnapshot(player).Pets, target)
+    if not material then
+        return false, PetRules.refusal(reason)
+    end
+    local definition = GameConfig.Pets[target.PetId]
+    if definition.Rarity == "Secret" and confirmSecret ~= true then
+        return false, "A Secret pet needs your confirmation to fuse."
+    end
+    for index, pet in data.ownedPets do
+        if pet.InstanceId == material.InstanceId then
+            table.remove(data.ownedPets, index)
+            break
+        end
+    end
+    local record = findOwnedPet(data, targetId)
+    record.Level = PetRules.level(record) + PetRules.level(material)
+    return true, definition.DisplayName .. " reached Level " .. record.Level .. "! +" .. PetRules.qiBonus(record.PetId, record.Level) .. "% Qi",
+        { InstanceId = targetId, PetId = record.PetId, Level = record.Level }
+end
+
 -- Takes a pet out of the inventory (unequipping it first); its PetId, or nil when it isn't theirs.
 function PetInventory.take(player, instanceId)
     local data = playerData[player]
@@ -160,12 +230,11 @@ function PetInventory.getQiBonusPercent(player)
         return 0
     end
 
-    local totalPercent = 0
+    local totalPercent = Codex.qiPercent(player)
     for _, instanceId in data.equipped do
         local pet = findOwnedPet(data, instanceId)
-        local definition = pet and GameConfig.Pets[pet.PetId]
-        if definition then
-            totalPercent += definition.QiBonusPercent
+        if pet then
+            totalPercent += PetRules.qiBonus(pet.PetId, pet.Level)
         end
     end
 
@@ -180,7 +249,7 @@ function PetInventory.exportData(player)
 
     local pets = {}
     for _, pet in data.ownedPets do
-        table.insert(pets, { InstanceId = pet.InstanceId, PetId = pet.PetId })
+        table.insert(pets, { InstanceId = pet.InstanceId, PetId = pet.PetId, Level = pet.Level, Locked = pet.Locked })
     end
 
     return {
@@ -202,12 +271,15 @@ function PetInventory.getSnapshot(player)
             InstanceId = pet.InstanceId,
             PetId = pet.PetId,
             Equipped = table.find(data.equipped, pet.InstanceId) ~= nil,
+            Level = pet.Level,
+            Locked = pet.Locked,
         })
     end
 
     return {
         Pets = pets,
         AuraPetInstanceId = data.auraPetInstanceId,
+        CodexQiPercent = Codex.qiPercent(player),
     }
 end
 
@@ -253,6 +325,15 @@ function PetInventory.publish(player)
         end
     end
     player:SetAttribute("EquippedPetIds", table.concat(equippedPetIds, ","))
+
+    local owned = {}
+    for _, pet in if snapshot then snapshot.Pets else {} do
+        local entry = owned[pet.PetId] or { Count = 0, Level = 1 }
+        entry.Count += 1
+        entry.Level = math.max(entry.Level, PetRules.level(pet))
+        owned[pet.PetId] = entry
+    end
+    Codex.publish(player, owned)
 end
 
 return PetInventory

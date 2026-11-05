@@ -10,11 +10,13 @@ local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
+local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
+local ConfirmDialog = require(UI:WaitForChild("ConfirmDialog"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Toast = require(UI:WaitForChild("Toast"))
@@ -403,6 +405,22 @@ local function renderMarket(contents)
     end
 end
 
+local function sellPet(pet, info)
+    if info.Rarity ~= "Secret" then
+        ask("SellPet", pet.InstanceId)
+        return
+    end
+    -- a Secret pet is the last thing anyone should lose to a quick tap: the server won't take one without this
+    ConfirmDialog.show({
+        Title = "SELL A SECRET PET", Picture = Portraits.pet(pet.PetId, 72), ConfirmText = "SELL FOREVER",
+        Text = "This " .. info.DisplayName .. " is one of the rarest beasts in the world. Sell it for "
+            .. NumberFormat.compact(Shop.petValue(pet.PetId, PetRules.level(pet))) .. " Spirit Stones? It can't be undone.",
+        OnConfirm = function()
+            ask("SellPet", pet.InstanceId, { ConfirmSecret = true })
+        end,
+    })
+end
+
 local function renderBuySell(contents)
     window.setTitle("BUY & SELL")
     local order = 0
@@ -414,13 +432,28 @@ local function renderBuySell(contents)
     if #contents.Pets == 0 then
         UiKit.empty(list, "No pets to sell.").LayoutOrder = nextOrder()
     end
+    -- everything past the copy worth keeping, in one go (PetRules.spares: never a locked or equipped pet, nor anything Legendary or rarer)
+    local spares = PetRules.spares(contents.Pets)
+    if #spares > 0 then
+        local total = 0
+        for _, pet in spares do
+            total += Shop.petValue(pet.PetId, PetRules.level(pet))
+        end
+        sellRow(nextOrder(), UiKit.icon(UiTheme.Icons.Stones, 44), "Sell all spares", #spares .. (if #spares == 1 then " duplicate" else " duplicates"),
+            C.AccentBright, total, function()
+                ask("SellSpares")
+            end)
+    end
     for _, pet in contents.Pets do
         local info = GameConfig.Pets[pet.PetId]
         if info then
-            sellRow(nextOrder(), Portraits.pet(pet.PetId, 44), info.DisplayName, info.Rarity .. (if pet.Equipped then "  ·  following you" else ""),
-                GameConfig.PetRarityColors[info.Rarity] or C.Text, Shop.petValue(pet.PetId), function()
-                    ask("SellPet", pet.InstanceId)
-                end)
+            local level = PetRules.level(pet)
+            sellRow(nextOrder(), Portraits.pet(pet.PetId, 44), info.DisplayName,
+                info.Rarity .. (if level > 1 then "  ·  Level " .. level else ""),
+                GameConfig.PetRarityColors[info.Rarity] or C.Text, Shop.petValue(pet.PetId, level),
+                if pet.Locked or pet.Equipped then nil else function()
+                    sellPet(pet, info)
+                end, if pet.Locked then "Locked" else "Equipped")
         end
     end
     heading(nextOrder(), "Weapons")
