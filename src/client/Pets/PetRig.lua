@@ -1564,6 +1564,7 @@ PetRig.Profiles.SpiritCrane = {
 
 PetRig.Profiles.CloudSheep = {
     Skinned = true,
+    SkinTint = Color3.fromRGB(255, 240, 216), -- the game's light pushes its slate face to royal blue: this brings it back (seen in Studio)
     Bones = {
         "Body", "Head", "WoolCap", "Tail", "WoolTop", "WoolBack", "WoolChest", "WoolL", "WoolR", "EyeL", "EyeR", "LidUL", "LidUR", "LidLL", "LidLR", "EarL", "EarR", "Smile", "Mouth",
         "LegFL1", "LegFL2", "HoofFL", "LegFR1", "LegFR2", "HoofFR", "LegBL1", "LegBL2", "HoofBL", "LegBR1", "LegBR2", "HoofBR",

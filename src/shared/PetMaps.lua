@@ -5,7 +5,7 @@
 -- Re-read after re-importing a pet's maps.
 return {
     AzureSkyDragon = "rbxassetid://102035306549567",
-    CloudSheep = "rbxassetid://122411756879106",
+    CloudSheep = "rbxassetid://137454504415941",
     DawnPhoenix = "rbxassetid://125937144749128",
     DreadfangCerberus = "rbxassetid://90383585387525",
     GalaxyManta = "rbxassetid://93932467864746",

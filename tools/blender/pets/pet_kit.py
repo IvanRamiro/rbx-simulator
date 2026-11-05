@@ -644,6 +644,43 @@ def uv_overlap_texels(me, size=1024):
     return clashes
 
 
+def bleed_gutters(images):
+    """Fills the empty space between a map's pieces with each piece's own edge colour, right across the image. Otherwise the fill colour bleeds in as thin cracks along the seams once the
+    engine shrinks the map. images[0] is the colour map: what it left at the fill colour (its commonest value, the pieces being a minority) is empty on every map."""
+    def read(img):
+        w, h = img.size
+        px = np.empty(w * h * 4, dtype=np.float32)
+        img.pixels.foreach_get(px)
+        return px.reshape(h, w, 4)
+    base = read(images[0])
+    packed = (np.round(base[..., :3] * 255).astype(np.int64) * (1, 256, 65536)).sum(2)
+    values, counts = np.unique(packed, return_counts=True)
+    empty = packed == values[np.argmax(counts)]
+    for img in images:
+        px = read(img)
+        h, w = px.shape[:2]
+        ys = (np.arange(h) * empty.shape[0] / h).astype(int)
+        xs = (np.arange(w) * empty.shape[1] / w).astype(int)
+        hole = empty[np.ix_(ys, xs)].copy()
+        px[hole] = 0
+        for _ in range(4096):
+            if not hole.any():
+                break
+            known = (~hole).astype(np.float32)
+            weight = np.zeros_like(known)
+            total = np.zeros_like(px)
+            for axis, shift in ((0, 1), (0, -1), (1, 1), (1, -1)):
+                k = np.roll(known, shift, axis)
+                weight += k
+                total += np.roll(px, shift, axis) * k[..., None]
+            grow = hole & (weight > 0)
+            px[grow] = total[grow] / weight[grow][..., None]
+            hole[grow] = False
+        px[..., 3] = 1.0
+        img.pixels.foreach_set(px.ravel())
+        img.update()
+
+
 def bake_all(lows, pieces, hi_mat=None, size=1024, colour_size=None, far=("Skin",), fill=(0.6, 0.6, 0.6, 1), metal=False, reach=(0.012, 0.03), far_reach=(0.014, 0.045)):
     """Every low piece from its own high piece, so neighbours can't project on each other. Returns the material."""
     os.makedirs(OUT, exist_ok=True)
@@ -693,6 +730,7 @@ def bake_all(lows, pieces, hi_mat=None, size=1024, colour_size=None, far=("Skin"
             bpy.ops.object.bake(type=kind, use_selected_to_active=True, cage_extrusion=cage, max_ray_distance=ray, margin=max(4, res // 256), use_clear=False, target="IMAGE_TEXTURES", **kw)
     if hi_bsdf:
         hi_bsdf.inputs["Emission Strength"].default_value = 0.0
+    bleed_gutters([img for img, _ in saves])
     for img, suffix in saves:
         img.filepath_raw = os.path.join(OUT, PET + "_" + suffix + ".png")
         img.file_format = "PNG"
