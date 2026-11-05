@@ -146,7 +146,7 @@ def height(x, z):
     # the court's flat cobbles; earth under all the other paving (island_upgrades.py), because terrain grass grows up through a mesh
     if a < ARENA_EDGE:
         return h, "Cobblestone"
-    if a < 68 or _spoke_distance(x, z) < 5.5:
+    if a < 68 or _spoke_distance(x, z) < 6.5:
         return h, "Ground"
     # no grass under the bridge: blades would grow up through the abutment
     ux, uz = -_IN[0], -_IN[1]

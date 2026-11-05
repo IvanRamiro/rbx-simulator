@@ -33,6 +33,9 @@ return {
         BI_Pavilion = {
             { Position = Vector3.new(-15.70, 3.00, -90.65), Yaw = 0.1715 },
         },
+        BI_PavilionSteps = {
+            { Position = Vector3.new(0.00, 0.00, 0.00), Yaw = 0.0000 },
+        },
         BI_Roads = {
             { Position = Vector3.new(0.00, 0.00, 0.00), Yaw = 0.0000 },
         },

@@ -799,10 +799,54 @@ def beginner_roads(coll, mat, bands):
     rnd = random.Random(636)
     mb = W.MeshBuilder()
     lines = [line for k, line in enumerate(B.PATHS) if k != 1]   # 1 is the ring, which the apron covers
+    bearing = math.degrees(math.atan2(B.PAVILION[1], B.PAVILION[0]))
+    pavilion_end = B.polar(bearing, 92 - B.PAVILION_R)
+    # the pavilion's road stops at the foot of its knoll: the steps take over (beginner_pavilion_steps)
+    lines = [[line[0], B.polar(bearing, STEPS_FOOT + 0.8)] if math.dist(line[-1], pavilion_end) < 0.01 else line for line in lines]
     for k, line in enumerate(lines):
         road(mb, rnd, line, 6.5, _beginner_ground, bands[P.PALE], bands[P.DARK], covered=_beginner_yard_cover,
              lift=0.2 + 0.01 * k, shade=(0.42, 0.62))
     return mb.object("BI_Roads", coll, mat)
+
+
+STEPS_FOOT = 71.0       # where the pavilion's steps start, out from the court's centre
+STEPS_TREADS = 8
+STEPS_RUN = 1.5         # studs of each tread, and the rise (the knoll's top, 3 studs up, in eight): a character walks up without a hitch
+STEPS_RISE = 0.39
+STEPS_WIDTH = 11.0
+
+
+def beginner_pavilion_steps(coll, mat, bands):
+    """Stone steps up the pavilion's knoll, from the road's end to the pavilion's own front step, between dark cheek walls that
+    step with them and end in a low post each side at the foot. Solid, down into the ground. It collides: it's walked on."""
+    import beginner_island as B
+    rnd = random.Random(638)
+    mb = W.MeshBuilder()
+    bearing = math.radians(math.degrees(math.atan2(B.PAVILION[1], B.PAVILION[0])))
+    dx, dz = math.cos(bearing), math.sin(bearing)
+    sx, sz = -dz, dx
+    yaw = math.atan2(-dz, dx)   # a box's local x runs up the steps
+    base = -1.6
+
+    def block(along, across, top, run, width, band, top_shade, side_shade=0.55, u=None):
+        r = STEPS_FOOT + along
+        x, z = dx * r + sx * across, dz * r + sz * across
+        mb.box((x, (top + base) / 2, z), (run, top - base, width), band, yaw=yaw, u=rnd.uniform(0.1, 0.9) if u is None else u,
+               top_shade=top_shade, side_shade=side_shade)
+
+    pale, dark, bronze = bands[P.PALE], bands[P.DARK], bands[P.BRONZE]
+    for k in range(STEPS_TREADS):
+        top = STEPS_RISE * (k + 1)
+        run = STEPS_RUN + (0.0 if k < STEPS_TREADS - 1 else 1.0)     # the last one is a little landing, up to the pavilion's step
+        block(STEPS_RUN * k + run / 2, 0.0, top, run + 0.02, STEPS_WIDTH, pale, rnd.uniform(0.78, 0.92))
+        for side in (-1, 1):
+            block(STEPS_RUN * k + run / 2, side * (STEPS_WIDTH / 2 + 0.55), top + 0.32, run + 0.02, 1.1, dark, rnd.uniform(0.55, 0.7), side_shade=0.45)
+    # a low post each side at the foot, with a bronze cap
+    for side in (-1, 1):
+        x_along, across = 0.0, side * (STEPS_WIDTH / 2 + 0.55)
+        block(x_along, across, 1.7, 1.7, 1.7, dark, 0.65, side_shade=0.5)
+        block(x_along, across, 1.95, 1.2, 1.2, bronze, 0.95, side_shade=0.7)
+    return mb.object("BI_PavilionSteps", coll, mat)
 
 
 def beginner_yard(coll, mat, bands):
@@ -821,7 +865,7 @@ ISLANDS = {
     "MoonlitIsle": ("MoonlitIsle_Atlas", MM.STRIPS, [moon_floor, moon_gate]),
     "OriginAbyss": ("OriginAbyss_Atlas", OM.STRIPS, [origin_floor, origin_glow, origin_colonnade]),
     "Yggdrasil": ("StartingIsland_PropAtlas", P.STRIPS, [hub_roads, hub_bridgeheads, hub_plot_edges, hub_compass_ring]),
-    "BeginnerIsle": ("StartingIsland_PropAtlas", P.STRIPS, [beginner_court, beginner_apron, beginner_roads, beginner_yard]),
+    "BeginnerIsle": ("StartingIsland_PropAtlas", P.STRIPS, [beginner_court, beginner_apron, beginner_roads, beginner_yard, beginner_pavilion_steps]),
 }
 
 

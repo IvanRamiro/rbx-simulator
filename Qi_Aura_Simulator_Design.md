@@ -685,7 +685,7 @@ The World Tree stands at the centre; everything else rings it. Scripts: `ygg_isl
 
 ### Beginner Isle (the owner, November 4, 2026)
 
-**Its layout kept, its edges made crisp, November 5, 2026 (`island_upgrades.py`):** a paved apron round the court's kerb to radius 67.5 (`BI_CourtApron`), paved roads to the gate, the Hall, the bell and the pavilion (`BI_Roads`), and a floor for the training yard (`BI_YardFloor`). The court's jade ring and bronze paw had been built facing down and never shown; they show now. Walked in Play from the bridge to every one of them, and the pavilion's road climbs its knoll.
+**Its layout kept, its edges made crisp, November 5, 2026 (`island_upgrades.py`):** a paved apron round the court's kerb to radius 67.5 (`BI_CourtApron`), paved roads to the gate, the Hall, the bell and the pavilion (`BI_Roads`), and a floor for the training yard (`BI_YardFloor`). The court's jade ring and bronze paw had been built facing down and never shown; they show now. The pavilion's road stops at the foot of its knoll, and eight stone steps (`BI_PavilionSteps`) climb from there to its front step between stepped dark walls, a bronze-capped post each side at the foot. Walked in Play from the bridge to every one of them; up and down the steps without a jump, and on the grass beside them.
 
 "Create the beginner island so you can transfer the eggs there, and there should be no boss in the main hub." The first island a new player crosses to, in the first ten minutes: the outer court of a cultivation sect. Scripts: `beginner_island.py` (terrain and layout), `beginner_meshes.py` (underside), `beginner_props.py` (kit and placements). About 280 studs across. It shares Yggdrasil's terrain materials (Grass, Ground, Rock, Cobblestone).
 
@@ -912,6 +912,7 @@ A real lion carved in weathered granite and come to life: a heavy mane of chisel
 With nobody within 60 studs for 12 s, it heals and sleeps.
 
 - **Never killed, never kills:** every blow is a knockback (about 19 studs, then off your feet for 1.1 s), and a knocked-back thief drops the egg.
+- **Softer on the first two guardians (the owner, November 5, 2026):** the Stone Lion and the Mantis Sage throw weaker (Knockback 28, 26 and 34 where it was 45, 40 and 55), for 0.8 s off your feet, and can't knock the same player again for 4 s and 3.5 s (`KnockGrace`; 0.6 s on the others), so a beginner isn't walking back all fight. At Qi Gatherer with the starter sword: the Lion weakens in 41 s (7 knocks), the Sage in 72 s (15 knocks).
 - **The egg a thief takes** is the one on the stand they take it from (their rank must open it), held over the thief's head.
 - **Carried on foot:** no sword flight while carrying.
 - **Grace:** for 1.5 s after taking or recovering the egg the thief can't be knocked back, so a blow already on its way doesn't take the egg straight back.

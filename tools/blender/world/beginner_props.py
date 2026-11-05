@@ -366,6 +366,7 @@ def placements():
     put("BI_CourtApron", 0, 0, 0.0, y=0.0)
     put("BI_Roads", 0, 0, 0.0, y=0.0)
     put("BI_YardFloor", 0, 0, 0.0, y=0.0)
+    put("BI_PavilionSteps", 0, 0, 0.0, y=0.0)
     hx, hz = Y.HALL
     put("BI_Hall", hx, hz, _yaw_to(hx, hz, 0, 0), y=0.0)
     px, pz = Y.PAVILION
