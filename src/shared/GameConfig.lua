@@ -186,6 +186,7 @@ local GameConfig = {
             WeakenedAt = 0.1,      -- share of health below which it falters and its stands' eggs can be taken
             HitRadius = 14,        -- its body round the chest
             EngageRadius = 24,
+            AwakenTime = 2.6,      -- seconds before its first blow: it rises from sitting and shakes its mane (default 1.6)
             LeashRadius = 60,      -- from the lair
             CalmAfter = 12,        -- seconds with nobody near before it heals and sleeps
             RespawnTime = 30,      -- seconds it rests (Resting) after an egg is secured; its stand: EggTheft

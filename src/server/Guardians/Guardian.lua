@@ -223,7 +223,7 @@ end
 
 function Guardian:awaken()
     self:setState("Guardian")
-    self.busyUntil = os.clock() + 1.6 -- its waking roar
+    self.busyUntil = os.clock() + (self.config.AwakenTime or 1.6) -- it wakes before it strikes
     self.lastEngaged = os.clock()
     self:broadcast("Awaken")
 end

@@ -852,7 +852,7 @@ Tuning lives in each rig: `Rig.Springs`, `Rig.Lean`, `Rig.Legs`, the gait number
 
 ### The Awakened Stone Lion (Beginner Isle)
 
-A granite temple guardian lion come to life: a mane of carved spiral curls, spiral brows and whisker curls, glowing Qi-blue eyes, a gold collar with a jade orb and gold tassels, moss in the crevices, and a tail of five stone flame tongues ending in curls. It stands about 30 studs tall, in the Lion Court at the middle of the Beginner Isle, its egg stands behind it, facing the Lion Gate (`GameConfig.Guardians.StoneLion`).
+A real lion carved in weathered granite and come to life: a heavy mane of chiselled locks, glowing Qi-blue eyes, a gold collar with a jade orb and gold tassels, moss on its upward faces, and a long tail with a heavy tuft. It stands about 28 studs tall, in the Lion Court at the middle of the Beginner Isle, its egg stands behind it, facing the Lion Gate (`GameConfig.Guardians.StoneLion`).
 
 **Its eyes and orb tell its state.** The eyes (rebuilt November 2, 2026 with `guardian_kit.eye`) are a temple lion's: bulging almond irises with dark cat pupils under carved stone lids set in a frown. Asleep, carved stone eyes (the pupil cut a shade darker) and a dull jade orb; awake, Neon Qi blue (`006eff`) and jade (`00a05f`), blinking every few seconds; weakened, flickering and wide; enraged, red-orange and wider still. Darker Neon renders as a flat black disc (the pupils use that), so the sleeping look is stone and glass, not dim Neon.
 
@@ -860,9 +860,9 @@ A granite temple guardian lion come to life: a mane of carved spiral curls, spir
 
 | State | What it does |
 |---|---|
-| Dormant | A statue. A player within 24 studs, or a strike, wakes it. (Until November 2, 2026 it pinned its egg under its right paw.) |
+| Dormant | A statue, seated on its haunches. A player within 24 studs, or a strike, wakes it, and it rises for 2.6 s before its first blow (`AwakenTime`; other guardians 1.6). |
 | Guardian | Stays at its lair. **Slam:** the left paw comes down in front (range 24, 55° arc, 0.75 s wind-up). **Roar:** a shockwave rolls out along the ground to 44 studs at 34 studs/s; whoever is on the ground when it passes is knocked back, and a jump clears it. |
-| Weakened | Below 10% of 1,200 health (a beginner's Qi Palm gets there alone in about 108 strikes) it rears and draws a paw up; its attacks come 1.7 times slower; health never falls below 1. An egg can be taken from the Egg Garden's stands. |
+| Weakened | Below 10% of 1,200 health (a beginner's Qi Palm gets there alone in about 108 strikes) its foreleg gives, it catches itself and holds the left paw off the ground; its attacks come 1.7 times slower; health never falls below 1. An egg can be taken from the Egg Garden's stands. |
 | Enraged | The egg is taken: it chases the thief at 21 studs/s (a beginner runs 22) and pounces from 16 to 46 studs, aiming 0.85 of the thief's motion ahead, so a straight runner is caught and a thief who turns or dashes while it is in the air is not. It takes no damage. |
 | Returning / Resting | It walks home. After a secured egg it sleeps for 30 s, then guards again. |
 
@@ -876,9 +876,9 @@ With nobody within 60 studs for 12 s, it heals and sleeps.
 - **The Hatching Altar is its sanctuary:** the egg is secured within 12 studs of the altar's centre, the lion never comes within 12 studs of its edge, and nobody inside it can be knocked back.
 - **The client** (`GuardianController`, `GuardianAnim`, `GuardianFx`): the health bar (name, state, the 10% weakened mark, a trailing loss), procedural animation (state poses, a walk turning into a gallop, breathing, the head turned toward its target, and the moves, all through springs: see How guardians move), stone-dust effects (the roar's rolling dust wall, slam and landing bursts, dust stirring where a pounce will land), camera shake, the way to the Hatching Altar for a thief, and the knockback on your own character.
 
-**Rig removed (November 5, 2026, the owner: "we will be redo-ing it anyways like a total change"):** `GuardianRigs/StoneLion.lua` and `Placements/StoneLion.lua` are gone ahead of a total rebuild. Until then the stored model stands still and the server still runs its fight, with no moves or attack warnings shown.
+**Rebuilt from nothing (November 5, 2026, the owner: "like a total change", "Make a more realistic animation"):** `tools/blender/guardians/stone_lion_v2.py` makes a lion in carved granite, not a temple dog: one skin on 39 bones, the mane one carving, the gold collar and jade orb a rigid piece on the neck, no egg. A foreleg is a shoulder blade, an upper arm, a forearm, a pastern and toes; a hind leg a thigh, a shin, a hock and toes (`rig.Legs` `Chain` carries the joints below the two solved ones). It sits as a statue until it wakes, rises, and shakes its mane; it walks in a lateral sequence with its head level, and gallops in a rotary gallop with its back gathering and stretching. `write_clips` generates `GuardianRigs/StoneLionClips.lua`, played by `GuardianRigs/StoneLionSkinned.lua`; `write_placement` writes `Placements/StoneLionSkinned.lua`. A move is solved every frame, so a planted paw doesn't leave its spot, and the tail is lifted just enough to stay above the ground; while it walks or runs, a landed paw is locked to its spot in the world until it lifts (`rig.Legs` `Lock`).
 
-**Asset:** `tools/blender/guardians/stone_lion.py` builds it; `assets/guardians/StoneLion.fbx` holds 12 jointed segments (Body, Head, Jaw, Tail and two pieces per leg). The curls are pieces of their own, so the bake's decimation leaves them whole. `WorldBuild.GuardianBuilder.store` fits the import and joins the segments with Motor6Ds at their pivots (`Placements/StoneLion.lua`), into `ServerStorage.Guardians.StoneLion`. Animation sets the joints' `Transform` on the client.
+**Asset:** `assets/guardians/StoneLionV2.fbx` and its maps; `GuardianBuilder.storeSkinned` fits the import and sets the model's `Rig` attribute.
 
 ### The Bamboo Mantis Sage (Jade Grove)
 

@@ -42,6 +42,7 @@ local SUBSTEP = if Quality.Low then 1 / 120 else 1 / 240
 local MAX_SWING = 60         -- degrees a dragged joint may lag its target
 local SNAP_GAP = 0.25        -- seconds without an update (off-screen, a hitch) after which springs snap
 local TURN_STEP = 0.1        -- studs of stepping per degree turned: turning on the spot steps its feet
+local LOCK_REACH = 7         -- studs a locked foot may fall behind where its pose would put it before it lets go
 
 local function smooth(x)
     x = math.clamp(x, 0, 1)
@@ -285,9 +286,18 @@ function GuardianAnim:plantFeet(pose)
         local hip = frameOf(self.parents[def.Upper]) * self.c0[def.Upper]
         local c1u, c0l, c1l = self.c1inv[def.Upper], self.c0[def.Lower], self.c1inv[def.Lower]
         local tu, tl = table.clone(upper), table.clone(lower)
+        -- a leg with more joints below (def.Chain, a hock or a pastern): the foot is where those joints, as posed, put it
+        local soleAt = leg.sole
+        if def.Chain then
+            local below = CFrame.identity
+            for _, joint in def.Chain do
+                below *= self.c0[joint] * transformOf(pose[joint]) * self.c1inv[joint]
+            end
+            soleAt = (below * self.c0[def.Foot]).Position
+        end
         local function sole(a, b)
             tu[axis], tl[axis] = a, b
-            return (hip * transformOf(tu) * c1u * c0l * transformOf(tl) * c1l):PointToWorldSpace(leg.sole)
+            return (hip * transformOf(tu) * c1u * c0l * transformOf(tl) * c1l):PointToWorldSpace(soleAt)
         end
         local a0, b0 = upper[axis], lower[axis]
         local posed = sole(a0, b0)
@@ -297,6 +307,21 @@ function GuardianAnim:plantFeet(pose)
         if weight > 0.01 then
             -- where it stands: under its posed foot while it walks, on its own spot when still
             local target = Vector3.new(posed.X, floorY, posed.Z):Lerp(leg.stand, (1 - self.moving) * (def.Pin or 1) * planted)
+            -- def.Lock: a paw that has landed stays on that spot in the world until it lifts, whatever the body does over it
+            if def.Lock then
+                if self.moving > 0.05 and (planted > 0.6 or (leg.lock and planted > 0.2)) then
+                    leg.lock = leg.lock or self.root.CFrame:PointToWorldSpace(target)
+                    local spot = self.root.CFrame:PointToObjectSpace(leg.lock)
+                    local gap = Vector3.new(spot.X, floorY, spot.Z) - target
+                    if gap.Magnitude > (def.LockReach or LOCK_REACH) then
+                        leg.lock = nil -- left too far behind (a teleport, a hard stop): it lets go
+                    else
+                        target += gap
+                    end
+                else
+                    leg.lock = nil
+                end
+            end
             local floor = math.min(0, bend * b0) -- the knee never bends further backward than posed
             local a, b = a0, b0 + bend * 3       -- a slight bend, so a straight leg knows which way it folds
             -- solved in the leg's own swing plane: height and forward for a leg that bends on pitch,
@@ -528,6 +553,9 @@ function GuardianAnim:follow(pose, dt, snap)
             local omega = 2 * math.pi * config.Freq
             local k, c = omega * omega, 2 * config.Damping * omega
             local x, v = spring.x, spring.v
+            -- a long frame makes each step too big for a stiff spring, which would throw the joint away: past that it's solved implicitly,
+            -- which can't blow up. An ordinary frame is untouched
+            local implicit = h * (c + omega) > 1.2
             for i = 1, 5 do
                 if i <= 3 then
                     -- an angle is the same a whole turn on: a joint goes the short way round, or a target written 360 degrees apart spins it
@@ -538,9 +566,16 @@ function GuardianAnim:follow(pose, dt, snap)
                     end
                 end
                 local xi, vi, ti = x[i], v[i], target[i]
-                for _ = 1, steps do
-                    vi += (k * (ti - xi) - c * vi) * h
-                    xi += vi * h
+                if implicit then
+                    for _ = 1, steps do
+                        vi = (vi + h * k * (ti - xi)) / (1 + h * c + h * h * k)
+                        xi += vi * h
+                    end
+                else
+                    for _ = 1, steps do
+                        vi += (k * (ti - xi) - c * vi) * h
+                        xi += vi * h
+                    end
                 end
                 x[i], v[i] = xi, vi
             end

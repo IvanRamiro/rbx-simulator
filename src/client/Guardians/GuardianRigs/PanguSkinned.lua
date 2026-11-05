@@ -181,8 +181,18 @@ function Rig.actions(anim, pose, now)
         add(pose, "Head", 12 * reel)
     end
 
-    for name, spec in STRIKES do
-        local action = anim.actions[name]
+    -- oldest first, so the newest move is laid over the last and a blow that starts during another's recovery is seen
+    local order = {}
+    for name in STRIKES do
+        if anim.actions[name] then
+            table.insert(order, name)
+        end
+    end
+    table.sort(order, function(x, y)
+        return anim.actions[x].start < anim.actions[y].start
+    end)
+    for _, name in order do
+        local spec, action = STRIKES[name], anim.actions[name]
         if action then
             local w = action.args[1] or spec[1]
             local rate = spec[1] / w
