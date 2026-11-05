@@ -48,8 +48,8 @@ return {
         Special = { Name = "Tugging Gale", Text = "Fills its cheeks and blows three ribbons of wind that wind round each other and carry leaves away." },
     },
     CloudSheep = {
-        Lore = "A satin sheep under a mantle of scroll-curl clouds, always half asleep. It paddles its hooves on the air as if it were swimming.",
-        Special = { Name = "Cloud Bloom", Text = "Lifts with its legs tucked and blooms a ring of cloud puffs while luminous droplets rain onto a widening sky ring." },
+        Lore = "A sheep whose fleece is a real cloud, silver lining and all, always half asleep. It paddles its hooves on the air as if it were swimming.",
+        Special = { Name = "Cloud Bloom", Text = "Tucks its legs and draws in a huge breath, swelling up, then lets it go in one long sigh of soft cloud." },
     },
     SpiritCrane = {
         Lore = "A tall pearl-and-silver crane crowned with a turquoise lotus. It is said to carry messages to those who have already ascended.",
@@ -59,7 +59,10 @@ return {
         Lore = "A lean sapphire wyvern that strides on two legs and trails wind ribbons behind it. Storm clouds part to let it pass.",
         Special = { Name = "Skyburst", Text = "Spreads its wings and throws up three rising wind spirals, gust rings and sky-crystal shards." },
     },
-    StormhornKirin = { Lore = "Its horn calls the rain and its hooves answer with thunder. Farmers and generals alike have prayed to it." },
+    StormhornKirin = {
+        Lore = "Its horn calls the rain and its hooves answer with thunder. Farmers and generals alike have prayed to it.",
+        Special = { Name = "Thunder Answers", Text = "Rears with its horn raised, then brings its hooves down in a burst of sparks as lightning flares through its mane." },
+    },
     GlacierPuff = { Lore = "A round little ball of old ice that has never once melted, not even in the mouth of a volcano." },
     ThunderJelly = { Lore = "It drifts on charged air and hums before a storm. Touching one is a lesson most people learn once." },
     CrystalBeetle = { Lore = "Its shell grows a new crystal for every year it lives. Collectors have spent fortunes on the moults." },
@@ -101,7 +104,10 @@ return {
     CelestialPearlDragon = { Lore = "A dragon that carries one flawless pearl of condensed heaven. Whole sects have fallen trying to take it." },
     EclipseCat = { Lore = "It appears only when something bright is being covered up. Its purr is the sound of the world going dark for a moment." },
     TimekeeperTortoise = { Lore = "Its shell is a calendar for an age nobody remembers. It is never late, because it decides when things happen." },
-    GalaxyManta = { Lore = "It glides through open space with a slow spiral of stars turning under its wings." },
+    GalaxyManta = {
+        Lore = "It glides through open space with a slow spiral of stars turning under its wings.",
+        Special = { Name = "Turning of the Heavens", Text = "Rears until the galaxy beneath it faces the world, spins it up, then throws it open in a great wheel of stars." },
+    },
     Shadowcoil = { Lore = "A loop of living shadow that hides under your own. You find out it is there when it moves first." },
     RuneSphinx = {
         Lore = "A charcoal guardian with a mane of stone blades and glowing runes of one forgotten alphabet. It has one question, and you won't like it.",

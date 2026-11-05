@@ -224,7 +224,7 @@ Pets give **Qi bonuses** (every equipped pet) and **aura style** (the one chosen
 
 - **★ = sculpted in Blender:** source at `tools/blender/pets/<EggId>/<PetId>.blend`, exported to `assets/pets/<EggId>/`. A pet sits under the first egg that drops it.
 - **Unmarked pets** use procedural low-poly models (`src/client/Pets/PetArchetypes.lua`) until they get their own Blender model.
-- **Every pet is its own species**, with its own anatomy, silhouette and face. No two share a body plan or head design, and every pet has expressive eyes.
+- **Every pet is its own species**, with its own anatomy, silhouette and face. No two share a body plan or head design. Its eyes suit what it is: big, expressive eyes where the creature calls for them, natural ones where they would fight it (the Galaxy Manta has a real manta's small, deep eyes on the sides of its head). Never a plain glowing ball.
 
 ### Duplicates
 
@@ -288,7 +288,9 @@ Specials are visual only.
 | Azure Sky Dragon | Lean upright sapphire wyvern with silver crest blades, crystal-studded wings with crescent tips, wind ribbons and a layered tail fan; strides on two legs | **Skyburst:** spreads its wings and throws up three rising wind spirals, gust rings and sky-crystal shards |
 | Spirit Crane | Tall pearl-and-silver celestial crane, misty slate flight feathers, three pearl plumes from a turquoise lotus crown, gold eyes ringed in turquoise, spiralling tail streamers | **Halo Ascension:** lifts its neck skyward as three luminous rings rise from feet to crown and burst into drifting pearl feathers |
 | Wind Sprite | A baby wind spirit whose body runs into one great scroll of wind: big teal eyes, a sly one-fanged smile, a curled topknot, seed-key wings, little robe sleeves with coral cuffs, a jade bead on a cord; blinks, glances about, raises a brow and reaches out a sleeve to tug twice | **Tugging Gale:** fills its cheeks, then blows three ribbons of wind that wind round each other and carry petals away while its tail unwinds |
-| Cloud Sheep | Satin celestial sheep under a mantle of scroll-curl clouds, a breaking-wave forelock, ivory-to-sky ribbon horns, heavy-lidded sky-blue eyes; hovers and paddles its hooves | **Cloud Bloom:** lifts with its legs tucked and blooms a ring of cloud puffs while luminous droplets rain onto a widening sky ring |
+| Galaxy Manta | A great ray whose back is deep space: a nebula spiralling out across both wings, gold constellations and edging, pearl beneath; a true manta's flat head with small deep eyes on its sides and curled horn fins, a comet on its whip tail. Under its wings a small galaxy really turns, with a ringed planet and a moon going round in it. Waves run along its wings, it banks into turns, feeds with its mouth open and barrel-rolls | **Turning of the Heavens:** rears until the galaxy faces forward, spins it up, then sweeps down and throws it open in a wheel of stars with a ring of light |
+| Stormhorn Kirin | A tall deer-dragon of storm-slate, scaled over neck and shoulder with a pale plated throat, on an arched neck and a heavy, stern head with one gold eye on each side. Its horn rises from a bronze sheath as a forked bolt of lightning; its mane and tail stream on a wind only it feels, lightning flickering in the mane; veins of lightning run under its hide; cloven bronze hooves spark where they land. Walks a rocking canter on the air, paws and tosses its head at rest | **Thunder Answers:** rears with its horn raised, then brings its hooves down in a burst of sparks as lightning flares through its mane |
+| Cloud Sheep | A fat little sheep whose fleece is a real cumulus, sunlit on top, rain-grey beneath, a silver lining at the edge; a small slate-blue face, drooping ears, little ram curls, half-closed gold eyes; breathes with its whole fleece, paddles its hooves on the air, nods off and starts awake, yawns | **Cloud Bloom:** tucks its legs and draws in a huge breath, swelling up, then lets it go in one long sigh of soft cloud |
 | Golden Mane Lion | High-shouldered royal lion, a tiered mane of flame-tipped locks in bronze, gold and champagne, a crest of reddish-gold locks, deep-set amber eyes; heavy, deliberate stride | **Sovereign Roar:** opens its jaw as golden shockwave rings roll out, solar rays flare behind its crest and a ring spreads beneath its paws |
 
 ### Roster by first egg
@@ -313,7 +315,7 @@ Specials are visual only.
 | Cloud Sheep ★ | Uncommon | Clouds | +25% |
 | Spirit Crane ★ | Rare | Spiritual energy | +40% |
 | Azure Sky Dragon ★ | Epic | Wind and sky | +60% |
-| Stormhorn Kirin | Legendary | Storms | +70% |
+| Stormhorn Kirin ★ | Legendary | Storms | +70% |
 
 **Elemental Core Egg (Yggdrasil)**
 
@@ -398,7 +400,7 @@ Specials are visual only.
 |---|---|---|---|
 | Eclipse Cat | Epic | Darkness and eclipses | +110% |
 | Timekeeper Tortoise | Legendary | Time | +130% |
-| Galaxy Manta | Mythical | Cosmic energy | +220% |
+| Galaxy Manta ★ | Mythical | Cosmic energy | +220% |
 
 **Forbidden Origin Egg (Origin Abyss)**
 

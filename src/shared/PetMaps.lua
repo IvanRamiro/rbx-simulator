@@ -5,9 +5,10 @@
 -- Re-read after re-importing a pet's maps.
 return {
     AzureSkyDragon = "rbxassetid://102035306549567",
-    CloudSheep = "rbxassetid://129961768516291",
+    CloudSheep = "rbxassetid://122411756879106",
     DawnPhoenix = "rbxassetid://125937144749128",
     DreadfangCerberus = "rbxassetid://90383585387525",
+    GalaxyManta = "rbxassetid://93932467864746",
     GoldenKirin = "rbxassetid://74047466096461",
     GoldenManeLion = "rbxassetid://89135149772900",
     JadeAntlerDeer = "rbxassetid://70823879643174",
@@ -17,6 +18,7 @@ return {
     MyceliumSprite = "rbxassetid://94221576326290",
     RuneSphinx = "rbxassetid://125628324690653",
     SpiritCrane = "rbxassetid://117737637798913",
+    StormhornKirin = "rbxassetid://96870617770871",
     SunscaleDragon = "rbxassetid://72856050814489",
     WindSprite = "rbxassetid://100955540073927",
 }

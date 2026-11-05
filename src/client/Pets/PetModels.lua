@@ -640,6 +640,8 @@ local MESH_LOOKS = {
     SpiritCrane = { Glow = Color3.fromRGB(40, 210, 200), Length = 4.2 },
     CloudSheep = { Glow = Color3.fromRGB(120, 215, 245), Length = 3.0 },
     WindSprite = { Glow = Color3.fromRGB(30, 235, 180), Length = 3.5 },
+    GalaxyManta = { Glow = Color3.fromRGB(140, 100, 255), Length = 4.0 },
+    StormhornKirin = { Glow = Color3.fromRGB(90, 170, 255), Length = 4.4 },
     GoldenManeLion = { Glow = Color3.fromRGB(255, 180, 60), Length = 4.4 },
     DawnPhoenix = { Glow = Color3.fromRGB(255, 170, 70), Length = 4.6 },
     AquaWisp = { Effect = "Bubbles", Glow = Color3.fromRGB(110, 205, 255), Length = 3.12 },
@@ -766,7 +768,7 @@ local function addImported(model, rootPart, template, design, petId)
 
     if PetRig.isRigged(petId, template) then
         if PetRig.Profiles[petId].Skinned then
-            rigs[model] = PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, longest, (look.Length or longest) * k)
+            rigs[model] = PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, (look.Length or longest) * k)
             return
         end
         local function place(piece)

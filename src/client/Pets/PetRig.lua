@@ -430,43 +430,120 @@ local function animateCrane(rig, s, moving, fly, nova)
     pose(m.Tail, CFrame.Angles(0.04 * math.sin(t * 0.6) - 0.15 * fly + 0.12 * ascend, 0.08 * math.sin(t * 0.45), 0.04 * math.sin(t * 0.9)))
 end
 
-local SHEEP_LEGS = { LegFL = 0, LegBR = 0.3, LegFR = math.pi, LegBL = math.pi + 0.3 }
-local function animateSheep(rig, s, moving, fly, nova)
-    local m, u, t = rig.motors, rig.unit, s.time
+
+-- The Cloud Sheep (skinned): always half asleep, its hooves paddling at the air. It breathes with its whole fleece, its lobes on their own bones; its head sinks as it nods off and comes up with a
+-- start; it yawns. +X swings a limb's far end forward.
+local SHEEP_LEADS = { FL = 0, BR = 0.4, FR = math.pi, BL = math.pi + 0.4 }
+local SHEEP_LID_HINGE = { L = Vector3.new(0.7476, 0.1035, -0.6561), R = Vector3.new(0.7476, -0.1035, 0.6561) }
+local SHEEP_WOOL = { WoolTop = Vector3.new(0, 1, 0), WoolBack = Vector3.new(0, 0.1, 1), WoolChest = Vector3.new(0, 0.3, -1), WoolL = Vector3.new(-1, 0.1, 0), WoolR = Vector3.new(1, 0.1, 0) }
+
+local function animateCloudSheep(rig, s, moving, fly, nova)
+    local camera = workspace.CurrentCamera
+    if camera and (camera.CFrame.Position - rig.rootPart.Position).Magnitude > 90 then
+        return
+    end
+    local m, u, t, dt = rig.motors, rig.meters, s.time, rig.deltaTime
     local pace = math.max(moving, fly)
-    s.stride = (s.stride or 0) + rig.deltaTime * (1 + 4.5 * pace)
-    local stride = s.stride
-    local drift = math.sin(t * 0.9)
-    local bloom = math.sin(math.min(nova * 1.3, 1) * math.pi / 2)
-    local hover = 0.05 + 0.08 * fly + 0.25 * bloom
 
-    pose(m.Body, CFrame.new(0, (hover + 0.035 * drift + 0.02 * math.sin(stride * 2) * moving) * u, 0)
-        * CFrame.Angles(0.025 * math.sin(t * 0.7) + 0.05 * moving - 0.12 * bloom, 0.04 * math.sin(t * 0.37),
-            0.035 * math.sin(t * 0.55) + 0.03 * math.sin(stride) * moving))
-    local tilt = math.sin(t * 0.33) ^ 3 * (1 - pace) * (1 - bloom)
-    local gaze = 0.35 * math.sin(t * 0.21 + 0.6) * (1 - pace) * (1 - bloom)
-    pose(m.Head, CFrame.Angles(0.06 * math.sin(t * 0.8 + 1) - 0.06 * moving - 0.25 * bloom, gaze, 0.3 * tilt))
+    -- the special: it tucks its legs and draws in a huge breath, swelling, then lets it all go in one long sigh
+    local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+    local inhale = smoothstep(0, 0.38, progress) * (1 - smoothstep(0.42, 0.56, progress))
+    local sigh = smoothstep(0.41, 0.47, progress) * (1 - smoothstep(0.66, 0.95, progress))
 
-    for _, side in { "L", "R" } do
-        local ear = m["Ear" .. side]
-        if ear then
-            local sign = rig.sides["Ear" .. side] or 0
-            local offset = if side == "L" then 0 else 2.1
-            local flick = math.max(0, math.sin(t * 1.3 + offset)) ^ 12
-            pose(ear, CFrame.Angles(0, sign * (0.15 * math.sin(t * 0.6 + offset) + 0.3 * pace),
-                sign * (0.08 * drift - 0.15 + 0.5 * flick + 0.35 * bloom)))
+    -- nodding off: its head sinks over seconds, its eyes close, and then it starts awake
+    s.nextNod = s.nextNod or t + 4 + math.random() * 5
+    local nod, startle = 0, 0
+    if t >= s.nextNod then
+        local a = t - s.nextNod
+        if a > 4 then
+            s.nextNod = t + 7 + math.random() * 8
+        elseif pace < 0.25 and nova == 0 then
+            nod = smoothstep(0, 3.1, a) * (1 - smoothstep(3.1, 3.28, a))
+            startle = smoothstep(3.08, 3.2, a) * (1 - smoothstep(3.2, 4, a))
+        else
+            s.nextNod = t + 3
+        end
+    end
+    s.nextYawn = s.nextYawn or t + 10 + math.random() * 8
+    local yawn = 0
+    if t >= s.nextYawn then
+        local a = (t - s.nextYawn) / 2.6
+        if a >= 1 then
+            s.nextYawn = t + 13 + math.random() * 12
+        elseif nod == 0 and pace < 0.4 and nova == 0 then
+            yawn = smoothstep(0, 0.34, a) * (1 - smoothstep(0.66, 1, a))
         end
     end
 
-    for name, phase in SHEEP_LEGS do
-        local front = string.sub(name, 4, 4) == "F"
-        local paddle = 0.32 * math.sin(stride + phase) * moving
-        local idle = 0.06 * math.sin(t * 1.1 + phase) * (1 - pace)
-        local tuck = (if front then -1 else 1) * (0.45 * fly + 0.6 * bloom)
-        pose(m[name], CFrame.Angles(paddle + idle + tuck, 0, 0))
+    -- its breath, in the whole fleece: slow, and the lobes never quite together
+    local breath = math.sin(t * 1.15)
+    local index = 0
+    for name, out in SHEEP_WOOL do
+        index += 1
+        local amount = 0.011 * (breath + 0.3 * math.sin(t * 0.7 + index * 1.7)) + 0.012 * yawn + 0.09 * inhale - 0.03 * sigh
+        local back = Vector3.new(0, 0, 0.022 * pace * (if name == "WoolBack" then 1.5 else 0.6))
+        local at = (out * amount + back) * u
+        pose(m[name], CFrame.new(at.X, at.Y, at.Z))
+    end
+    pose(m.WoolCap, CFrame.new(0, (0.006 * breath + 0.03 * inhale) * u, 0))
+
+    local hover = 0.015 * math.sin(t * 0.95) + 0.02 * fly + 0.2 * inhale + 0.08 * sigh
+    pose(m.Body, CFrame.new(0, hover * u, 0) * CFrame.Angles(0.02 * math.sin(t * 0.95 - 0.8) - 0.09 * moving - 0.16 * fly + 0.14 * inhale - 0.1 * sigh, 0.03 * math.sin(t * 0.31), 0.03 * math.sin(t * 0.53)))
+
+    -- the head hangs low; it sinks to sleep; it looks slowly about
+    s.nextGaze = s.nextGaze or 0
+    if t >= s.nextGaze then
+        s.nextGaze = t + 3 + math.random() * 5
+        s.gazeTo = (math.random() - 0.5) * 0.6
+    end
+    s.gaze = (s.gaze or 0) + ((s.gazeTo or 0) * (1 - nod) * (1 - nova) - (s.gaze or 0)) * math.min(1, dt * 1.2)
+    pose(m.Head, CFrame.new(0, 0, (0.02 * moving) * u) * CFrame.Angles(0.012 * math.sin(t * 1.15 - 0.6) - 0.48 * nod + 0.2 * startle + 0.26 * yawn + 0.1 * moving + 0.2 * inhale - 0.04 * sigh, s.gaze, 0.1 * nod))
+
+    -- half asleep: the lids rest low, and close as it nods off
+    s.nextBlink = s.nextBlink or t + 2
+    local blink = 0
+    if t >= s.nextBlink then
+        local a = (t - s.nextBlink) / 0.34
+        if a >= 1 then
+            s.nextBlink = t + 2.5 + math.random() * 4
+        else
+            blink = 1 - math.abs(2 * a - 1)
+        end
+    end
+    local shut = math.max(blink, nod, yawn, sigh * 0.9, inhale * 0.7) * (1 - startle)
+    local wide = math.rad(14) * startle
+    for _, side in { "L", "R" } do
+        pose(m["LidU" .. side], CFrame.fromAxisAngle(SHEEP_LID_HINGE[side], -math.rad(26) * shut + wide))
+        pose(m["LidL" .. side], CFrame.fromAxisAngle(SHEEP_LID_HINGE[side], math.rad(14) * shut))
+        pose(m["Eye" .. side], CFrame.Angles(0, s.gaze * 0.5, 0))
+        local sign = if side == "L" then -1 else 1
+        local offset = if side == "L" then 0 else 1.9
+        local flick = math.max(0, math.sin(t * 0.8 + offset)) ^ 18
+        pose(m["Ear" .. side], CFrame.Angles(0.06 * math.sin(t * 1.15 + offset) - 0.34 * nod + 0.34 * startle + 0.3 * flick - 0.34 * pace, 0, sign * 0.06 * math.sin(t * 0.7 + offset)))
+    end
+    local open = math.max(yawn, sigh * 0.85)
+    pose(m.Smile, CFrame.new(0, 0, 0.03 * open * u))
+    pose(m.Mouth, CFrame.new(0, 0.006 * open * u, -0.03 * open * u))
+
+    -- it paddles, slowly, even asleep: swimming on the air
+    s.stride = (s.stride or 0) + dt * (1.5 - 0.8 * nod + 7 * moving + 3 * fly)
+    local tuck = math.max(inhale, sigh * 0.7, fly * 0.55)
+    local reach = (0.2 + 0.32 * pace) * (1 - tuck)
+    for key, lead in SHEEP_LEADS do
+        local phase = s.stride + lead
+        local a, lift = math.sin(phase), math.max(0, math.cos(phase))
+        if string.sub(key, 1, 1) == "F" then
+            pose(m["Leg" .. key .. "1"], CFrame.Angles(reach * a + 1.0 * tuck, 0, 0))
+            pose(m["Leg" .. key .. "2"], CFrame.Angles(-(0.26 + 0.7 * pace) * lift * (1 - tuck) - 1.6 * tuck, 0, 0))
+            pose(m["Hoof" .. key], CFrame.Angles(-0.34 * lift - 0.6 * tuck, 0, 0))
+        else
+            pose(m["Leg" .. key .. "1"], CFrame.Angles(reach * a - 0.95 * tuck, 0, 0))
+            pose(m["Leg" .. key .. "2"], CFrame.Angles((0.24 + 0.6 * pace) * lift * (1 - tuck) + 1.5 * tuck, 0, 0))
+            pose(m["Hoof" .. key], CFrame.Angles(-0.3 * lift - 0.45 * tuck, 0, 0))
+        end
     end
 
-    pose(m.Tail, CFrame.Angles(0.08 * math.sin(t * 0.9) + 0.15 * bloom, 0.18 * math.sin(t * 0.6), 0.06 * math.sin(t * 0.75)))
+    pose(m.Tail, CFrame.Angles(0.08 * math.sin(t * 1.15 + 0.5) - 0.2 * pace, 0.16 * math.sin(t * 1.9) + 0.3 * math.max(0, math.sin(t * 0.37)) ^ 10 * math.sin(t * 11), 0))
 end
 
 -- The Wind Sprite is one smooth skin on a skeleton, so its joints are Bones (PetRig.buildSkinned). Axes as everywhere: -Z ahead, +X to its right; its left is -X.
@@ -620,6 +697,324 @@ local function animateWindSprite(rig, s, moving, fly, nova)
             0.045 * (0.5 + f) * (1 + moving) * math.sin(t * 1.15 - k * 0.5), 0.025 * math.sin(t * 0.8 - k * 0.45)))
     end
     pose(m.TailTip, CFrame.Angles(open + 0.1 * math.sin(t * 1.6 - 5), 0, 0.05 * math.sin(t * 2.1)))
+end
+
+-- The Galaxy Manta (a skinned pet, like the Wind Sprite): waves run out along its wings and back across them; a little galaxy turns under it, on its own bones, so
+-- the body can bank and roll over it. Rings turning at slightly different speeds wind and unwind the arms.
+local MANTA_SPAN = { 0.10, 0.13, 0.17, 0.2 }
+
+local function animateGalaxyManta(rig, s, moving, fly, nova)
+    local camera = workspace.CurrentCamera
+    if camera and (camera.CFrame.Position - rig.rootPart.Position).Magnitude > WIND_FAR then
+        return
+    end
+    local m, u, t, dt = rig.motors, rig.meters, s.time, rig.deltaTime
+    local pace = math.max(moving, fly)
+
+    -- the special: it rears until the galaxy faces the world, gathering, then sweeps down as it is thrown open
+    local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+    local rear = smoothstep(0, 0.3, progress) * (1 - smoothstep(0.62, 0.95, progress))
+    local gather = smoothstep(0.08, 0.4, progress) * (1 - smoothstep(0.42, 0.47, progress))
+    local sweep = smoothstep(0.41, 0.46, progress) * (1 - smoothstep(0.52, 0.85, progress))
+
+    -- it leans into its turns, a wing dropping
+    local look = rig.rootPart.CFrame.LookVector
+    local heading = math.atan2(-look.X, -look.Z)
+    local turned = heading - (s.heading or heading)
+    turned = (turned + math.pi) % (2 * math.pi) - math.pi
+    s.heading = heading
+    local turnRate = if dt > 0 then turned / dt else 0
+    s.bank = (s.bank or 0) + (math.clamp(turnRate * 0.3, -0.6, 0.6) - (s.bank or 0)) * math.min(1, dt * 3)
+
+    -- now and then, for no reason but joy, a slow barrel roll
+    s.nextRoll = s.nextRoll or t + 9 + math.random() * 10
+    local rollAngle, rollLift = 0, 0
+    if t >= s.nextRoll then
+        local a = (t - s.nextRoll) / 3.2
+        if a >= 1 then
+            s.nextRoll = t + 18 + math.random() * 16
+            s.rollSide = if math.random() < 0.5 then 1 else -1
+        elseif pace < 0.25 and nova == 0 then
+            rollAngle = (s.rollSide or 1) * 2 * math.pi * smoothstep(0.05, 0.95, a)
+            rollLift = math.sin(math.pi * a)
+        else
+            s.nextRoll = t + 4
+        end
+    end
+    local calm = 1 - 0.75 * rollLift
+
+    -- every so often it opens its mouth and spreads its horn fins, feeding on the dark
+    s.nextFeed = s.nextFeed or t + 6 + math.random() * 8
+    local feed = 0
+    if t >= s.nextFeed then
+        local a = (t - s.nextFeed) / 2.8
+        if a >= 1 then
+            s.nextFeed = t + 13 + math.random() * 12
+        else
+            feed = smoothstep(0, 0.22, a) * (1 - smoothstep(0.72, 1, a))
+        end
+    end
+    local open = math.max(feed * (1 - pace), 0.8 * rear)
+
+    s.flap = (s.flap or 0) + dt * (1.5 + 0.9 * moving + 1.7 * fly + 0.8 * sweep - 0.7 * gather)
+    local flap = s.flap
+    local hover = -0.035 * math.sin(flap + 0.7) + 0.02 * math.sin(t * 0.61) + 0.05 * fly + 0.45 * rollLift + 0.32 * rear
+    pose(m.Body, CFrame.new(0, hover * u, 0)
+        * CFrame.Angles(0.05 * math.sin(flap + 1.6) - 0.13 * moving - 0.24 * fly + 1.08 * rear - 0.32 * sweep, 0, s.bank + rollAngle))
+    pose(m.Head, CFrame.Angles(0.035 * math.sin(flap + 0.8) + 0.06 * pace - 0.3 * rear, 0.05 * math.sin(t * 0.37), 0))
+
+    -- the wings: each joint a little behind the last, so the beat travels out to the tip; the back of the wing follows the front
+    local stroke = (0.9 + 0.35 * moving + 0.2 * fly) * calm
+    local back = 0.2 * moving + 0.42 * fly - 0.2 * gather
+    for k = 1, 4 do
+        local beat = stroke * MANTA_SPAN[k] * math.sin(flap - k * 0.55)
+        local lift = (if k == 1 then 0.1 else 0.05) * (1 - pace) * 0.4 + 0.2 * gather + 0.05 * rear - 0.3 * sweep * (k + 1) / 3
+        local swing = if k == 1 then back else 0
+        pose(m["WingL" .. k], CFrame.Angles(0, swing, -(beat + lift)))
+        pose(m["WingR" .. k], CFrame.Angles(0, -swing, beat + lift))
+        local fold = (0.12 + 0.05 * k) * math.sin(flap - k * 0.55 - 1.3) * calm + 0.14 * moving + 0.2 * fly - 0.2 * gather
+        pose(m["WingRearL" .. k], CFrame.Angles(fold, 0, 0))
+        pose(m["WingRearR" .. k], CFrame.Angles(fold, 0, 0))
+    end
+
+    -- the eyes turn slowly, and old: an animal watching, not a toy
+    s.nextGaze = s.nextGaze or 0
+    if t >= s.nextGaze then
+        s.nextGaze = t + 2.5 + math.random() * 4
+        s.gazeTo = (math.random() - 0.5) * 0.5
+    end
+    s.gaze = (s.gaze or 0) + ((s.gazeTo or 0) - (s.gaze or 0)) * math.min(1, dt * 3)
+    pose(m.EyeL, CFrame.Angles(0, s.gaze, 0))
+    pose(m.EyeR, CFrame.Angles(0, s.gaze, 0))
+
+    pose(m.Smile, CFrame.new(0, 0, 0.03 * open * u))
+    pose(m.Mouth, CFrame.new(0, 0, -0.036 * open * u))
+
+    -- the horn fins furl and open; they spread as it feeds and stream back at speed
+    for k = 1, 3 do
+        local sway = 0.06 * math.sin(t * 0.9 - k * 0.7)
+        local spread = 0.2 * open - 0.13 * k * pace * 0.5
+        pose(m["HornL" .. k], CFrame.Angles(sway + 0.12 * pace, -spread, 0.03 * math.sin(t * 0.7 - k)))
+        pose(m["HornR" .. k], CFrame.Angles(sway + 0.12 * pace, spread, -0.03 * math.sin(t * 0.7 - k)))
+    end
+
+    -- the tail: a slow wave, straightening with speed, tucking under as it rears
+    local whip = 1 + 0.5 * moving
+    local level = 0.055 * pace - 0.09 * rear
+    for k = 1, 8 do
+        local f = k / 8
+        pose(m["Tail" .. k], CFrame.Angles(level + 0.03 * math.sin(t * 1.1 - k * 0.5) + 0.05 * sweep, whip * (0.035 + 0.05 * f) * math.sin(t * 1.7 - k * 0.62) * (1 - 0.5 * fly), 0))
+    end
+    pose(m.TailTip, CFrame.Angles(0, 0.1 * math.sin(t * 2.3), 0))
+
+    -- the galaxy turns, its arms trailing. At speed it lags behind and tips; when it rears, the wheel rises and faces forward with it, spinning up
+    s.spin = (s.spin or 0) + dt * (0.24 + 0.2 * pace + 3.4 * gather + 2.6 * sweep)
+    local follow = CFrame.new(0, (0.82 * rear + 0.3 * rollLift) * u, (0.3 * pace - 0.62 * rear) * u) * CFrame.Angles(1.08 * rear - 0.22 * pace, 0, 0)
+    pose(m.SpiralOuter, follow * CFrame.Angles(0, -s.spin, 0))
+    pose(m.SpiralMid, follow * CFrame.Angles(0, -(s.spin * 1.14 + 0.14 * math.sin(t * 0.23)), 0))
+    pose(m.SpiralInner, follow * CFrame.Angles(0, -(s.spin * 1.34 + 0.3 * math.sin(t * 0.17)), 0))
+    s.orbit = (s.orbit or 0) + dt * (0.34 + 0.7 * nova)
+    pose(m.Orbit, follow * CFrame.Angles(0, -s.orbit, 0))
+end
+
+-- The Stormhorn Kirin (skinned): a proud walker on the air. A rocking canter with a real lead, its hooves throwing sparks where they land; its head carried high and low with the
+-- stride, its mane and tail on a wind only it feels, lightning flickering in the mane. It paws and tosses its head when it stands. Its joints: +X swings a limb's far end forward, and raises
+-- what points ahead. Hind legs bend the other way at the stifle (Leg2) from the hock (Leg3).
+local KIRIN_LEADS = { FL = 0, BR = 0.3, FR = math.pi, BL = math.pi + 0.3 }
+local KIRIN_LID_HINGE = { L = Vector3.new(0.4472, -0.2227, -0.8662), R = Vector3.new(0.4472, 0.2227, 0.8662) }
+local KIRIN_BLINK_UPPER, KIRIN_BLINK_LOWER = math.rad(36), math.rad(12)
+local KIRIN_MANE = { A = 0, B = 0.9, C = 1.8 }
+
+local function animateStormhornKirin(rig, s, moving, fly, nova)
+    local camera = workspace.CurrentCamera
+    if camera and (camera.CFrame.Position - rig.rootPart.Position).Magnitude > WIND_FAR then
+        return
+    end
+    local m, u, t, dt = rig.motors, rig.meters, s.time, rig.deltaTime
+    local pace = math.max(moving, fly)
+
+    -- the special: it rears, its horn raised; the forelegs come down as lightning flares through its mane
+    local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+    local rear = smoothstep(0, 0.3, progress) * (1 - smoothstep(0.39, 0.46, progress))
+    local slam = smoothstep(0.39, 0.46, progress) * (1 - smoothstep(0.52, 0.86, progress))
+
+    -- now and then, standing: it paws the air and stamps, or tosses its head
+    s.nextPaw = s.nextPaw or t + 5 + math.random() * 6
+    local paw = 0
+    if t >= s.nextPaw then
+        local a = (t - s.nextPaw) / 1.9
+        if a >= 1 then
+            s.nextPaw = t + 10 + math.random() * 10
+        elseif pace < 0.2 and nova == 0 then
+            paw = math.sin(a * math.pi) * (0.65 + 0.35 * math.sin(a * math.pi * 6))
+            if a > 0.8 and not s.stamped then
+                s.stamped = true
+                s.flickerUntil = t + 0.3
+                local sparks = s.sparks and s.sparks.FR
+                if sparks then
+                    sparks:Emit(7)
+                end
+            end
+        end
+    else
+        s.stamped = false
+    end
+    s.nextToss = s.nextToss or t + 8 + math.random() * 8
+    local toss = 0
+    if t >= s.nextToss then
+        local a = (t - s.nextToss) / 1.1
+        if a >= 1 then
+            s.nextToss = t + 9 + math.random() * 9
+        elseif pace < 0.3 and nova == 0 then
+            toss = math.sin(a * math.pi) * math.sin(a * math.pi * 2.5)
+        end
+    end
+
+    -- the stride
+    if not s.sparks then
+        s.sparks = {}
+        for key in KIRIN_LEADS do
+            local hoof = rig.points["Hoof" .. key]
+            local sparks = hoof and hoof:FindFirstChild("Sparks")
+            if sparks then
+                sparks.Enabled = false -- only where a hoof lands: hot, thrown out, falling under gravity
+                sparks.Texture = "rbxassetid://113649240058592"
+                sparks.Orientation = Enum.ParticleOrientation.VelocityParallel
+                sparks.Rotation = NumberRange.new(90)
+                sparks.Speed = NumberRange.new(2.6 * rig.unit, 5 * rig.unit)
+                sparks.SpreadAngle = Vector2.new(70, 70)
+                sparks.Acceleration = Vector3.new(0, -8 * rig.unit, 0)
+                sparks.Drag = 1.5
+                sparks.Lifetime = NumberRange.new(0.2, 0.42)
+                sparks.Size = NumberSequence.new(0.13 * rig.unit, 0.05 * rig.unit)
+                sparks.Color = ColorSequence.new(Color3.fromRGB(225, 238, 255), Color3.fromRGB(255, 190, 110))
+                s.sparks[key] = sparks
+            end
+        end
+    end
+    s.stride = (s.stride or 0) + dt * (10.5 * moving + 4.5 * fly)
+    local stride = s.stride
+    local rock = math.sin(stride + 0.6)
+    local tuck = math.sin(math.min(fly, 1) * math.pi / 2)
+    for key, lead in KIRIN_LEADS do
+        local phase = stride + lead
+        local a, lift = math.sin(phase), math.max(0, math.cos(phase)) ^ 1.2
+        local landing = math.cos(phase)
+        if moving > 0.5 and (s.lastLanding and s.lastLanding[key] or 0) > 0 and landing <= 0 and s.sparks[key] then
+            s.sparks[key]:Emit(3)
+        end
+        s.lastLanding = s.lastLanding or {}
+        s.lastLanding[key] = landing
+        local sideSign = if string.sub(key, 2, 2) == "L" then 1 else -1
+        local idle = 0.018 * math.sin(t * 0.8 + lead)
+        local p1, p2, p3, p4
+        if string.sub(key, 1, 1) == "F" then
+            p1 = idle + moving * (0.52 * a + 0.05) + tuck * (0.72 + 0.14 * a) * (1 - moving) + rear * (if sideSign > 0 then 0.78 + 0.22 * math.sin(t * 11) else 0.36 - 0.22 * math.sin(t * 11)) + slam * 0.2
+            p2 = moving * 0.08 + tuck * 0.18 + rear * 0.16
+            p3 = -moving * (1.3 * lift + 0.08) - tuck * 1.45 - rear * (if sideSign > 0 then 1.55 else 1.1) - slam * 0.1
+            p4 = -moving * (0.5 * lift + 0.08) - tuck * 0.62 - rear * 0.6
+            if key == "FR" then
+                p1 += 0.62 * paw
+                p3 -= 1.25 * paw
+                p4 -= 0.55 * paw
+            end
+        else
+            p1 = idle + moving * (0.44 * a - 0.08) + tuck * (-0.5 + 0.12 * a) * (1 - moving) - rear * 0.8 - slam * 0.12
+            p2 = moving * 0.64 * lift + tuck * 0.2 + rear * 0.12
+            p3 = -moving * (0.95 * lift + 0.06) - tuck * 0.32 - rear * 0.16
+            p4 = -moving * 0.46 * lift - tuck * 0.32 + rear * 0.14
+        end
+        pose(m["Leg" .. key .. "1"], CFrame.Angles(p1, 0, 0))
+        pose(m["Leg" .. key .. "2"], CFrame.Angles(p2, 0, 0))
+        pose(m["Leg" .. key .. "3"], CFrame.Angles(p3, 0, 0))
+        pose(m["Hoof" .. key], CFrame.Angles(p4, 0, 0))
+    end
+
+    -- it leans into turns
+    local look = rig.rootPart.CFrame.LookVector
+    local heading = math.atan2(-look.X, -look.Z)
+    local turned = (heading - (s.heading or heading) + math.pi) % (2 * math.pi) - math.pi
+    s.heading = heading
+    s.bank = (s.bank or 0) + (math.clamp((if dt > 0 then turned / dt else 0) * 0.12, -0.28, 0.28) - (s.bank or 0)) * math.min(1, dt * 3)
+
+    local hover = 0.1 + 0.012 * math.sin(t * 1.5) + moving * 0.034 * math.sin(2 * stride + 0.4) + 0.05 * fly + 0.015 * math.sin(t * 2.1) * fly + 0.2 * rear
+    pose(m.Body, CFrame.new(0, hover * u, 0) * CFrame.Angles(0.006 * math.sin(t * 1.5) + moving * (0.045 * rock - 0.02) + 0.13 * fly + 0.84 * rear - 0.1 * slam, 0.02 * math.sin(t * 0.31), s.bank))
+    pose(m.Hips, CFrame.Angles(-moving * 0.06 * math.sin(stride + 1.7) + 0.05 * tuck, 0.03 * math.sin(t * 0.5) * (1 - pace), 0))
+    pose(m.Chest, CFrame.Angles(moving * 0.03 * math.sin(stride - 0.4), 0, 0.012 * math.sin(t * 0.8)))
+
+    -- head and neck: its gaze wanders, its head follows slowly; low and reaching at speed
+    s.nextGaze = s.nextGaze or 0
+    if t >= s.nextGaze then
+        s.nextGaze = t + 1.6 + math.random() * 3.2
+        s.gazeTo = (math.random() - 0.5) * 0.7
+    end
+    local calm = (1 - pace * 0.75) * (1 - nova)
+    s.gaze = (s.gaze or 0) + ((s.gazeTo or 0) * calm - (s.gaze or 0)) * math.min(1, dt * 2.2)
+    local nod = moving * 0.055 * math.sin(2 * stride - 0.5)
+    pose(m.Neck1, CFrame.Angles(0.012 * math.sin(t * 1.5 - 0.5) - 0.2 * moving - 0.05 * fly - 0.24 * rear + 0.14 * slam + 0.05 * toss - 0.1 * paw, s.gaze * 0.28, s.bank * 0.5))
+    pose(m.Neck2, CFrame.Angles(0.012 * math.sin(t * 1.5 - 1) - 0.1 * moving - 0.17 * rear - 0.34 * slam + 0.08 * toss - 0.07 * paw + nod, s.gaze * 0.36, 0))
+    pose(m.Head, CFrame.Angles(0.012 * math.sin(t * 1.5 - 1.5) + 0.22 * moving + 0.08 * fly + 0.4 * rear + 0.06 * slam - 0.2 * toss + 0.12 * paw - nod * 0.6, s.gaze * 0.5, 0.05 * math.sin(t * 0.37) * calm))
+    pose(m.Jaw, CFrame.Angles(-(0.16 * rear + 0.24 * slam + 0.1 * math.max(0, toss)), 0, 0))
+
+    -- the eye: blinks slowly, turns ahead of the head; a sterner lid when it runs
+    s.nextBlink = s.nextBlink or t + 2
+    local blink = 0
+    if t >= s.nextBlink then
+        local a = (t - s.nextBlink) / 0.2
+        if a >= 1 then
+            s.nextBlink = t + (if math.random() < 0.15 then 0.14 else 2.8 + math.random() * 4)
+        else
+            blink = 1 - math.abs(2 * a - 1)
+        end
+    end
+    local rest = math.rad(4 + 7 * pace - 6 * rear)
+    local upper = rest + (KIRIN_BLINK_UPPER - rest) * math.max(blink, slam * 0.25)
+    local lower = KIRIN_BLINK_LOWER * blink
+    for _, side in { "L", "R" } do
+        pose(m["Eye" .. side], CFrame.Angles(0, s.gaze * 0.6, 0))
+        pose(m["LidU" .. side], CFrame.fromAxisAngle(KIRIN_LID_HINGE[side], -upper))
+        pose(m["LidL" .. side], CFrame.fromAxisAngle(KIRIN_LID_HINGE[side], lower))
+    end
+
+    -- ears flick; the frills at its jaw trail
+    for _, side in { "L", "R" } do
+        local sign = if side == "L" then -1 else 1
+        local offset = if side == "L" then 0 else 2.2
+        local flick = math.max(0, math.sin(t * 0.9 + offset)) ^ 16
+        pose(m["Ear" .. side], CFrame.Angles(-0.14 * pace - 0.3 * rear + 0.4 * flick * (1 - pace), sign * 0.12 * flick, 0))
+        pose(m["Frill" .. side], CFrame.Angles(0.07 * math.sin(t * 2.4 + offset) - 0.16 * pace, sign * (0.05 * math.sin(t * 1.5 + offset) - 0.1 * pace), 0))
+    end
+
+    -- the mane on its wind: heavier at rest, streaming out as it runs, lifting up and back as it rears
+    local gust = 0.5 + 0.5 * math.sin(t * 0.47)
+    local waveSpeed = 2.1 + 4.2 * pace
+    for cluster, phase in KIRIN_MANE do
+        local base = 0.16 * (1 - pace) + 0.2 * moving - 0.12 * fly - 0.36 * rear + 0.2 * slam -- (a neck reaching forward would throw it straight up)
+        local wave = (0.06 + 0.05 * gust + 0.07 * pace)
+        pose(m["Mane" .. cluster .. "1"], CFrame.Angles(base + wave * math.sin(t * waveSpeed - phase), 0.05 * math.sin(t * 1.3 - phase), 0))
+        pose(m["Mane" .. cluster .. "2"], CFrame.Angles(base * 0.8 + 1.5 * wave * math.sin(t * waveSpeed - phase - 1.1), 0.09 * math.sin(t * 1.3 - phase - 1), 0))
+    end
+
+    -- the tail: a slow swish at rest, a long wave at speed; it clamps down as it rears
+    local droop = 0.045 * (1 - pace) - 0.02 * fly + 0.1 * rear
+    for k = 1, 6 do
+        local f = k / 6
+        pose(m["Tail" .. k], CFrame.Angles(droop + (0.025 + 0.05 * pace) * math.sin(t * (1.7 + 3 * pace) - k * 0.65),
+            (0.03 + 0.05 * f) * (1 + 0.5 * pace) * math.sin(t * (1.05 + 1.6 * pace) - k * 0.55), 0))
+    end
+    pose(m.TailTip, CFrame.Angles(0, 0.1 * math.sin(t * 2.4), 0))
+
+    -- lightning flickers in the mane: a few quick stutters every so often, oftener at speed, without pause during its special
+    s.nextFlicker = s.nextFlicker or t + 1
+    if t >= s.nextFlicker then
+        s.flickerUntil = t + 0.16 + math.random() * 0.22
+        s.nextFlicker = t + (1.1 + 2.6 * math.random()) * (1 - 0.6 * pace)
+    end
+    local bolts = rig.parts.Bolts
+    if bolts then
+        local lit = nova > 0.3 or (t < (s.flickerUntil or 0) and math.sin(t * 73) > -0.35)
+        bolts.Transparency = if lit then 0 else 1
+    end
 end
 
 local LION_LEGS = { LegFL = 0, LegBR = 0.15, LegFR = math.pi, LegBL = math.pi + 0.15 }
@@ -1168,40 +1563,31 @@ PetRig.Profiles.SpiritCrane = {
 }
 
 PetRig.Profiles.CloudSheep = {
-    Joints = {
-        Body = "Root",
-        Head = "Body",
-        EarL = "Head",
-        EarR = "Head",
-        LegFL = "Body",
-        LegFR = "Body",
-        LegBL = "Body",
-        LegBR = "Body",
-        Tail = "Body",
+    Skinned = true,
+    Bones = {
+        "Body", "Head", "WoolCap", "Tail", "WoolTop", "WoolBack", "WoolChest", "WoolL", "WoolR", "EyeL", "EyeR", "LidUL", "LidUR", "LidLL", "LidLR", "EarL", "EarR", "Smile", "Mouth",
+        "LegFL1", "LegFL2", "HoofFL", "LegFR1", "LegFR2", "HoofFR", "LegBL1", "LegBL2", "HoofBL", "LegBR1", "LegBR2", "HoofBR",
     },
+    Points = { "Tail" },
     GlowColors = {
-        ["59daf1"] = Color3.fromRGB(20, 190, 235),
-        ["61cbf3"] = Color3.fromRGB(30, 150, 240),
-        ["59ddef"] = Color3.fromRGB(10, 190, 220),
+        ["f0ead8"] = Color3.fromRGB(170, 165, 150), -- the catch-light in its eye
     },
     Effects = {
-        Motes = "Body",
-        Light = "Body",
-        Pulse = "Body",
         Burst = "Body",
-        Sparks = { "LegFL_Hoof", "LegFR_Hoof", "LegBL_Hoof", "LegBR_Hoof" },
-        Trail = "Tail_Tip",
+        Trail = "Tail",
+        TrailWidth = 0.05,
+        TrailTaper = true,
         Blast = "CloudBloom",
         NovaLight = 3,
     },
     Colors = {
-        Gold = Color3.fromRGB(120, 215, 245),
+        Gold = Color3.fromRGB(190, 215, 240),
         Amber = Color3.fromRGB(150, 150, 190),
-        Orange = Color3.fromRGB(185, 170, 235),
+        Orange = Color3.fromRGB(185, 195, 235),
         Sun = Color3.fromRGB(240, 248, 255),
         Ivory = Color3.fromRGB(250, 250, 255),
     },
-    Animate = animateSheep,
+    Animate = animateCloudSheep,
 }
 
 PetRig.Profiles.GoldenManeLion = {
@@ -1245,7 +1631,6 @@ local NOVA_BURST_AT = 0.42
 
 PetRig.Profiles.WindSprite = {
     Skinned = true,
-    AuthoredLength = 1.71, -- its longest side as built, in the Blender units its poses are written in
     Bones = {
         "Body", "Head", "Crest1", "Crest2", "EarL", "EarR", "EyeL", "EyeR", "LidUL", "LidUR", "LidLL", "LidLR", "BrowL", "BrowR", "CheekL", "CheekR",
         "Smile", "Blow", "ArmL1", "ArmL2", "ArmR1", "ArmR2", "WingL", "WingR", "WingMidL", "WingMidR", "Tail1", "Tail2", "Tail3", "Tail4", "Tail5", "Tail6", "Tail7", "TailTip", "Tassel",
@@ -1275,6 +1660,78 @@ PetRig.Profiles.WindSprite = {
         Ivory = Color3.fromRGB(235, 255, 250),
     },
     Animate = animateWindSprite,
+}
+
+PetRig.Profiles.StormhornKirin = {
+    Skinned = true,
+    SkinTint = Color3.fromRGB(250, 230, 198), -- the game's light pushes its slate to a royal blue: this brings the storm back (seen in Studio)
+    Bones = {
+        "Body", "Hips", "Chest", "Neck1", "Neck2", "Head", "Jaw", "EyeL", "EyeR", "LidUL", "LidUR", "LidLL", "LidLR", "EarL", "EarR", "FrillL", "FrillR",
+        "ManeA1", "ManeA2", "ManeB1", "ManeB2", "ManeC1", "ManeC2", "Tail1", "Tail2", "Tail3", "Tail4", "Tail5", "Tail6", "TailTip",
+        "LegFL1", "LegFL2", "LegFL3", "HoofFL", "LegFR1", "LegFR2", "LegFR3", "HoofFR", "LegBL1", "LegBL2", "LegBL3", "HoofBL", "LegBR1", "LegBR2", "LegBR3", "HoofBR",
+    },
+    Points = { "HoofFL", "HoofFR", "HoofBL", "HoofBR", "TailTip", "HornTip" },
+    GlowColors = {
+        ["4fb4ff"] = Color3.fromRGB(30, 125, 255),
+        ["2a9dff"] = Color3.fromRGB(20, 110, 255),
+        ["a8e0ff"] = Color3.fromRGB(120, 200, 255),
+        ["f0ead8"] = Color3.fromRGB(170, 165, 150), -- the catch-light in its eye
+    },
+    Effects = {
+        Pulse = "Horn",
+        Burst = "Body",
+        Sparks = { "HoofFL", "HoofFR", "HoofBL", "HoofBR" },
+        Trail = "TailTip",
+        TrailWidth = 0.05,
+        TrailTaper = true,
+        Blast = "ThunderAnswers",
+        NovaLight = 3,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(90, 170, 255),
+        Amber = Color3.fromRGB(255, 190, 90),
+        Orange = Color3.fromRGB(60, 110, 240),
+        Sun = Color3.fromRGB(190, 230, 255),
+        Ivory = Color3.fromRGB(235, 245, 255),
+    },
+    Animate = animateStormhornKirin,
+}
+
+PetRig.Profiles.GalaxyManta = {
+    Skinned = true,
+    Bones = {
+        "Body", "Head", "EyeL", "EyeR", "Smile", "Mouth", "SpiralInner", "SpiralMid", "SpiralOuter", "Orbit",
+        "HornL1", "HornL2", "HornL3", "HornR1", "HornR2", "HornR3",
+        "WingL1", "WingL2", "WingL3", "WingL4", "WingR1", "WingR2", "WingR3", "WingR4",
+        "WingRearL1", "WingRearL2", "WingRearL3", "WingRearL4", "WingRearR1", "WingRearR2", "WingRearR3", "WingRearR4",
+        "Tail1", "Tail2", "Tail3", "Tail4", "Tail5", "Tail6", "Tail7", "Tail8", "TailTip",
+    },
+    Points = { "TailTip", "WingL4", "WingR4", "SpiralInner" },
+    GlowColors = {
+        ["8a6bff"] = Color3.fromRGB(104, 62, 255),
+        ["ffc878"] = Color3.fromRGB(255, 118, 26), -- Neon shifts hard here: 255,92,16 reads orange, 255,142,44 lemon (seen in Studio)
+        ["e6e0ff"] = Color3.fromRGB(176, 160, 255),
+        ["d8d0f0"] = Color3.fromRGB(170, 165, 200), -- the catch-light in its eye: full white blooms over so small an eye
+    },
+    Effects = {
+        Motes = "Body",
+        Pulse = "Ember",
+        Burst = "Body",
+        Sparks = { "WingL4", "WingR4" },
+        Trail = "TailTip",
+        TrailWidth = 0.05,
+        TrailTaper = true,
+        Blast = "TurningOfTheHeavens",
+        NovaLight = 3,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(140, 100, 255),
+        Amber = Color3.fromRGB(255, 180, 90),
+        Orange = Color3.fromRGB(216, 72, 178),
+        Sun = Color3.fromRGB(255, 214, 140),
+        Ivory = Color3.fromRGB(235, 232, 255),
+    },
+    Animate = animateGalaxyManta,
 }
 
 function PetRig.isRigged(petId, template)
@@ -1540,8 +1997,8 @@ end
 
 -- A pet that is one skin on a skeleton. Its joints are Bones; rig.motors holds a stand-in for each, so animations pose it exactly as they
 -- pose a jointed pet: a pose in the pet's axes, turned into the bone's own (a bone may rest at any angle): rest:Inverse() * pose * rest.
--- rig.unit keeps effects the size they are on other pets; rig.meters is studs per Blender unit, what its own poses are written in.
-function PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, longest, length)
+-- rig.unit keeps effects the size they are on other pets; rig.meters is studs per metre as built, what its own poses are written in.
+function PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, length)
     local profile = PetRig.Profiles[petId]
     local prefix = petId .. "_"
     local rig = {
@@ -1549,7 +2006,7 @@ function PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, long
         model = model,
         rootPart = rootPart,
         unit = length / 3,
-        meters = longest * scale / profile.AuthoredLength,
+        meters = scale,
         parts = {},
         motors = {},
         sides = {},
@@ -2515,77 +2972,28 @@ function Blasts.HaloAscension(rig, fx)
     end
 end
 
+-- One long sigh: soft cloud leaves its whole fleece, drifting out, thinning as it goes. Real smoke, not shapes, and nothing beyond the sheep itself.
 function Blasts.CloudBloom(rig, fx)
-    local colors, u, origin, neon = rig.profile.Colors, rig.unit, fx.origin, fx.neon
-    local hooves = {}
-    for _, name in { "LegFL_Hoof", "LegFR_Hoof", "LegBL_Hoof", "LegBR_Hoof" } do
-        if rig.points[name] then
-            table.insert(hooves, rig.points[name].WorldPosition)
-        end
-    end
-    local ground = origin - Vector3.new(0, 0.9 * u, 0)
-    if #hooves > 0 then
-        local sum = Vector3.zero
-        for _, position in hooves do
-            sum += position
-        end
-        ground = sum / #hooves
-    end
-
-    local ring = neon(Vector3.new(0.04 * u, 0.6 * u, 0.6 * u), CFrame.new(ground + Vector3.new(0, 0.03 * u, 0)) * CFrame.Angles(0, 0, math.pi / 2), colors.Gold)
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Transparency = 0.45
-    TweenService:Create(ring, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Size = Vector3.new(0.02 * u, 4.4 * u, 4.4 * u),
-        Transparency = 1,
-    }):Play()
-
-    for index = 1, 10 do
-        local angle = index / 10 * 2 * math.pi + math.random() * 0.25
-        local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
-        local centre = origin + out * 0.3 * u
-        local finish = origin + out * (1.7 + math.random() * 0.4) * u + Vector3.new(0, (0.3 + math.random() * 0.4) * u, 0)
-        for lobe = 1, 3 do
-            local offset = Vector3.new(math.random() - 0.5, (lobe - 2) * 0.25, math.random() - 0.5) * 0.35 * u
-            local puff = neon(Vector3.one * 0.2 * u, CFrame.new(centre + offset), if lobe == 2 then colors.Ivory else colors.Sun)
-            puff.Shape = Enum.PartType.Ball
-            puff.Material = Enum.Material.SmoothPlastic
-            puff.Transparency = 0.1
-            local grown = (0.55 + 0.25 * math.random() - 0.1 * math.abs(lobe - 2)) * u
-            TweenService:Create(puff, TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = Vector3.one * grown,
-                CFrame = CFrame.new(centre:Lerp(finish, 0.6) + offset),
-            }):Play()
-            TweenService:Create(puff, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.In, 0, false, 0.55), {
-                CFrame = CFrame.new(finish + offset * 1.4 + Vector3.new(0, 0.3 * u, 0)),
-                Size = Vector3.one * grown * 1.3,
-                Transparency = 1,
-            }):Play()
-        end
-    end
-
-    for index = 1, 16 do
-        local start = origin + Vector3.new((math.random() - 0.5) * 2.4, 1.2 + math.random() * 0.6, (math.random() - 0.5) * 2.4) * u
-        local drop = neon(Vector3.new(0.05, 0.12, 0.05) * u, CFrame.new(start), if index % 2 == 0 then colors.Gold else colors.Sun)
-        drop.Shape = Enum.PartType.Ball
-        drop.Transparency = 1
-        local delay = 0.3 + math.random() * 0.4
-        TweenService:Create(drop, TweenInfo.new(0.08, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, delay), { Transparency = 0.2 }):Play()
-        TweenService:Create(drop, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, delay), {
-            CFrame = CFrame.new(Vector3.new(start.X, ground.Y + 0.05 * u, start.Z)),
-        }):Play()
-        TweenService:Create(drop, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, delay + 0.5), { Transparency = 1 }):Play()
-    end
-
-    local light = Instance.new("PointLight")
-    light.Color = colors.Gold
-    light.Range = 10 * u
-    light.Brightness = 1.6
-    light.Parent = ring
-    TweenService:Create(light, TweenInfo.new(1.2), { Brightness = 0 }):Play()
-    if rig.burst then
-        rig.burst:Emit(20)
-    end
+    local u = rig.unit
+    local holder = fx.neon(Vector3.new(1.3, 0.9, 1.5) * u, rig.rootPart.CFrame * CFrame.new(0, 0.25 * u, 0.2 * u), Color3.new(1, 1, 1))
+    holder.Transparency = 1
+    local puffs = Instance.new("ParticleEmitter")
+    puffs.Texture = "rbxasset://textures/particles/smoke_main.dds"
+    puffs.Rate = 0
+    puffs.Speed = NumberRange.new(0.5 * u, 1.4 * u)
+    puffs.SpreadAngle = Vector2.new(180, 180)
+    puffs.Drag = 1.8
+    puffs.Lifetime = NumberRange.new(1, 1.6)
+    puffs.Rotation = NumberRange.new(0, 360)
+    puffs.RotSpeed = NumberRange.new(-20, 20)
+    puffs.Acceleration = Vector3.new(0, 0.2 * u, 0)
+    puffs.LightEmission = 0
+    puffs.LightInfluence = 0.75
+    puffs.Color = ColorSequence.new(Color3.fromRGB(250, 252, 255))
+    puffs.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3 * u), NumberSequenceKeypoint.new(1, 1.05 * u) })
+    puffs.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(0.35, 0.62), NumberSequenceKeypoint.new(1, 1) })
+    puffs.Parent = holder
+    puffs:Emit(20)
 end
 
 -- Three ribbons of wind leave its mouth, wind round each other as they run ahead of it, and curl up and away; rings of breath and a scatter of
@@ -2698,6 +3106,104 @@ function Blasts.TuggingGale(rig, fx)
     TweenService:Create(light, TweenInfo.new(1), { Brightness = 0 }):Play()
     if rig.burst then
         rig.burst:Emit(14)
+    end
+end
+
+-- It rears and brings its hooves down: sparks fly from all four, and lightning flares through its mane. Its own lightning only: no weather.
+function Blasts.ThunderAnswers(rig, fx)
+    for _, name in { "FL", "FR", "BL", "BR" } do
+        local sparks = rig.state.sparks and rig.state.sparks[name]
+        if sparks then
+            sparks:Emit(14)
+        end
+    end
+    rig.state.flickerUntil = rig.state.time + 0.6
+end
+
+-- The galaxy under its wings, thrown open: stars in three arms wheel outward from its heart in front of it, three of them drawing ribbons, with a ring of light going out.
+function Blasts.TurningOfTheHeavens(rig, fx)
+    local colors, u, facing, neon = rig.profile.Colors, rig.unit, fx.facing, fx.neon
+    local heart = rig.points.SpiralInner
+    local centre = if heart then heart.TransformedWorldCFrame.Position else fx.origin
+    local ahead = facing:VectorToWorldSpace(Vector3.new(0, 0, -1))
+    local right = facing:VectorToWorldSpace(Vector3.new(1, 0, 0))
+    local up = Vector3.yAxis
+
+    local glow = rig.profile.GlowColors
+    local gold, violet, pale = glow["ffc878"], glow["8a6bff"], glow["e6e0ff"]
+    local stars = {}
+    for arm = 1, 3 do
+        for index = 1, 16 do
+            local f = index / 16
+            -- a thin streak of light, turned along its path each frame: a block this size reads as confetti
+            local thick = (0.042 - 0.018 * f) * u * (0.8 + 0.4 * math.random())
+            local star = neon(Vector3.new(thick, thick, thick * (5 + 3 * math.random())), CFrame.new(centre),
+                if f < 0.32 then gold elseif index % 5 == 0 then pale elseif index % 7 == 0 then colors.Orange else violet)
+            if index % 4 == 0 then
+                local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
+                a0.Position = Vector3.new(0, 0.035 * u, 0)
+                a1.Position = Vector3.new(0, -0.035 * u, 0)
+                a0.Parent, a1.Parent = star, star
+                local trail = Instance.new("Trail")
+                trail.Attachment0, trail.Attachment1 = a0, a1
+                trail.Lifetime = 0.34
+                trail.FaceCamera = true
+                trail.LightEmission = 0.8
+                trail.LightInfluence = 0
+                trail.Color = ColorSequence.new(pale, violet)
+                trail.Transparency = NumberSequence.new(0.15, 1)
+                trail.WidthScale = NumberSequence.new(1, 0.2)
+                trail.Parent = star
+            end
+            table.insert(stars, { part = star, angle = arm / 3 * 2 * math.pi + f * 2.6 + (math.random() - 0.5) * 0.14, reach = (0.22 + 1.65 * f) * (0.94 + 0.12 * math.random()) })
+        end
+    end
+    local started = os.clock()
+    local stepper
+    stepper = RunService.RenderStepped:Connect(function()
+        local f = (os.clock() - started) / 1.3
+        if f >= 1 or not stars[1].part.Parent then
+            stepper:Disconnect()
+            return
+        end
+        local opening = 1 - (1 - f) ^ 2.4
+        for _, star in stars do
+            local angle = star.angle - 3.2 * opening
+            local radius = star.reach * (0.15 + 1.25 * opening) * u
+            local at = centre + ahead * (0.25 + 0.9 * opening) * u + right * (math.cos(angle) * radius) + up * (math.sin(angle) * radius)
+            if star.last and (at - star.last).Magnitude > 1e-3 then
+                star.part.CFrame = CFrame.lookAt(at, at + (at - star.last))
+            else
+                star.part.CFrame = CFrame.new(at)
+            end
+            star.last = at
+            star.part.Transparency = smoothstep(0.62, 1, f)
+        end
+    end)
+
+    local flash = neon(Vector3.one * 0.3 * u, CFrame.new(centre), colors.Sun)
+    flash.Shape = Enum.PartType.Ball
+    flash.Transparency = 0.25
+    TweenService:Create(flash, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * 1.5 * u, Transparency = 1 }):Play()
+
+    local start = CFrame.lookAt(centre, centre + ahead) * CFrame.Angles(0, math.pi / 2, 0)
+    local ring = neon(Vector3.new(0.03 * u, 0.5 * u, 0.5 * u), start, colors.Gold)
+    ring.Shape = Enum.PartType.Cylinder
+    ring.Transparency = 0.8 -- a filled disc: stronger than this, it reads as a lens across the whole view
+    TweenService:Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        CFrame = start + ahead * 1.2 * u,
+        Size = Vector3.new(0.01 * u, 3.6 * u, 3.6 * u),
+        Transparency = 1,
+    }):Play()
+
+    local light = Instance.new("PointLight")
+    light.Color = colors.Gold
+    light.Range = 6 * u
+    light.Brightness = 1.2
+    light.Parent = flash
+    TweenService:Create(light, TweenInfo.new(0.9), { Brightness = 0 }):Play()
+    if rig.burst then
+        rig.burst:Emit(18)
     end
 end
 

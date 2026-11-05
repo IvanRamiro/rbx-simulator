@@ -20,45 +20,21 @@ import bpy
 import numpy as np
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
-from mathutils.kdtree import KDTree
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pet_kit
+from pet_kit import *  # noqa: F401,F403
+
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 STAGE = ARGS[0] if ARGS else "all"
 REVIEW = ARGS[1] if len(ARGS) > 1 else "/tmp"
 PET = "WindSprite"
 N = PET + "_"
-OUT = os.path.join(ROOT, "assets/pets/SpiritBreezeEgg")
-scene = bpy.context.scene
-TAU = 2 * math.pi
-for leftover in list(bpy.data.objects):   # the start-up scene's cube, light and camera
-    bpy.data.objects.remove(leftover, do_unlink=True)
-
-
-def V(*a):
-    return Vector(a)
-
-
-def rgb(r, g, b):
-    """sRGB 0-255 to linear."""
-    def f(c):
-        c /= 255
-        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
-    return np.array((f(r), f(g), f(b)))
+HI, GAME = pet_kit.start(PET, "SpiritBreezeEgg")
 
 
 PEARL, MINT, JADE, TEAL, DEEP = rgb(226, 246, 238), rgb(182, 238, 222), rgb(98, 208, 182), rgb(44, 156, 150), rgb(22, 96, 106)
 CORAL, GOLD, BLUSH, HAND = rgb(240, 104, 84), rgb(244, 190, 92), rgb(250, 150, 138), rgb(250, 232, 220)
-
-
-def smooth(a, b, x):
-    t = np.clip((x - a) / (b - a), 0, 1)
-    return t * t * (3 - 2 * t)
-
-
-def mix(a, b, t):
-    t = np.asarray(t)[..., None] if np.ndim(t) else t
-    return a * (1 - t) + b * t
 
 
 # ---------- the design, as numbers ----------
@@ -85,10 +61,6 @@ BLINK_U, BLINK_L = 72.0, 22.0
 EYE_C = V(0.1413, -0.1969, 0.8479)     # the ball's centre
 
 
-def mir(v, side):
-    return Vector((v.x * side, v.y, v.z))
-
-
 def curl_point(s):
     th = CURL_FROM + (CURL_TO - CURL_FROM) * s
     r = CURL_R * (1 - s) ** 0.92 + 0.028
@@ -98,19 +70,6 @@ def curl_point(s):
 
 def curl_radius(s):
     return 0.03 + 0.104 * (1 - s) ** 0.72 * min(1.0, 0.72 + s * 2.2)
-
-
-def catmull(pts, per=10):
-    pts = [Vector(p) for p in pts]
-    pts = [pts[0] * 2 - pts[1]] + pts + [pts[-1] * 2 - pts[-2]]
-    out = []
-    for i in range(1, len(pts) - 2):
-        p0, p1, p2, p3 = pts[i - 1], pts[i], pts[i + 1], pts[i + 2]
-        for k in range(per):
-            t = k / per
-            out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t))
-    out.append(pts[-2])
-    return out
 
 
 # the hair: one big lock swept up and back off the crown, leaning a little to its left, its tip curling over like a wave; two lower locks
@@ -127,98 +86,6 @@ def crest_side(side):
                     HEAD + V(side * 0.235, 0.115, 0.222), HEAD + V(side * 0.19, 0.11, 0.15)], 8)
 
 
-class Mesh:
-    def __init__(self):
-        self.bm = bmesh.new()
-
-    def ball(self, c, radii, seg=48, rings=32):
-        m = Matrix.Translation(c) @ Matrix.Diagonal((radii[0], radii[1], radii[2], 1))
-        bmesh.ops.create_uvsphere(self.bm, u_segments=seg, v_segments=rings, radius=1.0, matrix=m)
-
-    def tube(self, pts, rfn, sides=16, flat=1.0, plane=V(1, 0, 0), caps=True):
-        n = len(pts)
-        rings = []
-        for i, p in enumerate(pts):
-            tan = (pts[min(i + 1, n - 1)] - pts[max(i - 1, 0)]).normalized()
-            side = plane - tan * tan.dot(plane)
-            side = side.normalized() if side.length > 1e-5 else tan.orthogonal().normalized()
-            up = tan.cross(side).normalized()
-            r = rfn(i / (n - 1))
-            rings.append([self.bm.verts.new(p + side * math.cos(TAU * k / sides) * r * flat + up * math.sin(TAU * k / sides) * r) for k in range(sides)])
-        for i in range(n - 1):
-            for k in range(sides):
-                k2 = (k + 1) % sides
-                self.bm.faces.new((rings[i][k], rings[i][k2], rings[i + 1][k2], rings[i + 1][k]))
-        if caps:
-            self.bm.faces.new(rings[0])
-            self.bm.faces.new(list(reversed(rings[-1])))
-
-    def sheet(self, point, thick, nu, nv):
-        """A closed blade. point(u, v) on its middle surface."""
-        bm = self.bm
-
-        def P(i, j):
-            return Vector(point(i / nu, j / nv))
-        top, bot = [], []
-        for i in range(nu + 1):
-            rt, rb = [], []
-            for j in range(nv + 1):
-                p = P(i, j)
-                du = P(min(i + 1, nu), j) - P(max(i - 1, 0), j)
-                dv = P(i, min(j + 1, nv)) - P(i, max(j - 1, 0))
-                nrm = du.cross(dv)
-                nrm = nrm.normalized() if nrm.length > 1e-9 else V(0, 0, 1)
-                t = thick(i / nu, j / nv) / 2
-                rt.append(bm.verts.new(p + nrm * t))
-                rb.append(bm.verts.new(p - nrm * t))
-            top.append(rt)
-            bot.append(rb)
-        for i in range(nu):
-            for j in range(nv):
-                bm.faces.new((top[i][j], top[i + 1][j], top[i + 1][j + 1], top[i][j + 1]))
-                bm.faces.new((bot[i][j + 1], bot[i + 1][j + 1], bot[i + 1][j], bot[i][j]))
-        for i in range(nu):
-            bm.faces.new((top[i][0], bot[i][0], bot[i + 1][0], top[i + 1][0]))
-            bm.faces.new((top[i + 1][nv], bot[i + 1][nv], bot[i][nv], top[i][nv]))
-        for j in range(nv):
-            bm.faces.new((top[0][j + 1], bot[0][j + 1], bot[0][j], top[0][j]))
-            bm.faces.new((top[nu][j], bot[nu][j], bot[nu][j + 1], top[nu][j + 1]))
-
-    def finish(self, name, coll, smooth_shade=True, recalc=True):
-        if recalc:
-            bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces)
-        me = bpy.data.meshes.new(name)
-        self.bm.to_mesh(me)
-        self.bm.free()
-        if smooth_shade:
-            me.polygons.foreach_set("use_smooth", [True] * len(me.polygons))
-        o = bpy.data.objects.new(name, me)
-        coll.objects.link(o)
-        return o
-
-
-def apply_mods(o, mods):
-    for kind, props in mods:
-        md = o.modifiers.new(kind, kind)
-        for k, v in props.items():
-            setattr(md, k, v)
-    me = bpy.data.meshes.new_from_object(o.evaluated_get(bpy.context.evaluated_depsgraph_get()))
-    old = o.data
-    o.modifiers.clear()
-    o.data = me
-    bpy.data.meshes.remove(old)
-    return o
-
-
-def get_coll(name):
-    c = bpy.data.collections.get(name)
-    if not c:
-        c = bpy.data.collections.new(name)
-        scene.collection.children.link(c)
-    return c
-
-
-HI = get_coll(PET + "_Hi")
 
 
 def ear_point(side):
@@ -305,57 +172,9 @@ def build_skin():
 
 
 # ---------- painting ----------
-def verts(o):
-    me = o.data
-    p = np.empty(len(me.vertices) * 3, dtype=np.float64)
-    me.vertices.foreach_get("co", p)
-    return p.reshape(-1, 3)
-
-
-def normals(o):
-    me = o.data
-    n = np.empty(len(me.vertices) * 3, dtype=np.float64)
-    me.vertex_normals.foreach_get("vector", n)
-    return n.reshape(-1, 3)
-
-
-def set_verts(o, p):
-    o.data.vertices.foreach_set("co", p.ravel())
-    o.data.update()
-
-
-def paint(o, color, rough):
-    me = o.data
-    a = me.attributes.get("paint") or me.attributes.new("paint", "FLOAT_COLOR", "POINT")
-    rgba = np.ones((len(color), 4))
-    rgba[:, :3] = np.clip(color, 0, 1)
-    a.data.foreach_set("color", rgba.ravel())
-    b = me.attributes.get("rough") or me.attributes.new("rough", "FLOAT", "POINT")
-    b.data.foreach_set("value", np.broadcast_to(rough, (len(color),)).astype(float))
-
-
-def nearest_on(path, points):
-    """Per point: the index along a sampled path and the distance to it."""
-    a = np.array([tuple(p) for p in path])
-    ab = a[1:] - a[:-1]
-    best_d = np.full(len(points), 1e9)
-    best_f = np.zeros(len(points))
-    L = (ab * ab).sum(1) + 1e-12
-    for i in range(len(ab)):
-        t = np.clip(((points - a[i]) * ab[i]).sum(1) / L[i], 0, 1)
-        d = np.linalg.norm(points - (a[i] + ab[i] * t[:, None]), axis=1)
-        take = d < best_d
-        best_d[take] = d[take]
-        best_f[take] = (i + t[take]) / len(ab)
-    return best_f, best_d
 
 
 CURL_S = [curl_point(k / 90) for k in range(91)]
-
-
-def noise3(p, f, seed=0.0):
-    x = p * f + seed
-    return (np.sin(x[:, 0] * 1.3 + np.sin(x[:, 1] * 1.7 + seed) * 1.2) + np.sin(x[:, 1] * 1.1 + np.sin(x[:, 2] * 1.9) * 1.3) + np.sin(x[:, 2] * 1.5 + np.sin(x[:, 0] * 2.1) * 1.1)) / 3
 
 
 def paint_skin(o):
@@ -450,27 +269,6 @@ def paint_skin(o):
     paint(o, col, rough)
 
 
-def sheet_hi(point, thick, nu, nv, name, colour, rough, relief):
-    m = Mesh()
-    m.sheet(point, thick, nu, nv)
-    o = m.finish(name, HI)
-    # grid: (nu + 1) * (nv + 1) top and bottom pairs in order, then displace and paint by u, v
-    count = (nu + 1) * (nv + 1) * 2
-    uu = np.zeros(count)
-    vv = np.zeros(count)
-    idx = 0
-    for i in range(nu + 1):
-        for j in range(nv + 1):
-            for _ in range(2):
-                uu[idx], vv[idx] = i / nu, j / nv
-                idx += 1
-    P = verts(o)
-    Nn = normals(o)
-    set_verts(o, P + Nn * relief(uu, vv)[:, None])
-    paint(o, colour(uu, vv), rough(uu, vv))
-    return o
-
-
 def wing_veins(u, v):
     """Fan veins from the seed to the trailing edge, as in a real maple key."""
     fan = np.arctan2(v * 0.22 + 0.001, u * 0.68 + 0.02)
@@ -531,29 +329,6 @@ def build_ear(side, name):
     return sheet_hi(ear_point(side), ear_thick, 220, 140, N + name + "Hi", ear_colour, lambda u, v: np.full_like(u, 0.45), relief)
 
 
-class EyeFrame:
-    def __init__(self, tree, side):
-        self.side = side
-        self.axis = mir(EYE_AXIS, side)
-        self.centre = mir(EYE_C, side)
-        self.outer = (V(0, 0, 1).cross(self.axis)).normalized() * (-side)   # pointing out to its side of the head
-        if self.outer.x * side < 0:
-            self.outer = -self.outer
-        self.up = self.axis.cross(self.outer).normalized()
-        if self.up.z < 0:
-            self.up = -self.up
-        # the lids hinge on a line through the eye's centre, its outer end raised a little: a sly tilt to the whole opening
-        tilt = math.radians(LID_TILT)
-        self.lid_up = (self.up * math.cos(tilt) - self.outer * math.sin(tilt)).normalized()
-        self.hinge = self.axis.cross(self.lid_up).normalized()      # a turn this way about it lifts a lid
-
-    def lid(self, phi, h):
-        return (self.hinge * math.cos(h) + (self.axis * math.cos(phi) + self.lid_up * math.sin(phi)) * math.sin(h)).normalized()
-
-    def direction(self, az, el):
-        return (self.axis * (math.cos(el) * math.cos(az)) + self.outer * (math.cos(el) * math.sin(az)) + self.up * math.sin(el)).normalized()
-
-
 def eye_paint(o, fr):
     P = verts(o) - np.array(tuple(fr.centre))
     d = P / np.linalg.norm(P, axis=1)[:, None]
@@ -582,74 +357,6 @@ def eye_paint(o, fr):
     paint(o, col, np.full(len(P), 0.1))
 
 
-def lid_angles(upper):
-    return (LID_U, LID_U_FAR, LID_U_GAP) if upper else (LID_L, LID_L_FAR, LID_L_GAP)
-
-
-LID_H0, LID_H1 = math.radians(14), math.radians(166)
-
-
-def lid_patch(fr, upper, res=(96, 64), thick=0.0045):
-    """A doll's eyelid: a slice of a shell round the ball, hung on the hinge, its edge a great circle. It closes by turning on the hinge,
-    and everything past the edge is buried in the head at rest and stays buried when it turns."""
-    e, far, gap = lid_angles(upper)
-
-    def point(u, v):
-        phi = math.radians(e + (far - e) * u ** 1.8)     # packed toward the edge, for the lash line
-        return fr.centre + fr.lid(phi, LID_H0 + (LID_H1 - LID_H0) * v) * (EYE_R + gap)
-
-    m = Mesh()
-    m.sheet(point, lambda u, v: thick, res[1], res[0])
-    return m
-
-
-def build_eye(tree, side, name):
-    fr = EyeFrame(tree, side)
-    m = Mesh()
-    q = fr.axis.to_track_quat("Z", "Y").to_matrix().to_4x4()
-    bmesh.ops.create_uvsphere(m.bm, u_segments=220, v_segments=150, radius=EYE_R, matrix=Matrix.Translation(fr.centre) @ q)
-    o = m.finish(N + name + "EyeHi", HI)
-    eye_paint(o, fr)
-    return fr, o
-
-
-def lid_colour_for(lower):
-    def f(u, v):
-        return None
-    return f
-
-
-def build_lid(fr, upper, name, skin_tree=None):
-    m = lid_patch(fr, upper)
-    o = m.finish(N + name + "Hi", HI)
-    nu, nv = 64, 96
-    count = (nu + 1) * (nv + 1) * 2
-    uu = np.zeros(count)
-    vv = np.zeros(count)
-    idx = 0
-    for i in range(nu + 1):
-        for j in range(nv + 1):
-            for _ in range(2):
-                uu[idx], vv[idx] = i / nu, j / nv
-                idx += 1
-    e, far, _ = lid_angles(upper)
-    deg = abs(far - e) * uu ** 1.8     # degrees back from the edge
-    # +1 at the outer corner
-    outer = np.cos(LID_H0 + (LID_H1 - LID_H0) * vv) * (1 if fr.hinge.dot(fr.outer) > 0 else -1)
-    col = mix(MINT, PEARL, 0.95) * 0.92
-    col = np.broadcast_to(col, (count, 3)).copy()
-    if upper:
-        w = 2.4 + 3.4 * np.maximum(outer, 0) ** 2
-        col = mix(col, rgb(10, 48, 60), 1 - smooth(w, w + 1.5, deg))
-    else:
-        col = mix(col, rgb(40, 110, 112), (1 - smooth(1.1, 2.4, deg)) * 0.5)
-    paint(o, col, np.full(count, 0.5))
-    return o
-
-
-def on_surface(tree, p, dirn, lift):
-    loc, nrm, _, _ = tree.ray_cast(p - dirn * 0.5, dirn, 1.5)
-    return (loc + nrm * lift) if loc else p
 
 
 def build_brow(tree, side, name, fr):
@@ -782,28 +489,6 @@ def tail_channel(sign):
 
 
 # ---------- the whole, high-detail ----------
-def hi_material():
-    m = bpy.data.materials.new("WS_Hi")
-    m.use_nodes = True
-    t = m.node_tree
-    bsdf = next(n for n in t.nodes if n.type == "BSDF_PRINCIPLED")
-    attr = t.nodes.new("ShaderNodeAttribute")
-    attr.attribute_name = "paint"
-    rough = t.nodes.new("ShaderNodeAttribute")
-    rough.attribute_name = "rough"
-    ao = t.nodes.new("ShaderNodeAmbientOcclusion")
-    ao.inputs["Distance"].default_value = 0.10
-    ao.only_local = True
-    ao.samples = 16
-    mul = t.nodes.new("ShaderNodeMix")
-    mul.data_type = "RGBA"
-    mul.blend_type = "MULTIPLY"
-    mul.inputs[0].default_value = 0.55
-    t.links.new(attr.outputs["Color"], mul.inputs[6])
-    t.links.new(ao.outputs["Color"], mul.inputs[7])
-    t.links.new(mul.outputs[2], bsdf.inputs["Base Color"])
-    t.links.new(rough.outputs["Fac"], bsdf.inputs["Roughness"])
-    return m
 
 
 def build_hi():
@@ -811,20 +496,20 @@ def build_hi():
     skin = build_skin()
     paint_skin(skin)
     pieces["Skin"] = skin
-    bm = bmesh.new()
-    bm.from_mesh(skin.data)
-    tree = BVHTree.FromBMesh(bm)
-    bm.free()
+    tree = tree_of(skin)
     frames = {}
     for side, tag in ((1, "L"), (-1, "R")):
         pieces["Wing" + tag] = build_wing(side, "Wing" + tag)
         pieces["Nut" + tag] = build_nut(side, "Wing" + tag)
         pieces["Ear" + tag] = build_ear(side, "Ear" + tag)
-        fr, eye = build_eye(tree, side, tag)
+        fr = EyeFrame(mir(EYE_C, side), mir(EYE_AXIS, side), side, EYE_R, (LID_U, LID_U_FAR, LID_U_GAP), (LID_L, LID_L_FAR, LID_L_GAP), tilt=LID_TILT)
         frames[tag] = fr
+        eye = build_eye(fr, tag)
+        eye_paint(eye, fr)
         pieces["Eye" + tag] = eye
-        pieces["LidU" + tag] = build_lid(fr, True, "LidU" + tag)
-        pieces["LidL" + tag] = build_lid(fr, False, "LidL" + tag)
+        lid_skin = mix(MINT, PEARL, 0.95) * 0.92
+        pieces["LidU" + tag] = build_lid(fr, True, "LidU" + tag, lid_skin, rgb(10, 48, 60))
+        pieces["LidL" + tag] = build_lid(fr, False, "LidL" + tag, lid_skin, rgb(40, 110, 112))
         pieces["Brow" + tag] = build_brow(tree, side, "Brow" + tag, fr)
     smile, fang, blow, blow_c = build_mouth(tree)
     pieces["Smile"], pieces["Fang"], pieces["Blow"] = smile, fang, blow
@@ -832,27 +517,6 @@ def build_hi():
     cord, bead, cap, tassel, tassel_root = build_trim(tree)
     pieces["Cord"], pieces["Bead"], pieces["Cap"], pieces["Tassel"] = cord, bead, cap, tassel
     return pieces, frames, dict(blow=blow_c, tassel=tassel_root)
-
-
-def glints(frames, coll):
-    """Two catch-lights per eye, on the eye's bone (a glow piece: Neon). Discs lying on the ball, seen from outside only."""
-    m = Mesh()
-    bm = m.bm
-    for tag, fr in frames.items():
-        for az, el, r, sides in ((-22, 24, 0.024, 20), (17, -18, 0.0115, 12)):
-            d = fr.direction(math.radians(az), math.radians(el))
-            a, b = d.orthogonal().normalized(), None
-            b = d.cross(a).normalized()
-            lift = EYE_R + 0.0012
-
-            def on_ball(x, y):
-                return fr.centre + (d + a * (x / lift) + b * (y / lift)).normalized() * lift
-            centre = bm.verts.new(on_ball(0, 0))
-            ring = [bm.verts.new(on_ball(math.cos(TAU * k / sides) * r, math.sin(TAU * k / sides) * r * 1.12)) for k in range(sides)]
-            for k in range(sides):
-                bm.faces.new((centre, ring[k], ring[(k + 1) % sides]))
-    bm.normal_update()
-    return m.finish(N + "Glints_Glow_ffffff", coll, smooth_shade=False, recalc=False)
 
 
 def channels(coll):
@@ -863,134 +527,15 @@ def channels(coll):
 
 
 # ---------- review ----------
-def stage_setup():
-    for name, energy, rot in (("Key", 2.1, (55, 0, -35)), ("Fill", 0.8, (70, 0, 140)), ("Rim", 1.0, (120, 0, 20))):
-        sun = bpy.data.lights.new(name, "SUN")
-        sun.energy = energy
-        so = bpy.data.objects.new(name, sun)
-        scene.collection.objects.link(so)
-        so.rotation_euler = tuple(math.radians(v) for v in rot)
-    world = bpy.data.worlds.new("w")
-    scene.world = world
-    world.use_nodes = True
-    world.node_tree.nodes["Background"].inputs[0].default_value = (0.42, 0.46, 0.5, 1)
-    world.node_tree.nodes["Background"].inputs[1].default_value = 0.8
-    cam = bpy.data.cameras.new("ShowCam")
-    cam.lens = 70
-    co = bpy.data.objects.new("ShowCam", cam)
-    scene.collection.objects.link(co)
-    scene.camera = co
-    scene.render.engine = "CYCLES"
-    prefs = bpy.context.preferences.addons["cycles"].preferences
-    prefs.compute_device_type = "METAL"
-    prefs.get_devices()
-    for d in prefs.devices:
-        d.use = True
-    scene.cycles.device = "GPU"
-    scene.cycles.samples = 28
-    scene.view_settings.view_transform = "Standard"
-
-
-def shots(prefix, views, target=(0, 0.12, 0.66), dist=5.0, size=540):
-    T = Vector(target)
-    cam = bpy.data.objects["ShowCam"]
-    scene.render.resolution_x = scene.render.resolution_y = size
-    for k, view in enumerate(views):
-        d = view[3] if len(view) > 3 else dist
-        t = Vector(view[4]) if len(view) > 4 else T
-        cam.location = t + V(view[0], view[1], view[2]).normalized() * d
-        cam.rotation_euler = (t - cam.location).to_track_quat("-Z", "Y").to_euler()
-        scene.render.filepath = prefix + "_%d.png" % k
-        bpy.ops.render.render(write_still=True)
 
 
 VIEWS = [(0, -1, 0.08), (0.6, -0.8, 0.2), (1, 0, 0.1), (0, 1, 0.15), (-0.6, 0.75, 0.45), (0, -0.25, 1), (0, -1, 0.02, 2.0, (0, -0.1, 0.8)), (0.75, -0.7, 0.12, 2.0, (0, -0.1, 0.8))]
 
 
 # ---------- the game mesh ----------
-GAME = get_coll(PET)
 TARGET = {"NutL": 120, "NutR": 120, "BrowL": 56, "BrowR": 56, "Smile": 100, "Fang": 9, "Blow": 110, "Cord": 150, "Bead": 190, "Cap": 44, "Tassel": 66, "Fore": 90}
 SKIN_QUADS = 2350
-
-
-def retopo_skin(hi, name, quads):
-    me = hi.data.copy()
-    o = bpy.data.objects.new(name, me)
-    GAME.objects.link(o)
-    for a in ("paint", "rough"):
-        if o.data.attributes.get(a):
-            o.data.attributes.remove(o.data.attributes[a])
-    # QuadriFlow refuses a surface with a single edge under a tenth of a millimetre, which a voxel remesh can leave behind: fresh remesh, a light
-    # smooth, weld what is left, and try again at a slightly different size if it still objects
-    base = o.data.copy()
-    res = {"CANCELLED"}
-    for size in (0.0065, 0.0062, 0.0069, 0.0073, 0.0058):
-        o.data = base.copy()
-        apply_mods(o, [("REMESH", {"mode": "VOXEL", "voxel_size": size, "adaptivity": 0.0}), ("SMOOTH", {"factor": 0.6, "iterations": 3})])
-        bm = bmesh.new()
-        bm.from_mesh(o.data)
-        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0006)
-        bm.to_mesh(o.data)
-        bm.free()
-        select_only([o])
-        res = bpy.ops.object.quadriflow_remesh(use_mesh_symmetry=False, use_preserve_sharp=False, use_preserve_boundary=False, preserve_attributes=False, smooth_normals=False, mode="FACES", target_faces=quads, seed=3)
-        print("QUADRIFLOW", size, res, len(o.data.polygons), "faces", flush=True)
-        if "FINISHED" in res:
-            break
-    assert "FINISHED" in res and len(o.data.polygons) < quads * 1.5, "the skin was not retopologised"
-    apply_mods(o, [("TRIANGULATE", {"quad_method": "BEAUTY", "ngon_method": "BEAUTY"})])
-    o.data.polygons.foreach_set("use_smooth", [True] * len(o.data.polygons))
-    return o
-
-
-def decimated(hi, name, target):
-    me = hi.data.copy()
-    o = bpy.data.objects.new(name, me)
-    GAME.objects.link(o)
-    tris = sum(len(p.vertices) - 2 for p in me.polygons)
-    apply_mods(o, [("DECIMATE", {"decimate_type": "COLLAPSE", "ratio": min(1.0, target / max(1, tris))})])
-    for a in ("paint", "rough"):
-        if o.data.attributes.get(a):
-            o.data.attributes.remove(o.data.attributes[a])
-    return o
-
-
-def low_sheet(point, thick, nu, nv, name):
-    m = Mesh()
-    m.sheet(point, thick, nu, nv)
-    return m.finish(name, GAME)
-
-
-def low_eye(fr, name):
-    m = Mesh()
-    q = fr.axis.to_track_quat("Z", "Y").to_matrix().to_4x4()
-    bmesh.ops.create_uvsphere(m.bm, u_segments=22, v_segments=14, radius=EYE_R, matrix=Matrix.Translation(fr.centre) @ q)
-    # only what can ever show: the back of the ball goes
-    A = fr.axis
-    dead = [f for f in m.bm.faces if all((v.co - fr.centre).normalized().dot(A) < -0.1 for v in f.verts)]
-    bmesh.ops.delete(m.bm, geom=dead, context="FACES")
-    return m.finish(name, GAME)
-
-
-def low_lid(fr, upper, name):
-    """One outward layer: nobody sees the inside of a lid."""
-    e, far, gap = lid_angles(upper)
-    nu, nv = (7, 14) if upper else (5, 10)
-    m = Mesh()
-    rows = [[m.bm.verts.new(fr.centre + fr.lid(math.radians(e + (far - e) * (i / nu) ** 1.3), LID_H0 + (LID_H1 - LID_H0) * j / nv) * (EYE_R + gap)) for j in range(nv + 1)] for i in range(nu + 1)]
-    for i in range(nu):
-        for j in range(nv):
-            m.bm.faces.new((rows[i][j], rows[i + 1][j], rows[i + 1][j + 1], rows[i][j + 1]))
-    me = bpy.data.meshes.new(name)
-    m.bm.to_mesh(me)
-    m.bm.free()
-    p = me.polygons[0]
-    if p.normal.dot(p.center - fr.centre) < 0:
-        me.flip_normals()
-    me.polygons.foreach_set("use_smooth", [True] * len(me.polygons))
-    o = bpy.data.objects.new(name, me)
-    GAME.objects.link(o)
-    return o
+SCALES = {"EyeL": 3.0, "EyeR": 3.0, "LidUL": 1.6, "LidUR": 1.6, "LidLL": 1.6, "LidLR": 1.6, "Blow": 1.6, "Bead": 1.6, "Smile": 3.0, "Fang": 3.0, "WingL": 1.6, "WingR": 1.6, "EarL": 1.6, "EarR": 1.6}
 
 
 def build_low(pieces, frames):
@@ -1006,106 +551,6 @@ def build_low(pieces, frames):
     for o in lows.values():
         apply_mods(o, [("TRIANGULATE", {"quad_method": "BEAUTY", "ngon_method": "BEAUTY"})])
     return lows
-
-
-def select_only(objs, active=None):
-    for o in bpy.context.view_layer.objects:
-        o.select_set(False)
-    for o in objs:
-        o.select_set(True)
-    bpy.context.view_layer.objects.active = active or objs[0]
-
-
-def unwrap(lows):
-    """One atlas. The eyes get far more of it, then the face: that is what a player looks at."""
-    objs = list(lows.values())
-    for o in objs:
-        if not o.data.uv_layers:
-            o.data.uv_layers.new(name="UVMap")
-    select_only(objs)
-    skin = lows["Skin"]
-
-    def project(select):
-        for o in objs:
-            for p in o.data.polygons:
-                p.select = select(o, p)
-        bpy.ops.object.mode_set(mode="EDIT")
-        bpy.ops.mesh.select_mode(type="FACE")
-        bpy.ops.uv.smart_project(angle_limit=math.radians(62), island_margin=0.004, area_weight=0.0, correct_aspect=True, scale_to_bounds=False)
-        bpy.ops.object.mode_set(mode="OBJECT")
-
-    def is_face(o, p):
-        c = p.center
-        return o is skin and c.z > 0.58 and c.y < 0.1
-    project(lambda o, p: is_face(o, p))
-    faces = [p.index for p in skin.data.polygons if is_face(skin, p)]
-    project(lambda o, p: not is_face(o, p))
-    uv = skin.data.uv_layers.active.data
-    # (a second projection keeps the first's selection out, so scale what each covers)
-    for i in faces:
-        for l in skin.data.polygons[i].loop_indices:
-            uv[l].uv = uv[l].uv * 1.5
-    for key in ("EyeL", "EyeR"):
-        d = lows[key].data.uv_layers.active.data
-        for l in d:
-            l.uv = l.uv * 3.0
-    for key, k in (("LidUL", 1.6), ("LidUR", 1.6), ("LidLL", 1.6), ("LidLR", 1.6), ("Blow", 1.6), ("Bead", 1.6), ("Smile", 3.0), ("Fang", 3.0), ("WingL", 1.6), ("WingR", 1.6), ("EarL", 1.6), ("EarR", 1.6)):
-        d = lows[key].data.uv_layers.active.data
-        for l in d:
-            l.uv = l.uv * k
-    for o in objs:
-        o.data.polygons.foreach_set("select", [True] * len(o.data.polygons))
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.uv.select_all(action="SELECT")
-    bpy.ops.uv.pack_islands(margin_method="FRACTION", margin=0.008, rotate=True, scale=True, shape_method="CONCAVE")
-    bpy.ops.object.mode_set(mode="OBJECT")
-
-
-def bake_all(lows, pieces):
-    size = 1024
-    os.makedirs(OUT, exist_ok=True)
-
-    def image(name, fill, colour):
-        img = bpy.data.images.new(name, size, size, alpha=False)
-        img.generated_color = fill
-        if not colour:
-            img.colorspace_settings.name = "Non-Color"
-        return img
-    color = image(PET + "_Color", (0.6, 0.85, 0.78, 1), True)
-    normal = image(PET + "_Normal", (0.5, 0.5, 1, 1), False)
-    rough = image(PET + "_Roughness", (0.55, 0.55, 0.55, 1), False)
-    m = bpy.data.materials.new(PET + "_Baked")
-    m.use_nodes = True
-    t = m.node_tree
-    bsdf = next(n for n in t.nodes if n.type == "BSDF_PRINCIPLED")
-    ci = t.nodes.new("ShaderNodeTexImage"); ci.image = color; ci.name = "ColorMap"
-    ni = t.nodes.new("ShaderNodeTexImage"); ni.image = normal; ni.name = "NormalMap"
-    ri = t.nodes.new("ShaderNodeTexImage"); ri.image = rough; ri.name = "RoughMap"
-    nm = t.nodes.new("ShaderNodeNormalMap")
-    t.links.new(ci.outputs["Color"], bsdf.inputs["Base Color"])
-    t.links.new(ni.outputs["Color"], nm.inputs["Color"])
-    t.links.new(nm.outputs["Normal"], bsdf.inputs["Normal"])
-    t.links.new(ri.outputs["Color"], bsdf.inputs["Roughness"])
-    for o in lows.values():
-        o.data.materials.clear()
-        o.data.materials.append(m)
-        o.data.polygons.foreach_set("use_smooth", [True] * len(o.data.polygons))
-    scene.cycles.samples = 16
-    for kind, node, kw in (("DIFFUSE", "ColorMap", {"pass_filter": {"COLOR"}}), ("NORMAL", "NormalMap", {"normal_space": "TANGENT"}), ("ROUGHNESS", "RoughMap", {})):
-        t.nodes.active = t.nodes[node]
-        for key, low in lows.items():
-            src = pieces[key]
-            select_only([src, low], low)
-            # the retopologised skin can stray further from its source than the small pieces do
-            far = key == "Skin"
-            bpy.ops.object.bake(type=kind, use_selected_to_active=True, cage_extrusion=0.014 if far else 0.012, max_ray_distance=0.045 if far else 0.03, margin=4, use_clear=False, target="IMAGE_TEXTURES", **kw)
-    for img, suffix in ((color, "color"), (normal, "normal"), (rough, "roughness")):
-        img.filepath_raw = os.path.join(OUT, PET + "_" + suffix + ".png")
-        img.file_format = "PNG"
-        img.save()
-        img.pack()
-    return m
 
 
 # ---------- the skeleton ----------
@@ -1131,44 +576,7 @@ def skeleton(frames, marks):
         wp = wing_point(side)
         bones += [("Wing" + tag, mir(WING_ROOT, side), "Body"), ("WingMid" + tag, Vector(wp(0.42, 0.25)), "Wing" + tag), ("WingTip" + tag, Vector(wp(0.985, 0.25)), "WingMid" + tag)]
     bones += [("Smile", marks["blow"].copy(), "Head"), ("Blow", marks["blow"].copy(), "Head"), ("Tassel", marks["tassel"].copy(), "Body")]
-    arm = bpy.data.armatures.new(PET + "_Rig")
-    rig = bpy.data.objects.new(PET + "_Rig", arm)
-    GAME.objects.link(rig)
-    select_only([rig])
-    bpy.ops.object.mode_set(mode="EDIT")
-    for name, head, parent in bones:
-        b = arm.edit_bones.new(name)
-        b.head = head
-        b.tail = head + V(0, 0, 0.05)
-        b.roll = 0
-        b.use_deform = True
-    for name, head, parent in bones:
-        if parent:
-            arm.edit_bones[name].parent = arm.edit_bones[parent]
-            arm.edit_bones[name].use_connect = False
-    bpy.ops.object.mode_set(mode="OBJECT")
-    return rig
-
-
-def weigh(obj, weights):
-    """weights: list per vertex of {bone: w}: normalized, at most four, each above a hundredth."""
-    groups = {}
-    for i, w in enumerate(weights):
-        top = sorted(w.items(), key=lambda kv: -kv[1])[:4]
-        total = sum(v for _, v in top) or 1.0
-        for bone, v in top:
-            v /= total
-            if v < 0.01:
-                continue
-            g = groups.get(bone)
-            if not g:
-                g = groups[bone] = obj.vertex_groups.new(name=bone)
-            g.add([i], v, "REPLACE")
-
-
-def rigid(obj, bone):
-    obj.vertex_groups.clear()
-    obj.vertex_groups.new(name=bone).add(list(range(len(obj.data.vertices))), 1.0, "REPLACE")
+    return armature(bones)
 
 
 def tail_weights(s):
@@ -1240,7 +648,7 @@ def skin_weights(o):
     return weights
 
 
-def bind(lows, rig, glint, chan, frames):
+def bind_all(lows, rig, glint, chan, frames):
     weigh(lows["Skin"], skin_weights(lows["Skin"]))
     for side, tag in ((1, "L"), (-1, "R")):
         P = verts(lows["Wing" + tag])
@@ -1259,32 +667,9 @@ def bind(lows, rig, glint, chan, frames):
     P = verts(chan)
     s, _ = nearest_on(CURL_S, P)
     weigh(chan, [tail_weights(float(v)) for v in s])
-    objs = list(lows.values())
-    # one mesh, one material, one draw: every piece told apart by its bones
-    body = lows["Skin"]
-    select_only(objs, body)
-    bpy.ops.object.join()
-    body.name = N + "Body"
-    body.data.name = N + "Body"
-    for o in (body, glint, chan):
-        o.parent = rig
-        md = o.modifiers.new("Rig", "ARMATURE")
-        md.object = rig
+    body = join_into(lows, "Body")
+    pet_kit.bind(rig, (body, glint, chan))
     return body
-
-
-def pose(rig, spec):
-    """spec: bone: (axis (x, y, z), degrees, move (x, y, z)), all in the model's axes."""
-    for pb in rig.pose.bones:
-        pb.rotation_mode = "QUATERNION"
-        pb.location = (0, 0, 0)
-        pb.rotation_quaternion = (1, 0, 0, 0)
-    for name, (axis, deg, move) in spec.items():
-        pb = rig.pose.bones[name]
-        B = pb.bone.matrix_local.to_3x3()
-        pb.rotation_quaternion = (B.inverted() @ Matrix.Rotation(math.radians(deg), 3, Vector(axis)) @ B).to_quaternion()
-        pb.location = B.inverted() @ Vector(move)
-    bpy.context.view_layer.update()
 
 
 def pose_library(frames):
@@ -1302,37 +687,14 @@ def pose_library(frames):
     return {"Blink": lids(BLINK_U, BLINK_L), "Sly": lids(16, 7), "Blow": blow, "Look": look, "TailOpen": tail, "Tug": tug, "WingsUp": wings}
 
 
-def export_fbx(body, glint, chan, rig):
-    os.makedirs(OUT, exist_ok=True)
-    for o in (glint, chan):     # plain Neon: their UVs never show, but a mesh should have them
-        if not o.data.uv_layers:
-            o.data.uv_layers.new(name="UVMap")
-    pose(rig, {})
-    glint.data.materials.clear()
-    chan.data.materials.clear()
-    plain = bpy.data.materials.new("WS_GlowPiece")
-    glint.data.materials.append(plain)
-    chan.data.materials.append(plain)
-    select_only([body, glint, chan, rig], rig)
-    path = os.path.join(OUT, PET + ".fbx")
-    bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={"MESH", "ARMATURE"}, axis_forward="-Z", axis_up="Y", apply_scale_options="FBX_SCALE_UNITS",
-                             path_mode="COPY", embed_textures=True, mesh_smooth_type="FACE", add_leaf_bones=False, use_armature_deform_only=True, bake_anim=False,
-                             primary_bone_axis="Y", secondary_bone_axis="X")
-    return path
-
-
 if __name__ == "__main__":
     pieces, frames, marks = build_hi()
     mat = hi_material()
     for o in pieces.values():
         o.data.materials.clear()
         o.data.materials.append(mat)
-    glow_mat = bpy.data.materials.new("WS_Glow")
-    glow_mat.use_nodes = True
-    g = next(n for n in glow_mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
-    g.inputs["Emission Color"].default_value = (0.8, 1, 0.95, 1)
-    g.inputs["Emission Strength"].default_value = 1.6
-    gl = glints(frames, HI)
+    glow_mat = glow_material()
+    gl = glints(frames, HI, "Glints_Glow_ffffff")
     ch = channels(HI)
     gl.data.materials.append(glow_mat)
     ch.data.materials.append(glow_mat)
@@ -1341,8 +703,8 @@ if __name__ == "__main__":
         shots(os.path.join(REVIEW, "paint"), VIEWS)
     else:
         lows = build_low(pieces, frames)
-        unwrap(lows)
-        bake_all(lows, pieces)
+        unwrap(lows, [(lambda p: p.center.z > 0.58 and p.center.y < 0.1, 1.5), (None, 1.0)], SCALES)
+        bake_all(lows, pieces, mat, fill=(0.6, 0.85, 0.78, 1))
         tris = {k: sum(len(p.vertices) - 2 for p in o.data.polygons) for k, o in lows.items()}
         print("TRIS", sum(tris.values()), tris, flush=True)
         # the glow pieces move to the game collection
@@ -1350,7 +712,7 @@ if __name__ == "__main__":
             HI.objects.unlink(o)
             GAME.objects.link(o)
         rig = skeleton(frames, marks)
-        body = bind(lows, rig, gl, ch, frames)
+        body = bind_all(lows, rig, gl, ch, frames)
         # only the game mesh renders from here on
         for o in list(HI.objects):
             bpy.data.objects.remove(o, do_unlink=True)
@@ -1373,13 +735,7 @@ if __name__ == "__main__":
             pose(rig, lib[name])
             shots(os.path.join(REVIEW, "pose" + name), [view])
         pose(rig, {})
-        print("FBX", export_fbx(body, gl, ch, rig), flush=True)
-        scene.render.resolution_x = scene.render.resolution_y = 540
-        shots(os.path.join(ROOT, "tools/blender/pets/SpiritBreezeEgg/WindSprite_preview"), [(0.6, -0.8, 0.2)])
-        os.replace(os.path.join(ROOT, "tools/blender/pets/SpiritBreezeEgg/WindSprite_preview_0.png"), os.path.join(ROOT, "tools/blender/pets/SpiritBreezeEgg/WindSprite_preview.png"))
-        path = os.path.join(ROOT, "tools/blender/pets/SpiritBreezeEgg/WindSprite.blend")
-        bpy.ops.file.pack_all() if False else None
-        bpy.context.preferences.filepaths.save_version = 0
-        bpy.ops.wm.save_as_mainfile(filepath=path, compress=True)
+        print("FBX", export_fbx(rig, body, (gl, ch)), flush=True)
+        path = save_all((0.6, -0.8, 0.2))
         print("BLEND", path, os.path.getsize(path) // 1024, "KB", flush=True)
     print("DONE", flush=True)
