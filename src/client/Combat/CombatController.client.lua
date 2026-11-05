@@ -11,7 +11,7 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local CombatFx = require(script.Parent:WaitForChild("CombatFx"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
-local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKit"))
+local TouchActions = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("TouchActions"))
 
 local player = Players.LocalPlayer
 local readyAt = 0
@@ -71,17 +71,4 @@ RemoteEvents.CombatEvent.OnClientEvent:Connect(function(source, kind, position, 
     end
 end)
 
-if UserInputService.TouchEnabled then
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "CombatTouch"
-    gui.ResetOnSpawn = false
-    local button = Instance.new("TextButton")
-    button.Name = "Strike"
-    button.AnchorPoint = Vector2.new(0.5, 0.5)
-    button.Position = UDim2.new(1, -148, 1, -52)
-    button.Size = UDim2.fromOffset(62, 62)
-    UiKit.touchButton(button, "Strike")
-    button.Parent = gui
-    button.Activated:Connect(strike)
-    gui.Parent = player:WaitForChild("PlayerGui")
-end
+TouchActions.add("Strike", "Strike", strike)

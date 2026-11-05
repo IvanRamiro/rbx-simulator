@@ -12,9 +12,11 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local GuardianAnim = require(script.Parent:WaitForChild("GuardianAnim"))
@@ -24,6 +26,8 @@ local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toas
 local Hud = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"))
 local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKit"))
 local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiTheme"))
+local UiFx = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiFx"))
+local HudMetrics = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudMetrics"))
 
 local player = Players.LocalPlayer
 
@@ -38,10 +42,12 @@ local STATE_LOOK = {
     Weakened = { Text = "WEAKENED · TAKE AN EGG", Color = Color3.fromRGB(255, 196, 70) },
     Enraged = { Text = "ENRAGED", Color = Color3.fromRGB(255, 96, 50) },
 }
-local FILL = { -- the HUD's blue while it guards; red once enraged
+local FILL = { -- the HUD's blue while it guards; gold, pulsing, once weakened; red once enraged
     Calm = { Color3.fromRGB(120, 214, 255), Color3.fromRGB(26, 104, 196) },
+    Weak = { Color3.fromRGB(255, 232, 130), Color3.fromRGB(224, 140, 20) },
     Rage = { Color3.fromRGB(255, 110, 120), Color3.fromRGB(176, 22, 44) },
 }
+local WEAK_GOLD = Color3.fromRGB(255, 200, 70)
 
 -- Each guardian's sounds by action (SoundCatalog names). `Start` plays as the action arrives; `Hit`
 -- when the move lands, its wind-up (the action's first value) plus `Lead` (negative: a roar swells
@@ -92,6 +98,7 @@ local function voice(model, action, ...)
 end
 
 local anims = {} -- [model] = GuardianAnim
+local updateAlert, takeSize -- below, with the guardian's bar
 
 local function guardianModel(guardianId)
     for _, model in CollectionService:GetTagged(GameConfig.GuardianTag) do
@@ -107,25 +114,34 @@ local message = Toast.new("GuardianMessage", Color3.new(1, 1, 1), 4)
 
 -- the health bar of the guardian being fought: first in the HUD's top-centre stack, so the
 -- messages (Toast) fall in below it instead of under it
-local SMALL_BAR = Hud.isCompact() -- on a phone it has to fit between the profile and the QUEST panel
-local bar = UiKit.panel({ Name = "GuardianBar", Size = UDim2.fromOffset(if SMALL_BAR then 340 else 460, 66), LayoutOrder = 0, Visible = false, Parent = Hud.Banner })
+local function smallBar() -- on a phone it has to fit between the profile and the QUEST panel
+    return Hud.isCompact()
+end
+-- as wide as there is room for between the profile and the quest panel
+local function barWidth()
+    if smallBar() then
+        return 340
+    end
+    return math.clamp(HudMetrics.viewport().X / HudMetrics.scale() - 620, 340, 460)
+end
+local bar = UiKit.panel({ Name = "GuardianBar", Size = UDim2.fromOffset(barWidth(), 72), LayoutOrder = -2, Visible = false, Parent = Hud.Banner })
 local barIcon = UiKit.icon(UiTheme.Icons.Guardian, 34, "Danger")
-barIcon.Position = UDim2.fromOffset(14, 16)
+barIcon.Position = UDim2.fromOffset(14, 19)
 barIcon.Parent = bar
 
 local nameLabel = UiKit.label({
-    Font = "Title", TextSize = if SMALL_BAR then 14 else 16, TextColor3 = NAME_COLOR, Position = UDim2.fromOffset(58, 9),
+    Font = "Title", TextSize = 16, TextColor3 = NAME_COLOR, Position = UDim2.fromOffset(58, 9),
     Size = UDim2.new(0.6, -58, 0, 20), TextTruncate = Enum.TextTruncate.AtEnd, Parent = bar,
 })
 
 local stateLabel = UiKit.label({
-    Font = "Strong", TextSize = 12, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 12),
+    Font = "Strong", TextSize = 13, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 12),
     Size = UDim2.new(0.45, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Right, Parent = bar,
 })
 
 local barTrack = Instance.new("Frame")
 barTrack.Position = UDim2.fromOffset(58, 34)
-barTrack.Size = UDim2.new(1, -74, 0, 18)
+barTrack.Size = UDim2.new(1, -74, 0, 24)
 barTrack.BackgroundColor3 = UiTheme.Colors.Well
 barTrack.ClipsDescendants = true
 barTrack.Parent = bar
@@ -153,7 +169,7 @@ local weakMark = Instance.new("Frame")
 weakMark.BorderSizePixel = 0
 weakMark.BackgroundColor3 = UiTheme.Colors.Highlight
 weakMark.AnchorPoint = Vector2.new(0.5, 0)
-weakMark.Size = UDim2.new(0, 2, 1, 0)
+weakMark.Size = UDim2.new(0, 3, 1, 0)
 weakMark.ZIndex = 3
 weakMark.Parent = barTrack
 
@@ -161,7 +177,7 @@ local healthText = Instance.new("TextLabel")
 healthText.BackgroundTransparency = 1
 healthText.Size = UDim2.fromScale(1, 1)
 healthText.FontFace = UiTheme.Fonts.Strong
-healthText.TextSize = 12
+healthText.TextSize = 14
 healthText.TextColor3 = Color3.new(1, 1, 1)
 healthText.TextStrokeTransparency = 0.5
 healthText.ZIndex = 4
@@ -175,6 +191,211 @@ setFill(FILL.Calm)
 local function formatNumber(n)
     local s = tostring(math.floor(n))
     return (s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", ""))
+end
+
+HudMetrics.Changed:Connect(function()
+    bar.Size = UDim2.fromOffset(barWidth(), 72)
+    takeSize()
+end)
+
+-- ---------- weakened: impossible to miss ----------
+-- The moment a guardian weakens the bar flashes gold and its edge keeps pulsing, and the guardian itself is outlined in gold through
+-- anything in the way, so it can be found in the fight. One outline, on the one guardian the bar shows.
+local outline = Instance.new("Highlight")
+outline.Name = "WeakenedOutline"
+outline.FillTransparency = 1
+outline.OutlineColor = WEAK_GOLD
+outline.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+outline.Enabled = false
+outline.Parent = Workspace
+local barEdge = bar:FindFirstChildOfClass("UIStroke")
+local EDGE_COLOR, EDGE_THICK = barEdge.Color, barEdge.Thickness
+local alertState = nil
+
+function updateAlert(model, state)
+    local weak = state == "Weakened"
+    if state ~= alertState then
+        if weak then
+            UiFx.flash(bar, WEAK_GOLD)
+            UiFx.sweep(bar, WEAK_GOLD, 0.8)
+        elseif state == "Enraged" then
+            UiFx.flash(bar, STATE_LOOK.Enraged.Color)
+        end
+        alertState = state
+    end
+    outline.Adornee = if weak then model else nil
+    outline.Enabled = weak
+    if weak then
+        local pulse = 0.5 + 0.5 * math.sin(os.clock() * 5)
+        outline.OutlineTransparency = 0.15 + 0.45 * pulse
+        barEdge.Color = WEAK_GOLD
+        barEdge.Thickness = 2 + 2 * pulse
+    else
+        barEdge.Color = EDGE_COLOR
+        barEdge.Thickness = EDGE_THICK
+    end
+end
+
+-- ---------- an egg this player can take ----------
+-- While the server says they can (their CanTakeEgg attribute: they've earned a share of the fight, and nothing stops them), a panel under
+-- the bar says so and points to the nearest stand, and each stand holding an egg their rank can carry is marked TAKE, seen through anything.
+-- The marks stand above the eggs and touch nothing on them: eggs have only their Highlight and bloom.
+local takePanel = UiKit.panel({ Name = "TakeEggPanel", Size = UDim2.fromOffset(if smallBar() then 300 else 340, 48), LayoutOrder = -1, Visible = false, Brackets = false, Parent = Hud.Banner })
+function takeSize()
+    takePanel.Size = UDim2.fromOffset(if smallBar() then 300 else 340, 48)
+end
+UiFx.attention(takePanel, WEAK_GOLD)
+local takeEdge = takePanel:FindFirstChildOfClass("UIStroke")
+takeEdge.Color = WEAK_GOLD
+takeEdge.Thickness = 2
+local takeArrow = UiKit.label({
+    Name = "Arrow", Font = "Strong", TextSize = 34, Text = "^", TextColor3 = WEAK_GOLD, TextXAlignment = Enum.TextXAlignment.Center,
+    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(28, 24), Size = UDim2.fromOffset(30, 30), Parent = takePanel,
+})
+UiKit.label({
+    Name = "Title", Font = "Title", TextSize = 16, Text = "TAKE AN EGG", TextColor3 = WEAK_GOLD, Position = UDim2.fromOffset(50, 5),
+    Size = UDim2.new(1, -58, 0, 20), Parent = takePanel,
+})
+local takeHow = UiKit.label({
+    Name = "How", Font = "Strong", TextSize = 12, Position = UDim2.fromOffset(50, 25), Size = UDim2.new(1, -58, 0, 16),
+    TextTruncate = Enum.TextTruncate.AtEnd, Parent = takePanel,
+})
+
+local TAKE_MARK_ABOVE = Vector3.new(0, 7.5, 0)
+local TAKE_REFRESH = 0.5
+local takeMarks = {} -- [stand] = its BillboardGui
+local takeRefreshAt = 0
+local takeStands = {}
+local wasAbleToTake = false
+
+local function clearTakeMarks()
+    for _, mark in takeMarks do
+        mark:Destroy()
+    end
+    table.clear(takeMarks)
+end
+
+local takeLayer = Instance.new("Frame") -- under everything else on the HUD: the marks are drawn on the screen, following the stands
+takeLayer.Name = "TakeEggMarks"
+takeLayer.BackgroundTransparency = 1
+takeLayer.Size = UDim2.fromScale(1, 1)
+takeLayer.ZIndex = -1
+takeLayer.Parent = Hud.Banner.Parent
+
+local function markStand(stand)
+    local mark = Instance.new("Frame")
+    mark.Name = "TakeEggMark"
+    mark.BackgroundTransparency = 1
+    mark.AnchorPoint = Vector2.new(0.5, 1)
+    mark.Size = UDim2.fromOffset(84, 58)
+    mark.Visible = false
+    local word = UiKit.label({
+        Name = "Word", Font = "Title", Text = "TAKE", TextSize = 22, TextColor3 = WEAK_GOLD, TextStrokeTransparency = 0.2,
+        TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 26), Parent = mark,
+    })
+    word.ZIndex = 1
+    UiKit.label({
+        Name = "Chevron", Font = "Strong", Text = "v", TextSize = 28, TextColor3 = WEAK_GOLD, TextStrokeTransparency = 0.2,
+        TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 26), Parent = mark,
+    })
+    mark.Parent = takeLayer
+    takeMarks[stand] = mark
+end
+
+-- Each frame, over its stand, above the egg; a stand out of view is left to the panel's arrow.
+local function placeTakeMarks(camera, now)
+    for _, entry in takeStands do
+        local mark = takeMarks[entry.stand]
+        if mark then
+            local point, inFront = camera:WorldToScreenPoint(entry.pedestal.Position + TAKE_MARK_ABOVE)
+            mark.Visible = inFront and point.Z > 0
+            mark.Position = UDim2.fromOffset(point.X, point.Y)
+            mark.Chevron.Position = UDim2.fromOffset(0, 24 + 4 * math.sin(now * 5))
+        end
+    end
+end
+
+-- the stands holding an egg this player's rank can carry
+local function findTakeStands(config)
+    local stands = {}
+    local islands = Workspace:FindFirstChild("FloatingIslands")
+    local island = islands and islands:FindFirstChild(config.Island)
+    local folder = island and island:FindFirstChild("EggStands")
+    local rankName = Ranks.getPlayerRankName(player)
+    for _, stand in if folder then folder:GetChildren() else {} do
+        local egg = GameConfig.Eggs[stand:GetAttribute("EggId") or stand.Name]
+        local pedestal = stand:FindFirstChild("Pedestal")
+        local prompt = pedestal and pedestal:FindFirstChildWhichIsA("ProximityPrompt")
+        if egg and prompt and prompt.Enabled and rankName ~= "" and Ranks.isAtLeast(rankName, egg.RequiredRank) then
+            table.insert(stands, { stand = stand, pedestal = pedestal, prompt = prompt })
+        end
+    end
+    return stands
+end
+
+local function updateTakeIndicator()
+    local id = player:GetAttribute("CanTakeEgg")
+    local config = id and GameConfig.Guardians[id]
+    if not config or player:GetAttribute("CarryingEgg") then
+        takePanel.Visible = false
+        wasAbleToTake = false
+        clearTakeMarks()
+        return
+    end
+    local now = os.clock()
+    if now >= takeRefreshAt then
+        takeRefreshAt = now + TAKE_REFRESH
+        takeStands = findTakeStands(config)
+        local keep = {}
+        for _, entry in takeStands do
+            keep[entry.stand] = true
+            if not takeMarks[entry.stand] then
+                markStand(entry.stand)
+            end
+        end
+        for stand, mark in takeMarks do
+            if not keep[stand] then
+                mark:Destroy()
+                takeMarks[stand] = nil
+            end
+        end
+    end
+    if #takeStands == 0 then -- nothing here their rank can carry
+        takePanel.Visible = false
+        return
+    end
+    takePanel.Visible = true
+    if not wasAbleToTake then
+        wasAbleToTake = true
+        Sfx.play("Attune")
+        UiFx.flash(takePanel, WEAK_GOLD)
+    end
+
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    local camera = Workspace.CurrentCamera
+    if not (root and camera) then
+        return
+    end
+    placeTakeMarks(camera, now)
+    local nearest, nearestDistance = nil, math.huge
+    for _, entry in takeStands do
+        local distance = (entry.pedestal.Position - root.Position).Magnitude
+        if distance < nearestDistance then
+            nearest, nearestDistance = entry, distance
+        end
+    end
+    local reach = nearest.prompt.MaxActivationDistance
+    if nearestDistance <= reach then
+        takeArrow.Text = "!"
+        takeArrow.Rotation = 0
+        takeHow.Text = if UserInputService.TouchEnabled then "Hold the Take button on the stand"
+            else "Hold " .. nearest.prompt.KeyboardKeyCode.Name .. " at the stand"
+    else
+        takeArrow.Text = "^"
+        local away = camera.CFrame:VectorToObjectSpace(nearest.pedestal.Position - root.Position)
+        takeArrow.Rotation = math.deg(math.atan2(away.X, -away.Z))
+        takeHow.Text = "Go to the stand: " .. math.floor(nearestDistance) .. " studs"
+    end
 end
 
 local shownTrail = 1
@@ -196,6 +417,8 @@ local function updateBar(dt)
     end
     bar.Visible = best ~= nil
     if not best then
+        outline.Enabled = false
+        alertState = nil
         return
     end
     local config = GameConfig.Guardians[best:GetAttribute("GuardianId")]
@@ -204,9 +427,10 @@ local function updateBar(dt)
     local share = math.clamp(health / maxHealth, 0, 1)
     nameLabel.Text = config and config.DisplayName or best.Name
     local look = STATE_LOOK[state]
-    stateLabel.Text = if SMALL_BAR then string.split(look.Text, " ·")[1] else look.Text
+    stateLabel.Text = if smallBar() then string.split(look.Text, " ·")[1] else look.Text
     stateLabel.TextColor3 = look.Color
-    setFill(if state == "Enraged" then FILL.Rage else FILL.Calm)
+    setFill(if state == "Enraged" then FILL.Rage elseif state == "Weakened" then FILL.Weak else FILL.Calm)
+    updateAlert(best, state, dt)
     fill.Size = UDim2.fromScale(share, 1)
     shownTrail = if share > shownTrail then share else shownTrail + (share - shownTrail) * (1 - math.exp(-dt * 3))
     trailFill.Size = UDim2.fromScale(shownTrail, 1)
@@ -512,6 +736,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
     updateBar(dt)
+    updateTakeIndicator()
     updateWaypointText()
     updateCountdowns()
 end)

@@ -2,6 +2,7 @@
 -- player's "QuestStep" attribute, which the server moves on), its goal, a bar for one with a
 -- count (the "QuestProgress" attribute), its reward, and SKIP (asks once more). A finished
 -- quest is announced with its reward (QuestEvent "Complete"); after the last, the tracker goes.
+-- Its header folds it to the quest's title: it starts folded on a phone, opens for a moment when a new quest arrives, and stays as the player leaves it.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -48,6 +49,18 @@ local body = UiKit.label({
 })
 local bar = UiKit.bar({ Name = "Progress", Size = UDim2.new(1, 0, 0, 5), LayoutOrder = 4, Parent = inner })
 
+local fold = Instance.new("TextButton") -- the whole header
+fold.Name = "Fold"
+fold.Text = ""
+fold.BackgroundTransparency = 1
+fold.Size = UDim2.fromScale(1, 1)
+fold.ZIndex = 3
+fold.Parent = header
+local foldMark = UiKit.label({
+    Name = "FoldMark", Font = "Strong", TextSize = 15, TextColor3 = C.Muted, AnchorPoint = Vector2.new(0, 0.5),
+    Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromOffset(16, 14), Parent = header,
+})
+
 local footer = Instance.new("Frame")
 footer.Name = "Footer"
 footer.BackgroundTransparency = 1
@@ -84,6 +97,36 @@ local function questAllowed()
     return chosen == true
 end
 
+local PHONE_WIDTH, FULL_WIDTH = 224, 270
+local chosenFold = nil -- what the player chose: until then a phone starts folded
+local peekUntil = 0    -- a new quest shows in full until this moment
+local footerRef = footer
+local questHasBar = false
+
+local function applyFold()
+    local folded = if chosenFold ~= nil then chosenFold else Hud.isCompact()
+    if os.clock() < peekUntil then
+        folded = false
+    end
+    body.Visible = not folded
+    footerRef.Visible = not folded
+    bar.Visible = questHasBar and not folded
+    title.TextWrapped = not folded
+    title.TextTruncate = if folded then Enum.TextTruncate.AtEnd else Enum.TextTruncate.None
+    title.AutomaticSize = if folded then Enum.AutomaticSize.None else Enum.AutomaticSize.Y
+    title.Size = if folded then UDim2.new(1, 0, 0, 18) else UDim2.new(1, 0, 0, 0)
+    foldMark.Text = if folded then "+" else "-"
+    panel.Size = UDim2.fromOffset(if Hud.isCompact() then PHONE_WIDTH else FULL_WIDTH, 0)
+end
+
+fold.Activated:Connect(function()
+    local folded = if chosenFold ~= nil then chosenFold else Hud.isCompact()
+    chosenFold = not folded
+    peekUntil = 0
+    applyFold()
+end)
+Hud.CompactChanged:Connect(applyFold)
+
 local lastStep = nil
 local function render()
     local step = player:GetAttribute("QuestStep")
@@ -96,6 +139,8 @@ local function render()
     title.Text = quest.Title
     body.Text = quest.Text
     if lastStep and lastStep ~= step and panel.Visible then -- a new quest writes itself on
+        peekUntil = os.clock() + 8
+        task.delay(8.1, applyFold)
         UiFx.flash(panel, C.Highlight)
         UiFx.typeIn(title, 0.25)
         UiFx.typeIn(body, 0.55)
@@ -103,7 +148,8 @@ local function render()
     lastStep = step
     reward.Text = NumberFormat.compact(quest.Reward) .. " Spirit Stones"
     -- a bar only where there is a count to fill (Qi, a rank's Qi)
-    bar.Visible = quest.Kind == "Qi" or quest.Kind == "Rank"
+    questHasBar = quest.Kind == "Qi" or quest.Kind == "Rank"
+    applyFold()
 end
 
 local function renderProgress()

@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
@@ -119,7 +120,6 @@ local cultivateButton = UiKit.button({
 -- a pill, and light that keeps to its curves; the dock's size can change once the screen's is known
 local function shapeCultivateButton(size)
     local pill = size.Button // 2
-    cultivateButton.TextSize = size.TextSize + 7
     cultivateButton:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, pill)
     cultivateButton.Halo:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, pill + 3)
     cultivateButton:SetAttribute("RoundLight", pill)
@@ -151,11 +151,44 @@ task.spawn(function()
     end
 end)
 
-local function updateCultivateButton()
-    -- while cultivating it turns quiet and says how to stop: the aura itself is the feedback
-    cultivateButton:SetAttribute("Tone", if isCultivating() then "Quiet" else "Primary")
-    cultivateButton.Text = if isCultivating() then "STOP CULTIVATING" else "CULTIVATE"
+-- While cultivating there is no mistaking it: the button turns from gold to living jade and a band of light keeps crossing it, the
+-- emblem's ring turns, its well glows the same colour and the figure brightens. Pressing it again stops, and it says so.
+local ACTIVE_GLOW = Color3.fromRGB(120, 255, 236)
+local dock = Hud.CultivationDock
+local well = Hud.CultivationEmblemWell
+local WELL_AT_REST, FIGURE_AT_REST = well.BackgroundColor3, dock.Emblem.ImageColor3
+local RING_TURN = 40 -- degrees a second
+local turning = nil
+
+local function shapeCultivateText()
+    local size = dock.Size
+    cultivateButton.TextSize = if isCultivating() then size.TextSize + 3 else size.TextSize + 7
 end
+
+local function updateCultivateButton()
+    local active = isCultivating()
+    cultivateButton:SetAttribute("Tone", if active then "Active" else "Primary")
+    cultivateButton.Text = if active then "CULTIVATING - STOP" else "CULTIVATE"
+    shapeCultivateText()
+    well.BackgroundColor3 = if active then ACTIVE_GLOW else WELL_AT_REST
+    dock.Emblem.ImageColor3 = if active then Color3.new(1, 1, 1) else FIGURE_AT_REST
+    if active and not turning then
+        turning = RunService.RenderStepped:Connect(function(dt)
+            dock.Ring.Rotation = (dock.Ring.Rotation + RING_TURN * dt) % 360
+        end)
+        task.spawn(function()
+            while isCultivating() and cultivateButton.Parent do
+                UiFx.sweep(cultivateButton, Color3.new(1, 1, 1), 0.9)
+                task.wait(1.4)
+            end
+        end)
+    elseif not active and turning then
+        turning:Disconnect()
+        turning = nil
+        dock.Ring.Rotation = 0
+    end
+end
+dock.Resized:Connect(shapeCultivateText)
 
 local function requestToggleCultivation()
     local now = os.clock()

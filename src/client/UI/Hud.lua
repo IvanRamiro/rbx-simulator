@@ -1,16 +1,17 @@
 -- The HUD's regions, laid out from the owner's reference (2026-11-04). Every controller puts its pieces
 -- into a region, in its LayoutOrder, instead of placing them by pixel, so they line up and never overlap:
 --   Status    top left, one column: the player's profile, then the Rail
---   Rail      the menu down the left: Pets, Robes, Quests, Settings
---   Currency  top centre, in the row beside Roblox's own buttons: Qi, Spirit Stones, Relics
+--   Rail      the menu down the left: Pets, Codex, Robes, Quests, Settings (on a phone, icons in a row under the profile)
+--   Currency  top centre, in the row beside Roblox's own buttons: Qi, Spirit Stones, Relics, sharing one slim strip
 --   TopRight  top right, in that row: small round buttons (Rewards)
 --   Quest     right, under them: the current quest (QuestController)
 --   Banner    top centre, under the currencies: the guardian's bar and messages (Toast)
 --   Dock      bottom centre, bottom up: Cultivate, the breakthrough, the Qinggong strip
--- Strike, Dash and Sword stand round Roblox's jump button, bottom right. Roblox's chat stays where Roblox
+-- The touch actions stand beside Roblox's jump button, bottom right (TouchActions). Roblox's chat stays where Roblox
 -- puts it, at the top. Windows (the pets list, the altar, the shops): Hud.window, one open at a time.
--- Each region scales with the screen (HudScale). Hud.isCompact() is true on a short screen (a phone in
--- landscape). The first script to require this builds it.
+-- Each region scales with the screen (HudScale, HudMetrics), and text stays readable at any scale. Hud.isCompact() is true on a
+-- short screen (a phone in landscape): pieces change their layout on it, following Hud.CompactChanged. The first script to require this builds it.
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -20,6 +21,7 @@ local UiFx = require(script.Parent:WaitForChild("UiFx"))
 local UiKit = require(script.Parent:WaitForChild("UiKit"))
 local UiTheme = require(script.Parent:WaitForChild("UiTheme"))
 local applyHudScale = require(script.Parent:WaitForChild("HudScale"))
+local HudMetrics = require(script.Parent:WaitForChild("HudMetrics"))
 
 local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 local M = UiTheme.Margin
@@ -103,16 +105,11 @@ UiKit.list(rail, { FillDirection = Enum.FillDirection.Vertical, Padding = UDim.n
 Hud.Rail = rail
 
 -- ---------- compact screens ----------
-local COMPACT_BELOW = 500 -- px on the screen's shorter side: phones in landscape
 local compactChanged = Instance.new("BindableEvent")
 Hud.CompactChanged = compactChanged.Event
 local compact = nil
 local function checkCompact()
-    local camera = workspace.CurrentCamera
-    if not camera then
-        return
-    end
-    local now = math.min(camera.ViewportSize.X, camera.ViewportSize.Y) < COMPACT_BELOW
+    local now = HudMetrics.class() == "Phone"
     if now ~= compact then
         compact = now
         compactChanged:Fire(now)
@@ -126,43 +123,74 @@ end
 function Hud.DockWidth()
     return if Hud.isCompact() then 190 else 240
 end
-local watched
-local function watchCamera()
-    if watched then
-        watched:Disconnect()
+HudMetrics.Changed:Connect(checkCompact)
+checkCompact()
+
+HudMetrics.keepReadable(gui)
+HudMetrics.keepReadable(topGui)
+HudMetrics.keepReadable(windowGui)
+
+-- On a phone the menu runs along under the profile as icons alone: the thumbstick has the screen's lower left
+local function layoutRail(isCompact)
+    rail:FindFirstChildOfClass("UIListLayout").FillDirection = if isCompact then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical
+    for _, button in rail:GetChildren() do
+        if button:IsA("TextButton") then
+            button.Size = UDim2.fromOffset(if isCompact then 44 else 150, 42)
+            local word = button:FindFirstChild("Word")
+            if word then
+                word.Visible = not isCompact
+            end
+        end
     end
-    local camera = workspace.CurrentCamera
-    watched = camera and camera:GetPropertyChangedSignal("ViewportSize"):Connect(checkCompact)
-    checkCompact()
 end
-workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(watchCamera)
-watchCamera()
+Hud.CompactChanged:Connect(layoutRail)
+
+-- The three counters share one slim strip, side by side
+local strip = UiKit.panel({
+    Name = "Counters", AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 30), Brackets = false, Parent = Hud.Currency,
+})
+local stripRow = Instance.new("Frame")
+stripRow.Name = "Row"
+stripRow.BackgroundTransparency = 1
+stripRow.AutomaticSize = Enum.AutomaticSize.X
+stripRow.Size = UDim2.fromScale(0, 1)
+stripRow.Parent = strip
+UiKit.padding(stripRow, 8, 0)
+UiKit.list(stripRow, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), VerticalAlignment = Enum.VerticalAlignment.Center })
 
 -- A resource chip: its icon and a value. Returns the chip and a function that sets its number: it rolls
 -- there, and what changed floats off under the chip. opts: Format (number to text), FloatFormat, Color.
 function Hud.chip(name, image, order, opts)
-    local chip = UiKit.panel({
-        Name = name, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 34),
-        LayoutOrder = order, Brackets = false, Parent = Hud.Currency,
-    })
-    -- the row is its own frame: a list on the panel would also line up the panel's glow
+    local chip = Instance.new("Frame")
+    chip.Name = name
+    chip.BackgroundTransparency = 1
+    chip.AutomaticSize = Enum.AutomaticSize.X
+    chip.Size = UDim2.fromScale(0, 1)
+    chip.LayoutOrder = order
+    chip.Parent = stripRow
+    -- the row is its own frame: what's gained floats off under the chip, outside the row's order
     local row = Instance.new("Frame")
     row.Name = "Row"
     row.BackgroundTransparency = 1
     row.AutomaticSize = Enum.AutomaticSize.X
     row.Size = UDim2.fromScale(0, 1)
     row.Parent = chip
-    UiKit.padding(row, 5, 5)
-    UiKit.list(row, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), VerticalAlignment = Enum.VerticalAlignment.Center })
-    local icon = UiKit.icon(image, 24)
+    UiKit.list(row, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 5), VerticalAlignment = Enum.VerticalAlignment.Center })
+    local icon = Instance.new("Frame") -- the picture alone, no box: it stays as small as the strip
+    icon.Name = "Icon"
+    icon.BackgroundTransparency = 1
+    icon.Size = UDim2.fromOffset(20, 20)
     icon.Parent = row
+    local picture = Instance.new("ImageLabel")
+    picture.Name = "Image"
+    picture.BackgroundTransparency = 1
+    picture.Image = image
+    picture.Size = UDim2.fromScale(1, 1)
+    picture.Parent = icon
     local value = UiKit.label({
-        Name = "Value", Font = "Strong", TextSize = 16, AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, 24), LayoutOrder = 2, Parent = row,
+        Name = "Value", Font = "Strong", TextSize = 14, AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.fromOffset(0, 20), LayoutOrder = 2, Parent = row,
     })
-    local pad = Instance.new("UIPadding")
-    pad.PaddingRight = UDim.new(0, 6)
-    pad.Parent = value
     return chip, UiFx.counter(value, opts.Format, {
         Color = opts.Color, FloatIn = chip, Icon = icon:FindFirstChild("Image"), FloatFormat = opts.FloatFormat,
     })
@@ -203,6 +231,7 @@ function Hud.railButton(name, image, word, order)
         Name = "Word", Font = "Strong", Text = word, TextSize = 15, TextColor3 = UiTheme.Colors.Text,
         AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 46, 0.5, 0), Size = UDim2.new(1, -50, 0, 18), Parent = button,
     })
+    layoutRail(compact == true)
     return button, addBadge(button)
 end
 
@@ -226,6 +255,7 @@ end
 -- props: Name, Title, Size (Vector2), AnchorPoint, Position (UDim2), OnClose (function)
 -- Returns { Frame, Body, open(), close(), isOpen(), setTitle(text) }.
 local windows = {}
+local WINDOW_MARGIN = 24
 local SLIDE = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 function Hud.window(props)
@@ -236,7 +266,16 @@ function Hud.window(props)
     frame.BackgroundTransparency = 0.03 -- near solid, all the way down: the HUD under a window mustn't read through it
     frame:FindFirstChildOfClass("UIGradient").Transparency = NumberSequence.new(0)
     frame.Active = true -- clicks on it stay on it: they mustn't swing the player's weapon behind it
-    applyHudScale(frame, props.Size.Y) -- and never taller than the screen (a phone)
+    applyHudScale(frame)
+    -- on a small screen it stays at the HUD's scale, so its text stays readable, and gets shorter: its lists scroll
+    local function fitToScreen()
+        local view, scale = HudMetrics.viewport(), HudMetrics.scale()
+        local room = (view.Y - GuiService:GetGuiInset().Y - WINDOW_MARGIN) / scale
+        local across = (view.X - WINDOW_MARGIN) / scale
+        frame.Size = UDim2.fromOffset(math.min(props.Size.X, across), math.min(props.Size.Y, room))
+    end
+    HudMetrics.Changed:Connect(fitToScreen)
+    fitToScreen()
     local inner = UiKit.content(frame, 14, 10)
     local _, title = UiKit.header(inner, props.Title, { TextSize = 14 })
     local closeButton = UiKit.button({
@@ -316,8 +355,8 @@ end
 -- frame; QinggongController fills Top and Bar, TrainingController puts its button in Action.
 -- Two sizes, and it follows the screen: the screen's size may not be known yet when this first runs.
 local DOCK_SIZES = {
-    [true] = { Width = 310, Height = 90, Emblem = 80, Button = 38, TextSize = 12, Top = 4, Bar = 24, BarHeight = 7, Bottom = -6 },
-    [false] = { Width = 380, Height = 108, Emblem = 100, Button = 48, TextSize = 13, Top = 7, Bar = 28, BarHeight = 9, Bottom = -8 },
+    [true] = { Width = 310, Height = 90, Emblem = 80, Button = 38, TextSize = 12, Top = 4, Bar = 24, BarHeight = 10, Bottom = -6 },
+    [false] = { Width = 380, Height = 108, Emblem = 100, Button = 48, TextSize = 13, Top = 7, Bar = 28, BarHeight = 13, Bottom = -8 },
 }
 
 local dock = Instance.new("Frame")
@@ -364,6 +403,7 @@ emblemIcon.AnchorPoint = Vector2.new(0.5, 0.5)
 emblemIcon.Position = UDim2.fromScale(0.5, 0.5)
 emblemIcon.Size = UDim2.fromScale(0.68, 0.68)
 emblemIcon.Parent = emblem
+Hud.CultivationEmblemWell = well
 local ring = Instance.new("ImageLabel")
 ring.Name = "Ring"
 ring.BackgroundTransparency = 1
@@ -386,7 +426,7 @@ action.AnchorPoint = Vector2.new(0, 1)
 action.Parent = plate
 
 local dockResized = Instance.new("BindableEvent")
-Hud.CultivationDock = { Top = top, Bar = barSlot, Action = action, Emblem = emblemIcon, Resized = dockResized.Event, Size = nil }
+Hud.CultivationDock = { Top = top, Bar = barSlot, Action = action, Emblem = emblemIcon, Ring = ring, Resized = dockResized.Event, Size = nil }
 
 local function layoutDock(compact)
     local size = DOCK_SIZES[compact]

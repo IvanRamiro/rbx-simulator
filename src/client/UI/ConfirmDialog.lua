@@ -39,7 +39,7 @@ local panel = UiKit.panel({
 panel.BackgroundTransparency = 0.03
 panel:FindFirstChildOfClass("UIGradient").Transparency = NumberSequence.new(0)
 panel.Active = true
-applyHudScale(panel, PANEL_SIZE.Y)
+applyHudScale(panel)
 local inner = UiKit.content(panel, 14, 10)
 local _, title = UiKit.header(inner, "CONFIRM", { TextSize = 14 })
 

@@ -65,6 +65,7 @@ local POUNCE_LEAD = 0.85        -- how far ahead it aims: a straight runner is c
 local MAX_AIRBORNE = 12         -- seconds a thief may stay off the ground: every air leap and a long glide fit
 local MAX_CARRY = 300           -- seconds a thief may carry the egg (home across the longest bridge); nobody hides it forever
 
+local TAKER_CHECK = 0.4 -- seconds between looks at who could take an egg
 local Guardian = {}
 Guardian.__index = Guardian
 
@@ -808,10 +809,32 @@ end
 
 -- Each frame ------------------------------------------------------------------------------------
 
+-- Tells each player whether they could take an egg from this guardian's stands right now, by the same rules as
+-- takeFromStand: their CanTakeEgg attribute names the guardian while they can. The client shows them where to go.
+function Guardian:updateTakers(now)
+    if now < (self.nextTakerCheck or 0) then
+        return
+    end
+    self.nextTakerCheck = now + TAKER_CHECK
+    local id = self.model:GetAttribute("GuardianId")
+    local open = self.state == "Weakened" and self.egg.state == "Available"
+    local need = self.config.MaxHealth * (1 - self.config.WeakenedAt) * GameConfig.EggTheft.TakeShare
+    for _, player in Players:GetPlayers() do
+        local can = open and (self.damageBy[player] or 0) >= need and now >= (self.retakeAfter[player] or 0)
+            and not player:GetAttribute("CarryingEgg")
+        if can then
+            player:SetAttribute("CanTakeEgg", id)
+        elseif player:GetAttribute("CanTakeEgg") == id then
+            player:SetAttribute("CanTakeEgg", nil)
+        end
+    end
+end
+
 function Guardian:step(dt)
     local now = os.clock()
     local config = self.config
     local egg = self.egg
+    self:updateTakers(now)
 
     if egg.state == "Carried" then
         self:watchThief()

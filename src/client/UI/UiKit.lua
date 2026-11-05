@@ -263,6 +263,7 @@ local BUTTON_TONES = {
     Highlight = { back = C.Highlight, edge = Color3.new(1, 1, 1), text = Color3.fromRGB(48, 28, 6), glow = C.Highlight },
     Quiet = { back = C.Raised, edge = C.EdgeDim, text = C.Text },
     Danger = { back = C.DangerDeep, edge = C.Danger, text = C.Text },
+    Active = { back = Color3.fromRGB(14, 112, 118), edge = Color3.fromRGB(120, 255, 236), text = Color3.new(1, 1, 1), glow = Color3.fromRGB(70, 240, 220) }, -- something running, right now
 }
 
 -- props.Tone picks the colours; button:SetAttribute("Tone", name) changes them later

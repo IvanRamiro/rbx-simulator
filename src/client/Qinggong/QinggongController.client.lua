@@ -19,12 +19,13 @@ local UserInputService = game:GetService("UserInputService")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Hud = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"))
+local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
+local TouchActions = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("TouchActions"))
 local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKit"))
 local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiTheme"))
 local QinggongFx = require(script.Parent:WaitForChild("QinggongFx"))
 
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
 local qinggong = GameConfig.Qinggong
 
 local GLIDE_COLOR = UiTheme.Colors.AccentBright
@@ -36,7 +37,8 @@ local HARD_LANDING_SPEED = 25 -- a fall faster than this lands with an impact ev
 local FULL_IMPACT_SPEED = 110 -- the fall speed of a full-strength landing
 
 -- the top of the Cultivation dock (Hud): its title, the air leaps left or the state (gliding, sword
--- flight), and the stamina bar, ending in a diamond
+-- flight), and the stamina bar, ending in a diamond, with STAMINA and how much is left written on it. Its ticks mark what a dash costs,
+-- so the dashes left can be counted; it turns red and pulses when there isn't enough for one, and shakes when a dash is refused for lack of it.
 local dock = Hud.CultivationDock
 local dockTitle = UiKit.label({
     Name = "Title", Font = "Title", Text = "Cultivation", Size = UDim2.fromScale(0.45, 1), Parent = dock.Top,
@@ -68,6 +70,57 @@ tip.BorderSizePixel = 0
 tip.ZIndex = 3
 tip.Parent = dock.Bar
 UiKit.stroke(tip, Color3.fromRGB(70, 44, 10), 0, 1)
+
+local ticks = Instance.new("Frame")
+ticks.Name = "Ticks"
+ticks.BackgroundTransparency = 1
+ticks.Size = UDim2.fromScale(1, 1)
+ticks.ZIndex = 3
+ticks.Parent = staminaBack
+local shownTicksFor = nil
+local function drawTicks(total)
+    if total == shownTicksFor then
+        return
+    end
+    shownTicksFor = total
+    ticks:ClearAllChildren()
+    local cost = qinggong.Dash.Cost
+    local count = if total > 0 then math.floor((total - 1) / cost) else 0
+    if count > 12 then -- too many to read: a tick for every other dash
+        cost *= 2
+        count = math.floor((total - 1) / cost)
+    end
+    for i = 1, count do
+        local tick = Instance.new("Frame")
+        tick.BorderSizePixel = 0
+        tick.BackgroundColor3 = Color3.fromRGB(16, 18, 44)
+        tick.BackgroundTransparency = 0.25
+        tick.AnchorPoint = Vector2.new(0.5, 0)
+        tick.Position = UDim2.fromScale(i * cost / total, 0)
+        tick.Size = UDim2.new(0, 2, 1, 0)
+        tick.Parent = ticks
+    end
+end
+
+local staminaText = UiKit.label({ -- on the bar's frame, not its track, which would clip it on a small screen
+    Name = "StaminaText", Font = "Strong", TextSize = 10, TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.25,
+    TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 4, Parent = dock.Bar,
+})
+
+local barHome = dock.Bar.Position
+local function refuseDash()
+    Sfx.play("Error")
+    staminaFill.BackgroundColor3 = Color3.new(1, 1, 1)
+    task.spawn(function()
+        for _, dx in { -4, 4, -3, 3, -1, 1, 0 } do
+            dock.Bar.Position = barHome + UDim2.fromOffset(dx, 0)
+            task.wait(0.035)
+        end
+    end)
+end
+dock.Resized:Connect(function()
+    barHome = dock.Bar.Position
+end)
 
 local leapsUsed = 0
 local lastJumpRequest = 0
@@ -139,7 +192,11 @@ local function updateStaminaBar()
     local total = maxStamina()
     local share = if total > 0 then math.clamp(stamina / total, 0, 1) else 0
     staminaFill.Size = UDim2.fromScale(share, 1)
-    staminaFill.BackgroundColor3 = if share < 0.2 then STAMINA_LOW else STAMINA_COLOR
+    drawTicks(total)
+    local low = stamina < qinggong.Dash.Cost
+    staminaFill.BackgroundColor3 = if low then STAMINA_LOW else STAMINA_COLOR
+    staminaFill.BackgroundTransparency = if low then 0.25 + 0.25 * math.sin(os.clock() * 8) else 0
+    staminaText.Text = "STAMINA  " .. math.floor(share * 100 + 0.5) .. "%"
 end
 
 -- ---------- dash ----------
@@ -147,6 +204,9 @@ local function dash()
     local humanoid, rootPart = getCharacterParts()
     local now = os.clock()
     local config = qinggong.Dash
+    if humanoid and not flight and now >= dashReadyAt and stamina < config.Cost then
+        refuseDash()
+    end
     if not humanoid or flight or now < dashReadyAt or stamina < config.Cost then
         return
     end
@@ -460,31 +520,8 @@ player.CharacterAdded:Connect(function()
     updateHud()
 end)
 
-if UserInputService.TouchEnabled then
-    local touchGui = Instance.new("ScreenGui")
-    touchGui.Name = "QinggongTouch"
-    touchGui.ResetOnSpawn = false
-    -- round the jump button, whose centre Roblox keeps about 60 from the right and 55 from the bottom
-    local function touchButton(name, text, position)
-        local button = Instance.new("TextButton")
-        button.Name = name
-        button.AnchorPoint = Vector2.new(0.5, 0.5)
-        button.Position = position
-        button.Size = UDim2.fromOffset(52, 52)
-        UiKit.touchButton(button, text)
-        button.Parent = touchGui
-        return button
-    end
-    touchButton("Dash", "Dash", UDim2.new(1, -122, 1, -122)).Activated:Connect(dash)
-    local swordButton = touchButton("Sword", "Sword", UDim2.new(1, -52, 1, -132))
-    swordButton.Activated:Connect(requestFlight)
-    local function showSword()
-        swordButton.Visible = (player:GetAttribute("QinggongFlightSpeed") or 0) > 0
-    end
-    player:GetAttributeChangedSignal("QinggongFlightSpeed"):Connect(showSword)
-    showSword()
-    touchGui.Parent = playerGui
-end
+TouchActions.add("Dash", "Dash", dash)
+TouchActions.add("Sword", "Sword", requestFlight)
 task.spawn(function()
     local rankValue = player:WaitForChild("leaderstats"):WaitForChild("Rank")
     rankValue.Changed:Connect(updateHud)

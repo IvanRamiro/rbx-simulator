@@ -13,7 +13,9 @@ local Toast = {}
 Toast.__index = Toast
 
 local FADE = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local WIDTH = if Hud.isCompact() then 334 else 420 -- fits between the profile and the QUEST panel
+local function width() -- fits between the profile and the QUEST panel
+    return if Hud.isCompact() then 334 else 420
+end
 local created = 0
 
 function Toast.new(name, textColor, seconds)
@@ -23,7 +25,10 @@ function Toast.new(name, textColor, seconds)
     group.Name = name
     group.BackgroundTransparency = 1
     group.AutomaticSize = Enum.AutomaticSize.Y
-    group.Size = UDim2.fromOffset(WIDTH + 6, 0)
+    group.Size = UDim2.fromOffset(width() + 6, 0)
+    Hud.CompactChanged:Connect(function()
+        group.Size = UDim2.fromOffset(width() + 6, 0)
+    end)
     group.LayoutOrder = created
     group.Visible = false
     group.Parent = Hud.Banner
