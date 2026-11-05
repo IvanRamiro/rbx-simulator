@@ -263,7 +263,7 @@ function Hud.window(props)
         Name = props.Name, Size = UDim2.fromOffset(props.Size.X, props.Size.Y), AnchorPoint = props.AnchorPoint,
         Position = props.Position, Visible = false, ZIndex = 10, Parent = windowGui,
     })
-    frame.BackgroundTransparency = 0.03 -- near solid, all the way down: the HUD under a window mustn't read through it
+    frame.BackgroundTransparency = 0 -- near solid, all the way down: the HUD under a window mustn't read through it
     frame:FindFirstChildOfClass("UIGradient").Transparency = NumberSequence.new(0)
     frame.Active = true -- clicks on it stay on it: they mustn't swing the player's weapon behind it
     applyHudScale(frame)

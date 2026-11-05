@@ -25,6 +25,7 @@ local player = Players.LocalPlayer
 local C = UiTheme.Colors
 
 local LEAVE_MARGIN = 4 -- studs past the prompt's range the window closes: inside the server's own limit (its range + 6)
+local REVEAL_TIME = 2.5 -- seconds the window stays aside after the egg breaks, for the pet to be seen
 local BREAK_MARGIN = 0.15 -- seconds after the egg breaks that Hatch wakes, so a press never reaches a server still busy
 local NO_ANSWER = GameConfig.HatchingAltar.Stage + 3 -- seconds Hatch waits for an answer that never came
 local RARITY_ORDER = { Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }
@@ -62,14 +63,15 @@ end
 
 -- the rarest pet an egg can hatch
 local function bestOf(egg)
-    local best
+    local best, bestId
     for _, entry in egg.Pool do
         local pet = GameConfig.Pets[entry.PetId]
         if pet and (not best or (RARITY_ORDER[pet.Rarity] or 0) > (RARITY_ORDER[best.Rarity] or 0)) then
+            bestId = entry.PetId
             best = pet
         end
     end
-    return best
+    return best, bestId
 end
 
 local render
@@ -195,12 +197,13 @@ function render()
             needs.LayoutOrder = 1
             needs.Parent = tags
         end
-        local best = bestOf(entry.egg)
+        local best, bestId = bestOf(entry.egg)
         if best then
             UiKit.label({
                 Name = "Best", TextSize = 11, TextColor3 = C.Muted, Position = UDim2.fromOffset(66, 49),
                 Size = UDim2.new(1, -170, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, RichText = true,
-                Text = "Up to: " .. string.format('<font color="#%s">%s</font>', (GameConfig.PetRarityColors[best.Rarity] or C.Text):ToHex(), best.DisplayName),
+                Text = "Up to: " .. string.format('<font color="#%s">%s</font>', (GameConfig.PetRarityColors[best.Rarity] or C.Text):ToHex(),
+                    if CodexState.found[bestId] then best.DisplayName else "???"), -- an undiscovered beast keeps its name
                 Parent = card,
             })
         end
@@ -254,6 +257,11 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt, who)
     render()
 end)
 
+local function withinReach()
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    return root ~= nil and altarPart ~= nil and (root.Position - altarPart.Position).Magnitude <= leaveDistance
+end
+
 -- the server's answer ends the wait: at once when it refused, when the egg breaks when it didn't
 RemoteEvents.EggHatchResultEvent.OnClientEvent:Connect(function(result)
     if typeof(result) ~= "table" or not resting then
@@ -263,7 +271,26 @@ RemoteEvents.EggHatchResultEvent.OnClientEvent:Connect(function(result)
     if result.Reason or typeof(result.BreakAt) ~= "number" then
         wake(0)
     else
-        wake(math.max(0, result.BreakAt - workspace:GetServerTimeNow()) + BREAK_MARGIN)
+        local untilBroken = math.max(0, result.BreakAt - workspace:GetServerTimeNow()) + BREAK_MARGIN
+        wake(untilBroken)
+        -- the window steps aside so the egg can be seen breaking, and comes back if there are more to hatch
+        if window.isOpen() then
+            local part, reach = altarPart, leaveDistance -- closing forgets the altar
+            window.close()
+            local this = press
+            task.delay(untilBroken + REVEAL_TIME, function()
+                if this ~= press or window.isOpen() or #heldEggs() == 0 then
+                    return
+                end
+                altarPart, leaveDistance = part, reach
+                if withinReach() then
+                    window.open()
+                    render()
+                else
+                    altarPart = nil
+                end
+            end)
+        end
     end
 end)
 

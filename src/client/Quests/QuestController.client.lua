@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
+local RunService = game:GetService("RunService")
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
 local Toast = require(UI:WaitForChild("Toast"))
@@ -48,6 +49,23 @@ local body = UiKit.label({
     TextWrapped = true, LayoutOrder = 3, Parent = inner,
 })
 local bar = UiKit.bar({ Name = "Progress", Size = UDim2.new(1, 0, 0, 5), LayoutOrder = 4, Parent = inner })
+
+-- the way to where a quest happens (its Way in GameConfig.Quests): an arrow that turns with the camera, what it points at, how far
+local way = Instance.new("Frame")
+way.Name = "Way"
+way.BackgroundTransparency = 1
+way.Size = UDim2.new(1, 0, 0, 20)
+way.LayoutOrder = 4
+way.Visible = false
+way.Parent = inner
+local wayArrow = UiKit.label({
+    Name = "Arrow", Font = "Strong", TextSize = 20, Text = "^", TextColor3 = C.Highlight, TextXAlignment = Enum.TextXAlignment.Center,
+    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 9, 0.5, 2), Size = UDim2.fromOffset(18, 18), Parent = way,
+})
+local wayText = UiKit.label({
+    Name = "Where", Font = "Strong", TextSize = 12, TextColor3 = C.Highlight, Position = UDim2.fromOffset(24, 0), Size = UDim2.new(1, -24, 1, 0),
+    TextTruncate = Enum.TextTruncate.AtEnd, Parent = way,
+})
 
 local fold = Instance.new("TextButton") -- the whole header
 fold.Name = "Fold"
@@ -156,6 +174,35 @@ local function renderProgress()
     local share = player:GetAttribute("QuestProgress")
     UiKit.setBar(bar, if typeof(share) == "number" then share else 0)
 end
+
+-- It rests while the egg's own way home is showing, and within sight of the place.
+local WAY_NEAR, WAY_EVERY = 25, 0.15
+local nextWay = 0
+RunService.RenderStepped:Connect(function()
+    local now = os.clock()
+    if now < nextWay then
+        return
+    end
+    nextWay = now + WAY_EVERY
+    local step = player:GetAttribute("QuestStep")
+    local quest = typeof(step) == "number" and QUESTS[step]
+    local target = quest and quest.Way
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    local camera = workspace.CurrentCamera
+    local show = false
+    if target and root and camera and player:GetAttribute("CarryingEgg") == nil then
+        local to = Vector3.new(target[2] - root.Position.X, 0, target[3] - root.Position.Z)
+        if to.Magnitude > WAY_NEAR then
+            local away = camera.CFrame:VectorToObjectSpace(to)
+            wayArrow.Rotation = math.deg(math.atan2(away.X, -away.Z))
+            wayText.Text = target[1] .. "  ·  " .. NumberFormat.compact(math.floor(to.Magnitude)) .. " studs"
+            show = true
+        end
+    end
+    if way.Visible ~= show then
+        way.Visible = show
+    end
+end)
 
 player:GetAttributeChangedSignal("QuestStep"):Connect(render)
 player:GetAttributeChangedSignal("QuestProgress"):Connect(renderProgress)

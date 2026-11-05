@@ -34,6 +34,10 @@ do
         return DataStoreService:GetOrderedDataStore(rules.StoreName)
     end)
     store = if ok then result else nil
+    -- a Studio playtest on a test save (PlayerData) stays off the real board
+    if game:GetService("RunService"):IsStudio() and game:GetService("ServerStorage"):GetAttribute("StudioTestSave") then
+        store = nil
+    end
 end
 
 -- DataStores that will never answer here: stop asking, and rank this server's players instead.
@@ -81,8 +85,10 @@ local function writeQi(player, force)
     local ok, err = pcall(function()
         store:SetAsync(tostring(player.UserId), qi)
     end)
-    if ok and player.Parent then -- a write still running when the player left mustn't keep them
-        written[player] = { Qi = qi, At = os.clock() }
+    if ok then
+        if player.Parent then -- a write still running when the player left mustn't keep them
+            written[player] = { Qi = qi, At = os.clock() }
+        end
     else
         warn("LeaderboardService: couldn't record " .. player.Name .. "'s Qi: " .. tostring(err))
         giveUpIfPermanent(err)

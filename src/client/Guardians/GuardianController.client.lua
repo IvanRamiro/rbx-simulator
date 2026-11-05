@@ -263,7 +263,8 @@ local takeHow = UiKit.label({
 
 local TAKE_MARK_ABOVE = Vector3.new(0, 7.5, 0)
 local TAKE_REFRESH = 0.5
-local takeMarks = {} -- [stand] = its BillboardGui
+local takeMarks = {} -- [stand] = its mark, drawn on the screen over the stand
+local TAKE_MARK_SLACK = 40 -- pixels it may sit below its proper place, over the egg's own height
 local takeRefreshAt = 0
 local takeStands = {}
 local wasAbleToTake = false
@@ -308,8 +309,11 @@ local function placeTakeMarks(camera, now)
         local mark = takeMarks[entry.stand]
         if mark then
             local point, inFront = camera:WorldToScreenPoint(entry.pedestal.Position + TAKE_MARK_ABOVE)
-            mark.Visible = inFront and point.Z > 0
-            mark.Position = UDim2.fromOffset(point.X, point.Y)
+            -- it never climbs behind the bars at the top of the screen: it stops just under them, and goes only once
+            -- the egg itself is up there, when the panel has it
+            local lowest = takePanel.AbsolutePosition.Y + takePanel.AbsoluteSize.Y + mark.AbsoluteSize.Y
+            mark.Visible = inFront and point.Z > 0 and point.Y + TAKE_MARK_SLACK >= lowest
+            mark.Position = UDim2.fromOffset(point.X, math.max(point.Y, lowest))
             mark.Chevron.Position = UDim2.fromOffset(0, 24 + 4 * math.sin(now * 5))
         end
     end

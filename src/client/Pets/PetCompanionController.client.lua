@@ -8,8 +8,9 @@ local PetRig = require(script.Parent:WaitForChild("PetRig"))
 local PetPreload = require(script.Parent:WaitForChild("PetPreload"))
 local AuraBuilder = require(script.Parent.Parent:WaitForChild("Auras"):WaitForChild("AuraBuilder"))
 
-local FOLLOW_SPACING = 4.8
-local FOLLOW_DISTANCE = 5.5
+-- where each pet walks, in studs from its owner (x to the right, z behind): beside them, never in the line between them and
+-- the camera, which sits straight behind them. Pets are about 6 studs long.
+local FOLLOW_SLOTS = { Vector2.new(6.4, 2.4), Vector2.new(-6.4, 2.4), Vector2.new(12.5, 1.2) }
 local FOLLOW_HEIGHT = 0.9
 local FOLLOW_SHARPNESS = 6
 local SNAP_DISTANCE = 40
@@ -197,9 +198,8 @@ local function getTargetCFrame(player, rootPart, index, count, now)
         return CFrame.lookAt(position, position + heading)
     end
 
-    local side = index - (count + 1) / 2
-    local offset = Vector3.new(side * FOLLOW_SPACING, FOLLOW_HEIGHT + bob, FOLLOW_DISTANCE + math.abs(side) * 0.6)
-    return levelFacing(rootPart) * CFrame.new(offset)
+    local slot = FOLLOW_SLOTS[index] or FOLLOW_SLOTS[#FOLLOW_SLOTS]
+    return levelFacing(rootPart) * CFrame.new(slot.X, FOLLOW_HEIGHT + bob, slot.Y)
 end
 
 local function updateCompanions(deltaTime)

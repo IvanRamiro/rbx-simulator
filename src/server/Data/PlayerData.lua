@@ -95,9 +95,13 @@ MIGRATIONS[8] = function(progress)
     return progress
 end
 
+-- Playtesting in Studio: with ServerStorage's StudioTestSave attribute set, saves go to a separate store of that name, so
+-- each new name starts a new player and a real save can't be touched. Ignored outside Studio.
+local studioTestSave = RunService:IsStudio() and game:GetService("ServerStorage"):GetAttribute("StudioTestSave") or nil
+
 local store = nil
 local storeOk, storeResult = pcall(function()
-    return DataStoreService:GetDataStore(DATASTORE_NAME)
+    return DataStoreService:GetDataStore(studioTestSave or DATASTORE_NAME)
 end)
 if storeOk then
     store = storeResult

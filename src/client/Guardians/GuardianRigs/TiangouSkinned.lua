@@ -50,7 +50,7 @@ Rig.Poses = {
     Enraged = merged({ Hips = { -2, 0, 0, -0.9 }, Chest = { -3 }, Neck1 = { -22 }, Neck2 = { -8 }, Head = { 22 }, Jaw = { -20 }, Tail1 = { -20 }, Tail2 = { -10 } }, both("Ear", { 50 })),
     Returning = { Hips = { 0, 0, 0, -0.6 }, Neck1 = { -6 }, Head = { 4 } },
 }
-Rig.Gallop = { 14, 22 }
+Rig.Gallop = { 21, 25 } -- one gait or the other: halfway between the two (their legs lead differently) no foot is ever down, and they skate
 Rig.LeapAction = "MoonLeap"
 Rig.Look = { Joint = "Head", Share = 0.55, Body = "Neck2", BodyShare = 0.35, Limit = 50 }
 
@@ -82,9 +82,9 @@ Rig.Lean = { Joint = "Hips", Accel = 0.12, Bank = 0.07, Max = 8 }
 Rig.Legs = {}
 for _, side in SIDES do
     table.insert(Rig.Legs, { Name = side .. "Front", Upper = side .. "FrontUpper", Lower = side .. "FrontLower", Foot = side .. "FrontPaw",
-        Flat = { side .. "FrontPaw" }, Axis = 1, Bend = 1 })
+        Flat = { side .. "FrontPaw" }, Axis = 1, Bend = 1, Lock = true })
     table.insert(Rig.Legs, { Name = side .. "Back", Upper = side .. "BackUpper", Lower = side .. "BackLower", Foot = side .. "BackMeta",
-        Flat = { side .. "BackMeta", side .. "BackPaw" }, Axis = 1, Bend = -1 })
+        Flat = { side .. "BackMeta", side .. "BackPaw" }, Axis = 1, Bend = -1, Lock = true })
 end
 Rig.Style = { Debris = "Frost", Qi = Color3.fromRGB(110, 190, 255), QiCore = Color3.fromRGB(235, 248, 255) }
 
