@@ -590,7 +590,7 @@ function Guardian:knock(player, origin, power)
         or player:GetAttribute("IsFlying") == true then
         return
     end
-    self.knocked[player] = now + KNOCK_IMMUNITY
+    self.knocked[player] = now + (self.config.KnockGrace or KNOCK_IMMUNITY)
     MovementGuard.allow(player, power * 3) -- the throw, which the client carries out
     local away = flat(root.Position - origin)
     away = if away.Magnitude > 0.1 then away.Unit else flat(self.root.CFrame.LookVector).Unit

@@ -196,13 +196,14 @@ local GameConfig = {
             TurnSpeed = 140,       -- degrees per second
             Egg = { CarriedHeight = 2.6 }, -- its height, carried in the thief's arms
             WeakenedHint = "falters: take an egg from the stands behind it and carry it home to Yggdrasil!",
-            Stagger = 1.1,         -- seconds a knocked-back player is off their feet
+            Stagger = 0.8,         -- seconds a knocked-back player is off their feet (softer on the first two guardians: a beginner mustn't spend the fight walking back)
+            KnockGrace = 4,        -- seconds after a knock in which its blows can't knock the same player again (default 0.6)
             WeakenedSlowdown = 1.7, -- attack cooldown multiplier while weakened
             Attacks = {
                 -- a forepaw slams
-                Slam = { Kind = "Sweep", Range = 24, Arc = 55, WindUp = 0.75, Cooldown = 2.6, Knockback = 45 },
-                Roar = { Kind = "Wave", Radius = 44, WaveSpeed = 34, WindUp = 1.1, Cooldown = 8, Knockback = 40 },
-                Pounce = { Kind = "Pounce", MinRange = 16, MaxRange = 46, WindUp = 0.6, Air = 0.95, Height = 9, Cooldown = 4.5, Radius = 12, Knockback = 55 },
+                Slam = { Kind = "Sweep", Range = 24, Arc = 55, WindUp = 0.75, Cooldown = 2.6, Knockback = 28 },
+                Roar = { Kind = "Wave", Radius = 44, WaveSpeed = 34, WindUp = 1.1, Cooldown = 8, Knockback = 26 },
+                Pounce = { Kind = "Pounce", MinRange = 16, MaxRange = 46, WindUp = 0.6, Air = 0.95, Height = 9, Cooldown = 4.5, Radius = 12, Knockback = 34 },
             },
         },
         MantisSage = {
@@ -227,12 +228,13 @@ local GameConfig = {
             TurnsToFace = true,    -- awake at its lair, it turns to face whoever it watches
             Egg = { CarriedHeight = 2.6 },
             WeakenedHint = "lowers its blades: take an egg from the stands behind it and carry it home to Yggdrasil!",
-            Stagger = 1.1,
+            Stagger = 0.8,
+            KnockGrace = 3.5,
             WeakenedSlowdown = 1.7,
             Attacks = {
-                Scythe = { Kind = "Sweep", Range = 26, Arc = 65, WindUp = 0.6, Cooldown = 2.2, Knockback = 45 },
-                BladeWave = { Kind = "Wave", Arc = 50, Radius = 46, WaveSpeed = 40, WindUp = 0.9, Cooldown = 6.5, Knockback = 40 },
-                Leap = { Kind = "Pounce", MinRange = 16, MaxRange = 72, WindUp = 0.5, Air = 1.1, Height = 16, Cooldown = 4.2, Radius = 12, Knockback = 55 },
+                Scythe = { Kind = "Sweep", Range = 26, Arc = 65, WindUp = 0.6, Cooldown = 2.2, Knockback = 28 },
+                BladeWave = { Kind = "Wave", Arc = 50, Radius = 46, WaveSpeed = 40, WindUp = 0.9, Cooldown = 6.5, Knockback = 26 },
+                Leap = { Kind = "Pounce", MinRange = 16, MaxRange = 72, WindUp = 0.5, Air = 1.1, Height = 16, Cooldown = 4.2, Radius = 12, Knockback = 34 },
             },
         },
         EmberXuanwu = {
