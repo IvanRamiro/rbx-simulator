@@ -2,7 +2,7 @@
 -- ServerStorage.Guardians.<GuardianId> as a jointed Model for GuardianService to clone. Require a clone:
 --
 --   local GB = require(game.ServerStorage.WorldBuild.GuardianBuilder:Clone())
---   GB.store(workspace.MantisSage, "MantisSage")
+--   GB.store(workspace.EmberXuanwu, "EmberXuanwu")
 --
 -- The Model:
 --   Root      invisible anchored PrimaryPart; the Model's pivot is the origin, on the ground.

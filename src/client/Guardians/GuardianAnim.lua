@@ -42,6 +42,9 @@ local SUBSTEP = if Quality.Low then 1 / 120 else 1 / 240
 local MAX_SWING = 60         -- degrees a dragged joint may lag its target
 local SNAP_GAP = 0.25        -- seconds without an update (off-screen, a hitch) after which springs snap
 local TURN_STEP = 0.1        -- studs of stepping per degree turned: turning on the spot steps its feet
+local HOP_SPEED = 28         -- studs a second past which a planted foot steps instead of sliding (def.Hop)
+local HOP_TIME = 0.22
+local HOP_HEIGHT = 3
 local LOCK_REACH = 7         -- studs a locked foot may fall behind where its pose would put it before it lets go
 
 local function smooth(x)
@@ -266,7 +269,7 @@ function GuardianAnim:lift(leg, amount)
 end
 
 -- Puts the planted feet back on the ground (see the header).
-function GuardianAnim:plantFeet(pose)
+function GuardianAnim:plantFeet(pose, dt)
     local frames = {}
     local function frameOf(joint) -- the joint's piece in the root's frame, as posed
         local f = frames[joint]
@@ -295,8 +298,11 @@ function GuardianAnim:plantFeet(pose)
             end
             soleAt = (below * self.c0[def.Foot]).Position
         end
-        local function sole(a, b)
+        local function sole(a, b, y)
             tu[axis], tl[axis] = a, b
+            if y then
+                tu[2] = y
+            end
             return (hip * transformOf(tu) * c1u * c0l * transformOf(tl) * c1l):PointToWorldSpace(soleAt)
         end
         local a0, b0 = upper[axis], lower[axis]
@@ -304,7 +310,7 @@ function GuardianAnim:plantFeet(pose)
         -- a lifted foot is never posed through the ground either: it's put back on top of it
         local floorY = self.groundY + leg.height
         local weight = math.max(planted, if posed.Y < floorY - 0.05 then grounded else 0)
-        if weight > 0.01 then
+        if weight > 0.01 or leg.footWorld then
             -- where it stands: under its posed foot while it walks, on its own spot when still
             local target = Vector3.new(posed.X, floorY, posed.Z):Lerp(leg.stand, (1 - self.moving) * (def.Pin or 1) * planted)
             -- def.Lock: a paw that has landed stays on that spot in the world until it lifts, whatever the body does over it
@@ -322,25 +328,76 @@ function GuardianAnim:plantFeet(pose)
                     leg.lock = nil
                 end
             end
+            -- def.Hop: a foot told to be somewhere else at once (the body set off or stopped hard, a lock let go, a swing began far from its pose)
+            -- steps there through the air instead of popping or skating across the ground
+            if def.Hop then
+                local root = self.root.CFrame
+                local goal = root:PointToWorldSpace(if planted > 0.6 then target else Vector3.new(posed.X, math.max(posed.Y, floorY), posed.Z))
+                local last = leg.footWorld
+                if last and not leg.hop and dt > 0 and ((goal - last) * Vector3.new(1, 0, 1)).Magnitude / dt > HOP_SPEED then
+                    leg.hop = { from = last, t = 0 }
+                end
+                local world = goal
+                local hop = leg.hop
+                if hop then
+                    hop.t += dt / HOP_TIME
+                    if hop.t >= 1 then
+                        leg.hop = nil
+                    else
+                        local u = hop.t
+                        local far = ((goal - hop.from) * Vector3.new(1, 0, 1)).Magnitude
+                        world = hop.from:Lerp(goal, u * u * (3 - 2 * u)) + Vector3.new(0, math.sin(math.pi * u) * math.min(HOP_HEIGHT, far * 0.45), 0)
+                        target = root:PointToObjectSpace(world)
+                        weight = 1
+                    end
+                end
+                leg.footWorld = if planted > 0.6 or leg.hop then world else nil -- a foot in its swing has no spot to step from
+            end
             local floor = math.min(0, bend * b0) -- the knee never bends further backward than posed
             local a, b = a0, b0 + bend * 3       -- a slight bend, so a straight leg knows which way it folds
             -- solved in the leg's own swing plane: height and forward for a leg that bends on pitch,
             -- height and sideways for one that bends on roll (it can't reach out of that plane)
             local mask = if axis == 3 then Vector3.new(1, 1, 0) else Vector3.new(0, 1, 1)
-            for _ = 1, 5 do
-                local s = sole(a, b)
-                local r = (target - s) * mask
-                if r.Magnitude < 0.02 then
-                    break
+            if def.Yaw then
+                -- a leg splayed out to the side (a mantis's): its femur also swings on yaw, so the foot can be reached anywhere, not just in one plane
+                local y0 = upper[2]
+                local y = y0
+                for _ = 1, 5 do
+                    local s = sole(a, b, y)
+                    local r = target - s
+                    if r.Magnitude < 0.02 then
+                        break
+                    end
+                    local ja = (sole(a + 0.5, b, y) - s) / 0.5
+                    local jb = (sole(a, b + 0.5, y) - s) / 0.5
+                    local jy = (sole(a, b, y + 0.5) - s) / 0.5
+                    local n11, n12, n13 = ja:Dot(ja) + 1e-3, ja:Dot(jb), ja:Dot(jy)
+                    local n22, n23, n33 = jb:Dot(jb) + 1e-3, jb:Dot(jy), jy:Dot(jy) + 1e-3
+                    local g1, g2, g3 = ja:Dot(r), jb:Dot(r), jy:Dot(r)
+                    local c11, c12, c13 = n22 * n33 - n23 * n23, n13 * n23 - n12 * n33, n12 * n23 - n13 * n22
+                    local det = n11 * c11 + n12 * c12 + n13 * c13
+                    a += math.clamp((c11 * g1 + c12 * g2 + c13 * g3) / det, -15, 15)
+                    b += math.clamp((c12 * g1 + (n11 * n33 - n13 * n13) * g2 + (n12 * n13 - n11 * n23) * g3) / det, -15, 15)
+                    y += math.clamp((c13 * g1 + (n12 * n13 - n11 * n23) * g2 + (n11 * n22 - n12 * n12) * g3) / det, -15, 15)
+                    b = bend * math.max(bend * b, floor)
                 end
-                local ja = (sole(a + 0.5, b) - s) * mask / 0.5
-                local jb = (sole(a, b + 0.5) - s) * mask / 0.5
-                local aa, ab, bb = ja:Dot(ja) + 1e-3, ja:Dot(jb), jb:Dot(jb) + 1e-3
-                local ra, rb = ja:Dot(r), jb:Dot(r)
-                local det = aa * bb - ab * ab
-                a += math.clamp((bb * ra - ab * rb) / det, -20, 20)
-                b += math.clamp((aa * rb - ab * ra) / det, -20, 20)
-                b = bend * math.max(bend * b, floor)
+                upper[2] = y0 + (y - y0) * weight
+            else
+                for _ = 1, 5 do
+                    local s = sole(a, b)
+                    local r = (target - s) * mask
+                    if r.Magnitude < 0.02 then
+                        break
+                    end
+                    local ja = (sole(a + 0.5, b) - s) * mask / 0.5
+                    local jb = (sole(a, b + 0.5) - s) * mask / 0.5
+                    local aa, ab, bb = ja:Dot(ja) + 1e-3, ja:Dot(jb), jb:Dot(jb) + 1e-3
+                    local ra, rb = ja:Dot(r), jb:Dot(r)
+                    local det = aa * bb - ab * ab
+                    a += math.clamp((bb * ra - ab * rb) / det, -20, 20)
+                    b += math.clamp((aa * rb - ab * ra) / det, -20, 20)
+                    b = bend * math.max(bend * b, floor)
+                end
             end
             upper[axis] = a0 + (a - a0) * weight
             lower[axis] = b0 + (b - b0) * weight
@@ -352,6 +409,9 @@ function GuardianAnim:plantFeet(pose)
                     up = self.parents[up]
                 end
                 pose[flat][1] += (-sum - pose[flat][1]) * weight
+                if def.Yaw then
+                    pose[flat][3] -= ((a - a0) + (b - b0)) * weight -- what the solve added to the roll above it
+                end
             end
         end
     end
@@ -499,7 +559,7 @@ function GuardianAnim:update(dt)
         add(pose, joint, t[1], t[2], t[3])
     end
     table.clear(self.tremors)
-    self:plantFeet(pose)
+    self:plantFeet(pose, dt)
     if self.rig.Skinned then
         for joint, p in pose do
             local rest = self.boneRest[joint].Rotation
