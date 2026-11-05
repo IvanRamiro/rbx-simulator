@@ -498,7 +498,8 @@ RunService.RenderStepped:Connect(function(dt)
         if not model.Parent then
             anims[model] = nil
             rigs[model] = nil
-        elseif camera and model.PrimaryPart and (model.PrimaryPart.Position - camera.CFrame.Position).Magnitude <= ANIMATE_DISTANCE then
+        elseif camera and model.PrimaryPart and (not anim.lastUpdate or (model.PrimaryPart.Position - camera.CFrame.Position).Magnitude <= ANIMATE_DISTANCE) then
+            -- the first update comes at any distance: a skinned guardian that never had one stands in its bind pose
             -- on a phone a guardian at rest updates every other frame, with the time it missed
             local state = model:GetAttribute("State")
             local atRest = state == nil or state == "Dormant" or state == "Resting"

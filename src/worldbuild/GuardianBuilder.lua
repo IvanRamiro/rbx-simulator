@@ -161,14 +161,23 @@ function GuardianBuilder.storeSkinned(model, guardianId)
     -- the importer may turn or move it: found from three bones whose authored positions are known
     local function at(name)
         assert(bones[name], "the import has no bone " .. name)
-        return bones[name].WorldCFrame.Position
+        local cf = bones[name].CFrame
+        local up = bones[name].Parent
+        while up:IsA("Bone") do
+            cf = up.CFrame * cf
+            up = up.Parent
+        end
+        return up.CFrame:PointToWorldSpace(cf.Position)
     end
     local authored = placements.Fit
     local toImport = at("Head") - at("Hips")
     local toAuthored = authored.Head - authored.Hips
     local yaw = math.atan2(-toImport.Z, toImport.X) - math.atan2(-toAuthored.Z, toAuthored.X)
     local frame = CFrame.new(at("Hips")) * CFrame.Angles(0, yaw, 0) * CFrame.new(-authored.Hips)
-    local worst = (frame:PointToObjectSpace(at("LeftBackUpper")) - authored.LeftBackUpper).Magnitude
+    local worst = 0
+    for name, position in authored do
+        worst = math.max(worst, (frame:PointToObjectSpace(at(name)) - position).Magnitude)
+    end
     assert(worst < 0.1, ("the skeleton does not match its authored layout (%.3f studs off)"):format(worst))
 
     local guardian = Instance.new("Model")
@@ -184,15 +193,19 @@ function GuardianBuilder.storeSkinned(model, guardianId)
     root.Parent = guardian
     guardian.PrimaryPart = root
 
+    -- the importer's motors join the pieces, so moving one moves them all: every destination is worked out before any moves, or the
+    -- same move lands once per piece. Checked first, so a bad one leaves the import as it was
+    local targets = {}
+    for _, part in parts do
+        targets[part] = frame:ToObjectSpace(part.CFrame)
+        assert(targets[part].Position.Magnitude < 200, ("%s would land %.0f studs from the guardian's feet"):format(part.Name, targets[part].Position.Magnitude))
+    end
     local names = {}
-    for _, part in parts do
-        part.CFrame = frame:ToObjectSpace(part.CFrame)
+    for part, target in targets do
+        part.CFrame = target
     end
-    -- measured again once moved: the import's height read wrong on the first one (300 studs, every piece alike)
-    local drift = at("Hips") - authored.Hips
-    for _, part in parts do
-        part.CFrame = part.CFrame - drift
-    end
+    local landed = (at("Hips") - authored.Hips).Magnitude
+    assert(landed < 0.01, ("the hips landed %.3f studs from their place"):format(landed))
     for _, part in parts do
         if part.Name == "RootPart" then -- the importer's holder of the bones
             part.Transparency = 1

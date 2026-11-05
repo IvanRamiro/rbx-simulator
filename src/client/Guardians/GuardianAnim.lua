@@ -529,9 +529,13 @@ function GuardianAnim:follow(pose, dt, snap)
             local k, c = omega * omega, 2 * config.Damping * omega
             local x, v = spring.x, spring.v
             for i = 1, 5 do
-                if i <= 3 and drag > 0 then
-                    -- a dragged joint never trails its target by more than MAX_SWING
-                    x[i] = target[i] + math.clamp(x[i] - target[i], -MAX_SWING, MAX_SWING)
+                if i <= 3 then
+                    -- an angle is the same a whole turn on: a joint goes the short way round, or a target written 360 degrees apart spins it
+                    x[i] = target[i] + ((x[i] - target[i] + 180) % 360 - 180)
+                    if drag > 0 then
+                        -- a dragged joint never trails its target by more than MAX_SWING
+                        x[i] = target[i] + math.clamp(x[i] - target[i], -MAX_SWING, MAX_SWING)
+                    end
                 end
                 local xi, vi, ti = x[i], v[i], target[i]
                 for _ = 1, steps do
