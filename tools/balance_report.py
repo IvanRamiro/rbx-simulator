@@ -54,17 +54,16 @@ def read_config():
     ]
     config["pets"] = {
         m[0]: {"name": m[1], "rarity": m[2], "bonus": int(m[3])}
-        for m in re.findall(r'(\w+) = \{ DisplayName = "([^"]+)", Rarity = "(\w+)",[^\n]*QiBonusPercent = (\d+)', text)
+        for m in re.findall(r'(\w+) = \{ DisplayName = "([^"]+)", Rarity = "(\w+)",[^\n]*QiBonus = (\d+)', text)
     }
     config["eggs"] = [
         {
             "name": m[0],
             "rank": m[1],
-            "cooldown": float(m[2]),
-            "pool": [(p[0], float(p[1])) for p in re.findall(r'PetId = "(\w+)", Weight = ([\d.]+)', m[3])],
+            "pool": [(p[0], float(p[1])) for p in re.findall(r'PetId = "(\w+)", HatchChance = ([\d.]+)', m[2])],
         }
         for m in re.findall(
-            r'DisplayName = "([^"]+)",\s*RequiredRank = "(\w+)",\s*Cooldown = ([\d.]+),\s*Pool = \{(.*?)\n            \},',
+            r'DisplayName = "([^"]+)",\s*RequiredRank = "(\w+)",\s*Pool = \{(.*?)\n            \},',
             text,
             re.S,
         )
@@ -127,19 +126,22 @@ def main():
 
     print()
     print("Spirit Stones: see shared/Shop.lua (rankValue, eggStones, relicStones) and GameConfig.SpiritStones")
-    for egg in config["eggs"]:
+    # Rarity, QiBonus and HatchChance are set separately, so each egg is checked here: its chances add up to 100, and a rarer pet is never the weaker.
+    rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythical", "Secret"]
+    rank_order = {rank["id"]: index for index, rank in enumerate(config["ranks"])}
+    for egg in sorted(config["eggs"], key=lambda e: rank_order.get(e["rank"], 0)):
         print()
-        total_weight = sum(weight for _, weight in egg["pool"])
-        cooldown = egg["cooldown"]
-        print(f"{egg['name']} (needs {egg['rank']}, {cooldown:.0f}s cooldown): chance and average time to hatch one")
-        for pet_id, weight in egg["pool"]:
-            chance = weight / total_weight
-            hatches = 1 / chance
+        total = sum(chance for _, chance in egg["pool"])
+        average = sum(chance / 100 * config["pets"][pet_id]["bonus"] for pet_id, chance in egg["pool"])
+        print(f"{egg['name']} (needs {egg['rank']}): average +{average:.1f}% Qi, chances total {total:g}%" + ("" if abs(total - 100) < 0.001 else "   <-- NOT 100"))
+        for pet_id, chance in sorted(egg["pool"], key=lambda e: -e[1]):
             pet = config["pets"][pet_id]
-            print(
-                f"  {pet['name']:<20}{pet['rarity']:<11}+{pet['bonus']:<4}{chance * 100:>6.1f}%"
-                f"   1 in {hatches:>6.0f} hatches   ~{hatches * cooldown / 60:>7.1f} min"
-            )
+            print(f"  {pet['name']:<28}{pet['rarity']:<11}+{pet['bonus']:<4}{chance:>6g}%   1 in {100 / chance:>6.0f} hatches")
+        for a, _ in egg["pool"]:
+            for b, _ in egg["pool"]:
+                x, y = config["pets"][a], config["pets"][b]
+                if rarities.index(x["rarity"]) < rarities.index(y["rarity"]) and x["bonus"] > y["bonus"]:
+                    print(f"  <-- OUT OF ORDER: {x['name']} ({x['rarity']}, +{x['bonus']}) beats {y['name']} ({y['rarity']}, +{y['bonus']})")
 
 
 if __name__ == "__main__":

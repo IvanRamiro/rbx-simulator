@@ -47,24 +47,19 @@ local function handleRequest(remoteEvent, action)
     end)
 end
 
+-- A pet from the egg's pool, by its HatchChance (percents that add up to 100, PetInventory checks), and that chance.
 local function rollEggPet(egg)
     local pool = egg.Pool
-
-    local totalWeight = 0
+    local roll = random:NextNumber() * 100
     for _, entry in pool do
-        totalWeight += entry.Weight
-    end
-
-    local roll = random:NextNumber() * totalWeight
-    for _, entry in pool do
-        if roll < entry.Weight then
-            return entry.PetId, entry.Weight / totalWeight
+        if roll < entry.HatchChance then
+            return entry.PetId, entry.HatchChance
         end
-        roll -= entry.Weight
+        roll -= entry.HatchChance
     end
 
     local lastEntry = pool[#pool]
-    return lastEntry.PetId, lastEntry.Weight / totalWeight
+    return lastEntry.PetId, lastEntry.HatchChance
 end
 
 -- ---------- hatching, at the Hatching Altar ----------
@@ -161,7 +156,7 @@ local function onHatchRequest(player, eggId)
     RemoteEvents.EggHatchResultEvent:FireClient(player, {
         EggId = eggId,
         PetId = petId,
-        ChancePercent = math.round(chance * 1000) / 10,
+        ChancePercent = chance,
         IsNew = isNew,
         Staged = stageEgg(altar, eggId),
         BreakAt = workspace:GetServerTimeNow() + HATCH_STAGE, -- server time: the client breaks it on time, however late this arrives

@@ -30,7 +30,7 @@ function PetRules.qiBonus(petId, level)
     if not pet then
         return 0
     end
-    return math.round(pet.QiBonusPercent * (1 + RULES.QiPerLevel * ((level or 1) - 1)))
+    return math.round(pet.QiBonus * (1 + RULES.QiPerLevel * ((level or 1) - 1)))
 end
 
 -- The cheapest copy that can go into `target`: the lowest level first, so a levelled copy is never spent while a plain one will do.

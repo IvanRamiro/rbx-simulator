@@ -1,6 +1,6 @@
 -- The Spirit Beast Codex (the Codex button on the HUD's rail): a page for each egg, in the order they unlock,
 -- and a page of rewards. A beast the player has never owned is a black silhouette and "???"; its rarity and the eggs that
--- hatch it still show, so there is something to hunt (a Secret beast keeps its egg to itself too). Once discovered an
+-- hatch it still show, so there is something to hunt. Once discovered an
 -- entry stays, whatever happens to the pet. Each page draws only its own few portraits.
 -- The server owns the book (server/Pets/Codex, CodexEvent "State"); CodexEvent "Claim" asks for a reward.
 local Players = game:GetService("Players")
@@ -21,6 +21,7 @@ local Toast = require(UI:WaitForChild("Toast"))
 local UiFx = require(UI:WaitForChild("UiFx"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
+local CodexState = require(script.Parent:WaitForChild("CodexState"))
 local PetPreload = require(script.Parent:WaitForChild("PetPreload"))
 local SpecialPreview = require(script.Parent:WaitForChild("SpecialPreview"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
@@ -32,9 +33,8 @@ local NAV_WIDTH = 176
 local toggleButton, setBadge = Hud.railButton("CodexButton", UiTheme.Icons.Codex, "Codex", 2)
 local message = Toast.new("CodexMessage", Color3.new(1, 1, 1), 3.5)
 
-local found, claimed, owned = {}, {}, {}
+local found, claimed, owned = CodexState.found, CodexState.claimed, CodexState.owned
 local fresh = {}     -- [petId] = true: discovered since the player last looked
-local loaded = false
 local page = REWARDS_PAGE
 local detailPet = nil -- the beast whose entry is open, or nil for the page
 local stopSpin = nil  -- stops the open entry's turntable
@@ -334,7 +334,7 @@ local function renderEgg(egg)
     local pets = {}
     local pool = table.clone(egg.Pool)
     table.sort(pool, function(a, b)
-        return a.Weight > b.Weight
+        return a.HatchChance > b.HatchChance
     end)
     for _, entry in pool do
         table.insert(pets, entry.PetId)
@@ -356,7 +356,6 @@ local function renderEntry(petId)
     local info = GameConfig.Pets[petId]
     local lore = PetLore[petId] or {}
     local known = found[petId] == true
-    local secret = info.Rarity == "Secret"
     local color = GameConfig.PetRarityColors[info.Rarity] or C.Text
 
     local back = UiKit.button({
@@ -403,7 +402,7 @@ local function renderEntry(petId)
     line({ Font = "Title", TextSize = 20, Text = if known then info.DisplayName else "???", TextColor3 = if known then color else C.Muted })
     if known then
         line({ Font = "Strong", TextSize = 12, TextColor3 = C.AccentBright,
-            Text = info.Theme .. "  ·  +" .. info.QiBonusPercent .. "% Qi"
+            Text = info.Theme .. "  ·  +" .. info.QiBonus .. "% Qi"
                 .. (if have and have.Level > 1 then "  ·  Your best: Level " .. have.Level .. " (+" .. PetRules.qiBonus(petId, have.Level) .. "%)" else "") })
         line({ TextSize = 13, Text = lore.Lore or "" })
     else
@@ -414,8 +413,6 @@ local function renderEntry(petId)
     local eggs = CodexRules.eggsOf(petId)
     if #eggs == 0 then
         line({ TextSize = 13, TextColor3 = C.Muted, Text = "No egg holds this beast any more." })
-    elseif secret and not known then
-        line({ TextSize = 13, TextColor3 = C.Muted, Text = "An egg the Codex can't name." })
     else
         for _, entry in eggs do
             order += 1
@@ -495,30 +492,19 @@ local function updateBadge()
     setBadge(if waiting > 0 then tostring(waiting) else nil, "Highlight")
 end
 
-RemoteEvents.CodexEvent.OnClientEvent:Connect(function(action, data)
-    if typeof(data) ~= "table" then
-        return
+CodexState.Changed:Connect(function(discovered)
+    found, claimed, owned = CodexState.found, CodexState.claimed, CodexState.owned
+    for _, petId in discovered do
+        fresh[petId] = true
     end
-    if action == "State" then
-        local nextFound = {}
-        for _, petId in data.Found do
-            nextFound[petId] = true
-            if loaded and not found[petId] then
-                fresh[petId] = true
-            end
-        end
-        found = nextFound
-        claimed = {}
-        for _, id in data.Claimed do
-            claimed[id] = true
-        end
-        owned = data.Owned or {}
-        loaded = true
-        updateBadge()
-        if window.isOpen() then
-            render()
-        end
-    elseif action == "Claimed" then
+    updateBadge()
+    if window.isOpen() then
+        render()
+    end
+end)
+
+RemoteEvents.CodexEvent.OnClientEvent:Connect(function(action, data)
+    if action == "Claimed" and typeof(data) == "table" then
         Sfx.play("RareReveal")
         UiFx.flash(window.Frame, C.Highlight)
         local text = "Claimed " .. NumberFormat.compact(data.Stones) .. " Spirit Stones"
@@ -529,4 +515,6 @@ RemoteEvents.CodexEvent.OnClientEvent:Connect(function(action, data)
     end
 end)
 
+found, claimed, owned = CodexState.found, CodexState.claimed, CodexState.owned
+updateBadge()
 render()

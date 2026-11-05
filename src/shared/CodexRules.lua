@@ -51,16 +51,12 @@ end)
 local eggsOfPet = {}
 CodexRules.Pets = {}
 for _, egg in CodexRules.Eggs do
-    local total = 0
-    for _, entry in egg.Pool do
-        total += entry.Weight
-    end
     for _, entry in egg.Pool do
         if not eggsOfPet[entry.PetId] then
             eggsOfPet[entry.PetId] = {}
             table.insert(CodexRules.Pets, entry.PetId)
         end
-        table.insert(eggsOfPet[entry.PetId], { EggId = egg.Id, Percent = math.round(entry.Weight / total * 1000) / 10 })
+        table.insert(eggsOfPet[entry.PetId], { EggId = egg.Id, Percent = entry.HatchChance })
     end
 end
 for _, list in eggsOfPet do

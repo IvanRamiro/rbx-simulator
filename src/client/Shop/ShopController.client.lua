@@ -345,8 +345,8 @@ end)
 local function rarestOf(egg)
     local best, weight = nil, math.huge
     for _, entry in egg.Pool do
-        if entry.Weight < weight then
-            best, weight = GameConfig.Pets[entry.PetId], entry.Weight
+        if entry.HatchChance < weight then
+            best, weight = GameConfig.Pets[entry.PetId], entry.HatchChance
         end
     end
     return best

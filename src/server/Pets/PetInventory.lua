@@ -294,10 +294,13 @@ for petId, definition in GameConfig.Pets do
 end
 
 for eggId, egg in GameConfig.Eggs do
+    local total = 0
     for _, entry in egg.Pool do
         assert(GameConfig.Pets[entry.PetId], "Unknown pet ID in GameConfig.Eggs." .. eggId .. ".Pool: " .. tostring(entry.PetId))
-        assert(entry.Weight > 0, "GameConfig.Eggs." .. eggId .. ".Pool weights must be greater than 0")
+        assert(entry.HatchChance > 0, "GameConfig.Eggs." .. eggId .. ".Pool chances must be greater than 0")
+        total += entry.HatchChance
     end
+    assert(math.abs(total - 100) < 0.001, "GameConfig.Eggs." .. eggId .. ".Pool chances add up to " .. total .. ", not 100")
 end
 
 -- Sends the player their inventory (PetInventoryUpdatedEvent) and sets the attributes every client

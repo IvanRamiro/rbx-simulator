@@ -4,6 +4,8 @@
 -- it needs. One egg is hatched per press (HatchEggEvent); the window stays open to hatch the next,
 -- and closes when the player walks away. The hatch itself plays on the altar (HatchCeremony, from
 -- PetController's result).
+-- Each egg opens to show exactly what it can hatch: every pet's rarity and its HatchChance as configured, the rarest
+-- last. A beast not yet in the player's Codex stays a silhouette named "???", marked New; the rest show their name, Qi and how many they hold.
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,6 +18,8 @@ local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
+local Portraits = require(UI:WaitForChild("Portraits"))
+local CodexState = require(script.Parent:WaitForChild("CodexState"))
 
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
@@ -24,6 +28,7 @@ local LEAVE_MARGIN = 4 -- studs past the prompt's range the window closes: insid
 local BREAK_MARGIN = 0.15 -- seconds after the egg breaks that Hatch wakes, so a press never reaches a server still busy
 local NO_ANSWER = GameConfig.HatchingAltar.Stage + 3 -- seconds Hatch waits for an answer that never came
 local RARITY_ORDER = { Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }
+local CARD_HEIGHT, ROW_HEIGHT = 70, 40
 
 local altarPart = nil
 local leaveDistance = 0
@@ -68,6 +73,62 @@ local function bestOf(egg)
 end
 
 local render
+local openEgg = nil -- the egg whose chances are showing; the first one held, until the player picks another
+
+-- A HatchChance as it's configured, with no rounding: 2.5%, 0.05%.
+local function percentText(chance)
+    return string.format("%g%%", chance)
+end
+
+-- One pet the egg can hatch: its picture, name and tags, and its chance at the right.
+local function oddsRow(parent, entry, order)
+    local pet = GameConfig.Pets[entry.PetId]
+    if not pet then
+        return
+    end
+    local known = CodexState.found[entry.PetId] == true
+    local color = GameConfig.PetRarityColors[pet.Rarity] or C.Text
+    local row = Instance.new("Frame")
+    row.Name = "Odds"
+    row.BackgroundTransparency = 1
+    row.LayoutOrder = order
+    row.Size = UDim2.new(1, 0, 0, ROW_HEIGHT - 4)
+    row.Parent = parent
+    local picture = if known then Portraits.pet(entry.PetId, 36) else Portraits.silhouette(entry.PetId, 36)
+    picture.Parent = row
+    UiKit.label({
+        Name = "PetName", Font = "Strong", TextSize = 12, Text = if known then pet.DisplayName else "???", TextTruncate = Enum.TextTruncate.AtEnd,
+        TextColor3 = if known then C.Text else C.Muted, Position = UDim2.fromOffset(44, 1), Size = UDim2.new(1, -112, 0, 16), Parent = row,
+    })
+    local tags = Instance.new("Frame")
+    tags.BackgroundTransparency = 1
+    tags.Position = UDim2.fromOffset(44, 19)
+    tags.Size = UDim2.new(1, -112, 0, 16)
+    tags.Parent = row
+    UiKit.list(tags, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), VerticalAlignment = Enum.VerticalAlignment.Center })
+    UiKit.tag(pet.Rarity, color).Parent = tags
+    if known then
+        local qi = UiKit.label({
+            Font = "Strong", TextSize = 11, TextColor3 = C.AccentBright, Text = "+" .. pet.QiBonus .. "% Qi",
+            AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 16), LayoutOrder = 1, Parent = tags,
+        })
+        qi.LayoutOrder = 1
+        local have = CodexState.owned[entry.PetId]
+        if have and have.Count > 0 then
+            local count = UiKit.tag("Owned x" .. have.Count, C.Accent)
+            count.LayoutOrder = 2
+            count.Parent = tags
+        end
+    else
+        local new = UiKit.tag("New", C.Highlight)
+        new.LayoutOrder = 1
+        new.Parent = tags
+    end
+    UiKit.label({
+        Name = "Chance", Font = "Title", TextSize = 15, Text = percentText(entry.HatchChance), TextColor3 = color, AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.fromOffset(66, 20), TextXAlignment = Enum.TextXAlignment.Right, Parent = row,
+    })
+end
 
 -- Hatch wakes after `seconds`, unless a later press has taken over
 local function wake(seconds)
@@ -100,15 +161,21 @@ function render()
         end
     end
     local eggs = heldEggs()
-    hint.Text = if #eggs == 0 then "" elseif resting then "The egg rests in the cradle..." else "Lay an egg in the cradle to hatch it."
+    hint.Text = if #eggs == 0 then "" elseif resting then "The egg rests in the cradle..." else "Lay an egg in the cradle to hatch it. The odds below are exact."
     if #eggs == 0 then
         UiKit.empty(list, "No eggs yet.\nWeaken a guardian, take an egg from its stands, and carry it home.")
         return
     end
+    -- the first egg opens by itself, so the odds are seen without looking for them; false: the player closed it
+    if openEgg == nil then
+        openEgg = eggs[1].id
+    end
     local rankName = Ranks.getPlayerRankName(player)
     for index, entry in eggs do
         local open = rankName ~= "" and Ranks.isAtLeast(rankName, entry.egg.RequiredRank)
-        local card = UiKit.card({ Name = "EggCard", LayoutOrder = index, Size = UDim2.new(1, 0, 0, 70), Parent = list })
+        local showing = openEgg == entry.id
+        local height = CARD_HEIGHT + (if showing then #entry.egg.Pool * ROW_HEIGHT + 8 else 0)
+        local card = UiKit.card({ Name = "EggCard", LayoutOrder = index, Size = UDim2.new(1, 0, 0, height), Parent = list })
         local icon = UiKit.icon(UiTheme.EggIcons[entry.id] or UiTheme.Icons.Hatch, 44, if open then "Accent" else "Danger")
         icon.Position = UDim2.fromOffset(12, 13)
         icon.Parent = card
@@ -139,9 +206,34 @@ function render()
         end
         local button = UiKit.button({
             Name = "Hatch", Font = "Strong", TextSize = 13, Tone = "Accent", Text = if open then "HATCH" else "LOCKED",
-            Active = open and not resting, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
-            Size = UDim2.fromOffset(90, 32), Parent = card,
+            Active = open and not resting, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 8),
+            Size = UDim2.fromOffset(90, 30), Parent = card,
         })
+        local chances = UiKit.button({
+            Name = "Chances", Font = "Strong", TextSize = 11, Tone = "Quiet", Text = if showing then "HIDE ODDS" else "SEE ODDS",
+            AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 42), Size = UDim2.fromOffset(90, 22), Parent = card,
+        })
+        chances.Activated:Connect(function()
+            openEgg = if showing then false else entry.id
+            render()
+        end)
+        if showing then
+            local rows = Instance.new("Frame")
+            rows.Name = "Odds"
+            rows.BackgroundTransparency = 1
+            rows.Position = UDim2.fromOffset(12, CARD_HEIGHT + 2)
+            rows.Size = UDim2.new(1, -22, 0, #entry.egg.Pool * ROW_HEIGHT)
+            rows.Parent = card
+            UiKit.list(rows, { Padding = UDim.new(0, 4) })
+            -- likeliest first, the way the chances read down to the rarest
+            local pool = table.clone(entry.egg.Pool)
+            table.sort(pool, function(a, b)
+                return a.HatchChance > b.HatchChance
+            end)
+            for order, poolEntry in pool do
+                oddsRow(rows, poolEntry, order)
+            end
+        end
         if open then
             button.Activated:Connect(function()
                 if button.Active then
@@ -191,6 +283,12 @@ task.spawn(function()
                 render()
             end
         end)
+    end
+end)
+
+CodexState.Changed:Connect(function()
+    if window.isOpen() then
+        render()
     end
 end)
 
