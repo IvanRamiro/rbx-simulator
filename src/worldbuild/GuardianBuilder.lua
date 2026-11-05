@@ -2,7 +2,7 @@
 -- ServerStorage.Guardians.<GuardianId> as a jointed Model for GuardianService to clone. Require a clone:
 --
 --   local GB = require(game.ServerStorage.WorldBuild.GuardianBuilder:Clone())
---   GB.store(workspace.StoneLion, "StoneLion")
+--   GB.store(workspace.MantisSage, "MantisSage")
 --
 -- The Model:
 --   Root      invisible anchored PrimaryPart; the Model's pivot is the origin, on the ground.
@@ -239,12 +239,7 @@ function GuardianBuilder.storeSkinned(model, guardianId)
     folder.Parent = ServerStorage
     local old = folder:FindFirstChild(guardianId)
     if old then
-        -- the jointed build goes to the dev shelf, in case it is wanted again
-        local shelf = ServerStorage:FindFirstChild("DevStage") or Instance.new("Folder")
-        shelf.Name = "DevStage"
-        shelf.Parent = ServerStorage
-        old.Name = guardianId .. "Jointed"
-        old.Parent = shelf
+        old:Destroy() -- a new build replaces the old one outright
     end
     model:Destroy()
     guardian.Parent = folder

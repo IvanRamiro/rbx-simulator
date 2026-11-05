@@ -19,16 +19,81 @@ Authored in Roblox studs: facing -Z, feet on the ground at y = 0, left is -X.
 import json
 import math
 import os
+import random
 
 import bpy
 from mathutils import Matrix, Vector
 
+import egg_hi as Hm
 import egg_kit as K
 import guardian_kit as G
 import tiangou_v2 as T
 
 W = K.W
 V = Vector
+
+# ---------- materials ----------
+def mat_stone(name="PanguStone"):
+    """The titan's stone: dark slate with a violet cast, cut by fracture lines (Voronoi edges),
+    void light glowing faintly in its deepest crevices (ambient occlusion turned to violet), dust
+    settled on its upper faces."""
+    g = Hm._Graph(name)
+    co = g.coords()
+    big = g.n("ShaderNodeTexNoise", **{"Scale": 0.45, "Detail": 5.0, "Roughness": 0.6})
+    g.link(co, big.inputs["Vector"])
+    col = g.ramp(big.outputs["Fac"], [(0.3, (0.035, 0.03, 0.045)), (0.7, (0.1, 0.09, 0.12))])
+    cells = g.n("ShaderNodeTexVoronoi", **{"Scale": 0.9, "feature": "DISTANCE_TO_EDGE"})
+    g.link(co, cells.inputs["Vector"])
+    crack = g.math("LESS_THAN", cells.outputs["Distance"], 0.03)
+    col = g.mix(g.math("MULTIPLY", crack, 0.85), col, (0.012, 0.008, 0.02))
+    fine = g.n("ShaderNodeTexNoise", **{"Scale": 9.0, "Detail": 3.0})
+    g.link(co, fine.inputs["Vector"])
+    col = g.mix(g.math("MULTIPLY", fine.outputs["Fac"], 0.3), col, (0.16, 0.15, 0.18))
+    geo = g.n("ShaderNodeNewGeometry")
+    up = g.sep(geo.outputs["Normal"])[2]
+    col = g.mix(g.math("MULTIPLY", g.math("SUBTRACT", up, 0.55, clamp=True), 0.6), col, (0.2, 0.19, 0.21))
+    ao = g.n("ShaderNodeAmbientOcclusion", samples=16, only_local=True)
+    ao.inputs["Distance"].default_value = 0.35
+    deep = g.math("POWER", g.math("SUBTRACT", 1.0, ao.outputs["AO"], clamp=True), 1.2)
+    col = g.mix(g.math("MINIMUM", g.math("MULTIPLY", deep, 1.3), 0.8), col, (0.22, 0.05, 0.42))
+    height = g.math("SUBTRACT", g.math("MULTIPLY", big.outputs["Fac"], 0.6), g.math("MULTIPLY", crack, 0.5))
+    return g.finish(col, 0.74, 0.0, g.bump(g.math("ADD", height, g.math("MULTIPLY", fine.outputs["Fac"], 0.3)), 0.4, 0.04))
+
+def mat_void(name="PanguVoid"):
+    """Chaos as smoke: near black at a wisp's root, deep violet along it, a bright violet tip (UV v)."""
+    g = Hm._Graph(name)
+    _, v, _ = g.sep(g.coords("UV"))
+    col = g.ramp(v, [(0.0, (0.012, 0.004, 0.03)), (0.55, (0.12, 0.025, 0.3)), (1.0, (0.42, 0.14, 0.95))])
+    return g.finish(col, 0.55, 0.0)
+
+def mat_horn(name="PanguHorn"):
+    """Horn: near-black, ridged with growth lines, a violet sheen at the ridges."""
+    g = Hm._Graph(name)
+    co = g.coords()
+    lines = g.n("ShaderNodeTexWave", **{"Scale": 2.5, "Distortion": 2.0, "Detail": 3.0})
+    g.link(co, lines.inputs["Vector"])
+    col = g.ramp(lines.outputs["Fac"], [(0.0, (0.01, 0.008, 0.014)), (0.8, (0.05, 0.04, 0.07)), (1.0, (0.12, 0.07, 0.2))])
+    col = g.ao(col, 0.2, 0.5)
+    return g.finish(col, 0.42, 0.0, g.bump(lines.outputs["Fac"], 0.3, 0.02))
+
+def mat_plain(name, color, rough, metal=0.0):
+    g = Hm._Graph(name)
+    co = g.coords()
+    n = g.n("ShaderNodeTexNoise", **{"Scale": 5.0, "Detail": 4.0})
+    g.link(co, n.inputs["Vector"])
+    col = g.mix(g.math("MULTIPLY", n.outputs["Fac"], 0.3), color, tuple(min(1.0, c * 1.7) for c in color))
+    col = g.ao(col, 0.15, 0.45)
+    return g.finish(col, rough, metal, g.bump(n.outputs["Fac"], 0.2, 0.01))
+
+def materials():
+    return {"stone": mat_stone(), "void": mat_void(), "horn": mat_horn(), "bronze": Hm.mat_bronze("PanguBronze"),
+            "cloth": mat_plain("PanguCloth", (0.03, 0.014, 0.06), 0.8), "haft": mat_plain("PanguHaft", (0.05, 0.03, 0.022), 0.6),
+            "yang": mat_plain("PanguYang", (0.62, 0.6, 0.56), 0.35), "yin": mat_plain("PanguYin", (0.012, 0.01, 0.016), 0.3),
+            "blade": mat_plain("PanguBlade", (0.022, 0.019, 0.03), 0.5)}
+
+def vein_starts(rnd, centre, spread, count):
+    return [(V(centre) + V((rnd.uniform(-1, 1) * spread[0], rnd.uniform(-1, 1) * spread[1], rnd.uniform(-1, 1) * spread[2])),
+             V((rnd.uniform(-1, 1), rnd.uniform(-1, 1), rnd.uniform(-0.3, 0.3)))) for _ in range(count)]
 NAME = "Pangu"
 RIG = "PanguRig"
 
@@ -344,7 +409,6 @@ def _clean(obj, triangulate=False):
 
 def _eyes(coll, skin):
     """Deep-set under the heavy brow, a titan's stare: an almond iris, a dark pupil and a heavy lid, kept stern, not wild."""
-    import egg_hi as Hm
     eyes, pupils, lids = Hm.Hi(), Hm.Hi(), Hm.Hi()
     for side in (-1, 1):
         normal = V((side * 0.4, 0.04, -0.92)).normalized()
@@ -1088,7 +1152,6 @@ TAU = 2 * math.pi
 
 def _piece_axe(coll, M):
     """The axe as modelled for the clay, split by material for the bake, and its void-lit edge."""
-    import egg_hi as Hm
     F, H, E = V(FIST), _HAFT_BIND, _EDGE_BIND
     S = H.cross(E).normalized()
     head = F + H * 12.2
@@ -1112,7 +1175,6 @@ def _piece_axe(coll, M):
         blade.facing([front[i], back[i], back[j], front[j]], [(0, 0), (0, 1), (1, 1), (1, 0)], tuple((pt((a0 + a1) / 2, (b0 + b1) / 2) - centre).normalized()))
     pommel, top = F - H * 3.4, F + H * 15.5
     Hm.htube(haft, [pommel, F, top], lambda q: 0.55, sides=10, per=2, uv_scale=1.0, tip=False, wobble=0.0)
-    import pangu as O
     for at in (pommel + H * 0.3, F + H * 3.2, head - H * 2.4, top - H * 0.3):
         _band(bronze, at, H, 0.62, 0.18)
     G.sphere(bronze, pommel - H * 0.25, 0.8, nu=12, nv=8)
@@ -1124,7 +1186,6 @@ def _piece_axe(coll, M):
 
 def _ring(hi, pts, radius, sides=8):
     """A closed hoop: its ends meet once and are welded by _clean, so it never lies over itself."""
-    import egg_hi as Hm
     Hm.htube(hi, list(pts) + [pts[0]], lambda q: radius, sides=sides, per=1, uv_scale=2.0, tip=False, wobble=0.0)
 
 
@@ -1166,13 +1227,10 @@ def _taiji(disc, c, r):
 
 def build_final(voxel=0.11):
     """The high-detail pieces, ready to bake: {piece: [objects]}, and the glow pieces {name: object}."""
-    import random
-    import egg_hi as Hm
-    import pangu as O
     T.clear()
     coll = bpy.data.collections.new("PanguV2")
     bpy.context.scene.collection.children.link(coll)
-    M = O.materials()
+    M = materials()
     groups = [g for g in _groups() if not (g[0] == 0.1)]      # the horns are their own pieces here, in horn
     skin = G.blob("PG2_SkinHi", coll, M["stone"], _rough_lobes(groups), voxel=voxel, smooth=0.75, rough=0.0, chisel="PanguV2Chisel")
     T._settle(skin, groups, cut=_sockets)
@@ -1221,7 +1279,7 @@ def build_final(voxel=0.11):
         for a, b, spread, count, steps, seed in ((s, e, (1.8, 1.8, 1.8), 3, 8, 7), (e, w, (1.2, 1.2, 1.2), 3, 7, 21), (h, kn, (1.8, 2.5, 1.8), 3, 8, 41), (kn, an, (1.3, 2.0, 1.3), 2, 7, 51)):
             regions.append((tuple(a.lerp(b, 0.5)), spread, count, steps, 0.08, seed + side))
     for centre, spread, count, steps, radius, seed in regions:
-        G.veins(void, skin, O.vein_starts(random.Random(seed), centre, spread, count), random.Random(seed + 1), steps=steps, radius=radius)
+        G.veins(void, skin, vein_starts(random.Random(seed), centre, spread, count), random.Random(seed + 1), steps=steps, radius=radius)
     Hm.htube(void, [V((0, 37.7, -2.1)), V((0.12, 37.0, -2.6)), V((-0.08, 36.4, -2.95))], lambda q: 0.11 * (1 - 0.5 * q), sides=6, per=4, uv_scale=1.0, tip=True, wobble=0.0)
     mouth = [V((-0.85, 33.02, -3.14)), V((0, 33.22, -3.52)), V((0.85, 33.02, -3.14))]             # a stern seam of chaos: the corners down
     Hm.htube(void, mouth, lambda q: 0.055, sides=6, per=4, uv_scale=1.0, tip=True, wobble=0.0)

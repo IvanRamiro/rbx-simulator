@@ -1,8 +1,7 @@
 """Tiangou the Moon-Eater, rebuilt with a real skeleton (the owner, 2026-11-04: "all the boss in the game is actually
 stiff ... please put rig, skeleton and more weight paint"). The character is the same: the heavenly hound of the eclipse
 myth, a lean sighthound with a coat of night sky, white fire and the eclipse it made above its shoulders. What changes
-is its construction: one continuous skin over about 40 bones, instead of 18 rigid segments on 14 joints. The old build
-stays in tiangou.py until this one is in the game.
+is its construction: one continuous skin over about 40 bones.
 
 Authored in Roblox studs: standing, facing -Z, its paws on the ground at y = 0, the same size as before, so the fight's
 ranges still hold (its nose about 22 studs ahead of its origin, its shoulder 14 up).
@@ -14,15 +13,196 @@ ranges still hold (its nose about 22 studs ahead of its origin, its shoulder 14 
     T.stress(path)        # the skeleton bent to its limits, to judge the weights
 """
 import math
+import random
 
 import bpy
 from mathutils import Matrix, Vector
 
+import egg_hi as Hm
 import egg_kit as K
 import guardian_kit as G
 
 W = K.W
 V = Vector
+
+TAU = 2 * math.pi
+
+CORONA = "dcefff"        # the eclipse's white fire (meant to bloom white)
+
+DISC = "05070c"          # the swallowed moon: dark Neon renders as a flat black disc
+
+EYE = "ff9a00"           # gold eyes against the midnight coat
+
+PUPIL = "0a0400"         # round pupils, black
+
+ECLIPSE = V((0.0, 27.5, -3.5))       # the eclipse's centre, its face toward -Z
+
+ECLIPSE_R = 6.0
+
+ECLIPSE_TILT = V((0.0, 0.12, -1.0)).normalized()   # its normal: leaning back a little
+
+# ---------- materials ----------
+def mat_coat(name="TiangouCoat"):
+    """The night sky as fur: deep midnight blue in fine strands running back along the body,
+    silvered where the moonlight falls on the upper faces, and faint stars caught in it, gathered in
+    constellations (bright specks only where a broad noise allows)."""
+    g = Hm._Graph(name)
+    co = g.coords()
+    mp = g.n("ShaderNodeMapping")
+    mp.inputs["Scale"].default_value = (7.0, 0.9, 7.0)          # strands along Blender Y (the body's length)
+    g.link(co, mp.inputs["Vector"])
+    strands = g.n("ShaderNodeTexNoise", **{"Scale": 4.0, "Detail": 8.0, "Roughness": 0.7})
+    g.link(mp.outputs[0], strands.inputs["Vector"])
+    col = g.ramp(strands.outputs["Fac"], [(0.3, (0.005, 0.008, 0.03)), (0.7, (0.022, 0.034, 0.095))])
+    broad = g.n("ShaderNodeTexNoise", **{"Scale": 0.35, "Detail": 3.0})
+    g.link(co, broad.inputs["Vector"])
+    col = g.mix(g.math("MULTIPLY", broad.outputs["Fac"], 0.35), col, (0.04, 0.03, 0.11))     # a violet drift through it
+    geo = g.n("ShaderNodeNewGeometry")
+    up = g.sep(geo.outputs["Normal"])[2]
+    moon = g.math("MULTIPLY", g.math("SUBTRACT", up, 0.3, clamp=True), g.math("ADD", 0.4, g.math("MULTIPLY", strands.outputs["Fac"], 0.9)))
+    col = g.mix(g.math("MINIMUM", moon, 0.8), col, (0.3, 0.36, 0.5))
+    stars = g.n("ShaderNodeTexVoronoi", **{"Scale": 2.6})
+    g.link(co, stars.inputs["Vector"])
+    cluster = g.n("ShaderNodeTexNoise", **{"Scale": 0.5, "Detail": 2.0})
+    g.link(co, cluster.inputs["Vector"])
+    star = g.math("MULTIPLY", g.math("LESS_THAN", stars.outputs["Distance"], 0.045), g.math("GREATER_THAN", cluster.outputs["Fac"], 0.52))
+    col = g.mix(star, col, (0.85, 0.9, 1.0))
+    col = g.ao(col, 0.25, 0.45)
+    return g.finish(col, 0.6, 0.0, g.bump(strands.outputs["Fac"], 0.35, 0.02))
+
+def mat_flame(name="TiangouFlame"):
+    """White fire: a tuft pale blue at its root, whitening to the tip (UV v along it)."""
+    g = Hm._Graph(name)
+    u, v, _ = g.sep(g.coords("UV"))
+    col = g.ramp(v, [(0.0, (0.3, 0.42, 0.85)), (0.45, (0.72, 0.84, 1.0)), (1.0, (1.0, 1.0, 1.0))])
+    du = g.math("ABSOLUTE", g.math("SUBTRACT", u, 0.5))
+    col = g.mix(g.math("MULTIPLY", g.math("GREATER_THAN", du, 0.4), 0.3), col, (0.55, 0.68, 1.0))
+    return g.finish(col, 0.45, 0.0)
+
+def mat_plain(name, color, rough, metal=0.0):
+    g = Hm._Graph(name)
+    co = g.coords()
+    n = g.n("ShaderNodeTexNoise", **{"Scale": 6.0, "Detail": 4.0})
+    g.link(co, n.inputs["Vector"])
+    col = g.mix(g.math("MULTIPLY", n.outputs["Fac"], 0.25), color, tuple(c * 1.6 for c in color))
+    col = g.ao(col, 0.1, 0.5)
+    return g.finish(col, rough, metal, g.bump(n.outputs["Fac"], 0.15, 0.01))
+
+def materials():
+    return {"coat": mat_coat(), "flame": mat_flame(), "moon": Hm.mat_moonstone("TiangouMoonstone"),
+            "nose": mat_plain("TiangouNose", (0.008, 0.008, 0.012), 0.35), "ivory": mat_plain("TiangouIvory", (0.62, 0.6, 0.52), 0.4),
+            "silver": Hm.mat_moonsilver("TiangouSilver")}
+
+# ---------- shapes ----------
+cone, sphere, frame = G.cone, G.sphere, G.frame
+
+wisp = G.wisp
+
+soften = G.soften
+
+def flame_ring(hi, centre, axis, radius, count, length, rnd, lean=0.6, width=0.3):
+    """Wisps of white fire round a ring (a ruff): each from the ring outward and back along
+    `axis`, curling up at the tip."""
+    n, s_, t = frame(axis)
+    for k in range(count):
+        a = TAU * (k + rnd.uniform(-0.3, 0.3)) / count
+        out = s_ * math.cos(a) + t * math.sin(a)
+        base = V(centre) + out * radius
+        d = (out * rnd.uniform(0.6, 1.0) + V(axis) * lean * rnd.uniform(0.7, 1.3) + V((0, rnd.uniform(0.1, 0.45), 0))).normalized()
+        up = V((0, 1, 0)) + out * rnd.uniform(0.2, 0.8) + V(axis) * rnd.uniform(-0.4, 0.4)
+        wisp(hi, base, d, up, length * rnd.uniform(0.65, 1.3), width * rnd.uniform(0.8, 1.25), rnd)
+
+# ---------- the segments ----------
+def body(coll, M):
+    spine = [((0, 13.6 - 0.25 * k, -6.0 + 1.0 * k), (3.7 - 0.12 * k, 4.3 - 0.2 * k, 3.0), None) for k in range(7)]   # chest into the waist
+    spine += [((0, 14.9 + 0.08 * k, 1.5 + 1.1 * k), (2.7 + 0.12 * k, 2.4 + 0.12 * k, 2.4), None) for k in range(7)]   # the back up to the hips
+    flesh = G.blob("TG_Body", coll, M["coat"], spine + [
+        ((0, 10.6, -5.6), (2.6, 2.4, 3.0), None),                                                   # the deep brisket
+        ((-2.3, 14.4, -5.6), (1.6, 2.6, 2.4), None), ((2.3, 14.4, -5.6), (1.6, 2.6, 2.4), None),   # shoulders
+        ((-2.1, 13.6, 8.6), (1.7, 2.6, 2.6), None), ((2.1, 13.6, 8.6), (1.7, 2.6, 2.6), None),     # haunches
+        ((0, 16.0, -8.0), (2.3, 2.7, 2.5), None)], voxel=0.12, smooth=0.7, rough=0.015, chisel="TiangouFur")
+    soften(flesh, 30)
+    disc, corona, moon, flames = Hm.Hi(), Hm.Hi(), Hm.Hi(), Hm.Hi()
+    n, s, t = frame(ECLIPSE_TILT)        # n: the eclipse's face (toward -Z); s, t span it
+    if t.y < 0:
+        t = -t
+    s = t.cross(n)
+    at = lambda a, r, depth=0.0: ECLIPSE + (s * math.cos(a) + t * math.sin(a)) * r + n * depth
+    # the swallowed moon: a black disc, both faces and its rim
+    m = 48
+    for side in (1, -1):
+        ring = [disc.v(at(TAU * i / m, ECLIPSE_R, 0.2 * side)) for i in range(m)]
+        mid = disc.v(ECLIPSE + n * 0.2 * side)
+        for i in range(m):
+            disc.facing([mid, ring[i], ring[(i + 1) % m]], [(0.5, 0.5), (0, 0), (1, 0)], tuple(n * side))
+    rim = [(disc.v(at(TAU * i / m, ECLIPSE_R, 0.2)), disc.v(at(TAU * i / m, ECLIPSE_R, -0.2))) for i in range(m)]
+    for i in range(m):
+        j = (i + 1) % m
+        out = s * math.cos(TAU * (i + 0.5) / m) + t * math.sin(TAU * (i + 0.5) / m)
+        disc.facing([rim[i][0], rim[j][0], rim[j][1], rim[i][1]], [(0, 0), (1, 0), (1, 1), (0, 1)], tuple(out))
+    # the corona: a ring of white fire, tongues of it licking outward, and a few long streamers,
+    # uneven as a real corona
+    ring = [at(TAU * i / 64, ECLIPSE_R + 0.25) for i in range(64)]
+    Hm.htube(corona, ring + ring[:2], lambda q: 0.32, sides=8, per=1, uv_scale=1.0, tip=False, wobble=0.0)
+    rnd = random.Random(17)
+    for k in range(34):
+        a = TAU * (k + rnd.uniform(-0.35, 0.35)) / 34
+        out = s * math.cos(a) + t * math.sin(a)
+        tangent = n.cross(out)
+        length = rnd.uniform(0.9, 2.6)
+        wisp(corona, at(a, ECLIPSE_R + 0.15, rnd.uniform(-0.3, 0.3)), out + tangent * rnd.uniform(-0.45, 0.45) + n * rnd.uniform(-0.5, 0.5),
+             out + tangent * rnd.uniform(-0.6, 0.6), length, 0.3, rnd, sides=5)
+    for a_deg, length in ((62, 6.5), (118, 5.2), (205, 4.2), (338, 4.6), (12, 3.6)):
+        a = math.radians(a_deg)
+        out = s * math.cos(a) + t * math.sin(a)
+        wisp(corona, at(a, ECLIPSE_R + 0.2), out, out + n.cross(out) * 0.5, length, 0.42, rnd, sides=6)
+    # the last silver crescent of the moon, at the bottom of the disc, cradling the egg
+    outer, inner = ECLIPSE_R - 0.1, ECLIPSE_R - 1.7
+    lift = 1.3                                   # the inner arc's centre sits higher: a crescent, thickest at the bottom
+    steps = 40
+    a0, a1 = math.radians(200), math.radians(340)
+    front, back = [], []
+    for i in range(steps + 1):
+        a = a0 + (a1 - a0) * i / steps
+        p_out = at(a, outer)
+        # the inner edge: on a circle of radius `inner` round a point `lift` above the centre, met by the same ray
+        d = s * math.cos(a) + t * math.sin(a)
+        c2 = ECLIPSE + t * lift
+        # solve |c + d*r - c2| = inner for r
+        oc = ECLIPSE - c2
+        b_ = oc.dot(d)
+        disc_ = b_ * b_ - (oc.dot(oc) - inner * inner)
+        r_in = -b_ + math.sqrt(max(0.0, disc_))
+        r_in = min(r_in, outer - 0.05)
+        p_in = ECLIPSE + d * r_in
+        front.append((moon.v(p_out + n * 1.9), moon.v(p_in + n * 1.9)))     # deep enough to cradle the egg before the disc
+        back.append((moon.v(p_out - n * 0.1), moon.v(p_in - n * 0.1)))
+    for i in range(steps):
+        (fo, fi), (fo2, fi2) = front[i], front[i + 1]
+        (bo, bi), (bo2, bi2) = back[i], back[i + 1]
+        u0, u1 = i / steps, (i + 1) / steps
+        moon.facing([fo, fo2, fi2, fi], [(u0, 0), (u1, 0), (u1, 1), (u0, 1)], tuple(n))
+        moon.facing([bo, bi, bi2, bo2], [(u0, 0), (u0, 1), (u1, 1), (u1, 0)], tuple(-n))
+        d = (s * math.cos(a0 + (a1 - a0) * (i + 0.5) / steps) + t * math.sin(a0 + (a1 - a0) * (i + 0.5) / steps))
+        moon.facing([fo, bo, bo2, fo2], [(u0, 0), (u0, 1), (u1, 1), (u1, 0)], tuple(d))
+        moon.facing([fi, fi2, bi2, bi], [(u0, 0), (u1, 0), (u1, 1), (u0, 1)], tuple(-d))
+    for end in (0, steps):
+        fo, fi = front[end]
+        bo, bi = back[end]
+        moon.f([fo, fi, bi, bo], [(0, 0), (1, 0), (1, 1), (0, 1)])
+    # streams of white fire rising from its shoulders to the crescent's horns, holding the eclipse up
+    for side in (-1, 1):
+        horn = at(math.radians(200 if side < 0 else 340), outer - 0.6, 0.3)
+        for k in range(3):
+            start = V((side * (1.6 + 0.5 * k), 17.0 - 0.3 * k, -5.6 + 0.5 * k))
+            wisp(flames, start, horn - start, V((side * 0.5, 0.3, -0.4)), (horn - start).length * 1.05, 0.42 - 0.08 * k, rnd, sides=7)
+    m_ = moon.object("TG_BodyMoon", coll, [M["moon"]])
+    m_["keep"] = True
+    fl = flames.object("TG_BodyFlames", coll, [M["flame"]])
+    fl["keep"] = True
+    return [flesh, m_, fl], \
+        {DISC: [disc.object("TG_Disc", coll, [K.glow_material(DISC)], smooth=False)],
+         CORONA: [corona.object("TG_Corona", coll, [K.glow_material(CORONA)], smooth=True)]}
 NAME = "Tiangou"
 
 # bone: (parent, head, tail), Roblox studs. Left is -X. Names follow the game's joints where they can.
@@ -682,14 +862,11 @@ def _keep(obj):
 
 def build_final(voxel=0.13):
     """The high-detail pieces, ready to bake: {piece: [objects]}, and the glow pieces {name: (object, hex)}."""
-    import random
     import egg_bake as B
-    import egg_hi as Hm
-    import tiangou as O
     clear()
     coll = bpy.data.collections.new("TiangouV2")
     bpy.context.scene.collection.children.link(coll)
-    M = O.materials()
+    M = materials()
     groups = _groups()
 
     # the skin, in the night-sky coat
@@ -713,13 +890,13 @@ def build_final(voxel=0.13):
         # flames trailing from the cheeks
         for k in range(4):
             G.wisp(cheeks, (side * 1.5, 21.75 - 0.32 * k, -14.9 + 0.4 * k), (side * 0.5, 0.05, 1), (0, 1, 0.3), 2.5 - 0.3 * k, 0.24, rnd)
-        O.cone(teeth, (side * 0.4, _mouth_line(-20.5) + 0.1, -20.5), (side * 0.38, _mouth_line(-20.5) - 0.62, -20.6), 0.13, sides=6)   # the upper fangs
-        O.cone(teeth, (side * 0.46, _mouth_line(-19.5) + 0.1, -19.5), (side * 0.44, _mouth_line(-19.5) - 0.32, -19.55), 0.08, sides=6)
+        cone(teeth, (side * 0.4, _mouth_line(-20.5) + 0.1, -20.5), (side * 0.38, _mouth_line(-20.5) - 0.62, -20.6), 0.13, sides=6)   # the upper fangs
+        cone(teeth, (side * 0.46, _mouth_line(-19.5) + 0.1, -19.5), (side * 0.44, _mouth_line(-19.5) - 0.32, -19.55), 0.08, sides=6)
         # claws, silver, past the toes
         for (x, z, reach) in ((3.05, -6.2, 1.35), (3.25, 9.3, 1.3)):
             for dx, length in ((-0.46, 0.62), (-0.16, 0.86), (0.16, 0.86), (0.46, 0.62)):
                 tip_z = z - reach * length - 0.28
-                O.cone(claws, (side * x + dx * side, 0.34, tip_z), (side * x + dx * side * 1.12, 0.05, tip_z - 0.42), 0.1, sides=6)
+                cone(claws, (side * x + dx * side, 0.34, tip_z), (side * x + dx * side * 1.12, 0.05, tip_z - 0.42), 0.1, sides=6)
         # white fire feathering the back of the forearm and the hock
         for k in range(3):
             q = 0.18 + 0.2 * k
@@ -728,7 +905,7 @@ def build_final(voxel=0.13):
             hock = V((side * 3.2, 7.2, 8.1)).lerp(V((side * 3.25, 5.0, 10.9)), q)
             G.wisp(feather, hock + V((0, 0.1, 0.15)), V((side * 0.15, -0.5, 0.86)), V((0, 0.3, 1)), 3.0 - 0.45 * k, 0.26, rnd, sides=6)
     nose_at = G.surface_along(skin, V((0, 21.32, -20.9)), V((0, 0.15, -1)).normalized())
-    O.sphere(nose, nose_at + V((0, 0.02, 0.12)), 0.3, nu=12, nv=8, radii=(0.34, 0.25, 0.24))
+    sphere(nose, nose_at + V((0, 0.02, 0.12)), 0.3, nu=12, nv=8, radii=(0.34, 0.25, 0.24))
 
     # the ruff of white fire down the neck
     rnd = random.Random(5)
@@ -736,7 +913,7 @@ def build_final(voxel=0.13):
     # the tongues grow from the skin itself and lie back along the neck, overlapping like a mane
     for q, count, length in ((0.0, 22, 4.6), (0.2, 20, 4.2), (0.42, 17, 3.6), (0.64, 13, 3.0), (0.84, 10, 2.3)):
         c = V((0, 16.2, -7.4)).lerp(V((0, 21.0, -13.4)), q)
-        n, a1, a2 = O.frame(axis)
+        n, a1, a2 = frame(axis)
         for k in range(count):
             ang = 2 * math.pi * (k + rnd.uniform(-0.3, 0.3)) / count
             out = a1 * math.cos(ang) + a2 * math.sin(ang)
@@ -752,7 +929,7 @@ def build_final(voxel=0.13):
         j = min(int(u), 4)
         c = pts[j].lerp(pts[j + 1], u - j)
         d = (pts[j + 1] - pts[j]).normalized()
-        O.flame_ring(plume, c, d, 0.75 - 0.05 * i, 7 + i // 2, 2.3 + 0.17 * i, rnd, lean=0.6, width=0.3)
+        flame_ring(plume, c, d, 0.75 - 0.05 * i, 7 + i // 2, 2.3 + 0.17 * i, rnd, lean=0.6, width=0.3)
 
     def obj(hi, name, mat, smooth=True, keep=True):
         o = hi.object(name, coll, [mat], smooth=smooth)
@@ -770,18 +947,17 @@ def build_final(voxel=0.13):
     jaw["keep"] = False
     jaw_teeth = Hm.Hi()
     for side in (-1, 1):
-        O.cone(jaw_teeth, (side * 0.32, _mouth_line(-20.2) - 0.12, -20.2), (side * 0.3, _mouth_line(-20.2) + 0.4, -20.3), 0.11, sides=6)
+        cone(jaw_teeth, (side * 0.32, _mouth_line(-20.2) - 0.12, -20.2), (side * 0.3, _mouth_line(-20.2) + 0.4, -20.3), 0.11, sides=6)
     tongue = Hm.Hi()
     Hm.htube(tongue, [(0, _mouth_line(-16.8) - 0.02, -16.8), (0, _mouth_line(-18.5) - 0.0, -18.5), (0, _mouth_line(-20.0) - 0.05, -20.0)],
              lambda q: 0.34 * (1 - 0.5 * q), sides=8, per=4, uv_scale=1.0, tip=True, wobble=0.0)
-    tongue_mat = O.mat_plain("TiangouTongue", (0.28, 0.05, 0.09), 0.4)
+    tongue_mat = mat_plain("TiangouTongue", (0.28, 0.05, 0.09), 0.4)
 
-    # the eclipse and its fire, from the character as it was
-    old_flesh, old_glow = None, None
-    parts, old_glow = O.body(coll, M)
-    old_flesh, moon, streams = parts
-    me = old_flesh.data
-    bpy.data.objects.remove(old_flesh, do_unlink=True)
+    # the eclipse and its fire
+    parts, eclipse_glow = body(coll, M)
+    flesh, moon, streams = parts
+    me = flesh.data
+    bpy.data.objects.remove(flesh, do_unlink=True)
     bpy.data.meshes.remove(me)
 
     pieces = {
@@ -791,10 +967,10 @@ def build_final(voxel=0.13):
         "Moon": [moon, streams],
     }
     glows = {
-        "Eyes": (glow.object("TG2_Eyes", coll, [K.glow_material(O.EYE)], smooth=True), O.EYE),
-        "Pupils": (pupils.object("TG2_Pupils", coll, [K.glow_material(O.PUPIL)], smooth=True), O.PUPIL),
-        "Eclipse": (old_glow[O.DISC][0], O.DISC),
-        "Corona": (old_glow[O.CORONA][0], O.CORONA),
+        "Eyes": (glow.object("TG2_Eyes", coll, [K.glow_material(EYE)], smooth=True), EYE),
+        "Pupils": (pupils.object("TG2_Pupils", coll, [K.glow_material(PUPIL)], smooth=True), PUPIL),
+        "Eclipse": (eclipse_glow[DISC][0], DISC),
+        "Corona": (eclipse_glow[CORONA][0], CORONA),
     }
     build_skeleton(coll)
     return pieces, glows
