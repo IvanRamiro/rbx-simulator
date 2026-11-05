@@ -1,6 +1,7 @@
--- Animates a guardian on the client (the server never animates): its joints, the Motor6Ds
--- GuardianBuilder made, set through Transform every frame, and its glowing pieces, driven by its
--- rig (GuardianRigs/<GuardianId>).
+-- Animates a guardian on the client (the server never animates): its joints, set through Transform every
+-- frame, and its glowing pieces, driven by its rig (GuardianRigs/<GuardianId>). A joint is a Motor6D
+-- GuardianBuilder made, or for a skinned guardian (rig.Skinned) a Bone of its skeleton. A bone may rest at any
+-- angle, so a pose in the guardian's axes is turned into the bone's own: rest:Inverse() * pose * rest.
 --
 -- Transforms are in the guardian's own axes (X to its right, Y up, -Z ahead): a positive X turn
 -- swings a limb's far end forward and up. Poses give per joint { pitch, yaw, roll (degrees),
@@ -118,17 +119,21 @@ function GuardianAnim.new(model, rig)
     self.rig = rig
     self.root = model.PrimaryPart
     self.joints = {}
-    for _, joint in rig.Joints do
-        self.joints[joint] = model:WaitForChild("Joints"):WaitForChild(joint)
-    end
-    -- each joint's parent joint (nil: hangs from the root), from its motor
-    local jointOf = {}
-    for joint, motor in self.joints do
-        jointOf[motor.Part1] = joint
-    end
     self.parents = {}
-    for joint, motor in self.joints do
-        self.parents[joint] = jointOf[motor.Part0]
+    if rig.Skinned then
+        self:findBones()
+    else
+        for _, joint in rig.Joints do
+            self.joints[joint] = model:WaitForChild("Joints"):WaitForChild(joint)
+        end
+        -- each joint's parent joint (nil: hangs from the root), from its motor
+        local jointOf = {}
+        for joint, motor in self.joints do
+            jointOf[motor.Part1] = joint
+        end
+        for joint, motor in self.joints do
+            self.parents[joint] = jointOf[motor.Part0]
+        end
     end
     -- the springs walk rig.Joints in order, each joint after its parent
     local seen = {}
@@ -166,14 +171,69 @@ function GuardianAnim.new(model, rig)
     return self
 end
 
+-- A skinned guardian's bones, which replicate after the model: its joints, their parents, and each one's rest
+-- frame in the root's axes.
+function GuardianAnim:findBones()
+    local wanted = {}
+    for _, joint in self.rig.Joints do
+        wanted[joint] = true
+    end
+    local extra = self.rig.ExtraBones or {}
+    for _, joint in extra do
+        wanted[joint] = true
+    end
+    local found, count, need = {}, 0, 0
+    for _ in wanted do
+        need += 1
+    end
+    while count < need do
+        for _, d in self.model:GetDescendants() do
+            if d:IsA("Bone") and wanted[d.Name] and not found[d.Name] then
+                found[d.Name] = d
+                count += 1
+            end
+        end
+        if count < need then
+            task.wait(0.1)
+        end
+    end
+    self.bones = found
+    self.boneRest = {}
+    for name, bone in found do
+        self.boneRest[name] = self.root.CFrame:ToObjectSpace(bone.WorldCFrame)
+    end
+    for _, joint in self.rig.Joints do
+        self.joints[joint] = found[joint]
+        local up = found[joint].Parent
+        while up and up:IsA("Bone") and not self.joints[up.Name] do
+            up = up.Parent
+        end
+        self.parents[joint] = if up and up:IsA("Bone") then up.Name else nil
+    end
+end
+
+-- Sets a bone outside the rig's joints (the eyes in their sockets) to a pose in the guardian's axes.
+function GuardianAnim:poseBone(name, transform)
+    local bone, rest = self.bones[name], self.boneRest[name].Rotation
+    bone.Transform = rest:Inverse() * transform * rest
+end
+
 -- Each planted leg (rig.Legs: { Name, Upper, Lower, Axis = the turn it bends on (1 pitch, 3 roll),
 -- Bend = the sign of the Lower turn that folds it }): its sole at rest, as a point on its lower piece,
 -- and where it stands on the ground in the root's frame. The ground is the model's pivot.
 function GuardianAnim:setupLegs()
     self.c0, self.c1inv = {}, {}
     for joint, motor in self.joints do
-        self.c0[joint] = motor.C0
-        self.c1inv[joint] = motor.C1:Inverse()
+        if self.rig.Skinned then
+            -- a frame at each bone's pivot, turned with the guardian: a joint's turn acts about its pivot, as with a motor
+            local parent = self.parents[joint]
+            local here = self.boneRest[joint].Position
+            self.c0[joint] = CFrame.new(if parent then here - self.boneRest[parent].Position else here)
+            self.c1inv[joint] = CFrame.identity
+        else
+            self.c0[joint] = motor.C0
+            self.c1inv[joint] = motor.C1:Inverse()
+        end
     end
     self.plant = {}
     self.air = 0
@@ -192,8 +252,10 @@ function GuardianAnim:setupLegs()
     end
     for _, def in self.rig.Legs do
         local lower = restOf(def.Lower)
-        local stand = Vector3.new(lower.X, self.groundY, lower.Z)
-        table.insert(self.legs, { def = def, sole = lower:PointToObjectSpace(stand), stand = stand })
+        -- the point kept on its spot: under the lower piece's pivot on the ground; for a skinned leg, def.Foot's pivot, at its height
+        local foot = if def.Foot then self.boneRest[def.Foot].Position else nil
+        local stand = foot or Vector3.new(lower.X, self.groundY, lower.Z)
+        table.insert(self.legs, { def = def, sole = lower:PointToObjectSpace(stand), stand = stand, height = stand.Y - self.groundY })
     end
 end
 
@@ -230,10 +292,11 @@ function GuardianAnim:plantFeet(pose)
         local a0, b0 = upper[axis], lower[axis]
         local posed = sole(a0, b0)
         -- a lifted foot is never posed through the ground either: it's put back on top of it
-        local weight = math.max(planted, if posed.Y < self.groundY - 0.05 then grounded else 0)
+        local floorY = self.groundY + leg.height
+        local weight = math.max(planted, if posed.Y < floorY - 0.05 then grounded else 0)
         if weight > 0.01 then
             -- where it stands: under its posed foot while it walks, on its own spot when still
-            local target = Vector3.new(posed.X, self.groundY, posed.Z):Lerp(leg.stand, (1 - self.moving) * (def.Pin or 1) * planted)
+            local target = Vector3.new(posed.X, floorY, posed.Z):Lerp(leg.stand, (1 - self.moving) * (def.Pin or 1) * planted)
             local floor = math.min(0, bend * b0) -- the knee never bends further backward than posed
             local a, b = a0, b0 + bend * 3       -- a slight bend, so a straight leg knows which way it folds
             -- solved in the leg's own swing plane: height and forward for a leg that bends on pitch,
@@ -256,6 +319,15 @@ function GuardianAnim:plantFeet(pose)
             end
             upper[axis] = a0 + (a - a0) * weight
             lower[axis] = b0 + (b - b0) * weight
+            -- what hangs below stays level with the ground, as a planted foot does (def.Flat, top down)
+            for _, flat in def.Flat or {} do
+                local sum, up = 0, self.parents[flat]
+                while up do
+                    sum += pose[up][1]
+                    up = self.parents[up]
+                end
+                pose[flat][1] += (-sum - pose[flat][1]) * weight
+            end
         end
     end
     table.clear(self.plant)
@@ -403,8 +475,15 @@ function GuardianAnim:update(dt)
     end
     table.clear(self.tremors)
     self:plantFeet(pose)
-    for joint, p in pose do
-        self.joints[joint].Transform = transformOf(p)
+    if self.rig.Skinned then
+        for joint, p in pose do
+            local rest = self.boneRest[joint].Rotation
+            self.joints[joint].Transform = rest:Inverse() * transformOf(p) * rest
+        end
+    else
+        for joint, p in pose do
+            self.joints[joint].Transform = transformOf(p)
+        end
     end
     rig.glow(self, state, now)
 end

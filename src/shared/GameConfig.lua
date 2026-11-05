@@ -300,8 +300,8 @@ local GameConfig = {
                 Bite = { Kind = "Sweep", Range = 25, Arc = 60, WindUp = 0.5, Cooldown = 2.0, Knockback = 50 },
                 -- it howls at the sky and the eclipse flares: a ring of frost rolls out all round (jump it)
                 EclipseHowl = { Kind = "Wave", Radius = 52, WaveSpeed = 36, WindUp = 1.0, Cooldown = 7, Knockback = 45 },
-                -- long, high arcs: watch the sky
-                MoonLeap = { Kind = "Pounce", MinRange = 18, MaxRange = 85, WindUp = 0.55, Air = 1.4, Height = 26, Cooldown = 4.2, Radius = 13, Knockback = 60 },
+                -- long, low bounds: about one body height off the ground (the owner: 26 "jumps too high")
+                MoonLeap = { Kind = "Pounce", MinRange = 18, MaxRange = 85, WindUp = 0.55, Air = 1.2, Height = 12, Cooldown = 4.2, Radius = 13, Knockback = 60 },
             },
         },
         Pangu = {

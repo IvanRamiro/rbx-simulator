@@ -1,6 +1,6 @@
 # Qi Aura Simulator — Game Design
 
-**Platform:** Roblox · **Project:** `qi-aura-simulator` · **Last updated:** October 31, 2026
+**Platform:** Roblox · **Project:** `qi-aura-simulator` · **Last updated:** November 5, 2026
 
 The single design reference for the game: what is fixed, what is built, and what comes next.
 Exact numbers live in code and data, and the tables below are generated from them:
@@ -835,6 +835,8 @@ All guardian animation is procedural, on the client (`GuardianAnim`, one rig per
 - **Tremors** (a shudder, a quivering roar, a building shiver) go on after the springs, which would smooth them away.
 - **Cost:** 0.03-0.06 ms per guardian per frame in Studio, feet included; only guardians near the camera animate.
 
+**Skinned guardians** (`rig.Skinned`, Tiangou first): the same layers drive `Bone.Transform` instead of Motor6Ds, written as `rest:Inverse() * T * rest` so a pose reads in the guardian's own axes. Signs: positive swings a hanging limb's far end forward and up, lowers the tail, lays an ear back and lifts the nose.
+
 Tuning lives in each rig: `Rig.Springs`, `Rig.Lean`, `Rig.Legs`, the gait numbers and each move's keys. Joints are listed parent first (`GuardianAnim` warns otherwise). Strikes keep their impact on the wind-up time the server sends, so effects and knockback stay in sync.
 
 ### Guardians by island
@@ -844,7 +846,7 @@ Tuning lives in each rig: `Rig.Springs`, `Rig.Lean`, `Rig.Legs`, the gait number
 | Beginner Isle | The Awakened Stone Lion | Introductory fight, basic Qinggong escape |
 | Jade Grove | The Bamboo Mantis Sage | Escape routes through trees and elevated terrain |
 | Ember Peak | The Ember Xuanwu | Escape routes around lava and volcanic hazards; jump its quake rings |
-| Moonlit Isle | Tiangou the Moon-Eater | More demanding aerial movement: its leaps are long and high |
+| Moonlit Isle | Tiangou the Moon-Eater | More demanding aerial movement: long, low bounds that close the distance fast |
 | Origin Abyss | Pangu the World-Splitter | The most demanding encounter: a fissure to dodge, a nova to jump, a titan's leap |
 
 
@@ -908,7 +910,9 @@ Measured in Play (November 2, 2026): wake, lash, quake, weaken (egg set down at 
 
 ### Tiangou the Moon-Eater (Moonlit Isle)
 
-The heavenly hound of the eclipse myth, the dog that swallows the moon (chosen by the owner, November 2, 2026, over a three-legged moon toad and a moon-backed spider). A lean, long-legged sighthound whose coat is the midnight sky (deep blue, faint constellations in it, silvered where moonlight falls), with a ruff, a plume of a tail and feathered legs of white fire, tall pointed ears with a flicker of fire inside, fangs and a black nose. Above its shoulders stands the eclipse it made: the swallowed moon as a black disc (dark Neon) ringed by a corona of white fire with a few long streamers, framing its head from the front, held up by streams of fire from its shoulders. The egg sits in the moon's last silver crescent, before the disc. About 14 studs at the shoulder, 33 to the top of the eclipse, 44 from nose to tail (`tools/blender/guardians/tiangou.py`, 14 jointed segments).
+The heavenly hound of the eclipse myth, the dog that swallows the moon (chosen by the owner, November 2, 2026, over a three-legged moon toad and a moon-backed spider). A lean, long-legged sighthound whose coat is the midnight sky (deep blue, faint constellations in it, silvered where moonlight falls), with a ruff, a plume of a tail and feathered legs of white fire, tall pointed ears with a flicker of fire inside, fangs and a black nose. Above its shoulders stands the eclipse it made: the swallowed moon as a black disc (dark Neon) ringed by a corona of white fire with a few long streamers, framing its head from the front, held up by streams of fire from its shoulders. The egg sits in the moon's last silver crescent, before the disc. About 14 studs at the shoulder, 33 to the top of the eclipse, 44 from nose to tail.
+
+**Rebuilt with a skeleton (November 5, 2026), the first of the owner's boss rebuilds** ("all the boss in the game is actually stiff"; "please put rig, skeleton and more weight paint"): `tools/blender/guardians/tiangou_v2.py` makes one continuous skinned body on 32 bones with painted weights, in place of 14 jointed segments (`tiangou.py`, whose materials and eclipse it still borrows). Its gallop was approved in clay first: 44 studs a stride, so a planted paw stays still at its chase speed. In Studio, `GuardianBuilder.storeSkinned` fits the import (`Placements/TiangouSkinned`) and sets the model's `Rig` attribute, and the old model is kept in `ServerStorage.DevStage.TiangouJointed`. Importer facts: File > Import 3D keeps bones and all four maps, drops a bone that only single-bone pieces use (`AddBones` puts Jaw and Eyes back), and can leave pieces about 300 studs off in height. A missing bone would freeze the animation with no error, so `GuardianAnim` waits for every bone.
 
 **Its eyes** (`guardian_kit.eye`): gold almonds with round black pupils under a low, scowling brow. It blinks every few seconds, shuts them asleep, glares (narrowed, red) enraged, and widens and flickers weakened. Its corona burns low asleep (Neon fades with transparency), gutters weakened, flickers enraged and flares as it howls.
 
@@ -919,7 +923,7 @@ Its lair is the middle of the Lunar Court, facing the Crescent Arch; a thief car
 | Dormant | Asleep on its feet: head low, eyes shut, tail down, the corona burning low. |
 | Guardian | Alert, turning quickly to face whoever it watches, tail waving. **Bite:** it draws back and snaps (range 25, 60° arc). **Eclipse howl:** head thrown back to the sky, the eclipse flares and a ring of frost rolls out all round (52 studs); jump it. |
 | Weakened | Crouched low, panting. |
-| Enraged | The hunting crouch, lips drawn back, tail up, eyes red, chasing at 27 studs/s (it stops 17 short, `ChaseStop`). **Moon leap:** long, high arcs (18 to 85 studs, 26 high), stretched flat in the air. |
+| Enraged | The hunting crouch, lips drawn back, tail up, eyes red, chasing at 27 studs/s (it stops 17 short, `ChaseStop`). **Moon leap:** long, low bounds (18 to 85 studs, 12 high; the owner found 26 too high, November 5, 2026), stretched flat in the air. |
 
 Measured in Play (November 2, 2026): wake (it howls at once), bite, howl, weaken, steal (a Heavenly Throne Egg), the howl's ring knocking a grounded thief who drops the egg, recover, moon leaps aimed ahead of the runner and landing at the sanctuary's edge, and a secured egg (+4,000 stones). Most of its maps rendered grey after the first upload; they are re-uploads.
 

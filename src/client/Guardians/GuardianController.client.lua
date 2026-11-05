@@ -388,7 +388,8 @@ local function track(model)
     if anims[model] or not model:IsDescendantOf(Workspace) then
         return
     end
-    local rigModule = rigsFolder:FindFirstChild(model:GetAttribute("GuardianId") or "")
+    -- a model built with a skeleton names its own rig (GuardianBuilder.storeSkinned)
+    local rigModule = rigsFolder:FindFirstChild(model:GetAttribute("Rig") or model:GetAttribute("GuardianId") or "")
     if not rigModule then
         warn("GuardianController: no rig for " .. model.Name)
         return
