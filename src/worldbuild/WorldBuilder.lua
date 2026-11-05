@@ -61,7 +61,7 @@ WorldBuilder.MaterialColors = {
 -- Per-island terrain settings: how deep the terrain shell reaches below the island centre (the
 -- underside meshes take over below that) and which material sits under the surface layer.
 WorldBuilder.TerrainSettings = {
-    Yggdrasil = { ShellDepth = 9, SubMaterial = "Ground", KeepThrough = { Rock = true } },
+    Yggdrasil = { ShellDepth = 9, SubMaterial = "Ground", KeepThrough = { Rock = true, Grass = true } },
     -- deep enough for the Whispering Hollow (floor about -9)
     JadeGrove = { ShellDepth = 14, SubMaterial = "Mud", KeepThrough = { Sandstone = true } },
     -- the lava river's channel reaches about -6 at the edge
@@ -71,7 +71,8 @@ WorldBuilder.TerrainSettings = {
     -- the void crust is only the lip's top layer; the rift walls below are dark slate
     OriginAbyss = { ShellDepth = 14, SubMaterial = "Slate", KeepThrough = {} },
     -- on Yggdrasil's palette: terrain colours are global to the place
-    BeginnerIsle = { ShellDepth = 9, SubMaterial = "Ground", KeepThrough = { Rock = true } },
+    -- grass all the way down: on a slope the voxels under the top one show, and Ground there made brown patches
+    BeginnerIsle = { ShellDepth = 9, SubMaterial = "Ground", KeepThrough = { Rock = true, Grass = true } },
 }
 
 -- An island's terrain data, its grids turned by its quarter turns (Turns, layout.py) about its
@@ -166,18 +167,10 @@ function WorldBuilder.buildTerrain(island)
     local cellsPerVoxel = data.Cell / VOXEL
     assert(cellsPerVoxel == 1, "WorldBuilder expects 4-stud heightfield cells")
     local size = data.Size
-    local matGrid, occGrid = {}, {}
-    for i = 1, size do
-        local matCol, occCol = {}, {}
-        for k = 1, layers do
-            matCol[k], occCol[k] = {}, {}
-            for j = 1, size do
-                matCol[k][j] = Enum.Material.Air
-                occCol[k][j] = 0
-            end
-        end
-        matGrid[i], occGrid[i] = matCol, occCol
-    end
+    -- what's there already, so a column this island doesn't own (a neighbour's, in the corners of its square) stays as it is
+    local regionMin = Vector3.new(data.Origin.X, minY, data.Origin.Y)
+    local region = Region3.new(regionMin, regionMin + Vector3.new(size * VOXEL, layers * VOXEL, size * VOXEL))
+    local matGrid, occGrid = workspace.Terrain:ReadVoxels(region, VOXEL)
 
     local filled = 0
     for j = 1, size do
@@ -192,6 +185,8 @@ function WorldBuilder.buildTerrain(island)
                 local waterTop = waterLevel and data.Centre.Y + waterLevel
                 for k = 1, layers do
                     local y0 = minY + (k - 1) * VOXEL
+                    matGrid[i][k][j] = Enum.Material.Air
+                    occGrid[i][k][j] = 0
                     if y0 + VOXEL > bottomY then
                         -- a voxel's surface renders from its centre (occupancy 0) to the next one up (1), measured in Studio
                         local occupancy = math.clamp((top - y0 - VOXEL / 2) / VOXEL, 0, 1)
@@ -209,8 +204,6 @@ function WorldBuilder.buildTerrain(island)
         end
     end
 
-    local regionMin = Vector3.new(data.Origin.X, minY, data.Origin.Y)
-    local region = Region3.new(regionMin, regionMin + Vector3.new(size * VOXEL, layers * VOXEL, size * VOXEL))
     workspace.Terrain:WriteVoxels(region, VOXEL, matGrid, occGrid)
     return filled
 end
@@ -412,6 +405,10 @@ WorldBuilder.Appearance.JG_ArenaFloor = { CanCollide = false, CastShadow = false
 WorldBuilder.Appearance.EP_ArenaFloor = { CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance.MI_ArenaFloor = { CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance.OA_ArenaFloor = { CanCollide = false, CastShadow = false }
+-- and the paved ground of the hub and the Beginner Isle
+for _, name in { "YG_Roads", "YG_Bridgeheads", "YG_PlotEdges", "YG_CompassRing", "BI_CourtApron", "BI_Roads", "BI_YardFloor" } do
+    WorldBuilder.Appearance[name] = { CanCollide = false, CastShadow = false }
+end
 WorldBuilder.Appearance.EP_ArenaGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 78, 14), CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance.EP_PylonFire = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 120, 20), Transparency = 0.35, CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance.OA_ArenaGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(115, 40, 255), CanCollide = false, CastShadow = false }
@@ -799,6 +796,8 @@ local UPGRADE_ISLANDS = {
     EP = { Island = "EmberPeak", Atlas = "EP_BasaltClusterA" },
     MI = { Island = "MoonlitIsle", Atlas = "MI_LunarRock" },
     OA = { Island = "OriginAbyss", Atlas = "OA_SlateRock" },
+    YG = { Island = "Yggdrasil", Atlas = "SI_MossRockA" },
+    BI = { Island = "BeginnerIsle", Atlas = "SI_MossRockA" },
 }
 function WorldBuilder.storeUpgrades(model)
     local anchor = model:FindFirstChild("IU_Anchor")

@@ -549,12 +549,279 @@ def origin_colonnade(coll, mat, bands):
     return mb.object("OA_Colonnade", coll, mat)
 
 
+# ---------- paved ground that follows the land (the hub and the Beginner Isle) ----------
+ROAD_LIFT = 0.24        # above the ground, under a road's whole width
+ROAD_TILE = 5.0         # studs along a road per row of flagstones
+
+
+def _resample(line, step):
+    """A polyline's points every `step` studs, with the corners kept, so curves stay curves."""
+    out = [line[0]]
+    for a, b in zip(line, line[1:]):
+        L = math.hypot(b[0] - a[0], b[1] - a[1])
+        n = max(1, round(L / step))
+        for i in range(1, n + 1):
+            out.append((a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n))
+    return out
+
+
+def _line_distance(x, z, line):
+    best = 1e9
+    for a, b in zip(line, line[1:]):
+        vx, vz = b[0] - a[0], b[1] - a[1]
+        t = max(0.0, min(1.0, ((x - a[0]) * vx + (z - a[1]) * vz) / max(vx * vx + vz * vz, 1e-6)))
+        best = min(best, math.hypot(x - a[0] - vx * t, z - a[1] - vz * t))
+    return best
+
+
+def road(mb, rnd, line, half, ground, stone, edge, others=(), covered=None, lift=ROAD_LIFT, shade=(0.55, 0.86)):
+    """One road: rows of two flagstones with a dark kerb each side, every corner on the ground beneath it. A kerb is left out
+    where it would cross another road (`others`, (line, half)) or a plaza (`covered(x, z)`), so junctions read as one surface."""
+    points = _resample(line, ROAD_TILE)
+    closed = math.hypot(points[0][0] - points[-1][0], points[0][1] - points[-1][1]) < 0.01
+    frames = []
+    count = len(points)
+    for i, (x, z) in enumerate(points):
+        if closed:
+            ax, az = points[(i - 1) % (count - 1)]
+            bx, bz = points[(i + 1) % (count - 1)]
+        else:
+            ax, az = points[max(0, i - 1)]
+            bx, bz = points[min(count - 1, i + 1)]
+        dx, dz = bx - ax, bz - az
+        L = max(math.hypot(dx, dz), 1e-6)
+        frames.append((x, z, -dz / L, dx / L))
+
+    def at(frame, across, dy=0.0):
+        x, z, nx, nz = frame
+        px, pz = x + nx * across, z + nz * across
+        return (px, ground(px, pz) + lift + dy, pz)
+
+    def clear(frame, across):
+        x, z, nx, nz = frame
+        px, pz = x + nx * across, z + nz * across
+        if covered and covered(px, pz):
+            return False
+        return all(_line_distance(px, pz, ol) > oh - 0.5 for ol, oh in others)
+
+    kerb_width = 1.1
+    for a, b in zip(frames, frames[1:]):
+        for s0, s1 in ((-half + kerb_width, -0.06), (0.06, half - kerb_width)):
+            sh = rnd.uniform(*shade)
+            oriented(mb, [at(a, s0), at(b, s0), at(b, s1), at(a, s1)], (0, 1, 0), stone, rnd.uniform(0.1, 0.9), [sh] * 4)
+        for side in (-1, 1):
+            if clear(a, side * (half - 0.5)) and clear(b, side * (half - 0.5)):
+                sh = rnd.uniform(0.45, 0.7)
+                inner0, inner1 = at(a, side * (half - kerb_width), 0.07), at(b, side * (half - kerb_width), 0.07)
+                outer0, outer1 = at(a, side * half, 0.07), at(b, side * half, 0.07)
+                oriented(mb, [inner0, inner1, outer1, outer0], (0, 1, 0), edge, 0.5, [sh] * 4)
+                drop0, drop1 = (outer0[0], outer0[1] - 0.9, outer0[2]), (outer1[0], outer1[1] - 0.9, outer1[2])
+                oriented(mb, [outer0, outer1, drop1, drop0], (a[2] * side, 0, a[3] * side), edge, 0.5, [sh * 0.7] * 4)
+
+
+def paved_disc(mb, rnd, centre, r0, r1, rings, ground, stone, edge, kerb=1.4, lift=0.2, shade=(0.55, 0.86), covered=None):
+    """Rings of flagstones from r0 out to r1, then a dark kerb, on the ground beneath. `rings`: stones in each ring."""
+    cx, cz = centre
+    span = (r1 - kerb - r0) / len(rings)
+
+    def at(a, r, dy=0.0):
+        x, z = cx + math.cos(a) * r, cz + math.sin(a) * r
+        return (x, ground(x, z) + lift + dy, z)
+
+    for i, n in enumerate(rings):
+        ra, rb = r0 + i * span + 0.07, r0 + (i + 1) * span - 0.07
+        phase = rnd.uniform(0, TAU)
+        steps = max(1, round(TAU * rb / n / 4))
+        for k in range(n):
+            a0, a1 = phase + TAU * k / n, phase + TAU * (k + 1) / n
+            da = 0.08 / rb
+            sh = rnd.uniform(*shade)
+            u = rnd.uniform(0.1, 0.9)
+            for s in range(steps):
+                b0 = a0 + da + (a1 - a0 - 2 * da) * s / steps
+                b1 = a0 + da + (a1 - a0 - 2 * da) * (s + 1) / steps
+                oriented(mb, [at(b0, ra), at(b1, ra), at(b1, rb), at(b0, rb)], (0, 1, 0), stone, u, [sh] * 4)
+    n = max(12, round(TAU * r1 / 5))
+    for k in range(n):
+        a0, a1 = TAU * k / n + 0.004, TAU * (k + 1) / n - 0.004
+        mid = (a0 + a1) / 2
+        if covered and covered(cx + math.cos(mid) * (r1 - 0.6), cz + math.sin(mid) * (r1 - 0.6)):
+            continue
+        sh = rnd.uniform(0.45, 0.7)
+        oriented(mb, [at(a0, r1 - kerb, 0.08), at(a1, r1 - kerb, 0.08), at(a1, r1, 0.08), at(a0, r1, 0.08)], (0, 1, 0), edge, 0.5, [sh] * 4)
+        o0, o1 = at(a0, r1, 0.08), at(a1, r1, 0.08)
+        oriented(mb, [o0, o1, (o1[0], o1[1] - 0.9, o1[2]), (o0[0], o0[1] - 0.9, o0[2])], (math.cos(mid), 0, math.sin(mid)), edge, 0.5, [sh * 0.7] * 4)
+
+
+# ---------- Yggdrasil ----------
+def _hub_roads():
+    """(line, half width) of every road on the hub, the Root Court's ring first."""
+    import ygg_island as Y
+    return [(line, 8.0 if k == 0 else 7.0) for k, line in enumerate(Y.PATHS)]
+
+
+def _hub_plaza(x, z):
+    """On the hub's other paving: the Qi Compass, a bridgehead."""
+    import ygg_island as Y
+    if math.hypot(x - Y.COMPASS[0], z - Y.COMPASS[1]) < Y.COMPASS[2] + 4:
+        return True
+    return any(math.hypot(x - bx, z - bz) < Y.BRIDGEHEAD_R + 2 for bx, bz in hub_bridgehead_centres())
+
+
+def hub_bridgehead_centres():
+    import ygg_island as Y
+    out = []
+    for x, z in Y.EXITS.values():
+        r = math.hypot(x, z)
+        out.append((x * (r - 10) / r, z * (r - 10) / r))
+    return out
+
+
+def hub_roads(coll, mat, bands):
+    """The hub's paths as paved roads, instead of the blurred earth the 4-stud terrain gives: the Root Court's ring, the Spawn Walk,
+    the Market lane, the way to each bridge. Decoration on the ground, like the Lion Court."""
+    import ygg_island as Y
+    rnd = random.Random(631)
+    mb = W.MeshBuilder()
+    ground = lambda x, z: Y.height(x, z)[0] or 0.0
+    roads = _hub_roads()
+    for k, (line, half) in enumerate(roads):
+        others = [r for j, r in enumerate(roads) if j != k]
+        road(mb, rnd, line, half, ground, bands[P.PALE], bands[P.DARK], others=others, covered=_hub_plaza, lift=ROAD_LIFT + 0.012 * k)
+    return mb.object("YG_Roads", coll, mat)
+
+
+def hub_bridgeheads(coll, mat, bands):
+    """A crisp paved round where each bridge lands, in place of its jagged terrain edge."""
+    import ygg_island as Y
+    rnd = random.Random(632)
+    mb = W.MeshBuilder()
+    ground = lambda x, z: Y.height(x, z)[0] or 0.0
+    for centre in hub_bridgehead_centres():
+        paved_disc(mb, rnd, centre, 0.0, Y.BRIDGEHEAD_R + 3, (10, 18, 26), ground, bands[P.PALE], bands[P.DARK], lift=0.34)
+    return mb.object("YG_Bridgeheads", coll, mat)
+
+
+def hub_plot_edges(coll, mat, bands):
+    """A kerbed band round each building's plot, over the jagged edge of its terrain paving; what's inside is left to the building."""
+    import ygg_island as Y
+    rnd = random.Random(633)
+    mb = W.MeshBuilder()
+    ground = lambda x, z: Y.height(x, z)[0] or 0.0
+    roads = _hub_roads()
+    for plot in Y.PLOTS.values():
+        cx, cz, w, d, facing = plot
+        a = math.radians(facing)
+        fx, fz = math.cos(a), math.sin(a)      # out of its front
+        sx, sz = -fz, fx                       # along the front
+
+        layer = [0.0]   # each side a hair over the last, where they share a corner
+
+        def at(u, v, dy=0.0):
+            x, z = cx + sx * u + fx * v, cz + sz * u + fz * v
+            return (x, ground(x, z) + 0.26 + layer[0] + dy, z)
+
+        out, width = 2.5, 3.6
+        hu, hv = w / 2, d / 2
+        corners = [(-hu, -hv), (hu, -hv), (hu, hv), (-hu, hv)]
+        for i in range(4):
+            layer[0] = 0.012 * i
+            (u0, v0), (u1, v1) = corners[i], corners[(i + 1) % 4]
+            du, dv = (1 if u1 > u0 else -1 if u1 < u0 else 0), (1 if v1 > v0 else -1 if v1 < v0 else 0)
+            nu, nv = dv, -du                    # outward, going round this way
+            L = math.hypot(u1 - u0, v1 - v0) + 2 * out
+            n = max(1, round(L / 4.0))
+            su, sv = u0 - du * out, v0 - dv * out
+            for k in range(n):
+                t0, t1 = L * k / n + 0.05, L * (k + 1) / n - 0.05
+                a0 = (su + du * t0, sv + dv * t0)
+                a1 = (su + du * t1, sv + dv * t1)
+                # where a road runs over this edge, the road wins
+                mid = ((a0[0] + a1[0]) / 2 + nu * (out - 1.5), (a0[1] + a1[1]) / 2 + nv * (out - 1.5))
+                mx, mz = cx + sx * mid[0] + fx * mid[1], cz + sz * mid[0] + fz * mid[1]
+                if any(_line_distance(mx, mz, line) < half + 1.5 for line, half in roads):
+                    continue
+                inner = out - width
+                sh = rnd.uniform(0.55, 0.86)
+                oriented(mb, [at(a0[0] + nu * inner, a0[1] + nv * inner), at(a1[0] + nu * inner, a1[1] + nv * inner),
+                              at(a1[0] + nu * (out - 1.0), a1[1] + nv * (out - 1.0)), at(a0[0] + nu * (out - 1.0), a0[1] + nv * (out - 1.0))],
+                         (0, 1, 0), bands[P.PALE], rnd.uniform(0.1, 0.9), [sh] * 4)
+                sh = rnd.uniform(0.45, 0.7)
+                p0, p1 = at(a0[0] + nu * out, a0[1] + nv * out, 0.07), at(a1[0] + nu * out, a1[1] + nv * out, 0.07)
+                oriented(mb, [at(a0[0] + nu * (out - 1.0), a0[1] + nv * (out - 1.0), 0.07), at(a1[0] + nu * (out - 1.0), a1[1] + nv * (out - 1.0), 0.07), p1, p0],
+                         (0, 1, 0), bands[P.DARK], 0.5, [sh] * 4)
+                wx, wz = sx * nu + fx * nv, sz * nu + fz * nv
+                oriented(mb, [p0, p1, (p1[0], p1[1] - 0.9, p1[2]), (p0[0], p0[1] - 0.9, p0[2])], (wx, 0, wz), bands[P.DARK], 0.5, [sh * 0.7] * 4)
+    return mb.object("YG_PlotEdges", coll, mat)
+
+
+def hub_compass_ring(coll, mat, bands):
+    """A paved ring round the Qi Compass, over its terrain paving's jagged edge."""
+    import ygg_island as Y
+    rnd = random.Random(634)
+    mb = W.MeshBuilder()
+    ground = lambda x, z: Y.height(x, z)[0] or 0.0
+    cx, cz, r = Y.COMPASS
+    paved_disc(mb, rnd, (cx, cz), r - 1.0, r + 4.2, (20,), ground, bands[P.PALE], bands[P.DARK], lift=0.2)
+    return mb.object("YG_CompassRing", coll, mat)
+
+
+# ---------- the Beginner Isle: its layout stays; its edges go from blurred to crisp ----------
+def beginner_court(coll, mat, bands):
+    import beginner_props as BP
+    return BP.court_paving(coll, mat, bands)
+
+
+def _beginner_ground(x, z):
+    import beginner_island as B
+    return B.height(x, z)[0] or 0.0
+
+
+APRON_R = 67.5   # the paved round the Lion Court, out over its path
+
+
+def beginner_apron(coll, mat, bands):
+    """Two rings of darker flagstones outside the court's kerb, where the terrain's path made a blurred star."""
+    rnd = random.Random(635)
+    mb = W.MeshBuilder()
+    paved_disc(mb, rnd, (0.0, 0.0), 52.0, APRON_R, (54, 62), _beginner_ground, bands[P.PALE], bands[P.DARK], lift=0.1, shade=(0.42, 0.62))
+    return mb.object("BI_CourtApron", coll, mat)
+
+
+def _beginner_yard_cover(x, z):
+    import beginner_island as B
+    return math.hypot(x, z) < APRON_R - 0.5 or math.hypot(x - B.YARD[0], z - B.YARD[1]) < B.YARD_R + 3
+
+
+def beginner_roads(coll, mat, bands):
+    """The ways off the court: to the gate, the Hall, the yard, the pavilion and the bell."""
+    import beginner_island as B
+    rnd = random.Random(636)
+    mb = W.MeshBuilder()
+    lines = [line for k, line in enumerate(B.PATHS) if k != 1]   # 1 is the ring, which the apron covers
+    for k, line in enumerate(lines):
+        road(mb, rnd, line, 6.5, _beginner_ground, bands[P.PALE], bands[P.DARK], covered=_beginner_yard_cover,
+             lift=0.2 + 0.01 * k, shade=(0.42, 0.62))
+    return mb.object("BI_Roads", coll, mat)
+
+
+def beginner_yard(coll, mat, bands):
+    """The training yard's floor: pale raked rings in a stone kerb, where the bare earth had a blurred edge."""
+    import beginner_island as B
+    rnd = random.Random(637)
+    mb = W.MeshBuilder()
+    paved_disc(mb, rnd, tuple(B.YARD[:2]), 0.0, B.YARD_R + 3.0, (8, 16, 24, 32), _beginner_ground, bands[P.PALE], bands[P.DARK], lift=0.14, shade=(0.3, 0.42))
+    return mb.object("BI_YardFloor", coll, mat)
+
+
 # ---------- the batches, one atlas each ----------
 ISLANDS = {
     "JadeGrove": ("JadeGrove_Atlas", JM.STRIPS, [jade_floor, jade_hermitage]),
     "EmberPeak": ("EmberPeak_Atlas", EM.STRIPS, [ember_floor, ember_glow, ember_pylon, ember_pylon_fire]),
     "MoonlitIsle": ("MoonlitIsle_Atlas", MM.STRIPS, [moon_floor, moon_gate]),
     "OriginAbyss": ("OriginAbyss_Atlas", OM.STRIPS, [origin_floor, origin_glow, origin_colonnade]),
+    "Yggdrasil": ("StartingIsland_PropAtlas", P.STRIPS, [hub_roads, hub_bridgeheads, hub_plot_edges, hub_compass_ring]),
+    "BeginnerIsle": ("StartingIsland_PropAtlas", P.STRIPS, [beginner_court, beginner_apron, beginner_roads, beginner_yard]),
 }
 
 

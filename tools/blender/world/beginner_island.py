@@ -100,6 +100,15 @@ def _flatten(h, x, z, c, rad, soft, lift):
     return h * (1 - w) + lift * w
 
 
+def _spoke_distance(x, z):
+    """To the ways off the court, leaving out its ring (the apron paves that)."""
+    return min(_seg(x, z, a, b) for k, line in enumerate(PATHS) if k != 1 for a, b in zip(line, line[1:]))
+
+
+DIG = 0.8   # the most the ground is let down under paving on a slope
+ROAD_BED = 0.35   # and at least this under a road, off the court's level ground
+
+
 def edge_distance(x, z):
     return rim(math.atan2(z, x)) - math.hypot(x, z)
 
@@ -134,13 +143,16 @@ def height(x, z):
     if h is None:
         return None, None
     a = math.hypot(x, z)
-    if a < ARENA_EDGE or path_distance(x, z) < 3.6:
+    # the court's flat cobbles; earth under all the other paving (island_upgrades.py), because terrain grass grows up through a mesh
+    if a < ARENA_EDGE:
         return h, "Cobblestone"
+    if a < 68 or _spoke_distance(x, z) < 5.5:
+        return h, "Ground"
     # no grass under the bridge: blades would grow up through the abutment
     ux, uz = -_IN[0], -_IN[1]
     if x * ux + z * uz > math.hypot(*ARRIVAL) - 14 and abs(x * uz - z * ux) < 25:
         return h, "Ground"
-    if math.hypot(x - YARD[0], z - YARD[1]) < YARD_R + 1.5 * fbm(x / 6, z / 6, seed=431, octaves=2):
+    if math.hypot(x - YARD[0], z - YARD[1]) < YARD_R + 3.5:
         return h, "Ground"
     if edge_distance(x, z) < 3.0 + 2.0 * fbm(x / 11, z / 11, seed=432, octaves=2):
         return h, "Rock"
@@ -158,6 +170,18 @@ def export_terrain(path=None):
     a = math.radians(TURNS * 90)
     ca, sa = math.cos(a), math.sin(a)
 
+    def under_paving(x, z):
+        """The terrain, not the paving: where the land rises (the pavilion's knoll) the 4-stud voxels round up over the meshes laid on
+        height(), so the ground under and beside them is let down a little (island_upgrades.py, the apron and the roads)."""
+        from worldlib import smoothstep
+        h, mat = height(x, z)
+        if h is None:
+            return h, mat
+        a_ = math.hypot(x, z)
+        road = 1 - smoothstep(7.5, 11.0, _spoke_distance(x, z))
+        rise = min(max(h + 0.05, 0.0), DIG) * max(road, 1 - smoothstep(69.0, 73.0, a_))
+        return h - max(rise, ROAD_BED * road if a_ > 66 else 0.0), mat
+
     def turned(x, z):
-        return height(x * ca + z * sa, -x * sa + z * ca)
+        return under_paving(x * ca + z * sa, -x * sa + z * ca)
     return W.export_heightfield(NAME, CENTRE, 4, 160, turned, MATERIALS, path, priority=[("Cobblestone", 2)], turns=TURNS, baked_turn=True)

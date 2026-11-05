@@ -119,16 +119,24 @@ def court_paving(coll, mat, bands):
                 (math.cos(a1) * 49.7, math.sin(a1) * 49.7), (math.cos(a0) * 49.7, math.sin(a0) * 49.7)]
         P.slab_tile(mb, poly, top + 0.12, bot, bands[P.DARK], 0.5, rnd.uniform(0.5, 0.75))
     # the jade ring and the medallion
-    mb.lathe([(8.3, top + 0.05, 0.85), (7.1, top + 0.05, 0.75)], 48, bands[P.JADE], cap_top=False, cap_bottom=False)
-    mb.lathe([(7.1, top + 0.02, 0.5), (0.0, top + 0.02, 0.5)], 48, bands[P.DARK], cap_top=False, cap_bottom=False)
+    # (flat faces, each told to face up: a lathe's flat ring comes out facing down, which is how this whole middle went unseen)
+    def ring(r0, r1, y, band, shade, seg=48, centre=(0.0, 0.0)):
+        cx, cz = centre
+        for k in range(seg):
+            a0, a1 = TAU * k / seg, TAU * (k + 1) / seg
+            pts = [(cx + math.cos(a0) * r1, y, cz + math.sin(a0) * r1), (cx + math.cos(a1) * r1, y, cz + math.sin(a1) * r1)]
+            pts += [(cx + math.cos(a1) * r0, y, cz + math.sin(a1) * r0), (cx + math.cos(a0) * r0, y, cz + math.sin(a0) * r0)] if r0 > 0 else [(cx, y, cz)]
+            P.oriented(mb, pts, (0, 1, 0), band, 0.5, [shade] * len(pts))
+    ring(7.1, 8.3, top + 0.05, bands[P.JADE], 0.8)
+    ring(0.0, 7.1, top + 0.02, bands[P.DARK], 0.5)
     # the paw print, pointing at the gate (toes toward the arrival)
     ax, az = math.cos(math.radians(Y.ARRIVAL_BEARING)), math.sin(math.radians(Y.ARRIVAL_BEARING))
     sx, sz = -az, ax
     y = top + 0.09
-    mb.lathe([(3.0, y, 0.95), (0.0, y, 0.95)], 24, bands[P.BRONZE], centre=(-ax * 0.8, 0, -az * 0.8), cap_top=False, cap_bottom=False)
+    ring(0.0, 3.0, y, bands[P.BRONZE], 0.95, seg=24, centre=(-ax * 0.8, -az * 0.8))
     for off, r in ((-2.9, 1.15), (-1.0, 1.3), (1.0, 1.3), (2.9, 1.15)):
         reach = 3.9 - 0.3 * abs(off)
-        mb.lathe([(r, y, 0.95), (0.0, y, 0.95)], 16, bands[P.BRONZE], centre=(ax * reach + sx * off, 0, az * reach + sz * off), cap_top=False, cap_bottom=False)
+        ring(0.0, r, y + 0.012, bands[P.BRONZE], 0.95, seg=16, centre=(ax * reach + sx * off, az * reach + sz * off))
     return mb.object("BI_CourtPaving", coll, mat)
 
 
@@ -354,6 +362,10 @@ def placements():
     gx, gz = Y.GATE
     put("BI_LionGate", gx, gz, _yaw_to(gx, gz, *Y.ARRIVAL), y=0.0)
     put("BI_CourtPaving", 0, 0, 0.0, y=0.0)
+    # the ground beyond its kerb, each piece authored in island coordinates (island_upgrades.py)
+    put("BI_CourtApron", 0, 0, 0.0, y=0.0)
+    put("BI_Roads", 0, 0, 0.0, y=0.0)
+    put("BI_YardFloor", 0, 0, 0.0, y=0.0)
     hx, hz = Y.HALL
     put("BI_Hall", hx, hz, _yaw_to(hx, hz, 0, 0), y=0.0)
     px, pz = Y.PAVILION

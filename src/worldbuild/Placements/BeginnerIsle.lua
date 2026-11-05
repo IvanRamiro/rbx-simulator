@@ -5,6 +5,9 @@ return {
         BI_Bell = {
             { Position = Vector3.new(24.80, 0.00, -80.25), Yaw = -0.2998 },
         },
+        BI_CourtApron = {
+            { Position = Vector3.new(0.00, 0.00, 0.00), Yaw = 0.0000 },
+        },
         BI_CourtPaving = {
             { Position = Vector3.new(0.00, 0.00, 0.00), Yaw = 0.0000 },
         },
@@ -30,9 +33,15 @@ return {
         BI_Pavilion = {
             { Position = Vector3.new(-15.70, 3.00, -90.65), Yaw = 0.1715 },
         },
+        BI_Roads = {
+            { Position = Vector3.new(0.00, 0.00, 0.00), Yaw = 0.0000 },
+        },
         BI_WeaponRack = {
             { Position = Vector3.new(45.96, 0.00, 95.05), Yaw = -2.1628 },
             { Position = Vector3.new(25.26, 0.00, 102.51), Yaw = 2.8549 },
+        },
+        BI_YardFloor = {
+            { Position = Vector3.new(0.00, 0.00, 0.00), Yaw = 0.0000 },
         },
         SI_BlossomTreeA = {
             { Position = Vector3.new(-11.19, 0.09, 90.43), Yaw = 2.8137, Scale = 0.976 },
@@ -47,7 +56,7 @@ return {
             { Position = Vector3.new(-16.59, 0.20, 119.17), Yaw = 2.2930, Scale = 1.057 },
             { Position = Vector3.new(116.19, -0.11, 39.02), Yaw = 0.0249, Scale = 1.136 },
             { Position = Vector3.new(52.27, -0.16, -49.02), Yaw = 5.0136, Scale = 1.019 },
-            { Position = Vector3.new(-74.58, 0.19, 44.79), Yaw = 0.1415, Scale = 1.222 },
+            { Position = Vector3.new(-74.58, 0.00, 44.79), Yaw = 0.1415, Scale = 1.222 },
             { Position = Vector3.new(-68.95, 0.08, 81.08), Yaw = 4.2535, Scale = 1.084 },
         },
         SI_FlowersViolet = {
@@ -85,7 +94,7 @@ return {
         SI_FlowersWhite = {
             { Position = Vector3.new(89.35, -0.65, 57.56), Yaw = 4.5089, Scale = 1.083 },
             { Position = Vector3.new(9.92, -0.09, -119.27), Yaw = 5.2316, Scale = 1.047 },
-            { Position = Vector3.new(-115.73, -3.20, 53.29), Yaw = 1.2103, Scale = 1.270 },
+            { Position = Vector3.new(-115.73, -3.90, 53.29), Yaw = 1.2103, Scale = 1.270 },
             { Position = Vector3.new(75.85, -0.10, 9.93), Yaw = 0.2661, Scale = 0.945 },
             { Position = Vector3.new(-77.52, 0.35, 70.24), Yaw = 1.8978, Scale = 1.090 },
             { Position = Vector3.new(-66.50, -0.14, -33.29), Yaw = 0.1392, Scale = 1.163 },
@@ -95,7 +104,7 @@ return {
             { Position = Vector3.new(-83.67, -0.33, 5.18), Yaw = 3.3133, Scale = 1.270 },
             { Position = Vector3.new(-67.03, -0.18, -72.53), Yaw = 2.5166, Scale = 0.944 },
             { Position = Vector3.new(-60.75, -0.19, -77.88), Yaw = 0.0761, Scale = 1.063 },
-            { Position = Vector3.new(123.54, 0.03, -39.62), Yaw = 4.5531, Scale = 1.077 },
+            { Position = Vector3.new(123.54, 0.00, -39.62), Yaw = 4.5531, Scale = 1.077 },
             { Position = Vector3.new(33.97, 0.15, 117.83), Yaw = 5.4312, Scale = 0.990 },
         },
         SI_MossRockA = {
@@ -116,7 +125,7 @@ return {
             { Position = Vector3.new(31.37, -0.47, -115.05), Yaw = 5.3100, Scale = 0.742 },
             { Position = Vector3.new(-34.75, -0.72, 92.78), Yaw = 5.1579, Scale = 0.984 },
             { Position = Vector3.new(-53.03, -0.27, 103.22), Yaw = 5.9492, Scale = 0.847 },
-            { Position = Vector3.new(-61.80, 0.51, 40.14), Yaw = 0.9004, Scale = 0.723 },
+            { Position = Vector3.new(-61.80, 0.00, 40.14), Yaw = 0.9004, Scale = 0.723 },
         },
         SI_SpiritPineA = {
             { Position = Vector3.new(-109.98, 0.14, -54.99), Yaw = 0.7534, Scale = 0.901 },

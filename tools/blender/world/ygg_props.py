@@ -323,18 +323,17 @@ def plot_layout():
 
 def lantern_spots():
     spots = []
-    for b in (20, 55, 125, 160, 245, 315):           # the Root Court, clear of the paths that meet it
-        spots.append(Y.polar(b, Y.COURT_R + 6))
+    for b in (20, 55, 125, 160, 245, 315):           # the Root Court, clear of the paths that meet it, off the road
+        spots.append(Y.polar(b, Y.COURT_R + 10.5))
     for b in (50, 70, 110, 130):                       # the Spawn Walk, between the daises
-        spots.append(Y.polar(b, Y.SLOT_R + 6))
+        spots.append(Y.polar(b, Y.SLOT_R + 9.5))
     cx, cz, r = Y.COMPASS
     for b in (-15, -165, 25, 155):                     # the Qi Compass, clear of its paths
         spots.append((cx + math.cos(math.radians(b)) * (r + 3.5), cz + math.sin(math.radians(b)) * (r + 3.5)))
-    gx, gz, gr = Y.EGG_GARDEN
-    for side in (-1, 1):                                # either side of the Egg Garden's west entrance
-        spots.append((gx - gr - 2, gz + side * 7))
+    for side in (-9.5, 9.5):                            # the Spawn Walk's east end
+        spots.append(Y.polar(12, Y.SLOT_R + side))
     for b in (180, 204):                                # the Market lane
-        spots.append(Y.polar(b, Y.LANE_R - 7))
+        spots.append(Y.polar(b, Y.LANE_R - 9.5))
     ex, ez = 31.0, -27.0                                # the spring's path, as on the Starting Island
     for sgn in (-1, 1):
         spots.append(Y.from_start(ex + 0.647 * 4.5 * sgn, ez + 0.765 * 4.5 * sgn))
@@ -349,13 +348,18 @@ HERO = [  # (variant, x, z, yaw, scale): pines crowning the knolls, blossoms fra
     ("SI_SpiritPineB", 172, -120, 2.8, 1.3),
     ("SI_BlossomTreeA", -42, 116, 1.1, 1.1), ("SI_BlossomTreeB", 42, 116, 2.4, 1.1),
     ("SI_BlossomTreeA", 196, -12, 4.0, 1.05), ("SI_BlossomTreeB", 192, 30, 0.3, 1.0),
+    # the Spawn Walk's east end: it ends at a grove, not in the open (bearing 12 on its radius, the walk's last stone)
+    ("SI_BlossomTreeA", *Y.polar(7, Y.SLOT_R + 2), 1.0, 1.4), ("SI_SpiritPineA", *Y.polar(3, Y.SLOT_R + 16), 3.2, 1.3),
+    ("SI_SpiritPineB", *Y.polar(2, Y.SLOT_R - 14), 5.6, 1.2), ("SI_BlossomTreeB", *Y.polar(-5, Y.SLOT_R + 4), 2.2, 1.15),
+    ("SI_SpiritPineA", *Y.polar(-16, Y.SLOT_R + 12), 0.8, 1.25), ("SI_BlossomTreeA", *Y.polar(-30, Y.SLOT_R + 2), 4.4, 1.1),
+    ("SI_SpiritPineB", *Y.polar(-44, Y.SLOT_R + 10), 1.9, 1.3),
 ]
 
 
 def keepouts():
     """(x, z, radius) discs nothing is scattered into."""
-    zones = [(0, 0, 96), (Y.COMPASS[0], Y.COMPASS[1], Y.COMPASS[2] + 8), (Y.EGG_GARDEN[0], Y.EGG_GARDEN[1], Y.EGG_GARDEN[2] + 4),
-             (Y.LION_LAIR[0], Y.LION_LAIR[1], 26), (Y.SPRING_CENTRE[0], Y.SPRING_CENTRE[1], 32)]
+    zones = [(0, 0, 96), (Y.COMPASS[0], Y.COMPASS[1], Y.COMPASS[2] + 8),
+             (Y.ALTAR_COURT[0], Y.ALTAR_COURT[1], 26), (Y.SPRING_CENTRE[0], Y.SPRING_CENTRE[1], 32)]
     zones += [(x, z, Y.SLOT_PAD + 9) for x, z in Y.SLOTS]
     zones += [(x, z, 38) for x, z in Y.EXITS.values()] + [(Y.ROOT_EXIT[0], Y.ROOT_EXIT[1], 22)]
     zones += [(x, z, 13) for _, x, z, _ in waystone_layout()]
@@ -406,15 +410,16 @@ def nature():
     taken = [(x, z, 9) for _, x, z, *_ in HERO]
     for name, x, z, yaw, scale in HERO:
         items.append((name, x, z, yaw, scale, 0.6))
-    for x, z in scatter(rnd, 64, 17, 7, 10, 9, taken):
+    # fewer, gathered and off the roads: the land between them reads as open meadow (2026-11-05)
+    for x, z in scatter(rnd, 44, 22, 12, 10, 9, taken):
         r = math.hypot(x, z)
         pine = near_knoll(x, z) or r > 185 or rnd.random() < 0.35
         name = ("SI_SpiritPineA" if rnd.random() < 0.5 else "SI_SpiritPineB") if pine else \
                ("SI_BlossomTreeA" if rnd.random() < 0.5 else "SI_BlossomTreeB")
         items.append((name, x, z, rnd.uniform(0, TAU), rnd.uniform(0.9, 1.25) * (1.1 if pine else 1.0), 0.6))
-    for x, z in scatter(rnd, 48, 9, 3.5, 2, 4, taken, accept=lambda x, z, rr: near_knoll(x, z) or math.hypot(x, z) > 200 or rr.random() < 0.3):
+    for x, z in scatter(rnd, 28, 12, 8, 2, 4, taken, accept=lambda x, z, rr: near_knoll(x, z) or math.hypot(x, z) > 200 or rr.random() < 0.3):
         items.append(("SI_MossRockA" if rnd.random() < 0.45 else "SI_MossRockB", x, z, rnd.uniform(0, TAU), rnd.uniform(0.9, 1.6), 0.0))
-    for x, z in scatter(rnd, 150, 5.5, 2.8, 3, 2, taken):
+    for x, z in scatter(rnd, 100, 5.5, 7.5, 3, 2, taken):
         name = rnd.choice(("SI_FlowersWhite", "SI_FlowersWarm", "SI_FlowersViolet"))
         items.append((name, x, z, rnd.uniform(0, TAU), rnd.uniform(0.9, 1.3), 0.05))
     return items
@@ -428,6 +433,9 @@ def placements():
     for pos, yaw in G.shelf_placements(16):
         add("SI_RootShelf", *pos, yaw)
     add("SI_CradleFloor", *G.CRADLE_FLOOR)
+    # the paved ground, each piece authored in island coordinates (island_upgrades.py)
+    for name in ("YG_Roads", "YG_Bridgeheads", "YG_PlotEdges", "YG_CompassRing"):
+        add(name, 0, 0, 0)
     cx, cz, _ = Y.COMPASS
     add("SI_QiCompass", cx, 0.2, cz)
     add("SI_QiCompassGlow", cx, 0.2, cz)

@@ -71,6 +71,7 @@ A new player is walked through the loop by the quests, one at a time in the [ QU
 
 Then the path on, so a player always has a next goal (steps 8 to 23): buy a weapon; the Root of the Island's relic; cross to Jade Grove; secure a Mantis Sage egg; Qi Awakener; cross to Ember Peak; secure an Ember Xuanwu egg; forge a weapon; Foundation Initiate (sword flight); Soul Awakening; cross to Moonlit Isle; secure a Tiangou egg; Divine Initiate; cross to Origin Abyss; secure a Pangu egg; Eternal Origin. **Append only:** a save holds its step number.
 
+- **The way there (November 5, 2026):** a quest with a `Way` in `GameConfig.Quests` shows an arrow that turns with the camera, the place and the distance in studs. It rests within 25 studs of the place, and while a stolen egg's own way home is showing.
 - **The server decides** (`server/Quests`): it checks the current quest against the player's Qi, rank, pets, weapons, relics, island and carried egg, and the air leaps, guardian strikes and secured eggs it sees. The step is saved (`Quest`, save version 9).
 - **Skip:** a player can skip them all, which asks "SURE?" and pays nothing.
 - **Existing saves** were marked done at step 8 (migration 8), so they skip the first seven and start the path on at step 8.
@@ -661,6 +662,8 @@ Six floating islands built from original Blender work: terrain tops, sculpted un
 
 ### Yggdrasil (built; its own meshes await import)
 
+**Paved, November 5, 2026 (the owner: the same upgrade as the outer islands; `island_upgrades.py`):** the paths are roads now, flagstones in a dark kerb that follow the ground (`YG_Roads`), with paved rounds at the bridges (`YG_Bridgeheads`), a band round each plot (`YG_PlotEdges`) and a ring round the Qi Compass (`YG_CompassRing`). None of them collide. The old Egg Garden and lion lair are gone from the terrain, the land round the Hatching Altar is level, the Spawn Walk's east end stops at a grove, and the trees, rocks and flowers are thinned and kept off the roads. Terrain grass grows up through a mesh laid on it, so everything under paving is Ground or Cobblestone. Walked in Play along the roads to the shops, the altar, the bridges and the Spring; the scan reaches 11,029 of 11,650 floor cells, the rest being inside the great roots and past the bridges' barriers.
+
 The World Tree stands at the centre; everything else rings it. Scripts: `ygg_island.py` (terrain and layout), `ygg_tree.py`, `ygg_meshes.py` (atlas, underside, export), `ygg_props.py` (kit and placements).
 
 - **The World Tree:** an ancient ash about 200 studs tall. Seven buttress flutes spiral up its trunk, with Qi glowing cyan in the grooves and motes drifting up. Three great roots arch over the Root Court path and four sink into the mound. Six limbs spread into a crown of flat cloud pads in tiers, some gilded where the sun catches them, with golden seed-lanterns hanging under them on threads of light and aerial roots trailing from the limbs.
@@ -681,6 +684,8 @@ The World Tree stands at the centre; everything else rings it. Scripts: `ygg_isl
 - **Nature:** spirit pines crowning low knolls near the rim, plum blossoms, mossy rocks and flowers.
 
 ### Beginner Isle (the owner, November 4, 2026)
+
+**Its layout kept, its edges made crisp, November 5, 2026 (`island_upgrades.py`):** a paved apron round the court's kerb to radius 67.5 (`BI_CourtApron`), paved roads to the gate, the Hall, the bell and the pavilion (`BI_Roads`), and a floor for the training yard (`BI_YardFloor`). The court's jade ring and bronze paw had been built facing down and never shown; they show now. Walked in Play from the bridge to every one of them, and the pavilion's road climbs its knoll.
 
 "Create the beginner island so you can transfer the eggs there, and there should be no boss in the main hub." The first island a new player crosses to, in the first ten minutes: the outer court of a cultivation sect. Scripts: `beginner_island.py` (terrain and layout), `beginner_meshes.py` (underside), `beginner_props.py` (kit and placements). About 280 studs across. It shares Yggdrasil's terrain materials (Grass, Ground, Rock, Cobblestone).
 
@@ -762,7 +767,7 @@ The hidden endgame island, about 320 studs across since the owner's upgrade, mov
   - Ember Peak: Basalt, CrackedLava, Asphalt (ash) and Sand (paths).
   - Moonlit Isle: Limestone, Snow (frost), Salt (paths) and Pavement.
   - Origin Abyss: Slate, Concrete (paths) and Glacier (void-crystal crust). Brick is not used: Studio snaps Brick terrain to the 4-stud voxel grid, so paving is built from meshes. Sand also lies under the court's floor, out of sight.
-  - **Under a mesh floor, use a terrain material that renders level at its height.** Basalt, CrackedLava and Glacier render about a stud of bumps, which come through a floor; Concrete snaps to the voxel grid as Brick does. Sand, LeafyGrass and Pavement stay level.
+  - **Under a mesh floor, use a terrain material that renders level at its height.** Basalt, CrackedLava and Glacier render about a stud of bumps, which come through a floor; Concrete snaps to the voxel grid as Brick does. Sand, LeafyGrass and Pavement stay level. And never leave Grass under any mesh: its blades grow up through it.
 - **Meshes:** each island has one texture atlas and reusable kits, and every piece gets its own collision setting.
 
 ---

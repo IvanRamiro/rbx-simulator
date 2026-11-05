@@ -27,8 +27,8 @@ COMPASS = (0.0, 132.0, 18.0)    # the Qi Compass plaza: centre, radius (the defa
 SLOT_R = 162.0                  # the Spawn Walk's radius; a dais every 20 degrees on it
 SLOT_BEARINGS = (40, 60, 80, 100, 120, 140)
 SLOT_PAD = 12.0
-EGG_GARDEN = (170.0, 6.0, 22.0)  # sunk 1.5
-LION_LAIR = (128.0, -62.0, 16.0)
+SLOT_EARTH = 9.5
+ALTAR_COURT = (100.0, -130.0, 16.0)   # level round the Hatching Altar
 ROOT_EXIT = (0.0, 246.0)         # where the great root leaves the rim (RootPath)
 LANE_R = 140.0                   # the Market Terrace's lane
 
@@ -137,8 +137,6 @@ PATHS = [
     [(-11.0, COMPASS[1] - 13.0), (-24.0, 102.0), polar(106, COURT_R)],   # Compass -> Root Court, either side of the leaderboard
     [(11.0, COMPASS[1] - 13.0), (24.0, 102.0), polar(74, COURT_R)],
     [(0.0, SLOT_R), (0.0, ROOT_EXIT[1] - 6)],                        # Spawn Walk -> the great root
-    [polar(0, COURT_R), (EGG_GARDEN[0] - EGG_GARDEN[2], EGG_GARDEN[1])],   # Root Court -> the old Egg Garden
-    [polar(12, SLOT_R), (150.0, 26.0), (EGG_GARDEN[0] - 8, EGG_GARDEN[1] + 16)],   # Spawn Walk -> Egg Garden
     [polar(24, SLOT_R), SPRING_PATH_END],                            # Spawn Walk -> Qi Spring
     [polar(192, COURT_R), polar(192, LANE_R)],                       # Root Court -> Market Terrace
     _arc(168, 227, LANE_R),                                          # the Market lane
@@ -181,8 +179,7 @@ BRIDGEHEAD_R = 26.0             # paved round each bridge's start: the decks are
 def flats():
     """(x, z, radius, height, soft, material) discs the ground is levelled to."""
     out = [(COMPASS[0], COMPASS[1], COMPASS[2], 0.3, 7, "Cobblestone"),
-           (EGG_GARDEN[0], EGG_GARDEN[1], EGG_GARDEN[2], -1.5, 9, None),
-           (LION_LAIR[0], LION_LAIR[1], LION_LAIR[2], 0.0, 10, None)]
+           (ALTAR_COURT[0], ALTAR_COURT[1], ALTAR_COURT[2], 0.0, 10, None)]
     out += [(x, z, SLOT_PAD, 0.2, 6, "Ground") for x, z in SLOTS]   # bare earth: grass would grow through the dais
     for x, z in EXITS.values():
         r = math.hypot(x, z)
@@ -214,13 +211,15 @@ def height(x, z):
         d = math.hypot(x - fx, z - fz)
         w = 1 - smoothstep(fr, fr + soft, d)
         h = h * (1 - w) + fh * w
-        if fmat and d < fr + 1.0:
+        # a dais's bare earth stays under the dais: wider, it blurred out round it (terrain materials blend across a 4-stud cell)
+        # (terrain grass grows up through a mesh laid on it, so nothing under paving can be Grass)
+        if fmat and d < (fr + 3.5 if fmat != "Ground" else SLOT_EARTH):
             mat = fmat
     for plot in PLOTS.values():
         d = plot_distance(x, z, plot)
         w = 1 - smoothstep(0.0, 6.0, d)
         h = h * (1 - w) + 0.3 * w
-        if d < 0.5:
+        if d < 3.0:
             mat = "Cobblestone"
 
     # the Qi Spring's terrace and pool, as on the Starting Island
@@ -234,7 +233,6 @@ def height(x, z):
         h = h * (1 - wp) + S.POOL_BED * wp
 
     pd = path_distance(x, z)
-    h -= 0.35 * (1 - smoothstep(2.4, 4.4, pd))
 
     # rounded grass lip at the rim
     h -= 3.2 * (1 - smoothstep(R - 1, R - 11, r)) ** 1.6
@@ -244,8 +242,8 @@ def height(x, z):
         mat = "Rock"
     elif mat:
         pass
-    elif pd < 4.2:
-        mat = "Ground"
+    elif pd < 7.0:
+        mat = "Ground"     # the whole width of the road meshes over it (island_upgrades.py): terrain grass grows up through a mesh
     elif rocky or spring_edge:
         mat = "Rock"
     else:
