@@ -359,7 +359,6 @@ Specials are visual only.
 |---|---|---|---|
 | Magma Cub ★ | Common | Lava | +10% |
 | Obsidian Guardian | Rare | Darkness and crystal | +55% |
-| Golden Mane Lion ★ | Epic | Solar energy | +75% |
 | Sunscale Dragon ★ | Legendary | Solar | +60% |
 | Dawn Phoenix ★ | Legendary | Fire | +60% |
 
@@ -369,6 +368,7 @@ Specials are visual only.
 |---|---|---|---|
 | Sand Phantom | Common | Sand | +15% |
 | Solar Butterfly | Uncommon | Solar energy | +30% |
+| Golden Mane Lion ★ | Epic | Solar energy | +75% |
 | Bonefire Dragon ★ | Legendary | Spectral fire | +90% |
 
 **Phoenix Ash Egg (Ember Peak)**
@@ -556,7 +556,7 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 - **Hatching** (since November 2, 2026, section 7): only at Yggdrasil's **Hatching Altar**, from the player's **egg inventory** (`EggInventory`, saved as `Eggs`, at most 99 of each), filled by carrying eggs home from the guardians' stands. The stands no longer hatch; their prompt is "Take". (Before: free stand hatches with a 45-second cooldown.)
 - **Chances:** follow the rarity scale: Common 45%, Uncommon 27%, Rare 15%, Epic 8%, Legendary 4%, Mythical 0.9%, Secret 0.1%.
 - **Missing rarities:** when an egg has no pet of some rarity, its share goes to the next pet that has one. So later eggs give rarer pets far more often.
-- **Inferno and Phoenix Ash, rebalanced (the owner's decision, November 5, 2026):** the Inferno Egg gave half its hatches to Ember Wyrm with nothing Rare or Epic, and the Phoenix Ash Egg 87% Magma Cub or Ember Wyrm with its Epic better than its Legendary, so both paid less Qi on average than the eggs before them. They now follow the scale, at about +27% and +35%.
+- **Inferno and Phoenix Ash, rebalanced (the owner's decision, November 5, 2026):** the Inferno Egg gave half its hatches to Ember Wyrm with nothing Rare or Epic, and the Phoenix Ash Egg 87% Magma Cub or Ember Wyrm with its Epic better than its Legendary, so both paid less Qi on average than the eggs before them. They now follow the scale, at about +26% and +35%, and within each egg a rarer pet is never the weaker one.
 
 | Island | Egg | Needs | Chances |
 |---|---|---|---|
@@ -566,7 +566,7 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 | Jade Grove | Jade Spirit Egg | Qi Gatherer | Moss Golem 45%, Mycelium Sprite 27%, Jade Spirit Panda 15%, Jade Antler Deer 8%, Golden Kirin 5% |
 | Jade Grove | Bloomwood Egg | Foundation Adept | Dream Moth 45%, Crystal Snail 27%, Prism Armadillo 15%, Lantern Warden 8%, Jade Wyrm Turtle 5% |
 | Jade Grove | Ancient Grove Egg | Core Initiate | Echo Bat 45%, Qi Clockwork Finch 27%, Moonfang Tiger 15%, Thousand-Eyed Guardian 8%, Ninefold Spirit Serpent 4%, Worldroot Colossus 1% |
-| Ember Peak | Inferno Egg | Qi Awakener | Magma Cub 45%, Ember Wyrm 27%, Obsidian Guardian 15%, Golden Mane Lion 8%, Sunscale Dragon 2.5%, Dawn Phoenix 2.5% |
+| Ember Peak | Inferno Egg | Qi Awakener | Magma Cub 45%, Ember Wyrm 27%, Obsidian Guardian 15%, Azure Sky Dragon 8%, Sunscale Dragon 2.5%, Dawn Phoenix 2.5% |
 | Ember Peak | Magma Heart Egg | Perfect Foundation | Sand Phantom 45%, Solar Butterfly 27%, Obsidian Guardian 15%, Golden Mane Lion 8%, Bonefire Dragon 5% |
 | Ember Peak | Phoenix Ash Egg | Core Adept | Sand Phantom 45%, Solar Butterfly 27%, Obsidian Guardian 15%, Dreadfang Cerberus 8%, Bonefire Dragon 4%, Prismatic Phoenix 1% |
 | Moonlit Isle | Celestial Egg | Soul Awakening | Starfall Fox 45%, Cosmic Jellyfish 27%, Nebula Owl 15%, Celestial Snow Leopard 8%, Comet Stag 4%, Celestial Pearl Dragon 1% |

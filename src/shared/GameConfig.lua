@@ -687,7 +687,7 @@ local GameConfig = {
                 { PetId = "MagmaCub", Weight = 45 },
                 { PetId = "EmberWyrm", Weight = 27 },
                 { PetId = "ObsidianGuardian", Weight = 15 },
-                { PetId = "GoldenManeLion", Weight = 8 },
+                { PetId = "AzureSkyDragon", Weight = 8 },
                 { PetId = "SunscaleDragon", Weight = 2.5 },
                 { PetId = "DawnPhoenix", Weight = 2.5 },
             },
