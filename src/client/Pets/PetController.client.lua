@@ -22,8 +22,12 @@ local RARITY_ORDER = { Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare =
 
 local toggleButton, setPetBadge = Hud.railButton("PetsButton", UiTheme.Icons.Pets, "Pets", 1)
 
+local onWindowClosed -- set below, with the pets it redraws
+
 local window = Hud.window({
-    Name = "PetsWindow", Title = "PETS", Size = Vector2.new(330, 400), AnchorPoint = Vector2.new(0, 0),
+    Name = "PetsWindow", Title = "PETS", OnClose = function()
+        onWindowClosed()
+    end, Size = Vector2.new(330, 400), AnchorPoint = Vector2.new(0, 0),
     Position = UDim2.fromOffset(UiTheme.Margin + 270 + 16, UiTheme.Margin), -- beside the left column (the profile is 270 wide)
 })
 local body = window.Body
@@ -49,6 +53,12 @@ toggleButton.Activated:Connect(function()
     end
 end)
 
+-- ---------- newly hatched pets ----------
+-- Only a few cards fit in the window and the rest sort by rarity, so a new pet could land out of sight.
+-- It goes to the top, marked New, until the window has been opened and closed.
+local known = nil -- [InstanceId] = true: the pets seen so far (nil until the first inventory arrives)
+local fresh = {}  -- [InstanceId] = true: new since the player last looked
+
 -- ---------- a pet's card ----------
 local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
     local definition = GameConfig.Pets[pet.PetId]
@@ -73,6 +83,11 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
     tags.Size = UDim2.new(1, -86, 0, 16)
     tags.Parent = card
     UiKit.list(tags, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), VerticalAlignment = Enum.VerticalAlignment.Center })
+    if fresh[pet.InstanceId] then
+        local new = UiKit.tag("New", C.Highlight)
+        new.LayoutOrder = -1
+        new.Parent = tags
+    end
     UiKit.tag(definition.Rarity, rarityColor).Parent = tags
     UiKit.label({
         Font = "Strong", TextSize = 11, TextColor3 = C.AccentBright, Text = "+" .. definition.QiBonusPercent .. "% Qi",
@@ -118,12 +133,26 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
     end
 end
 
+local lastSnapshot = nil
+
 local function renderInventory(snapshot)
     for _, pet in if snapshot then snapshot.Pets else {} do
         PetPreload.soon(pet.PetId) -- ready before their portraits or their first walk
     end
     if not snapshot then
         return
+    end
+    lastSnapshot = snapshot
+    local arrived = false
+    for _, pet in snapshot.Pets do
+        if known and not known[pet.InstanceId] then
+            fresh[pet.InstanceId] = true
+            arrived = true
+        end
+    end
+    known = {}
+    for _, pet in snapshot.Pets do
+        known[pet.InstanceId] = true
     end
     for _, child in petList:GetChildren() do
         if child:IsA("GuiObject") then
@@ -149,10 +178,13 @@ local function renderInventory(snapshot)
         UiKit.empty(petList, "No pets yet.\nTake an egg from a guardian, carry it home, and hatch it at the Hatching Altar.")
         return
     end
-    -- equipped first, then the rarest, then by name
+    -- new first, then equipped, then the rarest, then by name
     local pets = table.clone(snapshot.Pets)
     table.sort(pets, function(a, b)
         local da, db = GameConfig.Pets[a.PetId], GameConfig.Pets[b.PetId]
+        if (fresh[a.InstanceId] == true) ~= (fresh[b.InstanceId] == true) then
+            return fresh[a.InstanceId] == true
+        end
         if (a.Equipped == true) ~= (b.Equipped == true) then
             return a.Equipped == true
         end
@@ -165,9 +197,21 @@ local function renderInventory(snapshot)
     for index, pet in pets do
         createPetCard(pet, index, equippedCount, snapshot.AuraPetInstanceId)
     end
+    if arrived then
+        petList.CanvasPosition = Vector2.zero
+    end
 end
 
 RemoteEvents.PetInventoryUpdatedEvent.OnClientEvent:Connect(renderInventory)
+
+-- once the player has looked, new pets take their usual places
+function onWindowClosed()
+    if next(fresh) then
+        fresh = {}
+        renderInventory(lastSnapshot)
+    end
+end
+
 
 local function showMessage(text, color)
     hatchMessage:show(text, color)
@@ -198,6 +242,12 @@ local function onHatchResult(result)
         showMessage("You haven't earned this egg: strike " .. who .. " yourself before you take one.", Color3.new(1, 1, 1))
     elseif result.Reason == "Retake" then
         showMessage("You just let an egg go back. You can take another in " .. tostring(result.Seconds) .. " s.", Color3.new(1, 1, 1))
+    elseif result.Reason == "NotAtAltar" then
+        showMessage("Stand by the altar and try again: your egg is safe.", Color3.new(1, 1, 1))
+    elseif result.Reason == "HatchBusy" then
+        showMessage("An egg is still hatching. Try again in a moment: your egg is safe.", Color3.new(1, 1, 1))
+    elseif result.Reason == "NoEgg" then
+        showMessage("You don't have that egg any more.", Color3.new(1, 1, 1))
     elseif result.Reason == "InventoryFull" then
         showMessage("Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets).", Color3.new(1, 1, 1))
     else

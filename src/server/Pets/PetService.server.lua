@@ -106,11 +106,23 @@ local function onHatchRequest(player, eggId)
     lastHatchRequest[player] = now
     local egg = typeof(eggId) == "string" and GameConfig.Eggs[eggId]
     local altar, promptPart, prompt = altarParts()
-    if not egg or hatching[player] or player.Parent ~= Players or not promptPart
-        or not PromptRules.isAliveAndNear(player, promptPart, PromptRules.maxDistance(prompt)) then
+    if not egg or player.Parent ~= Players or not promptPart then
+        return
+    end
+    -- every refusal is answered: the player has pressed Hatch and is waiting to see an egg
+    local function refuse(reason)
+        RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = reason })
+    end
+    if hatching[player] then
+        refuse("HatchBusy")
+        return
+    end
+    if not PromptRules.isAliveAndNear(player, promptPart, PromptRules.maxDistance(prompt)) then
+        refuse("NotAtAltar")
         return
     end
     if EggInventory.count(player, eggId) < 1 then
+        refuse("NoEgg")
         return
     end
     local _, rankValue = PlayerData.getStats(player)

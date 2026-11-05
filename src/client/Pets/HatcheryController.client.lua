@@ -20,18 +20,21 @@ local UiTheme = require(UI:WaitForChild("UiTheme"))
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
 
-local WALK_AWAY = 18
-local PRESS_GAP = GameConfig.HatchingAltar.Stage -- the server stages one egg at a time: the buttons rest as long
+local LEAVE_MARGIN = 4 -- studs past the prompt's range the window closes: inside the server's own limit (its range + 6)
+local BREAK_MARGIN = 0.15 -- seconds after the egg breaks that Hatch wakes, so a press never reaches a server still busy
+local NO_ANSWER = GameConfig.HatchingAltar.Stage + 3 -- seconds Hatch waits for an answer that never came
 local RARITY_ORDER = { Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }
 
-local openedAt = nil
-local resting = false -- an egg is in the cradle: Hatch waits
+local altarPart = nil
+local leaveDistance = 0
+local resting = false -- an egg is in the cradle, or the server hasn't answered: Hatch waits
+local press = 0 -- the latest press: a timer from an older one does nothing
 
 -- at the screen's right edge, so the cradle (mid-screen behind the player) stays in sight
 local window = Hud.window({
     Name = "HatcheryWindow", Title = "HATCHING ALTAR", Size = Vector2.new(380, 420), AnchorPoint = Vector2.new(1, 0.5),
     Position = UDim2.new(1, -UiTheme.Margin, 0.5, 0), OnClose = function()
-        openedAt = nil
+        altarPart = nil
     end,
 })
 local hint = UiKit.label({ Name = "Hint", TextSize = 12, TextColor3 = C.Muted, Size = UDim2.new(1, 0, 0, 16), Parent = window.Body })
@@ -66,19 +69,28 @@ end
 
 local render
 
+-- Hatch wakes after `seconds`, unless a later press has taken over
+local function wake(seconds)
+    local this = press
+    task.delay(seconds, function()
+        if this == press and resting then
+            resting = false
+            if window.isOpen() then
+                render()
+            end
+        end
+    end)
+end
+
 local function hatch(eggId)
     if resting then
         return
     end
     resting = true
+    press += 1
+    wake(NO_ANSWER)
     RemoteEvents.HatchEggEvent:FireServer(eggId)
     render()
-    task.delay(PRESS_GAP, function()
-        resting = false
-        if window.isOpen() then
-            render()
-        end
-    end)
 end
 
 function render()
@@ -144,10 +156,23 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt, who)
     if who ~= player or not prompt:GetAttribute("Hatchery") then
         return
     end
-    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    altarPart = prompt.Parent
+    leaveDistance = prompt.MaxActivationDistance + LEAVE_MARGIN
     window.open()
-    openedAt = root and root.Position
     render()
+end)
+
+-- the server's answer ends the wait: at once when it refused, when the egg breaks when it didn't
+RemoteEvents.EggHatchResultEvent.OnClientEvent:Connect(function(result)
+    if typeof(result) ~= "table" or not resting then
+        return
+    end
+    press += 1
+    if result.Reason or typeof(result.BreakAt) ~= "number" then
+        wake(0)
+    else
+        wake(math.max(0, result.BreakAt - workspace:GetServerTimeNow()) + BREAK_MARGIN)
+    end
 end)
 
 -- the list follows the egg inventory, and the player's rank (which eggs they can hatch), while the
@@ -169,13 +194,13 @@ task.spawn(function()
     end
 end)
 
--- walking away closes the window
+-- walking away closes the window, before the server would refuse a press from there
 RunService.Heartbeat:Connect(function()
     if not window.isOpen() then
         return
     end
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not root or not openedAt or (root.Position - openedAt).Magnitude > WALK_AWAY then
+    if not root or not altarPart or (root.Position - altarPart.Position).Magnitude > leaveDistance then
         window.close()
     end
 end)
