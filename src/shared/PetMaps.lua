@@ -21,6 +21,7 @@ return {
     NebulaOwl = "rbxassetid://85013631717001",
     RuneSphinx = "rbxassetid://125628324690653",
     SpiritCrane = "rbxassetid://117737637798913",
+    StarfallFox = "rbxassetid://100336403205239",
     StormhornKirin = "rbxassetid://96870617770871",
     SunscaleDragon = "rbxassetid://72856050814489",
     WindSprite = "rbxassetid://100955540073927",

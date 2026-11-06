@@ -99,7 +99,10 @@ return {
         Special = { Name = "Hellfire Breath", Text = "Rears all three heads and blasts cyan fire from every mouth." },
     },
     PrismaticPhoenix = { Lore = "Reborn so many times that its fire has gone through every colour. No two of its feathers burn alike." },
-    StarfallFox = { Lore = "It chases falling stars and sometimes catches one. It keeps them buried somewhere nobody has found." },
+    StarfallFox = {
+        Lore = "It chases falling stars and sometimes catches one. It keeps them buried somewhere nobody has found.",
+        Special = { Name = "Star In Its Teeth", Text = "Spots a falling star, crouches, wiggles, and leaps to take it out of the air in its teeth. It lands, and buries it on the spot." },
+    },
     CosmicJellyfish = {
         Lore = "A drifting scrap of nebula with no thoughts at all, and yet it always knows where you are.",
         Special = { Name = "Rolling Nebula", Text = "Opens its bell wide as the nebula inside spins up, then closes once, hard, and a ring of glowing gas rolls off its rim and sinks away." },
