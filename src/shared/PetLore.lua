@@ -100,7 +100,10 @@ return {
     },
     PrismaticPhoenix = { Lore = "Reborn so many times that its fire has gone through every colour. No two of its feathers burn alike." },
     StarfallFox = { Lore = "It chases falling stars and sometimes catches one. It keeps them buried somewhere nobody has found." },
-    CosmicJellyfish = { Lore = "A drifting scrap of nebula with no thoughts at all, and yet it always knows where you are." },
+    CosmicJellyfish = {
+        Lore = "A drifting scrap of nebula with no thoughts at all, and yet it always knows where you are.",
+        Special = { Name = "Rolling Nebula", Text = "Opens its bell wide as the nebula inside spins up, then closes once, hard, and a ring of glowing gas rolls off its rim and sinks away." },
+    },
     NebulaOwl = {
         Lore = "It sees by the light of stars that have not been born yet, which makes it very hard to surprise.",
         Special = { Name = "Stars Not Yet Born", Text = "Spreads its wings as gas gathers before its breast, and a new star lights exactly when it knew it would. One silent wingbeat, and it goes back to looking unimpressed." },

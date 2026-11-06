@@ -96,6 +96,9 @@ function Portraits.silhouette(petId, size)
             if piece:IsA("BasePart") then
                 piece.Color = Color3.new(0, 0, 0)
                 piece.Material = Enum.Material.SmoothPlastic
+                if piece.Transparency < 1 then
+                    piece.Transparency = 0 -- a see-through part is solid in a silhouette
+                end
                 if piece:IsA("MeshPart") then
                     piece.TextureID = ""
                 end

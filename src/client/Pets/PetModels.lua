@@ -644,6 +644,7 @@ local MESH_LOOKS = {
     StormhornKirin = { Glow = Color3.fromRGB(90, 170, 255), Length = 4.4 },
     JadeWyrmTurtle = { Glow = Color3.fromRGB(60, 220, 170), Length = 4.8 },
     NebulaOwl = { Glow = Color3.fromRGB(176, 122, 255), Length = 4.0 },
+    CosmicJellyfish = { Glow = Color3.fromRGB(245, 120, 180), Length = 3.3 },
     GoldenManeLion = { Glow = Color3.fromRGB(255, 180, 60), Length = 4.4 },
     DawnPhoenix = { Glow = Color3.fromRGB(255, 170, 70), Length = 4.6 },
     AquaWisp = { Effect = "Bubbles", Glow = Color3.fromRGB(110, 205, 255), Length = 3.12 },

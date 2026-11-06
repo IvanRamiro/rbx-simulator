@@ -909,8 +909,8 @@ def pose(rig, spec):
     bpy.context.view_layer.update()
 
 
-def export_fbx(rig, body, glows):
-    """The FBX, as File > Import 3D wants it. glows: the Neon pieces: their UVs never show, but a mesh should have them."""
+def export_fbx(rig, body, glows, extras=()):
+    """The FBX, as File > Import 3D wants it. glows: the Neon pieces: their UVs never show, but a mesh should have them. extras: other meshes that keep the baked material, such as see-through glass."""
     os.makedirs(OUT, exist_ok=True)
     pose(rig, {})
     plain_mat = bpy.data.materials.new(PET + "_GlowPiece")
@@ -919,7 +919,7 @@ def export_fbx(rig, body, glows):
             o.data.uv_layers.new(name="UVMap")
         o.data.materials.clear()
         o.data.materials.append(plain_mat)
-    select_only([body] + list(glows) + [rig], rig)
+    select_only([body] + list(extras) + list(glows) + [rig], rig)
     path = os.path.join(OUT, PET + ".fbx")
     bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={"MESH", "ARMATURE"}, axis_forward="-Z", axis_up="Y", apply_scale_options="FBX_SCALE_UNITS",
                              path_mode="COPY", embed_textures=True, mesh_smooth_type="FACE", add_leaf_bones=False, use_armature_deform_only=True, bake_anim=False,

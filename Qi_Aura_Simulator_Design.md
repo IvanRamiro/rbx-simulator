@@ -18,7 +18,7 @@ These never change without an explicit decision from the project owner.
 - **Ranks** stay as designed (section 2).
 - **Eggs** stay as designed: their pets, pools, chances and themes (section 5).
 - **No mistakes.** Every pet, egg, island and effect is checked against this document before it is built. For a pet, that means its egg, rarity and theme.
-- **Every pet and every guardian has expressive eyes**: never a plain glowing ball. A guardian's eye is an almond iris with a slit pupil and lids that give it a look (`guardian_kit.eye`), and its rig makes it live (blinks, glares).
+- **Every pet and every guardian has expressive eyes** (the owner's one exception: the Cosmic Jellyfish has none): never a plain glowing ball. A guardian's eye is an almond iris with a slit pupil and lids that give it a look (`guardian_kit.eye`), and its rig makes it live (blinks, glares).
 - **Aura concept** stays as designed (section 4). The bar is not "looks like Sol's RNG": it is to genuinely compete with, and aim to surpass, Sol's RNG's most impressive auras.
 - **No generic style.** Islands, pets and effects are original Blender work with their own silhouette and identity. Nothing is a recoloured copy of another piece.
 - **No Chinese text** anywhere in the game: not in the UI, icons, signs or names ("people might not want to play the game because there is chinese text", November 3, 2026). The wuxia feel comes from art, effects and English names.
@@ -224,7 +224,7 @@ Pets give **Qi bonuses** (every equipped pet) and **aura style** (the one chosen
 
 - **★ = sculpted in Blender:** source at `tools/blender/pets/<EggId>/<PetId>.blend`, exported to `assets/pets/<EggId>/`. A pet sits under the first egg that drops it.
 - **Unmarked pets** use procedural low-poly models (`src/client/Pets/PetArchetypes.lua`) until they get their own Blender model.
-- **Every pet is its own species**, with its own anatomy, silhouette and face. No two share a body plan or head design. Its eyes suit what it is: big, expressive eyes where the creature calls for them, natural ones where they would fight it (the Galaxy Manta has a real manta's small, deep eyes on the sides of its head). Never a plain glowing ball.
+- **Every pet is its own species**, with its own anatomy, silhouette and face. No two share a body plan or head design. Its eyes suit what it is: big, expressive eyes where the creature calls for them, natural ones where they would fight it (the Galaxy Manta has a real manta's small, deep eyes on the sides of its head). The Cosmic Jellyfish has none, by the owner's decision (November 6, 2026). Never a plain glowing ball.
 
 ### Duplicates
 
@@ -293,6 +293,7 @@ Specials are visual only.
 | Cloud Sheep | A fat little sheep whose fleece is a real cumulus, sunlit on top, rain-grey beneath, a silver lining at the edge; a small slate-blue face, drooping ears, little ram curls, half-closed gold eyes; breathes with its whole fleece, paddles its hooves on the air, nods off and starts awake, yawns | **Cloud Bloom:** tucks its legs and draws in a huge breath, swelling up, then lets it go in one long sigh of soft cloud |
 | Jade Wyrm Turtle | A mountain that took a step. Its shell starts at the rim as polished imperial jade, plates seamed in gold, and rises into a crag of terraced rock and moss: a spring running down the cliff into a pool, one old plum in blossom leaning over the rim, a dark pine, and a tiny red-pillared pavilion that gives the scale. Out of the front comes the wyrm: a long S of a neck with a low sail, two swept horns, an old gold beak, pale stripes, a heavy-lidded amber eye. Elephant-thick legs on three-clawed feet. It stands on the ground instead of hovering, treads one foot at a time with the crag rocking over it, turns its neck round to look at its garden, chews slowly, and rows on the air like a sea turtle; petals drift off the plum | **Between One Step and the Next:** raises one forefoot, slowly, the whole mountain leaning off it, then sets it down: dust and stone chips along the ground, a flurry of petals, and the garden has grown |
 | Nebula Owl | An owl whose wings are a stellar nursery, and who already knows what you are about to do. A wide head, a dished pale face, huge gold eyes (each iris a disc of dust winding in to a dark centre) under lids that rest low: an unimpressed stare. Every feather is its own, and one sky runs across them all: indigo, violet and magenta gas with dark lanes of dust, a few new stars burning in the wings; pale and chevroned beneath. It hovers in silence on slow overlapping wingbeats, beats and glides in flight. Its head snaps to a new place and holds still, turns right round to look behind it, one brow raised; it blinks one eye at a time | **Stars Not Yet Born:** spreads its wings as gas gathers before its breast, and a new star lights exactly when it knew it would; one silent wingbeat, and it goes back to looking unimpressed |
+| Cosmic Jellyfish | A real see-through glass bell with a small nebula slowly turning inside it, rose and amber gas with teal at its edges and four gold horseshoes, as a moon jelly has; fine canals run from it to the scalloped rim; frilled arms and six long tentacles hang below. It has no eyes (the owner, November 6, 2026). It swims in beats: the bell closes quickly, it rises, it opens slowly and sinks, and all below follows late. Its bell leans gently toward you wherever you stand | **Rolling Nebula:** opens its bell wide as the nebula spins up, then closes once, hard, and a ring of glowing gas rolls off its rim and sinks away |
 | Golden Mane Lion | High-shouldered royal lion, a tiered mane of flame-tipped locks in bronze, gold and champagne, a crest of reddish-gold locks, deep-set amber eyes; heavy, deliberate stride | **Sovereign Roar:** opens its jaw as golden shockwave rings roll out, solar rays flare behind its crest and a ring spreads beneath its paws |
 
 ### Roster by first egg
@@ -390,7 +391,7 @@ Specials are visual only.
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
 | Starfall Fox | Common | Stars | +20% |
-| Cosmic Jellyfish | Uncommon | Nebulae | +40% |
+| Cosmic Jellyfish ★ | Uncommon | Nebulae | +40% |
 | Nebula Owl ★ | Rare | Cosmic energy | +65% |
 | Celestial Snow Leopard | Epic | Ice and celestial energy | +95% |
 | Comet Stag | Legendary | Comets | +115% |
