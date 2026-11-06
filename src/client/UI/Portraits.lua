@@ -53,6 +53,9 @@ local function flatten(model, colorMap)
     return model
 end
 
+-- pets whose reach would be cut off by the usual tight framing (the Warden's crook stands well above its body)
+local FILL_FOR = { LanternWarden = 0.98 }
+
 -- frames `model` in `frame`, seen from `direction` (from the model's centre toward the camera)
 local function shoot(frame, model, direction, fill)
     model.Parent = frame
@@ -73,7 +76,7 @@ function Portraits.pet(petId, size)
         pets[petId] = if model then flatten(model, PetMaps[petId]) else false
     end
     if pets[petId] then
-        shoot(frame, pets[petId]:Clone(), Vector3.new(0.45, 0.35, -1), 0.82) -- pets face -Z
+        shoot(frame, pets[petId]:Clone(), Vector3.new(0.45, 0.35, -1), FILL_FOR[petId] or 0.82) -- pets face -Z
     end
     return frame
 end
@@ -113,7 +116,7 @@ function Portraits.silhouette(petId, size)
                 end
             end
         end
-        shoot(frame, copy, Vector3.new(0.45, 0.35, -1), 0.82)
+        shoot(frame, copy, Vector3.new(0.45, 0.35, -1), FILL_FOR[petId] or 0.82)
     end
     return frame
 end

@@ -72,7 +72,10 @@ return {
     DreamMoth = { Lore = "It feeds on dreams you have already forgotten. Sleepers near one wake oddly rested." },
     CrystalSnail = { Lore = "It takes a hundred years to cross a valley and leaves a road of crystal behind it." },
     PrismArmadillo = { Lore = "When it curls up, its plates split light into every colour. It curls up often, mostly to show off." },
-    LanternWarden = { Lore = "A keeper of lost paths that carries a light nobody lit. Follow it and you arrive, though not always where you meant." },
+    LanternWarden = {
+        Lore = "A keeper of lost paths that carries a light nobody lit. Follow it and you arrive, though not always where you meant.",
+        Special = { Name = "The Long Way Round", Text = "Lifts its lantern, and the flame stands up. A path of small lights runs out from its feet, winds once round it, and comes back to exactly where it started." },
+    },
     JadeWyrmTurtle = {
         Lore = "Half wyrm, half mountain, and in no hurry. Whole gardens have grown on its back between one step and the next.",
         Special = { Name = "Between One Step and the Next", Text = "Raises one forefoot, slowly, the whole mountain leaning off it, then sets it down: the ground throws up dust, the plum on its back shakes loose a flurry of petals, and the garden has grown." },
