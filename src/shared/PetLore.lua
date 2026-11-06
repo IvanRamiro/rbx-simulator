@@ -73,7 +73,10 @@ return {
     CrystalSnail = { Lore = "It takes a hundred years to cross a valley and leaves a road of crystal behind it." },
     PrismArmadillo = { Lore = "When it curls up, its plates split light into every colour. It curls up often, mostly to show off." },
     LanternWarden = { Lore = "A keeper of lost paths that carries a light nobody lit. Follow it and you arrive, though not always where you meant." },
-    JadeWyrmTurtle = { Lore = "Half wyrm, half mountain, and in no hurry. Whole gardens have grown on its back between one step and the next." },
+    JadeWyrmTurtle = {
+        Lore = "Half wyrm, half mountain, and in no hurry. Whole gardens have grown on its back between one step and the next.",
+        Special = { Name = "Between One Step and the Next", Text = "Raises one forefoot, slowly, the whole mountain leaning off it, then sets it down: the ground throws up dust, the plum on its back shakes loose a flurry of petals, and the garden has grown." },
+    },
     EchoBat = { Lore = "It speaks only in sounds it has already heard. Ask it a question and you may hear a voice from a hundred years ago." },
     QiClockworkFinch = { Lore = "Built by a forgotten artisan and wound with pure Qi. It still sings the hour of a city that no longer exists." },
     MoonfangTiger = { Lore = "A tiger whose fangs catch moonlight and keep it. It hunts only when the moon can watch." },
@@ -98,7 +101,10 @@ return {
     PrismaticPhoenix = { Lore = "Reborn so many times that its fire has gone through every colour. No two of its feathers burn alike." },
     StarfallFox = { Lore = "It chases falling stars and sometimes catches one. It keeps them buried somewhere nobody has found." },
     CosmicJellyfish = { Lore = "A drifting scrap of nebula with no thoughts at all, and yet it always knows where you are." },
-    NebulaOwl = { Lore = "It sees by the light of stars that have not been born yet, which makes it very hard to surprise." },
+    NebulaOwl = {
+        Lore = "It sees by the light of stars that have not been born yet, which makes it very hard to surprise.",
+        Special = { Name = "Stars Not Yet Born", Text = "Spreads its wings as gas gathers before its breast, and a new star lights exactly when it knew it would. One silent wingbeat, and it goes back to looking unimpressed." },
+    },
     CelestialSnowLeopard = { Lore = "It stalks the high snow where the sky begins. Its pawprints stay frozen long after the mountain thaws." },
     CometStag = { Lore = "It crosses the sky once in a lifetime and leaves a trail people name their children after." },
     CelestialPearlDragon = { Lore = "A dragon that carries one flawless pearl of condensed heaven. Whole sects have fallen trying to take it." },

@@ -291,6 +291,8 @@ Specials are visual only.
 | Galaxy Manta | A great ray whose back is deep space: a nebula spiralling out across both wings, gold constellations and edging, pearl beneath; a true manta's flat head with small deep eyes on its sides and curled horn fins, a comet on its whip tail. Under its wings a small galaxy really turns, with a ringed planet and a moon going round in it. Waves run along its wings, it banks into turns, feeds with its mouth open and barrel-rolls | **Turning of the Heavens:** rears until the galaxy faces forward, spins it up, then sweeps down and throws it open in a wheel of stars with a ring of light |
 | Stormhorn Kirin | A tall deer-dragon of storm-slate, scaled over neck and shoulder with a pale plated throat, on an arched neck and a heavy, stern head with one gold eye on each side. Its horn rises from a bronze sheath as a forked bolt of lightning; its mane and tail stream on a wind only it feels, lightning flickering in the mane; veins of lightning run under its hide; cloven bronze hooves spark where they land. Walks a rocking canter on the air, paws and tosses its head at rest | **Thunder Answers:** rears with its horn raised, then brings its hooves down in a burst of sparks as lightning flares through its mane |
 | Cloud Sheep | A fat little sheep whose fleece is a real cumulus, sunlit on top, rain-grey beneath, a silver lining at the edge; a small slate-blue face, drooping ears, little ram curls, half-closed gold eyes; breathes with its whole fleece, paddles its hooves on the air, nods off and starts awake, yawns | **Cloud Bloom:** tucks its legs and draws in a huge breath, swelling up, then lets it go in one long sigh of soft cloud |
+| Jade Wyrm Turtle | A mountain that took a step. Its shell starts at the rim as polished imperial jade, plates seamed in gold, and rises into a crag of terraced rock and moss: a spring running down the cliff into a pool, one old plum in blossom leaning over the rim, a dark pine, and a tiny red-pillared pavilion that gives the scale. Out of the front comes the wyrm: a long S of a neck with a low sail, two swept horns, an old gold beak, pale stripes, a heavy-lidded amber eye. Elephant-thick legs on three-clawed feet. It stands on the ground instead of hovering, treads one foot at a time with the crag rocking over it, turns its neck round to look at its garden, chews slowly, and rows on the air like a sea turtle; petals drift off the plum | **Between One Step and the Next:** raises one forefoot, slowly, the whole mountain leaning off it, then sets it down: dust and stone chips along the ground, a flurry of petals, and the garden has grown |
+| Nebula Owl | An owl whose wings are a stellar nursery, and who already knows what you are about to do. A wide head, a dished pale face, huge gold eyes (each iris a disc of dust winding in to a dark centre) under lids that rest low: an unimpressed stare. Every feather is its own, and one sky runs across them all: indigo, violet and magenta gas with dark lanes of dust, a few new stars burning in the wings; pale and chevroned beneath. It hovers in silence on slow overlapping wingbeats, beats and glides in flight. Its head snaps to a new place and holds still, turns right round to look behind it, one brow raised; it blinks one eye at a time | **Stars Not Yet Born:** spreads its wings as gas gathers before its breast, and a new star lights exactly when it knew it would; one silent wingbeat, and it goes back to looking unimpressed |
 | Golden Mane Lion | High-shouldered royal lion, a tiered mane of flame-tipped locks in bronze, gold and champagne, a crest of reddish-gold locks, deep-set amber eyes; heavy, deliberate stride | **Sovereign Roar:** opens its jaw as golden shockwave rings roll out, solar rays flare behind its crest and a ring spreads beneath its paws |
 
 ### Roster by first egg
@@ -345,7 +347,7 @@ Specials are visual only.
 | Crystal Snail | Uncommon | Crystals | +30% |
 | Prism Armadillo | Rare | Crystals | +50% |
 | Lantern Warden | Epic | Light | +70% |
-| Jade Wyrm Turtle | Legendary | Earth | +85% |
+| Jade Wyrm Turtle ★ | Legendary | Earth | +85% |
 
 **Ancient Grove Egg (Jade Grove)**
 
@@ -389,7 +391,7 @@ Specials are visual only.
 |---|---|---|---|
 | Starfall Fox | Common | Stars | +20% |
 | Cosmic Jellyfish | Uncommon | Nebulae | +40% |
-| Nebula Owl | Rare | Cosmic energy | +65% |
+| Nebula Owl ★ | Rare | Cosmic energy | +65% |
 | Celestial Snow Leopard | Epic | Ice and celestial energy | +95% |
 | Comet Stag | Legendary | Comets | +115% |
 | Celestial Pearl Dragon | Mythical | Celestial energy | +190% |

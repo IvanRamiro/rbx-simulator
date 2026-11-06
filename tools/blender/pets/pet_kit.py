@@ -576,9 +576,42 @@ def triangulate(lows):
         apply_mods(o, [("TRIANGULATE", {"quad_method": "BEAUTY", "ngon_method": "BEAUTY"})])
 
 
-def unwrap(lows, regions, scales, margin=0.008, angle=62, shape="CONCAVE"):
+def uv_density(objs):
+    """UV units per metre over these objects, as unwrapped so far."""
+    area_3d, area_uv = 0.0, 0.0
+    for o in objs:
+        uv = o.data.uv_layers.active.data
+        for p in o.data.polygons:
+            area_3d += p.area
+            loops = list(p.loop_indices)
+            a = uv[loops[0]].uv
+            for i in range(1, len(loops) - 1):
+                b, c = uv[loops[i]].uv, uv[loops[i + 1]].uv
+                area_uv += abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) / 2
+    return math.sqrt(area_uv / max(area_3d, 1e-9))
+
+
+def scale_uv_to(o, polys, density):
+    """Rescales these polygons' UVs to this many UV units per metre (the final pack fits the whole atlas to the map)."""
+    uv = o.data.uv_layers.active.data
+    area_3d, area_uv = 0.0, 0.0
+    for p in polys:
+        area_3d += p.area
+        loops = list(p.loop_indices)
+        a = uv[loops[0]].uv
+        for i in range(1, len(loops) - 1):
+            b, c = uv[loops[i]].uv, uv[loops[i + 1]].uv
+            area_uv += abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) / 2
+    k = density / max(math.sqrt(area_uv / max(area_3d, 1e-9)), 1e-9)
+    for p in polys:
+        for l in p.loop_indices:
+            uv[l].uv = uv[l].uv * k
+
+
+def unwrap(lows, regions, scales, margin=0.008, angle=62, shape="CONCAVE", own_uv=None, texels=None):
     """One atlas. regions: (test(polygon), share) over the skin (lows["Skin"]), each projected apart, the last taking every other piece too. scales: {key: share}:
-    what a player looks at gets more of the atlas."""
+    what a player looks at gets more of the atlas. own_uv: {key: writer(object, density)}: a piece that lays out its own UVs, in true scale at that density, in place of the projection.
+    texels: {key: relative density}: sets every piece and region to a true density instead (a region's share is then its density), since each projection run has a scale of its own."""
     objs = list(lows.values())
     for o in objs:
         if not o.data.uv_layers:
@@ -603,14 +636,33 @@ def unwrap(lows, regions, scales, margin=0.008, angle=62, shape="CONCAVE"):
         project(lambda o, p: (p.index in chosen) if o is skin else last)
         for i in mine:
             claimed[i] = share
-    uv = skin.data.uv_layers.active.data
-    for i, share in claimed.items():
-        for l in skin.data.polygons[i].loop_indices:
-            uv[l].uv = uv[l].uv * share
-    for key, k in scales.items():
-        d = lows[key].data.uv_layers.active.data
-        for l in d:
-            l.uv = l.uv * k
+    if texels is not None:
+        by_share = {}
+        for i, share in claimed.items():
+            by_share.setdefault(share, []).append(skin.data.polygons[i])
+        for share, polys in by_share.items():
+            scale_uv_to(skin, polys, share)
+        for key, o in lows.items():
+            if key == "Skin":
+                continue
+            if own_uv and key in own_uv:
+                own_uv[key](o, texels.get(key, 1.0))
+            else:
+                scale_uv_to(o, list(o.data.polygons), texels.get(key, 1.0))
+    else:
+        if own_uv:
+            density = uv_density([o for key, o in lows.items() if key not in own_uv and key != "Skin"])
+            for key, writer in own_uv.items():
+                writer(lows[key], density)
+        uv = skin.data.uv_layers.active.data
+        for i, share in claimed.items():
+            for l in skin.data.polygons[i].loop_indices:
+                uv[l].uv = uv[l].uv * share
+        for key, k in scales.items():
+            d = lows[key].data.uv_layers.active.data
+            for l in d:
+                l.uv = l.uv * k
+    select_only(objs)      # (a piece's own UV writer may have changed the selection)
     for o in objs:
         o.data.polygons.foreach_set("select", [True] * len(o.data.polygons))
     bpy.ops.object.mode_set(mode="EDIT")
@@ -681,8 +733,8 @@ def bleed_gutters(images):
         img.update()
 
 
-def bake_all(lows, pieces, hi_mat=None, size=1024, colour_size=None, far=("Skin",), fill=(0.6, 0.6, 0.6, 1), metal=False, reach=(0.012, 0.03), far_reach=(0.014, 0.045)):
-    """Every low piece from its own high piece, so neighbours can't project on each other. Returns the material."""
+def bake_all(lows, pieces, hi_mat=None, size=1024, colour_size=None, far=("Skin",), fill=(0.6, 0.6, 0.6, 1), metal=False, reach=(0.012, 0.03), far_reach=(0.014, 0.045), reaches=None):
+    """Every low piece from its own high piece, so neighbours can't project on each other. reaches: {key: (cage, ray)} for a piece that needs its own. Returns the material."""
     os.makedirs(OUT, exist_ok=True)
 
     def image(name, fill_with, colour, res):
@@ -726,7 +778,7 @@ def bake_all(lows, pieces, hi_mat=None, size=1024, colour_size=None, far=("Skin"
             hi_bsdf.inputs["Emission Strength"].default_value = 1.0 if kind == "EMIT" else 0.0
         for key, low in lows.items():
             select_only([pieces[key], low], low)
-            cage, ray = far_reach if key in far else reach
+            cage, ray = (reaches or {}).get(key) or (far_reach if key in far else reach)
             bpy.ops.object.bake(type=kind, use_selected_to_active=True, cage_extrusion=cage, max_ray_distance=ray, margin=max(4, res // 256), use_clear=False, target="IMAGE_TEXTURES", **kw)
     if hi_bsdf:
         hi_bsdf.inputs["Emission Strength"].default_value = 0.0

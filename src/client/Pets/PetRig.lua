@@ -546,6 +546,443 @@ local function animateCloudSheep(rig, s, moving, fly, nova)
     pose(m.Tail, CFrame.Angles(0.08 * math.sin(t * 1.15 + 0.5) - 0.2 * pace, 0.16 * math.sin(t * 1.9) + 0.3 * math.max(0, math.sin(t * 0.37)) ^ 10 * math.sin(t * 11), 0))
 end
 
+-- The Jade Wyrm Turtle (skinned): half wyrm, half mountain, and in no hurry. Everything it does is slow and carries weight: it treads one foot at a time and the whole crag rocks over it, its long neck
+-- wanders on its own, the plum and the pine sway after the shell does. Now and then it turns its neck right round to look at its garden. It stands on the ground rather than hovering (Body drops to it).
+local TURTLE_LEADS = { FL = 0, BR = 0.35, FR = math.pi, BL = math.pi + 0.35 }
+local TURTLE_LID_HINGE = { L = Vector3.new(0.539, 0.0867, -0.8379), R = Vector3.new(0.539, -0.0867, 0.8379) }
+local TURTLE_BLINK_UPPER, TURTLE_BLINK_LOWER = math.rad(38), math.rad(16)
+local TURTLE_FAR = 90 -- studs from the camera past which nobody can see it fidget: its bones rest
+local TURTLE_SOLE = 0.96 -- metres from the middle of its box down to the soles of its feet
+local TURTLE_PADS = { PadA = Vector3.new(-0.5, 0.2, -0.8), PadB = Vector3.new(0.6, 0.2, -0.3), PadC = Vector3.new(0, 1, 0.2) } -- which way each mass of blossom swells
+
+local turtleRay = RaycastParams.new()
+turtleRay.RespectCanCollide = true
+
+local function turtleGround(rig, s, t, u, fly)
+    s.nextGround = s.nextGround or 0
+    if t >= s.nextGround then
+        s.nextGround = t + 0.15
+        local from = rig.rootPart.Position
+        local hit = workspace:Raycast(from, Vector3.new(0, -8 * u, 0), turtleRay)
+        local onCharacter = hit and hit.Instance.Parent and hit.Instance.Parent:FindFirstChildOfClass("Humanoid")
+        if not onCharacter then -- (a player walking under it: keep what it had)
+            s.dropTo = if hit then math.clamp(from.Y - TURTLE_SOLE * u - hit.Position.Y, -0.3 * u, 2.6 * u) else 0
+        end
+    end
+    local target = (s.dropTo or 0) * (1 - fly)
+    s.drop = (s.drop or target) + (target - (s.drop or target)) * math.min(1, rig.deltaTime * 4)
+    return s.drop
+end
+
+local function animateJadeWyrmTurtle(rig, s, moving, fly, nova)
+    local camera = workspace.CurrentCamera
+    if camera and (camera.CFrame.Position - rig.rootPart.Position).Magnitude > TURTLE_FAR then
+        return
+    end
+    local m, u, t, dt = rig.motors, rig.meters, s.time, rig.deltaTime
+    local pace = math.max(moving, fly)
+    local drop = turtleGround(rig, s, t, u, fly)
+
+    -- the special: one forefoot rises, slowly, the whole mountain leaning off it; it comes down; the mountain rings; and the garden has grown
+    local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+    local raise = smoothstep(0, 0.37, progress) * (1 - smoothstep(0.385, 0.425, progress))
+    local plant = smoothstep(0.40, 0.43, progress) * (1 - smoothstep(0.46, 0.9, progress))
+    local ring = plant * math.sin(math.max(0, progress - 0.42) * 62)
+    local grown = smoothstep(0.43, 0.6, progress) * (1 - smoothstep(0.8, 1, progress))
+
+    -- it looks back at its garden, the long way round
+    s.nextGarden = s.nextGarden or t + 9 + math.random() * 8
+    local garden = 0
+    if t >= s.nextGarden then
+        local a = (t - s.nextGarden) / 5.2
+        if a >= 1 then
+            s.nextGarden = t + 15 + math.random() * 14
+            s.gardenSide = if math.random() < 0.5 then 1 else -1
+        elseif pace < 0.2 and nova == 0 then
+            garden = smoothstep(0, 0.34, a) * (1 - smoothstep(0.66, 1, a))
+        else
+            s.nextGarden = t + 4
+        end
+    end
+    garden *= s.gardenSide or 1
+    -- a slow chew over nothing
+    s.nextChew = s.nextChew or t + 5 + math.random() * 8
+    local chew = 0
+    if t >= s.nextChew then
+        local a = (t - s.nextChew) / 2.4
+        if a >= 1 then
+            s.nextChew = t + 9 + math.random() * 12
+        elseif pace < 0.4 and nova == 0 then
+            chew = math.abs(math.sin(a * math.pi * 3)) * math.sin(a * math.pi)
+        end
+    end
+
+    -- the tread: one foot at a time. A foot rises out and forward, is set down, and the body rolls over it
+    s.stride = (s.stride or 0) + dt * (3.6 * moving)
+    s.swim = (s.swim or 0) + dt * 1.7 * fly
+    local stride, stroke = s.stride, math.sin(s.swim)
+    local breath = math.sin(t * 0.85)
+    for key, lead in TURTLE_LEADS do
+        local phase = stride + lead
+        local a, lift = math.sin(phase), moving * math.max(0, math.cos(phase)) ^ 1.4
+        local out = if string.sub(key, 2, 2) == "L" then -1 else 1 -- a turn about Z that swings this foot out and up
+        local front = string.sub(key, 1, 1) == "F"
+        local swingX = moving * 0.3 * a + 0.012 * math.sin(t * 0.6 + lead)
+        local outZ = 0.26 * lift
+        local bendZ = -0.44 * lift
+        local footX = -swingX * 0.9 - 0.14 * lift
+        -- on the air it rows, as sea turtles do: long slow strokes from the front, the hind feet trailing
+        if front then
+            swingX += fly * (0.06 + 0.5 * stroke)
+            outZ += fly * (0.34 + 0.12 * stroke)
+            bendZ += fly * 0.26
+            footX += fly * (0.16 * stroke - 0.62)
+        else
+            swingX += fly * (-0.52 + 0.14 * stroke)
+            outZ += fly * 0.2
+            bendZ += fly * 0.12
+            footX += fly * -0.5
+        end
+        if key == "FR" then
+            swingX += 0.14 * raise
+            outZ += 0.62 * raise
+            bendZ -= 0.96 * raise
+            footX += 0.32 * raise + 0.04 * raise * math.sin(t * 9)
+        end
+        pose(m["Leg" .. key .. "1"], CFrame.Angles(swingX, 0, out * outZ))
+        pose(m["Leg" .. key .. "2"], CFrame.Angles(0, 0, out * bendZ))
+        pose(m["Foot" .. key], CFrame.Angles(footX, 0, 0))
+    end
+
+    -- the body rolls over the foot that bears it, and a mountain doesn't bob quickly. It leans into a turn only a little
+    local look = rig.rootPart.CFrame.LookVector
+    local heading = math.atan2(-look.X, -look.Z)
+    local turned = (heading - (s.heading or heading) + math.pi) % (2 * math.pi) - math.pi
+    s.heading = heading
+    s.bank = (s.bank or 0) + (math.clamp((if dt > 0 then turned / dt else 0) * 0.05, -0.1, 0.1) - (s.bank or 0)) * math.min(1, dt * 2)
+    local rollOver = moving * 0.036 * math.sin(stride + 0.5)
+    local fall = moving * 0.014 * math.cos(2 * stride + 0.6)
+    pose(m.Body, CFrame.new(0, (-drop / u + 0.006 * breath + fall + 0.13 * raise - 0.025 * plant + 0.05 * fly + 0.014 * math.sin(s.swim + 0.8) * fly) * u, 0)
+        * CFrame.Angles(0.004 * breath + 0.1 * raise - 0.05 * plant + 0.09 * fly + 0.03 * stroke * fly, 0.012 * math.sin(t * 0.27) + moving * 0.018 * math.sin(stride), rollOver + 0.1 * raise + s.bank))
+    pose(m.Shell, CFrame.new(0, (0.004 * breath + 0.012 * ring) * u, 0))
+
+    -- the neck: its gaze wanders and the neck follows late; at each joint a little less of the body's roll
+    s.nextGaze = s.nextGaze or 0
+    if t >= s.nextGaze then
+        s.nextGaze = t + 2.6 + math.random() * 4.5
+        s.gazeTo = (math.random() - 0.5) * 0.9
+        s.gazeUp = (math.random() - 0.5) * 0.14
+    end
+    local calm = (1 - pace * 0.7) * (1 - nova) * (1 - math.abs(garden))
+    s.gaze = (s.gaze or 0) + ((s.gazeTo or 0) * calm - (s.gaze or 0)) * math.min(1, dt * 1.1)
+    s.tip = (s.tip or 0) + ((s.gazeUp or 0) * calm - (s.tip or 0)) * math.min(1, dt * 0.9)
+    local sway = moving * 0.05 * math.sin(stride - 0.6)
+    local lift = 0.2 * raise - 0.1 * plant
+    local reach = fly * 0.28 + moving * 0.1
+    pose(m.Neck1, CFrame.Angles(0.012 * math.sin(t * 0.85 - 0.5) + lift * 0.8 - reach * 0.6, s.gaze * 0.14 + 0.28 * garden - sway, -rollOver * 0.5 - 0.06 * raise))
+    pose(m.Neck2, CFrame.Angles(0.01 * math.sin(t * 0.85 - 0.9) + lift - reach * 0.7 + 0.02 * ring, s.gaze * 0.2 + 0.42 * garden - sway * 0.7, -0.04 * raise))
+    pose(m.Neck3, CFrame.Angles(0.01 * math.sin(t * 0.85 - 1.3) + lift * 0.7 - reach * 0.2 + s.tip * 0.5 - 0.03 * ring + 0.1 * math.abs(garden), s.gaze * 0.26 + 0.45 * garden - sway * 0.3, 0))
+    local lookUp = math.abs(garden)
+    pose(m.Neck4, CFrame.Angles(s.tip * 0.5 + reach * 0.5 - lift * 0.3, s.gaze * 0.3 + 0.31 * garden, 0))
+    pose(m.Head, CFrame.Angles(0.008 * math.sin(t * 0.85 - 1.8) + s.tip + reach * 0.6 - lift * 0.55 - 0.04 * ring + 0.24 * lookUp, s.gaze * 0.4 + 0.28 * garden, 0.05 * math.sin(t * 0.31) * calm))
+    pose(m.Jaw, CFrame.Angles(-(0.14 * chew + 0.14 * raise + 0.24 * plant + 0.02 * math.max(0, breath)), 0, 0))
+
+    -- old eyes: a slow blink, closing as the foot comes down, and they look about ahead of the head
+    s.nextBlink = s.nextBlink or t + 2.5
+    local blink = 0
+    if t >= s.nextBlink then
+        local a = (t - s.nextBlink) / 0.62
+        if a >= 1 then
+            s.nextBlink = t + 3.2 + math.random() * 5
+        else
+            blink = 1 - math.abs(2 * a - 1)
+        end
+    end
+    local shut = math.max(blink, 0.45 * math.abs(garden), plant, 0.55 * chew)
+    for _, side in { "L", "R" } do
+        pose(m["Eye" .. side], CFrame.Angles(s.tip * 0.5, s.gaze * 0.7 + 0.4 * garden, 0))
+        pose(m["LidU" .. side], CFrame.fromAxisAngle(TURTLE_LID_HINGE[side], -TURTLE_BLINK_UPPER * shut))
+        pose(m["LidL" .. side], CFrame.fromAxisAngle(TURTLE_LID_HINGE[side], TURTLE_BLINK_LOWER * shut))
+        local sign = if side == "L" then -1 else 1
+        local offset = if side == "L" then 0 else 1.7
+        pose(m["Frill" .. side], CFrame.Angles(0.04 * math.sin(t * 1.1 + offset), sign * (0.07 * math.sin(t * 0.8 + offset) - 0.14 * pace + 0.1 * raise), 0))
+    end
+
+    -- the tail: a long lazy wave that starts at the body; on the air it trails straight
+    local waveSpeed = 0.9 + 1.6 * moving + 0.8 * fly
+    for k = 1, 6 do
+        local f = k / 6
+        pose(m["Tail" .. k], CFrame.Angles(0.012 * math.sin(t * 0.7 - k * 0.5) - 0.03 * fly + 0.03 * raise - 0.05 * ring * (1 - f),
+            (0.035 + 0.04 * f) * (1 + 0.7 * moving) * math.sin(t * waveSpeed - k * 0.62), 0))
+    end
+    pose(m.TailTip, CFrame.Angles(0.1 * math.sin(t * 0.8) - 0.1 * fly, 0.12 * math.sin(t * 1.2 - 4), 0))
+
+    -- the garden: a breeze of its own, and every roll of the shell reaching the trees a moment late
+    s.treeLag = (s.treeLag or 0) + ((rollOver + 0.1 * raise - 0.06 * plant) - (s.treeLag or 0)) * math.min(1, dt * 2.4)
+    local gust = 0.5 + 0.5 * math.sin(t * 0.37)
+    local windX, windZ = 0.012 * gust * math.sin(t * 1.3), 0.012 * gust * math.sin(t * 1.05 + 1)
+    local shake = 0.05 * ring + 0.1 * fly * math.sin(t * 2.1) * 0.2
+    pose(m.Plum1, CFrame.Angles(windX + 0.3 * shake + 0.03 * fly, 0, s.treeLag * 0.4 + windZ))
+    pose(m.Plum2, CFrame.Angles(windX * 1.4 + 0.5 * shake, 0.01 * math.sin(t * 0.7), s.treeLag * 0.7 + windZ * 1.4))
+    local padIndex = 0
+    for name, out in TURTLE_PADS do
+        padIndex += 1
+        local at = out * (0.008 * math.sin(t * 1.2 + padIndex * 1.9) + 0.055 * grown + 0.03 * ring) * u
+        pose(m[name], CFrame.new(at) * CFrame.Angles(0.02 * math.sin(t * 0.9 + padIndex), 0, 0.02 * math.sin(t * 0.8 + padIndex * 2.3)))
+    end
+    pose(m.Pine1, CFrame.Angles(windX * 0.7 + 0.25 * shake, 0, s.treeLag * 0.45))
+    for index, name in { "PineA", "PineB", "PineC" } do
+        pose(m[name], CFrame.Angles(0.016 * math.sin(t * 1.05 + index * 1.4) + 0.3 * shake, 0, 0.022 * gust * math.sin(t * 0.95 + index * 2.1)))
+    end
+
+    -- petals, always a few, drifting down off the plum: more when it walks, a flurry when it stamps (Blasts.BetweenSteps)
+    if not s.petals then
+        s.petals = {}
+        for name in TURTLE_PADS do
+            local bone = rig.points[name]
+            if bone then
+                local petals = Instance.new("ParticleEmitter")
+                petals.Name = "Petals"
+                petals.Texture = "rbxassetid://87701005821132"
+                petals.Rate = 0.5
+                petals.Lifetime = NumberRange.new(2.6, 4)
+                petals.Speed = NumberRange.new(0.15 * rig.unit, 0.5 * rig.unit)
+                petals.SpreadAngle = Vector2.new(180, 180)
+                petals.Acceleration = Vector3.new(0.12 * rig.unit, -0.42 * rig.unit, 0)
+                petals.Drag = 0.8
+                petals.Rotation = NumberRange.new(0, 360)
+                petals.RotSpeed = NumberRange.new(-110, 110)
+                petals.Size = NumberSequence.new(0.036 * rig.unit)
+                petals.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.08, 0), NumberSequenceKeypoint.new(0.8, 0), NumberSequenceKeypoint.new(1, 1) })
+                petals.LightEmission = 0
+                petals.LightInfluence = 0.9
+                petals.Parent = bone
+                s.petals[name] = petals
+            end
+        end
+    end
+    for _, petals in s.petals do
+        petals.Rate = 0.4 + 0.5 * moving
+    end
+end
+
+-- The Nebula Owl (skinned; the head is its own piece, so it can turn right round under the ruff): it hovers without a sound and already knows what you are about to do. Its wings row slowly, each joint later than the last. Its head
+-- doesn't drift: it snaps to a new place and holds still, as an owl's does, and now and then turns all the way round to look behind it, one brow raised. It blinks one eye at a time. Up is a turn about Z: left wing negative, right positive.
+local OWL_LID_HINGE = { L = Vector3.new(0.9734, -0.1044, -0.204), R = Vector3.new(0.9734, 0.1044, 0.204) }
+local OWL_BLINK_UPPER, OWL_BLINK_LOWER = math.rad(64), math.rad(22)
+local OWL_FAR = 90 -- studs from the camera past which nobody can see it fidget: its bones rest
+local OWL_STAR_AHEAD = Vector3.new(0, -0.05, -0.9) -- metres from the middle of its box: where the new star is born, before its breast
+local OWL_GATHER_RADIUS = 0.95
+
+-- Gas drawn in from all round a point, the first part of its special. Blasts.StarsNotYetBorn stops it when the star lights.
+local function owlGather(rig, s)
+    local metre = rig.meters
+    local at = rig.rootPart.CFrame:PointToWorldSpace(OWL_STAR_AHEAD * metre)
+    local holder = Instance.new("Part")
+    holder.Name = "OwlGather"
+    holder.Anchored = true
+    holder.CanCollide = false
+    holder.CanTouch = false
+    holder.CanQuery = false
+    holder.CastShadow = false
+    holder.Transparency = 1
+    holder.Size = Vector3.one * OWL_GATHER_RADIUS * 2 * metre
+    holder.CFrame = CFrame.new(at)
+    local gas = Instance.new("ParticleEmitter")
+    gas.Texture = "rbxassetid://16867371255"
+    gas.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4
+    gas.FlipbookMode = Enum.ParticleFlipbookMode.OneShot
+    gas.Shape = Enum.ParticleEmitterShape.Sphere
+    gas.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+    gas.ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward
+    gas.Rate = 30
+    gas.Lifetime = NumberRange.new(0.55, 0.7)
+    gas.Speed = NumberRange.new(OWL_GATHER_RADIUS * metre / 0.62)
+    gas.Rotation = NumberRange.new(0, 360)
+    gas.RotSpeed = NumberRange.new(-70, 70)
+    gas.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.34 * metre), NumberSequenceKeypoint.new(1, 0.16 * metre) })
+    gas.Color = ColorSequence.new(Color3.fromRGB(96, 52, 225), Color3.fromRGB(235, 90, 200))
+    gas.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.25, 0.42), NumberSequenceKeypoint.new(0.85, 0.15), NumberSequenceKeypoint.new(1, 0.9) })
+    gas.LightEmission = 0.75
+    gas.LightInfluence = 0
+    gas.Parent = holder
+    -- what the gas is falling into: a small star, growing, so the eye is already there when it lights
+    local seed = Instance.new("ParticleEmitter")
+    seed.Texture = "rbxassetid://95572555201628"
+    seed.Rate = 0
+    seed.Lifetime = NumberRange.new(PetRig.NOVA_TIME * PetRig.NOVA_BURST)
+    seed.Speed = NumberRange.new(0)
+    seed.Rotation = NumberRange.new(0, 360)
+    seed.RotSpeed = NumberRange.new(25, 25)
+    seed.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.05 * metre), NumberSequenceKeypoint.new(1, 0.72 * metre) })
+    seed.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 0) })
+    seed.LightEmission = 1
+    seed.LightInfluence = 0
+    seed.Parent = Instance.new("Attachment", holder)
+    seed:Emit(1)
+    holder.Parent = rig.model.Parent or workspace
+    Debris:AddItem(holder, PetRig.NOVA_TIME * PetRig.NOVA_BURST + 1)
+    s.gather, s.starAt = gas, at
+end
+
+local function animateNebulaOwl(rig, s, moving, fly, nova)
+    local camera = workspace.CurrentCamera
+    if camera and (camera.CFrame.Position - rig.rootPart.Position).Magnitude > OWL_FAR then
+        return
+    end
+    local m, u, t, dt = rig.motors, rig.meters, s.time, rig.deltaTime
+    local pace = math.max(moving, fly)
+
+    -- the special: wings lift and spread, slowly, as gas gathers before its breast; the star lights; one great silent downstroke; and it goes back to looking unimpressed, having known all along
+    local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+    local open = smoothstep(0, 0.36, progress) * (1 - smoothstep(0.41, 0.47, progress))
+    local stroke = smoothstep(0.41, 0.46, progress) * (1 - smoothstep(0.47, 0.76, progress))
+    local awe = smoothstep(0.1, 0.38, progress) * (1 - smoothstep(0.5, 0.72, progress))
+    if rig.nova and not rig.nova.gathering and progress < PetRig.NOVA_BURST then
+        rig.nova.gathering = true
+        owlGather(rig, s)
+    end
+
+    -- now and then it turns its head right round to look behind it, in no hurry to turn back
+    s.nextBehind = s.nextBehind or t + 6 + math.random() * 8
+    local behind = 0
+    if t >= s.nextBehind then
+        local a = (t - s.nextBehind) / 3.1
+        if a >= 1 then
+            s.nextBehind = t + 12 + math.random() * 14
+            s.behindSide = if math.random() < 0.5 then 1 else -1
+        elseif pace < 0.25 and nova == 0 then
+            behind = smoothstep(0, 0.2, a) * (1 - smoothstep(0.78, 1, a))
+        else
+            s.nextBehind = t + 3
+        end
+    end
+
+    -- the head doesn't drift: it snaps to a new place and holds still
+    s.nextGaze = s.nextGaze or 0
+    if t >= s.nextGaze then
+        s.nextGaze = t + 1.4 + math.random() * 3.2
+        s.gazeTo = (math.random() - 0.5) * 1.5
+        s.nodTo = (math.random() - 0.5) * 0.22
+        s.tiltTo = if math.random() < 0.25 then (math.random() - 0.5) * 0.8 else 0
+    end
+    local calm = (1 - pace * 0.8) * (1 - nova)
+    local yawTo = (s.gazeTo or 0) * calm * (1 - behind) + 2.65 * behind * (s.behindSide or 1)
+    local snap = math.min(1, dt * (if behind > 0 then 5 else 11))
+    s.yaw = (s.yaw or 0) + (yawTo - (s.yaw or 0)) * snap
+    s.nod = (s.nod or 0) + (((s.nodTo or 0) * calm + 0.12 * awe) - (s.nod or 0)) * snap
+    s.tilt = (s.tilt or 0) + ((s.tiltTo or 0) * calm * (1 - behind) - (s.tilt or 0)) * snap
+
+    -- the wings row, each joint later than the last; flying, it beats and then glides. It makes no sound and it doesn't hurry
+    s.beat = (s.beat or 0) + dt * (2 + 4.4 * moving + 1.6 * fly)
+    local glide = 0.45 + 0.55 * math.max(0, math.sin(t * 0.7))
+    local amp = 0.13 + 0.4 * moving + 0.22 * fly * glide
+    local beat = s.beat
+    local base = 0.02 - 0.04 * moving + 0.06 * fly
+    for _, side in { "L", "R" } do
+        local up = if side == "L" then -1 else 1
+        pose(m["Wing" .. side .. "1"], CFrame.Angles(0, up * (0.07 * math.cos(beat) * (amp / 0.3) - 0.12 * open), up * (base + amp * math.sin(beat) + 0.34 * open - 0.42 * stroke)))
+        pose(m["Wing" .. side .. "2"], CFrame.Angles(0, 0, up * (-0.06 + 0.6 * amp * math.sin(beat - 0.7) + 0.14 * open - 0.1 * stroke)))
+        pose(m["Wing" .. side .. "3"], CFrame.Angles(0, 0, up * (-0.04 + 0.7 * amp * math.sin(beat - 1.3) + 0.1 * open - 0.34 * stroke)))
+        pose(m["WingP" .. side], CFrame.Angles(0, 0, up * (0.6 * amp * math.sin(beat - 1.9) + 0.2 * open - 0.36 * stroke)))
+    end
+
+    -- the body rides each stroke a moment late, and leans into going forward; the head stays level, as an owl's does
+    local look = rig.rootPart.CFrame.LookVector
+    local heading = math.atan2(-look.X, -look.Z)
+    local turned = (heading - (s.heading or heading) + math.pi) % (2 * math.pi) - math.pi
+    s.heading = heading
+    s.bank = (s.bank or 0) + (math.clamp((if dt > 0 then turned / dt else 0) * 0.14, -0.3, 0.3) - (s.bank or 0)) * math.min(1, dt * 3)
+    local pitch = -0.22 * moving - 0.12 * fly + 0.12 * open
+    local rise = 0.1 * amp * math.sin(beat - 0.9) + 0.08 * open + 0.1 * stroke
+    pose(m.Body, CFrame.new(0, rise * u, 0) * CFrame.Angles(pitch + 0.015 * math.sin(beat - 1.2), 0, s.bank))
+    local breath = math.sin(t * 1.1)
+    pose(m.Chest, CFrame.new(0, 0.004 * breath * u, -0.006 * breath * u))
+    pose(m.Head, CFrame.new(0, 0.012 * math.sin(beat - 1.5) * u, 0) * CFrame.fromEulerAnglesYXZ(-pitch * 0.85 + s.nod, s.yaw + s.bank * 0.6, s.tilt - s.bank * 0.7))
+
+    -- its lids rest low. It blinks slowly and, more often than not, one eye at a time
+    s.nextBlink = s.nextBlink or t + 2
+    if t >= s.nextBlink then
+        s.nextBlink = t + 2.2 + math.random() * 4.5
+        s.blinkAt = t
+        local r = math.random()
+        s.blinkWhich = if r < 0.35 then "L" elseif r < 0.7 then "R" else "both"
+    end
+    local shut = 0
+    if s.blinkAt and t - s.blinkAt < 0.34 then
+        shut = 1 - math.abs(2 * (t - s.blinkAt) / 0.34 - 1)
+    end
+    s.nextBrow = s.nextBrow or t + 4
+    if t >= s.nextBrow then
+        s.nextBrow = t + 5 + math.random() * 7
+        s.browAt, s.browSide = t, if math.random() < 0.5 then "L" else "R"
+    end
+    local cock = if s.browAt then smoothstep(0, 0.12, t - s.browAt) * (1 - smoothstep(1.1, 1.5, t - s.browAt)) else 0
+    for _, side in { "L", "R" } do
+        local up = if side == "L" then -1 else 1
+        local mine = if s.blinkWhich == side or s.blinkWhich == "both" then shut else 0
+        local widen = math.rad(14) * math.max(awe, behind * 0.5)
+        pose(m["LidU" .. side], CFrame.fromAxisAngle(OWL_LID_HINGE[side], -OWL_BLINK_UPPER * mine + widen))
+        pose(m["LidL" .. side], CFrame.fromAxisAngle(OWL_LID_HINGE[side], OWL_BLINK_LOWER * mine))
+        pose(m["Eye" .. side], CFrame.Angles(s.nod * 0.25, s.yaw * 0.08 * (1 - behind), 0))
+        local raised = math.max(awe * 0.8, if s.browSide == side then cock else 0, behind * (if (s.behindSide or 1) == up then 1 else 0.2))
+        pose(m["Brow" .. side], CFrame.new(0, 0.014 * raised * u, 0) * CFrame.Angles(0, 0, up * 0.2 * raised))
+        -- tufts lie back at speed and prick up at anything
+        local offset = if side == "L" then 0 else 1.9
+        local flick = math.max(0, math.sin(t * 0.7 + offset)) ^ 16
+        pose(m["Tuft" .. side], CFrame.Angles(0.05 * math.sin(t * 0.9 + offset) + 0.5 * moving + 0.26 * fly - 0.12 * awe - 0.14 * flick, 0, up * (0.04 * math.sin(t * 0.6 + offset) + 0.12 * flick)))
+        -- legs trail behind it in flight, talons drawn up; at rest they hang, opening a little at the top of the special
+        pose(m["Leg" .. side], CFrame.Angles(0.03 * math.sin(t * 0.8 + offset) - 0.5 * pace + 0.2 * open, 0, 0))
+        pose(m["Foot" .. side], CFrame.Angles(0.05 * math.sin(t * 1.1 + offset) - 0.6 * pace + 0.28 * open, 0, 0))
+    end
+    pose(m.BeakLow, CFrame.Angles(-(0.3 * stroke + 0.14 * cock * (if s.browSide == "L" then 1 else 0)), 0, 0))
+
+    -- the tail steers and fans
+    local fan = 0.04 + 0.1 * open + 0.1 * fly + 0.05 * math.abs(s.bank) * 3
+    pose(m.Tail, CFrame.Angles(-pitch * 0.5 + 0.04 * math.sin(beat - 2.2) - 0.1 * moving, s.bank * 0.5, s.bank * 0.4))
+    pose(m.TailL, CFrame.Angles(0, -fan, 0))
+    pose(m.TailR, CFrame.Angles(0, fan, 0))
+
+    -- the new stars in its wings breathe, each its own way; a little gas always leaks from the wingtips, more as it moves
+    for index, name in { "StarsL", "StarsR" } do
+        local part = rig.parts[name]
+        if part then
+            local base2 = rig.profile.GlowColors["d6b4ff"]
+            part.Color = base2:Lerp(Color3.new(1, 1, 1), 0.28 * math.max(0, math.sin(t * 1.9 + index * 2.3)) ^ 3 + 0.5 * stroke)
+        end
+    end
+    if not s.wisps then
+        s.wisps = {}
+        for _, name in { "WingPL", "WingPR" } do
+            local bone = rig.points[name]
+            if bone then
+                local gas = Instance.new("ParticleEmitter")
+                gas.Name = "Gas"
+                gas.Texture = "rbxassetid://16172858603"
+                gas.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4
+                gas.FlipbookMode = Enum.ParticleFlipbookMode.OneShot
+                gas.Rate = 0.8
+                gas.Lifetime = NumberRange.new(1.5, 2.3)
+                gas.Speed = NumberRange.new(0.1 * rig.unit, 0.3 * rig.unit)
+                gas.SpreadAngle = Vector2.new(180, 180)
+                gas.Drag = 0.8
+                gas.Rotation = NumberRange.new(0, 360)
+                gas.RotSpeed = NumberRange.new(-14, 14)
+                gas.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1 * rig.unit), NumberSequenceKeypoint.new(1, 0.42 * rig.unit) })
+                gas.Color = ColorSequence.new(Color3.fromRGB(150, 96, 240), Color3.fromRGB(220, 110, 200))
+                gas.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.25, 0.62), NumberSequenceKeypoint.new(1, 1) })
+                gas.LightEmission = 0.35
+                gas.LightInfluence = 0.5
+                gas.Parent = bone
+                table.insert(s.wisps, gas)
+            end
+        end
+    end
+    for _, gas in s.wisps do
+        gas.Rate = 0.8 + 2.2 * pace
+    end
+end
+
 -- The Wind Sprite is one smooth skin on a skeleton, so its joints are Bones (PetRig.buildSkinned). Axes as everywhere: -Z ahead, +X to its right; its left is -X.
 local WIND_LID_HINGE = { L = Vector3.new(0.9574, -0.1218, -0.2618), R = Vector3.new(0.9574, 0.1218, 0.2618) } -- both lids of an eye turn on this line
 local WIND_BLINK_UPPER, WIND_BLINK_LOWER = math.rad(72), math.rad(22)
@@ -1591,6 +2028,67 @@ PetRig.Profiles.CloudSheep = {
     Animate = animateCloudSheep,
 }
 
+PetRig.Profiles.JadeWyrmTurtle = {
+    Skinned = true,
+    Bones = {
+        "Body", "Shell", "Neck1", "Neck2", "Neck3", "Neck4", "Head", "Jaw", "EyeL", "EyeR", "LidUL", "LidUR", "LidLL", "LidLR", "FrillL", "FrillR",
+        "Tail1", "Tail2", "Tail3", "Tail4", "Tail5", "Tail6", "TailTip",
+        "LegFL1", "LegFL2", "FootFL", "LegFR1", "LegFR2", "FootFR", "LegBL1", "LegBL2", "FootBL", "LegBR1", "LegBR2", "FootBR",
+        "Plum1", "Plum2", "PadA", "PadB", "PadC", "Pine1", "PineA", "PineB", "PineC",
+    },
+    Points = { "FootFR", "TailTip", "PadA", "PadB", "PadC" },
+    GlowColors = {
+        ["24c0a4"] = Color3.fromRGB(26, 170, 150), -- the spring
+        ["f0ead8"] = Color3.fromRGB(170, 165, 150), -- the catch-light in its eye
+    },
+    Effects = {
+        Pulse = "Spring",
+        Burst = "Body",
+        Trail = "TailTip",
+        TrailWidth = 0.05,
+        TrailTaper = true,
+        Blast = "BetweenSteps",
+        NovaLight = 3,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(110, 225, 180),
+        Amber = Color3.fromRGB(235, 190, 110),
+        Orange = Color3.fromRGB(245, 170, 195),
+        Sun = Color3.fromRGB(225, 250, 235),
+        Ivory = Color3.fromRGB(250, 240, 225),
+    },
+    Animate = animateJadeWyrmTurtle,
+}
+
+PetRig.Profiles.NebulaOwl = {
+    Skinned = true,
+    Bones = {
+        "Body", "Chest", "Head", "BeakLow", "EyeL", "EyeR", "LidUL", "LidUR", "LidLL", "LidLR", "BrowL", "BrowR", "TuftL", "TuftR",
+        "WingL1", "WingL2", "WingL3", "WingPL", "WingR1", "WingR2", "WingR3", "WingPR", "Tail", "TailL", "TailR", "LegL", "FootL", "LegR", "FootR",
+    },
+    Points = { "WingPL", "WingPR" },
+    GlowColors = {
+        ["d6b4ff"] = Color3.fromRGB(176, 122, 255), -- the new stars in its wings
+        ["f0ead8"] = Color3.fromRGB(190, 182, 160), -- the catch-lights in its eyes
+    },
+    Effects = {
+        Burst = "Body",
+        Trail = { "WingPL", "WingPR" },
+        TrailWidth = 0.05,
+        TrailTaper = true,
+        Blast = "StarsNotYetBorn",
+        NovaLight = 3,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(176, 122, 255),
+        Amber = Color3.fromRGB(240, 120, 200),
+        Orange = Color3.fromRGB(120, 76, 230),
+        Sun = Color3.fromRGB(235, 220, 255),
+        Ivory = Color3.fromRGB(245, 240, 255),
+    },
+    Animate = animateNebulaOwl,
+}
+
 PetRig.Profiles.GoldenManeLion = {
     Joints = {
         Body = "Root",
@@ -1629,6 +2127,7 @@ PetRig.Profiles.GoldenManeLion = {
 
 PetRig.NOVA_TIME = 2.6
 local NOVA_BURST_AT = 0.42
+PetRig.NOVA_BURST = NOVA_BURST_AT
 
 PetRig.Profiles.WindSprite = {
     Skinned = true,
@@ -2995,6 +3494,110 @@ function Blasts.CloudBloom(rig, fx)
     puffs.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(0.35, 0.62), NumberSequenceKeypoint.new(1, 1) })
     puffs.Parent = holder
     puffs:Emit(20)
+end
+
+-- The foot comes down: earth thrown out along the ground where it lands, chips of stone falling back, and the plum shaken, its petals coming down all at once. All of it in the world's light.
+function Blasts.BetweenSteps(rig, fx)
+    local u = rig.unit
+    local foot = rig.points.FootFR
+    local at = if foot then foot.TransformedWorldCFrame.Position - Vector3.new(0, 0.14 * rig.meters, 0) else fx.origin
+    local holder = fx.neon(Vector3.new(0.4, 0.05, 0.4) * u, CFrame.new(at), Color3.new(1, 1, 1))
+    holder.Transparency = 1
+
+    local dust = Instance.new("ParticleEmitter")
+    dust.Texture = "rbxassetid://82029518693714"
+    dust.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4
+    dust.FlipbookMode = Enum.ParticleFlipbookMode.OneShot
+    dust.Rate = 0
+    dust.EmissionDirection = Enum.NormalId.Top
+    dust.SpreadAngle = Vector2.new(88, 88)
+    dust.Speed = NumberRange.new(1.2 * u, 2.6 * u)
+    dust.Drag = 3.4
+    dust.Lifetime = NumberRange.new(0.8, 1.25)
+    dust.Rotation = NumberRange.new(0, 360)
+    dust.RotSpeed = NumberRange.new(-25, 25)
+    dust.Acceleration = Vector3.new(0, -0.5 * u, 0)
+    dust.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2 * u), NumberSequenceKeypoint.new(1, 0.68 * u) })
+    dust.Color = ColorSequence.new(Color3.fromRGB(198, 182, 150), Color3.fromRGB(150, 150, 130))
+    dust.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(0.5, 0.72), NumberSequenceKeypoint.new(1, 1) })
+    dust.LightEmission = 0
+    dust.LightInfluence = 0.85
+    dust.Parent = holder
+    dust:Emit(11)
+
+    local chips = Instance.new("ParticleEmitter")
+    chips.Texture = "rbxassetid://86117030913477"
+    chips.Rate = 0
+    chips.EmissionDirection = Enum.NormalId.Top
+    chips.SpreadAngle = Vector2.new(55, 55)
+    chips.Speed = NumberRange.new(1.4 * u, 3 * u)
+    chips.Acceleration = Vector3.new(0, -13 * u, 0)
+    chips.Lifetime = NumberRange.new(0.45, 0.8)
+    chips.Rotation = NumberRange.new(0, 360)
+    chips.RotSpeed = NumberRange.new(-420, 420)
+    chips.Size = NumberSequence.new(0.042 * u, 0.028 * u)
+    chips.LightEmission = 0
+    chips.LightInfluence = 0.9
+    chips.Parent = holder
+    chips:Emit(10)
+
+    for _, petals in rig.state.petals or {} do
+        petals:Emit(16)
+    end
+end
+
+-- The star lights where the gas gathered: its own painted flare, a thin shell of gas thrown off, and for a moment a little of its light on the owl. Nothing else in the sky changes.
+function Blasts.StarsNotYetBorn(rig, fx)
+    local s, metre = rig.state, rig.meters
+    if s.gather then
+        s.gather.Enabled = false -- (the grown seed ends on this same frame: its lifetime is the time to the burst)
+        s.gather = nil
+    end
+    local at = s.starAt or fx.origin
+    s.starAt = nil
+    local holder = fx.neon(Vector3.one * 0.05, CFrame.new(at), Color3.new(1, 1, 1))
+    holder.Transparency = 1
+
+    local flare = Instance.new("ParticleEmitter")
+    flare.Texture = "rbxassetid://95572555201628"
+    flare.Rate = 0
+    flare.Lifetime = NumberRange.new(1.35)
+    flare.Speed = NumberRange.new(0.25 * metre)
+    flare.EmissionDirection = Enum.NormalId.Top
+    flare.SpreadAngle = Vector2.new(4, 4)
+    flare.Drag = 0.5
+    flare.Rotation = NumberRange.new(0, 360)
+    flare.RotSpeed = NumberRange.new(-10, 10)
+    flare.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3 * metre), NumberSequenceKeypoint.new(0.07, 2.3 * metre), NumberSequenceKeypoint.new(0.3, 1.25 * metre), NumberSequenceKeypoint.new(1, 0.5 * metre) })
+    flare.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.6, 0.12), NumberSequenceKeypoint.new(1, 1) })
+    flare.LightEmission = 1
+    flare.LightInfluence = 0
+    flare.Parent = holder
+    flare:Emit(1)
+
+    local shell = Instance.new("ParticleEmitter")
+    shell.Texture = "rbxassetid://13655845087"
+    shell.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4
+    shell.FlipbookMode = Enum.ParticleFlipbookMode.OneShot
+    shell.Rate = 0
+    shell.Lifetime = NumberRange.new(0.85)
+    shell.Speed = NumberRange.new(0)
+    shell.Rotation = NumberRange.new(0, 360)
+    shell.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5 * metre), NumberSequenceKeypoint.new(1, 2.6 * metre) })
+    shell.Color = ColorSequence.new(Color3.fromRGB(200, 150, 255), Color3.fromRGB(120, 76, 230))
+    shell.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+    shell.LightEmission = 0.7
+    shell.LightInfluence = 0
+    shell.Parent = holder
+    shell:Emit(1)
+
+    local light = Instance.new("PointLight")
+    light.Color = Color3.fromRGB(200, 160, 255)
+    light.Range = 3.2 * metre
+    light.Brightness = 2.4
+    light.Shadows = false
+    light.Parent = holder
+    TweenService:Create(light, TweenInfo.new(1), { Brightness = 0 }):Play()
 end
 
 -- Three ribbons of wind leave its mouth, wind round each other as they run ahead of it, and curl up and away; rings of breath and a scatter of
