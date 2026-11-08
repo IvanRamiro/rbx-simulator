@@ -135,7 +135,10 @@ return {
         Lore = "It glides through open space with a slow spiral of stars turning under its wings.",
         Special = { Name = "Turning of the Heavens", Text = "Rears until the galaxy beneath it faces the world, spins it up, then throws it open in a great wheel of stars." },
     },
-    Shadowcoil = { Lore = "A loop of living shadow that hides under your own. You find out it is there when it moves first." },
+    Shadowcoil = {
+        Lore = "A loop of living shadow that hides under your own. You find out it is there when it moves first.",
+        Special = { Name = "First Move", Text = "Its eyes go wide and it pours itself down into its own shadow. The shadow races round a loop along the ground, two points of eyeshine in it, leaving a fading trail, then the Shadowcoil bursts back up out of it in a leap and a spray of dark drops." },
+    },
     RuneSphinx = {
         Lore = "A charcoal guardian with a mane of stone blades and glowing runes of one forgotten alphabet. It has one question, and you won't like it.",
         Special = { Name = "Rune Seal", Text = "Raises its chest and opens a spinning seal of rising rune glyphs and amber pillars." },
