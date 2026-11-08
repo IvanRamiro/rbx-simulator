@@ -125,7 +125,10 @@ return {
     },
     CelestialSnowLeopard = { Lore = "It stalks the high snow where the sky begins. Its pawprints stay frozen long after the mountain thaws." },
     CometStag = { Lore = "It crosses the sky once in a lifetime and leaves a trail people name their children after." },
-    CelestialPearlDragon = { Lore = "A dragon that carries one flawless pearl of condensed heaven. Whole sects have fallen trying to take it." },
+    CelestialPearlDragon = {
+        Lore = "A dragon that carries one flawless pearl of condensed heaven. Whole sects have fallen trying to take it.",
+        Special = { Name = "Heaven Condensed", Text = "It rears on its hind legs, wings flared, and raises the pearl to the sky. A column of heaven's light pours down into it, rings closing on the pearl; then it lunges, and the condensed light bursts out in a flash, a ring rolling along the ground and shards of pearl light." },
+    },
     EclipseCat = {
         Lore = "It appears only when something bright is being covered up. Its purr is the sound of the world going dark for a moment.",
         Special = { Name = "Totality", Text = "It sits up and looks to the sky as a black moon slides across a golden sun. At totality the corona flares, a ring of dark rolls out from it and the world dims for a moment while it purrs; then the diamond ring flashes and the light comes back." },

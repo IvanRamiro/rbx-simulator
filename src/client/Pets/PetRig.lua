@@ -2721,7 +2721,8 @@ local function shadowBones()
 end
 local SHADOW_BONES = shadowBones()
 
-local function shadowAdd(into, stance, weight)
+-- adds a stance (bone: { rx, ry, rz }), scaled by weight, into a table of wanted turns: a pet blends its poses by adding them
+local function addStance(into, stance, weight)
     if weight <= 0 then
         return
     end
@@ -2856,15 +2857,15 @@ local function animateShadowcoil(rig, s, moving, fly, nova)
     local onFoot = moving * (1 - fly)
     local gathered, stretched = math.max(0, g) * onFoot + 0.5 * notice, math.max(0, -g) * onFoot
     local want = {}
-    shadowAdd(want, SHADOW_GATHER, gathered)
-    shadowAdd(want, SHADOW_STRETCH, math.min(1, stretched + 0.9 * fly + hop))
-    shadowAdd(want, SHADOW_REAR, rear)
-    shadowAdd(want, SHADOW_LIE, lie)
+    addStance(want, SHADOW_GATHER, gathered)
+    addStance(want, SHADOW_STRETCH, math.min(1, stretched + 0.9 * fly + hop))
+    addStance(want, SHADOW_REAR, rear)
+    addStance(want, SHADOW_LIE, lie)
     local frontLift = math.max(0, -math.cos(s.stride)) * onFoot
     local hindLift = math.max(0, math.cos(s.stride)) * onFoot
     for _, side in { "L", "R" } do
-        shadowAdd(want, { ["LegF" .. side .. "2"] = { -0.3, 0, 0 }, ["LegF" .. side .. "3"] = { -0.5, 0, 0 }, ["PawF" .. side] = { -0.2, 0, 0 } }, frontLift)
-        shadowAdd(want, { ["LegB" .. side .. "2"] = { -0.35, 0, 0 }, ["LegB" .. side .. "3"] = { 0.4, 0, 0 } }, hindLift)
+        addStance(want, { ["LegF" .. side .. "2"] = { -0.3, 0, 0 }, ["LegF" .. side .. "3"] = { -0.5, 0, 0 }, ["PawF" .. side] = { -0.2, 0, 0 } }, frontLift)
+        addStance(want, { ["LegB" .. side .. "2"] = { -0.35, 0, 0 }, ["LegB" .. side .. "3"] = { 0.4, 0, 0 } }, hindLift)
     end
 
     -- the body: banking on turns, breathing, slower and deeper lying down
@@ -2872,7 +2873,7 @@ local function animateShadowcoil(rig, s, moving, fly, nova)
     local turned = (heading - (s.heading or heading) + math.pi) % (2 * math.pi) - math.pi
     s.heading = heading
     s.bank = (s.bank or 0) + (math.clamp((if dt > 0 then turned / dt else 0) * 0.08, -0.16, 0.16) - (s.bank or 0)) * math.min(1, dt * 3)
-    shadowAdd(want, { Hips = { 0, 0, s.bank }, Chest = { 0.012 * math.sin(t * 1.7), 0, 0 }, Body = { 0.015 * lie * math.sin(t * 1.1), 0, 0 } }, 1)
+    addStance(want, { Hips = { 0, 0, s.bank }, Chest = { 0.012 * math.sin(t * 1.7), 0, 0 }, Body = { 0.015 * lie * math.sin(t * 1.1), 0, 0 } }, 1)
 
     -- its gaze: quick sly glances, the eyes darting ahead and the head following; often at you; wider when it rears to look about
     local toYou = rig.rootPart.CFrame:VectorToObjectSpace((camera.CFrame.Position - rig.rootPart.Position).Unit)
@@ -2889,19 +2890,19 @@ local function animateShadowcoil(rig, s, moving, fly, nova)
     s.yaw = (s.yaw or 0) + (wantYaw - (s.yaw or 0)) * math.min(1, dt * 5)
     s.pitch = (s.pitch or 0) + (wantPitch - (s.pitch or 0)) * math.min(1, dt * 5)
     local turn = 1 - 0.5 * lie
-    shadowAdd(want, {
+    addStance(want, {
         Neck = { 0.3 * s.pitch - 0.06 * moving, 0.4 * s.yaw * turn, 0 },
         Head = { 0.5 * s.pitch, 0.6 * s.yaw * turn, 0 },
     }, 1)
     local eyeYaw = math.clamp(0.25 * s.yaw + (s.eyeYaw - s.yaw), -0.3, 0.3)
-    shadowAdd(want, { EyeL = { 0.25 * s.pitch, eyeYaw, 0 }, EyeR = { 0.25 * s.pitch, eyeYaw, 0 } }, 1)
+    addStance(want, { EyeL = { 0.25 * s.pitch, eyeYaw, 0 }, EyeR = { 0.25 * s.pitch, eyeYaw, 0 } }, 1)
 
     -- the ears: each twitches on its own now and then; laid back in the leap and as it goes down into its shadow
     local flat = math.max(notice, sink, 0.6 * fly)
     for _, side in { "L", "R" } do
         local sign = if side == "L" then 1 else -1
         local twitch = math.max(0, math.sin(t * 0.8 + (if side == "L" then 0 else 2.3))) ^ 12
-        shadowAdd(want, { ["Ear" .. side] = { -0.15 * twitch - 0.4 * flat, sign * (0.3 * twitch + 0.3 * flat), 0 } }, 1)
+        addStance(want, { ["Ear" .. side] = { -0.15 * twitch - 0.4 * flat, sign * (0.3 * twitch + 0.3 * flat), 0 } }, 1)
     end
 
     -- the tail: smoke drifting, a slow wave along it; bobbing with the bound and streaming behind it at speed; coiled behind it lying down
@@ -2909,7 +2910,7 @@ local function animateShadowcoil(rig, s, moving, fly, nova)
         local sway = (0.035 + 0.05 * k / 7) * math.sin(t * 0.9 - k * 0.55) * (1 - 0.6 * lie) * (1 - 0.5 * fly)
         local drift = 0.03 * math.sin(t * 0.6 - k * 0.7)
         local stream = (if k <= 3 then 0.07 else 0.03) * pace + (if k == 1 then 0.06 * g * onFoot else 0)
-        shadowAdd(want, { ["Tail" .. k] = { drift + stream, sway, 0 } }, 1)
+        addStance(want, { ["Tail" .. k] = { drift + stream, sway, 0 } }, 1)
     end
 
     for _, name in SHADOW_BONES do
@@ -2939,6 +2940,228 @@ local function animateShadowcoil(rig, s, moving, fly, nova)
     for _, side in { "L", "R" } do
         pose(m["LidU" .. side], CFrame.fromAxisAngle(SHADOW_LID_HINGE[side], -upper))
         pose(m["LidL" .. side], CFrame.fromAxisAngle(SHADOW_LID_HINGE[side], lower))
+    end
+end
+
+-- The Celestial Pearl Dragon (skinned): a fierce winged dragon of pearl-white nacre that holds its pearl to its chest in its right forefoot. Standing,
+-- it keeps its great wings raised behind it, breathing with it, and now and then flexes them and settles; its head moves slowly and deliberately, its
+-- stare holding on you; its tail sways. It never walks on three legs: to go anywhere it lifts off on heavy wingbeats and hovers low, its legs tucked,
+-- its tail streaming.
+local PEARL_FAR = 110 -- studs from the camera past which nobody can see it fidget: its bones rest
+local PEARL_SOLE = 0.5741 -- metres from the middle of its box down to its feet: it stands on the ground
+local PEARL_LID_HINGE = { L = Vector3.new(0.7386, -0.308, -0.5997), R = Vector3.new(0.7386, 0.308, 0.5997) } -- both lids of an eye turn on this line
+local PEARL_BLINK_UPPER, PEARL_BLINK_LOWER = math.rad(40), math.rad(20)
+local PEARL_HOVER = 0.32 -- metres it hovers above the ground when it goes anywhere
+local PEARL_GLOW = Color3.fromRGB(255, 230, 214)
+
+local function pearlWings(lift, sweep, elbow, hand, fan)
+    local out = {}
+    for tag, sign in { L = 1, R = -1 } do
+        out["Wing" .. tag .. "1"] = { 0, sweep * sign, -lift * sign }
+        out["Wing" .. tag .. "2"] = { 0, elbow * sign, 0 }
+        out["Wing" .. tag .. "3"] = { 0, hand * sign, 0 }
+        for j = 0, 3 do
+            out["Wing" .. tag .. "F" .. (j + 1)] = { 0, fan * sign * j / 3, 0 }
+        end
+    end
+    return out
+end
+
+-- its poses, each checked in Blender against the ground and for torn skin: the same numbers as celestial_pearl_dragon.py's FLEX, BEAT_UP, BEAT_DOWN, TUCK
+-- and REAR
+local PEARL_FLEX = pearlWings(-0.15, 0.1, 0, -0.2, 0.3)
+local PEARL_BEAT_UP = pearlWings(0.45, -0.1, 0, 0, 0)
+local PEARL_BEAT_DOWN = pearlWings(-0.7, 0.05, 0, 0.15, 0)
+local PEARL_TUCK = {
+    LegFL1 = { 0.5, 0, 0 }, LegFL2 = { -1.0, 0, 0 }, LegFL3 = { 0.5, 0, 0 },
+    LegBL1 = { -0.6, 0, 0 }, LegBL2 = { 0.7, 0, 0 }, LegBR1 = { -0.6, 0, 0 }, LegBR2 = { 0.7, 0, 0 },
+}
+local PEARL_REAR = {
+    Body = { 0.611, 0, 0 }, Chest = { 0.15, 0, 0 }, Neck1 = { -0.2, 0, 0 }, Neck2 = { -0.15, 0, 0 }, Head = { -0.25, 0, 0 },
+    LegFL1 = { -0.386, 0, 0 }, LegFL2 = { 0.344, 0, 0 }, LegFL3 = { 0.059, 0, 0 }, ArmR2 = { 0.3, 0, 0 },
+    LegBL1 = { -0.295, 0, 0 }, LegBR1 = { -0.295, 0, 0 }, LegBL2 = { 0.008, 0, 0 }, LegBR2 = { 0.008, 0, 0 }, LegBL3 = { 0.543, 0, 0 }, LegBR3 = { 0.543, 0, 0 },
+    Tail1 = { -0.055, 0, 0 }, Tail2 = { -0.028, 0, 0 },
+}
+for bone, a in pearlWings(0.5, -0.2, 0, 0, 0) do
+    PEARL_REAR[bone] = a
+end
+local PEARL_REAR_DROP = -0.019 -- metres its hips move in the rear
+
+local function pearlBones()
+    local bones = { "Hips", "Body", "Chest", "Neck1", "Neck2", "Neck3", "Head", "EyeL", "EyeR", "ArmR1", "ArmR2", "ArmR3", "HandR" }
+    for k = 1, 6 do
+        table.insert(bones, "Tail" .. k)
+    end
+    for _, key in { "FL", "BL", "BR" } do
+        for k = 1, 3 do
+            table.insert(bones, "Leg" .. key .. k)
+        end
+        table.insert(bones, "Paw" .. key)
+    end
+    for _, tag in { "L", "R" } do
+        for k = 1, 3 do
+            table.insert(bones, "Wing" .. tag .. k)
+        end
+        for j = 1, 4 do
+            table.insert(bones, "Wing" .. tag .. "F" .. j)
+        end
+    end
+    return bones
+end
+local PEARL_BONES = pearlBones() -- every bone its stances pose (the lids turn on their hinges on their own)
+
+-- where the pearl is now: the hand's bone carries it, at the offset it had at rest
+local function pearlAt(rig, s)
+    local hand = rig.points.HandR
+    if not hand then
+        return rig.rootPart.Position
+    end
+    if not s.pearlOffset then
+        local pearl = rig.parts.Pearl
+        s.pearlOffset = if pearl then hand.TransformedWorldCFrame:PointToObjectSpace(pearl.Position) else Vector3.zero
+    end
+    return hand.TransformedWorldCFrame:PointToWorldSpace(s.pearlOffset)
+end
+
+-- its glow: the light and the drifting motes ride on the hand's bone, where the pearl is (a skinned piece's own CFrame stays where it was bound)
+local function pearlGlow(rig, s)
+    local hand = rig.points.HandR
+    if not hand then
+        return
+    end
+    local at = Instance.new("Attachment")
+    at.Name = "Pearl"
+    at.CFrame = CFrame.new(s.pearlOffset)
+    at.Parent = hand
+    local light = Instance.new("PointLight")
+    light.Name = "PulseLight"
+    light.Color = PEARL_GLOW
+    light.Range = 5 * rig.unit
+    light.Brightness = 1.4
+    light.Shadows = false
+    light.Parent = at
+    rig.light = light
+    local motes = Instance.new("ParticleEmitter")
+    motes.Name = "Motes"
+    motes.Texture = SPARKLE
+    motes.Rate = 4
+    motes.Lifetime = NumberRange.new(1.2, 2)
+    motes.Speed = NumberRange.new(0.05 * rig.unit, 0.2 * rig.unit)
+    motes.SpreadAngle = Vector2.new(180, 180)
+    motes.Acceleration = Vector3.new(0, 0.15 * rig.unit, 0)
+    motes.Drag = 1
+    motes.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.08 * rig.unit), NumberSequenceKeypoint.new(1, 0) })
+    motes.Color = ColorSequence.new(Color3.fromRGB(255, 240, 214), Color3.fromRGB(196, 176, 255))
+    motes.LightEmission = 1
+    motes.LightInfluence = 0
+    motes.Parent = at
+end
+
+local function animatePearlDragon(rig, s, moving, fly, nova)
+    if not s.pearlOffset then
+        pearlAt(rig, s) -- at rest, before any pose: where the pearl sits in the hand
+        pearlGlow(rig, s)
+    end
+    local camera = workspace.CurrentCamera
+    if not camera or (camera.CFrame.Position - rig.rootPart.Position).Magnitude > PEARL_FAR then
+        return
+    end
+    local m, u, t, dt = rig.motors, rig.meters, s.time, rig.deltaTime
+    local pace = math.max(moving, fly)
+    local drop = dropToGround(rig, s, t, u, fly, PEARL_SOLE)
+
+    -- the special, Heaven Condensed: it rears on its hind legs, wings flared, and raises the pearl to the sky; it watches heaven's light pour down into
+    -- it (Blasts.HeavenCondensed); then it lunges, head and pearl thrust forward, wings snapping down, as the light bursts out of the pearl; it settles
+    local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+    local rise = smoothstep(0.02, 0.28, progress) * (1 - smoothstep(0.8, 0.97, progress))
+    local skyward = smoothstep(0.2, 0.4, progress) * (1 - smoothstep(0.6, 0.67, progress))
+    local lunge = smoothstep(0.64, 0.69, progress) * (1 - smoothstep(0.76, 0.9, progress))
+
+    -- on the wing: heavy beats, the body lifting on each downstroke; it hovers low when it goes anywhere, higher when it flies
+    s.beat = (s.beat or 0) + dt * (4.2 + 1.2 * fly) * pace
+    local stroke = math.sin(s.beat)
+    local up, down = math.max(0, stroke), math.max(0, -stroke)
+    local hover = (PEARL_HOVER * pace + 0.03 * pace * math.cos(s.beat)) * (1 - rise)
+
+    local want = {}
+    addStance(want, PEARL_REAR, rise)
+    addStance(want, PEARL_TUCK, pace * (1 - rise))
+    addStance(want, PEARL_BEAT_UP, up * pace + 0.6 * rise * (1 - lunge))
+    addStance(want, PEARL_BEAT_DOWN, down * pace + lunge)
+    addStance(want, {
+        Neck1 = { 0.1 * skyward - 0.25 * lunge, 0, 0 }, Neck2 = { 0.15 * skyward - 0.25 * lunge, 0, 0 }, Head = { 0.3 * skyward - 0.15 * lunge, 0, 0 },
+        ArmR2 = { 0.15 * skyward + 0.35 * lunge, 0, 0 }, ArmR3 = { 0.2 * lunge, 0, 0 },
+    }, 1)
+
+    -- standing: it breathes, its raised wings breathing with it; now and then they flex and settle, or it tosses its head with a snort
+    local breath = math.sin(t * 1.2)
+    local calmness = (1 - pace) * (1 - rise)
+    s.nextFlex = s.nextFlex or t + 5
+    if t >= s.nextFlex then
+        s.flexAt, s.flexKind = t, if math.random() < 0.6 then "wings" else "snort"
+        s.nextFlex = t + 6 + math.random() * 5
+    end
+    local env = if s.flexAt then math.clamp((t - s.flexAt) / 1.6, 0, 1) else 1
+    local flex = math.sin(math.pi * env) * calmness
+    addStance(want, PEARL_FLEX, (if s.flexKind == "wings" then flex else 0))
+    addStance(want, pearlWings(0.04 * breath, 0, 0, 0, 0), calmness)
+    local snort = if s.flexKind == "snort" then flex else 0
+    addStance(want, { Chest = { 0.015 * breath, 0, 0 }, Head = { 0.18 * snort * math.sin(math.pi * 2 * env), 0, 0.1 * snort } }, 1)
+
+    -- banking on turns
+    local heading = math.atan2(-rig.rootPart.CFrame.LookVector.X, -rig.rootPart.CFrame.LookVector.Z)
+    local turned = (heading - (s.heading or heading) + math.pi) % (2 * math.pi) - math.pi
+    s.heading = heading
+    s.bank = (s.bank or 0) + (math.clamp((if dt > 0 then turned / dt else 0) * 0.1, -0.25, 0.25) - (s.bank or 0)) * math.min(1, dt * 3)
+    addStance(want, { Hips = { 0.08 * pace, 0, s.bank * pace }, Body = { -0.06 * pace, 0, 0 } }, 1)
+
+    -- its gaze: slow and deliberate, a predator's; it settles on you and holds
+    local toYou = rig.rootPart.CFrame:VectorToObjectSpace((camera.CFrame.Position - rig.rootPart.Position).Unit)
+    s.nextGaze = s.nextGaze or 0
+    if t >= s.nextGaze then
+        s.nextGaze = t + 3 + math.random() * 3.5
+        s.atYou = math.random() < 0.55
+        s.gazeYaw, s.gazePitch = (math.random() - 0.5) * 1.0, (math.random() - 0.5) * 0.25
+    end
+    local calm = (1 - 0.7 * pace) * (1 - rise)
+    local wantYaw = (if s.atYou then math.clamp(math.atan2(-toYou.X, -toYou.Z), -0.75, 0.75) else s.gazeYaw) * calm
+    local wantPitch = (if s.atYou then math.clamp(toYou.Y * 0.5, -0.2, 0.3) else s.gazePitch) * calm
+    s.yaw = (s.yaw or 0) + (wantYaw - (s.yaw or 0)) * math.min(1, dt * 2.2)
+    s.pitch = (s.pitch or 0) + (wantPitch - (s.pitch or 0)) * math.min(1, dt * 2.2)
+    addStance(want, {
+        Neck2 = { 0.25 * s.pitch, 0.3 * s.yaw, 0 }, Neck3 = { 0.25 * s.pitch, 0.3 * s.yaw, 0 }, Head = { 0.4 * s.pitch, 0.4 * s.yaw, 0 },
+        EyeL = { 0.2 * s.pitch, 0.15 * s.yaw, 0 }, EyeR = { 0.2 * s.pitch, 0.15 * s.yaw, 0 },
+    }, 1)
+
+    -- the tail: a slow, heavy sway; streaming out behind it on the wing
+    for k = 1, 6 do
+        local sway = (0.03 + 0.04 * k / 6) * math.sin(t * 0.7 - k * 0.5) * (1 - 0.6 * pace)
+        addStance(want, { ["Tail" .. k] = { 0.02 * math.sin(t * 0.5 - k * 0.6) + 0.05 * pace + 0.04 * pace * math.sin(s.beat - k * 0.6), sway, 0 } }, 1)
+    end
+
+    for _, name in PEARL_BONES do
+        local a = want[name] or Vector3.zero
+        local lift = if name == "Hips" then (hover + 0.025 * pace * down + PEARL_REAR_DROP * rise) * u - drop else 0
+        pose(m[name], CFrame.new(0, lift, 0) * CFrame.Angles(a.X, a.Y, a.Z))
+    end
+
+    -- the eyes: a slow blink now and then; wide as it watches heaven's light, narrowed in the lunge
+    s.nextBlink = s.nextBlink or t + 3
+    local blink = 0
+    if t >= s.nextBlink then
+        local a = (t - s.nextBlink) / 0.3
+        if a >= 1 then
+            s.nextBlink = t + 4 + math.random() * 4
+        else
+            blink = 1 - math.abs(2 * a - 1)
+        end
+    end
+    local close = math.max(blink * (1 - skyward), 0.3 * lunge)
+    local upper = PEARL_BLINK_UPPER * close - math.rad(7) * skyward
+    local lower = PEARL_BLINK_LOWER * close - math.rad(5) * skyward
+    for _, side in { "L", "R" } do
+        pose(m["LidU" .. side], CFrame.fromAxisAngle(PEARL_LID_HINGE[side], -upper))
+        pose(m["LidL" .. side], CFrame.fromAxisAngle(PEARL_LID_HINGE[side], lower))
     end
 end
 
@@ -4380,6 +4603,38 @@ PetRig.Profiles.Shadowcoil = {
         Ivory = Color3.fromRGB(236, 232, 248),
     },
     Animate = animateShadowcoil,
+}
+
+local function pearlProfileBones()
+    local bones = table.clone(PEARL_BONES)
+    for _, lid in { "LidUL", "LidUR", "LidLL", "LidLR" } do
+        table.insert(bones, lid)
+    end
+    return bones
+end
+
+PetRig.Profiles.CelestialPearlDragon = {
+    Skinned = true,
+    Bones = pearlProfileBones(),
+    SkinTint = Color3.fromRGB(200, 198, 214), -- its near-white nacre blows out in daylight: toned down, the scale rows and plates read (seen in Play)
+    Points = { "HandR", "Head" },
+    GlowColors = {
+        ffffff = Color3.fromRGB(255, 255, 255), -- the catch-lights in its eyes
+        fff4e2 = PEARL_GLOW, -- the pearl
+    },
+    Effects = {
+        Blast = "HeavenCondensed",
+        Pulse = "Pearl", -- (its light and motes ride on the hand: pearlGlow)
+        NovaLight = 3,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(255, 240, 214),
+        Amber = Color3.fromRGB(224, 210, 255),
+        Orange = Color3.fromRGB(196, 176, 255),
+        Sun = Color3.fromRGB(255, 250, 240),
+        Ivory = Color3.fromRGB(246, 238, 218),
+    },
+    Animate = animatePearlDragon,
 }
 
 PetRig.Profiles.GoldenManeLion = {
@@ -6654,6 +6909,160 @@ function Blasts.FirstMove(rig, fx)
     task.delay(out, function()
         if smoke.Parent then
             smoke:Emit(14)
+        end
+    end)
+end
+
+-- It has reared, pearl raised (animatePearlDragon). Heaven's light pours down out of the sky onto the pearl in a column, and the pearl draws it in:
+-- rings closing on it, motes of light streaming into it. As it lunges, the condensed light bursts out: a flash, a ring rolling out along the ground,
+-- shards of pearl light flung outward, and a glow on everything near.
+local PEARL_BURST = 0.68 -- seconds from the start of the blast to the lunge (animatePearlDragon's lunge, at progress 0.68 of NOVA_TIME, from 0.42)
+local PEARL_LIGHT, PEARL_LILAC, PEARL_VIOLET = Color3.fromRGB(255, 240, 214), Color3.fromRGB(196, 176, 255), Color3.fromRGB(132, 96, 250)
+
+function Blasts.HeavenCondensed(rig, fx)
+    local metre = rig.meters
+    local pearl = pearlAt(rig, rig.state)
+    local ground = rig.rootPart.Position - Vector3.new(0, PEARL_SOLE * metre + (rig.state.drop or 0), 0)
+
+    -- the column: from above down onto the pearl, narrowing as it is drawn in. Two layers, as the breakthrough pillar has: a broad violet sheath and a
+    -- bright core, both strong enough to read against a daytime sky (a single pale beam faded to nothing there, seen in Play)
+    local sky = fx.neon(Vector3.one * 0.05, CFrame.new(pearl + Vector3.new(0, 5 * metre, 0)), PEARL_LIGHT)
+    sky.Transparency = 1
+    local into = fx.neon(Vector3.one * 0.05, CFrame.new(pearl), PEARL_LIGHT)
+    into.Transparency = 1
+    local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
+    a0.Parent, a1.Parent = sky, into
+    for layer = 1, 2 do
+        local core = layer == 2
+        local column = Instance.new("Beam")
+        column.Attachment0, column.Attachment1 = a0, a1
+        column.Segments = 1
+        column.FaceCamera = true
+        column.LightEmission = if core then 0.8 else 0.6
+        column.LightInfluence = 0
+        column.Brightness = if core then 2.2 else 1.6
+        column.ZOffset = if core then 0.1 else 0
+        column.Color = if core then ColorSequence.new(PEARL_LIGHT) else ColorSequence.new(PEARL_VIOLET, PEARL_LILAC)
+        column.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.85), NumberSequenceKeypoint.new(0.3, if core then 0.1 else 0.3), NumberSequenceKeypoint.new(1, 0) })
+        column.Width0, column.Width1 = 0, 0
+        column.Parent = sky
+        local w = if core then 0.32 else 1.1
+        TweenService:Create(column, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Width0 = w * metre, Width1 = w * 0.3 * metre }):Play()
+        tweenAfter(0.3, column, TweenInfo.new(PEARL_BURST - 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Width0 = 0, Width1 = 0 })
+    end
+
+    -- drawn in: rings closing on the pearl, and motes streaming into it from all round
+    local holder = fx.neon(Vector3.one * 2.4 * metre, CFrame.new(pearl), PEARL_LIGHT)
+    holder.Transparency = 1
+    local rings = Instance.new("ParticleEmitter")
+    rings.Texture = "rbxassetid://13655845087"
+    rings.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4
+    rings.FlipbookMode = Enum.ParticleFlipbookMode.OneShot
+    rings.Shape = Enum.ParticleEmitterShape.Box
+    rings.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+    rings.Rate = 0
+    rings.Speed = NumberRange.new(0)
+    rings.Lifetime = NumberRange.new(0.32)
+    rings.Rotation = NumberRange.new(0, 360)
+    rings.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.6 * metre), NumberSequenceKeypoint.new(1, 0.05 * metre) })
+    rings.Color = ColorSequence.new(PEARL_LIGHT, PEARL_LILAC)
+    rings.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(0.5, 0.15), NumberSequenceKeypoint.new(1, 0.6) })
+    rings.LightEmission = 1
+    rings.LightInfluence = 0
+    rings.LockedToPart = true
+    rings.Parent = into
+    for _, at in { 0.06, 0.2, 0.34 } do
+        task.delay(at, function()
+            if rings.Parent then
+                rings:Emit(1)
+            end
+        end)
+    end
+    local motes = Instance.new("ParticleEmitter")
+    motes.Texture = SPARKLE
+    motes.Shape = Enum.ParticleEmitterShape.Sphere
+    motes.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+    motes.ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward
+    motes.Rate = 70
+    motes.Speed = NumberRange.new(2.2 * metre, 2.8 * metre)
+    motes.Lifetime = NumberRange.new(0.42, 0.5)
+    motes.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.05 * metre), NumberSequenceKeypoint.new(0.6, 0.09 * metre), NumberSequenceKeypoint.new(1, 0) })
+    motes.Color = ColorSequence.new(PEARL_LILAC, PEARL_LIGHT)
+    motes.LightEmission = 1
+    motes.LightInfluence = 0
+    motes.Parent = holder
+    task.delay(PEARL_BURST - 0.45, function()
+        motes.Enabled = false
+    end)
+
+    -- the burst, as it lunges: a flash in its hand, a ring rolling out along the ground, shards flung out, a glow on everything near
+    local flash = fx.neon(Vector3.one * 0.1 * metre, CFrame.new(pearl), PEARL_LIGHT)
+    flash.Shape = Enum.PartType.Ball
+    flash.Transparency = 1
+    tweenAfter(PEARL_BURST, flash, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = 0.1, Size = Vector3.one * 0.55 * metre })
+    tweenAfter(PEARL_BURST + 0.08, flash, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1, Size = Vector3.one * 0.8 * metre })
+    local glow = Instance.new("PointLight")
+    glow.Color = PEARL_LIGHT
+    glow.Range = 5 * metre
+    glow.Brightness = 0
+    glow.Shadows = false
+    glow.Parent = flash
+    tweenAfter(PEARL_BURST, glow, TweenInfo.new(0.06), { Brightness = 6 })
+    tweenAfter(PEARL_BURST + 0.06, glow, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Brightness = 0 })
+
+    local floor = fx.neon(Vector3.new(0.3, 0.05, 0.3) * metre, CFrame.new(ground + Vector3.new(0, 0.05 * metre, 0)), PEARL_LIGHT)
+    floor.Transparency = 1
+    local wave = Instance.new("ParticleEmitter")
+    wave.Texture = "rbxassetid://13655845087"
+    wave.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4
+    wave.FlipbookMode = Enum.ParticleFlipbookMode.OneShot
+    wave.Orientation = Enum.ParticleOrientation.VelocityPerpendicular
+    wave.EmissionDirection = Enum.NormalId.Top
+    wave.Shape = Enum.ParticleEmitterShape.Box
+    wave.Rate = 0
+    wave.SpreadAngle = Vector2.new(0, 0)
+    wave.Speed = NumberRange.new(0.01)
+    wave.Lifetime = NumberRange.new(0.75)
+    wave.Rotation = NumberRange.new(0, 360)
+    wave.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6 * metre), NumberSequenceKeypoint.new(1, 5 * metre) })
+    wave.Color = ColorSequence.new(PEARL_LIGHT, PEARL_LILAC)
+    wave.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0.3), NumberSequenceKeypoint.new(1, 1) })
+    wave.LightEmission = 1
+    wave.LightInfluence = 0
+    wave.Parent = floor
+    task.delay(PEARL_BURST + 0.04, function()
+        if wave.Parent then
+            wave:Emit(1)
+        end
+    end)
+
+    local facing = fx.facing.LookVector * Vector3.new(1, 0, 1)
+    facing = if facing.Magnitude > 1e-3 then facing.Unit else Vector3.new(0, 0, -1)
+    for k = 1, 9 do
+        local angle = (k - 5) * 0.32 + (math.random() - 0.5) * 0.15
+        local out = (CFrame.fromAxisAngle(Vector3.yAxis, angle) * facing) + Vector3.new(0, 0.25 + 0.35 * math.random(), 0)
+        local shard = fx.neon(Vector3.new(0.035, 0.035, 0.11) * metre, CFrame.lookAt(pearl, pearl + out), if k % 2 == 0 then PEARL_LIGHT else PEARL_LILAC)
+        shard.Transparency = 1
+        local to = pearl + out.Unit * (1.6 + 0.6 * math.random()) * metre
+        tweenAfter(PEARL_BURST, shard, TweenInfo.new(0.04), { Transparency = 0 })
+        tweenAfter(PEARL_BURST, shard, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = CFrame.lookAt(to, to + out) })
+        tweenAfter(PEARL_BURST + 0.3, shard, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1, Size = Vector3.new(0.01, 0.01, 0.04) * metre })
+    end
+    local sparks = Instance.new("ParticleEmitter")
+    sparks.Texture = SPARKLE
+    sparks.Enabled = false
+    sparks.Lifetime = NumberRange.new(0.5, 0.9)
+    sparks.Speed = NumberRange.new(2 * metre, 4 * metre)
+    sparks.Drag = 4
+    sparks.SpreadAngle = Vector2.new(180, 180)
+    sparks.Size = NumberSequence.new(0.1 * metre, 0)
+    sparks.Color = ColorSequence.new(PEARL_LIGHT, PEARL_LILAC)
+    sparks.LightEmission = 1
+    sparks.LightInfluence = 0
+    sparks.Parent = flash
+    task.delay(PEARL_BURST, function()
+        if sparks.Parent then
+            sparks:Emit(18)
         end
     end)
 end
