@@ -127,7 +127,10 @@ return {
         Lore = "It stalks the high snow where the sky begins. Its pawprints stay frozen long after the mountain thaws.",
         Special = { Name = "Where the Sky Begins", Text = "It sinks into a crouch, haunches wiggling, eyes fixed, and pounces in a long leap. Frost bursts up where it sprang, and ahead of it a trail of pawprints freezes into the ground one by one, glowing with starlight, then shatters into glittering snow." },
     },
-    CometStag = { Lore = "It crosses the sky once in a lifetime and leaves a trail people name their children after." },
+    CometStag = {
+        Lore = "It crosses the sky once in a lifetime and leaves a trail people name their children after.",
+        Special = { Name = "Once in a Lifetime", Text = "It rears, forelegs striking, and a comet leaves the nucleus on its brow: a white-hot head with a blue ion tail and a broad gold dust tail, arcing up and across the sky until it bursts into glittering dust that falls over the stag." },
+    },
     CelestialPearlDragon = {
         Lore = "A dragon that carries one flawless pearl of condensed heaven. Whole sects have fallen trying to take it.",
         Special = { Name = "Heaven Condensed", Text = "It rears on its hind legs, wings flared, and raises the pearl to the sky. A column of heaven's light pours down into it, rings closing on the pearl; then it lunges, and the condensed light bursts out in a flash, a ring rolling along the ground and shards of pearl light." },

@@ -58,8 +58,9 @@ local FILL_FOR = { LanternWarden = 0.98, DreamMoth = 1.02, TheNamelessOne = 1.0,
 -- where the camera looks from, for a pet the usual three-quarter view hides: the Hydra's four heads line up behind each other
 -- from the side, so it is seen more from the front and above, its necks fanned out
 local DIRECTION = Vector3.new(0.45, 0.35, -1)
--- and the Snow Leopard's long, low body hides behind its head from the front: seen more from the side, its length and tail show
-local DIRECTION_FOR = { VoidscaleHydra = Vector3.new(0.3, 0.75, -1), CelestialSnowLeopard = Vector3.new(0.85, 0.4, -0.9) }
+-- and the Snow Leopard's long, low body hides behind its head from the front: seen more from the side, its length and tail show;
+-- so do the Comet Stag's antlers, which sweep straight back and from the front read as upright
+local DIRECTION_FOR = { VoidscaleHydra = Vector3.new(0.3, 0.75, -1), CelestialSnowLeopard = Vector3.new(0.85, 0.4, -0.9), CometStag = Vector3.new(1, 0.3, -0.55) }
 
 -- frames `model` in `frame`, seen from `direction` (from the model's centre toward the camera)
 local function shoot(frame, model, direction, fill)

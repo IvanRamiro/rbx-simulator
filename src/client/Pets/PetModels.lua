@@ -656,6 +656,7 @@ local MESH_LOOKS = {
     Shadowcoil = { Glow = Color3.fromRGB(168, 255, 224), Length = 3.0 },
     CelestialPearlDragon = { Glow = Color3.fromRGB(224, 210, 255), Length = 4.6 },
     CelestialSnowLeopard = { Glow = Color3.fromRGB(196, 232, 255), Length = 4.2 },
+    CometStag = { Glow = Color3.fromRGB(150, 210, 255), Length = 4.6 },
     StormhornKirin = { Glow = Color3.fromRGB(90, 170, 255), Length = 4.4 },
     JadeWyrmTurtle = { Glow = Color3.fromRGB(60, 220, 170), Length = 4.8 },
     NebulaOwl = { Glow = Color3.fromRGB(176, 122, 255), Length = 4.0 },

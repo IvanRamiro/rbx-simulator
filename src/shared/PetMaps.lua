@@ -9,6 +9,7 @@ return {
     CelestialPearlDragon = "rbxassetid://88231363393309",
     CelestialSnowLeopard = "rbxassetid://73710725624687",
     CloudSheep = "rbxassetid://137454504415941",
+    CometStag = "rbxassetid://79384540004744",
     CosmicJellyfish = "rbxassetid://113526835581631",
     CrystalSnail = "rbxassetid://119626589372847",
     DawnPhoenix = "rbxassetid://125937144749128",
