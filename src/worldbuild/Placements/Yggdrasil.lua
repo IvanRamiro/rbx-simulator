@@ -334,16 +334,14 @@ return {
     },
     SlotTop = 1, -- the dais's top, over its origin
     SlotPanel = { Centre = Vector3.new(0, 2.15, -10.48), Size = Vector2.new(3.3, 2) },
-    -- plots kept for buildings to come: centre, size (width along the front, depth) and the yaw
-    -- that turns local +Z out of the front, where the notice board stands
+    -- the plots the hub's buildings stand on: centre, size (width along the front, depth) and the yaw
+    -- that turns local +Z out of the front
     Plots = {
         Leaderboard = { Centre = Vector3.new(0.00, 0.30, 102.00), Size = Vector2.new(28, 12), Yaw = 0.0000 },
         Blacksmith = { Centre = Vector3.new(-173.90, 0.30, 46.60), Size = Vector2.new(36, 30), Yaw = 1.8326 },
         Marketplace = { Centre = Vector3.new(-168.30, 0.30, -29.70), Size = Vector2.new(40, 32), Yaw = 1.3963 },
         BuySell = { Centre = Vector3.new(-132.60, 0.30, -101.60), Size = Vector2.new(30, 26), Yaw = 0.9250 },
     },
-    PlotBoardPanel = { Centre = Vector3.new(0, 4, 0.23), Size = Vector2.new(5.2, 2.9) },
-    PlotCordHeight = 4.7,
     -- the Ascension Stele (the leaderboard, on the Leaderboard plot): its board's face and title plaque
     SteleBoard = { Centre = Vector3.new(0, 8.6, 0.23), Size = Vector2.new(15.6, 9.6) },
     SteleTitle = { Centre = Vector3.new(0, 15.7, 0.29), Size = Vector2.new(6.2, 1.1) },

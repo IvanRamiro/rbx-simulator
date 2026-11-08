@@ -19,9 +19,8 @@
 -- the guardian rests, then guards again). One theft at a time. Every step is checked here; repeated
 -- requests are ignored. Only its thief can recover a dropped egg, within DropTime; after that it goes
 -- back to its stand. It also goes back if the thief leaves the server or carries it longer than
--- MAX_CARRY without securing it. The safe zone (SafeZone) is a circle (round its Centre, or with
--- SafeZone.Altar the Hatching Altar's), or with SafeZone.Island a whole island: Yggdrasil, the hub,
--- reached across the bridge.
+-- MAX_CARRY without securing it. The safe zone (SafeZone.Island) is a whole island: Yggdrasil, the
+-- hub, reached across the bridge.
 --
 -- Guardians never kill: every attack knocks players back (GuardianEvent "Knock" to that player's
 -- client, which owns its character), and a knocked-back thief drops the egg.
@@ -57,7 +56,6 @@ local CHASE_STOP = 13           -- it stops this far from its prey (its face is 
 local KNOCK_IMMUNITY = 0.6      -- seconds
 local TELEPORT_JUMP = 40        -- a thief moving this far in one frame was returned by the world
 local CARRY_SLACK = 40          -- studs of allowance on the carry's speed check (knockbacks, falls)
-local SANCTUARY_MARGIN = 12     -- studs it keeps outside its safe zone's edge
 local TAKE_GRACE = 1.5          -- seconds a fresh thief can't be knocked: a blow already on its way would feel random
 local EGG_PROMPT_DISTANCE = 12
 local POUNCE_HEIGHT = 9
@@ -122,17 +120,10 @@ function Guardian.new(id, config, source, folder)
     at = Vector3.new(at.X, if ground then ground.Y else at.Y, at.Z)
     self.lair = CFrame.lookAt(at, at + flat(frame:PointToWorldSpace(config.Facing) - at))
     self.facing = self.lair.Rotation -- TurnsToFace guardians change this
-    local zone = config.SafeZone
-    if zone.Island then
-        -- the hub: secured on setting foot on it; the waypoint is its end of this island's bridge
-        self.safeIsland = WorldConfig.Islands[zone.Island]
-        self.safeCentre = WorldConfig.bridgeLanding(config.Island) or self.safeIsland.Centre
-    elseif zone.Altar then
-        local altar = GameConfig.HatchingAltar
-        self.safeCentre = WorldConfig.frame(altar.Island):PointToWorldSpace(altar.Centre)
-    else
-        self.safeCentre = frame:PointToWorldSpace(zone.Centre)
-    end
+    -- the hub: secured on setting foot on it; the waypoint is its end of this island's bridge
+    self.safeIsland = WorldConfig.Islands[config.SafeZone.Island]
+    assert(self.safeIsland, "guardian " .. id .. ": SafeZone.Island must name an island")
+    self.safeCentre = WorldConfig.bridgeLanding(config.Island) or self.safeIsland.Centre
 
     local model = source:Clone()
     model.Name = id
@@ -573,11 +564,7 @@ end
 
 function Guardian:inSafeZone(position, margin)
     local hub = self.safeIsland
-    if hub then
-        return flat(position - hub.Centre).Magnitude <= hub.Radius - 8 + (margin or 0) and math.abs(position.Y - hub.Centre.Y) < 60
-    end
-    return flat(position - self.safeCentre).Magnitude <= self.config.SafeZone.Radius + (margin or 0)
-        and math.abs(position.Y - self.safeCentre.Y) < 14
+    return flat(position - hub.Centre).Magnitude <= hub.Radius - 8 + (margin or 0) and math.abs(position.Y - hub.Centre.Y) < 60
 end
 
 -- Knocks a player back from `origin` (no damage: guardians never kill); a thief drops the egg.
@@ -711,11 +698,6 @@ function Guardian:pounce(name, targetRoot)
         offset = offset.Unit * (self.islandRadius - 12)
     end
     local landing = self.islandCentre + offset
-    local keepOut = (self.config.SafeZone.Radius or 0) + SANCTUARY_MARGIN
-    local fromZone = flat(landing - self.safeCentre)
-    if not self.safeIsland and fromZone.Magnitude < keepOut then
-        landing = self.safeCentre + (if fromZone.Magnitude > 0.1 then fromZone.Unit else flat(from - self.safeCentre).Unit) * keepOut
-    end
     local ground = groundAt(landing, from.Y + 4) or groundAt(landing, from.Y + 25)
     if not ground then
         return
@@ -770,13 +752,6 @@ function Guardian:moveToward(target, speed, stop, dt)
     local offset = flat(point - self.islandCentre)
     if offset.Magnitude > self.islandRadius - 10 then
         point = self.islandCentre + offset.Unit * (self.islandRadius - 10) + Vector3.new(0, point.Y - self.islandCentre.Y, 0)
-    end
-    -- it walks round the sanctuary's rim, never into it (a whole island, the hub, is out of its reach)
-    local keepOut = (self.config.SafeZone.Radius or 0) + SANCTUARY_MARGIN
-    local fromZone = flat(point - self.safeCentre)
-    if not self.safeIsland and fromZone.Magnitude < keepOut then
-        local away = if fromZone.Magnitude > 0.1 then fromZone.Unit else flat(here - self.safeCentre).Unit
-        point = self.safeCentre + away * keepOut + Vector3.new(0, point.Y - self.safeCentre.Y, 0)
     end
     local ground = groundAt(point, here.Y + 3.5)
     self.align.MaxVelocity = speed

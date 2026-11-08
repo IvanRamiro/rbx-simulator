@@ -111,6 +111,12 @@ local function edgeOf(panel)
     return panel:FindFirstChildOfClass("UIStroke")
 end
 
+-- an edge breathing between its rest thickness and 3, for as long as it lives (UiFx.attention)
+local function breathe(edge)
+    edge.Thickness = edge:GetAttribute("RestThickness") or edge.Thickness
+    tween(edge, 0.8, { Thickness = 3 }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+end
+
 function UiFx.flash(panel, color)
     local edge = edgeOf(panel)
     if not edge then
@@ -123,7 +129,15 @@ function UiFx.flash(panel, color)
     edge.Thickness = thickness + 2
     edge.Color = color or C.AccentBright
     edge.Transparency = 0
-    tween(edge, 0.55, { Thickness = thickness, Color = shade, Transparency = transparency })
+    local settle = tween(edge, 0.55, { Thickness = thickness, Color = shade, Transparency = transparency })
+    if edge:GetAttribute("Breathes") then
+        -- this tween took over the edge's thickness from its breathing (UiFx.attention): it breathes again after
+        settle.Completed:Once(function(state)
+            if state == Enum.PlaybackState.Completed then
+                breathe(edge)
+            end
+        end)
+    end
 end
 
 function UiFx.scan(panel, color)
@@ -181,7 +195,9 @@ end
 function UiFx.attention(button, color)
     local edge = edgeOf(button)
     if edge then
-        tween(edge, 0.8, { Thickness = 3 }, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+        edge:SetAttribute("RestThickness", edge:GetAttribute("RestThickness") or edge.Thickness)
+        edge:SetAttribute("Breathes", true)
+        breathe(edge)
     end
     task.spawn(function()
         while button.Parent do

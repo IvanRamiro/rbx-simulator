@@ -219,22 +219,6 @@ AuraStyles.EmberCrucible = {
     Halo = { Diameter = 6.2, Lift = 1, Back = 1.6, RingFill = 1.3 },
 }
 
-AuraStyles.VerdantGale = {
-    Colors = {
-        White = Color3.fromRGB(230, 255, 220),
-        Pale = Color3.fromRGB(190, 255, 120),
-        Lime = Color3.fromRGB(150, 255, 60),
-        Deep = Color3.fromRGB(60, 220, 20),
-    },
-    Textures = {
-        Swirl = "rbxassetid://135407417004177",
-        Slash = "rbxassetid://100518308037097",
-        Streak = "rbxassetid://124605526627411",
-        Wisp = "rbxassetid://12191903502",
-        Fog = "rbxasset://textures/particles/smoke_main.dds",
-    },
-}
-
 AuraStyles.CharacterAura = {
     Textures = {
         Flame = "rbxassetid://125999209006478",

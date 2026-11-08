@@ -5,7 +5,6 @@ local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local AuraKit = require(script.Parent:WaitForChild("AuraKit"))
 local TidecallerAura = require(script.Parent:WaitForChild("TidecallerAura"))
 local EmberCrucibleAura = require(script.Parent:WaitForChild("EmberCrucibleAura"))
-local VerdantGaleAura = require(script.Parent:WaitForChild("VerdantGaleAura"))
 
 local CharacterAura = {}
 
@@ -63,8 +62,7 @@ end
 
 local function measureBody(character, rootPart)
     local rootCFrame = rootPart.CFrame
-    local boxCFrame, boxSize = character:GetBoundingBox()
-    local feetY = rootCFrame:PointToObjectSpace(boxCFrame.Position).Y - boxSize.Y / 2
+    local feetY = AuraKit.bodyBounds(character, rootPart).Y
     local head = character:FindFirstChild("Head")
     local headTopY = if head and head:IsA("BasePart")
         then rootCFrame:PointToObjectSpace(head.Position).Y + head.Size.Y / 2
@@ -423,28 +421,6 @@ local function buildLightning(aura)
     end
 end
 
-local function buildGlow(aura)
-    local colors = aura.colors
-    local light = Instance.new("PointLight")
-    light.Color = colors.Main
-    light.Range = 16 * aura.k
-    light.Brightness = 0
-    light.Shadows = false
-    light.Parent = aura.volume
-    aura.light = light
-
-    local glow = Instance.new("Highlight")
-    glow.Name = "AuraGlow"
-    glow.Adornee = aura.character
-    glow.DepthMode = Enum.HighlightDepthMode.Occluded
-    glow.FillColor = colors.Main
-    glow.OutlineColor = colors.Core
-    glow.FillTransparency = 1
-    glow.OutlineTransparency = 1
-    glow.Parent = aura.model
-    aura.highlight = glow
-end
-
 local function strikeArc(aura, arc, now)
     local body, width = aura.body, aura.width
     local random = aura.random
@@ -514,7 +490,7 @@ function CharacterAura.hasPetDesign(petId)
 end
 
 function CharacterAura.build(player, character, rootPart, petId, rankId)
-    local design = if petId then DESIGNS[petId] else VerdantGaleAura
+    local design = DESIGNS[petId] -- (AuraController builds one only for a pet with a design: hasPetDesign)
     if design then
         local designed = design.build(player, character, rootPart, petId, rankId)
         if designed then
@@ -566,7 +542,7 @@ function CharacterAura.build(player, character, rootPart, petId, rankId)
     buildRings(aura)
     buildGround(aura)
     buildLightning(aura)
-    buildGlow(aura)
+    AuraKit.glow(aura, aura.colors.Main, aura.colors.Core, 16 * aura.k)
 
     aura.allImages = {}
     for _, list in { aura.waistImages, aura.haloImages, aura.groundImages } do

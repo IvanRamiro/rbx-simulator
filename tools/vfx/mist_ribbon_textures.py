@@ -11,7 +11,6 @@ spans the ribbon once: it fades out at both ends and across its width, so no edg
   GlowLine.png     256x1024 a soft line, even along its length (upright, as a Beam reads it): the
                             glow under procedural lightning
 """
-import math
 import os
 import sys
 

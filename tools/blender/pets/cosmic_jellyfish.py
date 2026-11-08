@@ -15,7 +15,6 @@ import math
 import os
 import sys
 
-import bmesh
 import bpy
 import numpy as np
 from mathutils import Matrix, Vector
@@ -716,14 +715,13 @@ if __name__ == "__main__" and STAGE == "all":
         pose(rig, lib[name])
         shots(os.path.join(REVIEW, "pose" + name), [view], target=VIEW_AT, size=540)
     pose(rig, {})
-    shots(os.path.join(pet_kit.TOOLS, PET + "_preview"), [(0.62, -0.72, 0.28, 7.6, VIEW_AT)]) if os.makedirs(pet_kit.TOOLS, exist_ok=True) is None else None
+    os.makedirs(pet_kit.TOOLS, exist_ok=True)
+    shots(os.path.join(pet_kit.TOOLS, PET + "_preview"), [(0.62, -0.72, 0.28, 7.6, VIEW_AT)])
     os.replace(os.path.join(pet_kit.TOOLS, PET + "_preview_0.png"), os.path.join(pet_kit.TOOLS, PET + "_preview.png"))
     glass.data.materials[0] = baked
     for o in glows.values():
         o.data.uv_layers.new(name="UVMap")
-    bpy.context.preferences.filepaths.save_version = 0
-    path = os.path.join(pet_kit.TOOLS, PET + ".blend")
-    bpy.ops.wm.save_as_mainfile(filepath=path, compress=True)      # before the export, which takes the glow pieces' colours off
+    path = pet_kit.save_blend()      # before the export, which takes the glow pieces' colours off
     print("BLEND", path, os.path.getsize(path) // 1024, "KB", flush=True)
     print("FBX", export_fbx(rig, body, list(glows.values()), extras=[glass]), flush=True)
     print("DONE", flush=True)

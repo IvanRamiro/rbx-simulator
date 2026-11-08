@@ -14,7 +14,6 @@ import math
 import os
 import sys
 
-import bmesh
 import bpy
 import numpy as np
 from mathutils import Matrix, Vector

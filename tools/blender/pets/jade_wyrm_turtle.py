@@ -398,7 +398,6 @@ def pavilion(name, coll, low=False):
     m = Mesh()
     B = V(x, y, z)
     W, H = 0.092, 0.135
-    sides = 4
     # the base: a low square plinth
     def box(c, sx, sy, sz, taper=1.0):
         vs = []
@@ -956,7 +955,6 @@ def shell_uv(o, density):
     P = verts(o)
     t = np.arctan2((P[:, 1] - CY) / RB, P[:, 0] / RA)
     reach, high = rim_shape(t)
-    rho = np.sqrt((P[:, 0] / RA) ** 2 + ((P[:, 1] - CY) / RB) ** 2) / reach
     # distance down the slope from the summit, ring by ring (rows go round the shell in order)
     nt, nrows = SHELL_NT, len(SHELL_RHO)
     arc = np.zeros(len(P))
@@ -969,7 +967,6 @@ def shell_uv(o, density):
         arcs.append(run.copy())
     arcs = np.array(arcs)
     arc[:nt * nrows] = arcs.ravel()
-    biggest = float(arcs.max()) * 1.05
     sn, cs = np.sin(t), np.cos(t)
     flat_x = 0.5 + arc * cs * k
     flat_y = 0.5 + arc * sn * k
@@ -1142,7 +1139,7 @@ def neck_weight(f):
 
 def skin_weights(o):
     P = verts(o)
-    x, y, z = P[:, 0], P[:, 1], P[:, 2]
+    y, z = P[:, 1], P[:, 2]
     f, d = nearest_on(NECK, P)
     neck_on = smooth(-0.70, -0.92, y)
     head_on = smooth(-1.50, -1.60, y) * smooth(0.98, 1.06, z)

@@ -12,7 +12,7 @@ Space: all authoring values are Roblox's, relative to the HumanoidRootPart: +X t
 import math
 
 import bpy
-from mathutils import Matrix, Quaternion, Vector
+from mathutils import Matrix, Vector
 
 V = Vector
 FLOOR = -2.774

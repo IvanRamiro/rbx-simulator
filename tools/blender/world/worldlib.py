@@ -6,7 +6,7 @@ so a Roblox point (x, y, z) lives at Blender (x, -z, y). 1 Blender unit = 1 stud
 import bpy, bmesh, math, os
 from mathutils import Vector
 
-REPO = "/Users/ivan/qi-aura-simulator"
+REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))  # the repository, from tools/blender/<folder>/
 
 
 def rb(x, y, z):

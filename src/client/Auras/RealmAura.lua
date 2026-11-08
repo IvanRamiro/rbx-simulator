@@ -56,36 +56,21 @@ local TEX = {
     DaoRunes = "rbxassetid://80369515975276",   -- tools/vfx/top_tier_aura_textures.py
     LawStreak = "rbxassetid://75983337371298",
     Nebula = "rbxassetid://128568519603570",
-    -- Realm 1, picked by the owner (Creator Store images)
-    SoftOrb = "rbxassetid://196969716",        -- a soft radial gradient (Corecii)
-    OrbShine = "rbxassetid://98986384327358",   -- a bright core in coiling filaments (XxOmqxXNerd)
-    LightOrbs = "rbxassetid://917181007",       -- scattered soft light dots (JDLENL)
-    OrbMist = "rbxassetid://15753665886",       -- a soft blurred wisp (troPSDtroPSD)
-    SmokePuffs = "rbxassetid://16503766653",    -- an 8x8 flipbook of smoke puffs (Quantum1zed)
     -- Realm 1, from the PDS' Particles & Models Kit (Workspace)
     Mote = "rbxassetid://16512006463",         -- one tiny core with a faint halo (Sparkles&Debris)
     QiThread = "rbxassetid://11829306338",     -- one soft waving thread (Beams)
     Wisp = "rbxassetid://7216854921",          -- a faint soft smoke wisp (Fogs)
-    Spiral = "rbxassetid://14050124950",        -- a soft spiral (Fogs)
     -- Realm 2, from the PDS kit
     Spark = "rbxassetid://16511998441",         -- a small dot with a faint cross flare (Sparkles&Debris)
-    RiseStreak = "rbxassetid://7216847852",     -- a thin upright streak (Sparkles&Debris; replaced)
-    RiseDrops = "rbxassetid://14919963322",     -- droplets with tails, on black (bryselee811; tried, replaced)
     RiseStar = "rbxassetid://12363775390",      -- a small six-ray star (PDS, Sparkles&Debris)
     -- Realm 3, from the PDS kit (Rings)
     EnergyRing = "rbxassetid://12403112662",    -- a thin glowing ring with brighter arcs
     SwirlRing = "rbxassetid://6250126210",      -- a thin ring of wispy strokes
-    CrescentSwirl = "rbxassetid://15999331354", -- a 4x4 flipbook: a crescent ring forms and breaks up (sappVFX; tried, replaced)
     -- our own (tools/vfx/mist_ribbon_textures.py)
     MistRibbon = "rbxassetid://106430686548190", -- smoke streaming along its length, no edge anywhere
     MistHaze = "rbxassetid://139629863109215",   -- a wider, fainter veil under it
-    GlowLine = "rbxassetid://102421798899318",   -- a soft line, even along its length, upright (lightning glow)
-    RuneGlyphs = "rbxassetid://118226937399588", -- 16 original runes, 4x4 (tools/vfx/rune_glyphs.py; no text)
     -- the owner's Realm 4 layout, textures from the PDS kit (Shines)
-    SoulMist = "rbxassetid://9345352897",        -- a soft swirling ghost-like mist (CoreGlow)
     SoulWisp = "rbxassetid://14590122278",       -- a small soft spiral wisp (Wisps)
-    SoulRing = "rbxassetid://17426702695",       -- a ring of swirling strokes (GroundRing)
-    SoulShock = "rbxassetid://14197762397",      -- a shockwave ring with streaks (EnergyShockwave)
     -- the owner's own body aura (built by the owner on the AuraWorkbench dummy, approved 2026-11-03)
     BodySmoke = "rbxassetid://17332831347",     -- an 8x8 flipbook of rolling smoke
     BodySpark = "rbxassetid://9997556038",      -- a small round spark
@@ -100,12 +85,8 @@ local TEX = {
                                                   -- (inside 78% of each frame: a clear margin, so no cell edges show)
     ElectricRing = "rbxassetid://6900421398",     -- a crackling electric ring (PDS Rings)
     BoltBurst = "rbxassetid://7216850580",        -- a small burst of lightning (PDS Fogs)
-    OrbLightning = "rbxassetid://14431633138",    -- 4x4 flipbook lightning (Clazite_VFX; tried, replaced by procedural bolts)
-    OrbSmoke = "rbxassetid://1084987899",         -- a dense soft cloud puff
-    GroundSmoke = "rbxassetid://8779210242",      -- a very soft round fog, no edges (PDS Fogs; replaced)
     SmokeRipple = "rbxassetid://133636855384267", -- our own ripple of smoke strands, zero at its border (tools/vfx/soul_orb_textures.py;
                                                   -- the PDS ring 12878479033's faint border showed as a square at 19 studs)
-    RollingSmoke = "rbxassetid://14050526759",    -- 2x2 billowy torn smoke puffs (PDS Fogs)
 }
 -- the top realms' meshes (tools/vfx/top_tier_aura_meshes.py, imported into TopTierMeshes): where
 -- each sits round the root, as built
@@ -156,8 +137,12 @@ local function emitter(parent, props)
     return e
 end
 
--- an invisible part for a ring-shaped emitter (from an attachment an emitter emits from a point)
-local function host(fx, root, r, h, y)
+local spinners = {}
+
+-- an invisible part for a ring-shaped emitter (from an attachment an emitter emits from a point). It
+-- follows the root (a player may shift a few studs while cultivating, QiService.STILL_RADIUS);
+-- grounded: the "ground" spinner moves it instead, on the floor under the feet.
+local function host(fx, root, r, h, y, grounded)
     local part = Instance.new("Part")
     part.Name = "EmitterHost"
     part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch = true, false, false, false
@@ -165,6 +150,9 @@ local function host(fx, root, r, h, y)
     part.Size = Vector3.new(r * 2, h, r * 2)
     part.CFrame = root.CFrame * CFrame.new(0, y, 0)
     part.Parent = fx
+    if not grounded then
+        table.insert(spinners, { kind = "follow", part = part, root = root, offset = CFrame.new(0, y, 0), speed = 0, angle = 0 })
+    end
     return part
 end
 
@@ -187,8 +175,6 @@ local function hasMesh(name)
     local library = meshLibrary()
     return library ~= nil and library:FindFirstChild(name, true) ~= nil
 end
-
-local spinners = {}
 
 local topTier, signature -- below
 
@@ -594,7 +580,7 @@ local function realm4(root, fx, tint, p)
     -- two ground smokes rippling out past the seal (the owner: "2 different type of smoke in the
     -- ground, bigger than the circle, like a ripple"):
     -- 1. the ripple: a wispy ring of smoke lying flat, expanding from 6 to ~19 studs as it fades
-    local rippleHost = host(fx, root, 0.1, 0.1, -2.85)
+    local rippleHost = host(fx, root, 0.1, 0.1, -2.85, true)
     local ripple = emitter(rippleHost, { Name = "SmokeRipple", Texture = TEX.SmokeRipple,
         Color = ColorSequence.new(Color3.fromRGB(150, 95, 230)), LightEmission = 0.45, LightInfluence = 0,
         Orientation = Enum.ParticleOrientation.VelocityPerpendicular, EmissionDirection = Enum.NormalId.Top,
@@ -1039,8 +1025,6 @@ local function step(dt)
                     s.sparkAt = 0.08 + math.random() * 0.06
                 end
             end
-        elseif s.kind == "seal" then        -- Realm 4's seal: still, following the character
-            s.part.CFrame = s.root.CFrame * CFrame.new(0, -2.95, 0)
         elseif s.kind == "meditate" then    -- Realm 4's ground smoke: idle or meditating
             local player = s.model and Players:GetPlayerFromCharacter(s.model)
             local on = if player then player:GetAttribute("IsCultivating") == true
@@ -1094,9 +1078,11 @@ local function step(dt)
             s.highlight.OutlineTransparency = s.line + 0.18 * out
             s.highlight.FillTransparency = s.fill + 0.04 * out
             s.light.Brightness = s.glow * (1 - 0.35 * out)
+        elseif s.kind == "follow" then      -- an emitter host, keeping its place round the root
+            s.part.CFrame = s.root.CFrame * s.offset
         elseif s.kind == "crown" then       -- turning in its own plane, behind the head
             s.part.CFrame = s.root.CFrame * CFrame.new(s.offset) * CFrame.Angles(0, 0, s.angle)
-        else
+        else                                -- "sigil": a disc turning flat at the feet
             s.part.CFrame = s.root.CFrame * CFrame.new(0, -2.95, 0) * CFrame.Angles(0, s.angle, 0)
         end
     end
@@ -1181,8 +1167,6 @@ function RealmAura.build(root, realm, sub, options)
     return fx
 end
 
-RealmAura.Textures = TEX
-RealmAura.realmCount = #AuraConfig.Tiers
 -- the body aura on its own (OwnerAura wears it): builds on root's character, cleaned up when fx goes;
 -- returns a function that removes it at once
 RealmAura.bodyAura = bodyAura

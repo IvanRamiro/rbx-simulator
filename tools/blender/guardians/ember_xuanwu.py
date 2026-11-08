@@ -1,7 +1,7 @@
 """The Ember Xuanwu, Ember Peak's guardian (run inside Blender). The idea: the Black Tortoise of
 the north, gone to the volcano. A colossal tortoise whose shell has become a small volcano: the
-carapace is a dome of black basalt columns, stepped up into a cone whose crater cradles the egg,
-and between every column the magma inside the shell shows through, glowing. Round the shell coils
+carapace is a dome of black basalt columns, stepped up into a cone round a crater pool of magma (it holds
+no egg: the eggs are on the island's stands), and between every column the magma inside the shell shows through, glowing. Round the shell coils
 its companion, a molten serpent: a body of cooled black crust broken into bands, the lava of it
 glowing between them. The serpent rises from the coil over the volcano's flank and looks down at
 whoever comes; the tortoise's own head is a heavy beaked skull crowned with basalt columns, its
@@ -418,7 +418,7 @@ def body(coll, M):
     middle = core.v((cx, POOL_Y, cz))
     for j in range(around):
         core.facing([middle, grid[0][j], grid[0][(j + 1) % around]], [(0.5, 0.5), (0, 0), (1, 0)], (0, 1, 0))
-    # the crater: broken stubs of columns standing in the pool round the egg's cradle
+    # the crater: broken stubs of columns standing round its pool
     for k in range(9):
         a = TAU * k / 9 + rnd.uniform(-0.15, 0.15)
         rr = rnd.uniform(2.45, 2.85)

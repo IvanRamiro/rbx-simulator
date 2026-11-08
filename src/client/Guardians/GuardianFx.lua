@@ -35,14 +35,13 @@ local colorSequence = AuraKit.colorSequence
 
 local GuardianFx = {}
 
-GuardianFx.TEXTURES = {
+local TEXTURES = {
     Fog = "rbxassetid://14050223758",       -- a soft billowing puff
     Glow = "rbxassetid://135169457468310",
     Streak = "rbxassetid://115312010132075",
     Slash = "rbxassetid://77516609955713",  -- QiSlash (tools/blender/vfx/combat_textures.py)
     Leaf = "rbxassetid://126547188247220",  -- BambooLeaf (combat_textures.py)
 }
-local TEXTURES = GuardianFx.TEXTURES
 local DUST = Color3.fromRGB(196, 190, 178)
 local DUST_DARK = Color3.fromRGB(142, 136, 126)
 local LEAF = Color3.fromRGB(96, 168, 70)
@@ -63,11 +62,10 @@ local fxFolder = Instance.new("Folder")
 fxFolder.Name = "GuardianFx"
 fxFolder.Parent = Workspace
 
-function GuardianFx.near(position)
+local function near(position)
     local camera = Workspace.CurrentCamera
     return camera ~= nil and (camera.CFrame.Position - position).Magnitude <= MAX_DISTANCE
 end
-local near = GuardianFx.near
 
 local function host(cframe, life)
     local part = Instance.new("Part")
@@ -79,7 +77,6 @@ local function host(cframe, life)
     Debris:AddItem(part, life)
     return part
 end
-GuardianFx.host = host
 
 local function emitter(parent, properties)
     local e = Instance.new("ParticleEmitter")

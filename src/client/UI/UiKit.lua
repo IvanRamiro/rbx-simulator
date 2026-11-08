@@ -3,9 +3,7 @@
 --                               (Brackets = false: none)
 --   content(panel, x, y)        a padded frame inside a panel, for its content
 --   header(parent, text, props) a bracketed header: a line, [ TEXT ], a line
---   glow(label, color)          a soft glow round a label's letters
---   icon(image, size, tone)     a box holding a full-colour icon (UiTheme.Icons; "Accent", "Danger",
---                               "Highlight")
+--   icon(image, size, tone)     a box holding a full-colour icon (UiTheme.Icons; "Accent" or "Danger")
 --   label(props)                text in a theme font (Font = a UiTheme.Fonts name)
 --   button(props)               an action: "Primary" (the one main action, with a halo), "Accent",
 --                               "Highlight" (a breakthrough, with a halo), "Quiet", "Danger"; on hover
@@ -179,13 +177,6 @@ function UiKit.label(props)
     return label
 end
 
--- A soft glow round a label's letters, as projected light (the header font is thin)
-function UiKit.glow(label, color)
-    local halo = stroke(label, color or C.Edge, 0.6, 1)
-    halo.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
-    return halo
-end
-
 -- A header across its parent: a fading line, TEXT, a fading line. props: Color,
 -- TextSize, and any Frame properties (Position, Size, LayoutOrder ...).
 function UiKit.header(parent, text, props)
@@ -232,7 +223,6 @@ end
 local TONES = {
     Accent = { C.AccentDeep, C.Accent, C.AccentBright },
     Danger = { C.DangerDeep, C.Danger, C.Text },
-    Highlight = { Color3.fromRGB(80, 60, 16), C.Highlight, C.Highlight },
 }
 
 function UiKit.icon(image, size, tone)

@@ -223,12 +223,6 @@ def crescent(side, n):
     return out
 
 
-def in_crescent(side, x, z):
-    t = (np.asarray(x) - side * EYE_X) / EYE_A
-    arch = EYE_B * np.clip(1 - t * t, 0, 1)
-    return (np.abs(t) < 1) & (z < EYE_Z + arch) & (z > EYE_Z + 0.34 * arch)
-
-
 def build_mask(name, coll, step, n_outline, n_eye, back_rings):
     """The mask's face, triangulated round the crescents so each slit is a clean edge, with a wall and a dark floor behind it, and a plain back."""
     outline = []
@@ -808,7 +802,6 @@ def paint_mask(o):
     P = verts(o)
     Nn = normals(o)
     x, y, z = P[:, 0], P[:, 1], P[:, 2]
-    p = (z - MASK_Z) / MASK_H
     col = np.tile(IVORY, (len(P), 1))
     col = mix(col, IVORY_D, smooth(0.42, 0.7, fbm(P, 15.0, 3, 3)) * 0.26)      # old lacquer, yellowing unevenly
     # painted, as such masks are: high smudged brows, rouge, a very small mouth that has decided something
@@ -892,7 +885,6 @@ def paint_arms(o):
     P = verts(o)
     Nn = normals(o)
     col = np.zeros((len(P), 3))
-    rough = np.full(len(P), 0.86)
     best = np.full(len(P), 9.0)
     f = np.zeros(len(P))
     for side in (1, -1):
@@ -900,7 +892,6 @@ def paint_arms(o):
         ff, dd = nearest_on(path, P)
         take = dd < best
         best[take], f[take] = dd[take], ff[take]
-    thin = best < 0.031
     bare = np.zeros(len(P), bool)
     for side in (1, -1):
         wrist = np.array(tuple(mir(ARM[2], side)))

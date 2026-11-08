@@ -185,7 +185,6 @@ def fo_chain(hi, path, count, length, width, wire, mat=0, skip=None):
             ca, sa = math.cos(a), math.sin(a)
             p = along * (length / 2 - width / 2 + width / 2 * abs(ca)) * (1 if ca > 0 else -1) + across * (width / 2) * sa
             out = (along * ca + across * sa).normalized()
-            tang = out.cross(along.cross(across)).normalized()
             third = along.cross(across).normalized()
             rings.append([hi.v(centre + p + (out * math.cos(TAU * r / sides) + third * math.sin(TAU * r / sides)) * wire) for r in range(sides)])
         for q in range(steps):
@@ -250,7 +249,6 @@ def fo_pieces(coll):
     for k in range(len(key)):
         g.f([rim[k], rim[(k + 1) % len(key)], top], [(0, 0), (1, 0), (0, 1)])
     # glyph strokes of the middle ring as Neon, the ones either side of the seal
-    fn_strokes = []
     for k in range(FO_COUNT):
         ss0 = k / FO_COUNT
         if abs(((ss0 + 0.5 / FO_COUNT - FO_SEAL[0] + 0.5) % 1.0) - 0.5) * 6.3 < 0.62:
@@ -304,7 +302,7 @@ def vr_outline():
 
 def void_paint():
     f = F.Field()
-    P, S, Vv = f.P, f.S, f.V
+    P, S = f.P, f.S
     warp = np.stack([F.fbm(P, 1.4, 3, seed=s) for s in (621, 622, 623)], -1) * 0.22
     swirl = np.clip(F.fbm(P + warp, 1.6, 4, seed=624) * 1.3 + 0.5, 0, 1)
     # polished void glass: almost black, a faint blue and violet sheen moving through it
@@ -462,7 +460,6 @@ def primordial_paint():
     grain = F.fbm(P * np.array((1.0, 2.6, 1.0)), 6.0, 4, seed=663)
     fine = F.fbm(P, 30.0, 3, seed=664)
     # each layer's face slopes, overhangs a little and is lipped at its top: terraces, not stripes
-    face = np.clip(t * 1.1, 0, 1)
     height = tops[idx] + 0.03 * np.sin(np.pi * np.clip(t, 0, 1)) ** 0.5 - 0.024 * (1 - F.sstep(0.0, 0.08, t)) + 0.01 * grain + 0.003 * fine
     # dark shale, ochre, rust, pale limestone, slate, a thin red iron bed: rocks you would see in a cliff
     palette = (("1f1a18", "3c302a"), ("9c7848", "c9a56c"), ("33241d", "573e30"), ("15141a", "2f2d36"), ("7d3f22", "b5622f"), ("bfae8e", "ded0ae"), ("23212a", "434050"), ("8a2e1c", "b8482a"),
@@ -491,13 +488,11 @@ def primordial_paint():
     # how far along the coil: which whorl is this point in, and where within it
     w = (np.log(np.maximum(r, 1e-3) / 0.56) / k) / TAU        # 0 at the rim, negative going in
     u = (w - ang / TAU) % 1.0                                  # 0..1 across a whorl
-    along = ang + (np.floor(w - ang / TAU) * TAU)
     # the shell's ribs: many, curved, running across each whorl
     ribs = 0.5 + 0.5 * np.cos(ang * 26.0 + np.log(np.maximum(r, 1e-3)) * 42.0)
     rounded = np.sin(np.pi * u) ** 0.55            # each whorl a rounded tube
     groove = 1 - F.sstep(0.0, 0.06, np.minimum(u, 1 - u))
     shell_h = 0.07 * rounded + 0.012 * ribs * rounded
-    centre = 1 - F.sstep(0.015, 0.05, r)
     fossil = F.ramp(np.clip(0.34 + 0.48 * rounded + 0.16 * (ribs - 0.5) + fine * 0.2, 0, 1), [(0.0, "2e2015"), (0.35, "6c4f33"), (0.7, "b08d62"), (1.0, "e0c79c")])
     fossil = F.mix(fossil, np.array((0.04, 0.02, 0.02)), groove * 0.8)
     # the seam of light down the grooves

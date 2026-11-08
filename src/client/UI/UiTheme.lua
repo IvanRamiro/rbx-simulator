@@ -42,18 +42,15 @@ UiTheme.Ornaments = {
 UiTheme.Margin = 16 -- from the screen's edges
 
 -- The icons: original full-colour pictures (tools/ui/draw_icons.py, assets/ui/icons; ids in icons.json),
--- shown untinted. No text in any language on an icon.
+-- shown untinted. No text in any language on an icon. (icons.json also lists the ones the HUD doesn't show.)
 UiTheme.Icons = {
     Qi = "rbxassetid://92441554457364", -- a flame of energy
     Stones = "rbxassetid://115509307959601",    -- a faceted crystal
     Relics = "rbxassetid://120244333350364",     -- a jade disc on its cord
     Pets = "rbxassetid://86159942849787", -- a spirit fox
     Robes = "rbxassetid://74536498666359", -- a crossed-collar robe
-    Qinggong = "rbxassetid://115713809878403", -- a diving swallow
     Guardian = "rbxassetid://87780403658411",  -- a shield with a beast's eye
     Hatch = "rbxassetid://93316116947603",      -- a cracked egg
-    Shop = "rbxassetid://86121773247188", -- the Jade Scale
-    Forge = "rbxassetid://83033475878685",      -- hammer and anvil
     Quest = "rbxassetid://95203744242297", -- an open scroll with a seal
     Settings = "rbxassetid://92494124873013", -- a dial of lotus petals
     Rewards = "rbxassetid://119590867507093", -- a gold ingot

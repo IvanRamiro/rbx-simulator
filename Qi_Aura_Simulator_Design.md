@@ -475,7 +475,7 @@ Each kind has its own visual purpose. None is a recolour of another.
 - **Culling:** other players' auras switch off past 120 studs from the camera. Roblox draws at most 31 Highlights per client.
 - **One source of truth:** the Studio test range (`workspace.AuraTestRange`) uses the same module, so a realm enhanced there is the realm the game shows.
 
-**Pet designs over the realm aura:** an equipped Aqua Wisp or Ember Wyrm adds its design (below) on top of the realm aura while the player meditates. The default (Verdant Gale) and the element-coloured flame aura no longer show; the realm aura is the cultivation look.
+**Pet designs over the realm aura:** an equipped Aqua Wisp or Ember Wyrm adds its design (below) on top of the realm aura while the player meditates. The element-coloured flame aura no longer shows, and the old default (Verdant Gale) was removed on November 8, 2026; the realm aura is the cultivation look.
 
 **Character auras** (one module per aura, all on the `CharacterAura` interface: build, show, hide, pulse, update, destroy)
 
@@ -490,7 +490,6 @@ Each kind has its own visual purpose. None is a recolour of another.
 |---|---|---|---|
 | Aqua Wisp | **Tidecaller Sanctum** | The player meditates on a blooming water lotus inside a tidal vortex over a pool of caustic light. Spirit koi join at the charged stage; a breaking-wave crown and four water spouts rise when awakened. | `TidecallerAura.lua` |
 | Ember Wyrm | **Ember Crucible** | Fast-spinning ember slashes and cloud under the player; rising debris, sparkles, a twin vortex of energy beams and body flames. The spirit bead wyrm and orbit trails join when charged; a molten fire halo forms behind the head when awakened. | `EmberCrucibleAura.lua` |
-| No aura pet | **Verdant Gale** (default) | A lime swirl and slash ring spinning on the ground, a twisting wind wisp rising through the body, rising streaks, a soft lime glow and light. | `VerdantGaleAura.lua` |
 
 **Pet auras:** each equipped pet of a cultivating player shows its own element's aura (`src/client/Auras/AuraBuilder.lua`). Aqua Wisp and Golden Kirin are done.
 

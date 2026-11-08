@@ -11,7 +11,6 @@ Authored in Roblox studs: standing, facing -Z, its feet on the ground at y = 0, 
 """
 import math
 import os
-import random
 
 import bpy
 from mathutils import Matrix, Vector
@@ -409,7 +408,6 @@ def build_hi():
     h = Hm.Hi()
     Hm.htube(h, [(0, 14.5, 0.46), (0, 15.2, 0.03), (0, 15.84, -0.36), (0, 16.7, -0.88), (0, 17.63, -1.45)], lambda q: 1.52 + 0.53 * (1 - q) ** 1.6, sides=16, per=3, uv_scale=1.0, tip=False, wobble=0.0)
     add("Skin", h, "NeckSheath", M["bamboo"], bone="Pro1")
-    rnd = random.Random(31)
     # ---- the limbs: rigid culms turning at ball joints
     for side, tag in ((-1, "Left"), (1, "Right")):
         S, Tr, Kn, K2, Wr, Tp = V(B[tag + "Coxa"][1]), V(B[tag + "Femur"][1]), V(B[tag + "Femur"][2]), V(B[tag + "Tibia"][1]), V(B[tag + "Tibia"][2]), V(B[tag + "Tarsus"][2])
@@ -1049,7 +1047,7 @@ def write_clips(path=None):
         lines.append(name + "=" + _lua(_vals(pose, shift, base)) + ",")
     lines.append("}")
     standv = _vals(stand, s0, base)
-    lines.append("Clips.Stand = " + _lua(standv))
+    # (not written: the game never reads the standing pose; it is the Guardian pose, and the gaits are measured from it)
     lines.append("Clips.Gaits = {")
     for name in GAITS:
         table = {n: [] for n in _joints()}
@@ -1214,7 +1212,6 @@ def bake_piece(name, hi, low):
     """Each limb is baked by itself, moved far from the others: a culm sits inside its neighbour at the joint, and what was hidden there comes into view when
     the joint turns, so it must not bake dark. The materials read object coordinates and UVs, so moving the objects changes nothing else."""
     import egg_bake as B
-    import numpy as np
     bpy.context.scene.cycles.device = "GPU"
     names = {g.index: _group_of(g.name) for g in low.vertex_groups}
     keys = sorted(set(names.values()))

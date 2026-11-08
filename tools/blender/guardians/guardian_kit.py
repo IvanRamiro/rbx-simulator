@@ -65,15 +65,6 @@ def capsule_lobes(a, b, r0, r1, n=5):
     return out
 
 
-def surface_down(obj, x, z, from_y=40.0):
-    """Where a ray straight down at (x, z) meets obj, and the surface normal there (Roblox space)."""
-    tree = BVHTree.FromObject(obj, bpy.context.evaluated_depsgraph_get())
-    hit, normal, _, _ = tree.ray_cast(W.rb(x, from_y, z), V((0, 0, -1)))
-    if hit is None:
-        return None, None
-    return V(K.rb_inv(*hit)), V(K.rb_inv(*normal))
-
-
 def surface_along(obj, near, normal, reach=6.0):
     """Where the line through `near` along `normal` leaves obj's surface outward (Roblox space): cast
     back toward obj from `reach` out."""
@@ -89,21 +80,6 @@ def frame(normal):
     ref = V((0, 1, 0)) if abs(n.y) < 0.9 else V((1, 0, 0))
     s = n.cross(ref).normalized()
     return n, s, n.cross(s).normalized()
-
-
-def curl(hi, centre, normal, radius, turns=1.6, thick=0.22, spin=1, phase=0.0):
-    """A carved spiral curl lying on a surface: a tube winding in from `radius`, standing proud."""
-    n, s, t = frame(normal)
-    c = V(centre)
-    pts = []
-    steps = 28
-    for i in range(steps + 1):
-        k = i / steps
-        a = phase + spin * TAU * turns * k
-        r = radius * (1 - 0.82 * k)
-        pts.append(c + (s * math.cos(a) + t * math.sin(a)) * r + n * thick * 0.6 * (1 - 0.4 * k))
-    Hm.htube(hi, pts, lambda k: thick * (1 - 0.55 * k), sides=7, per=1, uv_scale=3.0, tip=True, wobble=0.0)
-    sphere(hi, pts[0], thick, nu=8, nv=6)                  # the outer end rounded off, not an open tube
 
 
 def on_ellipsoid(centre, radii, u, v):
@@ -238,12 +214,6 @@ def wisp(hi, base, direction, up, length, radius, rnd, sides=6):
            V(base) + d * length * 0.95 + u * length * 0.32]
     Hm.htube(hi, pts, lambda q: radius * (1.0 + 0.25 * math.sin(math.pi * min(1.0, q * 2.5))) * (1 - q) ** 0.85, sides=sides, per=3,
              uv_scale=1.0 / length, tip=True, wobble=0.0)
-
-
-def limb(a, b, r0, r1):
-    """Lobes along a limb, close enough that the merge reads as one smooth form."""
-    n = max(4, int((V(b) - V(a)).length / (0.45 * min(r0, r1))) + 1)
-    return capsule_lobes(a, b, r0, r1, n=n)
 
 
 def soften(o, iterations=14):

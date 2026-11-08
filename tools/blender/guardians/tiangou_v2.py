@@ -583,8 +583,6 @@ def set_pose(pose, root_shift=(0, 0, 0)):
         t = rb_rot(*pose.get(pb.name, (0, 0, 0)))
         w = parent_world @ t
         world[pb.name] = w
-        parent_rest = pb.parent.bone.matrix_local.to_3x3() if pb.parent else Matrix.Identity(3)
-        p_delta = parent_world
         # the bone's channel, in its own axes: rest^-1 * (parent's posed)^-1 ... as the delta from rest
         pb.rotation_quaternion = (rest.inverted() @ t @ rest).to_quaternion()
         for c in pb.children:
@@ -862,7 +860,6 @@ def _keep(obj):
 
 def build_final(voxel=0.13):
     """The high-detail pieces, ready to bake: {piece: [objects]}, and the glow pieces {name: (object, hex)}."""
-    import egg_bake as B
     clear()
     coll = bpy.data.collections.new("TiangouV2")
     bpy.context.scene.collection.children.link(coll)

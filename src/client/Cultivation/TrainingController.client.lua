@@ -159,6 +159,7 @@ local well = Hud.CultivationEmblemWell
 local WELL_AT_REST, FIGURE_AT_REST = well.BackgroundColor3, dock.Emblem.ImageColor3
 local RING_TURN = 40 -- degrees a second
 local turning = nil
+local sweeping = 0 -- the active look's sweep loop: a new one stops any still waiting from before
 
 local function shapeCultivateText()
     local size = dock.Size
@@ -176,8 +177,10 @@ local function updateCultivateButton()
         turning = RunService.RenderStepped:Connect(function(dt)
             dock.Ring.Rotation = (dock.Ring.Rotation + RING_TURN * dt) % 360
         end)
+        sweeping += 1
+        local mine = sweeping
         task.spawn(function()
-            while isCultivating() and cultivateButton.Parent do
+            while mine == sweeping and isCultivating() and cultivateButton.Parent do
                 UiFx.sweep(cultivateButton, Color3.new(1, 1, 1), 0.9)
                 task.wait(1.4)
             end

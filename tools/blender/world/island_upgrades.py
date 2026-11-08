@@ -25,9 +25,7 @@ import bpy
 
 import ember_island as E
 import ember_meshes as EM
-import jade_island as J
 import jade_meshes as JM
-import moon_island as M
 import moon_meshes as MM
 import origin_island as O
 import origin_meshes as OM
@@ -395,7 +393,7 @@ def moon_gate(coll, mat, bands):
     """A great moon gate on the lip of the bay, behind the eggs: a porcelain ring banded in gold on a stepped marble plinth, a crescent on its
     crown, the empty sky seen through it. It faces +Z."""
     mb = W.MeshBuilder()
-    marble, gold, porcelain, moonstone, night = bands[MM.MARBLE], bands[MM.GOLD], bands[MM.PORCELAIN], bands[MM.MOONSTONE], bands[MM.NIGHT]
+    marble, gold, porcelain, moonstone = bands[MM.MARBLE], bands[MM.GOLD], bands[MM.PORCELAIN], bands[MM.MOONSTONE]
     # the plinth, three broad steps, walkable and open through the ring
     for k, (w, d, y) in enumerate(((30.0, 15.0, 0.3), (24.0, 11.5, 1.05), (19.0, 8.0, 1.75))):
         mb.box((0, y, 0), (w, 0.75, d), marble, u=0.2 + k * 0.2, top_shade=0.95, side_shade=0.62)

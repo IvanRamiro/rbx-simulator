@@ -29,7 +29,7 @@ REPO = os.path.abspath(os.path.join(HERE, "..", "..", "..", ".."))
 EE = os.path.join(REPO, "tools", "blender", "ugc", "eclipse_exorcist")
 if EE not in sys.path:
     sys.path.append(EE)
-import ee_bake as B  # noqa: E402
+import ee_bake as B  # noqa: E402,F401  (run_v3 takes it from here: H.B)
 import ee_kit as K  # noqa: E402
 
 V = Vector
@@ -227,41 +227,6 @@ def along(points, t):
     return pts[-1].copy()
 
 
-def mass(mesh, paths, rows, thick, mat=0, centre=HEAD_C, smooth=0.01):
-    """A sculpted mass of hair: a surface swept through `paths` (one curve per column, across the
-    mass, each from its root to its own tip, so the lower edge takes the shape the tips give it),
-    given thickness thick(s, t) (s across 0..1, t root to tip 0..1) about that surface. Thickness 0
-    on every edge closes it: the outer and inner faces meet there in one watertight shell.
-    UVs: u across, v from root to tip."""
-    cols = len(paths)
-    curves = [K.resample([V(p) for p in c], smooth) for c in paths]
-    mid = [[along(c, j / rows) for c in curves] for j in range(rows + 1)]
-
-    def normal(j, i):
-        a = mid[j][min(i + 1, cols - 1)] - mid[j][max(i - 1, 0)]
-        b = mid[min(j + 1, rows)][i] - mid[max(j - 1, 0)][i]
-        n = a.cross(b)
-        if n.length < 1e-9:
-            n = mid[j][i] - centre
-        n.normalize()
-        return n if n.dot(mid[j][i] - centre) >= 0 else -n
-    nrm = [[normal(j, i) for i in range(cols)] for j in range(rows + 1)]
-    outer, inner, uvs = [], [], []
-    for j in range(rows + 1):
-        orow, irow, uvrow = [], [], []
-        for i in range(cols):
-            h = thick(i / (cols - 1), j / rows) / 2
-            orow.append(mid[j][i] + nrm[j][i] * h)
-            irow.append(mid[j][i] - nrm[j][i] * h)
-            uvrow.append((i / (cols - 1), j / rows))
-        outer.append(orow)
-        inner.append(irow)
-        uvs.append(uvrow)
-    mesh.grid(outer, uvs, mat, closed=False, outward=lambda j, i, c: nrm[j][i])
-    mesh.grid(inner, uvs, mat, closed=False, outward=lambda j, i, c: -nrm[j][i])
-    return mid
-
-
 def lens(s, t, peak=1.0, root=0.12, tip=0.75):
     """A thickness profile for a mass: 0 on its edges, full across the middle, thinning toward its
     tips (from `tip` on) and opening quickly from its root."""
@@ -277,50 +242,6 @@ def lobes(c, centres, slope):
 
 
 BLADE_LOW = [math.radians(a) for a in (90, 206, 334)]   # spine out, two edges: three sides
-
-
-def strand(mesh, pts, width, thick, step, hi, mat=0, up=None, curl=0.0, flick=0.0, seed=0, swell=0.3, root=0.7):
-    """A blade-shaped lock of hair (flat toward the head, a spine outward), the way anime hair is
-    drawn: through the control points `pts`, `width` across and `thick` deep at its widest (about
-    `swell` along), pointed at its tip. up(p) is its outward direction at a point (default: away
-    from the head's centre). curl bends it sideways in an S as it falls; flick turns its tip out.
-    Game mesh: three sides; high detail: a smooth blade with strand grooves.
-    UVs: u round the lock, v from 0 at the root to 1 at the tip."""
-    import random as _r
-    rnd = _r.Random(seed)
-    base = K.resample([V(p) for p in pts], 0.01)
-    n0 = len(base)
-    upf = up or (lambda p: (p - HEAD_C).normalized())
-    ph = rnd.uniform(0, TAU)
-    bent = []
-    for k, p in enumerate(base):
-        u = k / (n0 - 1)
-        t = (base[min(k + 1, n0 - 1)] - base[max(k - 1, 0)]).normalized()
-        o = upf(p)
-        side = o.cross(t).normalized() if o.cross(t).length > 1e-6 else t.orthogonal().normalized()
-        bent.append(p + side * (curl * math.sin(u * math.pi * 1.6 + ph) * u) + o * (flick * smoothstep(0.65, 1.0, u) ** 2))
-    path = K.resample(bent, step)
-    if len(path) < 4:
-        path = K.resample(bent, max(0.02, (sum((b - a).length for a, b in zip(bent, bent[1:])) / 3.2)))
-    n = len(path)
-
-    def shape(k, nn):
-        u = k / (nn - 1)
-        grow = root + (1 - root) * math.sin(min(u / swell, 1.0) * math.pi / 2)
-        return grow * (1 - smoothstep(swell, 1.0, u)) ** 1.2 if k < nn - 1 else 0.0
-
-    def wide(k):
-        t = path[min(k + 1, n - 1)] - path[max(k - 1, 0)]
-        return upf(path[k]).cross(t)
-    ridge = None
-    if hi:
-        g = [rnd.uniform(0, TAU) for _ in range(2)]
-
-        def ridge(k, nn, ang):
-            u = k / (nn - 1)
-            return (0.0015 * abs(math.sin(ang * 9 + g[0] + 3 * u)) + 0.002 * abs(math.sin(ang * 3 + g[1])) + 0.0012) * (1 - u ** 4)
-    return lock(mesh, path, lambda k, nn: width * shape(k, nn), lambda k, nn: thick * shape(k, nn) ** 0.5,
-                16 if hi else 3, wide, mat, ridge, uv_norm=True, angles=None if hi else BLADE_LOW, under=0.3)
 
 
 def ribbon(mesh, path, width, wide, mat=0, notch=0.0, cols=2):
@@ -350,45 +271,6 @@ def ribbon(mesh, path, width, wide, mat=0, notch=0.0, cols=2):
 
 # ---------- materials ----------
 G = K.G
-
-
-def mat_hair(name, dark=(0.006, 0.006, 0.009), light=(0.045, 0.047, 0.066), sheen=(0.11, 0.115, 0.15), strands=55.0,
-             tip=None, tip_from=0.55):
-    """Black hair (UVs: u across the strands, v along them, 0 at the root and 1 at the tip):
-    fine strands of slightly different darkness, clumps catching a broken sheen on their upper
-    faces, the clefts between locks going to black. tip: the colour the ends turn toward (each clump
-    by its own amount)."""
-    g = G(name)
-    uv = g.coords("UV")
-    u, v, _ = g.sep(uv)
-    st = g.n("ShaderNodeTexNoise", **{"Scale": 1.0, "Detail": 3.0, "Roughness": 0.55})
-    vec = g.n("ShaderNodeCombineXYZ")
-    g.link(g.math("MULTIPLY", u, strands), vec.inputs[0])
-    g.link(g.math("MULTIPLY", v, 1.4), vec.inputs[1])
-    g.link(vec.outputs[0], st.inputs["Vector"])
-    fine = st.outputs["Fac"]
-    clump = g.n("ShaderNodeTexNoise", **{"Scale": 1.0, "Detail": 1.0})
-    vec2 = g.n("ShaderNodeCombineXYZ")
-    g.link(g.math("MULTIPLY", u, strands * 0.12), vec2.inputs[0])
-    g.link(g.math("MULTIPLY", v, 0.5), vec2.inputs[1])
-    g.link(vec2.outputs[0], clump.inputs["Vector"])
-    col = g.mix(g.math("POWER", fine, 1.6), dark, light)
-    # the sheen: where a clump faces up and its strands are lighter, broken along the strands
-    geo = g.n("ShaderNodeNewGeometry")
-    up = g.sep(geo.outputs["Normal"])[2]
-    shine = g.math("MULTIPLY", g.math("SUBTRACT", up, 0.15, clamp=True),
-                   g.math("MULTIPLY", g.math("SUBTRACT", clump.outputs["Fac"], 0.42, clamp=True), 3.0))
-    shine = g.math("MULTIPLY", g.math("MINIMUM", shine, 1.0), g.math("SUBTRACT", fine, 0.25, clamp=True))
-    col = g.mix(g.math("MINIMUM", shine, 0.5), col, sheen)
-    if tip:
-        each = g.math("ADD", 0.35, g.math("MULTIPLY", geo.outputs["Random Per Island"], 0.65))
-        toward = g.math("MULTIPLY", g.math("SUBTRACT", v, tip_from, clamp=True), 1.0 / (1.0 - tip_from))
-        tint = g.math("MULTIPLY", g.math("MULTIPLY", toward, toward), each)
-        lit = g.mix(fine, tip, tuple(min(1.0, c * 1.8) for c in tip))
-        col = g.mix(g.math("MINIMUM", tint, 0.9), col, lit)
-    col = g.ao(col, 0.05, 0.12)
-    rough = g.math("ADD", 0.46, g.math("MULTIPLY", fine, 0.2))   # a soft sheen, not wet plastic
-    return g.finish(col, rough, 0.0, g.bump(fine, 0.35, 0.0015))
 
 
 def mat_anime_hair(name, root=(0.004, 0.0026, 0.0032), body=(0.018, 0.011, 0.013), shine=(0.07, 0.046, 0.052),

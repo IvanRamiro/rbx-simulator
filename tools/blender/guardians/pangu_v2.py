@@ -1714,7 +1714,7 @@ def write_clips(path=None):
         lines.append(name + "=" + _lua(_vals(pose, shift, base)) + ",")
     lines.append("}")
     standv = _vals(stand, s0, base)
-    lines.append("Clips.Stand = " + _lua(standv))
+    # (not written: the game never reads the standing pose; the gaits are measured from it)
     lines.append("Clips.Gaits = {")
     for name in GAITS:
         table = {n: [] for n in _joints()}

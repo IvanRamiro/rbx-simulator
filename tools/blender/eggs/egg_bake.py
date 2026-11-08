@@ -5,7 +5,7 @@ are made:
    leaves and petals keep more of theirs), joined into one game mesh, unwrapped.
 2. bake: colour (with the shaders' ambient occlusion), tangent-space normal, roughness and
    metalness, from the high-detail pieces onto the game mesh (Cycles, selected to active).
-3. export: assets/eggs/<EggId>.fbx holding "<EggId>_Body" (the game mesh wearing the colour and
+3. export: EGG_DIR/<EggId>.fbx (each caller sets the folder) holding "<EggId>_Body" (the game mesh wearing the colour and
    normal maps, which Studio's importer turns into a SurfaceAppearance) and one
    "<EggId>_Glow_<rrggbb>" piece per glow colour (Neon in the game), plus <EggId>_color.png,
    _normal.png, _roughness.png and _metalness.png next to it (the last two are set on the
@@ -19,7 +19,7 @@ import bpy
 import egg_kit as K
 
 W = K.W
-EGG_DIR = K.EGG_DIR
+EGG_DIR = None  # the folder bake() and export() write to: each caller sets it, and puts it back after
 
 
 def tris(obj):
@@ -207,6 +207,7 @@ def bake(egg_id, hi_objects, low, size=1024, small=512, samples=12, extrusion=0.
         for r, v in saved_rays.items():
             setattr(low, r, v)
     wire_baked(mat)
+    assert EGG_DIR, "egg_bake.EGG_DIR: set the folder the maps go to"
     os.makedirs(EGG_DIR, exist_ok=True)
     for key, img in images.items():
         img.filepath_raw = os.path.join(EGG_DIR, egg_id + "_" + key + ".png")
@@ -216,7 +217,8 @@ def bake(egg_id, hi_objects, low, size=1024, small=512, samples=12, extrusion=0.
 
 
 def export(egg_id, low, glow_objects, coll):
-    """assets/eggs/<EggId>.fbx: the baked body and one Neon piece per glow colour."""
+    """EGG_DIR/<EggId>.fbx: the baked body and one Neon piece per glow colour."""
+    assert EGG_DIR, "egg_bake.EGG_DIR: set the folder the FBX goes to"
     parts = [low]
     for hexstr, objs in glow_objects.items():
         if objs:

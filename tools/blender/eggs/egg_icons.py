@@ -11,7 +11,7 @@ import re
 import bpy
 from mathutils import Vector
 
-REPO = "/Users/ivan/qi-aura-simulator"
+REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))  # the repository, from tools/blender/<folder>/
 EGGS = ["BeginnerQiEgg", "SpiritBreezeEgg", "ElementalCoreEgg", "JadeSpiritEgg", "BloomwoodEgg", "AncientGroveEgg",
         "InfernoEgg", "MagmaHeartEgg", "PhoenixAshEgg", "CelestialEgg", "AstralSanctumEgg", "HeavenlyThroneEgg",
         "ForbiddenOriginEgg", "VoidRiftEgg", "PrimordialAbyssEgg"]

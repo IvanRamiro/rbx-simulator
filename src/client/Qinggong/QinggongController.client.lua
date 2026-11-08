@@ -108,9 +108,10 @@ local staminaText = UiKit.label({ -- on the bar's frame, not its track, which wo
 })
 
 local barHome = dock.Bar.Position
+local refusedUntil = 0 -- the bar shows white until then (updateStaminaBar keeps it)
 local function refuseDash()
     Sfx.play("Error")
-    staminaFill.BackgroundColor3 = Color3.new(1, 1, 1)
+    refusedUntil = os.clock() + 0.25
     task.spawn(function()
         for _, dx in { -4, 4, -3, 3, -1, 1, 0 } do
             dock.Bar.Position = barHome + UDim2.fromOffset(dx, 0)
@@ -194,7 +195,7 @@ local function updateStaminaBar()
     staminaFill.Size = UDim2.fromScale(share, 1)
     drawTicks(total)
     local low = stamina < qinggong.Dash.Cost
-    staminaFill.BackgroundColor3 = if low then STAMINA_LOW else STAMINA_COLOR
+    staminaFill.BackgroundColor3 = if os.clock() < refusedUntil then Color3.new(1, 1, 1) elseif low then STAMINA_LOW else STAMINA_COLOR
     staminaFill.BackgroundTransparency = if low then 0.25 + 0.25 * math.sin(os.clock() * 8) else 0
     staminaText.Text = "STAMINA  " .. math.floor(share * 100 + 0.5) .. "%"
 end

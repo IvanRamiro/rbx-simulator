@@ -429,17 +429,6 @@ def ember_gate(ox, mats):
 MOON_GLOW = "b9a8ff"
 
 
-def moon_slope():
-    """The Moonlit stairway's flights all climb at one slope (layout.py): the stair section is
-    built for it."""
-    nodes = L.bridge_nodes("MoonlitRoute")
-    best = 0.0
-    for a, b in zip(nodes, nodes[1:]):
-        d = math.hypot(b[0] - a[0], b[2] - a[2])
-        best = max(best, math.atan2(abs(b[1] - a[1]), d))
-    return best
-
-
 def crescent(hi, centre, radius, width=0.42, start=0.25, end=0.75, segments=20, axis="z"):
     """A crescent moon: a tube along an arc that thickens in its middle, facing along `axis`."""
     cx, cy, cz = centre
@@ -455,48 +444,8 @@ def crescent(hi, centre, radius, width=0.42, start=0.25, end=0.75, segments=20, 
     Hm.htube(hi, pts, lambda t: width * (0.15 + 0.85 * math.sin(math.pi * t)), sides=8, per=1, uv_scale=2.0, tip=False)
 
 
-def moon_stair(ox, mats):
-    """One section of the stairway. Its treads and posts are built level (the world's frame) and then
-    turned so the climb runs along the section's -z, as the builder lays it along the slope; its
-    stringers and gold handrail are built straight in the section's own frame. Moonstone treads
-    with gold nosings between the stringers, slim moonstone posts with gold crescents at its low
-    end, a gold handrail."""
-    from mathutils import Matrix, Vector as Vec
-    theta = moon_slope()
-    run, rise = SECTION * math.cos(theta), SECTION * math.sin(theta)
-    n = max(4, round(rise / 0.75))
-    stone, gold = Hm.Hi(), Hm.Hi()           # built level, then turned
-    frame_stone, frame_gold = Hm.Hi(), Hm.Hi()   # built in the section's frame
-    inner = DECK_WIDTH - 2.6
-    for i in range(n):
-        z0 = run / 2 - run * i / n
-        z1 = run / 2 - run * (i + 1) / n
-        top = -rise / 2 + rise * (i + 0.5) / n + 0.35   # the walking plane runs through the treads' middles
-        box(stone, (ox, top - 0.9, (z0 + z1) / 2), (inner, 1.8, abs(z1 - z0) + 0.02))
-        box(gold, (ox, top - 0.06, z0 - 0.12), (inner - 0.4, 0.14, 0.26))     # the gold nosing
-    for side in (-1, 1):
-        x = ox + side * (DECK_WIDTH / 2 - 0.65)
-        prism(stone, (x, -rise / 2 + 0.6, run / 2 - 0.4), 0.36, 3.0, sides=8, taper=0.85)     # plumb once laid
-        crescent(gold, (x, -rise / 2 + 4.0, run / 2 - 0.4), 0.55, width=0.16, axis="x")
-        box(frame_stone, (x, -0.4, 0), (1.3, 2.6, SECTION + 0.02))           # stringer
-        box(frame_gold, (x, 0.95, 0), (1.42, 0.14, SECTION + 0.02))          # its gold trim
-        box(frame_gold, (x, 3.0, 0), (0.24, 0.24, SECTION + 0.02))           # handrail
-    turned = [stone.object("MoonStair_Treads", mats.coll, [mats.stone], smooth=False),
-              gold.object("MoonStair_Nosings", mats.coll, [mats.gold], smooth=False)]
-    for o in turned:
-        chamfer(o, 0.05)
-        o.data.transform(Matrix.Translation(Vec((-ox, 0, 0))))
-        o.data.transform(Matrix.Rotation(-theta, 4, "X"))  # checked: the risers come out plumb, the tread tops level
-        o.data.transform(Matrix.Translation(Vec((ox, 0, 0))))
-    framed = [frame_stone.object("MoonStair_Stringers", mats.coll, [mats.stone], smooth=False),
-              frame_gold.object("MoonStair_Rails", mats.coll, [mats.gold], smooth=False)]
-    for o in framed:
-        chamfer(o, 0.05)
-    return turned + framed, []
-
-
 def moon_support(ox, mats):
-    """Under the stairway: a moonstone crescent hanging on two gold chains, a moon lantern glowing
+    """Under the bridge: a moonstone crescent hanging on two gold chains, a moon lantern glowing
     in its arms."""
     stone, gold, glow = Hm.Hi(), Hm.Hi(), Hm.Hi()
     cy, cr = -9.5, 4.6                    # the crescent hangs below the deck, its horns up
@@ -521,7 +470,7 @@ def moon_support(ox, mats):
 
 
 def moon_gate(ox, mats):
-    """The gate at the stairway's foot: two moonstone pillars ringed in gold, under a great gold
+    """The gate at the bridge's foot: two moonstone pillars ringed in gold, under a great gold
     crescent whose horns rise above them, a moon lantern at its heart."""
     stone, gold, glow = Hm.Hi(), Hm.Hi(), Hm.Hi()
     px = DECK_WIDTH / 2 + 1.6
@@ -834,7 +783,7 @@ class _Mats:
 
 def moon_deck(ox, mats):
     """A level section of the Moonlit bridge (it climbs only gently since the islands were levelled):
-    moonstone pavers with gold seams between the stringers, the stair's slim posts with gold
+    moonstone pavers with gold seams between the stringers, slim moonstone posts with gold
     crescents at its end, and the gold handrail."""
     stone, gold = Hm.Hi(), Hm.Hi()
     inner = DECK_WIDTH - 2.6
@@ -862,7 +811,7 @@ KITS = {
     "Jade": [("Deck", jade_deck), ("Support", jade_support), ("Gate", jade_gate)],
     "Ember": [("Deck", ember_deck), ("Support", ember_support), ("Gate", ember_gate)],
     "Origin": [("Deck", origin_deck), ("Support", origin_support), ("Gate", origin_gate)],
-    "Moon": [("Stair", moon_stair), ("Support", moon_support), ("Gate", moon_gate)],
+    "Moon": [("Support", moon_support), ("Gate", moon_gate)],      # its deck is in EXTRA_KITS (the bridge is level now; the stairway it had is gone)
     "Lion": [("Deck", lion_deck), ("Support", lion_support), ("Gate", lion_gate_kit)],
 }
 

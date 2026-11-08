@@ -97,8 +97,9 @@ local reward = UiKit.label({
     Name = "Reward", Font = "Strong", TextSize = 12, TextColor3 = C.AccentBright, Position = UDim2.fromOffset(23, 0),
     Size = UDim2.new(1, -93, 1, 0), Parent = footer,
 })
+local SKIP = "Skip" -- its label at rest (it asks "SURE?" when pressed once)
 local skip = UiKit.button({
-    Name = "Skip", Font = "Strong", TextSize = 11, Text = "Skip", Tone = "Quiet", AnchorPoint = Vector2.new(1, 0),
+    Name = "Skip", Font = "Strong", TextSize = 11, Text = SKIP, Tone = "Quiet", AnchorPoint = Vector2.new(1, 0),
     Position = UDim2.fromScale(1, 0), Size = UDim2.fromOffset(62, 22), Parent = footer,
 })
 
@@ -220,7 +221,7 @@ skip.Activated:Connect(function()
     skip.Text = "SURE?"
     task.delay(CONFIRM_SECONDS, function()
         if os.clock() >= armedUntil then
-            skip.Text = "SKIP"
+            skip.Text = SKIP
         end
     end)
 end)

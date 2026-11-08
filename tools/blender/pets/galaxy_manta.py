@@ -17,7 +17,7 @@ import sys
 import bmesh
 import bpy
 import numpy as np
-from mathutils import Matrix, Vector
+from mathutils import Matrix
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pet_kit

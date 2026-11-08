@@ -30,26 +30,11 @@ local function addLoop(aura, instance, seconds, goal)
     table.insert(aura.loops, tween)
 end
 
-local function newPart(aura, name, shape, size)
-    local part = Instance.new("Part")
-    part.Name = name
-    part.Shape = shape
-    part.Size = size
-    part.Anchored = true
-    part.CanCollide = false
-    part.CanQuery = false
-    part.CanTouch = false
-    part.CastShadow = false
-    part.Transparency = 1
-    part.CFrame = aura.rootPart.CFrame
-    part.Parent = aura.model
-    return part
-end
-
 local function measureBody(model, rootPart)
     local rootCFrame = rootPart.CFrame
-    local boxCFrame, boxSize = model:GetBoundingBox()
-    local feetY = rootCFrame:PointToObjectSpace(boxCFrame.Position).Y - boxSize.Y / 2
+    local low, high = AuraKit.bodyBounds(model, rootPart)
+    local boxSize = high - low
+    local feetY = low.Y
     local head = model:FindFirstChild("Head")
     local headTopY = if head and head:IsA("BasePart")
         then rootCFrame:PointToObjectSpace(head.Position).Y + head.Size.Y / 2
@@ -60,7 +45,7 @@ end
 
 local function createDroplet(aura, style, index)
     local textures = style.Textures
-    local part = newPart(aura, "Droplet" .. index, Enum.PartType.Ball, Vector3.one * style.DropletSize)
+    local part = AuraKit.newPart(aura, "Droplet" .. index, Vector3.one * style.DropletSize, Enum.PartType.Ball)
     part.Material = Enum.Material.Neon
     part.Color = style.Main:Lerp(style.Core, 0.3)
     addFade(aura, part, "Transparency", 0, 1)
@@ -206,7 +191,7 @@ local function meshPiece(aura, name, longest, fades)
     end
     local boxCFrame, boxSize = template:GetBoundingBox()
     local scale = longest / math.max(boxSize.X, boxSize.Y, boxSize.Z)
-    local root = newPart(aura, name, Enum.PartType.Block, Vector3.one * 0.2)
+    local root = AuraKit.newPart(aura, name, Vector3.one * 0.2)
     local piece = { Root = root, Parts = {} }
     for _, source in template:GetDescendants() do
         if not source:IsA("BasePart") then
@@ -388,7 +373,7 @@ function AuraBuilder.build(player, character, rootPart, petId, rankId)
     addFade(aura, fader, "Value", 1, 0)
 
     local width = math.max(body.Height * 0.8, body.Reach * 2)
-    aura.volume = newPart(aura, "Volume", Enum.PartType.Block, Vector3.new(width, body.Height * 0.9, width))
+    aura.volume = AuraKit.newPart(aura, "Volume", Vector3.new(width, body.Height * 0.9, width))
 
     local element = ELEMENTS[petId]
     element.Build(aura, style)

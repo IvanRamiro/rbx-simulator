@@ -27,7 +27,6 @@ def new_star(size=256):
     u = (x + 0.5) / size * 2 - 1
     v = (y + 0.5) / size * 2 - 1
     r = np.sqrt(u * u + v * v)
-    a = np.arctan2(v, u)
     core = np.exp(-(r / 0.055) ** 2)
     halo = np.exp(-(r / 0.26) ** 1.6) * 0.42
     rays = np.zeros_like(r)

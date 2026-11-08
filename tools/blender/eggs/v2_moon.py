@@ -278,7 +278,7 @@ def as_ring_point(axis, deg):
 
 def astral_paint():
     f = F.Field()
-    P, S, Vv = f.P, f.S, f.V
+    P, S = f.P, f.S
     warp = np.stack([F.fbm(P, 1.3, 3, seed=s) for s in (521, 522, 523)], -1) * 0.3
     sheen = F.sstep(-0.1, 0.45, F.fbm(P + warp, 1.25, 4, 0.5, seed=524))
     hue = np.clip(F.fbm(P, 0.8, 2, seed=525) * 1.4 + 0.5, 0, 1)
@@ -322,7 +322,6 @@ def astral_paint():
         m = d < R
         t = np.clip(d / R, 0, 1)
         dome = np.sqrt(np.clip(1 - t * t, 0, 1))
-        tone = F.ramp(dome, [(0.0, "000000"), (1.0, "ffffff")])
         stone = F.mix(F.rgb(base) * 0.5, F.rgb(light), dome ** 1.5)
         col = np.where(m[..., None], stone, col)
         rim = np.exp(-((d - R * 1.1) / 0.008) ** 2)

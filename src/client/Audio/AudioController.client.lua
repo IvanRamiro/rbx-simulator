@@ -128,11 +128,11 @@ for _, other in Players:GetPlayers() do
 end
 
 -- every button the HUD makes, now or later, clicks when pressed; the touch controls (Strike, Dash,
--- Sword) are actions with sounds of their own
+-- Sword: TouchActions' ScreenGui) are actions with sounds of their own
 local playerGui = player:WaitForChild("PlayerGui")
 local function hook(button)
     local gui = button:FindFirstAncestorOfClass("ScreenGui")
-    if button:IsA("GuiButton") and not (gui and gui.Name:match("Touch$")) then
+    if button:IsA("GuiButton") and not (gui and gui.Name == "TouchActions") then
         button.Activated:Connect(function()
             Sfx.play("Click")
         end)

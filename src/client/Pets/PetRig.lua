@@ -805,6 +805,7 @@ local function owlGather(rig, s)
     gas.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.25, 0.42), NumberSequenceKeypoint.new(0.85, 0.15), NumberSequenceKeypoint.new(1, 0.9) })
     gas.LightEmission = 0.75
     gas.LightInfluence = 0
+    gas.LockedToPart = true -- it gathers before its breast, wherever the owl goes (animateNebulaOwl moves it)
     gas.Parent = holder
     -- what the gas is falling into: a small star, growing, so the eye is already there when it lights
     local seed = Instance.new("ParticleEmitter")
@@ -818,6 +819,7 @@ local function owlGather(rig, s)
     seed.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 0) })
     seed.LightEmission = 1
     seed.LightInfluence = 0
+    seed.LockedToPart = true
     seed.Parent = Instance.new("Attachment", holder)
     seed:Emit(1)
     holder.Parent = rig.model.Parent or workspace
@@ -841,6 +843,11 @@ local function animateNebulaOwl(rig, s, moving, fly, nova)
     if rig.nova and not rig.nova.gathering and progress < PetRig.NOVA_BURST then
         rig.nova.gathering = true
         owlGather(rig, s)
+    end
+    if s.gather and s.gather.Parent then
+        -- the gas keeps before its breast as it follows its player, and the star lights there
+        s.starAt = rig.rootPart.CFrame:PointToWorldSpace(OWL_STAR_AHEAD * rig.meters)
+        s.gather.Parent.CFrame = CFrame.new(s.starAt)
     end
 
     -- now and then it turns its head right round to look behind it, in no hurry to turn back
@@ -1166,6 +1173,7 @@ local function foxFallingStar(rig, s)
     star:Emit(1)
     Debris:AddItem(holder, PetRig.NOVA_TIME)
     s.foxStar = holder
+    s.foxFrom = nil -- measured afresh from this star
 end
 
 local function animateStarfallFox(rig, s, moving, fly, nova)
@@ -1189,7 +1197,8 @@ local function animateStarfallFox(rig, s, moving, fly, nova)
     local land = smoothstep(0.58, 0.62, progress) * (1 - smoothstep(0.63, 0.72, progress))
     local bury = smoothstep(0.66, 0.71, progress) * (1 - smoothstep(0.92, 0.99, progress))
     local gape = smoothstep(0.26, 0.36, progress) * (1 - smoothstep(0.415, 0.43, progress))
-    if rig.nova and progress >= FOX_FALL_FROM and not rig.nova.starFell then
+    -- (only before the catch: seen first after it, the burst has gone and nothing would take the star away)
+    if rig.nova and progress >= FOX_FALL_FROM and progress < FOX_CATCH and not rig.nova.starFell then
         rig.nova.starFell = true
         foxFallingStar(rig, s)
     end
@@ -1367,10 +1376,11 @@ local WARDEN_LIGHT, WARDEN_DIM = Color3.fromRGB(255, 118, 26), Color3.fromRGB(11
 local function wardenPendulum(rig, s, dt, fly)
     local at = rig.rootPart.Position
     local step = math.clamp(dt, 0.001, 0.05)
-    local velocity = (at - (s.lastAt or at)) / step
+    local moved = at - (s.lastAt or at)
     s.lastAt = at
-    local inFrame = rig.rootPart.CFrame:VectorToObjectSpace(velocity)
-    if inFrame.Magnitude > 55 then -- not movement: it was teleported, or caught up with a teleported player
+    local inFrame = rig.rootPart.CFrame:VectorToObjectSpace(moved / math.max(dt, 0.001))
+    -- more than 20 studs in one frame is not movement (a dash at 170 studs/s is under 3): it was teleported, or caught up with a teleported player
+    if moved.Magnitude > 20 then
         inFrame = s.lastV or Vector3.zero
     end
     -- what it feels is its acceleration, smoothed: the follow path's small corrections shouldn't reach the lantern
@@ -1404,6 +1414,7 @@ end
 local function animateLanternWarden(rig, s, moving, fly, nova)
     local camera = workspace.CurrentCamera
     if camera and (camera.CFrame.Position - rig.rootPart.Position).Magnitude > WARDEN_FAR then
+        s.lastAt, s.lastV = nil, nil -- its lantern starts afresh when it comes back into view
         return
     end
     local m, u, t, dt = rig.motors, rig.meters, s.time, rig.deltaTime
@@ -1629,7 +1640,8 @@ local function animateDreamMoth(rig, s, moving, fly, nova)
     local lift = smoothstep(0.3, 0.42, progress) * (1 - smoothstep(0.44, 0.52, progress))
     local stroke = smoothstep(0.44, 0.52, progress) * (1 - smoothstep(0.56, 0.78, progress))
     local stillness = smoothstep(0.08, 0.3, progress) * (1 - smoothstep(0.42, 0.5, progress))
-    if rig.nova and progress >= MOTH_THREAD_FROM and not rig.nova.threaded then
+    -- (only before they reach its tongue: seen first after that, the burst has gone and nothing would take them away)
+    if rig.nova and progress >= MOTH_THREAD_FROM and progress < MOTH_THREAD_TO and not rig.nova.threaded then
         rig.nova.threaded = true
         mothThreads(rig, s)
     end
@@ -1775,6 +1787,30 @@ local ARMA_BLINK, ARMA_SQUINT = 1.15, 0.5
 local ARMA_LEGS = { FL = 0, BR = 0, FR = math.pi, BL = math.pi }
 local ARMA_CRESTS = 6
 
+-- The special's spin, as a turn at each moment of it (armaSpinAngle), so it always ends facing
+-- forward: its speed rises and falls with armaWhirl, scaled to the whole number of turns nearest
+-- ARMA_SPIN_RATE turns a second at full speed. ARMA_SPIN[i] is the share of the spin done by
+-- progress (i - 1) / ARMA_SPIN_STEPS; armaSpin is the whole spin's length in full-speed specials.
+local ARMA_SPIN_RATE, ARMA_SPIN_STEPS = 2.4, 200
+local function armaWhirl(progress)
+    return smoothstep(0.1, 0.3, progress) * (1 - smoothstep(0.4, 0.46, progress))
+end
+local ARMA_SPIN, armaSpin = { 0 }, 0
+for i = 1, ARMA_SPIN_STEPS do
+    armaSpin += armaWhirl((i - 0.5) / ARMA_SPIN_STEPS) / ARMA_SPIN_STEPS
+    ARMA_SPIN[i + 1] = armaSpin
+end
+for i, done in ARMA_SPIN do
+    ARMA_SPIN[i] = done / armaSpin
+end
+local function armaSpinAngle(progress)
+    local turns = math.max(1, math.floor(ARMA_SPIN_RATE * PetRig.NOVA_TIME * armaSpin + 0.5))
+    local x = math.clamp(progress, 0, 1) * ARMA_SPIN_STEPS
+    local i = math.min(math.floor(x), ARMA_SPIN_STEPS - 1)
+    local done = ARMA_SPIN[i + 1] + (ARMA_SPIN[i + 2] - ARMA_SPIN[i + 1]) * (x - i)
+    return done * turns * 2 * math.pi
+end
+
 local function animatePrismArmadillo(rig, s, moving, fly, nova)
     local camera = workspace.CurrentCamera
     if camera and (camera.CFrame.Position - rig.rootPart.Position).Magnitude > ARMA_FAR then
@@ -1787,14 +1823,10 @@ local function animatePrismArmadillo(rig, s, moving, fly, nova)
     -- the special: it rolls up, spins in place faster and faster, and pops open in a flash of every colour, very pleased with itself
     local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
     local curled = smoothstep(0, 0.12, progress) * (1 - smoothstep(0.44, 0.52, progress))
-    local whirl = smoothstep(0.1, 0.3, progress) * (1 - smoothstep(0.4, 0.46, progress))
     local hop = smoothstep(0.44, 0.5, progress) * (1 - smoothstep(0.52, 0.64, progress))
     local proud = smoothstep(0.5, 0.58, progress) * (1 - smoothstep(0.86, 0.98, progress))
     local flash = smoothstep(0.36, 0.43, progress) * (1 - smoothstep(0.46, 0.66, progress))
-    s.whirl = ((s.whirl or 0) + dt * whirl * 2 * math.pi * 2.4) % (2 * math.pi)
-    if progress == 0 then
-        s.whirl = s.whirl * math.max(0, 1 - dt * 6)
-    end
+    s.whirl = armaSpinAngle(progress) % (2 * math.pi)
 
     -- now and then: it rolls up for a moment just to be admired; or rears up to look about
     s.nextShow = s.nextShow or t + 10 + math.random() * 8
@@ -2319,7 +2351,34 @@ local KIRIN_LID_HINGE = { L = Vector3.new(0.4472, -0.2227, -0.8662), R = Vector3
 local KIRIN_BLINK_UPPER, KIRIN_BLINK_LOWER = math.rad(36), math.rad(12)
 local KIRIN_MANE = { A = 0, B = 0.9, C = 1.8 }
 
+-- Its hoof sparks, set up on its first frame however far it is: each model's emitters start enabled,
+-- and they must throw sparks only where a hoof lands.
+local function kirinSparks(rig, s)
+    s.sparks = {}
+    for key in KIRIN_LEADS do
+        local hoof = rig.points["Hoof" .. key]
+        local sparks = hoof and hoof:FindFirstChild("Sparks")
+        if sparks then
+            sparks.Enabled = false -- only where a hoof lands: hot, thrown out, falling under gravity
+            sparks.Texture = "rbxassetid://113649240058592"
+            sparks.Orientation = Enum.ParticleOrientation.VelocityParallel
+            sparks.Rotation = NumberRange.new(90)
+            sparks.Speed = NumberRange.new(2.6 * rig.unit, 5 * rig.unit)
+            sparks.SpreadAngle = Vector2.new(70, 70)
+            sparks.Acceleration = Vector3.new(0, -8 * rig.unit, 0)
+            sparks.Drag = 1.5
+            sparks.Lifetime = NumberRange.new(0.2, 0.42)
+            sparks.Size = NumberSequence.new(0.13 * rig.unit, 0.05 * rig.unit)
+            sparks.Color = ColorSequence.new(Color3.fromRGB(225, 238, 255), Color3.fromRGB(255, 190, 110))
+            s.sparks[key] = sparks
+        end
+    end
+end
+
 local function animateStormhornKirin(rig, s, moving, fly, nova)
+    if not s.sparks then
+        kirinSparks(rig, s)
+    end
     local camera = workspace.CurrentCamera
     if camera and (camera.CFrame.Position - rig.rootPart.Position).Magnitude > WIND_FAR then
         return
@@ -2365,27 +2424,6 @@ local function animateStormhornKirin(rig, s, moving, fly, nova)
     end
 
     -- the stride
-    if not s.sparks then
-        s.sparks = {}
-        for key in KIRIN_LEADS do
-            local hoof = rig.points["Hoof" .. key]
-            local sparks = hoof and hoof:FindFirstChild("Sparks")
-            if sparks then
-                sparks.Enabled = false -- only where a hoof lands: hot, thrown out, falling under gravity
-                sparks.Texture = "rbxassetid://113649240058592"
-                sparks.Orientation = Enum.ParticleOrientation.VelocityParallel
-                sparks.Rotation = NumberRange.new(90)
-                sparks.Speed = NumberRange.new(2.6 * rig.unit, 5 * rig.unit)
-                sparks.SpreadAngle = Vector2.new(70, 70)
-                sparks.Acceleration = Vector3.new(0, -8 * rig.unit, 0)
-                sparks.Drag = 1.5
-                sparks.Lifetime = NumberRange.new(0.2, 0.42)
-                sparks.Size = NumberSequence.new(0.13 * rig.unit, 0.05 * rig.unit)
-                sparks.Color = ColorSequence.new(Color3.fromRGB(225, 238, 255), Color3.fromRGB(255, 190, 110))
-                s.sparks[key] = sparks
-            end
-        end
-    end
     s.stride = (s.stride or 0) + dt * (10.5 * moving + 4.5 * fly)
     local stride = s.stride
     local rock = math.sin(stride + 0.6)

@@ -344,7 +344,6 @@ def bw_base(coll, gold):
 
 
 def bw_heart(coll):
-    x0, y0 = 0.0, 0.0
     c, n = F.on(BW_AT[0], BW_AT[1], 0.018), F.normal(*BW_AT)
     hi = Hm.Hi()
     F.cut_gem(hi, c, n, (0, 1, 0), 0.098, 0.075, sides=6, base=0.03)
@@ -430,7 +429,6 @@ def ancient_grove_paint():
     x, y, front = f.plane(*AG_AT)
     d, along = F.seg_dist(x, y, ag_spiral())
     cut = (1 - F.sstep(0.022, 0.05, d)) * (front > 0.2)
-    deep = (1 - F.sstep(0.0, 0.024, d)) * (front > 0.2)
     col = F.mix(col, np.array((0.12, 0.08, 0.03)), cut * 0.85)
     glow_spill = np.clip(np.exp(-(d / 0.09) ** 2), 0, 1) * (front > 0.2) * (1 - cut)
     col = col + np.array((0.08, 0.2, 0.02)) * glow_spill[..., None]

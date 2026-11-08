@@ -85,7 +85,12 @@ local function stageEgg(altar, eggId)
     if not cradle then
         return nil
     end
-    local model = EggModel.build(eggId, 3.6)
+    -- the pet is already granted: a missing egg mesh must not stop the result reaching the client
+    local ok, model = pcall(EggModel.build, eggId, 3.6)
+    if not ok then
+        warn("PetService: couldn't stage the egg: " .. tostring(model))
+        return nil
+    end
     model.Name = "HatchingEgg"
     model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent -- it rides in the remote: it must be there
     model:PivotTo(cradle.CFrame * CFrame.new(0, 1.8, 0))
@@ -201,7 +206,8 @@ RemoteEvents.FusePetEvent.OnServerEvent:Connect(function(player, instanceId, con
 end)
 
 RemoteEvents.CodexEvent.OnServerEvent:Connect(function(player, action, rewardId)
-    if action ~= "Claim" or throttled(player) or Wallet.balance(player) == nil then
+    -- (the wallet must be set up, or the claim would be marked and its stones lost)
+    if action ~= "Claim" or throttled(player) or Wallet.exportData(player) == nil then
         return
     end
     local reward = Codex.claim(player, rewardId)

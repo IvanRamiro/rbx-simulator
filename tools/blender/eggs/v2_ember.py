@@ -18,7 +18,6 @@ of long plumes streams back off the crown, and a gold flame burns on its breast.
 """
 import math
 
-import bmesh
 import numpy as np
 
 import egg_forge as F

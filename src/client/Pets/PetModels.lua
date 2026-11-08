@@ -7,7 +7,15 @@ local meshFolder = ReplicatedStorage:WaitForChild("PetMeshes", 10)
 
 local PetModels = {}
 
-local rigs = setmetatable({}, { __mode = "k" })
+-- [model] = its rig. A rig holds its model, so a weak key would never free it: each entry goes
+-- when its model is destroyed (keep).
+local rigs = {}
+local function keep(model, rig)
+    rigs[model] = rig
+    model.Destroying:Once(function()
+        rigs[model] = nil
+    end)
+end
 
 function PetModels.getRig(model)
     return rigs[model]
@@ -776,14 +784,14 @@ local function addImported(model, rootPart, template, design, petId)
 
     if PetRig.isRigged(petId, template) then
         if PetRig.Profiles[petId].Skinned then
-            rigs[model] = PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, (look.Length or longest) * k)
+            keep(model, PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, (look.Length or longest) * k))
             return
         end
         local function place(piece)
             local offset = CFrame.new(-boxCFrame.Position) * piece.CFrame
             return turn * (offset.Rotation + offset.Position * scale), piece.Size * scale
         end
-        rigs[model] = PetRig.build(model, rootPart, template, petId, place, scale)
+        keep(model, PetRig.build(model, rootPart, template, petId, place, scale))
         return
     end
 

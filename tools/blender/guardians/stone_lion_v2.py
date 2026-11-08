@@ -79,7 +79,6 @@ def _side(sign, tag):
         "Meta": ("Shin", (x(5.4), 6.0, 15.6), (x(5.4), 1.0, 13.3)),
         "Toes": ("Meta", (x(5.4), 1.0, 13.3), (x(5.4), 0.8, 10.6)),
     }
-    fix = lambda name, group: (group + (name if name != "x" else ""))
     for n, (parent, head, tail) in front.items():
         full = "Front" + tag + n
         out[full] = ("Front" + tag + parent if parent in front else parent, head, tail)
@@ -488,7 +487,7 @@ def _bind_mane(obj):
     pts = _points(obj)
     names = ["Head", "Neck1", "Neck2", "Chest", "ManeTop", "ManeChest", "LeftMane", "RightMane"]
     d = _distances(pts, names)
-    x, y, z = pts[:, 0], pts[:, 1], pts[:, 2]
+    z = pts[:, 2]
     d[:, 0] += np.clip((z + 14.5) / 1.5, 0, 1) * 6
     return _write_weights(obj, names, d, 2.6)
 
@@ -932,7 +931,6 @@ def clips():
     ]
     # the pounce: a deep crouch with the haunches loaded; the hinds drive, the fores reach, stretched out long; then the nose comes down
     crouch = {"Hips": (6, 0, 0), "Spine": (-3, 0, 0), "Chest": (-6, 0, 0), "Neck1": (-6, 0, 0), "Tail1": (-14, 0, 0), "LeftEar": (28, 0, 0), "RightEar": (28, 0, 0)}
-    reach = {"BackLeft": (0, 0, 0.2, -6, 0), "BackRight": (0, 0, 0.5, -6, 0)}
     out["Pounce"] = [
         _key(0.0, head=0.0),
         _key(0.42, "smooth", crouch, (0, -6.0, 2.0), {"FrontLeft": (0, 0, 0.6, -8, 0), "FrontRight": (0, 0, 0.6, -8, 0), "BackLeft": (0, 0, -0.6, -14, 0), "BackRight": (0, 0, -0.3, -14, 0)}, -10.0),
@@ -1280,12 +1278,10 @@ def _planted(keys):
         t = min(f / MOVES_FPS, length)
         if t >= keys[-1]["at"]:
             a = b = keys[-1]
-            u = 0.0
         else:
             for i in range(len(keys) - 1):
                 a, b = keys[i], keys[i + 1]
                 if t <= b["at"]:
-                    u = (t - a["at"]) / (b["at"] - a["at"])
                     break
         for leg in LEGS:
             ya = a["feet"].get(leg, (0, 0, 0, 0, 0))[1]
@@ -1323,7 +1319,7 @@ def write_clips(path=None):
         lines.append(name + "=" + _lua(_vals(pose, shift, base)) + ",")
     lines.append("}")
     standv = _vals(stand, s0, base)
-    lines.append("Clips.Stand = " + _lua(standv))
+    # (not written: the game never reads the standing pose; it is the Guardian pose, and the gaits are measured from it)
     lines.append("Clips.Gaits = {")
     for name in GAITS:
         table = {n: [] for n in _joints()}

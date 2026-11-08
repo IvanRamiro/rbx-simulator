@@ -488,7 +488,16 @@ def stage_setup(world_colour=(0.42, 0.46, 0.5, 1)):
     scene.camera = co
     scene.render.engine = "CYCLES"
     prefs = bpy.context.preferences.addons["cycles"].preferences
-    prefs.compute_device_type = "METAL"
+    for kind in ("METAL", "OPTIX", "CUDA", "HIP", "ONEAPI"):      # the first GPU backend this machine has (else the CPU)
+        try:
+            prefs.compute_device_type = kind
+        except TypeError:
+            continue
+        prefs.get_devices()
+        if any(d.type == kind for d in prefs.devices):
+            break
+    else:
+        prefs.compute_device_type = "NONE"
     prefs.get_devices()
     for d in prefs.devices:
         d.use = True
@@ -628,20 +637,20 @@ def unwrap(lows, regions, scales, margin=0.008, angle=62, shape="CONCAVE", own_u
         bpy.ops.uv.smart_project(angle_limit=math.radians(angle), island_margin=0.004, area_weight=0.0, correct_aspect=True, scale_to_bounds=False)
         bpy.ops.object.mode_set(mode="OBJECT")
 
-    claimed = {}
+    claimed, run = {}, {}      # [polygon] = its region's share, and the region (projection run) it came from
     for k, (test, share) in enumerate(regions):
         last = k == len(regions) - 1
         mine = [p.index for p in skin.data.polygons if p.index not in claimed and (last or test(p))]
         chosen = set(mine)
         project(lambda o, p: (p.index in chosen) if o is skin else last)
         for i in mine:
-            claimed[i] = share
+            claimed[i], run[i] = share, k
     if texels is not None:
-        by_share = {}
-        for i, share in claimed.items():
-            by_share.setdefault(share, []).append(skin.data.polygons[i])
-        for share, polys in by_share.items():
-            scale_uv_to(skin, polys, share)
+        by_run = {}      # each projection run is scaled on its own, even when two share a density
+        for i, k in run.items():
+            by_run.setdefault(k, []).append(skin.data.polygons[i])
+        for k, polys in by_run.items():
+            scale_uv_to(skin, polys, regions[k][1])
         for key, o in lows.items():
             if key == "Skin":
                 continue
@@ -927,16 +936,28 @@ def export_fbx(rig, body, glows, extras=()):
     return path
 
 
+def save_blend():
+    """The .blend, beside its preview, with no path from this machine in it. Returns its path."""
+    os.makedirs(TOOLS, exist_ok=True)
+    path = os.path.join(TOOLS, PET + ".blend")
+    bpy.context.preferences.filepaths.save_version = 0
+    # the render output field keeps the last shot's path, and its old bytes after a shorter one: fill it to the end, then clear it
+    render = bpy.context.scene.render
+    render.filepath = "//" + "_" * 1020
+    render.filepath = "//"
+    # the baked maps are packed, but remember where they were written: keep that relative to the .blend
+    for img in bpy.data.images:
+        if img.filepath_raw and not img.filepath_raw.startswith("//"):
+            img.filepath_raw = bpy.path.relpath(img.filepath_raw, start=TOOLS)
+        for packed in img.packed_files:
+            packed.filepath = img.filepath_raw
+    bpy.ops.wm.save_as_mainfile(filepath=path, compress=True)
+    return path
+
+
 def save_all(preview_view):
     """The preview beside the .blend, and the .blend. Returns its path."""
     os.makedirs(TOOLS, exist_ok=True)
     shots(os.path.join(TOOLS, PET + "_preview"), [preview_view])
     os.replace(os.path.join(TOOLS, PET + "_preview_0.png"), os.path.join(TOOLS, PET + "_preview.png"))
-    bpy.context.preferences.filepaths.save_version = 0
-    # the render output field keeps the last shot's path, and its old bytes after a shorter one: fill it to the end, then clear it, so no path from this machine is saved
-    render = bpy.context.scene.render
-    render.filepath = "//" + "_" * 1020
-    render.filepath = "//"
-    path = os.path.join(TOOLS, PET + ".blend")
-    bpy.ops.wm.save_as_mainfile(filepath=path, compress=True)
-    return path
+    return save_blend()

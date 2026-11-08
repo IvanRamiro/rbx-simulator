@@ -19,7 +19,6 @@ import bmesh
 import bpy
 import numpy as np
 from mathutils import Matrix, Vector
-from mathutils.bvhtree import BVHTree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pet_kit
@@ -735,7 +734,7 @@ if __name__ == "__main__":
             pose(rig, lib[name])
             shots(os.path.join(REVIEW, "pose" + name), [view])
         pose(rig, {})
-        print("FBX", export_fbx(rig, body, (gl, ch)), flush=True)
-        path = save_all((0.6, -0.8, 0.2))
+        path = save_all((0.6, -0.8, 0.2))      # first: the export takes the glow pieces' colours off
         print("BLEND", path, os.path.getsize(path) // 1024, "KB", flush=True)
+        print("FBX", export_fbx(rig, body, (gl, ch)), flush=True)
     print("DONE", flush=True)

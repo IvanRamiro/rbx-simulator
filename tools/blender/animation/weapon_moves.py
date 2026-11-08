@@ -12,6 +12,7 @@ fitted to where the tip truly went; the thrust coils, lunges with a real step, a
 """
 import math
 import os
+import tempfile
 
 import bpy
 import numpy as np
@@ -21,7 +22,7 @@ import r15_rig as R
 import stances as S
 
 V = Vector
-REPO = "/Users/ivan/qi-aura-simulator"
+REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))  # the repository, from tools/blender/<folder>/
 ANKLE = R.ANKLE_Y
 SPEAR_TIP, SWORD_TIP = -6.0, -4.6
 SPEAR_BUTT, SWORD_BUTT = 2.2, 0.4
@@ -74,7 +75,6 @@ def spear_thrust():
     guard = S.capture(S.SPEAR_READY, "Spear")
     low = S.capture(S.SPEAR_LOW, "Spear")
     clip = Clip("Spear")
-    left_rel = guard["left_rel"]
     knee_f = (0.12, 0.2, -0.5)
     lead = {"pelvis": 0.015, "chest": 0.008, "feet": 0.025}
 
@@ -127,7 +127,6 @@ def spear_slash():
     guard = S.capture(S.SPEAR_READY, "Spear")
     low = S.capture(S.SPEAR_LOW, "Spear")
     clip = Clip("Spear")
-    left_rel = guard["left_rel"]
     lead = {"pelvis": 0.014, "chest": 0.006}
     knees = dict(Right_knee=V((0.2, 0.3, 0.15)), Left_knee=V((0.1, 0.3, -0.3)))
 
@@ -366,7 +365,7 @@ def run(name, review=True, out=None, cam_from=(9, 3.5, -11), cam_to=(0, -0.6, -2
     result = {"frames": bake_frames, "extra": extra, "length": length, "worst": worst, "kind": kind,
         "crescent": fit_crescent(bake_frames, extra["Swing"]) if "Swing" in extra else None}
     if review:
-        path = out or "%s/assets/animation_review/%s.png" % (REPO, name)
+        path = out or os.path.join(tempfile.gettempdir(), "weapon_moves", name + ".png")      # a review sheet: never in assets/
         contact_sheet(result, kind, path, cam_from, cam_to, times)
         result["path"] = path
     return result
@@ -394,7 +393,7 @@ def contact_sheet(result, kind, path, cam_from, cam_to, times=None, size=340):
     for t in times:
         f = frames[min(len(frames) - 1, int(round(t * R.FPS)))]
         # the weapon's frame
-        g, tp = f["grip"], f["tip"]
+        g = f["grip"]
         wr = None
         offset = result["extra"]["Cycle"][0] if "Cycle" in result["extra"] else 0
         scene.frame_set(int(round((t + offset) * R.FPS)) * (R.SCENE_FPS // R.FPS) + 1)

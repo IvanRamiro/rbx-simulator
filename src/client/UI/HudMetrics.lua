@@ -76,9 +76,7 @@ local function track(item)
     end)
 end
 
-local watchedGuis = {}
 function HudMetrics.keepReadable(gui)
-    table.insert(watchedGuis, gui)
     for _, item in gui:GetDescendants() do
         track(item)
     end

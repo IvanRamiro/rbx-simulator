@@ -132,10 +132,10 @@ local GameConfig = {
 
     -- Guardians (src/server/Guardians/GuardianService; design doc section 7). A guardian holds no
     -- egg: it guards its island's three egg stands (EggStands). Weakened below WeakenedAt, one of
-    -- their eggs can be taken (if the thief's rank can hatch it) and carried to the SafeZone: a
-    -- circle (island-local studs), or with Island a whole island, Yggdrasil, home across the
-    -- bridge. A secured egg goes to the egg inventory and is hatched at the Hatching Altar; its stand
-    -- shows a random one of Eggs after EggTheft.RespawnTime. Positions are island-local studs.
+    -- their eggs can be taken (if the thief's rank can hatch it) and carried to the SafeZone: its
+    -- Island, a whole island (Yggdrasil, home across the bridge). A secured egg goes to the egg
+    -- inventory and is hatched at the Hatching Altar; its stand shows a random one of Eggs after
+    -- EggTheft.RespawnTime. Positions are island-local studs.
     -- Attack kinds: Sweep strikes in front (Range, Arc); Wave rolls along the ground to Radius (all
     -- round, or within Arc) and a jump clears it; Pounce leaps onto the thief (enraged only).
     GuardianTag = "Guardian",

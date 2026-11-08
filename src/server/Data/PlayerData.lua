@@ -96,8 +96,13 @@ MIGRATIONS[8] = function(progress)
 end
 
 -- Playtesting in Studio: with ServerStorage's StudioTestSave attribute set, saves go to a separate store of that name, so
--- each new name starts a new player and a real save can't be touched. Ignored outside Studio.
-local studioTestSave = RunService:IsStudio() and game:GetService("ServerStorage"):GetAttribute("StudioTestSave") or nil
+-- each new name starts a new player and a real save can't be touched (set to true, a store called "StudioTestSave").
+-- Ignored outside Studio.
+local studioTestSave = nil
+if RunService:IsStudio() then
+    local name = game:GetService("ServerStorage"):GetAttribute("StudioTestSave")
+    studioTestSave = if typeof(name) == "string" and name ~= "" then name elseif name then "StudioTestSave" else nil
+end
 
 local store = nil
 local storeOk, storeResult = pcall(function()
@@ -365,6 +370,9 @@ local function loadProfile(player, profile)
         end
 
         task.wait(LOAD_RETRY_DELAY)
+        if player.Parent ~= Players then
+            break -- left during the wait: never take over a lock for a player who is gone
+        end
     end
 
     if result == "Loaded" then
@@ -435,6 +443,13 @@ function PlayerData.waitForData(player)
     end
 
     return profile.progress, profile.isNew
+end
+
+-- Whether this server saves the player's data: it loaded from the store and no other server took it.
+-- False for fresh Studio data after a failed load, which must not reach anything shared.
+function PlayerData.canSave(player)
+    local profile = profiles[player]
+    return profile ~= nil and profile.canSave
 end
 
 function PlayerData.save(player)

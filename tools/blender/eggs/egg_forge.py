@@ -1,5 +1,5 @@
-"""The egg forge (run inside Blender): the second generation of the egg pipeline, for the review
-board. Nothing here touches the eggs in the game: everything is written to assets/eggs_v2/.
+"""The egg forge (run inside Blender): the egg pipeline. Everything is written to assets/eggs_v2/,
+the eggs the game uses (WorldBuilder places them from ServerStorage.EggMeshes).
 
 What it does better than egg_bake.py, each fixing something seen on the first eggs in Studio:
 
@@ -871,32 +871,6 @@ def gem_material(name, dark, mid, light, panes=11.0, depth=0.25, rough=0.08, pan
     return g.finish(col, rough, 0.0)
 
 
-def boulder(hi, c, size, seed, stretch=(1.0, 1.0, 1.0), planes=11, mat=0, subdiv=3):
-    """A chiselled lump of rock: a sphere cut back by random planes, so it has real fracture faces
-    instead of the bloblike look of noise on a ball. Flat faces, ragged only where the cuts meet."""
-    rnd = np.random.default_rng(seed)
-    cuts = []
-    for _ in range(planes):
-        n = rnd.normal(size=3)
-        n /= np.linalg.norm(n)
-        cuts.append((n, rnd.uniform(0.55, 0.9)))
-    bm = bmesh.new()
-    bmesh.ops.create_icosphere(bm, subdivisions=subdiv, radius=1.0)
-    bm.verts.ensure_lookup_table()
-    idx = {}
-    for v in bm.verts:
-        q = np.array(v.co)
-        for n, d in cuts:
-            over = q.dot(n) - d
-            if over > 0:
-                q = q - n * over
-        p = V(c) + V((q[0] * stretch[0], q[1] * stretch[1], q[2] * stretch[2])) * size
-        idx[v.index] = hi.v(p)
-    for f in bm.faces:
-        hi.f([idx[v.index] for v in f.verts], [(0, 0), (1, 0), (0, 1)], mat)
-    bm.free()
-
-
 def crystal(hi, base, direction, length, radius, sides=6, tip=0.26, seed=0, mat=0, taper=0.82, lean=0.0):
     """A natural crystal point: a tapering prism of `sides` flat faces, with a slanted pyramid at its
     tip whose apex sits off the axis, as real quartz terminations do."""
@@ -920,31 +894,3 @@ def crystal(hi, base, direction, length, radius, sides=6, tip=0.26, seed=0, mat=
         hi.f([mid[k], mid[n], apex], uv[:3], mat)
     hi.f(low[::-1], [(0, 0)] * sides, mat)
 
-
-def box_loft(hi, rows, mat=0):
-    """A shaped block through rectangular sections [(y, x0, x1, z0, z1)], bottom to top, capped: for
-    anvils, seats and plinths, anything with a profile that flares and waists."""
-    rings = []
-    for y, x0, x1, z0, z1 in rows:
-        rings.append([hi.v((x0, y, z0)), hi.v((x1, y, z0)), hi.v((x1, y, z1)), hi.v((x0, y, z1))])
-    uv = [(0, 0), (1, 0), (1, 1), (0, 1)]
-    for a, b in zip(rings, rings[1:]):
-        for k in range(4):
-            n = (k + 1) % 4
-            hi.f([a[k], a[n], b[n], b[k]], uv, mat)
-    hi.f(rings[0][::-1], uv, mat)
-    hi.f(rings[-1], uv, mat)
-
-
-def circle_path(c, axis, radius, count=72, phase=0.0):
-    """Points round a circle with outward normals: for rings standing in air."""
-    axis = V(axis).normalized()
-    ref = V((0, 1, 0)) if abs(axis.y) < 0.9 else V((1, 0, 0))
-    e1 = axis.cross(ref).normalized()
-    e2 = axis.cross(e1)
-    out = []
-    for k in range(count):
-        a = phase + TAU * k / count
-        d = e1 * math.cos(a) + e2 * math.sin(a)
-        out.append((V(c) + d * radius, d))
-    return out

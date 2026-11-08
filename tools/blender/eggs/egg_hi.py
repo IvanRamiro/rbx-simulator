@@ -453,64 +453,6 @@ def mat_petal(name="EggPetal"):
     return g.finish(col, 0.42, 0.0, nrm)
 
 
-def mat_wood(name="EggWood"):
-    """Carved wood: vertical grain (stretched rings), a tone per plank (each plank its own mesh
-    island), dark carved grooves (ambient occlusion), a little moss low down."""
-    g = _Graph(name)
-    co = g.coords()
-    mp = g.n("ShaderNodeMapping")
-    mp.inputs["Scale"].default_value = (9.0, 9.0, 0.7)
-    g.link(co, mp.inputs["Vector"])
-    grain = g.n("ShaderNodeTexWave", wave_type="RINGS", **{"Scale": 1.4, "Distortion": 5.0, "Detail": 5.0, "Detail Scale": 1.2})
-    g.link(mp.outputs[0], grain.inputs["Vector"])
-    geo0 = g.n("ShaderNodeNewGeometry")   # every plank is its own mesh island: its own tone
-    tone = g.ramp(geo0.outputs["Random Per Island"], [(0.0, (0.16, 0.08, 0.03)), (0.35, (0.27, 0.15, 0.06)), (0.7, (0.38, 0.22, 0.09)),
-                                                       (1.0, (0.5, 0.31, 0.14))])
-    col = g.mix(g.math("MULTIPLY", grain.outputs["Fac"], 0.45), tone, (0.2, 0.11, 0.05))
-    hi = g.n("ShaderNodeTexNoise", **{"Scale": 30.0, "Detail": 4.0})
-    g.link(co, hi.inputs["Vector"])
-    col = g.mix(g.math("MULTIPLY", g.math("SUBTRACT", hi.outputs["Fac"], 0.6, clamp=True), 1.2), col, (0.58, 0.4, 0.22))
-    z = g.sep(co)[2]
-    geo = g.n("ShaderNodeNewGeometry")
-    up = g.sep(geo.outputs["Normal"])[2]
-    mn = g.n("ShaderNodeTexNoise", **{"Scale": 4.0, "Detail": 4.0})
-    g.link(co, mn.inputs["Vector"])
-    moss = g.math("MULTIPLY", g.math("LESS_THAN", z, 0.9), g.math("SUBTRACT", g.math("MULTIPLY", mn.outputs["Fac"], 2.5), 1.25, clamp=True))
-    moss = g.math("MINIMUM", g.math("MULTIPLY", moss, g.math("ADD", up, 0.6)), 1.0)
-    col = g.mix(moss, col, (0.2, 0.42, 0.08))
-    col = g.ao(col, 0.07, 0.2)
-    nrm = g.bump(grain.outputs["Fac"], 0.45, 0.01)
-    return g.finish(col, 0.75, 0.0, nrm)
-
-
-def mat_heartwood(name="EggHeartwood"):
-    """The pale wood showing in the cracks, streaked, shadowed deep inside."""
-    g = _Graph(name)
-    n = g.n("ShaderNodeTexNoise", **{"Scale": 14.0, "Detail": 5.0})
-    g.link(g.coords(), n.inputs["Vector"])
-    col = g.ramp(n.outputs["Fac"], [(0.3, (0.7, 0.66, 0.52)), (0.7, (0.95, 0.93, 0.84))])
-    col = g.ao(col, 0.05, 0.25)
-    return g.finish(col, 0.8, 0.0, g.bump(n.outputs["Fac"], 0.3, 0.005))
-
-
-def mat_foliage(name="EggFoliage"):
-    """A crown of leaves: clumps of leaf shapes (Voronoi cells), bright in their middles and dark
-    between, varied greens, deep shadow inside the crown."""
-    g = _Graph(name)
-    co = g.coords()
-    vor = g.n("ShaderNodeTexVoronoi", feature="F1", **{"Scale": 26.0})
-    g.link(co, vor.inputs["Vector"])
-    edge = g.n("ShaderNodeTexVoronoi", feature="DISTANCE_TO_EDGE", **{"Scale": 26.0})
-    g.link(co, edge.inputs["Vector"])
-    col = g.ramp(g.bw(vor.outputs["Color"]),
-                 [(0.0, (0.1, 0.36, 0.06)), (0.5, (0.2, 0.55, 0.1)), (1.0, (0.42, 0.75, 0.18))])
-    leafedge = g.math("LESS_THAN", edge.outputs["Distance"], 0.06)
-    col = g.mix(g.math("MULTIPLY", leafedge, 0.6), col, (0.03, 0.15, 0.03))
-    col = g.ao(col, 0.2, 0.25)
-    nrm = g.bump(edge.outputs["Distance"], 0.6, 0.01)
-    return g.finish(col, 0.6, 0.0, nrm)
-
-
 def mat_gold(name="EggGold"):
     g = _Graph(name)
     n = g.n("ShaderNodeTexNoise", **{"Scale": 18.0, "Detail": 4.0})
@@ -665,22 +607,6 @@ def mat_cloud(name="EggCloud"):
     return g.finish(col, 0.65, 0.0, g.bump(fine.outputs["Fac"], 0.08, 0.01))
 
 
-def mat_sealstone(name="EggSealStone"):
-    """Ancient seal-stone: near-black slate with a cold blue-grey cast, weathered in soft mottled
-    patches, finely pitted, its worn high points a little paler."""
-    g = _Graph(name)
-    co = g.coords()
-    mott = g.n("ShaderNodeTexNoise", **{"Scale": 4.0, "Detail": 6.0, "Roughness": 0.6})
-    g.link(co, mott.inputs["Vector"])
-    col = g.ramp(mott.outputs["Fac"], [(0.3, (0.018, 0.018, 0.026)), (0.55, (0.04, 0.04, 0.055)), (0.75, (0.075, 0.072, 0.09))])
-    pit = g.n("ShaderNodeTexNoise", **{"Scale": 38.0, "Detail": 3.0})
-    g.link(co, pit.inputs["Vector"])
-    col = g.mix(g.math("MULTIPLY", g.math("GREATER_THAN", pit.outputs["Fac"], 0.62), 0.5), col, (0.008, 0.008, 0.012))
-    col = g.ao(col, 0.1, 0.4)
-    return g.finish(col, g.math("ADD", 0.45, g.math("MULTIPLY", mott.outputs["Fac"], 0.25)), 0.0,
-                    g.bump(g.math("ADD", mott.outputs["Fac"], g.math("MULTIPLY", pit.outputs["Fac"], 0.5)), 0.3, 0.01))
-
-
 def mat_bronze(name="EggBronze"):
     """Aged bronze: warm metal on the raised parts, a teal-green verdigris settled in the hollows
     (ambient occlusion turned to patina), like the shrine's thorn branches."""
@@ -706,30 +632,6 @@ def mat_voidglass(name="EggVoidGlass"):
     col = g.ramp(sw.outputs["Fac"], [(0.35, (0.006, 0.006, 0.02)), (0.6, (0.018, 0.02, 0.07)), (0.8, (0.05, 0.04, 0.14))])
     col = g.ao(col, 0.08, 0.5)
     return g.finish(col, 0.08, 0.0)
-
-
-def mat_strata(name="EggStrata"):
-    """Primordial stone in bands of sediment, warm umber, ochre and dark slate in turn, the layers
-    gently warped and weathered, the ridges between them standing a little proud."""
-    g = _Graph(name)
-    co = g.coords()
-    warp = g.n("ShaderNodeTexNoise", **{"Scale": 1.1, "Detail": 3.0})
-    g.link(co, warp.inputs["Vector"])
-    fine = g.n("ShaderNodeTexNoise", **{"Scale": 6.0, "Detail": 4.0})
-    g.link(co, fine.inputs["Vector"])
-    # uneven layers: warped strongly, a finer warp breaking their edges, mostly dark rock with a
-    # thin bright seam of ochre here and there (not even stripes)
-    z = g.math("ADD", g.math("ADD", g.sep(co)[2], g.math("MULTIPLY", warp.outputs["Fac"], 1.0)), g.math("MULTIPLY", fine.outputs["Fac"], 0.12))
-    layer = g.math("FRACT", g.math("MULTIPLY", z, 2.6))
-    col = g.ramp(layer, [(0.0, (0.03, 0.025, 0.03)), (0.16, (0.08, 0.045, 0.03)), (0.28, (0.2, 0.075, 0.035)), (0.33, (0.42, 0.26, 0.1)),
-                         (0.37, (0.1, 0.06, 0.04)), (0.62, (0.05, 0.05, 0.06)), (0.8, (0.14, 0.11, 0.09)), (0.9, (0.06, 0.045, 0.04)),
-                         (1.0, (0.03, 0.025, 0.03))])
-    grit = g.n("ShaderNodeTexNoise", **{"Scale": 30.0, "Detail": 4.0})
-    g.link(co, grit.inputs["Vector"])
-    col = g.mix(g.math("MULTIPLY", grit.outputs["Fac"], 0.35), col, (0.03, 0.02, 0.015))
-    col = g.ao(col, 0.1, 0.4)
-    ridge = g.math("ABSOLUTE", g.math("SUBTRACT", layer, 0.5))
-    return g.finish(col, 0.7, 0.0, g.bump(g.math("ADD", ridge, g.math("MULTIPLY", grit.outputs["Fac"], 0.3)), 0.35, 0.01))
 
 
 def mat_fossil(name="EggFossil"):

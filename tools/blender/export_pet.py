@@ -8,7 +8,7 @@ Z up, each part coloured with plain materials (Principled BSDF base colour).
 Materials with the custom property "glow" become glowing Neon in the game;
 everything else is baked into one palette texture.
 
-Writes (assets/pets/<EggId>, the first egg in GameConfig that drops the pet):
+Writes (assets/pets/<EggId>, the egg folder the .blend sits in):
     <PetId>.fbx            "<PetId>_Body" (palette textured) and one
                            "<PetId>_Glow_<rrggbb>" object per glow colour
     <PetId>_palette.png    The palette (also embedded in the FBX)
@@ -43,7 +43,11 @@ PET_ID = ARGS[0]
 
 
 def home_egg(pet_id):
-    """The first egg in GameConfig whose pool drops the pet."""
+    """The egg folder the pet's .blend sits in (tools/blender/pets/<EggId>/): a pet more than one egg
+    drops lives in one of them. Else the first egg in GameConfig whose pool drops it."""
+    folder = os.path.dirname(os.path.realpath(bpy.data.filepath)) if bpy.data.filepath else ""
+    if folder and os.path.dirname(folder) == os.path.realpath(os.path.join(ROOT, "tools", "blender", "pets")):
+        return os.path.basename(folder)
     with open(os.path.join(ROOT, "src", "shared", "GameConfig.lua")) as file:
         source = file.read()
     eggs = source[source.index("    Eggs = {"):]

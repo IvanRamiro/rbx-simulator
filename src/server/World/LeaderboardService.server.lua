@@ -2,12 +2,16 @@
 -- across every server. Each player's whole Qi goes into an OrderedDataStore every WriteEvery seconds
 -- while it changes, and once more as they leave; the board re-reads the top entries every
 -- RefreshEvery seconds. Without DataStores (a place not yet published, or Studio with API access
--- off) it ranks the players in this server instead. Qi is never spent, so it only climbs.
+-- off) it ranks the players in this server instead. Qi is never spent, so it only climbs. Only
+-- data this server saves is written (PlayerData.canSave), so fresh Studio data never lowers an
+-- entry. The store keeps Qi alone: a cultivator in this server shows their own rank, any other the
+-- rank their Qi reaches.
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
 local WorldConfig = require(script.Parent:WaitForChild("WorldConfig"))
@@ -51,7 +55,12 @@ end
 local names = {} -- [UserId] = name
 local written = {} -- [Player] = { Qi = the last whole Qi written, At = os.clock() }
 
-local function rankNameFor(qi)
+local function rankNameFor(userId, qi)
+    local player = Players:GetPlayerByUserId(userId)
+    local own = player and Ranks.getPlayerRankName(player)
+    if own and own ~= "" then
+        return own
+    end
     local best = GameConfig.Ranks[1]
     for _, rank in GameConfig.Ranks do
         if rank.QiRequired <= qi then
@@ -74,7 +83,7 @@ end
 
 local function writeQi(player, force)
     local qiValue = PlayerData.getStats(player)
-    if not (store and qiValue) then
+    if not (store and qiValue and PlayerData.canSave(player)) then
         return
     end
     local qi = math.floor(qiValue.Value)
@@ -128,7 +137,7 @@ local function render(entries)
     for index, row in rows do
         local entry = entries[index]
         row.Cultivator.Text = if entry then nameOf(entry.UserId) else ""
-        row.Rank.Text = if entry then rankNameFor(entry.Qi) else ""
+        row.Rank.Text = if entry then rankNameFor(entry.UserId, entry.Qi) else ""
         row.Qi.Text = if entry then NumberFormat.compact(entry.Qi) else ""
     end
 end

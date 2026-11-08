@@ -73,10 +73,6 @@ def hprof(s, knots):
     return float(np.interp(s, H_S, knots))
 
 
-def hash_of(k):
-    return math.sin(k * 12.9898) * 43758.5453 % 1.0
-
-
 def torso_at(y):
     """The torso's centre-line point and its fraction along, at a given y."""
     ys = np.array([p.y for p in TORSO])
@@ -161,7 +157,6 @@ def plate_surface(spec, cols, rows, inset=0.0, teeth=TEETH):
     arc = plate_arc(name)
     a = np.linspace(-arc, arc, cols + 1)
     phase = (a + arc) / (2 * arc) * teeth
-    tri = np.abs(((phase + 0.5) % 1.0) * 2 - 1)
     pts = []
     for i in range(rows + 1):
         g = i / rows
@@ -314,25 +309,6 @@ def build_head(name, coll):
     data_store["crown"] = (u, v)
     o.data.polygons.foreach_set("use_smooth", [True] * len(o.data.polygons))
     return o
-
-
-def unused_head_shield_point(u, v):
-    """The crystal shield on the head: u from the back of the skull to over the eyes, v across."""
-    s = 0.04 + 0.42 * u
-    c = head_axis(s)
-    w = hprof(s, H_W) * (0.8 + 0.12 * math.sin(math.pi * u))
-    t = hprof(s, H_T)
-    x = (2 * v - 1) * w
-    q = x / max(w, 1e-4)
-    z = t * math.sqrt(max(0.0, 1 - 0.55 * q * q)) + 0.012
-    brow = 0.018 * math.exp(-((u - 0.92) / 0.1) ** 2)      # its front edge stands out over the eyes
-    return c + V(x * 1.12, 0, 0) + HUP * (z + brow) - HD * 0.012 * (u > 0.9) * 0
-
-
-def build_head_shield(name, coll, nu, nv):
-    m = Mesh()
-    m.sheet(head_shield_point, lambda u, v: 0.012, nu, nv)
-    return m.finish(name, coll)
 
 
 def ear_point(side):
@@ -775,7 +751,6 @@ def ball(k=1.0):
 
 
 def pose_library():
-    up = cheek_frame(1)[2]
     cheeks = lambda a: {"CheekL": (tuple(cheek_hinge(1)), math.degrees(a), (0, 0, 0)), "CheekR": (tuple(cheek_hinge(-1)), math.degrees(a), (0, 0, 0))}
     return {
         "Squint": cheeks(CHEEK_SQUINT), "Blink": cheeks(CHEEK_BLINK),

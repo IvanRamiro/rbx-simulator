@@ -1,7 +1,8 @@
 -- The rewards window (the Rewards button on the HUD's rail): the seven days of the login streak with
 -- today's to claim, a code box, and the group reward when GameConfig.Rewards.Group has a GroupId. The
--- server decides everything (server/Rewards/RewardService); "DailyReady" and "DailyDay" carry the
--- state here, and the button shows a dot while a claim waits. Also announces offline Qi on joining.
+-- server decides everything (server/Rewards/RewardService); the "DailyReady", "DailyDay" and
+-- "GroupClaimed" attributes carry the state here, and the button shows a dot while a claim waits.
+-- Also announces offline Qi on joining.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

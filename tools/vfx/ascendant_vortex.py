@@ -9,7 +9,6 @@ is inside the fast swirling golden portal"). Our own textures; each carries its 
                             hole at the very centre (a dark core particle sits there)
   GoldVortexArms.png  1024  three looser, broader arms, softer: the second layer turning the other way
 """
-import math
 import os
 import sys
 

@@ -23,7 +23,6 @@ return {
         Gate = { Offset = Vector3.new(0.000, 10.950, -0.000), Size = Vector3.new(55.400, 22.500, 6.995) },
     },
     Moon = {
-        Stair = { Offset = Vector3.new(0.000, 1.408, 0.053), Size = Vector3.new(40.120, 6.217, 12.156) },
         Support = { Offset = Vector3.new(0.001, -8.051, -0.020), Size = Vector3.new(9.634, 14.398, 2.409) },
         SupportGlow = { Hex = "b9a8ff", Offset = Vector3.new(0.000, -11.150, -0.000), Size = Vector3.new(1.900, 1.900, 1.900) },
         Gate = { Offset = Vector3.new(0.000, 17.472, -0.000), Size = Vector3.new(47.000, 36.145, 3.800) },

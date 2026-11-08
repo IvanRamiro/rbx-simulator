@@ -33,19 +33,23 @@ local HIDDEN_TYPES = {
 local lastRequest = {}
 local ownership = {}
 
+-- Whether the player owns the outfit, and whether that answer is certain (a game pass check can fail).
 local function ownsOutfit(player, outfitId)
     local config = GameConfig.Outfits[outfitId]
     if not config then
-        return false
+        return false, true
     end
     if table.find(config.OwnerUserIds or {}, player.UserId) then
-        return true
+        return true, true
     end
     if (config.GamePassId or 0) > 0 then
         local ok, owns = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, config.GamePassId)
-        return ok and owns
+        if ok then
+            return owns == true, true
+        end
+        return false, false
     end
-    return false
+    return false, true
 end
 
 local function hideAccessory(accessory)
@@ -152,10 +156,26 @@ local function onPlayerAdded(player)
         task.spawn(onCharacterAdded, player, player.Character)
     end
 
+    -- The saved choice (checked when it was chosen) is put back as soon as the data is in, before the
+    -- ownership checks: a game pass check can yield, and a save meanwhile must not write it away. It
+    -- comes off only if a check now says the player doesn't own it; a check that fails keeps it.
+    local progress = PlayerData.waitForData(player)
+    if not player.Parent then
+        return
+    end
+    local saved = progress and progress.OutfitId
+    if saved and GameConfig.Outfits[saved] then
+        player:SetAttribute("OutfitId", saved)
+        if player.Character then
+            applyToCharacter(player, player.Character)
+        end
+    end
+
     -- ownsOutfit can yield (a game pass check): the player may have left by the end
     local owns, owned = {}, {}
     for outfitId in GameConfig.Outfits do
-        if ownsOutfit(player, outfitId) then
+        local has, certain = ownsOutfit(player, outfitId)
+        if has or (not certain and outfitId == saved) then
             owns[outfitId] = true
             table.insert(owned, outfitId)
         end
@@ -166,10 +186,8 @@ local function onPlayerAdded(player)
     ownership[player] = owns
     table.sort(owned)
     player:SetAttribute("OwnedOutfits", table.concat(owned, ","))
-
-    local progress = PlayerData.waitForData(player)
-    if progress and progress.OutfitId and ownership[player] and ownership[player][progress.OutfitId] then
-        player:SetAttribute("OutfitId", progress.OutfitId)
+    if saved and not owns[saved] and player:GetAttribute("OutfitId") == saved then
+        player:SetAttribute("OutfitId", nil)
         if player.Character then
             applyToCharacter(player, player.Character)
         end

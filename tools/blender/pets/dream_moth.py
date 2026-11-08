@@ -52,10 +52,6 @@ WING_LIFT = {"Fore": 0.2, "Hind": 0.13}
 WING_THICK = 0.006
 
 
-def hash_of(k):
-    return math.sin(k * 12.9898) * 43758.5453 % 1.0
-
-
 def puff(m, c, d, length, width, seg=14, rings=10):
     """A soft lobe of fluff: an egg lying along d, its round end out. Many of them fused make a cloud."""
     d = d.normalized()
@@ -280,7 +276,7 @@ def build_antennae_low():
             for i in range(n - 1):
                 for k in range(2):
                     q = (rows[i][k], rows[i][k + 1], rows[i + 1][k + 1], rows[i + 1][k])
-                    face = bm.faces.new(q if lift > 0 else tuple(reversed(q)))
+                    bm.faces.new(q if lift > 0 else tuple(reversed(q)))
     for f in bm.faces:
         f.normal_update()
     o = m.finish(N + "AntennaeLow", GAME, recalc=False)
@@ -480,14 +476,12 @@ def paint_pupils(o):
 
 def paint_tongue(o):
     P = verts(o)
-    rings = 0.5 + 0.5 * np.sin(np.arange(len(P)) * 0)
     col = mix(GOLD_TAN, rgb(170, 128, 82), smooth(0.4, 0.8, fbm(P, 400.0, 2, 3)))
     paint(o, col, 0.5)
 
 
 def paint_antennae(o):
     P = verts(o)
-    Nn = normals(o)
     best = np.full(len(P), 9.0)
     for side in (1, -1):
         _, d = nearest_on(antenna_path(side, 24), P)
@@ -521,7 +515,6 @@ def paint_wing(o, key, side):
     scale = fbm(P * np.array((1.0, 1.0, 1.0)), 260.0, 2, 13)
     veins = np.zeros(len(P))
     root, (p0, p1), _ = WING[key]
-    phi = p0 + (p1 - p0) * v
     for k in range(1, 9):
         vk = k / 9
         veins = np.maximum(veins, np.exp(-((v - vk) * r / 0.0035) ** 2) * smooth(0.12, 0.3, u))

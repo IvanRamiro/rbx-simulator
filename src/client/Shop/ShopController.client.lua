@@ -26,7 +26,9 @@ local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
 
-local WALK_AWAY = 60 -- studs from where the window was opened
+-- studs from where the window was opened. It opens within 12 of the shop's prompt, and the server sells only
+-- within 45 of it (ShopService REACH): 12 + 30 keeps a margin, so the window closes before a purchase is refused
+local WALK_AWAY = 30
 
 -- ---------- the Spirit Stones counter ----------
 local stoneChip, setStones = Hud.chip("StoneCounter", UiTheme.Icons.Stones, 1, { Format = NumberFormat.compact, Color = Color3.fromRGB(120, 240, 255) })

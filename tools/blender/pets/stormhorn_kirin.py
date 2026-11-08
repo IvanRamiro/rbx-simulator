@@ -16,7 +16,7 @@ import sys
 import bmesh
 import bpy
 import numpy as np
-from mathutils import Matrix, Vector
+from mathutils import Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pet_kit
@@ -406,18 +406,6 @@ def build_fins(tree, name, coll):
 
 
 # ---------- glow: lightning ----------
-def jagged(a, b, n, amount, rng):
-    pts = []
-    d = b - a
-    side = d.cross(V(1, 0, 0))
-    side = side.normalized() if side.length > 1e-6 else V(0, 0, 1)
-    for i in range(n + 1):
-        f = i / n
-        off = 0.0 if i in (0, n) else rng.uniform(-amount, amount)
-        pts.append(a + d * f + side * off)
-    return pts
-
-
 def on_flank(tree, side, y, z, lift):
     loc, nrm, _, _ = tree.ray_cast(V(side * 1.5, y, z), V(-side, 0, 0), 2.0)
     return (loc + nrm * lift) if loc else None

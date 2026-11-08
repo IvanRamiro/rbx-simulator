@@ -242,9 +242,31 @@ function AuraKit.glow(aura, main, core, range)
     aura.highlight = highlight
 end
 
+-- The character's own body, in its root's frame: its body parts only (the character's direct
+-- BaseParts), never its accessories, tools, or the realm aura parented under its root (RealmAura),
+-- which a bounding box of the whole character takes in. Returns the low and high corners.
+function AuraKit.bodyBounds(character, rootPart)
+    local frame = rootPart.CFrame
+    local low, high = Vector3.one * math.huge, -Vector3.one * math.huge
+    for _, part in character:GetChildren() do
+        if part:IsA("BasePart") then
+            local half = part.Size / 2
+            for _, corner in { Vector3.new(1, 1, 1), Vector3.new(1, 1, -1), Vector3.new(1, -1, 1), Vector3.new(1, -1, -1),
+                Vector3.new(-1, 1, 1), Vector3.new(-1, 1, -1), Vector3.new(-1, -1, 1), Vector3.new(-1, -1, -1) } do
+                local point = frame:PointToObjectSpace(part.CFrame:PointToWorldSpace(half * corner))
+                low, high = low:Min(point), high:Max(point)
+            end
+        end
+    end
+    if low.X > high.X then -- no body parts: the root alone
+        return Vector3.new(-1, -3, -1), Vector3.new(1, 2.5, 1)
+    end
+    return low, high
+end
+
 function AuraKit.newAura(player, character, rootPart, rankId, set, style)
-    local _, boxSize = character:GetBoundingBox()
-    local height = math.clamp(boxSize.Y, 3, 12)
+    local low, high = AuraKit.bodyBounds(character, rootPart)
+    local height = math.clamp(high.Y - low.Y, 3, 12)
     local boost = AuraStyles.getBoost(rankId)
     local model = Instance.new("Folder")
     model.Name = player.Name .. "_Aura"
@@ -364,8 +386,8 @@ function AuraKit.step(aura, now)
 
     if now >= aura.nextGroundCheck then
         aura.nextGroundCheck = now + 0.25
-        local boxCFrame, boxSize = aura.character:GetBoundingBox()
-        aura.seatY = boxCFrame.Position.Y - boxSize.Y / 2
+        local low = AuraKit.bodyBounds(aura.character, aura.rootPart)
+        aura.seatY = aura.rootPart.CFrame:PointToWorldSpace(Vector3.new(0, low.Y, 0)).Y
         groundParams.FilterDescendantsInstances = { aura.character, aura.model, workspace:FindFirstChild("PetCompanions") }
         local hit = workspace:Raycast(aura.rootPart.Position, Vector3.new(0, -MAX_GROUND_DROP, 0), groundParams)
         aura.groundY = if hit then hit.Position.Y else nil

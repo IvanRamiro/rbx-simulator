@@ -38,7 +38,9 @@ end
 local function sustainedSpeed(player, level)
     local q = GameConfig.Qinggong
     if player:GetAttribute("IsFlying") == true then
-        return level.FlightSpeed * SPEED_SLACK
+        -- a flier goes along the camera at FlightSpeed and climbs on top of it; a sample is charged its
+        -- level distance plus its rise, which along a slope comes to at most FlightSpeed * sqrt(2)
+        return (level.FlightSpeed * math.sqrt(2) + GameConfig.SwordFlight.ClimbSpeed) * SPEED_SLACK
     end
     local run = level.RunSpeed * q.GlideSpeedFactor
     local dashShare = q.Dash.Duration / q.Dash.Cooldown -- dashing as often as its cooldown lets them

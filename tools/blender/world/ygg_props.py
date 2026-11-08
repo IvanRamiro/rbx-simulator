@@ -3,8 +3,6 @@
 New pieces, on the Starting Island's prop atlas (start_props.STRIPS):
 - YG_SpawnDais / YG_SpawnDaisGlow: a player's spawn slot, a two-tier stone seat with a jade inlay
   and a ring that lights for the player it belongs to; their name is cut into the stone behind it.
-- YG_PlotStake: a talisman stake. Stakes and red cords mark out each plot kept for a building.
-- YG_PlotBoard: the roofed notice board at a plot's front, naming what will stand there.
 
 Everything else Yggdrasil places is the Starting Island's kit, stored in Studio under
 WorldKit.Yggdrasil (SI_* names), including its Qi Spring, carried onto this rim by
@@ -72,54 +70,7 @@ def spawn_dais_glow(coll, mat, bands):
     return mb.object("YG_SpawnDaisGlow", coll, mat)
 
 
-STAKE_HEIGHT = 5.4
-CORD_HEIGHT = 4.7     # where the cords tie on
-
-
-def plot_stake(coll, mat, bands):
-    mb = W.MeshBuilder()
-    mb.box((0, STAKE_HEIGHT / 2 - 0.8, 0), (0.62, STAKE_HEIGHT + 1.6, 0.62), bands[P.WOOD], u=0.3, top_shade=0.8, side_shade=0.75)
-    # bronze cap and the collar the cords tie to
-    mb.lathe([(0.0, STAKE_HEIGHT + 0.75, 1.0), (0.5, STAKE_HEIGHT + 0.1, 0.85), (0.5, STAKE_HEIGHT - 0.1, 0.6)], 4,
-             bands[P.BRONZE], phase=TAU / 8, cap_top=False, cap_bottom=True)
-    mb.box((0, CORD_HEIGHT, 0), (0.78, 0.28, 0.78), bands[P.BRONZE], u=0.6, top_shade=0.9, side_shade=0.7)
-    # a paper talisman on a peg, a red seal on it
-    mb.box((0, 3.4, 0.44), (0.12, 0.12, 0.3), bands[P.WOOD], u=0.6)
-    mb.box((0, 2.45, 0.6), (0.62, 1.9, 0.04), bands[P.PAPER], u=0.5, top_shade=0.9, side_shade=0.95)
-    mb.box((0, 2.75, 0.63), (0.32, 0.32, 0.02), bands[P.LACQUER], u=0.5, top_shade=0.9, side_shade=0.9)
-    mb.box((0, 2.15, 0.63), (0.08, 0.6, 0.02), bands[P.LACQUER], u=0.5, top_shade=0.9, side_shade=0.9)
-    return mb.object("YG_PlotStake", coll, mat)
-
-
-BOARD_PANEL = ((0.0, 4.0), (5.2, 2.9))   # the board's face: centre (x, y) and size, on its +Z side
-BOARD_FRONT = 0.2
-
-
-def plot_board(coll, mat, bands):
-    mb = W.MeshBuilder()
-    for x in (-3.3, 3.3):
-        mb.box((x, 3.0, 0), (0.6, 7.2, 0.6), bands[P.WOOD], u=0.3, top_shade=0.8, side_shade=0.75)
-        mb.box((x, 0.15, 0), (1.1, 0.5, 1.1), bands[P.DARK], u=0.4, top_shade=0.85, side_shade=0.6)
-    (bx, by), (bw, bh) = BOARD_PANEL
-    mb.box((bx, by, 0), (bw + 0.6, bh + 0.6, 2 * BOARD_FRONT), bands[P.WOOD], u=0.7, top_shade=0.75, side_shade=0.6)
-    P.oriented(mb, [(bx - bw / 2, by - bh / 2, BOARD_FRONT + 0.01), (bx + bw / 2, by - bh / 2, BOARD_FRONT + 0.01),
-                    (bx + bw / 2, by + bh / 2, BOARD_FRONT + 0.01), (bx - bw / 2, by + bh / 2, BOARD_FRONT + 0.01)],
-               (0, 0, 1), bands[P.DARK], 0.5, [0.45] * 4)
-    # a little gabled roof, lacquered, with a bronze ridge
-    eave, ridge, half, depth = 6.25, 7.15, 4.3, 1.25
-    for side in (1, -1):
-        P.oriented(mb, [(-half, eave, side * depth), (half, eave, side * depth), (half, ridge, 0), (-half, ridge, 0)],
-                   (0, depth, side * (ridge - eave)), bands[P.LACQUER], 0.5, [0.8, 0.8, 1.0, 1.0])
-        P.oriented(mb, [(-half, eave, side * depth), (-half, eave - 0.18, side * depth), (half, eave - 0.18, side * depth), (half, eave, side * depth)],
-                   (0, 0, side), bands[P.LACQUER], 0.5, [0.6] * 4)
-    for x in (-half, half):
-        sgn = 1 if x > 0 else -1
-        P.oriented(mb, [(x, eave, depth), (x, ridge, 0), (x, eave, -depth)], (sgn, 0, 0), bands[P.LACQUER], 0.5, [0.55] * 3)
-    mb.box((0, ridge + 0.08, 0), (2 * half + 0.3, 0.2, 0.28), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
-    return mb.object("YG_PlotBoard", coll, mat)
-
-
-KIT = [spawn_dais, spawn_dais_glow, plot_stake, plot_board]
+KIT = [spawn_dais, spawn_dais_glow]
 
 
 # ---------- the Ascension Stele (the leaderboard) ----------
@@ -488,16 +439,13 @@ def write_placements(path=W.REPO + "/src/worldbuild/Placements/Yggdrasil.lua"):
     (px, py), (pw, ph) = SLOT_PANEL
     lines.append("    SlotPanel = { Centre = Vector3.new(%g, %g, %.2f), Size = Vector2.new(%g, %g) },"
                  % (SLOT_STONE[0] + px, py, SLOT_STONE[1] + STONE_FRONT + 0.04, pw, ph))
-    lines.append("    -- plots kept for buildings to come: centre, size (width along the front, depth) and the yaw")
-    lines.append("    -- that turns local +Z out of the front, where the notice board stands")
+    lines.append("    -- the plots the hub's buildings stand on: centre, size (width along the front, depth) and the yaw")
+    lines.append("    -- that turns local +Z out of the front")
     lines.append("    Plots = {")
     for name, (x, z, w, d, yaw) in plot_layout().items():
         lines.append("        %s = { Centre = Vector3.new(%.2f, %.2f, %.2f), Size = Vector2.new(%g, %g), Yaw = %.4f },"
                      % (name, x, 0.3, z, w, d, yaw))
     lines.append("    },")
-    (bx, by), (bw, bh) = BOARD_PANEL
-    lines.append("    PlotBoardPanel = { Centre = Vector3.new(%g, %g, %.2f), Size = Vector2.new(%g, %g) }," % (bx, by, BOARD_FRONT + 0.03, bw, bh))
-    lines.append("    PlotCordHeight = %g," % CORD_HEIGHT)
     (sx, sy), (sw, sh) = STELE_PANEL
     (tx, ty), (tw, th) = STELE_TITLE
     lines.append("    -- the Ascension Stele (the leaderboard, on the Leaderboard plot): its board's face and title plaque")

@@ -253,7 +253,25 @@ def build(tree, res, mat=None):
 
 
 # ---------- the ornament and the ribbon (stage 3) ----------
-from ponytail import plate  # noqa: E402  (a closed plate with a properly triangulated outline)
+def plate(m, centre, xaxis, yaxis, normal, outline, th):
+    """A flat plate `th` thick (a closed solid) with the given outline (x, y in its plane, any
+    simple polygon, concave too): its faces properly triangulated, its rim facing out."""
+    from mathutils.geometry import tessellate_polygon
+    area2 = sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(outline, outline[1:] + outline[:1]))
+    if area2 < 0:
+        outline = outline[::-1]   # counter-clockwise in (x, y): the rim's outward side is (dy, -dx)
+    front = [m.v(centre + xaxis * x + yaxis * y + normal * th) for x, y in outline]
+    backv = [m.v(centre + xaxis * x + yaxis * y - normal * th) for x, y in outline]
+    for a, b, c in tessellate_polygon([[V((x, y, 0)) for x, y in outline]]):
+        m.face([front[a], front[b], front[c]], [outline[a], outline[b], outline[c]], 0, normal)
+        m.face([backv[a], backv[b], backv[c]], [outline[a], outline[b], outline[c]], 0, -normal)
+    n = len(outline)
+    for i in range(n):
+        i2 = (i + 1) % n
+        (x0, y0), (x1, y1) = outline[i], outline[i2]
+        out = xaxis * (y1 - y0) - yaxis * (x1 - x0)
+        m.face([front[i], backv[i], backv[i2], front[i2]], [(0, 0), (0, 1), (1, 1), (1, 0)], 0, out)
+
 
 TIE_AXIS = (V((0.0, 0.42, 3.62)) - (TIE + V((0, 0.02, -0.04)))).normalized()   # the hair leaves the tie upward
 CROWN_FACE = V((0, -0.8, 0.6)).normalized()

@@ -244,10 +244,10 @@ local takePanel = UiKit.panel({ Name = "TakeEggPanel", Size = UDim2.fromOffset(i
 function takeSize()
     takePanel.Size = UDim2.fromOffset(if smallBar() then 300 else 340, 48)
 end
-UiFx.attention(takePanel, WEAK_GOLD)
 local takeEdge = takePanel:FindFirstChildOfClass("UIStroke")
 takeEdge.Color = WEAK_GOLD
 takeEdge.Thickness = 2
+UiFx.attention(takePanel, WEAK_GOLD) -- (after the edge is set: it breathes from its rest thickness)
 local takeArrow = UiKit.label({
     Name = "Arrow", Font = "Strong", TextSize = 34, Text = "^", TextColor3 = WEAK_GOLD, TextXAlignment = Enum.TextXAlignment.Center,
     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(28, 24), Size = UDim2.fromOffset(30, 30), Parent = takePanel,
@@ -701,7 +701,7 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
     elseif action == "Steal" and style then
         GuardianFx.steal((...), style)
         if player:GetAttribute("CarryingGuardian") == model:GetAttribute("GuardianId") then
-            local goal = if config.SafeZone.Island then "Carry it home to " .. config.SafeZone.Name .. "!" else "Reach the " .. config.SafeZone.Name .. "!"
+            local goal = "Carry it home to " .. config.SafeZone.Name .. "!"
             message:show("You took the egg! " .. goal, Color3.fromRGB(255, 214, 110))
         end
     elseif action == "Drop" and style then

@@ -295,7 +295,8 @@ function Hud.window(props)
     local opened = false
     local shown = 0 -- which opening or closing is the latest: a quick reopen cancels a closing
     local hudScale = frame:FindFirstChildOfClass("UIScale")
-    local restScale = hudScale.Scale -- read only while it's hidden: mid-animation the scale isn't its rest
+    -- its rest scale is the screen's (HudScale), read each time: the screen may change while it is open
+    local restScale = HudMetrics.scale
     UiFx.edgeLight(frame)
     function win.isOpen()
         return opened
@@ -307,11 +308,11 @@ function Hud.window(props)
         opened = false
         shown += 1
         local this = shown
-        UiFx.tween(hudScale, 0.09, { Scale = restScale * 0.95 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        UiFx.tween(hudScale, 0.09, { Scale = restScale() * 0.95 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
         task.delay(0.09, function()
             if shown == this then
                 frame.Visible = false
-                hudScale.Scale = restScale
+                hudScale.Scale = restScale()
             end
         end)
         if props.OnClose then
@@ -327,14 +328,17 @@ function Hud.window(props)
         if not opened then
             opened = true
             shown += 1
-            if not frame.Visible then
-                restScale = hudScale.Scale
-            end
+            local this = shown
+            task.delay(0.25, function() -- (the screen changed while it unfolded: the tween ended on the old scale)
+                if shown == this then
+                    hudScale.Scale = restScale()
+                end
+            end)
             Sfx.play("Open")
             frame.Position = home + UDim2.fromOffset(0, 14) -- it rises into place, unfolding
             frame.Visible = true
-            hudScale.Scale = restScale * 0.93
-            UiFx.tween(hudScale, 0.24, { Scale = restScale }, Enum.EasingStyle.Back)
+            hudScale.Scale = restScale() * 0.93
+            UiFx.tween(hudScale, 0.24, { Scale = restScale() }, Enum.EasingStyle.Back)
             TweenService:Create(frame, SLIDE, { Position = home }):Play()
             UiFx.flash(frame)
             UiFx.scan(frame)

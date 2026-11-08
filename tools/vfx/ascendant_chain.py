@@ -32,7 +32,6 @@ GOLD_LO = np.array([120, 60, 10], dtype=float)
 
 def shade(d):
     """d: distance from the tube's centreline (0 at the centre, 1 at its edge) -> colour and alpha"""
-    a = np.clip(1 - d, 0, 1)
     s = np.sqrt(np.clip(1 - d * d, 0, 1))                  # the round section
     light = np.clip(0.35 + 0.65 * s, 0, 1) ** 1.2
     hi = np.exp(-((d - 0.25) / 0.18) ** 2)                 # a highlight a little off centre

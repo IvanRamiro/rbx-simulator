@@ -147,7 +147,7 @@ end
 -- The spearman's stances (the owner's reference, 2026-11-04), whole-body, for a player standing still
 -- on the ground: wide and low, side-on with the left leg leading, the head turned to look ahead, the
 -- shaft in both hands. Guard: level across the body. Low: a deep lunge, the tip forward and down. Draw
--- and Thrust: the strike. A walking or airborne player uses STRIKES' arms-only versions. The values
+-- and Thrust: the strike. A walking or airborne player uses the strike clips' arms-only versions (clipPose). The values
 -- were solved against an R15 rig: the hands on the shaft, the feet flat on the floor.
 local function spearStance(drop, yaw, waist, neck, arms, legs)
     return {
@@ -339,12 +339,7 @@ for name, pose in QINGGONG_POSES do
         QUICK_POSES[pose] = true
     end
 end
-for name, pose in STRIKES do
-    -- a stance settles at the normal pace; the blows snap
-    if name ~= "SwordReady" and name ~= "SpearReady" then
-        QUICK_POSES[pose] = true
-    end
-end
+-- (the strikes are clips, blended at the slash pace; the ready stances in STRIKES settle at the normal one)
 
 local function updatePoses(deltaTime)
     local now = os.clock()

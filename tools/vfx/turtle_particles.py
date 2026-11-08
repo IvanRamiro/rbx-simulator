@@ -2,7 +2,6 @@
 
     blender -b --factory-startup -P tools/vfx/turtle_particles.py     writes assets/vfx/pets/plum_petal.png and jade_chip.png
 """
-import math
 import os
 import struct
 import zlib

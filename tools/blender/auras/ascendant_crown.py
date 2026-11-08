@@ -16,7 +16,8 @@ Every plate is drawn flat on the unrolled band (x along its circumference, y up,
 thickness, then wrapped onto the band's cylinder, which flares a little toward the top.
 Units are studs (1 Blender unit = 1 stud), Z up; the front faces -Y. One mesh, one material.
 
-    run inside Blender:  exec(open(".../tools/blender/auras/ascendant_crown.py").read(), {"__name__": "__main__"})
+    run inside Blender:  path = ".../tools/blender/auras/ascendant_crown.py"
+                         exec(open(path).read(), {"__name__": "__main__", "__file__": path})
     then export(bpy.data.objects["AscendantCrown"]) writes assets/aura/ascendant/AscendantCrown.obj
 """
 import math
@@ -26,7 +27,7 @@ import bmesh
 import bpy
 from mathutils import Vector
 
-ROOT = "/Users/ivan/qi-aura-simulator"
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))  # the repository, from tools/blender/<folder>/
 OUT = os.path.join(ROOT, "assets/aura/ascendant/AscendantCrown.obj")
 COLL = "AscendantCrown"
 TAU = math.tau

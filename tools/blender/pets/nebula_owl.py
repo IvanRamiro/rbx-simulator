@@ -5,10 +5,11 @@ a dark centre, under lids that rest low: an unimpressed stare. Pale brow feather
 lanes of dust, a few new stars burning in it. Its breast is pale, chevroned like a real owl's, going to dusk at the flanks; it flies without a sound.
 Its signature: the head is its own piece, turning freely under a ruff of feathers, so it can look right round behind itself as a real owl does.
 
-    Blender -b --factory-startup --python-exit-code 1 -P tools/blender/pets/nebula_owl.py -- [clay|paint|all] [review dir]
+    Blender -b --factory-startup --python-exit-code 1 -P tools/blender/pets/nebula_owl.py -- [clay|paint|all|overwrite] [review dir]
 
-clay: form review in neutral clay. paint: the painted high-detail model. all: also the game mesh, bake, rig, the file and the FBX.
-Faces -Y, Z up. The maps go to assets/pets/CelestialEgg/.
+clay: form review in neutral clay. paint: the painted high-detail model. all: also the game mesh, bake, rig, the file and the FBX,
+into the PET_KIT_TRIAL folder. overwrite: "all" into assets/pets/CelestialEgg/ itself, which undoes the hand-painted colour map
+there (see the NOTE by the bake). With no stage it does "paint". Faces -Y, Z up.
 
 What touches what: the head's lower half is buried in a round collar, hidden by the ruff, so it can turn with no skin to twist; eyes sit in the dishes of the face under their lids; the beak, brows and tufts are sunk into the head;
 every feather's root is sunk into the arm of its wing, whose shoulder is sunk into the body; tail feathers are sunk into the rump; legs into the thighs' feathers, talons into the feet.
@@ -27,7 +28,12 @@ import pet_kit
 from pet_kit import *  # noqa: F401,F403
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-STAGE = ARGS[0] if ARGS else "all"
+STAGE = ARGS[0] if ARGS else "paint"
+if STAGE == "all" and not os.environ.get("PET_KIT_TRIAL"):
+    # a full build into assets/ would replace the hand-painted colour map: ask for it by name
+    raise SystemExit("nebula_owl: \"all\" needs PET_KIT_TRIAL set to a trial folder; \"overwrite\" builds into assets/ itself")
+if STAGE == "overwrite":
+    STAGE = "all"
 REVIEW = ARGS[1] if len(ARGS) > 1 else "/tmp"
 PET = "NebulaOwl"
 N = PET + "_"
@@ -442,7 +448,6 @@ def paint_feathers(o, idx, uu, vv, top, kind="sky", hidden_under=None, flight=No
 
 def plain_feathers(o, idx, uu, vv, top):
     """The brows: pale, a dark line beneath, what its whole expression is drawn with."""
-    P = verts(o)
     col = mix(PEARL, LAVENDER, smooth(0.45, 1.0, uu) * 0.5)
     col = np.where(top[:, None] > 0, col, DUSK)
     paint(o, col, 0.7)
@@ -849,7 +854,7 @@ def bind_all(lows, rig, glows, data):
             share = min(1.0, abs(x) / 0.2)
             weights.append({"Tail": 1 - share, ("TailL" if x > 0 else "TailR"): share})
     weigh(lows["Tail"], weights)
-    legs, talons = verts(lows["Legs"]), verts(lows["Talons"])
+    legs = verts(lows["Legs"])
     weigh(lows["Legs"], [{("Foot" if p[2] < LEG[2].z + 0.03 else "Leg") + ("L" if side > 0 else "R"): 1.0} for p, side in zip(legs, META["Legs"])])
     weigh(lows["Talons"], [{"Foot" + ("L" if side > 0 else "R"): 1.0} for side in META["Talons"]])
     weigh(glows["Glints"], [{"EyeL" if p[0] > 0 else "EyeR": 1.0} for p in verts(glows["Glints"])])
