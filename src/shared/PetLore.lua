@@ -140,6 +140,10 @@ return {
     ThousandYearDreamEater = { Lore = "It has been eating one dream for a thousand years and still hasn't reached the end. Be careful what you are dreaming when it looks up." },
     TheNamelessOne = { Lore = "Every name it was given has been forgotten by whoever gave it. This page keeps trying to write something down." },
     HeavenbreakerApe = { Lore = "It struck heaven once and heaven still hasn't answered. It is waiting, and getting impatient." },
+    AbyssAnomalocaris = {
+        Lore = "The first hunter of the first sea. The sea has been gone for longer than mountains have stood; it hasn't noticed, and swims on through the air.",
+        Special = { Name = "The First Hunt", Text = "Opens its great arms wide and draws back, then lunges, and the arms snap shut. Two rings of light ripple out from it, like the surface of the first sea closing over the strike." },
+    },
     VoidscaleHydra = { Lore = "Cut one head and the void grows two in its place. Between its scales there is simply nothing." },
     EternalClockworkDragon = { Lore = "A dragon wound at the start of time. When its gears finally stop, so will everything else." },
 }

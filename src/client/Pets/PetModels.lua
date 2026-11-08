@@ -649,6 +649,7 @@ local MESH_LOOKS = {
     CloudSheep = { Glow = Color3.fromRGB(120, 215, 245), Length = 3.0 },
     WindSprite = { Glow = Color3.fromRGB(30, 235, 180), Length = 3.5 },
     GalaxyManta = { Glow = Color3.fromRGB(140, 100, 255), Length = 4.0 },
+    AbyssAnomalocaris = { Glow = Color3.fromRGB(190, 36, 146), Length = 3.8 },
     StormhornKirin = { Glow = Color3.fromRGB(90, 170, 255), Length = 4.4 },
     JadeWyrmTurtle = { Glow = Color3.fromRGB(60, 220, 170), Length = 4.8 },
     NebulaOwl = { Glow = Color3.fromRGB(176, 122, 255), Length = 4.0 },

@@ -442,6 +442,7 @@ PetArchetypes.Specs = {
     Shadowcoil = { Kind = "Serpent", Body = rgb(35, 30, 50), Accent = rgb(160, 90, 255), Belly = rgb(70, 60, 90), Glow = rgb(170, 100, 255), Core = rgb(220, 190, 255), Spikes = true, GlowEyes = true },
     RuneSphinx = { Kind = "Beast", Body = rgb(40, 36, 32), Accent = rgb(255, 196, 97), Belly = rgb(150, 115, 75), Glow = rgb(255, 180, 80), Core = rgb(255, 240, 200), Ears = "Pointed", Horns = "Horns", Mane = true, Tail = "Long", Gems = true },
     ThousandYearDreamEater = { Kind = "Beast", Body = rgb(120, 90, 170), Accent = rgb(255, 170, 230), Belly = rgb(180, 160, 220), Glow = rgb(255, 180, 240), Core = rgb(255, 230, 250), Ears = "Long", Tail = "Fluffy", Gems = true, Halo = true },
+    AbyssAnomalocaris = { Kind = "Ray", Body = rgb(52, 48, 60), Accent = rgb(196, 138, 66), Belly = rgb(120, 110, 112), Glow = rgb(225, 50, 175), Core = rgb(255, 210, 240) },
     HeavenbreakerApe = { Kind = "Golem", Body = rgb(60, 45, 40), Accent = rgb(255, 200, 80), Belly = rgb(140, 110, 90), Glow = rgb(255, 210, 100), Core = rgb(255, 245, 200), Halo = true, GlowEyes = true, Spikes = true },
     VoidscaleHydra = { Kind = "Serpent", Body = rgb(30, 25, 55), Accent = rgb(140, 70, 255), Belly = rgb(60, 50, 90), Glow = rgb(170, 100, 255), Core = rgb(220, 190, 255), Heads = 3, Spikes = true, GlowEyes = true },
     TheNamelessOne = { Kind = "Golem", Body = rgb(15, 15, 25), Accent = rgb(255, 255, 255), Belly = rgb(40, 40, 60), Glow = rgb(230, 220, 255), Core = rgb(255, 255, 255), GlowEyes = true, Halo = true, Gems = true },

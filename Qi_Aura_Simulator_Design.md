@@ -300,6 +300,7 @@ Specials are visual only.
 | Prism Armadillo | An armadillo armoured in cut crystal: a shield over the shoulders, four bands that slide over each other, a shield over the hips, every plate faceted like quartz with a faint spectral sheen on its bevels; a crown of crystal tiles on its head, a ringed crystal tail; dusty-rose skin, a long pink snout, tall pink ears, stubby legs with big digging claws. A row of small prisms down its back, each drifting slowly through the spectrum. Its face is unlike any other pet's: small bead eyes under a crystal brow with no upper lids; soft cheek pads turn up round each eye from below, half up when it is pleased, all the way for a blink. Sniffs at everything, rears up to look about, rolls up now and then purely to show off; flying, it rolls up and spins through the air | **Every Colour:** rolls up into its armour and spins in place, faster and faster, its crest blazing; it pops open in a fan of thin rays of every colour and a scatter of rainbow glints, then waits, squinting, to be admired |
 | Crystal Snail | A glossy jade snail, its soft wet body pebbled with fine tubercles, its neck lifted, a pale gliding foot; on its back a coiled shell of pearly aquamarine banded along its growth, with a small spire on one side, and clusters of geode crystal growing out of it, the tallest in each cluster glowing. Its face is unlike any other pet's: two eyes on long stalks with no lids; like a real snail it blinks by drawing a stalk in, one at a time, and its feelings show in how the stalks lean, wave and droop; a small smile and a soft blush below. It glides on a slow wave of its foot, stretching and gathering, and leaves a faint road of crystal glints behind it; shy now and then, it draws both stalks in | **A Hundred Years:** draws itself in under its shell, stalks first, as its crystals brighten; a road of crystal grows up behind it shard by shard along the way it came; then its eyes come out first, to see whether anyone noticed, and the rest of it after |
 | Golden Mane Lion | High-shouldered royal lion, a tiered mane of flame-tipped locks in bronze, gold and champagne, a crest of reddish-gold locks, deep-set amber eyes; heavy, deliberate stride | **Sovereign Roar:** opens its jaw as golden shockwave rings roll out, solar rays flare behind its crest and a ring spreads beneath its paws |
+| Abyss Anomalocaris | The Primordial Abyss Egg's own pet (November 8, 2026): a hunter from the first sea, made of the egg's primordial stone (dark slate, warped strata, thin ochre seams), paler beneath. A low oval head shield ringed in ochre; a flattened trunk of nine segments rimmed in ochre, setal ridges along its back; nine pairs of shingled flaps, each front flap resting over the next, the only light on it a thin magenta line round the skirt's scalloped outer edge and along its tail blades; a tail fan of three pairs of long blades raised in a V; two great ringed arms curled like fern fronds under its head, each segment armed with a pair of curved bone-pale spines; two large kidney-shaped compound eyes on short thick stalks, faceted, black-violet; a round mouth cone of plates beneath. It always swims through the air: a wave runs back along its flaps, its trunk undulates, it banks into turns, its arms flex as if tasting the water and its eyes swivel on their stalks | **The First Hunt:** opens its arms wide as it draws back, lunges, and snaps them shut; sparks fly from the spines and two rings of magenta light ripple out from it, level, like the surface of the first sea closing over the strike |
 
 ### Roster by first egg
 
@@ -430,6 +431,7 @@ Specials are visual only.
 
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
+| Abyss Anomalocaris ★ | Legendary | Primordial seas | +230% |
 | Eternal Clockwork Dragon ★ | Secret | Time | +600% |
 
 Nine-Tail Moonfox (Mythical) no longer hatches; players who own one keep it.
@@ -588,7 +590,7 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 | Moonlit Isle | Heavenly Throne Egg | Lesser Immortal | Celestial Snow Leopard 47.5%, Eclipse Cat 47.5%, Comet Stag 2%, Timekeeper Tortoise 2%, Celestial Pearl Dragon 0.5%, Galaxy Manta 0.5% |
 | Origin Abyss | Forbidden Origin Egg | Divine Initiate | Shadowcoil 87%, Eclipse Cat 8%, Rune Sphinx 4%, Thousand-Year Dream Eater 0.9%, The Nameless One 0.1% |
 | Origin Abyss | Void Rift Egg | Void Walker | Shadowcoil 87%, Eclipse Cat 8%, Heavenbreaker Ape 4%, Voidscale Hydra 0.9%, The Nameless One 0.1% |
-| Origin Abyss | Primordial Abyss Egg | Primordial Awakening | Heavenbreaker Ape 99%, Voidscale Hydra 0.45%, Thousand-Year Dream Eater 0.45%, Eternal Clockwork Dragon 0.05%, The Nameless One 0.05% |
+| Origin Abyss | Primordial Abyss Egg | Primordial Awakening | Heavenbreaker Ape 60%, Abyss Anomalocaris 39%, Voidscale Hydra 0.45%, Thousand-Year Dream Eater 0.45%, Eternal Clockwork Dragon 0.05%, The Nameless One 0.05% |
 
 ### Egg designs
 

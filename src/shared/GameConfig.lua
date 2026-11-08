@@ -543,6 +543,7 @@ local GameConfig = {
         VoidscaleHydra = { DisplayName = "Voidscale Hydra", Rarity = "Mythical", Theme = "Void", QiBonus = 340 },
 
         EternalClockworkDragon = { DisplayName = "Eternal Clockwork Dragon", Rarity = "Secret", Theme = "Time", QiBonus = 600 },
+        AbyssAnomalocaris = { DisplayName = "Abyss Anomalocaris", Rarity = "Legendary", Theme = "Primordial seas", QiBonus = 230 },
     },
 
     PetRarityColors = {
@@ -846,7 +847,8 @@ local GameConfig = {
             DisplayName = "Primordial Abyss Egg",
             RequiredRank = "PrimordialAwakening",
             Pool = {
-                { PetId = "HeavenbreakerApe", HatchChance = 99 },
+                { PetId = "HeavenbreakerApe", HatchChance = 60 },
+                { PetId = "AbyssAnomalocaris", HatchChance = 39 },
                 { PetId = "VoidscaleHydra", HatchChance = 0.45 },
                 { PetId = "ThousandYearDreamEater", HatchChance = 0.45 },
                 { PetId = "EternalClockworkDragon", HatchChance = 0.05 },

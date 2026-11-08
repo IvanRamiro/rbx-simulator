@@ -4,6 +4,7 @@
 -- ViewportFrame. A pet missing here has no SurfaceAppearance (palette-textured or procedural).
 -- Re-read after re-importing a pet's maps.
 return {
+    AbyssAnomalocaris = "rbxassetid://72650000114111",
     AzureSkyDragon = "rbxassetid://102035306549567",
     CloudSheep = "rbxassetid://137454504415941",
     CosmicJellyfish = "rbxassetid://113526835581631",

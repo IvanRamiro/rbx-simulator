@@ -64,6 +64,7 @@ AuraStyles.Elements = {
     RuneSphinx = { Core = Color3.fromRGB(255, 240, 200), Main = Color3.fromRGB(255, 180, 80), Deep = Color3.fromRGB(60, 45, 30), Particles = "Mote", RingShape = "Polygon", RingSides = 4 },
     ThousandYearDreamEater = { Core = Color3.fromRGB(255, 230, 250), Main = Color3.fromRGB(200, 140, 255), Deep = Color3.fromRGB(90, 50, 160), Particles = "Mote", RingShape = "Circle" },
     HeavenbreakerApe = { Core = Color3.fromRGB(255, 245, 200), Main = Color3.fromRGB(255, 180, 70), Deep = Color3.fromRGB(150, 70, 30), Particles = "Ember", RingShape = "Circle" },
+    AbyssAnomalocaris = { Core = Color3.fromRGB(255, 210, 240), Main = Color3.fromRGB(225, 50, 175), Deep = Color3.fromRGB(70, 30, 80), Particles = "Mote", RingShape = "Circle" },
     VoidscaleHydra = { Core = Color3.fromRGB(220, 190, 255), Main = Color3.fromRGB(120, 60, 240), Deep = Color3.fromRGB(30, 10, 80), Particles = "Mote", RingShape = "Circle" },
     TheNamelessOne = { Core = Color3.fromRGB(255, 255, 255), Main = Color3.fromRGB(200, 170, 255), Deep = Color3.fromRGB(40, 20, 90), Particles = "Mote", RingShape = "Polygon", RingSides = 8 },
     EternalClockworkDragon = { Core = Color3.fromRGB(235, 255, 255), Main = Color3.fromRGB(220, 190, 110), Deep = Color3.fromRGB(110, 80, 40), Particles = "Spark", RingShape = "Polygon", RingSides = 12 },
