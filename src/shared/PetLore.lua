@@ -73,7 +73,10 @@ return {
         Lore = "It feeds on dreams you have already forgotten. Sleepers near one wake oddly rested.",
         Special = { Name = "A Forgotten Dream", Text = "Uncurls its tongue, and faint threads of a dream nobody remembers drift in, spiralling, to the tip of it. One slow wingbeat, and a shimmer of scale dust drifts down." },
     },
-    CrystalSnail = { Lore = "It takes a hundred years to cross a valley and leaves a road of crystal behind it." },
+    CrystalSnail = {
+        Lore = "It takes a hundred years to cross a valley and leaves a road of crystal behind it.",
+        Special = { Name = "A Hundred Years", Text = "Draws itself in under its shell as its crystals brighten, and a road of crystal grows up behind it, shard by shard. Then its eyes come out first, to see whether anyone noticed." },
+    },
     PrismArmadillo = {
         Lore = "When it curls up, its plates split light into every colour. It curls up often, mostly to show off.",
         Special = { Name = "Every Colour", Text = "Rolls up into its crystal armour and spins, faster and faster, until it pops open in a fan of every colour of light. Then it waits to be admired." },
