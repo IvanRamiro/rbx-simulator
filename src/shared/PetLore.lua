@@ -123,7 +123,10 @@ return {
         Lore = "It sees by the light of stars that have not been born yet, which makes it very hard to surprise.",
         Special = { Name = "Stars Not Yet Born", Text = "Spreads its wings as gas gathers before its breast, and a new star lights exactly when it knew it would. One silent wingbeat, and it goes back to looking unimpressed." },
     },
-    CelestialSnowLeopard = { Lore = "It stalks the high snow where the sky begins. Its pawprints stay frozen long after the mountain thaws." },
+    CelestialSnowLeopard = {
+        Lore = "It stalks the high snow where the sky begins. Its pawprints stay frozen long after the mountain thaws.",
+        Special = { Name = "Where the Sky Begins", Text = "It sinks into a crouch, haunches wiggling, eyes fixed, and pounces in a long leap. Frost bursts up where it sprang, and ahead of it a trail of pawprints freezes into the ground one by one, glowing with starlight, then shatters into glittering snow." },
+    },
     CometStag = { Lore = "It crosses the sky once in a lifetime and leaves a trail people name their children after." },
     CelestialPearlDragon = {
         Lore = "A dragon that carries one flawless pearl of condensed heaven. Whole sects have fallen trying to take it.",

@@ -3165,6 +3165,214 @@ local function animatePearlDragon(rig, s, moving, fly, nova)
     end
 end
 
+-- The Celestial Snow Leopard (skinned): a grown snow leopard, a hunter of the high snow. It prowls low, head level and forward, its shoulder blades
+-- rolling, its huge tail held low behind it, the tip lifting in a curl; now and then it stops, sinks into a stalking crouch and stares, its haunches
+-- wiggling; still a while, it lies down sphinx-like, its tail curled round beside it. Its stare is steady and intense; its ears turn on their own; its
+-- tail tip twitches. In the air it stretches out in a long leap.
+local LEOPARD_FAR = 90 -- studs from the camera past which nobody can see it fidget: its bones rest
+local LEOPARD_SOLE = 0.297 -- metres from the middle of its box down to its paws: it walks on the ground
+local LEOPARD_LID_HINGE = { L = Vector3.new(0.939, -0.1562, -0.3064), R = Vector3.new(0.939, 0.1562, 0.3064) } -- both lids of an eye turn on this line
+local LEOPARD_BLINK_UPPER, LEOPARD_BLINK_LOWER = math.rad(52), math.rad(24)
+local LEOPARD_ICE, LEOPARD_STAR = Color3.fromRGB(196, 232, 255), Color3.fromRGB(140, 200, 255)
+local LEOPARD_LEADS = { BL = 0, FL = math.pi / 2, BR = math.pi, FR = 3 * math.pi / 2 } -- a cat's lateral walk
+
+local function leopardLegs(f, b)
+    local out = {}
+    for _, side in { "L", "R" } do
+        for k = 1, 3 do
+            out["LegF" .. side .. k] = { f[k], 0, 0 }
+            out["LegB" .. side .. k] = { b[k], 0, 0 }
+        end
+    end
+    return out
+end
+
+local function leopardStance(base, f, b)
+    for bone, a in leopardLegs(f, b) do
+        base[bone] = a
+    end
+    return base
+end
+
+-- its stances, each searched in Blender against the ground and for torn skin: the same numbers as celestial_snow_leopard.py's CROUCH, LIE and LEAP
+local LEOPARD_CROUCH = leopardStance({ Shoulders = { 0.005, 0, 0 }, Head = { 0.228, 0, 0 } }, { -0.2, -1.387, -0.2 }, { 0.354, -0.419, 0.957 })
+local LEOPARD_CROUCH_DROP = 0.098
+local LEOPARD_LIE = leopardStance({ Hips = { -0.158, 0, 0 }, Shoulders = { 0.265, 0, 0 }, Head = { 0.16, 0, 0 },
+    Tail1 = { 0, 0.4, 0 }, Tail2 = { 0, 0.4, 0 }, Tail3 = { 0, 0.35, 0 } }, { 0.226, 1.261, -0.698 }, { 0.23, -1.026, -0.306 })
+local LEOPARD_LIE_DROP = 0.182
+local LEOPARD_LEAP = leopardStance({ Hips = { -0.12, 0, 0 }, Shoulders = { -0.2, 0, 0 }, Head = { 0.155, 0, 0 } }, { 0.756, -0.247, -0.29 }, { -0.511, 0.407, -0.106 })
+for k = 1, 7 do
+    LEOPARD_LEAP["Tail" .. k] = { -0.05, 0, 0 }
+end
+
+local function leopardBones()
+    local bones = { "Hips", "Body", "Chest", "Shoulders", "Neck", "Head", "EyeL", "EyeR", "EarL", "EarR" }
+    for k = 1, 7 do
+        table.insert(bones, "Tail" .. k)
+    end
+    for _, key in { "FL", "FR", "BL", "BR" } do
+        for k = 1, 3 do
+            table.insert(bones, "Leg" .. key .. k)
+        end
+        table.insert(bones, "Paw" .. key)
+    end
+    return bones
+end
+local LEOPARD_BONES = leopardBones() -- every bone its stances pose (the lids turn on their hinges on their own)
+
+-- a fine frost drifts off it: its breath of the high snow, rising from its back and tail
+local function leopardFrost(rig, s)
+    s.frostMade = true
+    local tail = rig.points.Tail4
+    if not tail then
+        return
+    end
+    local frost = Instance.new("ParticleEmitter")
+    frost.Name = "Frost"
+    frost.Texture = SPARKLE
+    frost.Rate = 2
+    frost.Lifetime = NumberRange.new(1.4, 2.2)
+    frost.Speed = NumberRange.new(0.03 * rig.unit, 0.12 * rig.unit)
+    frost.SpreadAngle = Vector2.new(180, 180)
+    frost.Acceleration = Vector3.new(0, 0.08 * rig.unit, 0)
+    frost.Drag = 1
+    frost.Rotation = NumberRange.new(0, 360)
+    frost.RotSpeed = NumberRange.new(-30, 30)
+    frost.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.06 * rig.unit), NumberSequenceKeypoint.new(1, 0) })
+    frost.Color = ColorSequence.new(Color3.fromRGB(240, 250, 255), LEOPARD_STAR)
+    frost.LightEmission = 1
+    frost.LightInfluence = 0
+    frost.Parent = tail
+end
+
+local function animateSnowLeopard(rig, s, moving, fly, nova)
+    if not s.frostMade then
+        leopardFrost(rig, s)
+    end
+    local camera = workspace.CurrentCamera
+    if not camera or (camera.CFrame.Position - rig.rootPart.Position).Magnitude > LEOPARD_FAR then
+        return
+    end
+    local m, u, t, dt = rig.motors, rig.meters, s.time, rig.deltaTime
+    local pace = math.max(moving, fly)
+    local drop = dropToGround(rig, s, t, u, fly, LEOPARD_SOLE)
+
+    -- the special, Where the Sky Begins: it sinks into a crouch, its haunches wiggling, eyes fixed (progress to 0.38); it pounces up in a long leap,
+    -- frost bursting from where it sprang (Blasts.WhereTheSkyBegins, at 0.42); it lands in a crouch and rises
+    local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+    local gather = smoothstep(0.02, 0.2, progress) * (1 - smoothstep(0.38, 0.43, progress)) + smoothstep(0.62, 0.68, progress) * (1 - smoothstep(0.78, 0.95, progress))
+    local wiggle = smoothstep(0.15, 0.22, progress) * (1 - smoothstep(0.34, 0.39, progress))
+    local leap = if progress > 0.4 and progress < 0.66 then math.sin(math.pi * (progress - 0.4) / 0.26) else 0
+    local special = progress > 0
+
+    -- still a moment, it sinks into a stalking crouch and stares, now and then; still a while, it lies down; it is up as soon as it has somewhere to go
+    s.still = if pace < 0.05 and not special then (s.still or 0) + dt else 0
+    local wantLie = if s.still > 8 then 1 else 0
+    if s.still > 2.5 and wantLie == 0 and t >= (s.nextStalk or 0) then
+        s.stalkUntil = t + 2 + math.random() * 1.5
+        s.nextStalk = s.stalkUntil + 2.5 + math.random() * 3
+    end
+    local wantStalk = if s.still > 2.5 and wantLie == 0 and t < (s.stalkUntil or 0) then 1 else 0
+    s.lie = (s.lie or 0) + (wantLie - (s.lie or 0)) * math.min(1, dt * (if wantLie > (s.lie or 0) then 1.2 else 6))
+    s.stalk = (s.stalk or 0) + (wantStalk - (s.stalk or 0)) * math.min(1, dt * (if wantStalk > (s.stalk or 0) then 3 else 4))
+    local lie, stalk = smoothstep(0, 1, s.lie), smoothstep(0, 1, s.stalk)
+    local crouch = math.max(stalk, gather)
+
+    -- the prowl: a cat's lateral walk, low and smooth, the shoulder blades rolling with each forefoot; in the air a long stretched leap
+    s.stride = (s.stride or 0) + dt * 7.5 * moving
+    local onFoot = moving * (1 - fly) * (1 - crouch)
+    local want = {}
+    addStance(want, LEOPARD_CROUCH, crouch * (1 - lie))
+    addStance(want, LEOPARD_LIE, lie)
+    addStance(want, LEOPARD_LEAP, math.min(1, fly * 0.9 + leap))
+    for key, lead in LEOPARD_LEADS do
+        local phase = s.stride + lead
+        local swing, lift = math.sin(phase), math.max(0, math.cos(phase))
+        local stance
+        if string.sub(key, 1, 1) == "F" then
+            stance = { ["Leg" .. key .. "1"] = { 0.38 * swing, 0, 0 }, ["Leg" .. key .. "2"] = { -0.55 * lift, 0, 0 }, ["Leg" .. key .. "3"] = { 0.25 * lift, 0, 0 },
+                ["Paw" .. key] = { -0.3 * lift, 0, 0 } }
+        else
+            stance = { ["Leg" .. key .. "1"] = { -0.38 * swing, 0, 0 }, ["Leg" .. key .. "2"] = { 0.45 * lift, 0, 0 }, ["Leg" .. key .. "3"] = { -0.55 * lift, 0, 0 } }
+        end
+        addStance(want, stance, onFoot)
+    end
+    local roll = math.sin(s.stride + math.pi / 2)
+    addStance(want, { Shoulders = { 0, 0.06 * roll, 0.03 * roll }, Hips = { 0, -0.05 * roll, -0.025 * roll }, Neck = { -0.05, -0.05 * roll, 0 } }, onFoot)
+
+    -- the body: breathing, deeper lying down; banking on turns; the haunches wiggling before a pounce
+    local heading = math.atan2(-rig.rootPart.CFrame.LookVector.X, -rig.rootPart.CFrame.LookVector.Z)
+    local turned = (heading - (s.heading or heading) + math.pi) % (2 * math.pi) - math.pi
+    s.heading = heading
+    s.bank = (s.bank or 0) + (math.clamp((if dt > 0 then turned / dt else 0) * 0.08, -0.16, 0.16) - (s.bank or 0)) * math.min(1, dt * 3)
+    local breath = math.sin(t * (1.3 - 0.4 * lie))
+    local wig = math.sin(t * 18) * math.max(wiggle, 0.4 * stalk * math.max(0, math.sin(t * 0.9)) ^ 6)
+    addStance(want, { Hips = { 0, 0.08 * wig, s.bank * moving }, Chest = { 0.012 * breath * (1 + lie), 0, 0 } }, 1)
+
+    -- its stare: steady and intense, holding on you; when it crouches it locks on what is ahead
+    local toYou = rig.rootPart.CFrame:VectorToObjectSpace((camera.CFrame.Position - rig.rootPart.Position).Unit)
+    s.nextGaze = s.nextGaze or 0
+    if t >= s.nextGaze then
+        s.nextGaze = t + 2.5 + math.random() * 3
+        s.atYou = math.random() < 0.5
+        s.gazeYaw, s.gazePitch = (math.random() - 0.5) * 0.9, (math.random() - 0.5) * 0.25
+    end
+    local calm = (1 - 0.7 * pace) * (1 - crouch)
+    local wantYaw = (if s.atYou then math.clamp(math.atan2(-toYou.X, -toYou.Z), -0.8, 0.8) else s.gazeYaw) * calm
+    local wantPitch = (if s.atYou then math.clamp(toYou.Y * 0.5, -0.25, 0.3) else s.gazePitch) * calm
+    s.yaw = (s.yaw or 0) + (wantYaw - (s.yaw or 0)) * math.min(1, dt * 2.5)
+    s.pitch = (s.pitch or 0) + (wantPitch - (s.pitch or 0)) * math.min(1, dt * 2.5)
+    local turn = 1 - 0.4 * lie
+    addStance(want, {
+        Neck = { 0.25 * s.pitch, 0.4 * s.yaw * turn, 0 }, Head = { 0.45 * s.pitch, 0.55 * s.yaw * turn, 0 },
+        EyeL = { 0.2 * s.pitch, 0.2 * s.yaw, 0 }, EyeR = { 0.2 * s.pitch, 0.2 * s.yaw, 0 },
+    }, 1)
+
+    -- the ears: each turns on its own now and then; flattened in the crouch and the leap
+    local flat = math.max(crouch, 0.5 * fly, leap)
+    for _, side in { "L", "R" } do
+        local sign = if side == "L" then 1 else -1
+        local swivel = math.max(0, math.sin(t * 0.6 + (if side == "L" then 0 else 2.7))) ^ 10
+        addStance(want, { ["Ear" .. side] = { -0.15 * swivel - 0.45 * flat, sign * (0.35 * swivel + 0.25 * flat), 0 } }, 1)
+    end
+
+    -- the tail: held low and heavy behind it, the tip lifting in a curl and twitching now and then; streaming in the leap; lashing before a pounce
+    for k = 1, 7 do
+        local sway = (0.025 + 0.04 * k / 7) * math.sin(t * 0.8 - k * 0.5) * (1 - 0.6 * lie)
+        local twitch = if k >= 6 then 0.25 * math.max(0, math.sin(t * 2.1 + k)) ^ 10 * (1 - lie) else 0
+        local lash = 0.12 * math.sin(t * 9 - k * 0.7) * math.max(wiggle, 0.5 * stalk) * k / 7
+        addStance(want, { ["Tail" .. k] = { 0.02 * math.sin(t * 0.5 - k * 0.6) - 0.04 * moving, sway + twitch + lash, 0 } }, 1)
+    end
+
+    for _, name in LEOPARD_BONES do
+        local a = want[name] or Vector3.zero
+        local lift = if name == "Hips"
+            then (-LEOPARD_CROUCH_DROP * crouch * (1 - lie) - LEOPARD_LIE_DROP * lie + 0.32 * leap + 0.006 * onFoot * math.abs(math.sin(s.stride * 2))) * u - drop
+            else 0
+        pose(m[name], CFrame.new(0, lift, 0) * CFrame.Angles(a.X, a.Y, a.Z))
+    end
+
+    -- the eyes: slow, rare blinks; a steady stare when it crouches; heavy lids lying down
+    s.nextBlink = s.nextBlink or t + 3
+    local blink = 0
+    if t >= s.nextBlink then
+        local a = (t - s.nextBlink) / 0.24
+        if a >= 1 then
+            s.nextBlink = t + 3.5 + math.random() * 4
+        else
+            blink = 1 - math.abs(2 * a - 1)
+        end
+    end
+    local doze = smoothstep(0.3, 0.9, 0.5 + 0.5 * math.sin(t * 0.35))
+    local close = math.max(blink * (1 - crouch), lie * (0.35 + 0.55 * doze)) * (1 - gather)
+    local upper = LEOPARD_BLINK_UPPER * close - math.rad(5) * crouch
+    local lower = LEOPARD_BLINK_LOWER * close - math.rad(4) * crouch
+    for _, side in { "L", "R" } do
+        pose(m["LidU" .. side], CFrame.fromAxisAngle(LEOPARD_LID_HINGE[side], -upper))
+        pose(m["LidL" .. side], CFrame.fromAxisAngle(LEOPARD_LID_HINGE[side], lower))
+    end
+end
+
 -- The Wind Sprite is one smooth skin on a skeleton, so its joints are Bones (PetRig.buildSkinned). Axes as everywhere: -Z ahead, +X to its right; its left is -X.
 local WIND_LID_HINGE = { L = Vector3.new(0.9574, -0.1218, -0.2618), R = Vector3.new(0.9574, 0.1218, 0.2618) } -- both lids of an eye turn on this line
 local WIND_BLINK_UPPER, WIND_BLINK_LOWER = math.rad(72), math.rad(22)
@@ -4635,6 +4843,34 @@ PetRig.Profiles.CelestialPearlDragon = {
         Ivory = Color3.fromRGB(246, 238, 218),
     },
     Animate = animatePearlDragon,
+}
+
+local function leopardProfileBones()
+    local bones = table.clone(LEOPARD_BONES)
+    for _, lid in { "LidUL", "LidUR", "LidLL", "LidLR" } do
+        table.insert(bones, lid)
+    end
+    return bones
+end
+
+PetRig.Profiles.CelestialSnowLeopard = {
+    Skinned = true,
+    Bones = leopardProfileBones(),
+    Points = { "Tail4", "Head" },
+    GlowColors = {
+        ffffff = Color3.fromRGB(255, 255, 255), -- the catch-lights in its eyes
+    },
+    Effects = {
+        Blast = "WhereTheSkyBegins",
+    },
+    Colors = {
+        Gold = Color3.fromRGB(196, 232, 255),
+        Amber = Color3.fromRGB(140, 200, 255),
+        Orange = Color3.fromRGB(70, 110, 200),
+        Sun = Color3.fromRGB(240, 250, 255),
+        Ivory = Color3.fromRGB(246, 247, 250),
+    },
+    Animate = animateSnowLeopard,
 }
 
 PetRig.Profiles.GoldenManeLion = {
@@ -7065,6 +7301,131 @@ function Blasts.HeavenCondensed(rig, fx)
             sparks:Emit(18)
         end
     end)
+end
+
+-- It springs (animateSnowLeopard): frost bursts up from where it left the ground, and ahead of it, one after another, a line of its pawprints freezes
+-- into the ground, glowing ice-blue with starlight; then each print shatters into a puff of glittering snow.
+local LEOPARD_PRINTS = 6
+local LEOPARD_PRINT_SIZE = 2 -- its prints, twice its paw: at a pet's size, a print the size of its paw is lost on pale ground (seen in Play)
+local LEOPARD_PRINT_GLOW = Color3.fromRGB(70, 160, 255)
+
+local leopardRay = RaycastParams.new()
+leopardRay.RespectCanCollide = true
+-- The roads and paved floors are decoration laid over the terrain (no collision, invisible to rays) and drawn about 0.4 studs above it (measured in
+-- Play with markers at stepped heights): a mark meant to lie on the ground goes that far above a terrain hit, or the paving covers it
+local LEOPARD_OVER_TERRAIN = 0.45
+
+-- where a mark on the ground goes, at a point: on whatever is under it, lifted clear of paving over terrain; nil if nothing is under it
+local function leopardGroundAt(at, metre)
+    local hit = workspace:Raycast(at + Vector3.new(0, 0.5 * metre, 0), Vector3.new(0, -1 * metre, 0), leopardRay)
+    if not hit or (hit.Instance.Parent and hit.Instance.Parent:FindFirstChildOfClass("Humanoid")) then
+        return nil
+    end
+    return Vector3.new(at.X, hit.Position.Y + (if hit.Instance:IsA("Terrain") then LEOPARD_OVER_TERRAIN else 0.03), at.Z)
+end
+
+function Blasts.WhereTheSkyBegins(rig, fx)
+    local metre = rig.meters
+    local ground = rig.rootPart.Position - Vector3.new(0, LEOPARD_SOLE * metre + (rig.state.drop or 0), 0)
+    local ahead = (fx.facing.LookVector * Vector3.new(1, 0, 1)).Unit
+    local right = (fx.facing.RightVector * Vector3.new(1, 0, 1)).Unit
+
+    -- frost bursting up where it sprang, and a ring of rime across the ground
+    local holder = fx.neon(Vector3.new(0.5, 0.05, 0.5) * metre, CFrame.new(ground + Vector3.new(0, 0.03 * metre, 0)), LEOPARD_ICE)
+    holder.Transparency = 1
+    local frost = Instance.new("ParticleEmitter")
+    frost.Texture = "rbxasset://textures/particles/smoke_main.dds"
+    frost.Enabled = false
+    frost.Lifetime = NumberRange.new(0.6, 1)
+    frost.Speed = NumberRange.new(0.8 * metre, 1.6 * metre)
+    frost.SpreadAngle = Vector2.new(60, 60)
+    frost.EmissionDirection = Enum.NormalId.Top
+    frost.Drag = 3
+    frost.Rotation = NumberRange.new(0, 360)
+    frost.RotSpeed = NumberRange.new(-50, 50)
+    frost.Size = NumberSequence.new(0.18 * metre, 0.5 * metre)
+    frost.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+    frost.Color = ColorSequence.new(Color3.fromRGB(246, 252, 255), LEOPARD_ICE)
+    frost.LightEmission = 0.3
+    frost.LightInfluence = 0.4
+    frost.Parent = holder
+    frost:Emit(16)
+    local glitter = Instance.new("ParticleEmitter")
+    glitter.Texture = SPARKLE
+    glitter.Enabled = false
+    glitter.Lifetime = NumberRange.new(0.5, 0.9)
+    glitter.Speed = NumberRange.new(1 * metre, 2.2 * metre)
+    glitter.SpreadAngle = Vector2.new(70, 70)
+    glitter.EmissionDirection = Enum.NormalId.Top
+    glitter.Drag = 2
+    glitter.Acceleration = Vector3.new(0, -1.5 * metre, 0)
+    glitter.Size = NumberSequence.new(0.06 * metre, 0)
+    glitter.Color = ColorSequence.new(Color3.new(1, 1, 1), LEOPARD_STAR)
+    glitter.LightEmission = 1
+    glitter.LightInfluence = 0
+    glitter.Parent = holder
+    glitter:Emit(24)
+    local rimeAt = leopardGroundAt(ground, metre) or ground
+    local rime = fx.neon(Vector3.new(0.008 * metre, 0.3 * metre, 0.3 * metre), CFrame.new(rimeAt) * CFrame.Angles(0, 0, math.pi / 2), LEOPARD_ICE)
+    rime.Shape = Enum.PartType.Cylinder
+    rime.Material = Enum.Material.Glass
+    rime.Transparency = 0.35
+    TweenService:Create(rime, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.008 * metre, 2.4 * metre, 2.4 * metre) }):Play()
+    tweenAfter(0.35, rime, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1 })
+
+    -- its pawprints, freezing into the ground ahead of it one by one: a big heel pad and four toes, staggered left and right
+    for k = 1, LEOPARD_PRINTS do
+        local side = if k % 2 == 0 then 1 else -1
+        local at = ground + ahead * (0.45 + 0.42 * k) * metre + right * side * 0.12 * metre
+        at = leopardGroundAt(at, metre) or at
+        local face = CFrame.lookAt(at, at + ahead)
+        local appear = 0.06 + 0.07 * k
+        local pads = { { 0, 0.02, 0.09, 0.075 } }
+        for j = -1.5, 1.5 do
+            table.insert(pads, { j * 0.028, -0.05 - 0.012 * (1 - math.abs(j) / 1.5), 0.038, 0.042 })
+        end
+        for _, pad in pads do
+            local k2 = LEOPARD_PRINT_SIZE
+            local cf = face * CFrame.new(pad[1] * k2 * metre, 0, pad[2] * k2 * metre) * CFrame.Angles(0, 0, math.pi / 2)
+            local mark = fx.neon(Vector3.new(0.004 * metre, pad[4] * k2 * metre, pad[3] * k2 * metre), cf, LEOPARD_PRINT_GLOW)
+            mark.Shape = Enum.PartType.Cylinder
+            mark.Transparency = 1
+            tweenAfter(appear, mark, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = 0 })
+            tweenAfter(appear + 0.55, mark, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1 })
+        end
+        -- as it freezes in, a few motes of starlight rise off it: they show above grass, which hides anything flat on the ground
+        task.delay(appear, function()
+            if not holder.Parent then
+                return
+            end
+            local glint = fx.neon(Vector3.one * 0.05, CFrame.new(at + Vector3.new(0, 0.03 * metre, 0)), LEOPARD_ICE)
+            glint.Transparency = 1
+            local rise = glitter:Clone()
+            rise.EmissionDirection = Enum.NormalId.Top
+            rise.SpreadAngle = Vector2.new(15, 15)
+            rise.Speed = NumberRange.new(0.5 * metre, 0.9 * metre)
+            rise.Acceleration = Vector3.zero
+            rise.Drag = 3
+            rise.Lifetime = NumberRange.new(0.5, 0.8)
+            rise.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.07 * metre), NumberSequenceKeypoint.new(1, 0) })
+            rise.Color = ColorSequence.new(LEOPARD_ICE, LEOPARD_PRINT_GLOW)
+            rise.Parent = glint
+            rise:Emit(5)
+        end)
+        task.delay(appear + 0.6, function()
+            if not holder.Parent then
+                return
+            end
+            local puff = fx.neon(Vector3.one * 0.05, CFrame.new(at + Vector3.new(0, 0.02 * metre, 0)), LEOPARD_ICE)
+            puff.Transparency = 1
+            local snow = glitter:Clone()
+            snow.Speed = NumberRange.new(0.3 * metre, 0.8 * metre)
+            snow.Size = NumberSequence.new(0.045 * metre, 0)
+            snow.Lifetime = NumberRange.new(0.35, 0.6) -- gone before the special's folder is (2 s)
+            snow.Parent = puff
+            snow:Emit(7)
+        end)
+    end
 end
 
 -- Three ribbons of wind leave its mouth, wind round each other as they run ahead of it, and curl up and away; rings of breath and a scatter of
