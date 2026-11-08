@@ -933,6 +933,10 @@ def save_all(preview_view):
     shots(os.path.join(TOOLS, PET + "_preview"), [preview_view])
     os.replace(os.path.join(TOOLS, PET + "_preview_0.png"), os.path.join(TOOLS, PET + "_preview.png"))
     bpy.context.preferences.filepaths.save_version = 0
+    # the render output field keeps the last shot's path, and its old bytes after a shorter one: fill it to the end, then clear it, so no path from this machine is saved
+    render = bpy.context.scene.render
+    render.filepath = "//" + "_" * 1020
+    render.filepath = "//"
     path = os.path.join(TOOLS, PET + ".blend")
     bpy.ops.wm.save_as_mainfile(filepath=path, compress=True)
     return path

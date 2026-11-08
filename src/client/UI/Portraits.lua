@@ -53,8 +53,8 @@ local function flatten(model, colorMap)
     return model
 end
 
--- pets whose reach would be cut off by the usual tight framing (the Warden's crook stands well above its body)
-local FILL_FOR = { LanternWarden = 0.98 }
+-- pets whose reach would be cut off by the usual tight framing (the Warden's crook stands well above its body; the Moth's wings reach far out to either side)
+local FILL_FOR = { LanternWarden = 0.98, DreamMoth = 1.02 }
 
 -- frames `model` in `frame`, seen from `direction` (from the model's centre toward the camera)
 local function shoot(frame, model, direction, fill)

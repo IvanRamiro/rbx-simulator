@@ -69,7 +69,10 @@ return {
     GravityImp = { Lore = "A small, smug creature that decides which way is down. Loose objects tend to follow it around." },
     ThunderclawDrake = { Lore = "A drake that sharpens its claws on lightning. Mountain passes go quiet when it is hunting nearby." },
     FrostfangSerpent = { Lore = "Its bite stops time for whatever it touches, at least for the moment that matters. It sheds its skin as sheets of clear ice." },
-    DreamMoth = { Lore = "It feeds on dreams you have already forgotten. Sleepers near one wake oddly rested." },
+    DreamMoth = {
+        Lore = "It feeds on dreams you have already forgotten. Sleepers near one wake oddly rested.",
+        Special = { Name = "A Forgotten Dream", Text = "Uncurls its tongue, and faint threads of a dream nobody remembers drift in, spiralling, to the tip of it. One slow wingbeat, and a shimmer of scale dust drifts down." },
+    },
     CrystalSnail = { Lore = "It takes a hundred years to cross a valley and leaves a road of crystal behind it." },
     PrismArmadillo = { Lore = "When it curls up, its plates split light into every colour. It curls up often, mostly to show off." },
     LanternWarden = {
