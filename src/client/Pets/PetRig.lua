@@ -1,10 +1,22 @@
 local Debris = game:GetService("Debris")
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local PetRig = {}
 
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
+
+-- Plays a tween once a delay has passed. A later step can't be queued with TweenInfo's DelayTime when an earlier tween on the same instance
+-- changes the same property: playing the later one cancels the earlier at once, delay or not (measured in Studio, 2026-11-08). So it waits here.
+local function tweenAfter(delay, instance, info, goal)
+    task.delay(delay, function()
+        if instance.Parent then
+            TweenService:Create(instance, info, goal):Play()
+        end
+    end)
+end
 
 local function pose(motor, cframe)
     if motor then
@@ -2499,6 +2511,169 @@ local function animateTheNamelessOne(rig, s, moving, fly, nova)
     end
 end
 
+-- The Eclipse Cat (skinned): a stylized black cat with a crescent tail, after the owner's concept sheet. It walks a cat's lateral walk with its tail
+-- held high; still for a few seconds, it sits, its tail lying behind it; its gaze wanders and now and then settles on you with a slow blink, the
+-- way a cat tells someone it trusts them; its ears swivel on their own, its tail sways and the tip flicks; gold and violet sparkles drift off it.
+local CAT_FAR = 90 -- studs from the camera past which nobody can see it fidget: its bones rest
+local CAT_SOLE = 0.5573 -- metres from the middle of its box down to its paws: it walks on the ground
+local CAT_LID_HINGE = { L = Vector3.new(0.8802, -0.3085, -0.3606), R = Vector3.new(0.8802, 0.3085, 0.3606) } -- both lids of an eye turn on this line
+local CAT_BLINK_UPPER, CAT_BLINK_LOWER = math.rad(42), math.rad(18)
+local CAT_LEADS = { BL = 0, FL = math.pi / 2, BR = math.pi, FR = 3 * math.pi / 2 } -- a lateral walk: a hind foot, then the fore on its side
+-- its sit, found by a search in Blender over these joints (paws flat on the ground, the seat down): the same numbers as eclipse_cat.py's SIT
+local CAT_SIT = { body = 0.38, drop = 0.045, back = 0.02, hips = 0.7, fore = -0.38, thigh = -0.4, shin = -1.1, hock = 0.42 }
+local CAT_SIT_TAIL = { { 0.5, 1.1 }, { 0.2, 0.7 }, { 0, 0.6 }, { -0.1, 0.5 }, { 0, 0.4 }, { 0, 0.3 } }
+local CAT_SUN, CAT_CORONA = Color3.fromRGB(255, 210, 120), Color3.fromRGB(255, 244, 214)
+
+local function catSparkles(rig, s)
+    s.sparkles = true
+    local tip = rig.points.Tail6
+    if not tip then
+        return
+    end
+    local sparkles = Instance.new("ParticleEmitter")
+    sparkles.Name = "Sparkles"
+    sparkles.Texture = SPARKLE
+    sparkles.Rate = 2.2
+    sparkles.Lifetime = NumberRange.new(1.2, 2)
+    sparkles.Speed = NumberRange.new(0.05 * rig.unit, 0.2 * rig.unit)
+    sparkles.SpreadAngle = Vector2.new(180, 180)
+    sparkles.Acceleration = Vector3.new(0, 0.12 * rig.unit, 0)
+    sparkles.Drag = 1
+    sparkles.Rotation = NumberRange.new(0, 360)
+    sparkles.RotSpeed = NumberRange.new(-40, 40)
+    sparkles.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.09 * rig.unit), NumberSequenceKeypoint.new(1, 0) })
+    sparkles.Color = ColorSequence.new(Color3.fromRGB(255, 214, 130), Color3.fromRGB(176, 124, 255))
+    sparkles.LightEmission = 1
+    sparkles.LightInfluence = 0
+    sparkles.Parent = tip
+end
+
+local function animateEclipseCat(rig, s, moving, fly, nova)
+    if not s.sparkles then
+        catSparkles(rig, s)
+    end
+    local camera = workspace.CurrentCamera
+    if not camera or (camera.CFrame.Position - rig.rootPart.Position).Magnitude > CAT_FAR then
+        return
+    end
+    local m, u, t, dt = rig.motors, rig.meters, s.time, rig.deltaTime
+    local pace = math.max(moving, fly)
+    local drop = dropToGround(rig, s, t, u, fly, CAT_SOLE)
+
+    -- the special, Totality: it sits and looks up to the sky as the moon crosses the sun (Blasts.Totality); at totality it purrs, a tremor through
+    -- it, its eyes wide; then the light comes back
+    local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+    local look = smoothstep(0.04, 0.3, progress) * (1 - smoothstep(0.78, 0.95, progress))
+    local purr = smoothstep(0.42, 0.47, progress) * (1 - smoothstep(0.68, 0.78, progress))
+
+    -- it sits after a few seconds still, and for its special; it gets up as soon as it has somewhere to go
+    s.still = if pace < 0.05 then (s.still or 0) + dt else 0
+    local wantSit = if pace > 0.1 then 0 elseif nova > 0 or s.still > 4 then 1 else 0
+    s.sit = (s.sit or 0) + (wantSit - (s.sit or 0)) * math.min(1, dt * (if wantSit > (s.sit or 0) then 2.4 else 6))
+    local sit = smoothstep(0, 1, s.sit)
+
+    -- the legs: a lateral walk; in the air a stretched leap, forelegs reaching, hind legs pushed back; folded into the sit
+    s.stride = (s.stride or 0) + dt * (8.5 * moving + 2 * fly)
+    for key, lead in CAT_LEADS do
+        local phase = s.stride + lead
+        local swing, lift = math.sin(phase), math.max(0, math.cos(phase))
+        local p1, p2, p3, p4
+        if string.sub(key, 1, 1) == "F" then
+            p1 = moving * 0.4 * swing + fly * 0.8
+            p2 = moving * 0.1 * lift
+            p3 = -moving * 0.9 * lift - fly * 0.35
+            p4 = -moving * 0.3 * lift
+            p1 = p1 * (1 - sit) + CAT_SIT.fore * sit
+            p2, p3, p4 = p2 * (1 - sit), p3 * (1 - sit), p4 * (1 - sit)
+        else
+            p1 = -moving * 0.4 * swing - fly * 0.8
+            p2 = moving * 0.45 * lift + fly * 0.45
+            p3 = -moving * 0.6 * lift
+            p4 = 0
+            p1 = p1 * (1 - sit) + CAT_SIT.thigh * sit
+            p2 = p2 * (1 - sit) + CAT_SIT.shin * sit
+            p3 = p3 * (1 - sit) + CAT_SIT.hock * sit
+        end
+        pose(m["Leg" .. key .. "1"], CFrame.Angles(p1, 0, 0))
+        pose(m["Leg" .. key .. "2"], CFrame.Angles(p2, 0, 0))
+        pose(m["Leg" .. key .. "3"], CFrame.Angles(p3, 0, 0))
+        pose(m["Paw" .. key], CFrame.Angles(p4, 0, 0))
+    end
+
+    -- the body: a slight sway with its steps, banking on turns, a purr's tremor; lowered and tipped back into the sit
+    local heading = math.atan2(-rig.rootPart.CFrame.LookVector.X, -rig.rootPart.CFrame.LookVector.Z)
+    local turned = (heading - (s.heading or heading) + math.pi) % (2 * math.pi) - math.pi
+    s.heading = heading
+    s.bank = (s.bank or 0) + (math.clamp((if dt > 0 then turned / dt else 0) * 0.08, -0.16, 0.16) - (s.bank or 0)) * math.min(1, dt * 3)
+    local breath = math.sin(t * 1.6)
+    local tremor = 0.0015 * purr * math.sin(t * 62)
+    pose(m.Body, CFrame.new(0, (0.003 * breath + tremor - CAT_SIT.drop * sit + 0.012 * moving * math.abs(math.sin(s.stride))) * u - drop, CAT_SIT.back * sit * u)
+        * CFrame.Angles(CAT_SIT.body * sit + 0.1 * fly, 0.04 * moving * math.sin(s.stride), s.bank))
+    pose(m.Hips, CFrame.Angles(CAT_SIT.hips * sit - 0.05 * fly, -0.05 * moving * math.sin(s.stride), 0))
+    pose(m.Chest, CFrame.Angles(0.01 * breath, 0.03 * moving * math.sin(s.stride + 1), 0))
+
+    -- its gaze wanders; now and then it turns to you and holds; it looks to the sky in the special; a curious tilt of the head
+    local toYou = rig.rootPart.CFrame:VectorToObjectSpace((camera.CFrame.Position - rig.rootPart.Position).Unit)
+    s.nextGaze = s.nextGaze or 0
+    if t >= s.nextGaze then
+        s.nextGaze = t + 2 + math.random() * 3.5
+        s.atYou = math.random() < 0.45
+        s.gazeYaw, s.gazePitch = (math.random() - 0.5) * 0.9, (math.random() - 0.5) * 0.3
+        s.tilt = if math.random() < 0.3 then (math.random() - 0.5) * 0.5 else 0
+    end
+    local calm = (1 - 0.7 * pace) * (1 - look)
+    local wantYaw = if s.atYou then math.clamp(math.atan2(-toYou.X, -toYou.Z), -0.9, 0.9) else s.gazeYaw
+    local wantPitch = if s.atYou then math.clamp(toYou.Y * 0.6, -0.3, 0.4) else s.gazePitch
+    s.yaw = (s.yaw or 0) + (wantYaw * calm - (s.yaw or 0)) * math.min(1, dt * 3)
+    s.pitch = (s.pitch or 0) + (wantPitch * calm - (s.pitch or 0)) * math.min(1, dt * 3)
+    s.headTilt = (s.headTilt or 0) + ((s.tilt or 0) * calm - (s.headTilt or 0)) * math.min(1, dt * 2.5)
+    pose(m.Neck, CFrame.Angles(0.3 * s.pitch + 0.25 * look - 0.08 * moving + 0.015 * breath, 0.4 * s.yaw, 0))
+    pose(m.Head, CFrame.Angles(0.5 * s.pitch + 0.55 * look + 0.03 * moving * math.sin(2 * s.stride), 0.6 * s.yaw, s.headTilt))
+    for _, side in { "L", "R" } do
+        pose(m["Eye" .. side], CFrame.Angles(0.25 * s.pitch, 0.25 * s.yaw, 0))
+    end
+
+    -- the eyes: quick blinks; a slow blink when it is looking at you; content, half-lidded, when it sits; wide in the special
+    s.nextBlink = s.nextBlink or t + 2
+    local blink = 0
+    if t >= s.nextBlink then
+        local a = (t - s.nextBlink) / (if s.slowBlink then 1.4 else 0.18)
+        if a >= 1 then
+            s.nextBlink = t + 2.5 + math.random() * 3.5
+            s.slowBlink = s.atYou and math.random() < 0.6
+        else
+            blink = if s.slowBlink then smoothstep(0, 0.4, a) * (1 - smoothstep(0.6, 1, a)) * 0.8 else 1 - math.abs(2 * a - 1)
+        end
+    end
+    local close = math.max(blink, 0.22 * sit * (1 - look)) * (1 - 0.8 * look)
+    local upper = CAT_BLINK_UPPER * close - math.rad(6) * look
+    local lower = CAT_BLINK_LOWER * close - math.rad(4) * look
+    for _, side in { "L", "R" } do
+        pose(m["LidU" .. side], CFrame.fromAxisAngle(CAT_LID_HINGE[side], -upper))
+        pose(m["LidL" .. side], CFrame.fromAxisAngle(CAT_LID_HINGE[side], lower))
+    end
+
+    -- the ears: each swivels on its own now and then; laid back in the leap
+    for _, side in { "L", "R" } do
+        local sign = if side == "L" then -1 else 1
+        local offset = if side == "L" then 0 else 2.6
+        local swivel = math.max(0, math.sin(t * 0.7 + offset)) ^ 10
+        pose(m["Ear" .. side], CFrame.Angles(-0.35 * fly - 0.12 * swivel, sign * (0.35 * swivel + 0.2 * fly), 0))
+    end
+
+    -- the tail: a slow sway along it, the tip flicking now and then; streaming in the leap; lying behind it in the sit
+    for k = 1, 6 do
+        local wave = math.sin(t * 1.1 - k * 0.55)
+        local sway = (0.05 + 0.05 * k / 6) * wave * (1 - 0.6 * sit) * (1 - 0.5 * fly)
+        local flick = if k >= 5 then 0.2 * math.max(0, math.sin(t * 2.3 + k)) ^ 8 else 0
+        local rest = CAT_SIT_TAIL[k]
+        pose(m["Tail" .. k], CFrame.Angles(rest[1] * sit - 0.1 * fly + 0.015 * math.sin(t * 0.8 - k * 0.6), rest[2] * sit + sway + flick, 0))
+    end
+
+    -- the pendant swings with it
+    pose(m.Pendant, CFrame.Angles(0.15 * moving * math.sin(2 * s.stride) - 0.12 * fly + 0.03 * math.sin(t * 1.3), 0, 0.06 * math.sin(t * 0.9)))
+end
+
 -- The Wind Sprite is one smooth skin on a skeleton, so its joints are Bones (PetRig.buildSkinned). Axes as everywhere: -Z ahead, +X to its right; its left is -X.
 local WIND_LID_HINGE = { L = Vector3.new(0.9574, -0.1218, -0.2618), R = Vector3.new(0.9574, 0.1218, 0.2618) } -- both lids of an eye turn on this line
 local WIND_BLINK_UPPER, WIND_BLINK_LOWER = math.rad(72), math.rad(22)
@@ -3872,6 +4047,45 @@ PetRig.Profiles.TheNamelessOne = {
     Animate = animateTheNamelessOne,
 }
 
+local function catBones()
+    local bones = { "Body", "Hips", "Chest", "Neck", "Head", "Pendant", "EyeL", "EyeR", "LidUL", "LidUR", "LidLL", "LidLR", "EarL", "EarR" }
+    for k = 1, 6 do
+        table.insert(bones, "Tail" .. k)
+    end
+    for key in CAT_LEADS do
+        for k = 1, 3 do
+            table.insert(bones, "Leg" .. key .. k)
+        end
+        table.insert(bones, "Paw" .. key)
+    end
+    return bones
+end
+
+PetRig.Profiles.EclipseCat = {
+    Skinned = true,
+    Bones = catBones(),
+    Points = { "Head", "Tail6" },
+    GlowColors = {
+        ffffff = Color3.fromRGB(255, 255, 255), -- the catch-lights in its eyes
+        ffd27a = Color3.fromRGB(255, 196, 90), -- the crescent on its forehead
+        ffd27b = Color3.fromRGB(255, 188, 84), -- the thread of gold along its tail
+        b07cff = Color3.fromRGB(176, 124, 255), -- the gem under its pendant
+    },
+    Effects = {
+        Burst = "Body",
+        Blast = "Totality",
+        NovaLight = 2,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(255, 200, 100),
+        Amber = Color3.fromRGB(196, 150, 255),
+        Orange = Color3.fromRGB(118, 70, 220),
+        Sun = Color3.fromRGB(255, 236, 190),
+        Ivory = Color3.fromRGB(245, 238, 255),
+    },
+    Animate = animateEclipseCat,
+}
+
 PetRig.Profiles.GoldenManeLion = {
     Joints = {
         Body = "Root",
@@ -4997,10 +5211,10 @@ function Blasts.SolarCorona(rig, fx)
     core.Shape = Enum.PartType.Ball
     core.Transparency = 0.2
     TweenService:Create(core, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.one * 1.3 * u }):Play()
-    TweenService:Create(core, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.55), {
+    tweenAfter(0.55, core, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
         Size = Vector3.one * 2.4 * u,
         Transparency = 1,
-    }):Play()
+    })
 
     local plane = CFrame.lookAt(centre, centre + facing.LookVector)
     for index = 1, 12 do
@@ -5064,10 +5278,10 @@ function Blasts.MagmaPop(rig, fx)
     pool.Shape = Enum.PartType.Cylinder
     pool.Transparency = 0.15
     TweenService:Create(pool, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.new(0.06 * u, 2.6 * u, 2.6 * u) }):Play()
-    TweenService:Create(pool, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.5), {
+    tweenAfter(0.5, pool, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
         Size = Vector3.new(0.02 * u, 3.4 * u, 3.4 * u),
         Transparency = 1,
-    }):Play()
+    })
 
     for index = 1, 9 do
         local angle = index / 9 * 2 * math.pi + math.random() * 0.4
@@ -5153,10 +5367,10 @@ function Blasts.Skyburst(rig, fx)
             streak.Transparency = 1
             local appear = 0.04 * step + 0.05 * index
             TweenService:Create(streak, TweenInfo.new(0.12, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, appear), { Transparency = 0.25 }):Play()
-            TweenService:Create(streak, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, appear + 0.3), {
+            tweenAfter(appear + 0.3, streak, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
                 Transparency = 1,
                 Size = Vector3.new(0.02, 0.02, 0.6) * u,
-            }):Play()
+            })
         end
     end
 
@@ -5216,7 +5430,7 @@ function Blasts.HaloAscension(rig, fx)
                 CFrame = CFrame.lookAt(top, top + out:Cross(Vector3.yAxis)),
                 Size = Vector3.new(0.03 * u, 0.03 * u, arc * 0.25),
             }):Play()
-            TweenService:Create(bead, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, delay + 0.7), { Transparency = 1 }):Play()
+            tweenAfter(delay + 0.7, bead, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1 })
         end
     end
 
@@ -5224,10 +5438,10 @@ function Blasts.HaloAscension(rig, fx)
     halo.Shape = Enum.PartType.Ball
     halo.Transparency = 1
     TweenService:Create(halo, TweenInfo.new(0.15, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0.75), { Transparency = 0.3 }):Play()
-    TweenService:Create(halo, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.85), {
+    tweenAfter(0.9, halo, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
         Size = Vector3.one * 1.6 * u,
         Transparency = 1,
-    }):Play()
+    })
 
     for index = 1, 12 do
         local angle = index / 12 * 2 * math.pi + math.random() * 0.3
@@ -5241,10 +5455,10 @@ function Blasts.HaloAscension(rig, fx)
         local drift = angle + 0.8
         local finish = start + Vector3.new(math.cos(drift), 0, math.sin(drift)) * (1.4 + math.random() * 0.6) * u - Vector3.new(0, (0.6 + math.random() * 0.5) * u, 0)
         TweenService:Create(plume, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, 0.8), { Transparency = 0.15 }):Play()
-        TweenService:Create(plume, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, 0, false, 0.85), {
+        tweenAfter(0.9, plume, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
             CFrame = CFrame.lookAt(finish, finish + Vector3.new(math.cos(drift + 1.4), -0.3, math.sin(drift + 1.4))),
             Transparency = 1,
-        }):Play()
+        })
     end
 
     local light = Instance.new("PointLight")
@@ -5894,7 +6108,7 @@ function Blasts.Unwritten(rig, fx)
     end
     -- then all of it rises a little and fades
     for _, seg in strokes do
-        TweenService:Create(seg, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.95), { Transparency = 1, CFrame = seg.CFrame + Vector3.new(0, 0.12 * metre, 0) }):Play()
+        tweenAfter(0.95, seg, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1, CFrame = seg.CFrame + Vector3.new(0, 0.12 * metre, 0) })
     end
     local light = Instance.new("PointLight")
     light.Color = NAMELESS_HALO
@@ -5905,6 +6119,111 @@ function Blasts.Unwritten(rig, fx)
     TweenService:Create(light, TweenInfo.new(1.3), { Brightness = 0 }):Play()
     if rig.burst then
         rig.burst:Emit(12)
+    end
+end
+
+-- Totality: above it a gold sun, and a black moon sliding across it; at totality the corona flares in streamers, a ring of dark rolls out along the
+-- ground and, for whoever is near, the world dims for a moment (not with Reduced Effects); Baily's beads on the moon's edge, the diamond ring, and the
+-- light comes back. All of it faces the camera that sees it.
+function Blasts.Totality(rig, fx)
+    local metre = rig.meters
+    local head = rig.points.Head
+    local camera = workspace.CurrentCamera
+    local centre = (if head then head.TransformedWorldCFrame.Position else fx.origin) + Vector3.new(0, 0.5 * metre, 0) -- just above it: in sight of a third-person camera
+    local toCamera = if camera then (camera.CFrame.Position - centre).Unit else fx.facing.LookVector
+    local face = CFrame.lookAt(centre, centre + toCamera)
+    local right, up = face.RightVector, face.UpVector
+    local radius = 0.2 * metre
+    local disc = CFrame.Angles(0, math.pi / 2, 0) -- a cylinder's axis is its X: turned to face the camera
+    local function fade(part, seconds, delay, to)
+        tweenAfter(delay, part, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = to })
+    end
+
+    local sun = fx.neon(Vector3.new(0.01 * metre, 2 * radius, 2 * radius), face * disc, CAT_SUN)
+    sun.Shape = Enum.PartType.Cylinder
+    sun.Transparency = 1
+    fade(sun, 0.15, 0, 0.05)
+    fade(sun, 0.35, 1.05, 1)
+
+    local moonAt = face * CFrame.new(0, 0, -0.02 * metre)
+    local moon = fx.neon(Vector3.new(0.012 * metre, 2.04 * radius, 2.04 * radius), (moonAt + right * 2.4 * radius) * disc, Color3.fromRGB(6, 4, 14))
+    moon.Material = Enum.Material.SmoothPlastic
+    moon.Shape = Enum.PartType.Cylinder
+    TweenService:Create(moon, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = moonAt * disc }):Play()
+    tweenAfter(0.85, moon, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { CFrame = (moonAt - right * 2.4 * radius) * disc, Transparency = 1 })
+
+    -- the corona at totality: streamers of light all round the moon's edge, and a thin ring
+    for k = 1, 14 do
+        local angle = (k / 14) * 2 * math.pi + math.random() * 0.3
+        local direction = right * math.cos(angle) + up * math.sin(angle)
+        local length = (0.3 + 0.45 * math.random()) * radius
+        local at = centre + toCamera * (0.005 * metre) + direction * (radius + length / 2)
+        local streamer = fx.neon(Vector3.new(0.012 * metre, 0.012 * metre, length), CFrame.lookAt(at, at + direction), CAT_CORONA)
+        streamer.Transparency = 1
+        fade(streamer, 0.08, 0.42, 0.15)
+        fade(streamer, 0.4, 0.62, 1)
+    end
+    for k = 1, 24 do
+        local a, b = (k / 24) * 2 * math.pi, ((k + 1) / 24) * 2 * math.pi
+        local pa = centre + (right * math.cos(a) + up * math.sin(a)) * radius * 1.04
+        local pb = centre + (right * math.cos(b) + up * math.sin(b)) * radius * 1.04
+        local arc = fx.neon(Vector3.new(0.014 * metre, 0.014 * metre, (pb - pa).Magnitude), CFrame.lookAt((pa + pb) / 2, pb), CAT_CORONA)
+        arc.Transparency = 1
+        fade(arc, 0.08, 0.42, 0.05)
+        fade(arc, 0.3, 0.95, 1)
+    end
+
+    -- Baily's beads, where the sun comes back, and then the diamond ring
+    for k = -2, 2 do
+        local angle = k * 0.28
+        local bead = fx.neon(Vector3.one * 0.03 * metre, CFrame.new(centre + toCamera * (0.03 * metre) + (right * math.cos(angle) + up * math.sin(angle)) * radius), CAT_CORONA)
+        bead.Shape = Enum.PartType.Ball
+        bead.Transparency = 1
+        fade(bead, 0.06, 0.85 + 0.02 * (k + 2), 0)
+        fade(bead, 0.2, 1.0, 1)
+    end
+    local ringAt = centre + toCamera * (0.04 * metre) + right * radius
+    local diamond = fx.neon(Vector3.one * 0.07 * metre, CFrame.new(ringAt), CAT_CORONA)
+    diamond.Shape = Enum.PartType.Ball
+    diamond.Transparency = 1
+    fade(diamond, 0.06, 0.98, 0)
+    fade(diamond, 0.35, 1.08, 1)
+    for _, axis in { right, up } do
+        local ray = fx.neon(Vector3.new(0.012 * metre, 0.012 * metre, 0.02 * metre), CFrame.lookAt(ringAt, ringAt + axis), CAT_CORONA)
+        ray.Transparency = 1
+        tweenAfter(0.98, ray, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = 0, Size = Vector3.new(0.012 * metre, 0.012 * metre, 0.9 * radius) })
+        fade(ray, 0.3, 1.12, 1)
+    end
+
+    -- a ring of dark rolls out along the ground from it
+    local ground = rig.rootPart.Position - Vector3.new(0, CAT_SOLE * metre, 0)
+    local shade = fx.neon(Vector3.new(0.01 * metre, 0.2 * metre, 0.2 * metre), CFrame.new(ground + Vector3.new(0, 0.01 * metre, 0)) * CFrame.Angles(0, 0, math.pi / 2), Color3.fromRGB(8, 6, 20))
+    shade.Material = Enum.Material.SmoothPlastic
+    shade.Shape = Enum.PartType.Cylinder
+    shade.Transparency = 1
+    tweenAfter(0.42, shade, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.01 * metre, 4 * metre, 4 * metre), Transparency = 0.45 })
+    fade(shade, 0.45, 0.97, 1)
+
+    -- for whoever is near: the world goes dark for a moment
+    local player = Players.LocalPlayer
+    if camera and (camera.CFrame.Position - centre).Magnitude < 45 and not (player and player:GetAttribute("SettingReducedEffects") == true) then
+        local dim = Instance.new("ColorCorrectionEffect")
+        dim.Name = "TotalityDim"
+        dim.Parent = Lighting
+        tweenAfter(0.42, dim, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = -0.16, Saturation = -0.35, TintColor = Color3.fromRGB(205, 196, 255) })
+        tweenAfter(0.85, dim, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Brightness = 0, Saturation = 0, TintColor = Color3.new(1, 1, 1) })
+        Debris:AddItem(dim, 1.4)
+    end
+
+    local light = Instance.new("PointLight")
+    light.Color = CAT_CORONA
+    light.Range = 3 * metre
+    light.Brightness = 0
+    light.Parent = diamond
+    tweenAfter(0.98, light, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = 3 })
+    tweenAfter(1.1, light, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Brightness = 0 })
+    if rig.burst then
+        rig.burst:Emit(10)
     end
 end
 
@@ -6135,11 +6454,11 @@ function Blasts.SovereignRoar(rig, fx)
         ring.Transparency = 1
         local finish = mouth + forward * (1.1 + 0.5 * index) * u
         TweenService:Create(ring, TweenInfo.new(0.06, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, delay), { Transparency = 0.35 }):Play()
-        TweenService:Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, delay), {
+        tweenAfter(delay + 0.06, ring, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             CFrame = CFrame.lookAt(finish, finish + forward) * CFrame.Angles(0, math.pi / 2, 0),
             Size = Vector3.new(0.02 * u, (1.6 + 0.5 * index) * u, (1.6 + 0.5 * index) * u),
             Transparency = 1,
-        }):Play()
+        })
     end
 
     local behind = crown - forward * 0.12 * u
@@ -6157,7 +6476,7 @@ function Blasts.SovereignRoar(rig, fx)
             CFrame = CFrame.lookAt(tip, tip + out),
             Size = Vector3.new(0.025 * u, 0.025 * u, length),
         }):Play()
-        TweenService:Create(ray, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.6), { Transparency = 1 }):Play()
+        tweenAfter(0.6, ray, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1 })
     end
 
     local paws = {}

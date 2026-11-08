@@ -12,6 +12,7 @@ return {
     DawnPhoenix = "rbxassetid://125937144749128",
     DreadfangCerberus = "rbxassetid://90383585387525",
     DreamMoth = "rbxassetid://116224404517599",
+    EclipseCat = "rbxassetid://85885755382252",
     GalaxyManta = "rbxassetid://93932467864746",
     GoldenKirin = "rbxassetid://74047466096461",
     GoldenManeLion = "rbxassetid://89135149772900",

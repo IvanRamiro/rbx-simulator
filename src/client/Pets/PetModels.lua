@@ -652,6 +652,7 @@ local MESH_LOOKS = {
     AbyssAnomalocaris = { Glow = Color3.fromRGB(190, 36, 146), Length = 3.8 },
     VoidscaleHydra = { Glow = Color3.fromRGB(70, 150, 255), Length = 4.0 },
     TheNamelessOne = { Glow = Color3.fromRGB(200, 170, 255), Length = 3.6 },
+    EclipseCat = { Glow = Color3.fromRGB(176, 124, 255), Length = 3.0 },
     StormhornKirin = { Glow = Color3.fromRGB(90, 170, 255), Length = 4.4 },
     JadeWyrmTurtle = { Glow = Color3.fromRGB(60, 220, 170), Length = 4.8 },
     NebulaOwl = { Glow = Color3.fromRGB(176, 122, 255), Length = 4.0 },
