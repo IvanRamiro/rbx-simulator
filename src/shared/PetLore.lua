@@ -74,7 +74,10 @@ return {
         Special = { Name = "A Forgotten Dream", Text = "Uncurls its tongue, and faint threads of a dream nobody remembers drift in, spiralling, to the tip of it. One slow wingbeat, and a shimmer of scale dust drifts down." },
     },
     CrystalSnail = { Lore = "It takes a hundred years to cross a valley and leaves a road of crystal behind it." },
-    PrismArmadillo = { Lore = "When it curls up, its plates split light into every colour. It curls up often, mostly to show off." },
+    PrismArmadillo = {
+        Lore = "When it curls up, its plates split light into every colour. It curls up often, mostly to show off.",
+        Special = { Name = "Every Colour", Text = "Rolls up into its crystal armour and spins, faster and faster, until it pops open in a fan of every colour of light. Then it waits to be admired." },
+    },
     LanternWarden = {
         Lore = "A keeper of lost paths that carries a light nobody lit. Follow it and you arrive, though not always where you meant.",
         Special = { Name = "The Long Way Round", Text = "Lifts its lantern, and the flame stands up. A path of small lights runs out from its feet, winds once round it, and comes back to exactly where it started." },

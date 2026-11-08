@@ -1766,6 +1766,150 @@ local function animateDreamMoth(rig, s, moving, fly, nova)
     end
 end
 
+-- The Prism Armadillo (skinned): it scurries on short quick legs, sniffs at everything, rears up on its hind legs to look about, and now and then rolls up into its armour for a moment, purely to show off. Its eyes have no upper lids:
+-- soft cheek pads turn up round each eye from below (a pleased squint, or all the way for a blink). Flying, it rolls up and spins through the air. Its crest prisms each drift slowly through the spectrum.
+local ARMA_FAR = 90 -- studs from the camera past which nobody can see it fidget: its bones rest
+local ARMA_SOLE = 0.24 -- metres from the middle of its box down to its claws: it walks on the ground
+local ARMA_CHEEK = { L = Vector3.new(0.2668, -0.441, -0.8569), R = Vector3.new(-0.2668, -0.441, -0.8569) } -- each pad's hinge, through its eye's centre: a positive turn carries it up over the eye
+local ARMA_BLINK, ARMA_SQUINT = 1.15, 0.5
+local ARMA_LEGS = { FL = 0, BR = 0, FR = math.pi, BL = math.pi }
+local ARMA_CRESTS = 6
+
+local function animatePrismArmadillo(rig, s, moving, fly, nova)
+    local camera = workspace.CurrentCamera
+    if camera and (camera.CFrame.Position - rig.rootPart.Position).Magnitude > ARMA_FAR then
+        return
+    end
+    local m, u, t, dt = rig.motors, rig.meters, s.time, rig.deltaTime
+    local pace = math.max(moving, fly)
+    local drop = dropToGround(rig, s, t, u, fly, ARMA_SOLE)
+
+    -- the special: it rolls up, spins in place faster and faster, and pops open in a flash of every colour, very pleased with itself
+    local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+    local curled = smoothstep(0, 0.12, progress) * (1 - smoothstep(0.44, 0.52, progress))
+    local whirl = smoothstep(0.1, 0.3, progress) * (1 - smoothstep(0.4, 0.46, progress))
+    local hop = smoothstep(0.44, 0.5, progress) * (1 - smoothstep(0.52, 0.64, progress))
+    local proud = smoothstep(0.5, 0.58, progress) * (1 - smoothstep(0.86, 0.98, progress))
+    local flash = smoothstep(0.36, 0.43, progress) * (1 - smoothstep(0.46, 0.66, progress))
+    s.whirl = ((s.whirl or 0) + dt * whirl * 2 * math.pi * 2.4) % (2 * math.pi)
+    if progress == 0 then
+        s.whirl = s.whirl * math.max(0, 1 - dt * 6)
+    end
+
+    -- now and then: it rolls up for a moment just to be admired; or rears up to look about
+    s.nextShow = s.nextShow or t + 10 + math.random() * 8
+    local show = 0
+    if t >= s.nextShow then
+        local a = (t - s.nextShow) / 2.6
+        if a >= 1 then
+            s.nextShow = t + 16 + math.random() * 14
+            s.pleasedUntil = t + 1.6
+        elseif pace < 0.25 and nova == 0 then
+            show = smoothstep(0, 0.12, a) * (1 - smoothstep(0.7, 0.82, a))
+        else
+            s.nextShow = t + 3
+        end
+    end
+    s.nextRear = s.nextRear or t + 5 + math.random() * 6
+    local rear = 0
+    if t >= s.nextRear then
+        local a = (t - s.nextRear) / 3.2
+        if a >= 1 then
+            s.nextRear = t + 12 + math.random() * 12
+        elseif pace < 0.25 and nova == 0 and show == 0 then
+            rear = smoothstep(0, 0.2, a) * (1 - smoothstep(0.78, 1, a))
+        else
+            s.nextRear = t + 2
+        end
+    end
+    local roll = math.max(curled, show, fly)
+
+    -- the body
+    s.stride = (s.stride or 0) + dt * 11 * moving
+    local stride = s.stride
+    local breath = math.sin(t * 1.6)
+    local look = rig.rootPart.CFrame.LookVector
+    local heading = math.atan2(-look.X, -look.Z)
+    local turned = (heading - (s.heading or heading) + math.pi) % (2 * math.pi) - math.pi
+    s.heading = heading
+    s.bank = (s.bank or 0) + (math.clamp((if dt > 0 then turned / dt else 0) * 0.08, -0.18, 0.18) - (s.bank or 0)) * math.min(1, dt * 4)
+    -- flying, it is a ball rolling forward through the air
+    s.tumble = ((s.tumble or 0) + dt * fly * 2 * math.pi * 1.3) % (2 * math.pi)
+    local tumble = if fly > 0.5 then s.tumble else s.tumble * fly
+    local lift = 0.012 * moving * math.abs(math.sin(stride)) + 0.12 * hop + 0.04 * rear - 0.03 * roll
+    pose(m.Body, CFrame.new(0, lift * u - drop, 0) * CFrame.Angles(0.25 * rear - tumble + 0.1 * hop, s.whirl, s.bank * (1 - roll) + 0.02 * moving * math.sin(stride)))
+
+    -- the armour's joints: rolled up as far as it is (the same numbers as tools/blender/pets/prism_armadillo.py's ball()), and a little give with each step
+    pose(m.Front, CFrame.Angles(-0.46 * roll + 0.75 * rear * (1 - roll) + 0.2 * proud + 0.01 * breath, 0, 0))
+    pose(m.Mid, CFrame.Angles(0.3 * roll + 0.012 * moving * math.sin(2 * stride), 0, 0))
+    pose(m.Back, CFrame.Angles(0.3 * roll, 0, 0))
+    pose(m.Pelvis, CFrame.Angles(0.48 * roll, 0, 0))
+
+    -- the head: sniffing, curious, tucked away when rolled
+    s.nextSniff = s.nextSniff or t + 1
+    if t >= s.nextSniff then
+        s.nextSniff = t + 1.2 + math.random() * 2.4
+        s.sniffAt = t
+        s.gazeTo = (math.random() - 0.5) * 0.9
+        s.nodTo = (math.random() - 0.5) * 0.25
+    end
+    local sniff = if s.sniffAt and t - s.sniffAt < 0.7 then math.sin((t - s.sniffAt) * 26) * (1 - (t - s.sniffAt) / 0.7) else 0
+    local calm = (1 - roll) * (1 - 0.5 * moving)
+    s.yaw = (s.yaw or 0) + ((s.gazeTo or 0) * calm - (s.yaw or 0)) * math.min(1, dt * 6)
+    s.nod = (s.nod or 0) + ((s.nodTo or 0) * calm - (s.nod or 0)) * math.min(1, dt * 6)
+    pose(m.Neck, CFrame.Angles(-1.25 * roll - 0.35 * rear * (1 - roll) + 0.3 * proud + s.nod * 0.5, s.yaw * 0.45, 0))
+    pose(m.Head, CFrame.Angles(-1.1 * roll - 0.2 * rear * (1 - roll) + 0.2 * proud + s.nod * 0.5 + 0.03 * sniff, s.yaw * 0.55, 0.1 * proud * math.sin(t * 3)))
+
+    -- the cheek pads: a blink now and then; pleased, half up
+    s.nextBlink = s.nextBlink or t + 2
+    if t >= s.nextBlink then
+        s.nextBlink = t + 2.5 + math.random() * 3.5
+        s.blinkAt = t
+    end
+    local shut = if s.blinkAt and t - s.blinkAt < 0.2 then 1 - math.abs(2 * (t - s.blinkAt) / 0.2 - 1) else 0
+    local pleased = math.max(proud, if s.pleasedUntil and t < s.pleasedUntil then 1 else 0)
+    s.pleased = (s.pleased or 0) + (pleased - (s.pleased or 0)) * math.min(1, dt * 5)
+    local cheek = math.max(ARMA_BLINK * shut, ARMA_SQUINT * s.pleased, ARMA_BLINK * roll)
+    for _, side in { "L", "R" } do
+        pose(m["Cheek" .. side], CFrame.fromAxisAngle(ARMA_CHEEK[side], cheek))
+        local offset = if side == "L" then 0 else 1.7
+        local flick = math.max(0, math.sin(t * 0.9 + offset)) ^ 18
+        local sign = if side == "L" then -1 else 1
+        pose(m["Ear" .. side], CFrame.Angles(0.7 * roll + 0.3 * moving - 0.25 * rear + 0.3 * flick + 0.04 * math.sin(t * 1.3 + offset), 0, sign * (0.08 * flick)))
+    end
+
+    -- the legs: a quick little trot; rearing, the forelegs lift; rolled, all folded in
+    local reach = 0.45 * moving * (1 - roll)
+    for key, lead in ARMA_LEGS do
+        local fore = string.sub(key, 1, 1) == "F"
+        local phase = stride + lead
+        local swing = math.sin(phase) * reach
+        local fold = math.max(0, math.cos(phase)) * moving * (1 - roll) * 0.6
+        local tuck1 = if fore then -0.9 else 0.9
+        local tuck2 = if fore then 1.4 else -1.2
+        local reared = if fore then -0.4 * rear else 0.25 * rear
+        pose(m["Leg" .. key .. "1"], CFrame.Angles(swing + tuck1 * roll + reared * (1 - roll) - 0.25 * rear * (if fore then 0 else 1), 0, 0))
+        pose(m["Leg" .. key .. "2"], CFrame.Angles((if fore then -fold else fold) + tuck2 * roll, 0, 0))
+        pose(m["Paw" .. key], CFrame.Angles((if fore then 0.4 * fold else -0.3 * fold), 0, 0))
+    end
+
+    -- the tail: swishing as it goes, tucked when rolled
+    for index, name in { "Tail1", "Tail2", "Tail3" } do
+        local tuck = ({ 0.9, 0.8, 0.7 })[index]
+        pose(m[name], CFrame.Angles(tuck * roll - 0.3 * rear * (index == 1 and 1 or 0) * (1 - roll), (0.08 + 0.12 * moving) * math.sin(t * 2.4 + stride - index * 0.7) * (1 - roll), 0))
+    end
+
+    -- the crest: each prism drifting through the spectrum, a step behind the one before; flashing white-bright when it shows off
+    local bright = math.max(flash, 0.6 * show * smoothstep(0.3, 0.6, show))
+    for k = 1, ARMA_CRESTS do
+        local part = rig.parts["Crest" .. k]
+        if part then
+            local hue = ((k - 1) / ARMA_CRESTS + t * 0.05 + 2 * s.whirl / (2 * math.pi)) % 1
+            part.Color = Color3.fromHSV(hue, 0.62 - 0.14 * bright, 1) -- (Neon pales a colour: below about 0.45 saturation the prisms all read white)
+        end
+    end
+end
+
 -- The Wind Sprite is one smooth skin on a skeleton, so its joints are Bones (PetRig.buildSkinned). Axes as everywhere: -Z ahead, +X to its right; its left is -X.
 local WIND_LID_HINGE = { L = Vector3.new(0.9574, -0.1218, -0.2618), R = Vector3.new(0.9574, 0.1218, 0.2618) } -- both lids of an eye turn on this line
 local WIND_BLINK_UPPER, WIND_BLINK_LOWER = math.rad(72), math.rad(22)
@@ -2979,6 +3123,36 @@ PetRig.Profiles.DreamMoth = {
         Ivory = Color3.fromRGB(255, 250, 255),
     },
     Animate = animateDreamMoth,
+}
+
+PetRig.Profiles.PrismArmadillo = {
+    Skinned = true,
+    Bones = {
+        "Body", "Front", "Neck", "Head", "Mid", "Back", "Pelvis", "Tail1", "Tail2", "Tail3", "EarL", "EarR", "CheekL", "CheekR",
+        "LegFL1", "LegFL2", "PawFL", "LegFR1", "LegFR2", "PawFR", "LegBL1", "LegBL2", "PawBL", "LegBR1", "LegBR2", "PawBR",
+    },
+    Points = { "Body" },
+    GlowColors = {
+        ["ff7ab4"] = Color3.fromRGB(255, 160, 200), -- the crest prisms: their colours are set each frame, these are only where they start
+        ["ffc864"] = Color3.fromRGB(255, 220, 150),
+        ["8cf0a0"] = Color3.fromRGB(160, 240, 180),
+        ["78c8ff"] = Color3.fromRGB(150, 210, 255),
+        ["a08cff"] = Color3.fromRGB(180, 160, 255),
+        ["f08cff"] = Color3.fromRGB(240, 160, 255),
+    },
+    Effects = {
+        Burst = "Body",
+        Blast = "EveryColour",
+        NovaLight = 2,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(200, 170, 255),
+        Amber = Color3.fromRGB(255, 180, 220),
+        Orange = Color3.fromRGB(150, 210, 255),
+        Sun = Color3.fromRGB(245, 240, 255),
+        Ivory = Color3.fromRGB(250, 248, 255),
+    },
+    Animate = animatePrismArmadillo,
 }
 
 PetRig.Profiles.GoldenManeLion = {
@@ -4713,6 +4887,48 @@ function Blasts.AForgottenDream(rig, fx)
     light.Shadows = false
     light.Parent = holder
     TweenService:Create(light, TweenInfo.new(0.8), { Brightness = 0 }):Play()
+end
+
+-- It pops open, and its plates split the light: a fan of thin spectral rays round it, every colour once, and a scatter of rainbow glints. Nothing else in the scene changes.
+function Blasts.EveryColour(rig, fx)
+    local metre = rig.meters
+    local centre = fx.origin + Vector3.new(0, 0.12 * metre, 0)
+    local RAYS = 7
+    for k = 1, RAYS do
+        local angle = (k - 1) / RAYS * 2 * math.pi + math.random() * 0.3
+        local out = fx.facing:VectorToWorldSpace(Vector3.new(math.cos(angle), 0.35, math.sin(angle))).Unit
+        local length = 0.75 * metre
+        local colour = Color3.fromHSV((k - 1) / RAYS, 0.55, 1)
+        local ray = fx.neon(Vector3.new(0.025 * metre, 0.025 * metre, length), CFrame.lookAt(centre + out * (0.25 * metre + length / 2), centre + out * metre * 3), colour)
+        ray.Transparency = 0.15
+        TweenService:Create(ray, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = 1, CFrame = ray.CFrame + out * 0.35 * metre, Size = Vector3.new(0.01 * metre, 0.01 * metre, length * 1.3) }):Play()
+    end
+    local holder = fx.neon(Vector3.one * 0.05, CFrame.new(centre), Color3.new(1, 1, 1))
+    holder.Transparency = 1
+    local glints = Instance.new("ParticleEmitter")
+    glints.Texture = SPARKLE
+    glints.Rate = 0
+    glints.Lifetime = NumberRange.new(0.45, 0.8)
+    glints.Speed = NumberRange.new(0.8 * metre, 1.8 * metre)
+    glints.SpreadAngle = Vector2.new(180, 60)
+    glints.Drag = 3
+    glints.Acceleration = Vector3.new(0, -1.2 * metre, 0)
+    glints.Size = NumberSequence.new(0.06 * metre, 0)
+    glints.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromHSV(0.95, 0.5, 1)), ColorSequenceKeypoint.new(0.25, Color3.fromHSV(0.12, 0.5, 1)), ColorSequenceKeypoint.new(0.5, Color3.fromHSV(0.35, 0.5, 1)),
+        ColorSequenceKeypoint.new(0.75, Color3.fromHSV(0.58, 0.5, 1)), ColorSequenceKeypoint.new(1, Color3.fromHSV(0.78, 0.5, 1)),
+    })
+    glints.LightEmission = 1
+    glints.LightInfluence = 0
+    glints.Parent = holder
+    glints:Emit(22)
+    local light = Instance.new("PointLight")
+    light.Color = Color3.fromRGB(230, 210, 255)
+    light.Range = 2.2 * metre
+    light.Brightness = 1.8
+    light.Shadows = false
+    light.Parent = holder
+    TweenService:Create(light, TweenInfo.new(0.7), { Brightness = 0 }):Play()
 end
 
 -- Three ribbons of wind leave its mouth, wind round each other as they run ahead of it, and curl up and away; rings of breath and a scatter of
