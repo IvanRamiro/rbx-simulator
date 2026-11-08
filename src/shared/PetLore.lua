@@ -138,7 +138,10 @@ return {
         Special = { Name = "Rune Seal", Text = "Raises its chest and opens a spinning seal of rising rune glyphs and amber pillars." },
     },
     ThousandYearDreamEater = { Lore = "It has been eating one dream for a thousand years and still hasn't reached the end. Be careful what you are dreaming when it looks up." },
-    TheNamelessOne = { Lore = "Every name it was given has been forgotten by whoever gave it. This page keeps trying to write something down." },
+    TheNamelessOne = {
+        Lore = "Every name it was given has been forgotten by whoever gave it. This page keeps trying to write something down.",
+        Special = { Name = "Unwritten", Text = "Raises both arms, and words in a hand nobody can read write themselves in a ring of light around it. Each word is struck through, the writing fades, and for a moment it is gone." },
+    },
     HeavenbreakerApe = { Lore = "It struck heaven once and heaven still hasn't answered. It is waiting, and getting impatient." },
     AbyssAnomalocaris = {
         Lore = "The first hunter of the first sea. The sea has been gone for longer than mountains have stood; it hasn't noticed, and swims on through the air.",

@@ -40,6 +40,11 @@ function Codex.setupPlayer(player, progress)
     for _, id in saved.Claimed do
         data.claimed[id] = true
     end
+    if table.find(GameConfig.Codex.CreatorUserIds, player.UserId) then -- a creator's book holds every beast
+        for petId in GameConfig.Pets do
+            data.found[petId] = true
+        end
+    end
     state[player] = data
 end
 

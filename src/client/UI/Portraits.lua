@@ -54,7 +54,7 @@ local function flatten(model, colorMap)
 end
 
 -- pets whose reach would be cut off by the usual tight framing (the Warden's crook stands well above its body; the Moth's wings reach far out to either side)
-local FILL_FOR = { LanternWarden = 0.98, DreamMoth = 1.02 }
+local FILL_FOR = { LanternWarden = 0.98, DreamMoth = 1.02, TheNamelessOne = 1.0 } -- the camera farther back: the Nameless One's halo and scarves reach past its head
 -- where the camera looks from, for a pet the usual three-quarter view hides: the Hydra's four heads line up behind each other
 -- from the side, so it is seen more from the front and above, its necks fanned out
 local DIRECTION = Vector3.new(0.45, 0.35, -1)

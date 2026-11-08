@@ -657,8 +657,10 @@ local GameConfig = {
 
     -- The Spirit Beast Codex's milestones (shared/CodexRules): discover Count beasts (no Count: all of them) for a lasting
     -- Qi bonus and Spirit Stones worth WeaponShare of a weapon of the player's realm. Each egg's full page pays too, by the rarest beast
-    -- on it (PageShare), so a page that takes a Secret pays for the hunt however early its egg is.
+    -- on it (PageShare), so a page that takes a Secret pays for the hunt however early its egg is. CreatorUserIds: the game's creators,
+    -- whose book holds every beast from the start, those added later included (the owner, November 8, 2026).
     Codex = {
+        CreatorUserIds = { 4993575280 },
         PageShare = { Legendary = 0.25, Mythical = 0.5, Secret = 1 },
         Milestones = {
             { Count = 5, QiPercent = 2, WeaponShare = 0.25 },
