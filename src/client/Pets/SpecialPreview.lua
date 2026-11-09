@@ -31,6 +31,9 @@ function SpecialPreview.play(petId, onDone)
         end
         local model, petRoot = PetModels.build(petId)
         local rig = model and PetModels.getRig(model)
+        if rig then
+            rig.owner = Players.LocalPlayer
+        end
         if not (rig and root.Parent) then
             if model then
                 model:Destroy()

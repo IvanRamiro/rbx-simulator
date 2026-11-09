@@ -151,6 +151,9 @@ local function syncPets(player, entry)
         for _, petId in string.split(key, ",") do
             local pet = spare[petId] and table.remove(spare[petId]) or buildPet(petId, rootPart, entry.culled)
             if pet then
+                if pet.rig then
+                    pet.rig.owner = player -- (a special can show its owner: the Obsidian Guardian's)
+                end
                 table.insert(entry.pets, pet)
             end
         end

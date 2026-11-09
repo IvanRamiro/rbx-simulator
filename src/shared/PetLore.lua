@@ -103,7 +103,10 @@ return {
         Lore = "Its wings store a whole afternoon of sun and spend it slowly after dark.",
         Special = { Name = "Afterglow", Text = "It spreads its wings wide and still as the stored sunlight gathers in them, then lets it go in one slow wingbeat: a warm flare turns through sunset to dusk, motes of gold drift up and away, and for a moment the world around it glows like evening." },
     },
-    ObsidianGuardian = { Lore = "A sentinel of black glass that reflects you a little more honestly than you would like." },
+    ObsidianGuardian = {
+        Lore = "A sentinel of black glass that reflects you a little more honestly than you would like.",
+        Special = { Name = "Honest Glass", Text = "It rises on its haunches, spreads its wings of glass wide and holds you in its stare. Its mirror face flashes, and a figure of black glass in your shape stands before it, facing you; then the figure cracks and falls apart into shards of violet glass." },
+    },
     GoldenManeLion = {
         Lore = "A high-shouldered royal lion with a tiered mane of flame-tipped locks. It walks as if the ground owes it something.",
         Special = { Name = "Sovereign Roar", Text = "Opens its jaw as golden shockwave rings roll out, solar rays flare behind its crest and a ring spreads beneath its paws." },
