@@ -1,7 +1,10 @@
 -- Each pet's entry in the Spirit Beast Codex: Lore, its description, and Special, the name and description of its
 -- special move (PetRig), for the pets that have one. Original writing, English only.
 return {
-    AquaWisp = { Lore = "A droplet that learned to think while falling. It follows anyone whose Qi runs as calm as still water." },
+    AquaWisp = {
+        Lore = "A droplet that learned to think while falling. It follows anyone whose Qi runs as calm as still water.",
+        Special = { Name = "Tide Spiral", Text = "Curls up tight and twirls until three ribbons of water spiral up around it and burst into a shower of droplets." },
+    },
     EmberWyrm = {
         Lore = "A chain of lava beads held together by one stubborn, molten heart. It sleeps in the warm ash of old campfires.",
         Special = { Name = "Heart Flare", Text = "Its beads spread apart while its molten heart blazes." },

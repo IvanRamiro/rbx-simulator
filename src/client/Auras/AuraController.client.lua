@@ -208,7 +208,7 @@ local function refreshRealmAura(player)
     end
 end
 
--- the pet layer: an aura pet with its own design (Tidecaller, Ember Crucible) over the realm aura,
+-- the pet layer: an aura pet with its own design (Ember Crucible) over the realm aura,
 -- while the player meditates
 function refreshAura(player)
     refreshRealmAura(player)

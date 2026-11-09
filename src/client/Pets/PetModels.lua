@@ -57,30 +57,6 @@ local function diamond(x, y, z, size, color)
     return { Shape = "Block", Size = Vector3.new(size, size, size), At = at(x, y, z, 45, 0, 45), Color = color, Neon = true }
 end
 
-local function aquaWisp()
-    local water = Color3.fromRGB(90, 190, 255)
-    local light = Color3.fromRGB(165, 230, 255)
-    local glow = Color3.fromRGB(120, 215, 255)
-    local parts = {
-        { Shape = "Prism", Axis = "X", Size = Vector3.new(1.25, 1.1, 1.1), At = at(0, 0, -0.1), Color = water },
-        { Shape = "Prism", Size = Vector3.new(0.6, 0.55, 0.7), At = at(0, -0.05, 0.6, -8), Color = water },
-        { Shape = "Wedge", Size = Vector3.new(0.08, 0.6, 0.7), At = at(0, 0.7, 0.05), Color = light },
-        { Shape = "Wedge", Size = Vector3.new(0.08, 0.6, 0.75), At = at(0, 0.3, 1.15, 35), Color = glow, Neon = true, Transparency = 0.15 },
-        { Shape = "Wedge", Size = Vector3.new(0.08, 0.6, 0.75), At = at(0, -0.35, 1.1, 145, 0, 0), Color = glow, Neon = true, Transparency = 0.15 },
-        diamond(0.95, 0.55, 0.15, 0.16, light),
-        diamond(-0.9, 0.25, 0.45, 0.12, light),
-        diamond(0.65, -0.6, 0.55, 0.1, light),
-    }
-    eyes(parts, 0.55, 0.05, -0.66, 0.26)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.13, 0.07, 0.04), At = at(side * 0.42, -0.2, -0.66), Color = Color3.fromRGB(255, 170, 210) }
-    end)
-    mirrored(parts, function(side)
-        return wing(side, 0.5, -0.15, 0.05, 0.55, 0.5, -15, glow, true)
-    end)
-    return { Scale = 0.95, Parts = parts }
-end
-
 local function emberWyrm()
     local scales = Color3.fromRGB(65, 32, 30)
     local lava = Color3.fromRGB(255, 115, 35)
@@ -191,49 +167,6 @@ local function voltFox()
     table.insert(parts, diamond(0.7, 0.9, 0.3, 0.12, spark))
     table.insert(parts, diamond(-0.65, 0.6, 0.9, 0.1, spark))
     return { Scale = 1.05, Parts = parts }
-end
-
-local function goldenKirin()
-    local gold = Color3.fromRGB(240, 195, 80)
-    local cream = Color3.fromRGB(252, 240, 205)
-    local jade = Color3.fromRGB(110, 235, 210)
-    local hoof = Color3.fromRGB(120, 85, 40)
-    local parts = {
-        { Shape = "Prism", Size = Vector3.new(0.85, 0.8, 1.5), At = at(0, 0, 0), Color = gold },
-        { Shape = "Prism", Axis = "Y", Size = Vector3.new(0.45, 0.75, 0.45), At = at(0, 0.55, -0.6, -25), Color = gold },
-        { Shape = "Prism", Size = Vector3.new(0.5, 0.45, 0.75), At = at(0, 1, -0.95), Color = gold },
-        { Shape = "Wedge", Size = Vector3.new(0.32, 0.25, 0.32), At = at(0, 0.92, -1.45), Color = cream },
-        { Shape = "Wedge", Size = Vector3.new(0.14, 0.5, 0.6), At = at(0, 0.95, -0.5, -20, 180, 0), Color = cream },
-        { Shape = "Wedge", Size = Vector3.new(0.14, 0.45, 0.55), At = at(0, 0.65, -0.25, -40, 180, 0), Color = cream },
-        { Shape = "Wedge", Size = Vector3.new(0.16, 0.55, 0.7), At = at(0, 0.3, 0.95, 40, 180, 0), Color = cream },
-        { Shape = "Wedge", Size = Vector3.new(0.14, 0.45, 0.5), At = at(0, 0.75, 1.2, 10, 180, 0), Color = gold },
-        diamond(0, 0.2, -0.72, 0.16, jade),
-    }
-    eyes(parts, 0.3, 1.05, -1.33, 0.13, Color3.fromRGB(20, 110, 100))
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.08, 0.75, 0.08), At = at(side * 0.17, 1.5, -0.85, -15, 0, side * -20), Color = gold }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.07, 0.42, 0.07), At = at(side * 0.38, 1.6, -0.82, -15, 0, side * -65), Color = gold }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.07, 0.38, 0.07), At = at(side * 0.33, 1.9, -0.9, -35, 0, side * -10), Color = gold }
-    end)
-    mirrored(parts, function(side)
-        return diamond(side * 0.36, 2.1, -0.95, 0.1, jade)
-    end)
-    mirrored(parts, function(side)
-        return diamond(side * 0.56, 1.72, -0.82, 0.09, jade)
-    end)
-    for _, z in { -0.5, 0.5 } do
-        mirrored(parts, function(side)
-            return { Shape = "Block", Size = Vector3.new(0.15, 0.6, 0.15), At = at(side * 0.25, -0.6, z), Color = gold }
-        end)
-        mirrored(parts, function(side)
-            return { Shape = "Block", Size = Vector3.new(0.17, 0.12, 0.17), At = at(side * 0.25, -0.92, z), Color = hoof }
-        end)
-    end
-    return { Scale = 1.15, Parts = parts }
 end
 
 local function astralWhale()
@@ -536,11 +469,11 @@ local function dawnPhoenix()
 end
 
 PetModels.Pets = {
-    AquaWisp = aquaWisp(),
+    AquaWisp = { Scale = 0.95, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old droplet design removed (MESH_LOOKS was tuned with this scale)
     EmberWyrm = emberWyrm(),
     LunarHopper = lunarHopper(),
     VoltFox = voltFox(),
-    GoldenKirin = goldenKirin(),
+    GoldenKirin = { Scale = 1.15, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old design removed (MESH_LOOKS was tuned with this scale)
     NineTailMoonfox = nineTailMoonfox(),
     OriginSerpent = originSerpent(),
     AstralWhale = astralWhale(),
@@ -678,7 +611,7 @@ local MESH_LOOKS = {
     CrystalSnail = { Glow = Color3.fromRGB(110, 230, 200), Length = 3.2 },
     GoldenManeLion = { Glow = Color3.fromRGB(255, 180, 60), Length = 4.4 },
     DawnPhoenix = { Glow = Color3.fromRGB(255, 170, 70), Length = 4.6 },
-    AquaWisp = { Effect = "Bubbles", Glow = Color3.fromRGB(110, 205, 255), Length = 3.12 },
+    AquaWisp = { Glow = Color3.fromRGB(60, 196, 232), Length = 1.8 }, -- crown to tail (its longest, upright): about 3.4 studs, a small starter beside its owner
     EmberWyrm = { Effect = "TailFlame", Glow = Color3.fromRGB(255, 115, 35), Length = 2.9 },
     LunarHopper = { Effect = "Stars", Glow = Color3.fromRGB(150, 160, 255), Length = 2.58 },
     VoltFox = { Effect = "Sparks", Glow = Color3.fromRGB(255, 235, 110), Length = 2.91 },

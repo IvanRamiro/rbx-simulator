@@ -286,6 +286,7 @@ Specials are visual only.
 
 | Pet | Look and motion | Special |
 |---|---|---|
+| Aqua Wisp | A small water seahorse (recreated 2026-11-09): sea-blue going to clear aqua, pale as foam on its belly, sunlight netted over it; a crown of curling wave-crests tipped with foam, big ocean eyes, a short snout with a little round mouth, a see-through fan on its back, little fins behind its cheeks, leafy fronds, its tail curled into a spiral. It hovers upright, its fan rippling fast; twirls, curls its tail, blows bubbles | **Tide Spiral:** curls tight and twirls until three ribbons of water spiral up around it and burst into a shower of droplets, ripples running out across the ground |
 | Sunscale Dragon | Winged solar dragon in bronze, copper and gold scale armour, a corona frill of gold blades and a sun-fan tail tip; walks on four legs, breathes its raised wings at rest and beats them in flight | **Solar Corona:** flares its wings and lifts its head as a sun forms before it, throwing out a ring of rays, golden scale shards and a ground wave of sunlight |
 | Ember Wyrm | Floating beads of lava rock with flame gills | **Heart Flare:** its beads spread apart while its molten heart blazes |
 | Bonefire Dragon | Floating dragon skeleton with a blue soul flame in its ribcage | **Soul Lantern:** the soul rises out of the ribs while the ghost of the living dragon appears around the bones |
@@ -516,7 +517,7 @@ Each kind has its own visual purpose. None is a recolour of another.
 - **Culling:** other players' auras switch off past 120 studs from the camera. Roblox draws at most 31 Highlights per client.
 - **One source of truth:** the Studio test range (`workspace.AuraTestRange`) uses the same module, so a realm enhanced there is the realm the game shows.
 
-**Pet designs over the realm aura:** an equipped Aqua Wisp or Ember Wyrm adds its design (below) on top of the realm aura while the player meditates. The element-coloured flame aura no longer shows, and the old default (Verdant Gale) was removed on November 8, 2026; the realm aura is the cultivation look.
+**Pet designs over the realm aura:** an equipped Ember Wyrm adds its design (below) on top of the realm aura while the player meditates. The element-coloured flame aura no longer shows, and the old default (Verdant Gale) was removed on November 8, 2026; the realm aura is the cultivation look.
 
 **Character auras** (one module per aura, all on the `CharacterAura` interface: build, show, hide, pulse, update, destroy)
 
@@ -529,17 +530,16 @@ Each kind has its own visual purpose. None is a recolour of another.
 
 | Pet | Aura | What it is | Module |
 |---|---|---|---|
-| Aqua Wisp | **Tidecaller Sanctum** | The player meditates on a blooming water lotus inside a tidal vortex over a pool of caustic light. Spirit koi join at the charged stage; a breaking-wave crown and four water spouts rise when awakened. | `TidecallerAura.lua` |
 | Ember Wyrm | **Ember Crucible** | Fast-spinning ember slashes and cloud under the player; rising debris, sparkles, a twin vortex of energy beams and body flames. The spirit bead wyrm and orbit trails join when charged; a molten fire halo forms behind the head when awakened. | `EmberCrucibleAura.lua` |
 
-**Pet auras:** each equipped pet of a cultivating player shows its own element's aura (`src/client/Auras/AuraBuilder.lua`). Aqua Wisp's is done. (The Golden Kirin's crown-and-leaves aura was removed with its old design, 2026-11-09, at the owner's word: "remove that", "I don't need that anymore".)
+**Pet auras:** each equipped pet of a cultivating player shows its own element's aura (`src/client/Auras/AuraBuilder.lua`). None are live now: the Aqua Wisp's orbiting droplets and its Tidecaller Sanctum were removed with its old design (2026-11-09, the owner's choice: "Remove both, make new"; a new aura comes once the new water seahorse is done), and the Golden Kirin's crown-and-leaves aura was removed with its old design (2026-11-09, at the owner's word: "remove that", "I don't need that anymore".)
 
 **Poses and breakthroughs**
 
 - A flying pose while airborne, and each realm's own meditation idle while cultivating (below).
 - A burst effect on every rank-up, bigger at milestones.
 
-**Next:** every remaining element gets its own aura concept. Aqua Wisp's water aura is the model for this, not a shared aura recoloured.
+**Next:** every remaining element gets its own aura concept. Each its own concept, never a shared aura recoloured.
 
 ### The twelve meditation idles (the owner, November 4, 2026)
 

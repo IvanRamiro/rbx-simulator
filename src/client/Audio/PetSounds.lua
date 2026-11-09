@@ -15,6 +15,7 @@ local SPECIAL_NEAR, SPECIAL_REACH = 25, 160
 -- moves (a leap about 38, a dash about 59). Picks by kind: the closest real creature, or for spirits a magical tone; pets of
 -- one family (the lions and dragons, the kirins) told apart by their pitch.
 local DATA = {
+    AquaWisp = { Voice = { "9120312739", "9120312834", "9120312968" }, VoiceVolume = 0.79, Pitch = 1.15, VoiceLength = 1.6, Special = "9114455244", SpecialVolume = 0.63, SpecialLength = 3 },
     AbyssAnomalocaris = { Voice = { "9113957245", "9113957592", "9113957437" }, VoiceVolume = 1.14, Special = "9120314649", SpecialVolume = 0.49, SpecialLength = 4 },
     AzureSkyDragon = { Voice = { "9116291350", "9116292005", "9116292195" }, VoiceVolume = 0.41, Pitch = 0.85, Special = "9120727460", SpecialVolume = 0.41 },
     BonefireDragon = { Voice = { "9125840983", "9125841207", "9125841551" }, VoiceVolume = 0.58, Pitch = 0.9, Special = "9120575099", SpecialVolume = 0.46 },
