@@ -67,7 +67,10 @@ return {
         Lore = "A round little ball of old ice that has never once melted, not even in the mouth of a volcano.",
         Special = { Name = "Hoarfrost Bloom", Text = "It takes a great gulp of air and swells into a ball of hoarfrost spines: frost bursts off them in a glittering cloud and a breath of icy mist rolls out. It hangs there, turning slowly, then lets the air go in a sigh of frost bubbles and is a smooth little fish again." },
     },
-    ThunderJelly = { Lore = "It drifts on charged air and hums before a storm. Touching one is a lesson most people learn once." },
+    StormBumblebee = {
+        Lore = "It drifts on charged air and hums before a storm. Its sting is a lesson most people learn once.",
+        Special = { Name = "A Lesson Learned Once", Text = "It rises, buzzing harder, every hair of its fur crackling, and curls its tail under: its sting of light slides out. Then it dives and drives the sting into the ground. Lightning cracks out across the ground from it, forking as it runs, and it pops back up and shakes itself off." },
+    },
     CrystalBeetle = {
         Lore = "Its shell grows a new crystal for every year it lives. Collectors have spent fortunes on the moults.",
         Special = { Name = "Ring of Years", Text = "It rears on its hind legs, horn high, and slams its front down. A ring of crystal points bursts up from the ground round it, one after another, one for every year it has lived, then shatters into glitter." },

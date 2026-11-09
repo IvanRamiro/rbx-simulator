@@ -495,7 +495,7 @@ local GameConfig = {
         StormhornKirin = { DisplayName = "Stormhorn Kirin", Rarity = "Legendary", Theme = "Storms", QiBonus = 70 },
 
         GlacierPuff = { DisplayName = "Glacier Puff", Rarity = "Common", Theme = "Ice", QiBonus = 15 },
-        ThunderJelly = { DisplayName = "Thunder Jelly", Rarity = "Uncommon", Theme = "Electricity", QiBonus = 25 },
+        StormBumblebee = { DisplayName = "Storm Bumblebee", Rarity = "Uncommon", Theme = "Electricity", QiBonus = 25 }, -- (replaced the Thunder Jelly, November 9, 2026: PlayerData migration 12)
         CrystalBeetle = { DisplayName = "Crystal Beetle", Rarity = "Rare", Theme = "Crystal", QiBonus = 45 },
         GravityImp = { DisplayName = "Gravity Imp", Rarity = "Epic", Theme = "Gravity", QiBonus = 65 },
         ThunderclawDrake = { DisplayName = "Thunderclaw Drake", Rarity = "Legendary", Theme = "Lightning", QiBonus = 80 },
@@ -734,7 +734,7 @@ local GameConfig = {
             RequiredRank = "FoundationInitiate",
             Pool = {
                 { PetId = "GlacierPuff", HatchChance = 45 },
-                { PetId = "ThunderJelly", HatchChance = 27 },
+                { PetId = "StormBumblebee", HatchChance = 27 },
                 { PetId = "CrystalBeetle", HatchChance = 15 },
                 { PetId = "GravityImp", HatchChance = 8 },
                 { PetId = "ThunderclawDrake", HatchChance = 4 },

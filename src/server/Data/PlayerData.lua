@@ -19,7 +19,7 @@ local Settings = require(script.Parent:WaitForChild("Settings"))
 local Rewards = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("Rewards"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 12
+local SCHEMA_VERSION = 13
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -92,6 +92,30 @@ end
 -- returning player never sees the beginner's path (a new player starts at the first).
 MIGRATIONS[8] = function(progress)
     progress.Quest = progress.Quest or Quests.DONE
+    return progress
+end
+
+-- Version 13 replaced the Thunder Jelly with the Storm Bumblebee (November 9, 2026): a pet or a Codex entry of the old one
+-- becomes the new one (unknown, they were dropped).
+local V12_PETS = {
+    ThunderJelly = "StormBumblebee",
+}
+
+MIGRATIONS[12] = function(progress)
+    if typeof(progress.Pets) == "table" then
+        for _, pet in progress.Pets do
+            if typeof(pet) == "table" and V12_PETS[pet.PetId] then
+                pet.PetId = V12_PETS[pet.PetId]
+            end
+        end
+    end
+    if typeof(progress.Codex) == "table" and typeof(progress.Codex.Found) == "table" then
+        for i, petId in progress.Codex.Found do
+            if V12_PETS[petId] then
+                progress.Codex.Found[i] = V12_PETS[petId]
+            end
+        end
+    end
     return progress
 end
 

@@ -28,7 +28,7 @@ AuraStyles.Elements = {
     AzureSkyDragon = { Core = Color3.fromRGB(220, 245, 255), Main = Color3.fromRGB(90, 170, 255), Deep = Color3.fromRGB(40, 80, 200), Particles = "Spark", RingShape = "Circle" },
     StormhornKirin = { Core = Color3.fromRGB(255, 250, 200), Main = Color3.fromRGB(150, 160, 255), Deep = Color3.fromRGB(70, 60, 170), Particles = "Spark", RingShape = "Polygon", RingSides = 6 },
     GlacierPuff = { Core = Color3.fromRGB(240, 252, 255), Main = Color3.fromRGB(150, 215, 255), Deep = Color3.fromRGB(80, 140, 220), Particles = "Crystal", RingShape = "Circle" },
-    ThunderJelly = { Core = Color3.fromRGB(255, 250, 200), Main = Color3.fromRGB(255, 220, 80), Deep = Color3.fromRGB(170, 110, 255), Particles = "Spark", RingShape = "Circle" },
+    StormBumblebee = { Core = Color3.fromRGB(255, 250, 200), Main = Color3.fromRGB(255, 220, 80), Deep = Color3.fromRGB(170, 110, 255), Particles = "Spark", RingShape = "Circle" },
     CrystalBeetle = { Core = Color3.fromRGB(220, 250, 255), Main = Color3.fromRGB(130, 220, 255), Deep = Color3.fromRGB(90, 60, 170), Particles = "Crystal", RingShape = "Polygon", RingSides = 6 },
     GravityImp = { Core = Color3.fromRGB(240, 210, 255), Main = Color3.fromRGB(170, 100, 255), Deep = Color3.fromRGB(70, 30, 140), Particles = "Mote", RingShape = "Circle" },
     ThunderclawDrake = { Core = Color3.fromRGB(255, 250, 190), Main = Color3.fromRGB(255, 215, 60), Deep = Color3.fromRGB(120, 90, 220), Particles = "Spark", RingShape = "Circle" },
