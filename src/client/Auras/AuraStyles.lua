@@ -72,56 +72,6 @@ AuraStyles.Elements = {
 
 AuraStyles.Auras = {} -- per-pet aura styles (AuraBuilder); the old Aqua Wisp and Golden Kirin ones went with their old designs
 
-AuraStyles.EmberCrucible = {
-    Colors = {
-        Core = Color3.fromRGB(255, 245, 215),
-        Gold = Color3.fromRGB(255, 210, 110),
-        Main = Color3.fromRGB(255, 125, 30),
-        Deep = Color3.fromRGB(215, 40, 15),
-        Ember = Color3.fromRGB(120, 20, 10),
-        Debris = Color3.fromRGB(150, 100, 80),
-    },
-    Textures = {
-        Fog = "rbxassetid://135407417004177",
-        Slash = "rbxassetid://100518308037097",
-        Debris = "rbxassetid://101728761589336",
-        Sparkle = "rbxassetid://100647641098473",
-        Energy = "rbxassetid://93719245219671",
-        TrailWisp = "rbxassetid://108955155209671",
-        EnergyFlame = "rbxassetid://91361071402462",
-        Fire = "rbxassetid://93414475552747",
-        Glow = "rbxassetid://135169457468310",
-        Trail = "rbxassetid://85921257601970",
-        Ring = "rbxassetid://12386390257",
-    },
-    Materials = {
-        Rock = { Material = Enum.Material.Basalt, Color = Color3.fromRGB(48, 36, 36), Transparency = 0 },
-        Core = { Material = Enum.Material.Neon, Color = Color3.fromRGB(215, 55, 10), Transparency = 0.1 },
-        Eye = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 205, 90), Transparency = 0 },
-        HaloGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 90, 20), Transparency = 0.7 },
-    },
-    Ground = {
-        Size = 3,
-        FogSpin = NumberRange.new(260, 300),
-        FogCounterSpin = NumberRange.new(-360, -320),
-        SlashSpin = { 800, -650, 1000 },
-    },
-    Vortex = {
-        Spin = 1.3,
-        Outer = { Count = 10, Base = 4.2, Top = 1.4, Height = 8, Twist = 1.5, Width = 1, Flow = 1.8, Curve = 3.4 },
-        Inner = { Count = 6, Base = 2.4, Top = 0.8, Height = 6, Twist = -1.8, Width = 0.55, Flow = 2.6, Curve = 2.2 },
-    },
-    Orbiters = {
-        { Radius = 3.6, Height = 0.9, Speed = 2.6, Rise = 0.5, Phase = 0 },
-        { Radius = 2.6, Height = 2.6, Speed = -3.2, Rise = 0.7, Phase = 1.3 },
-        { Radius = 3.2, Height = 4.2, Speed = 2.9, Rise = 0.6, Phase = 2.6 },
-        { Radius = 2.2, Height = 5.8, Speed = -3.6, Rise = 0.5, Phase = 3.9 },
-        { Radius = 3.9, Height = 3.3, Speed = 2.2, Rise = 1.4, Phase = 5.2 },
-    },
-    Wyrm = { Beads = 16, Bead = 0.95, Head = 2.1, Radius = 4.8, Gap = 0.78 },
-    Halo = { Diameter = 6.2, Lift = 1, Back = 1.6, RingFill = 1.3 },
-}
-
 AuraStyles.CharacterAura = {
     Textures = {
         Flame = "rbxassetid://125999209006478",

@@ -30,7 +30,7 @@ local DATA = {
     DreadfangCerberus = { Voice = { "9113973520", "9113973521" }, VoiceVolume = 0.52, Special = "9114444008", SpecialVolume = 2.29 },
     DreamMoth = { Voice = { "9116383039", "9116383270" }, VoiceVolume = 6.86, Pitch = 0.85, Special = "9116380049", SpecialVolume = 10 },
     EclipseCat = { Voice = { "9113984339", "9113984510", "9113984650" }, VoiceVolume = 1.89, Special = "9125484367", SpecialVolume = 0.83 },
-    EmberWyrm = { Voice = { "9120041219", "9120043311", "9120043116" }, VoiceVolume = 0.73, Pitch = 1.1, Special = "9114430091", SpecialVolume = 0.33, SpecialLength = 4 },
+    EmberWyrm = { Voice = { "9117987278", "9117987286", "9117983605" }, VoiceVolume = 0.66, Pitch = 1.3, VoiceLength = 1.2, Special = "9117984812", SpecialVolume = 0.55, SpecialLength = 3 },
     FrostfangSerpent = { Voice = { "9119299847", "9119300024", "9119300025" }, VoiceVolume = 0.38, Special = "9114856117", SpecialVolume = 0.98 },
     GalaxyManta = { Voice = { "9120653665", "9120653868", "9120653862" }, VoiceVolume = 0.52, Special = "9125635430", SpecialVolume = 0.8 },
     GlacierPuff = { Voice = { "9120310416", "9120310477", "9120310104" }, VoiceVolume = 0.72, Special = "9125611419", SpecialVolume = 0.29 },

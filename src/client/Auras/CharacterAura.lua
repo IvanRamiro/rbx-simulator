@@ -3,16 +3,15 @@ local TweenService = game:GetService("TweenService")
 
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local AuraKit = require(script.Parent:WaitForChild("AuraKit"))
-local EmberCrucibleAura = require(script.Parent:WaitForChild("EmberCrucibleAura"))
 
 local CharacterAura = {}
 
 CharacterAura.REMOVE_DELAY = 2.2
 
 local SETTINGS = AuraStyles.CharacterAura
-local DESIGNS = { -- (the Aqua Wisp's Tidecaller Sanctum went with its old design, 2026-11-09; its new aura comes once the new pet is done)
-    EmberWyrm = EmberCrucibleAura,
-}
+-- (empty for now: the Aqua Wisp's Tidecaller Sanctum and the Ember Wyrm's Ember Crucible went with their old designs, 2026-11-09; their new
+-- auras come once the new pets are done)
+local DESIGNS = {}
 local TEXTURES = SETTINGS.Textures
 local TAU = 2 * math.pi
 local FADE_IN = TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
@@ -481,7 +480,7 @@ local function surge(aura, strength)
     end
 end
 
--- Whether a pet has its own aura design (Ember Crucible): those layer over the realm
+-- Whether a pet has its own aura design: those layer over the realm
 -- aura (RealmAura) while the player meditates; every other look is the realm aura's now.
 function CharacterAura.hasPetDesign(petId)
     return petId ~= nil and DESIGNS[petId] ~= nil

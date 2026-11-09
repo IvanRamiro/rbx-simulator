@@ -18,6 +18,7 @@ return {
     DreadfangCerberus = "rbxassetid://90383585387525",
     DreamMoth = "rbxassetid://116224404517599",
     EclipseCat = "rbxassetid://85885755382252",
+    EmberWyrm = "rbxassetid://119439182813124",
     FrostfangSerpent = "rbxassetid://120358055125100",
     GalaxyManta = "rbxassetid://93932467864746",
     GlacierPuff = "rbxassetid://103685602446753",

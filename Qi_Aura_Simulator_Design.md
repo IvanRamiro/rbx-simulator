@@ -288,7 +288,7 @@ Specials are visual only.
 |---|---|---|
 | Aqua Wisp | A small water seahorse (recreated 2026-11-09): sea-blue going to clear aqua, pale as foam on its belly, sunlight netted over it; a crown of curling wave-crests tipped with foam, big ocean eyes, a short snout with a little round mouth, a see-through fan on its back, little fins behind its cheeks, leafy fronds, its tail curled into a spiral. It hovers upright, its fan rippling fast; twirls, curls its tail, blows bubbles | **Tide Spiral:** curls tight and twirls until three ribbons of water spiral up around it and burst into a shower of droplets, ripples running out across the ground |
 | Sunscale Dragon | Winged solar dragon in bronze, copper and gold scale armour, a corona frill of gold blades and a sun-fan tail tip; walks on four legs, breathes its raised wings at rest and beats them in flight | **Solar Corona:** flares its wings and lifts its head as a sun forms before it, throwing out a ring of rays, golden scale shards and a ground wave of sunlight |
-| Ember Wyrm | Floating beads of lava rock with flame gills | **Heart Flare:** its beads spread apart while its molten heart blazes |
+| Ember Wyrm | A campfire salamander (recreated 2026-11-09): a chubby baby wyrm of charcoal crust cracked with glowing magma, ember spots down its flanks, a warm ember belly, sleepy ember eyes and coal-glow cheeks, a crest of little flames down its back and a tail tip burning like a campfire. Sits low and content; walks with a salamander's sprawl; wags, sniffs, stretches; naps curled after a while | **Bonfire:** rears up and swings its burning tail over its back, stoking its campfire into a roaring bonfire, embers showering and a ring of fire running out across the ground |
 | Bonefire Dragon | Floating dragon skeleton with a blue soul flame in its ribcage | **Soul Lantern:** the soul rises out of the ribs while the ghost of the living dragon appears around the bones |
 | Dreadfang Cerberus | Hulking three-headed hellhound, dark hide split by glowing cyan cracks; trots on the ground, gallops in the air, each head moves on its own | **Hellfire Breath:** rears all three heads and blasts cyan fire from every mouth |
 | Golden Kirin | A radiant celestial kirin: pearl-white, legs dipped in gold to the knee, gold flame-scrolls on its shoulders and haunches, big golden sun-eyes, two gold crescent horns, long gold barbels, a mane and tail of gold silk ribbons, a sunburst arc of light behind its head; it never touches the ground, a lotus of light under each hoof (recreated 2026-11-09) | **Lotus Bloom:** rears up, its halo flaring, and a great lotus of golden light blooms on the air beneath it, a ring of light running out across the ground |
@@ -517,7 +517,7 @@ Each kind has its own visual purpose. None is a recolour of another.
 - **Culling:** other players' auras switch off past 120 studs from the camera. Roblox draws at most 31 Highlights per client.
 - **One source of truth:** the Studio test range (`workspace.AuraTestRange`) uses the same module, so a realm enhanced there is the realm the game shows.
 
-**Pet designs over the realm aura:** an equipped Ember Wyrm adds its design (below) on top of the realm aura while the player meditates. The element-coloured flame aura no longer shows, and the old default (Verdant Gale) was removed on November 8, 2026; the realm aura is the cultivation look.
+**Pet designs over the realm aura:** an equipped pet with a design of its own adds it (below) on top of the realm aura while the player meditates. None are live now: the Aqua Wisp's Tidecaller Sanctum and the Ember Wyrm's Ember Crucible were removed with their old designs (2026-11-09, the owner's choices "Remove both, make new" and "Remove, make new"); new ones come once the new pets are approved. The element-coloured flame aura no longer shows, and the old default (Verdant Gale) was removed on November 8, 2026; the realm aura is the cultivation look.
 
 **Character auras** (one module per aura, all on the `CharacterAura` interface: build, show, hide, pulse, update, destroy)
 
@@ -530,7 +530,6 @@ Each kind has its own visual purpose. None is a recolour of another.
 
 | Pet | Aura | What it is | Module |
 |---|---|---|---|
-| Ember Wyrm | **Ember Crucible** | Fast-spinning ember slashes and cloud under the player; rising debris, sparkles, a twin vortex of energy beams and body flames. The spirit bead wyrm and orbit trails join when charged; a molten fire halo forms behind the head when awakened. | `EmberCrucibleAura.lua` |
 
 **Pet auras:** each equipped pet of a cultivating player shows its own element's aura (`src/client/Auras/AuraBuilder.lua`). None are live now: the Aqua Wisp's orbiting droplets and its Tidecaller Sanctum were removed with its old design (2026-11-09, the owner's choice: "Remove both, make new"; a new aura comes once the new water seahorse is done), and the Golden Kirin's crown-and-leaves aura was removed with its old design (2026-11-09, at the owner's word: "remove that", "I don't need that anymore".)
 

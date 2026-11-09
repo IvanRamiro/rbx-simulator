@@ -6,8 +6,8 @@ return {
         Special = { Name = "Tide Spiral", Text = "Curls up tight and twirls until three ribbons of water spiral up around it and burst into a shower of droplets." },
     },
     EmberWyrm = {
-        Lore = "A chain of lava beads held together by one stubborn, molten heart. It sleeps in the warm ash of old campfires.",
-        Special = { Name = "Heart Flare", Text = "Its beads spread apart while its molten heart blazes." },
+        Lore = "A little salamander born in the coals of an old campfire, held together by one stubborn, molten heart. It sleeps in the warm ash of old campfires.",
+        Special = { Name = "Bonfire", Text = "Rears up and swings its burning tail over its back, stoking its campfire into a roaring bonfire." },
     },
     LunarHopper = { Lore = "It leaps only under moonlight, and each leap lands a little further from the ground than it should." },
     VoltFox = { Lore = "A fox born from a thunderclap. Its fur remembers every storm it has run through, and it crackles when it is pleased." },

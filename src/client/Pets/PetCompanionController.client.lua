@@ -232,7 +232,9 @@ local function updateCompanions(deltaTime)
             else
                 pet.cframe = pet.cframe:Lerp(target, blend)
             end
-            local moved = (pet.cframe.Position - previous).Magnitude / math.max(deltaTime, 1e-3)
+            -- ground travel only: the idle bob is up and down, and counting it kept a still pet from ever settling (its naps never came)
+            local step = pet.cframe.Position - previous
+            local moved = Vector2.new(step.X, step.Z).Magnitude / math.max(deltaTime, 1e-3)
             pet.speed += (math.min(moved, 60) - pet.speed) * math.min(1, deltaTime * 8)
 
             table.insert(parts, pet.rootPart)

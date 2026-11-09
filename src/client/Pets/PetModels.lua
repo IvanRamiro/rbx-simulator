@@ -57,47 +57,6 @@ local function diamond(x, y, z, size, color)
     return { Shape = "Block", Size = Vector3.new(size, size, size), At = at(x, y, z, 45, 0, 45), Color = color, Neon = true }
 end
 
-local function emberWyrm()
-    local scales = Color3.fromRGB(65, 32, 30)
-    local lava = Color3.fromRGB(255, 115, 35)
-    local ember = Color3.fromRGB(255, 190, 70)
-    local membrane = Color3.fromRGB(235, 95, 35)
-    local parts = {
-        { Shape = "Prism", Size = Vector3.new(0.8, 0.75, 1.1), At = at(0, 0, 0), Color = scales },
-        { Shape = "Prism", Size = Vector3.new(0.5, 0.25, 0.9), At = at(0, -0.3, -0.05), Color = lava, Neon = true },
-        { Shape = "Block", Size = Vector3.new(0.38, 0.6, 0.38), At = at(0, 0.5, -0.45, -30), Color = scales },
-        { Shape = "Prism", Size = Vector3.new(0.55, 0.5, 0.7), At = at(0, 0.85, -0.75), Color = scales },
-        { Shape = "Wedge", Size = Vector3.new(0.42, 0.3, 0.42), At = at(0, 0.78, -1.25), Color = scales },
-        { Shape = "Prism", Size = Vector3.new(0.5, 0.5, 0.55), At = at(0, 0.05, 0.75, -15), Color = scales },
-        { Shape = "Prism", Size = Vector3.new(0.35, 0.35, 0.5), At = at(0, 0.25, 1.15, -35), Color = scales },
-        { Shape = "Wedge", Size = Vector3.new(0.3, 0.55, 0.3), At = at(0, 0.7, 1.4, 0, 180, 0), Color = lava, Neon = true },
-        { Shape = "Wedge", Size = Vector3.new(0.18, 0.35, 0.2), At = at(0, 0.85, 1.42, 0, 180, 0), Color = ember, Neon = true },
-        { Shape = "Wedge", Size = Vector3.new(0.08, 0.25, 0.25), At = at(0, 0.45, -0.1, 0, 180, 0), Color = lava },
-        { Shape = "Wedge", Size = Vector3.new(0.08, 0.22, 0.22), At = at(0, 0.42, 0.3, 0, 180, 0), Color = lava },
-    }
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.15, 0.1, 0.06), At = at(side * 0.17, 0.92, -1.08, 0, 0, side * -15), Color = lava, Neon = true }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Wedge", Size = Vector3.new(0.1, 0.55, 0.45), At = at(side * 0.2, 1.25, -0.6, -15, 180, side * -12), Color = lava }
-    end)
-    mirrored(parts, function(side)
-        return wing(side, 0.3, 0.42, -0.05, 1.4, 1.1, 35, membrane)
-    end)
-    mirrored(parts, function(side)
-        return wing(side, 0.3, 0.5, -0.15, 1.45, 0.35, 38, scales)
-    end)
-    for _, z in { -0.35, 0.35 } do
-        mirrored(parts, function(side)
-            return { Shape = "Block", Size = Vector3.new(0.18, 0.45, 0.2), At = at(side * 0.3, -0.5, z), Color = scales }
-        end)
-    end
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.04, 0.08, 0.4), At = at(side * 0.41, 0.05, 0.1, 25, 0, 0), Color = lava, Neon = true }
-    end)
-    return { Scale = 1.05, Parts = parts }
-end
-
 local function lunarHopper()
     local fur = Color3.fromRGB(160, 145, 235)
     local pale = Color3.fromRGB(210, 200, 255)
@@ -470,7 +429,7 @@ end
 
 PetModels.Pets = {
     AquaWisp = { Scale = 0.95, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old droplet design removed (MESH_LOOKS was tuned with this scale)
-    EmberWyrm = emberWyrm(),
+    EmberWyrm = { Scale = 1.05, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old lava-bead design removed (MESH_LOOKS was tuned with this scale)
     LunarHopper = lunarHopper(),
     VoltFox = voltFox(),
     GoldenKirin = { Scale = 1.15, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old design removed (MESH_LOOKS was tuned with this scale)
@@ -612,7 +571,7 @@ local MESH_LOOKS = {
     GoldenManeLion = { Glow = Color3.fromRGB(255, 180, 60), Length = 4.4 },
     DawnPhoenix = { Glow = Color3.fromRGB(255, 170, 70), Length = 4.6 },
     AquaWisp = { Glow = Color3.fromRGB(60, 196, 232), Length = 1.8 }, -- crown to tail (its longest, upright): about 3.4 studs, a small starter beside its owner
-    EmberWyrm = { Effect = "TailFlame", Glow = Color3.fromRGB(255, 115, 35), Length = 2.9 },
+    EmberWyrm = { Glow = Color3.fromRGB(255, 122, 30), Length = 2.4 }, -- nose to campfire (its longest): about 5 studs long and 1.5 tall, a small salamander at its owner's feet
     LunarHopper = { Effect = "Stars", Glow = Color3.fromRGB(150, 160, 255), Length = 2.58 },
     VoltFox = { Effect = "Sparks", Glow = Color3.fromRGB(255, 235, 110), Length = 2.91 },
     GoldenKirin = { Glow = Color3.fromRGB(255, 214, 120), Length = 2.4 }, -- nose to tail-silk (its longest), 5.5 studs; its halo's top about 4.8 studs up, under its owner's head (k is about 2.3 for it: 4.4 stood it 9 studs tall)
