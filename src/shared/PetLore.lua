@@ -80,7 +80,10 @@ return {
         Lore = "A drake that sharpens its claws on lightning. Mountain passes go quiet when it is hunting nearby.",
         Special = { Name = "Called Down", Text = "It rears up on its hind legs, wings flung open, and lifts its horns to the sky. A bolt comes down onto them and it glows white-hot. It slams down onto its wrists, its hands flung up over it, and the lightning bursts out of it across the ground." },
     },
-    FrostfangSerpent = { Lore = "Its bite stops time for whatever it touches, at least for the moment that matters. It sheds its skin as sheets of clear ice." },
+    FrostfangSerpent = {
+        Lore = "Its bite stops time for whatever it touches, at least for the moment that matters. It sheds its skin as sheets of clear ice.",
+        Special = { Name = "The Moment That Matters", Text = "It rears, hood flared and crystal fangs bared, and strikes. Where it bites, a hexagon of stopped time spreads across the ground: shards of ice hang still in the air. Then the moment ends, and everything shatters." },
+    },
     DreamMoth = {
         Lore = "It feeds on dreams you have already forgotten. Sleepers near one wake oddly rested.",
         Special = { Name = "A Forgotten Dream", Text = "Uncurls its tongue, and faint threads of a dream nobody remembers drift in, spiralling, to the tip of it. One slow wingbeat, and a shimmer of scale dust drifts down." },
