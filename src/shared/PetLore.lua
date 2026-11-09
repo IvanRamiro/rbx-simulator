@@ -99,7 +99,10 @@ return {
         Lore = "A shape in the blowing sand that is gone when you look straight at it. Caravans leave it water, just in case.",
         Special = { Name = "Mirage", Text = "It sits up tall and stares straight at you, then blows away downwind as sand. A dust devil spins up beside where it stood; it steps out of it, shakes the sand off, and hops back as if nothing happened." },
     },
-    SolarButterfly = { Lore = "Its wings store a whole afternoon of sun and spend it slowly after dark." },
+    SolarButterfly = {
+        Lore = "Its wings store a whole afternoon of sun and spend it slowly after dark.",
+        Special = { Name = "Afterglow", Text = "It spreads its wings wide and still as the stored sunlight gathers in them, then lets it go in one slow wingbeat: a warm flare turns through sunset to dusk, motes of gold drift up and away, and for a moment the world around it glows like evening." },
+    },
     ObsidianGuardian = { Lore = "A sentinel of black glass that reflects you a little more honestly than you would like." },
     GoldenManeLion = {
         Lore = "A high-shouldered royal lion with a tiered mane of flame-tipped locks. It walks as if the ground owes it something.",

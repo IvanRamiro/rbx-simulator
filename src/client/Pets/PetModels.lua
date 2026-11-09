@@ -658,6 +658,7 @@ local MESH_LOOKS = {
     CelestialSnowLeopard = { Glow = Color3.fromRGB(196, 232, 255), Length = 4.2 },
     CometStag = { Glow = Color3.fromRGB(150, 210, 255), Length = 4.6 },
     SandPhantom = { Glow = Color3.fromRGB(240, 196, 120), Length = 4.0 }, -- its long tail is most of its length
+    SolarButterfly = { Glow = Color3.fromRGB(255, 170, 70), Length = 3.8 }, -- its wingspan
     StormhornKirin = { Glow = Color3.fromRGB(90, 170, 255), Length = 4.4 },
     JadeWyrmTurtle = { Glow = Color3.fromRGB(60, 220, 170), Length = 4.8 },
     NebulaOwl = { Glow = Color3.fromRGB(176, 122, 255), Length = 4.0 },

@@ -3866,6 +3866,157 @@ local function animateSandPhantom(rig, s, moving, fly, nova)
     end
 end
 
+-- The Solar Butterfly (skinned): a swallowtail of sunset glass. It flies in slow, deep wingbeats with glides between, bobbing as butterflies do; still
+-- a few seconds, it drifts down and lands on its legs to bask, wings spread flat to the sun, now and then closing them up over its back and opening them
+-- again; its antennae sway and twitch; warm motes of stored sunlight drift off its eyespots, more after dark.
+local BFLY_FAR = 90 -- studs from the camera past which nobody can see it fidget: its bones rest
+local BFLY_LEGS = 0.0737 -- metres from its Body bone down to the tips of its legs (solar_butterfly.py): where it stands when it lands. Measured from the
+-- bone, not the box: the importer's root part sits at the model's origin, under a pet that floats, so the box's middle is not where it seems
+local BFLY_GOLD, BFLY_ROSE, BFLY_DUSK = Color3.fromRGB(255, 196, 80), Color3.fromRGB(255, 110, 90), Color3.fromRGB(150, 80, 200)
+-- its wings in the game's axes (a turn about its length; L takes the opposite sign): the same numbers as solar_butterfly.py's wings(), each checked in
+-- Blender for torn skin: raised to 0.95 and lowered to -0.5 in the beat, flat at -0.12 basking, closed over its back at 1.3
+local BFLY_UP, BFLY_DOWN, BFLY_FLAT, BFLY_CLOSED, BFLY_GLIDE = 0.95, -0.5, -0.12, 1.3, 0.3
+
+local function bflyWings(m, raise, bend, hindLag)
+    for _, side in { "L", "R" } do
+        local up = if side == "L" then -1 else 1
+        pose(m["Fore" .. side .. "1"], CFrame.Angles(0, 0, up * raise))
+        pose(m["Fore" .. side .. "2"], CFrame.Angles(0, 0, up * bend))
+        pose(m["Hind" .. side .. "1"], CFrame.Angles(0, 0, up * (raise - hindLag)))
+        pose(m["Hind" .. side .. "2"], CFrame.Angles(0, 0, up * bend * 0.8))
+    end
+end
+
+-- warm motes of stored sunlight drifting off its eyespots; more after dark
+local function bflyMotes(rig, s)
+    s.motesMade = true
+    s.motes = {}
+    for _, name in { "HindL2", "HindR2" } do
+        local point = rig.points[name]
+        if point then
+            local motes = Instance.new("ParticleEmitter")
+            motes.Name = "Sunlight"
+            motes.Texture = SPARKLE
+            motes.Rate = 1.2
+            motes.Lifetime = NumberRange.new(1.2, 2)
+            motes.Speed = NumberRange.new(0.03 * rig.unit, 0.1 * rig.unit)
+            motes.SpreadAngle = Vector2.new(180, 180)
+            motes.Acceleration = Vector3.new(0, 0.08 * rig.unit, 0)
+            motes.Drag = 1
+            motes.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.07 * rig.unit), NumberSequenceKeypoint.new(1, 0) })
+            motes.Color = ColorSequence.new(BFLY_GOLD, BFLY_ROSE)
+            motes.LightEmission = 1
+            motes.LightInfluence = 0
+            motes.Parent = point
+            table.insert(s.motes, motes)
+        end
+    end
+end
+
+local function animateSolarButterfly(rig, s, moving, fly, nova)
+    if not s.motesMade then
+        bflyMotes(rig, s)
+    end
+    local m, u, t, dt = rig.motors, rig.meters, s.time, rig.deltaTime
+    -- after dark it spends its sunlight a little faster
+    local clock = Lighting.ClockTime
+    local night = if clock < 6.2 or clock > 17.8 then 1 else 0
+    for _, motes in s.motes do
+        motes.Rate = 1.2 + 2.3 * night
+    end
+    local camera = workspace.CurrentCamera
+    if not camera or (camera.CFrame.Position - rig.rootPart.Position).Magnitude > BFLY_FAR then
+        return
+    end
+    local pace = math.max(moving, fly)
+
+    -- the special, Afterglow: it rises a little and spreads its wings wide and still as the sunlight gathers in them (to 0.42); then lets it go
+    -- (Blasts.Afterglow) with one slow, deep wingbeat, and flies on
+    local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+    local spread = smoothstep(0.02, 0.25, progress) * (1 - smoothstep(0.42, 0.5, progress))
+    local release = if progress > 0.42 and progress < 0.8 then math.sin(math.pi * (progress - 0.42) / 0.38) else 0
+    local special = progress > 0
+
+    -- still a few seconds, it drifts down and lands to bask; it takes off as soon as it has somewhere to go
+    s.still = if pace < 0.05 and not special then (s.still or 0) + dt else 0
+    local wantLand = if s.still > 4 then 1 else 0
+    s.land = (s.land or 0) + (wantLand - (s.land or 0)) * math.min(1, dt * (if wantLand > (s.land or 0) then 0.9 else 4))
+    local land = smoothstep(0, 1, s.land)
+    local bodyBone = rig.points.Body
+    if bodyBone and not s.sole then
+        s.sole = rig.rootPart.CFrame:PointToObjectSpace(bodyBone.WorldPosition).Y * -1 / u + BFLY_LEGS -- (WorldPosition leaves out its own Transform)
+    end
+    local drop = dropToGround(rig, s, t, u, 0, s.sole or 0.15)
+
+    -- flight: slow, deep beats; now and then a glide with its wings held up in a shallow V
+    s.nextGlide = s.nextGlide or t + 2
+    if t >= s.nextGlide then
+        s.glideUntil = t + 0.6 + math.random() * 0.6
+        s.nextGlide = s.glideUntil + 1.6 + math.random() * 2
+    end
+    local gliding = if t < (s.glideUntil or 0) then 1 else 0
+    s.glide = (s.glide or 0) + (gliding - (s.glide or 0)) * math.min(1, dt * 6)
+    local rate = (1.7 + 0.8 * moving + 0.5 * fly) * (1 - 0.8 * s.glide) * (1 - land) * (1 - spread)
+    s.beat = (s.beat or 0) + dt * rate * 2 * math.pi
+    local wave = math.sin(s.beat)
+    local mid, half = (BFLY_UP + BFLY_DOWN) / 2, (BFLY_UP - BFLY_DOWN) / 2
+    local flying = (1 - land) * (1 - spread)
+    local raise = (mid + half * wave) * (1 - s.glide) + BFLY_GLIDE * s.glide
+    local bend = 0.12 * math.sin(s.beat - 0.8) * (1 - s.glide)
+
+    -- basking: wings flat to the sun; now and then closed up over its back a while, then opened again
+    s.nextClose = s.nextClose or t + 3
+    if land > 0.9 and t >= s.nextClose then
+        s.closeAt = t
+        s.nextClose = t + 5 + math.random() * 5
+    end
+    local closeEnv = if s.closeAt then math.clamp((t - s.closeAt) / 2.6, 0, 1) else 1
+    local closed = math.min(1, math.sin(math.pi * closeEnv) * 1.6) * land
+    local bask = BFLY_FLAT + 0.05 * math.sin(t * 0.9)
+    local landed = bask * (1 - closed) + BFLY_CLOSED * closed
+
+    -- the special: held flat and wide, then one slow, deep beat as it lets the light go
+    local held = BFLY_FLAT - 0.05
+    local deep = BFLY_UP * math.sin(math.pi * math.clamp((progress - 0.42) / 0.38, 0, 1)) * 1.0
+    local wingRaise = raise * flying + landed * land * (1 - spread) + held * spread * (1 - release) + deep * release * (if progress > 0.42 then 1 else 0)
+    bflyWings(m, wingRaise, bend * flying, 0.08 * flying)
+
+    -- the body: rides each downstroke and bobs as butterflies do; settles onto its legs when it lands; rises into its special
+    local heading = math.atan2(-rig.rootPart.CFrame.LookVector.X, -rig.rootPart.CFrame.LookVector.Z)
+    local turned = (heading - (s.heading or heading) + math.pi) % (2 * math.pi) - math.pi
+    s.heading = heading
+    s.bank = (s.bank or 0) + (math.clamp((if dt > 0 then turned / dt else 0) * 0.12, -0.3, 0.3) - (s.bank or 0)) * math.min(1, dt * 3)
+    local bob = (0.05 * math.sin(s.beat - 1.4) + 0.035 * math.sin(t * 1.3) + 0.02 * math.sin(t * 3.1 + 1)) * flying + 0.1 * spread
+    local drift = 0.025 * math.sin(t * 1.1) * flying
+    local lift = bob * u * (1 - land) - drop * land
+    local pitch = (-0.08 * moving + 0.05 * math.sin(s.beat - 1.8)) * flying - 0.1 * spread
+    pose(m.Body, CFrame.new(drift * u, lift, 0) * CFrame.Angles(pitch, 0.05 * math.sin(t * 0.8) * flying, s.bank * flying - drift * 1.5))
+    for index, name in { "Abd1", "Abd2", "Abd3" } do
+        pose(m[name], CFrame.Angles(-0.05 * math.sin(s.beat - 1.6 - index * 0.5) * flying + 0.04 * land * math.sin(t * 0.7 + index), 0, 0))
+    end
+
+    -- the head and antennae: it looks about, and to you; its antennae sway, now and then one twitches
+    local toYou = rig.rootPart.CFrame:VectorToObjectSpace((camera.CFrame.Position - rig.rootPart.Position).Unit)
+    s.nextGaze = s.nextGaze or 0
+    if t >= s.nextGaze then
+        s.nextGaze = t + 1.5 + math.random() * 2.5
+        s.atYou = math.random() < 0.4
+        s.gazeYaw, s.gazePitch = (math.random() - 0.5) * 0.7, (math.random() - 0.5) * 0.3
+    end
+    local wantYaw = if s.atYou then math.clamp(math.atan2(-toYou.X, -toYou.Z), -0.5, 0.5) else s.gazeYaw
+    local wantPitch = if s.atYou then math.clamp(toYou.Y * 0.4, -0.2, 0.3) else s.gazePitch
+    s.yaw = (s.yaw or 0) + (wantYaw - (s.yaw or 0)) * math.min(1, dt * 4)
+    s.pitch = (s.pitch or 0) + (wantPitch - (s.pitch or 0)) * math.min(1, dt * 4)
+    pose(m.Head, CFrame.Angles(0.5 * s.pitch, 0.5 * s.yaw, 0.1 * s.yaw))
+    for _, side in { "L", "R" } do
+        local sign = if side == "L" then 1 else -1
+        local twitch = math.max(0, math.sin(t * 1.9 + (if side == "L" then 0 else 2.1))) ^ 16
+        local sway = 0.06 * math.sin(t * 1.4 + (if side == "L" then 0 else 1.2))
+        pose(m["Ant" .. side .. "1"], CFrame.Angles(0.05 * math.sin(s.beat - 2) * flying + sway - 0.1 * spread, sign * 0.05 * twitch, 0))
+        pose(m["Ant" .. side .. "2"], CFrame.Angles(0.25 * twitch + 0.04 * math.sin(t * 2.3 + sign), 0, 0))
+    end
+end
+
 -- The Wind Sprite is one smooth skin on a skeleton, so its joints are Bones (PetRig.buildSkinned). Axes as everywhere: -Z ahead, +X to its right; its left is -X.
 local WIND_LID_HINGE = { L = Vector3.new(0.9574, -0.1218, -0.2618), R = Vector3.new(0.9574, 0.1218, 0.2618) } -- both lids of an eye turn on this line
 local WIND_BLINK_UPPER, WIND_BLINK_LOWER = math.rad(72), math.rad(22)
@@ -5424,6 +5575,33 @@ PetRig.Profiles.SandPhantom = {
         Ivory = Color3.fromRGB(248, 238, 214),
     },
     Animate = animateSandPhantom,
+}
+
+PetRig.Profiles.SolarButterfly = {
+    Skinned = true,
+    Bones = {
+        "Body", "Head", "Abd1", "Abd2", "Abd3", "AntL1", "AntL2", "AntR1", "AntR2",
+        "ForeL1", "ForeL2", "HindL1", "HindL2", "ForeR1", "ForeR2", "HindR1", "HindR2",
+    },
+    Points = { "HindL2", "HindR2", "Head", "Body" },
+    GlowColors = {
+        ffffff = Color3.fromRGB(255, 255, 255), -- the catch-lights in its eyes
+        ff8a1e = Color3.fromRGB(255, 138, 30), -- the sun-disc eyespots on its hindwings (saturated: Neon keeps the hue)
+    },
+    Effects = {
+        Blast = "Afterglow",
+        Pulse = "Eyespots",
+        Light = "Eyespots",
+        NovaLight = 3,
+    },
+    Colors = {
+        Gold = Color3.fromRGB(255, 196, 80),
+        Amber = Color3.fromRGB(250, 146, 38),
+        Orange = Color3.fromRGB(226, 72, 36),
+        Sun = Color3.fromRGB(255, 226, 150),
+        Ivory = Color3.fromRGB(255, 240, 210),
+    },
+    Animate = animateSolarButterfly,
 }
 
 PetRig.Profiles.GoldenManeLion = {
@@ -8195,6 +8373,74 @@ function Blasts.Mirage(rig, fx)
         puff.Enabled = false
         puff:Emit(18)
     end)
+end
+
+-- It has gathered the afternoon's sunlight in its wings (animateSolarButterfly) and lets it go: a warm light flares from it and turns through sunset to
+-- dusk as it fades; motes of gold drift up and out from its wings, reddening and dimming as they go; for whoever is near, the world takes on a sunset's
+-- warmth for a moment, then the colour of dusk, then is itself again.
+function Blasts.Afterglow(rig, fx)
+    local metre = rig.meters
+    local at = rig.rootPart.Position
+    local holder = fx.neon(Vector3.new(1.2, 0.2, 0.8) * metre, CFrame.new(at), BFLY_GOLD)
+    holder.Transparency = 1
+
+    -- the light: a flare of noon gold, turning to sunset rose and then to dusk as it fades
+    local glow = Instance.new("PointLight")
+    glow.Color = BFLY_GOLD
+    glow.Range = 2 * metre
+    glow.Brightness = 0
+    glow.Shadows = false
+    glow.Parent = holder
+    TweenService:Create(glow, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = 5, Range = 6 * metre }):Play()
+    tweenAfter(0.25, glow, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Color = BFLY_ROSE, Brightness = 3.5 })
+    tweenAfter(0.8, glow, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Color = BFLY_DUSK, Brightness = 0 })
+
+    -- the motes: gold drifting up and outward from the wings, reddening to dusk and dimming
+    local motes = Instance.new("ParticleEmitter")
+    motes.Texture = SPARKLE
+    motes.Enabled = false
+    motes.Shape = Enum.ParticleEmitterShape.Box
+    motes.Lifetime = NumberRange.new(0.9, 1.4)
+    motes.Speed = NumberRange.new(0.4 * metre, 0.9 * metre)
+    motes.SpreadAngle = Vector2.new(70, 70)
+    motes.EmissionDirection = Enum.NormalId.Top
+    motes.Drag = 1.6
+    motes.Acceleration = Vector3.new(0, 0.3 * metre, 0)
+    motes.Rotation = NumberRange.new(0, 360)
+    motes.RotSpeed = NumberRange.new(-60, 60)
+    motes.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.05 * metre), NumberSequenceKeypoint.new(0.25, 0.1 * metre), NumberSequenceKeypoint.new(1, 0) })
+    motes.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, BFLY_GOLD), ColorSequenceKeypoint.new(0.5, BFLY_ROSE), ColorSequenceKeypoint.new(1, BFLY_DUSK) })
+    motes.LightEmission = 1
+    motes.LightInfluence = 0
+    motes.Parent = holder
+    motes:Emit(36)
+    -- a soft glow round it, the warmth leaving its wings
+    local haze = Instance.new("ParticleEmitter")
+    haze.Texture = "rbxasset://textures/particles/smoke_main.dds"
+    haze.Enabled = false
+    haze.Lifetime = NumberRange.new(0.8, 1.1)
+    haze.Speed = NumberRange.new(0.1 * metre, 0.3 * metre)
+    haze.SpreadAngle = Vector2.new(180, 180)
+    haze.Size = NumberSequence.new(0.5 * metre, 1.4 * metre)
+    haze.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1) })
+    haze.Color = ColorSequence.new(BFLY_GOLD, BFLY_ROSE)
+    haze.LightEmission = 1
+    haze.LightInfluence = 0
+    haze.Parent = holder
+    haze:Emit(6)
+
+    -- for whoever is near: a sunset's warmth for a moment, then dusk, then the world is itself again
+    local player = Players.LocalPlayer
+    local camera = workspace.CurrentCamera
+    if camera and (camera.CFrame.Position - at).Magnitude < 45 and not (player and player:GetAttribute("SettingReducedEffects") == true) then
+        local grade = Instance.new("ColorCorrectionEffect")
+        grade.Name = "AfterglowGrade"
+        grade.Parent = Lighting
+        TweenService:Create(grade, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TintColor = Color3.fromRGB(255, 226, 196), Brightness = 0.04, Saturation = 0.12 }):Play()
+        tweenAfter(0.45, grade, TweenInfo.new(0.45, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { TintColor = Color3.fromRGB(226, 206, 246), Brightness = -0.04, Saturation = -0.05 })
+        tweenAfter(1.0, grade, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TintColor = Color3.new(1, 1, 1), Brightness = 0, Saturation = 0 })
+        Debris:AddItem(grade, 1.6)
+    end
 end
 
 -- Three ribbons of wind leave its mouth, wind round each other as they run ahead of it, and curl up and away; rings of breath and a scatter of
