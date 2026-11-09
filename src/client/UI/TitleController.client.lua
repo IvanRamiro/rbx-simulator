@@ -1,8 +1,9 @@
 -- Titles (the owner, November 9, 2026): a nameplate over every player, the title they wear over their name, in the
--- title's own colour, a sheen of light sweeping across it; and the Titles window (the Titles button on the HUD's rail):
--- every title by section, earned or locked with how to earn it, to choose which to wear: one of them, Auto (Developer,
--- else Content Creator, else Beta Tester, else the highest realm's) or none. A new title is announced and badged on the button.
--- The server (server/Titles) decides what is earned; the "Title" attribute on each player is what they show.
+-- title's own lettering and colour, a sheen of light sweeping across it; and the Titles window (the Titles button on the
+-- HUD's rail): every title by section, earned or locked with how to earn it, to choose which to wear: one of them, Auto
+-- (Developer, else Content Creator, else Beta Tester, else the highest realm's) or none. A new title is announced and
+-- badged on the button. The server (server/Titles) decides what is earned; the "Title" attribute on each player is what
+-- they show.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -23,38 +24,107 @@ local PLATE_DISTANCE = 90 -- studs past which a nameplate isn't drawn
 local ROW = 54
 
 -- ---------- a title, drawn ----------
--- Every title's text is white under a gradient of its colour, and now and then a sheen sweeps across it: a slanted band
--- of light, as off polished metal. A grander title (its Shimmer) sweeps more often, in a colour of its own. Each title
--- keeps its own moment, so a crowd of nameplates never flashes at once.
+-- Every title in its own lettering (TitleRules' Font) and colour, and now and then a sheen sweeps across it: a slanted band
+-- of light with a white-hot core, as off polished metal, lighting the letters and their outline together (in the letters
+-- alone, a narrow band was hardly seen: the owner). A grander title (its Shimmer) sweeps more often, its band tinted its own
+-- colour. Each title keeps its own moment, so a crowd of nameplates never flashes at once.
 local SHEEN = { -- band half-width (along the text), seconds between sweeps, seconds a sweep takes
-    Plain = { Width = 0.07, Period = 4.2, Sweep = 0.75 },
-    Grand = { Width = 0.1, Period = 2.6, Sweep = 0.85 },
+    Plain = { Width = 0.2, Period = 3.4, Sweep = 1.0 },
+    Grand = { Width = 0.26, Period = 2.3, Sweep = 1.1 },
 }
-local shimmers = setmetatable({}, { __mode = "k" }) -- [UIGradient] = { Period, Sweep, Phase }
+local EDGE = Color3.fromRGB(14, 12, 34) -- the outline's colour, away from the sheen
+local WHITE = Color3.new(1, 1, 1)
+local WEIGHTS = {
+    [100] = Enum.FontWeight.Thin, [200] = Enum.FontWeight.ExtraLight, [300] = Enum.FontWeight.Light, [400] = Enum.FontWeight.Regular,
+    [500] = Enum.FontWeight.Medium, [600] = Enum.FontWeight.SemiBold, [700] = Enum.FontWeight.Bold, [800] = Enum.FontWeight.ExtraBold,
+    [900] = Enum.FontWeight.Heavy,
+}
+-- [UIGradient] = { Period, Sweep, Phase }. A plain table, cleared as each gradient leaves the game: weak keys dropped them
+-- (an Instance's Lua handle is collected while the Instance lives on) and every sheen froze where it was.
+local shimmers = {}
+
+local function fontOf(entry)
+    local f = entry.Font
+    return Font.new("rbxasset://fonts/families/" .. f[1] .. ".json", WEIGHTS[f[2]] or Enum.FontWeight.Regular,
+        if f[3] == "Italic" then Enum.FontStyle.Italic else Enum.FontStyle.Normal)
+end
+
+-- a band across a base colour, at the middle of a gradient (its Offset carries it across): a halo of its own colour, then
+-- a white-hot core (tinted toward its own colour, the band read as hardly more than a change of shade: the owner)
+local function band(base, halo, w)
+    return ColorSequence.new({
+        ColorSequenceKeypoint.new(0, base), ColorSequenceKeypoint.new(0.5 - w, base),
+        ColorSequenceKeypoint.new(0.5 - w * 0.55, halo), ColorSequenceKeypoint.new(0.5 - w * 0.18, WHITE),
+        ColorSequenceKeypoint.new(0.5 + w * 0.18, WHITE), ColorSequenceKeypoint.new(0.5 + w * 0.55, halo),
+        ColorSequenceKeypoint.new(0.5 + w, base), ColorSequenceKeypoint.new(1, base),
+    })
+end
+
+local function gradientIn(parent, name)
+    local gradient = parent:FindFirstChild(name) or Instance.new("UIGradient")
+    gradient.Name = name
+    gradient.Rotation = 18 -- slanted, as a glint is
+    gradient.Parent = parent
+    return gradient
+end
+
+local function edgeOf(label)
+    local edge = label:FindFirstChild("TitleEdge")
+    if not edge then
+        edge = Instance.new("UIStroke")
+        edge.Name = "TitleEdge"
+        edge.Thickness = label:GetAttribute("EdgeThickness") or 1
+        edge.Parent = label
+    end
+    return edge
+end
 
 local function styleTitle(label, entry)
-    label.TextColor3 = Color3.new(1, 1, 1)
-    local gradient = label:FindFirstChild("TitleColor") or Instance.new("UIGradient")
-    gradient.Name = "TitleColor"
-    gradient.Rotation = 18 -- slanted, as a glint is
+    label.FontFace = fontOf(entry)
+    label.TextColor3 = WHITE
     local kind = if entry.Shimmer then SHEEN.Grand else SHEEN.Plain
-    local sheen = entry.Shimmer or entry.Color:Lerp(Color3.new(1, 1, 1), 0.78)
-    local w = kind.Width
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, entry.Color), ColorSequenceKeypoint.new(0.5 - w, entry.Color),
-        ColorSequenceKeypoint.new(0.5 - w * 0.35, entry.Color:Lerp(sheen, 0.6)), ColorSequenceKeypoint.new(0.5, sheen),
-        ColorSequenceKeypoint.new(0.5 + w * 0.35, entry.Color:Lerp(sheen, 0.6)), ColorSequenceKeypoint.new(0.5 + w, entry.Color),
-        ColorSequenceKeypoint.new(1, entry.Color),
-    })
-    local old = shimmers[gradient]
-    shimmers[gradient] = { Period = kind.Period, Sweep = kind.Sweep, Phase = if old then old.Phase else math.random() * kind.Period }
-    gradient.Offset = Vector2.new(-1, 0)
-    gradient.Parent = label
+    local halo = if entry.Shimmer then entry.Shimmer else entry.Color:Lerp(WHITE, 0.55)
+    local letters = gradientIn(label, "TitleColor")
+    letters.Color = band(entry.Color, halo, kind.Width)
+    local edge = edgeOf(label)
+    edge.Color = WHITE
+    edge.Transparency = 0
+    local glow = gradientIn(edge, "TitleGlow")
+    glow.Color = band(EDGE, halo, kind.Width * 1.1)
+    local old = shimmers[letters]
+    local phase = if old then old.Phase else math.random() * kind.Period
+    shimmers[letters] = { Period = kind.Period, Sweep = kind.Sweep, Phase = phase }
+    shimmers[glow] = { Period = kind.Period, Sweep = kind.Sweep, Phase = phase }
+end
+
+-- a title not earned, or no title: plain, in this colour
+local function plainTitle(label, color, entry)
+    if entry then
+        label.FontFace = fontOf(entry)
+    end
+    local letters = label:FindFirstChild("TitleColor")
+    if letters then
+        shimmers[letters] = nil
+        letters:Destroy()
+    end
+    local edge = edgeOf(label)
+    local glow = edge:FindFirstChild("TitleGlow")
+    if glow then
+        shimmers[glow] = nil
+        glow:Destroy()
+    end
+    edge.Color = EDGE
+    edge.Transparency = 0.4
+    label.TextColor3 = color
 end
 
 RunService.Heartbeat:Connect(function()
     local now = os.clock()
     for gradient, sheen in shimmers do
+        if not gradient:IsDescendantOf(game) then
+            shimmers[gradient] = nil -- its nameplate went with its character
+            continue
+        end
         local t = (now + sheen.Phase) % sheen.Period
         -- across from beyond its left edge to beyond its right, then resting out of sight until the next
         local x = if t < sheen.Sweep then -1 + 2 * (t / sheen.Sweep) else 1
@@ -98,21 +168,18 @@ local function buildPlate(owner, character)
     local gui = Instance.new("BillboardGui")
     gui.Name = "Nameplate_" .. owner.UserId
     gui.Adornee = head
-    gui.Size = UDim2.new(7, 0, 1.5, 0) -- in studs: it shrinks with distance, as the head does
+    gui.Size = UDim2.new(8, 0, 1.7, 0) -- in studs: it shrinks with distance, as the head does
     gui.StudsOffsetWorldSpace = Vector3.new(0, 2.3, 0)
     gui.MaxDistance = PLATE_DISTANCE
     gui.LightInfluence = 0
     gui.ResetOnSpawn = false
     local title = UiKit.label({
-        Name = "Title", Font = "Title", TextScaled = true, Size = UDim2.fromScale(1, 0.46), TextXAlignment = Enum.TextXAlignment.Center,
+        Name = "Title", Font = "Title", TextScaled = true, Size = UDim2.fromScale(1, 0.5), TextXAlignment = Enum.TextXAlignment.Center,
         Parent = gui,
     })
-    local titleEdge = Instance.new("UIStroke")
-    titleEdge.Color = Color3.fromRGB(10, 10, 30)
-    titleEdge.Thickness = 1.5
-    titleEdge.Parent = title
+    title:SetAttribute("EdgeThickness", 2)
     local name = UiKit.label({
-        Name = "PlayerName", Font = "Strong", TextScaled = true, Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromScale(1, 0.42),
+        Name = "PlayerName", Font = "Strong", TextScaled = true, Position = UDim2.fromScale(0, 0.54), Size = UDim2.fromScale(1, 0.4),
         TextXAlignment = Enum.TextXAlignment.Center, Parent = gui,
     })
     local nameEdge = Instance.new("UIStroke")
@@ -156,7 +223,7 @@ local unseen = 0
 -- the top: what they show now, and Auto and Hide
 UiKit.label({ Name = "ShowingWord", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = "SHOWING",
     Size = UDim2.new(1, -150, 0, 14), Parent = body })
-local showing = UiKit.label({ Name = "Showing", Font = "Title", TextSize = 18, Position = UDim2.fromOffset(0, 15),
+local showing = UiKit.label({ Name = "Showing", Font = "Title", TextSize = 20, Position = UDim2.fromOffset(0, 15),
     Size = UDim2.new(1, -150, 0, 24), TextTruncate = Enum.TextTruncate.AtEnd, Parent = body })
 local autoButton = UiKit.button({ Name = "Auto", Font = "Strong", Text = "AUTO", TextSize = 12, AnchorPoint = Vector2.new(1, 0),
     Position = UDim2.new(1, -74, 0, 6), Size = UDim2.fromOffset(66, 28), Parent = body })
@@ -197,8 +264,9 @@ for _, group in TitleRules.Groups do
         end
         order += 1
         local card = UiKit.card({ Name = entry.Id, Size = UDim2.new(1, 0, 0, ROW), LayoutOrder = order, Stripe = entry.Color, Parent = list })
-        local title = UiKit.label({ Name = "Text", Font = "Title", TextSize = 16, Text = entry.Text, Position = UDim2.fromOffset(12, 7),
-            Size = UDim2.new(1, -112, 0, 20), TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
+        local title = UiKit.label({ Name = "Text", Font = "Title", TextSize = 18, Text = entry.Text, Position = UDim2.fromOffset(12, 5),
+            Size = UDim2.new(1, -112, 0, 22), TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
+        title.FontFace = fontOf(entry)
         local how = UiKit.label({ Name = "How", TextSize = 11, TextColor3 = C.Muted, Text = entry.How, TextWrapped = true,
             TextYAlignment = Enum.TextYAlignment.Top, Position = UDim2.fromOffset(12, 28), Size = UDim2.new(1, -112, 0, 24), Parent = card })
         local button = UiKit.button({ Name = "Wear", Font = "Strong", TextSize = 11, AnchorPoint = Vector2.new(1, 0.5),
@@ -223,12 +291,7 @@ render = function()
         if has then
             styleTitle(row.title, entry)
         else
-            local gradient = row.title:FindFirstChild("TitleColor")
-            if gradient then
-                shimmers[gradient] = nil
-                gradient:Destroy()
-            end
-            row.title.TextColor3 = C.Muted
+            plainTitle(row.title, C.Muted, entry)
         end
         row.card.BackgroundTransparency = if has then 0.35 else 0.6
         row.button.Text = if wearing then "WEARING" elseif has then "WEAR" else "LOCKED"
@@ -246,12 +309,8 @@ render = function()
         showing.Text = shown.Text
         styleTitle(showing, shown)
     else
-        local gradient = showing:FindFirstChild("TitleColor")
-        if gradient then
-            shimmers[gradient] = nil
-            gradient:Destroy()
-        end
-        showing.TextColor3 = C.Muted
+        plainTitle(showing, C.Muted)
+        showing.FontFace = UiTheme.Fonts.Title
         showing.Text = "No title"
     end
     autoButton:SetAttribute("Tone", if book.Worn == "Auto" then "Accent" else "Quiet")

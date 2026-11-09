@@ -105,8 +105,43 @@ add({ Id = "SecretKeeper", Group = "Collection", Text = "Keeper of Secrets", Col
 add({ Id = "RelicSeeker", Group = "Collection", Text = "Relic Seeker", Color = rgb(244, 196, 116),
     How = "Find every relic on the islands." })
 
+-- Each title's lettering (Roblox's own font families: { family, weight, "Italic" }), chosen for what it means: Developer
+-- engineered and sharp, Content Creator a bold thumbnail face, Beta Tester futuristic; the realms climbing from brush
+-- calligraphy through stone, forged metal and refined book type to Roman inscription, ornate blackletter and the far-future
+-- faces of the stars and the void; the guardians' thieves as their quarry suggests; a beast keeper's sturdy hand, the
+-- Keeper of Secrets in blackletter, the Relic Seeker in an explorer's typewritten notes.
+local FONTS = {
+    Developer = { "Sarpanch", 900 },
+    ContentCreator = { "LuckiestGuy", 400 },
+    BetaTester = { "Michroma", 400 },
+    Realm1 = { "Fondamento", 400, "Italic" },    -- the Awakened
+    Realm2 = { "Oswald", 600 },                  -- Bedrock Disciple
+    Realm3 = { "Sarpanch", 700 },                -- Core Forger
+    Realm4 = { "AccanthisADFStd", 400 },         -- Soul-Tempered
+    Realm5 = { "Fondamento", 400 },              -- Cloud Strider
+    Realm6 = { "RomanAntique", 400 },            -- the Deathless
+    Realm7 = { "GrenzeGotisch", 600 },           -- Heaven's Chosen
+    Realm8 = { "Jura", 700 },                    -- Starborn
+    Realm9 = { "Zekton", 400 },                  -- Void-Touched
+    Realm10 = { "AccanthisADFStd", 400 },        -- Keeper of the Dao
+    Realm11 = { "GrenzeGotisch", 900 },          -- the Primeval
+    Realm12 = { "RomanAntique", 400 },           -- the Eternal
+    PrideThief = { "Oswald", 700 },
+    BambooShadow = { "Fondamento", 400, "Italic" },
+    Ashwalker = { "Sarpanch", 800 },
+    MoonSaver = { "AccanthisADFStd", 400 },
+    PangusRival = { "RomanAntique", 400 },
+    BeastSeeker = { "DenkOne", 400 },
+    BeastTamer = { "DenkOne", 400 },
+    BeastMaster = { "Oswald", 700 },
+    CodexKeeper = { "AccanthisADFStd", 400 },
+    SecretKeeper = { "GrenzeGotisch", 700 },
+    RelicSeeker = { "SpecialElite", 400 },
+}
+
 for order, entry in TitleRules.List do
     entry.Order = order
+    entry.Font = FONTS[entry.Id] or { "Merriweather", 700 }
 end
 
 -- What a player wearing "Auto" (their choice until they pick one) shows: Developer, else Content Creator, else Beta Tester,
