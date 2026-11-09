@@ -1137,15 +1137,16 @@ Build one complete encounter before expanding to every island.
 
 ## 7c. Titles (November 9, 2026)
 
-The owner asked for titles ("BETA TESTER, DEVELOPER, AND THE 12 REALMS TITLES etc."), and chose: a nameplate above every player plus a Titles window to choose one; Beta Tester for everyone who plays before launch; a unique epithet per realm; and all four extras (guardian, beast collector, secret beast, relic seeker).
+The owner asked for titles ("BETA TESTER, DEVELOPER, AND THE 12 REALMS TITLES etc."; then "Also add content Creator and add sheen effects on the title"), and chose: a nameplate above every player plus a Titles window to choose one; Beta Tester for everyone who plays before launch; a unique epithet per realm; and all four extras (guardian, beast collector, secret beast, relic seeker).
 
-- **The nameplate:** over every player's head, the title they wear (in its own colour; a band of light runs across the grandest) over their display name. It replaces Roblox's own name (their health bar stays) and fades out past 90 studs. Everyone sees everyone's.
-- **The Titles window** (Titles on the HUD's rail, between Quests and Settings, an honour-banner icon): every title by section, earned or locked, with how to earn it; WEAR on any earned one. **AUTO** (the default) shows Developer, else Beta Tester, else their highest realm's title; **HIDE** shows none. A new title is announced at the top of the screen and counted on the button's badge; the ones a returning player already qualifies for are announced together, once.
-- **Saved** in PlayerData as Titles (schema 14): what they have earned (kept for good, even if their Qi ever fell back) and what they chose. Developer is never saved: it follows `GameConfig.Titles.DeveloperUserIds`.
+- **The nameplate:** over every player's head, the title they wear over their display name, in the title's own colour; now and then a sheen sweeps across it, a slanted band of light as off polished metal (the owner asked for it). The grandest sweep more often, in a colour of their own; each player's sweeps keep their own moment, so a crowd never flashes at once. It replaces Roblox's own name (their health bar stays) and fades out past 90 studs. Everyone sees everyone's.
+- **The Titles window** (Titles on the HUD's rail, between Quests and Settings, an honour-banner icon): every title by section, earned or locked, with how to earn it; WEAR on any earned one. **AUTO** (the default) shows Developer, else Content Creator, else Beta Tester, else their highest realm's title; **HIDE** shows none. A new title is announced at the top of the screen and counted on the button's badge; the ones a returning player already qualifies for are announced together, once.
+- **Saved** in PlayerData as Titles (schema 14): what they have earned (kept for good, even if their Qi ever fell back) and what they chose. Developer and Content Creator are never saved: they follow their lists in `GameConfig.Titles`, so one can be taken away.
 
 | Section | Title | How it is earned |
 |---|---|---|
 | Special | Developer | The game's creators (`GameConfig.Titles.DeveloperUserIds`); its row shows only to them |
+| Special | Content Creator | Given: their UserId in `GameConfig.Titles.ContentCreatorUserIds` (the owner, November 9, 2026); off the list, they lose it on their next join |
 | Special | Beta Tester | Playing before the launch (`GameConfig.Titles.BetaEndsAt`, a Unix time; while it is nil the beta runs and everyone earns it). **Set it before the launch.** |
 | Realms | the Awakened, Bedrock Disciple, Core Forger, Soul-Tempered, Cloud Strider, the Deathless, Heaven's Chosen, Starborn, Void-Touched, Keeper of the Dao, the Primeval, the Eternal | Reaching each of the twelve realms in turn (Qi Awakening to Eternal Transcendence), in the realm's colour; from the Divine Realm up a light runs across them |
 | Guardians | Pride Thief, Bamboo Shadow, Ashwalker, Moon-Saver, Pangu's Rival | Carrying an egg home from the Stone Lion, the Mantis Sage, the Ember Xuanwu, Tiangou, Pangu (they are robbed, never beaten). Counted from now on: eggs secured before titles existed aren't recorded |

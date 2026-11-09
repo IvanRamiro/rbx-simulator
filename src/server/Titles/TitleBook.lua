@@ -1,7 +1,7 @@
 -- A player's titles (shared/TitleRules), saved in PlayerData as Titles: the ones they have earned (Earned, kept for good)
 -- and what they chose to wear (Worn: "Auto", "None", or a title's id). The title they show is the "Title" attribute on
--- the player, which every client draws over their head (TitleController). Developer is never saved: it follows
--- GameConfig.Titles.DeveloperUserIds each time they join. TitleService decides when one is earned.
+-- the player, which every client draws over their head (TitleController). Developer and Content Creator are never saved:
+-- they follow GameConfig.Titles' lists each time the player joins. TitleService decides when one is earned.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
@@ -11,6 +11,7 @@ local TitleRules = require(ReplicatedStorage:WaitForChild("TitleRules"))
 local TitleBook = {}
 
 local state = {} -- [player] = { earned = { [id] = true }, worn = "Auto" | "None" | id }
+local GIVEN = { Developer = "DeveloperUserIds", ContentCreator = "ContentCreatorUserIds" } -- titles given by a list, never saved
 
 local function cleanWorn(worn)
     if worn == "Auto" or worn == "None" or (typeof(worn) == "string" and TitleRules.ById[worn]) then
@@ -24,7 +25,7 @@ function TitleBook.sanitize(raw)
     local earned = {}
     if typeof(raw.Earned) == "table" then
         for _, id in raw.Earned do
-            if typeof(id) == "string" and TitleRules.ById[id] and id ~= "Developer" and not table.find(earned, id) then
+            if typeof(id) == "string" and TitleRules.ById[id] and not GIVEN[id] and not table.find(earned, id) then
                 table.insert(earned, id)
             end
         end
@@ -45,8 +46,10 @@ function TitleBook.setupPlayer(player, progress)
     for _, id in saved.Earned do
         data.earned[id] = true
     end
-    if table.find(GameConfig.Titles.DeveloperUserIds, player.UserId) then
-        data.earned.Developer = true
+    for id, list in GIVEN do
+        if table.find(GameConfig.Titles[list] or {}, player.UserId) then
+            data.earned[id] = true
+        end
     end
     state[player] = data
     show(player)
@@ -94,7 +97,7 @@ function TitleBook.exportData(player)
     end
     local earned = {}
     for _, entry in TitleRules.List do
-        if data.earned[entry.Id] and entry.Id ~= "Developer" then
+        if data.earned[entry.Id] and not GIVEN[entry.Id] then
             table.insert(earned, entry.Id)
         end
     end

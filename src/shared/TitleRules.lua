@@ -1,6 +1,7 @@
--- Every title a cultivator can earn and wear (the owner, November 9, 2026): Developer, Beta Tester, one for each of the twelve
+-- Every title a cultivator can earn and wear (the owner, November 9, 2026): Developer, Content Creator, Beta Tester, one for each of the twelve
 -- realms, one for securing an egg from each guardian, the beast collector titles, Keeper of Secrets and Relic Seeker.
--- A worn title shows over the player's head (TitleController) in its own colour; a Shimmer is a light that runs across it.
+-- A worn title shows over the player's head (TitleController) in its own colour, a sheen of light sweeping across it now and
+-- then; a Shimmer is the colour of a grander title's sheen (it sweeps more often).
 -- The server (server/Titles) decides who has earned what; this is what each one is, and how it is earned.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -65,6 +66,8 @@ end
 
 add({ Id = "Developer", Group = "Special", Text = "Developer", Color = rgb(255, 104, 96), Shimmer = rgb(255, 214, 96),
     How = "Made this game." })
+add({ Id = "ContentCreator", Group = "Special", Text = "Content Creator", Color = rgb(255, 110, 196), Shimmer = rgb(255, 236, 140),
+    How = "Given to creators who make videos and streams of the game." })
 add({ Id = "BetaTester", Group = "Special", Text = "Beta Tester", Color = rgb(96, 240, 210), Shimmer = rgb(130, 170, 255),
     How = "Played during the beta, before the game's launch." })
 
@@ -106,11 +109,14 @@ for order, entry in TitleRules.List do
     entry.Order = order
 end
 
--- What a player wearing "Auto" (their choice until they pick one) shows: Developer, else Beta Tester, else their highest
--- realm's title. earned: { [id] = true }
+-- What a player wearing "Auto" (their choice until they pick one) shows: Developer, else Content Creator, else Beta Tester,
+-- else their highest realm's title. earned: { [id] = true }
 function TitleRules.autoPick(earned)
     if earned.Developer then
         return "Developer"
+    end
+    if earned.ContentCreator then
+        return "ContentCreator"
     end
     if earned.BetaTester then
         return "BetaTester"

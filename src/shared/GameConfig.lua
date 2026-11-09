@@ -673,11 +673,13 @@ local GameConfig = {
         },
     },
 
-    -- Titles (shared/TitleRules: what each is). DeveloperUserIds: who wears Developer (the game's creators). BetaEndsAt: the
+    -- Titles (shared/TitleRules: what each is). DeveloperUserIds: who wears Developer (the game's creators). ContentCreatorUserIds:
+    -- who wears Content Creator (add a creator's Roblox UserId; taken off the list, they lose it on their next join). BetaEndsAt: the
     -- launch, as a Unix time in seconds (UTC): everyone who plays before it earns Beta Tester and keeps it for good; nil
     -- while the beta runs (everyone who plays now earns it). Set it before the launch.
     Titles = {
         DeveloperUserIds = { 4993575280 },
+        ContentCreatorUserIds = {},
         BetaEndsAt = nil,
     },
 

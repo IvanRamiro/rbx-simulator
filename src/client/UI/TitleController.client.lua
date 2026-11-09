@@ -1,7 +1,7 @@
 -- Titles (the owner, November 9, 2026): a nameplate over every player, the title they wear over their name, in the
--- title's own colour (a light running across the grandest); and the Titles window (the Titles button on the HUD's rail):
+-- title's own colour, a sheen of light sweeping across it; and the Titles window (the Titles button on the HUD's rail):
 -- every title by section, earned or locked with how to earn it, to choose which to wear: one of them, Auto (Developer,
--- else Beta Tester, else the highest realm's) or none. A new title is announced and badged on the button.
+-- else Content Creator, else Beta Tester, else the highest realm's) or none. A new title is announced and badged on the button.
 -- The server (server/Titles) decides what is earned; the "Title" attribute on each player is what they show.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,30 +23,41 @@ local PLATE_DISTANCE = 90 -- studs past which a nameplate isn't drawn
 local ROW = 54
 
 -- ---------- a title, drawn ----------
--- Every title's text is white under a gradient of its colour; a shimmer is a band of light running across it.
-local shimmers = setmetatable({}, { __mode = "k" }) -- [UIGradient] = true
+-- Every title's text is white under a gradient of its colour, and now and then a sheen sweeps across it: a slanted band
+-- of light, as off polished metal. A grander title (its Shimmer) sweeps more often, in a colour of its own. Each title
+-- keeps its own moment, so a crowd of nameplates never flashes at once.
+local SHEEN = { -- band half-width (along the text), seconds between sweeps, seconds a sweep takes
+    Plain = { Width = 0.07, Period = 4.2, Sweep = 0.75 },
+    Grand = { Width = 0.1, Period = 2.6, Sweep = 0.85 },
+}
+local shimmers = setmetatable({}, { __mode = "k" }) -- [UIGradient] = { Period, Sweep, Phase }
 
 local function styleTitle(label, entry)
     label.TextColor3 = Color3.new(1, 1, 1)
     local gradient = label:FindFirstChild("TitleColor") or Instance.new("UIGradient")
     gradient.Name = "TitleColor"
-    if entry.Shimmer then
-        gradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, entry.Color), ColorSequenceKeypoint.new(0.4, entry.Color),
-            ColorSequenceKeypoint.new(0.5, entry.Shimmer), ColorSequenceKeypoint.new(0.6, entry.Color), ColorSequenceKeypoint.new(1, entry.Color),
-        })
-        shimmers[gradient] = true
-    else
-        gradient.Color = ColorSequence.new(entry.Color)
-        gradient.Offset = Vector2.zero
-        shimmers[gradient] = nil
-    end
+    gradient.Rotation = 18 -- slanted, as a glint is
+    local kind = if entry.Shimmer then SHEEN.Grand else SHEEN.Plain
+    local sheen = entry.Shimmer or entry.Color:Lerp(Color3.new(1, 1, 1), 0.78)
+    local w = kind.Width
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, entry.Color), ColorSequenceKeypoint.new(0.5 - w, entry.Color),
+        ColorSequenceKeypoint.new(0.5 - w * 0.35, entry.Color:Lerp(sheen, 0.6)), ColorSequenceKeypoint.new(0.5, sheen),
+        ColorSequenceKeypoint.new(0.5 + w * 0.35, entry.Color:Lerp(sheen, 0.6)), ColorSequenceKeypoint.new(0.5 + w, entry.Color),
+        ColorSequenceKeypoint.new(1, entry.Color),
+    })
+    local old = shimmers[gradient]
+    shimmers[gradient] = { Period = kind.Period, Sweep = kind.Sweep, Phase = if old then old.Phase else math.random() * kind.Period }
+    gradient.Offset = Vector2.new(-1, 0)
     gradient.Parent = label
 end
 
 RunService.Heartbeat:Connect(function()
-    local x = (os.clock() * 0.45) % 2.4 - 1.2 -- the band crosses, then rests off the edge a moment
-    for gradient in shimmers do
+    local now = os.clock()
+    for gradient, sheen in shimmers do
+        local t = (now + sheen.Phase) % sheen.Period
+        -- across from beyond its left edge to beyond its right, then resting out of sight until the next
+        local x = if t < sheen.Sweep then -1 + 2 * (t / sheen.Sweep) else 1
         gradient.Offset = Vector2.new(x, 0)
     end
 end)
