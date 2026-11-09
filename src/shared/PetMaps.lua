@@ -11,6 +11,7 @@ return {
     CloudSheep = "rbxassetid://137454504415941",
     CometStag = "rbxassetid://79384540004744",
     CosmicJellyfish = "rbxassetid://113526835581631",
+    CrystalBeetle = "rbxassetid://116113641028026",
     CrystalSnail = "rbxassetid://119626589372847",
     DawnPhoenix = "rbxassetid://125937144749128",
     DreadfangCerberus = "rbxassetid://90383585387525",

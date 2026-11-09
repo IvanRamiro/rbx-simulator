@@ -68,7 +68,10 @@ return {
         Special = { Name = "Hoarfrost Bloom", Text = "It takes a great gulp of air and swells into a ball of hoarfrost spines: frost bursts off them in a glittering cloud and a breath of icy mist rolls out. It hangs there, turning slowly, then lets the air go in a sigh of frost bubbles and is a smooth little fish again." },
     },
     ThunderJelly = { Lore = "It drifts on charged air and hums before a storm. Touching one is a lesson most people learn once." },
-    CrystalBeetle = { Lore = "Its shell grows a new crystal for every year it lives. Collectors have spent fortunes on the moults." },
+    CrystalBeetle = {
+        Lore = "Its shell grows a new crystal for every year it lives. Collectors have spent fortunes on the moults.",
+        Special = { Name = "Ring of Years", Text = "It rears on its hind legs, horn high, and slams its front down. A ring of crystal points bursts up from the ground round it, one after another, one for every year it has lived, then shatters into glitter." },
+    },
     GravityImp = {
         Lore = "A small, smug creature that decides which way is down. Loose objects tend to follow it around.",
         Special = { Name = "Which Way Is Down", Text = "It lifts one foot out to the side like a sumo and stamps on its moonlet. The ground around it lets go of its stones: they rise into a ring round the moonlet, spin faster and faster, and are flung off to fall where they like. It puts its fists back on its hips." },

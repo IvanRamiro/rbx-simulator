@@ -662,6 +662,7 @@ local MESH_LOOKS = {
     ObsidianGuardian = { Glow = Color3.fromRGB(176, 110, 255), Length = 3.8 }, -- its folded wings' peaks: its tallest part
     GlacierPuff = { Glow = Color3.fromRGB(170, 225, 255), Length = 2.6 }, -- its box runs from the origin below it (it floats) to its top: about 4 studs nose to tail
     GravityImp = { Glow = Color3.fromRGB(210, 140, 255), Length = 2.6 }, -- its box runs from the origin, just under its moonlet, to its cowlick (it is "a small creature": at 3.2 it stood taller than its owner)
+    CrystalBeetle = { Glow = Color3.fromRGB(160, 245, 255), Length = 3.2 }, -- nose to tail (its longest): long and low, so at 2.6 it was knee-high and lost in tall grass
     TimekeeperTortoise = { Glow = Color3.fromRGB(255, 214, 130), Length = 4.4 }, -- head to tail
     StormhornKirin = { Glow = Color3.fromRGB(90, 170, 255), Length = 4.4 },
     JadeWyrmTurtle = { Glow = Color3.fromRGB(60, 220, 170), Length = 4.8 },
