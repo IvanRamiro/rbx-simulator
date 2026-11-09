@@ -151,7 +151,10 @@ return {
         Lore = "It appears only when something bright is being covered up. Its purr is the sound of the world going dark for a moment.",
         Special = { Name = "Totality", Text = "It sits up and looks to the sky as a black moon slides across a golden sun. At totality the corona flares, a ring of dark rolls out from it and the world dims for a moment while it purrs; then the diamond ring flashes and the light comes back." },
     },
-    TimekeeperTortoise = { Lore = "Its shell is a calendar for an age nobody remembers. It is never late, because it decides when things happen." },
+    TimekeeperTortoise = {
+        Lore = "Its shell is a calendar for an age nobody remembers. It is never late, because it decides when things happen.",
+        Special = { Name = "Stopped Hour", Text = "It plants its feet and raises its old head; the gold edge of its gnomon flares and a ring of hour marks lights round it one by one. For a heartbeat time stops: motes of gold hang dead still in the air and the world fades to sepia. Then the hour moves on, and so does it." },
+    },
     GalaxyManta = {
         Lore = "It glides through open space with a slow spiral of stars turning under its wings.",
         Special = { Name = "Turning of the Heavens", Text = "Rears until the galaxy beneath it faces the world, spins it up, then throws it open in a great wheel of stars." },
