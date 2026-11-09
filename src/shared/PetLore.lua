@@ -69,7 +69,10 @@ return {
     },
     ThunderJelly = { Lore = "It drifts on charged air and hums before a storm. Touching one is a lesson most people learn once." },
     CrystalBeetle = { Lore = "Its shell grows a new crystal for every year it lives. Collectors have spent fortunes on the moults." },
-    GravityImp = { Lore = "A small, smug creature that decides which way is down. Loose objects tend to follow it around." },
+    GravityImp = {
+        Lore = "A small, smug creature that decides which way is down. Loose objects tend to follow it around.",
+        Special = { Name = "Which Way Is Down", Text = "It lifts one foot out to the side like a sumo and stamps on its moonlet. The ground around it lets go of its stones: they rise into a ring round the moonlet, spin faster and faster, and are flung off to fall where they like. It puts its fists back on its hips." },
+    },
     ThunderclawDrake = { Lore = "A drake that sharpens its claws on lightning. Mountain passes go quiet when it is hunting nearby." },
     FrostfangSerpent = { Lore = "Its bite stops time for whatever it touches, at least for the moment that matters. It sheds its skin as sheets of clear ice." },
     DreamMoth = {
