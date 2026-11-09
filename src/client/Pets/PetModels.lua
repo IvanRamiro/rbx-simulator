@@ -682,7 +682,7 @@ local MESH_LOOKS = {
     EmberWyrm = { Effect = "TailFlame", Glow = Color3.fromRGB(255, 115, 35), Length = 2.9 },
     LunarHopper = { Effect = "Stars", Glow = Color3.fromRGB(150, 160, 255), Length = 2.58 },
     VoltFox = { Effect = "Sparks", Glow = Color3.fromRGB(255, 235, 110), Length = 2.91 },
-    GoldenKirin = { Glow = Color3.fromRGB(70, 235, 195), Length = 3.6 },
+    GoldenKirin = { Glow = Color3.fromRGB(255, 214, 120), Length = 2.4 }, -- nose to tail-silk (its longest), 5.5 studs; its halo's top about 4.8 studs up, under its owner's head (k is about 2.3 for it: 4.4 stood it 9 studs tall)
     AstralWhale = { Effect = "Stars", Glow = Color3.fromRGB(130, 125, 255), Length = 4.0 },
     OriginSerpent = { Effect = "Stars", Glow = Color3.fromRGB(80, 190, 255), Length = 2.9 },
     SunscaleDragon = { Glow = Color3.fromRGB(255, 194, 74), Length = 4.6 },

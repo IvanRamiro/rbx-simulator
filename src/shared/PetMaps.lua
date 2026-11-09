@@ -20,7 +20,7 @@ return {
     FrostfangSerpent = "rbxassetid://120358055125100",
     GalaxyManta = "rbxassetid://93932467864746",
     GlacierPuff = "rbxassetid://103685602446753",
-    GoldenKirin = "rbxassetid://74047466096461",
+    GoldenKirin = "rbxassetid://112489488270275",
     GoldenManeLion = "rbxassetid://89135149772900",
     GravityImp = "rbxassetid://99583846777124",
     JadeAntlerDeer = "rbxassetid://70823879643174",

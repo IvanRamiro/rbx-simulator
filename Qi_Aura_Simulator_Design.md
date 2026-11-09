@@ -290,7 +290,7 @@ Specials are visual only.
 | Ember Wyrm | Floating beads of lava rock with flame gills | **Heart Flare:** its beads spread apart while its molten heart blazes |
 | Bonefire Dragon | Floating dragon skeleton with a blue soul flame in its ribcage | **Soul Lantern:** the soul rises out of the ribs while the ghost of the living dragon appears around the bones |
 | Dreadfang Cerberus | Hulking three-headed hellhound, dark hide split by glowing cyan cracks; trots on the ground, gallops in the air, each head moves on its own | **Hellfire Breath:** rears all three heads and blasts cyan fire from every mouth |
-| Golden Kirin | White-furred qilin with branching antlers, a mane of teal cloud curls and teal-scaled legs; treads the air on cloud steps | **Auspicious Clouds:** rears up and throws off a ring of cloud puffs and rising orange flames |
+| Golden Kirin | A radiant celestial kirin: pearl-white, legs dipped in gold to the knee, gold flame-scrolls on its shoulders and haunches, big golden sun-eyes, two gold crescent horns, long gold barbels, a mane and tail of gold silk ribbons, a sunburst arc of light behind its head; it never touches the ground, a lotus of light under each hoof (recreated 2026-11-09) | **Lotus Bloom:** rears up, its halo flaring, and a great lotus of golden light blooms on the air beneath it, a ring of light running out across the ground |
 | Moss Golem | Hunched stone guardian grown over with moss, ferns and a sapling, one boulder fist and one root claw; lumbers and breathes | **Groundbreaker:** slams both arms down, bursting stone shards and an emerald shockwave |
 | Mycelium Sprite | Glowing mushroom spirit with a dripping cap and a lattice skirt; drifts and waves its spore puffs | **Spore Bloom:** scatters spores and a ring of glowing mushrooms |
 | Jade Spirit Panda | Stout jade guardian with leaf ears, dark-jade eye patches and a crystal cluster on its back; ambles heavily | **Jade Lotus:** rears up and slams down, opening rings of jade lotus petals |
@@ -532,7 +532,7 @@ Each kind has its own visual purpose. None is a recolour of another.
 | Aqua Wisp | **Tidecaller Sanctum** | The player meditates on a blooming water lotus inside a tidal vortex over a pool of caustic light. Spirit koi join at the charged stage; a breaking-wave crown and four water spouts rise when awakened. | `TidecallerAura.lua` |
 | Ember Wyrm | **Ember Crucible** | Fast-spinning ember slashes and cloud under the player; rising debris, sparkles, a twin vortex of energy beams and body flames. The spirit bead wyrm and orbit trails join when charged; a molten fire halo forms behind the head when awakened. | `EmberCrucibleAura.lua` |
 
-**Pet auras:** each equipped pet of a cultivating player shows its own element's aura (`src/client/Auras/AuraBuilder.lua`). Aqua Wisp and Golden Kirin are done.
+**Pet auras:** each equipped pet of a cultivating player shows its own element's aura (`src/client/Auras/AuraBuilder.lua`). Aqua Wisp's is done. (The Golden Kirin's crown-and-leaves aura was removed with its old design, 2026-11-09, at the owner's word: "remove that", "I don't need that anymore".)
 
 **Poses and breakthroughs**
 
