@@ -95,7 +95,10 @@ return {
     ThousandEyedGuardian = { Lore = "Nobody has seen all of its eyes open at once, and nobody has lied to it and prospered." },
     NinefoldSpiritSerpent = { Lore = "Nine coils, one for each meridian. Cultivators meditate beside it to feel their own Qi move." },
     WorldrootColossus = { Lore = "A walking piece of the root under all forests. When it sleeps, new islands of moss rise around it." },
-    SandPhantom = { Lore = "A shape in the blowing sand that is gone when you look straight at it. Caravans leave it water, just in case." },
+    SandPhantom = {
+        Lore = "A shape in the blowing sand that is gone when you look straight at it. Caravans leave it water, just in case.",
+        Special = { Name = "Mirage", Text = "It sits up tall and stares straight at you, then blows away downwind as sand. A dust devil spins up beside where it stood; it steps out of it, shakes the sand off, and hops back as if nothing happened." },
+    },
     SolarButterfly = { Lore = "Its wings store a whole afternoon of sun and spend it slowly after dark." },
     ObsidianGuardian = { Lore = "A sentinel of black glass that reflects you a little more honestly than you would like." },
     GoldenManeLion = {
