@@ -76,7 +76,10 @@ return {
         Lore = "A small, smug creature that decides which way is down. Loose objects tend to follow it around.",
         Special = { Name = "Which Way Is Down", Text = "It lifts one foot out to the side like a sumo and stamps on its moonlet. The ground around it lets go of its stones: they rise into a ring round the moonlet, spin faster and faster, and are flung off to fall where they like. It puts its fists back on its hips." },
     },
-    ThunderclawDrake = { Lore = "A drake that sharpens its claws on lightning. Mountain passes go quiet when it is hunting nearby." },
+    ThunderclawDrake = {
+        Lore = "A drake that sharpens its claws on lightning. Mountain passes go quiet when it is hunting nearby.",
+        Special = { Name = "Called Down", Text = "It rears up on its hind legs, wings flung open, and lifts its horns to the sky. A bolt comes down onto them and it glows white-hot. It slams down onto its wrists, its hands flung up over it, and the lightning bursts out of it across the ground." },
+    },
     FrostfangSerpent = { Lore = "Its bite stops time for whatever it touches, at least for the moment that matters. It sheds its skin as sheets of clear ice." },
     DreamMoth = {
         Lore = "It feeds on dreams you have already forgotten. Sleepers near one wake oddly rested.",

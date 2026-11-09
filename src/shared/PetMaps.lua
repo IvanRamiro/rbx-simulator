@@ -41,6 +41,7 @@ return {
     StormhornKirin = "rbxassetid://96870617770871",
     SunscaleDragon = "rbxassetid://72856050814489",
     TheNamelessOne = "rbxassetid://89179027531207",
+    ThunderclawDrake = "rbxassetid://78862187110001",
     TimekeeperTortoise = "rbxassetid://105490938991647",
     VoidscaleHydra = "rbxassetid://134504797181991",
     WindSprite = "rbxassetid://100955540073927",
