@@ -673,6 +673,24 @@ local GameConfig = {
         },
     },
 
+    -- The Heavenly Tribulation (November 9, 2026): breaking through into a new realm, the heavens test the cultivator. Storm
+    -- clouds gather over them, rings of light mark the ground where lightning will fall, and it falls; they dodge on foot
+    -- (leaps and dashes; no sword flight). Lives hits and it is over: they may try again RetryAfter seconds later, no Qi lost.
+    -- Survive every bolt and the breakthrough is theirs. Per realm entered (2 = Qi Foundation ... 12), bolts, the warning
+    -- before each, the gap between them, how many fall together and how much they lead the cultivator's run all harden.
+    Tribulation = {
+        Lives = 3,
+        RetryAfter = 60,       -- seconds
+        Radius = 6,            -- studs: a bolt's reach, round the ring's middle
+        Gather = 2.5,          -- seconds the storm gathers before the first bolt (to rise from meditation and get moving)
+        CloudHeight = 55,      -- studs over the ground where the storm hangs
+        Bolts = { 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 },                         -- realms 2 to 12
+        Warn = { 1.45, 1.4, 1.3, 1.25, 1.2, 1.1, 1.05, 1.0, 0.95, 0.9, 0.85 },       -- seconds a ring shows before its bolt
+        Gap = { 1.1, 1.05, 1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6 },         -- seconds from one bolt to the next
+        Together = { 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3 },                              -- bolts falling at once (the others ring the cultivator)
+        Lead = { 0, 0.2, 0.35, 0.45, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85 },          -- how far ahead of their run a bolt is aimed (share of the warning)
+    },
+
     -- Titles (shared/TitleRules: what each is). DeveloperUserIds: who wears Developer (the game's creators). ContentCreatorUserIds:
     -- who wears Content Creator (add a creator's Roblox UserId; taken off the list, they lose it on their next join). BetaEndsAt: the
     -- launch, as a Unix time in seconds (UTC): everyone who plays before it earns Beta Tester and keeps it for good; nil

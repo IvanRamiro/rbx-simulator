@@ -257,13 +257,24 @@ local function updateRankDisplay()
         else NumberFormat.compact(nextRank.QiRequired - qiValue.Value) .. " Qi to " .. target
     nextRankLabel.TextColor3 = C.Text -- white either way: gold words would vanish on the gold bar
     UiKit.setBarColor(progressBar, if canRankUp then C.Highlight else C.Accent)
-    rankUpButton.Visible = canRankUp
-    rankUpButton.Text = "BREAK THROUGH: " .. string.upper(target)
+    -- into a new realm, the Heavenly Tribulation stands in the way (server/Cultivation/Tribulation): hidden while it lasts,
+    -- and after a fall, the time until they may face it again
+    local newRealm = rank ~= nil and nextRank.Realm ~= rank.Realm
+    local recovering = math.ceil((player:GetAttribute("TribulationRetryAt") or 0) - workspace:GetServerTimeNow())
+    rankUpButton.Visible = canRankUp and player:GetAttribute("InTribulation") ~= true
+    if newRealm and recovering > 0 then
+        rankUpButton.Text = "RECOVERING FROM THE TRIBULATION: " .. recovering .. " s"
+        rankUpButton:SetAttribute("Tone", "Quiet")
+    else
+        rankUpButton.Text = if newRealm then "FACE THE TRIBULATION: " .. string.upper(target) else "BREAK THROUGH: " .. string.upper(target)
+        rankUpButton:SetAttribute("Tone", "Highlight")
+    end
 end
 
 local function requestRankUp()
     local nextRank = Ranks.getNextRank(rankValue.Value)
-    if nextRank and qiValue.Value >= nextRank.QiRequired then
+    local recovering = (player:GetAttribute("TribulationRetryAt") or 0) > workspace:GetServerTimeNow()
+    if nextRank and qiValue.Value >= nextRank.QiRequired and player:GetAttribute("InTribulation") ~= true and not recovering then
         RemoteEvents.RankUpEvent:FireServer()
     end
 end
@@ -280,6 +291,16 @@ qiValue.Changed:Connect(function()
     updateRankDisplay()
 end)
 rankValue.Changed:Connect(updateRankDisplay)
+player:GetAttributeChangedSignal("InTribulation"):Connect(updateRankDisplay)
+-- the countdown after a fall, each second until it's over
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if (player:GetAttribute("TribulationRetryAt") or 0) > workspace:GetServerTimeNow() - 1 then
+            updateRankDisplay()
+        end
+    end
+end)
 
 updateQiLabel()
 updateRankDisplay()

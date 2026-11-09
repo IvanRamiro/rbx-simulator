@@ -20,7 +20,8 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local C = UiTheme.Colors
 
-local PLATE_DISTANCE = 90 -- studs past which a nameplate isn't drawn
+local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local PLATE_DISTANCE = if Quality.Low then 55 else 90 -- studs past which a nameplate isn't drawn (nearer on a phone)
 local ROW = 54
 
 -- ---------- a title, drawn ----------

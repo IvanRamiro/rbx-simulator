@@ -2,7 +2,8 @@
 -- call is protected: analytics must never break play. What's logged:
 --   the quest path (an onboarding funnel: where new players stop);
 --   Spirit Stones in and out, by what caused them;
---   a few moments (RankUp, EggTaken, EggDropped, EggSecured, EggHatched, QuestsSkipped).
+--   a few moments (RankUp, EggTaken, EggDropped, EggSecured, EggHatched, QuestsSkipped, TribulationStarted,
+--   TribulationPassed, TribulationFailed); and each device's frame rate and memory (ClientFps, ClientMemory: PerfService).
 local AnalyticsService = game:GetService("AnalyticsService")
 
 local Analytics = {}

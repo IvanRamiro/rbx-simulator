@@ -17,13 +17,15 @@
 -- by up to 200 times), so sounds of a kind sit together: a guardian's blows loudest, then the egg,
 -- then the player's own moves, then the interface; the beds and music by their average. Starts
 -- skip lead-ins measured the same way. Re-measure before swapping a file.
+local PetSounds = require(script.Parent:WaitForChild("PetSounds"))
+
 local function guardian(spec)
     spec.Near = spec.Near or 40
     spec.Reach = spec.Reach or 420 -- as far as a guardian is animated
     return spec
 end
 
-return {
+local catalog = {
     -- ---------- the Awakened Stone Lion ----------
     LionAwaken = guardian({ Id = "9118694131", Volume = 5, Pitch = 0.8, Start = 1.1, With = "LionGrowl" }), -- stone cracks open
     LionGrowl = guardian({ Id = "9113973164", Volume = 0.8, Pitch = 0.75 }),
@@ -79,6 +81,13 @@ return {
     EggReturn = { Id = "9125635297", Volume = 1.5, Near = 20, Reach = 200, Length = 2.2 },
     ChaseLoop = { Id = "9043365842", Volume = 0.3, Group = "Music" },                                  -- a heartbeat under the battle drums
 
+    -- ---------- the Heavenly Tribulation (TribulationController; picks from the Aura Sound Library, levels to measure in Play) ----------
+    TribulationStorm = { Id = "9119806923", Volume = 1.1, Near = 40, Reach = 320, FadeIn = 2, FadeOut = 2 },     -- a deep pulsing rumble: the storm overhead
+    TribulationGather = { Id = "9120032392", Volume = 2.2, Near = 40, Reach = 320, Length = 6 },                 -- thunder rolling in
+    TribulationStrike = { Id = "9114246605", Volume = 2.4, Pitch = { 0.85, 1 }, Near = 25, Reach = 260, With = "TribulationBoom" }, -- the crack
+    TribulationBoom = { Id = { "9113551995", "9113552058" }, Volume = 2.6, Pitch = { 0.8, 0.95 }, Near = 25, Reach = 260 },          -- and its boom
+    TribulationArc = { Id = "9114236059", Volume = 0.8, Pitch = { 1.1, 1.3 }, Near = 15, Reach = 120, Length = 0.9 },               -- a ring charging
+
     -- ---------- strikes and movement ----------
     PalmStrike = { Id = { "9125496394", "9119699577" }, Volume = 1.2, Pitch = { 1, 1.15 }, Reach = 90 },
     SwordSwing = { Id = { "9126014082", "9126013811", "9119700022" }, Volume = 1.3, Pitch = { 0.95, 1.1 }, Reach = 90 },
@@ -125,3 +134,10 @@ return {
     MusicAbyss = { Id = "9042642782", Volume = 0.5, Group = "Music", FadeIn = 2.5 },   -- Alien Nation: dark percussion
     MusicBattle = { Id = "1840898686", Volume = 0.35, Group = "Music", FadeIn = 1.5 }, -- Kodo Ceremonial: taiko from the first beat
 }
+
+-- every animated pet's voice and special (PetSounds)
+for name, spec in PetSounds.Entries do
+    catalog[name] = spec
+end
+
+return catalog

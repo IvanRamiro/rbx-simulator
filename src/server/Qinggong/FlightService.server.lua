@@ -121,6 +121,7 @@ local function canFly(player)
     return humanoid ~= nil and humanoid.Health > 0
         and player:GetAttribute("IsCultivating") ~= true
         and player:GetAttribute("CarryingEgg") == nil -- a guardian's egg is carried on foot
+        and player:GetAttribute("InTribulation") ~= true -- a tribulation is faced on foot
         and Ranks.isAtLeast(Ranks.getPlayerRankName(player), config.UnlockRank)
         and (player:GetAttribute("QinggongFlightSpeed") or 0) > 0
 end
@@ -165,6 +166,11 @@ local function onPlayerAdded(player)
     -- cultivating lands you (QiService also stops cultivation when a flight starts)
     player:GetAttributeChangedSignal("IsCultivating"):Connect(function()
         if player:GetAttribute("IsCultivating") == true and flights[player] then
+            land(player)
+        end
+    end)
+    player:GetAttributeChangedSignal("InTribulation"):Connect(function() -- and so does a tribulation
+        if player:GetAttribute("InTribulation") == true and flights[player] then
             land(player)
         end
     end)

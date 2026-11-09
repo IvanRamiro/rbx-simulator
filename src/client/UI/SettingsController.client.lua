@@ -18,8 +18,9 @@ local STEP = 0.1
 local ROW = 58
 
 local toggleButton = Hud.railButton("SettingsButton", UiTheme.Icons.Settings, "Settings", 6)
+local isDeveloper = table.find(GameConfig.Titles.DeveloperUserIds, player.UserId) ~= nil
 local window = Hud.window({
-    Name = "SettingsWindow", Title = "SETTINGS", Size = Vector2.new(340, 250), AnchorPoint = Vector2.new(0.5, 0.5),
+    Name = "SettingsWindow", Title = "SETTINGS", Size = Vector2.new(340, if isDeveloper then 300 else 250), AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.fromScale(0.5, 0.5),
 })
 local body = window.Body
@@ -94,6 +95,26 @@ reduced.Activated:Connect(function()
 end)
 player:GetAttributeChangedSignal("SettingReducedEffects"):Connect(renderReduced)
 renderReduced()
+
+-- for developers: the performance readout (client/Performance/PerfProbe), to read a device's frame rate and memory live;
+-- not saved
+if isDeveloper then
+    local devY = y + 76
+    UiKit.label({ Name = "PerfLabel", Font = "Strong", TextSize = 13, TextColor3 = C.Text, Text = "PERFORMANCE READOUT",
+        Position = UDim2.fromOffset(0, devY + 4), Size = UDim2.new(1, -70, 0, 18), Parent = body })
+    local perf = UiKit.button({ Name = "PerfReadout", Font = "Strong", TextSize = 12, AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, 0, 0, devY), Size = UDim2.fromOffset(62, 28), Parent = body })
+    local function renderPerf()
+        local on = player:GetAttribute("PerfReadout") == true
+        perf.Text = if on then "ON" else "OFF"
+        perf:SetAttribute("Tone", if on then "Accent" else "Quiet")
+    end
+    perf.Activated:Connect(function()
+        player:SetAttribute("PerfReadout", player:GetAttribute("PerfReadout") ~= true)
+        renderPerf()
+    end)
+    renderPerf()
+end
 
 toggleButton.Activated:Connect(function()
     if window.isOpen() then

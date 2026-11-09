@@ -11,6 +11,9 @@
 --   GuardianAnim  coarser springs; GuardianController: animated within 150 studs, half rate at rest
 --   Pets          other players' pets hidden past 80 studs
 --   Poses, robes  other players' poses stop past 80 studs, robes' sway past 40
+--   Pet lights   other players' pets give up their PointLights (PetRig)
+--   Nameplates   drawn within 55 studs instead of 90 (TitleController)
+--   Tribulation  other players' storms drawn within 160 studs instead of 320, thinner cloud, no sparks
 local UserInputService = game:GetService("UserInputService")
 
 return {

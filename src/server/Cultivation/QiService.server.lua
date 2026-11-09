@@ -89,6 +89,11 @@ local function setupPlayer(player)
             setCultivating(player, false)
         end
     end)
+    player:GetAttributeChangedSignal("InTribulation"):Connect(function() -- a tribulation stops meditation: they must move
+        if player:GetAttribute("InTribulation") == true and cultivatingPlayers[player] then
+            setCultivating(player, false)
+        end
+    end)
 
     player.CharacterAdded:Connect(function(character)
         onCharacterAdded(player, character)
@@ -117,7 +122,8 @@ local function onCultivationRequest(player, wantsToCultivate)
             return
         end
 
-        if player:GetAttribute("IsFlying") == true or player:GetAttribute("CarryingEgg") ~= nil then
+        if player:GetAttribute("IsFlying") == true or player:GetAttribute("CarryingEgg") ~= nil
+            or player:GetAttribute("InTribulation") == true then -- facing the heavens is no time to meditate
             return
         end
     end

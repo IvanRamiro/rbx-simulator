@@ -6,6 +6,12 @@ local TweenService = game:GetService("TweenService")
 
 local PetRig = {}
 
+-- (kept on the module, not as locals: the main chunk sits at Luau's 200-local limit)
+PetRig.Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
+PetRig.PetSounds = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("PetSounds"))
+PetRig.VOICE_EVERY = { 9, 18 } -- seconds between a pet's calls while it idles in the world (PetSounds)
+PetRig.Quality = require(script.Parent.Parent:WaitForChild("Quality")) -- the phone tier: other players' pets drop their lights
+
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 
 -- Plays a tween once a delay has passed. A later step can't be queued with TweenInfo's DelayTime when an earlier tween on the same instance
@@ -6854,6 +6860,7 @@ function PetRig.build(model, rootPart, template, petId, place, unit)
     local profile = PetRig.Profiles[petId]
     local prefix = petId .. "_"
     local rig = {
+        petId = petId,
         profile = profile,
         model = model,
         rootPart = rootPart,
@@ -6971,6 +6978,7 @@ function PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, leng
     local profile = PetRig.Profiles[petId]
     local prefix = petId .. "_"
     local rig = {
+        petId = petId,
         profile = profile,
         model = model,
         rootPart = rootPart,
@@ -10167,6 +10175,9 @@ local function burst(rig)
     }
     Blasts[profile.Effects.Blast](rig, fx)
     Debris:AddItem(folder, 2) -- the longest blast (Sacred Grove's branches) has faded by 1.75 s
+    if PetRig.PetSounds.special(rig.petId) and rig.rootPart:IsDescendantOf(workspace) then -- (never from a portrait)
+        PetRig.Sfx.play(PetRig.PetSounds.special(rig.petId), rig.rootPart)
+    end
 end
 
 function PetRig.nova(rig)
@@ -10198,6 +10209,28 @@ function PetRig.update(rig, deltaTime, state)
     end
 
     rig.profile.Animate(rig, s, s.walk, s.fly, nova)
+
+    -- on a phone, another player's pet gives up its point lights (a phone pays for every dynamic light; a pet makes some
+    -- of its lights as it first animates, so they are looked for now and then)
+    if PetRig.Quality.Low and rig.owner and rig.owner ~= Players.LocalPlayer and s.time >= (s.nextLightSweep or 0) then
+        s.nextLightSweep = s.time + 2
+        for _, d in rig.model:GetDescendants() do
+            if d:IsA("PointLight") or d:IsA("SpotLight") then
+                d.Enabled = false
+            end
+        end
+    end
+
+    -- now and then, its voice (in the world only: never from a portrait; never over its special)
+    local every = PetRig.VOICE_EVERY
+    s.nextVoice = s.nextVoice or s.time + every[1] * math.random()
+    if s.time >= s.nextVoice then
+        s.nextVoice = s.time + every[1] + math.random() * (every[2] - every[1])
+        local voice = PetRig.PetSounds.voice(rig.petId)
+        if voice and not rig.nova and rig.rootPart:IsDescendantOf(workspace) then
+            PetRig.Sfx.play(voice, rig.rootPart)
+        end
+    end
 
     local pulse = 0.5 + 0.5 * math.sin(s.time * 2.2)
     if rig.light then
