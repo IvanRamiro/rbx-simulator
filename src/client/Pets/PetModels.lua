@@ -660,6 +660,7 @@ local MESH_LOOKS = {
     SandPhantom = { Glow = Color3.fromRGB(240, 196, 120), Length = 4.0 }, -- its long tail is most of its length
     SolarButterfly = { Glow = Color3.fromRGB(255, 170, 70), Length = 3.8 }, -- its wingspan
     ObsidianGuardian = { Glow = Color3.fromRGB(176, 110, 255), Length = 3.8 }, -- its folded wings' peaks: its tallest part
+    GlacierPuff = { Glow = Color3.fromRGB(170, 225, 255), Length = 2.6 }, -- its box runs from the origin below it (it floats) to its top: about 4 studs nose to tail
     StormhornKirin = { Glow = Color3.fromRGB(90, 170, 255), Length = 4.4 },
     JadeWyrmTurtle = { Glow = Color3.fromRGB(60, 220, 170), Length = 4.8 },
     NebulaOwl = { Glow = Color3.fromRGB(176, 122, 255), Length = 4.0 },

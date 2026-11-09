@@ -63,10 +63,32 @@ local DIRECTION = Vector3.new(0.45, 0.35, -1)
 local DIRECTION_FOR = { VoidscaleHydra = Vector3.new(0.3, 0.75, -1), CelestialSnowLeopard = Vector3.new(0.85, 0.4, -0.9), CometStag = Vector3.new(1, 0.3, -0.55),
     SolarButterfly = Vector3.new(0.25, 1.4, -0.6) } -- its wings are flat: seen from the usual angle they read as a line, so it is seen from above
 
+-- a pet that floats is framed on what can be seen of it: its importer's holder part sits at the origin, well below it, and pulls the box down
+local VISIBLE_BOX_FOR = { GlacierPuff = true }
+
+local function visibleBox(model)
+    local lo, hi = Vector3.one * math.huge, -Vector3.one * math.huge
+    for _, part in model:GetDescendants() do
+        if part:IsA("BasePart") and part.Transparency < 1 then
+            local half = part.Size / 2
+            for _, corner in { Vector3.new(-1, -1, -1), Vector3.new(1, 1, 1), Vector3.new(-1, 1, 1), Vector3.new(1, -1, -1), Vector3.new(1, -1, 1), Vector3.new(-1, 1, -1), Vector3.new(1, 1, -1), Vector3.new(-1, -1, 1) } do
+                local p = part.CFrame:PointToWorldSpace(half * corner)
+                lo, hi = lo:Min(p), hi:Max(p)
+            end
+        end
+    end
+    return CFrame.new((lo + hi) / 2), hi - lo
+end
+
 -- frames `model` in `frame`, seen from `direction` (from the model's centre toward the camera)
-local function shoot(frame, model, direction, fill)
+local function shoot(frame, model, direction, fill, visibleOnly)
     model.Parent = frame
-    local box, size = model:GetBoundingBox()
+    local box, size
+    if visibleOnly then
+        box, size = visibleBox(model)
+    else
+        box, size = model:GetBoundingBox()
+    end
     local camera = Instance.new("Camera")
     camera.FieldOfView = FIELD_OF_VIEW
     local distance = (size.Magnitude / 2) / math.tan(math.rad(FIELD_OF_VIEW / 2)) * (fill or 1.02)
@@ -83,7 +105,7 @@ function Portraits.pet(petId, size)
         pets[petId] = if model then flatten(model, PetMaps[petId]) else false
     end
     if pets[petId] then
-        shoot(frame, pets[petId]:Clone(), DIRECTION_FOR[petId] or DIRECTION, FILL_FOR[petId] or 0.82) -- pets face -Z
+        shoot(frame, pets[petId]:Clone(), DIRECTION_FOR[petId] or DIRECTION, FILL_FOR[petId] or 0.82, VISIBLE_BOX_FOR[petId]) -- pets face -Z
     end
     return frame
 end
@@ -123,7 +145,7 @@ function Portraits.silhouette(petId, size)
                 end
             end
         end
-        shoot(frame, copy, DIRECTION_FOR[petId] or DIRECTION, FILL_FOR[petId] or 0.82)
+        shoot(frame, copy, DIRECTION_FOR[petId] or DIRECTION, FILL_FOR[petId] or 0.82, VISIBLE_BOX_FOR[petId])
     end
     return frame
 end

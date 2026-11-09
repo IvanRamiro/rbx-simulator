@@ -63,7 +63,10 @@ return {
         Lore = "Its horn calls the rain and its hooves answer with thunder. Farmers and generals alike have prayed to it.",
         Special = { Name = "Thunder Answers", Text = "Rears with its horn raised, then brings its hooves down in a burst of sparks as lightning flares through its mane." },
     },
-    GlacierPuff = { Lore = "A round little ball of old ice that has never once melted, not even in the mouth of a volcano." },
+    GlacierPuff = {
+        Lore = "A round little ball of old ice that has never once melted, not even in the mouth of a volcano.",
+        Special = { Name = "Hoarfrost Bloom", Text = "It takes a great gulp of air and swells into a ball of hoarfrost spines: frost bursts off them in a glittering cloud and a breath of icy mist rolls out. It hangs there, turning slowly, then lets the air go in a sigh of frost bubbles and is a smooth little fish again." },
+    },
     ThunderJelly = { Lore = "It drifts on charged air and hums before a storm. Touching one is a lesson most people learn once." },
     CrystalBeetle = { Lore = "Its shell grows a new crystal for every year it lives. Collectors have spent fortunes on the moults." },
     GravityImp = { Lore = "A small, smug creature that decides which way is down. Loose objects tend to follow it around." },

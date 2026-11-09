@@ -17,6 +17,7 @@ return {
     DreamMoth = "rbxassetid://116224404517599",
     EclipseCat = "rbxassetid://85885755382252",
     GalaxyManta = "rbxassetid://93932467864746",
+    GlacierPuff = "rbxassetid://103685602446753",
     GoldenKirin = "rbxassetid://74047466096461",
     GoldenManeLion = "rbxassetid://89135149772900",
     JadeAntlerDeer = "rbxassetid://70823879643174",
