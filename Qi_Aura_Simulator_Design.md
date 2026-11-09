@@ -1135,6 +1135,26 @@ Build one complete encounter before expanding to every island.
 
 ---
 
+## 7c. Titles (November 9, 2026)
+
+The owner asked for titles ("BETA TESTER, DEVELOPER, AND THE 12 REALMS TITLES etc."), and chose: a nameplate above every player plus a Titles window to choose one; Beta Tester for everyone who plays before launch; a unique epithet per realm; and all four extras (guardian, beast collector, secret beast, relic seeker).
+
+- **The nameplate:** over every player's head, the title they wear (in its own colour; a band of light runs across the grandest) over their display name. It replaces Roblox's own name (their health bar stays) and fades out past 90 studs. Everyone sees everyone's.
+- **The Titles window** (Titles on the HUD's rail, between Quests and Settings, an honour-banner icon): every title by section, earned or locked, with how to earn it; WEAR on any earned one. **AUTO** (the default) shows Developer, else Beta Tester, else their highest realm's title; **HIDE** shows none. A new title is announced at the top of the screen and counted on the button's badge; the ones a returning player already qualifies for are announced together, once.
+- **Saved** in PlayerData as Titles (schema 14): what they have earned (kept for good, even if their Qi ever fell back) and what they chose. Developer is never saved: it follows `GameConfig.Titles.DeveloperUserIds`.
+
+| Section | Title | How it is earned |
+|---|---|---|
+| Special | Developer | The game's creators (`GameConfig.Titles.DeveloperUserIds`); its row shows only to them |
+| Special | Beta Tester | Playing before the launch (`GameConfig.Titles.BetaEndsAt`, a Unix time; while it is nil the beta runs and everyone earns it). **Set it before the launch.** |
+| Realms | the Awakened, Bedrock Disciple, Core Forger, Soul-Tempered, Cloud Strider, the Deathless, Heaven's Chosen, Starborn, Void-Touched, Keeper of the Dao, the Primeval, the Eternal | Reaching each of the twelve realms in turn (Qi Awakening to Eternal Transcendence), in the realm's colour; from the Divine Realm up a light runs across them |
+| Guardians | Pride Thief, Bamboo Shadow, Ashwalker, Moon-Saver, Pangu's Rival | Carrying an egg home from the Stone Lion, the Mantis Sage, the Ember Xuanwu, Tiangou, Pangu (they are robbed, never beaten). Counted from now on: eggs secured before titles existed aren't recorded |
+| Collection | Beast Seeker, Beast Tamer, Beast Master, Keeper of the Codex | 10, 25, 45 and every beast (61) in the Spirit Beast Codex |
+| Collection | Keeper of Secrets | A Secret beast in the Codex (owned at least once) |
+| Collection | Relic Seeker | Every relic on the islands found |
+
+Code: `shared/TitleRules` (every title: text, colours, how), `server/Titles/TitleBook` (each player's book, saved) and `TitleService` (gives them out: on joining, every 2 seconds for realms, the Codex and relics, and at once on a secured egg; takes the choice to wear), `client/UI/TitleController` (nameplates, the window, the notices). The player's `Title` attribute is the title they show.
+
 ## 8. Technical architecture
 
 **Tools:** Roblox Studio and Rojo 7.7.1 (VS Code, Git), with Blender 5.2 for pets, eggs, aura pieces and islands.

@@ -283,4 +283,22 @@ a.poly([(170, 450), (854, 450), (894, 500), (130, 500)], "FFF4B8", "FFE27A")
 a.ellipse(512, 650, 76, 76, "3A2410", "1E1208")
 a.poly([(476, 670), (548, 670), (580, 830), (444, 830)], "3A2410", "1E1208")
 a.save("Lock")
-print("drew 15 icons in", OUT)
+# Titles: an honour banner of silk hung from a gold rod, a swallowtail end, a gold medallion with a star on it, tassels
+a = Art()
+a.poly([(250, 190), (774, 190), (774, 820), (512, 690), (250, 820)], "8E5CFF", "3A1C9C")
+a.poly([(250, 190), (774, 190), (774, 250), (250, 250)], "B494FF", "8E5CFF")
+a.line([(300, 260), (300, 760)], 18, "FFE27A", "D88A1C")
+a.line([(724, 260), (724, 760)], 18, "FFE27A", "D88A1C")
+a.line([(150, 170), (874, 170)], 56, "FFF0A0", "D88A1C")
+for cx in (130, 894):
+    a.ellipse(cx, 170, 58, 58, "FFF4B8", "E8901C")
+a.ellipse(512, 460, 150, 150, "FFE27A", "D88A1C")
+a.ellipse(512, 460, 112, 112, "FFF4B8", "F4B020")
+r = 92
+a.poly([(512, 460 - r), (512 + r * 0.22, 460 - r * 0.22), (512 + r, 460), (512 + r * 0.22, 460 + r * 0.22),
+        (512, 460 + r), (512 - r * 0.22, 460 + r * 0.22), (512 - r, 460), (512 - r * 0.22, 460 - r * 0.22)], "FFFFFF", "FFD84A")
+for cx in (190, 834):
+    a.line([(cx, 210), (cx, 470)], 16, "FFE27A", "D88A1C")
+    a.poly([(cx, 450), (cx + 44, 600), (cx - 44, 600)], "FFE27A", "C8740C")
+a.save("Titles")
+print("drew 16 icons in", OUT)

@@ -17,9 +17,10 @@ local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local Quests = require(script.Parent.Parent:WaitForChild("Quests"):WaitForChild("Quests"))
 local Settings = require(script.Parent:WaitForChild("Settings"))
 local Rewards = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("Rewards"))
+local TitleBook = require(script.Parent.Parent:WaitForChild("Titles"):WaitForChild("TitleBook"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 13
+local SCHEMA_VERSION = 14
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -75,7 +76,8 @@ end
 -- and EquippedWeapon (MIGRATIONS[6], below); version 8 added ForgeElements (the guardians' drops)
 -- and a weapon's Element and Name, which start at none; version 9 added Quest (MIGRATIONS[8]);
 -- version 10 added Settings and version 11 Rewards, which sanitizeProgress starts at their defaults;
--- version 12 added Codex and a pet's Level and Locked, which start empty, at 1 and unlocked (PetInventory enters owned pets in the Codex).
+-- version 12 added Codex and a pet's Level and Locked, which start empty, at 1 and unlocked (PetInventory enters owned pets in the Codex);
+-- version 14 added Titles, which start with none earned (TitleService gives a returning player the ones they qualify for).
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -160,6 +162,7 @@ local function sanitizeProgress(raw)
         Settings = Settings.sanitize(nil),
         Rewards = Rewards.sanitize(nil),
         Codex = Codex.sanitize(nil),
+        Titles = TitleBook.sanitize(nil),
     }
 
     if typeof(raw) ~= "table" then
@@ -241,6 +244,7 @@ local function sanitizeProgress(raw)
     progress.Settings = Settings.sanitize(raw.Settings)
     progress.Rewards = Rewards.sanitize(raw.Rewards)
     progress.Codex = Codex.sanitize(raw.Codex)
+    progress.Titles = TitleBook.sanitize(raw.Titles)
 
     return progress
 end
@@ -274,6 +278,9 @@ local function captureProgress(player)
     local settings = Settings.exportData(player)
     local rewards = Rewards.exportData(player)
     local codex = Codex.exportData(player)
+    -- (titles not set up yet: the ones loaded are kept, so a fault in them can never stop the rest from saving)
+    local loaded = profiles[player] and profiles[player].progress
+    local titles = TitleBook.exportData(player) or (loaded and loaded.Titles) or TitleBook.sanitize(nil)
     if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings and rewards and codex) then
         return nil
     end
@@ -297,6 +304,7 @@ local function captureProgress(player)
         Settings = settings,
         Rewards = rewards,
         Codex = codex,
+        Titles = titles,
     }
 end
 
@@ -536,6 +544,7 @@ function PlayerData.release(player)
     Quests.removePlayer(player)
     Settings.removePlayer(player)
     Rewards.removePlayer(player)
+    TitleBook.removePlayer(player)
 
     if not profile then
         return

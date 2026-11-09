@@ -26,6 +26,7 @@ local EVENT_NAMES = {
     "QuestEvent",
     "SettingsEvent",
     "RewardEvent",
+    "TitleEvent",
 }
 
 local RemoteEvents = {}
