@@ -27,7 +27,7 @@ local player = Players.LocalPlayer
 local C = UiTheme.Colors
 
 local LEAVE_MARGIN = 4 -- studs past the prompt's range the window closes: inside the server's own limit (its range + 6)
-local REVEAL_TIME = 2.5 -- seconds the window stays aside after the egg breaks, for the pet to be seen
+local REVEAL_TIME = 2.8 -- seconds the window stays aside after the egg breaks: the hatch cinematic's reveal card and its fade (HatchCeremony)
 local BREAK_MARGIN = 0.15 -- seconds after the egg breaks that Hatch wakes, so a press never reaches a server still busy
 local NO_ANSWER = GameConfig.HatchingAltar.Stage + 3 -- seconds Hatch waits for an answer that never came
 local RARITY_ORDER = { Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }

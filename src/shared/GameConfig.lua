@@ -151,7 +151,7 @@ local GameConfig = {
     -- hatched. Centre is island-local (on the ground), Yaw turns its front (local +Z) toward the
     -- World Tree and the bridges. Stage: seconds an egg rests in the cradle before it breaks (one
     -- egg at a time per player: the client's Hatch button waits as long).
-    HatchingAltar = { Island = "Yggdrasil", Centre = Vector3.new(100, -0.2, -130), Yaw = -1.4, Stage = 2.6 },
+    HatchingAltar = { Island = "Yggdrasil", Centre = Vector3.new(100, -0.2, -130), Yaw = -1.4, Stage = 3.8 }, -- Stage: seconds to the crack, the length of the hatch cinematic's reel (HatchCeremony)
     -- the size of a stand's egg (and a carried one): studs per unit of its Blender model
     EggStudsPerUnit = 1.3,
     EggGlowTag = "GlowingEgg",
@@ -903,7 +903,7 @@ local GameConfig = {
     -- (tools/ui/draw_store_icons.py: assets/ui/store/<Id>.png; <Id>_512.png is the picture to give the pass on Roblox).
     GamePasses = {
         { Id = "Luck", Name = "Lucky Cultivator", GamePassId = 0, Price = 149, Icon = "rbxassetid://129170449479441",
-            Text = "2x luck: rare beasts hatch twice as often from every egg.", Luck = 2 },
+            Text = "2x luck: Rare, Epic, Legendary, Mythical and Secret beasts hatch twice as often from every egg.", Luck = 2 },
         { Id = "QiSurge", Name = "Qi Surge", GamePassId = 0, Price = 199, Icon = "rbxassetid://71034417049645",
             Text = "2x Qi from cultivating, while you're away and from every Qi reward.", QiMultiplier = 2 },
         { Id = "PetSlots", Name = "+3 Pet Slots", GamePassId = 0, Price = 249, Icon = "rbxassetid://90769324952400",

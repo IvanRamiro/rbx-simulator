@@ -22,7 +22,6 @@ local HatchCeremony = require(script.Parent:WaitForChild("HatchCeremony"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local C = UiTheme.Colors
-local GRAND_REVEAL = { Legendary = true, Mythical = true, Secret = true } -- rarities revealed with the grander sound
 local RARITY_ORDER = { Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }
 
 local toggleButton, setPetBadge = Hud.railButton("PetsButton", UiTheme.Icons.Pets, "Pets", 1)
@@ -339,20 +338,8 @@ local function onHatchResult(result)
     elseif result.Reason == "InventoryFull" then
         showMessage("Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets). Fuse or sell your spares.", Color3.new(1, 1, 1))
     else
-        local definition = GameConfig.Pets[result.PetId]
-        -- the egg rises from the altar's cradle and breaks; the pet is named as it does
-        local delay = if typeof(result.BreakAt) == "number" then math.max(0, result.BreakAt - workspace:GetServerTimeNow()) else 0
-        HatchCeremony.play(result.Staged, delay, function()
-            if definition then
-                Sfx.play(if GRAND_REVEAL[definition.Rarity] then "RareReveal" else "HatchReveal")
-                local rarityColor = GameConfig.PetRarityColors[definition.Rarity] or Color3.new(1, 1, 1)
-                local article = if string.find(definition.DisplayName, "^[AEIOUaeiou]") then "an " else "a "
-                local text = "You hatched " .. article .. definition.DisplayName .. "! ("
-                    .. definition.Rarity .. ", " .. tostring(result.ChancePercent) .. "% chance)"
-                    .. (if result.IsNew then " New in the Codex!" else " A duplicate: fuse or sell it.")
-                showMessage(text, rarityColor)
-            end
-        end)
+        -- the hatch cinematic: the camera to the egg, the reel of its beasts, the crack and the reveal card (HatchCeremony)
+        HatchCeremony.play(result)
     end
 end
 
