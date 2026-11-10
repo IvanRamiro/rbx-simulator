@@ -12,7 +12,7 @@ AuraStyles.Elements = {
     GoldenKirin = { Core = Color3.fromRGB(255, 244, 206), Main = Color3.fromRGB(245, 190, 70), Deep = Color3.fromRGB(210, 140, 40), Particles = "Crystal", RingShape = "Polygon", RingSides = 6 },
     VoltFox = { Core = Color3.fromRGB(196, 246, 255), Main = Color3.fromRGB(70, 190, 255), Deep = Color3.fromRGB(64, 74, 140), Particles = "Spark", RingShape = "Circle" }, -- its storm: lightning blue over storm slate (recreated 2026-11-10)
     NineTailMoonfox = { Core = Color3.fromRGB(225, 210, 255), Main = Color3.fromRGB(195, 175, 255), Deep = Color3.fromRGB(110, 85, 215), Particles = "Mote", RingShape = "Circle" },
-    OriginSerpent = { Core = Color3.fromRGB(200, 240, 255), Main = Color3.fromRGB(150, 100, 255), Deep = Color3.fromRGB(40, 30, 140), Particles = "Mote", RingShape = "Polygon", RingSides = 8 },
+    OriginSerpent = { Core = Color3.fromRGB(170, 245, 255), Main = Color3.fromRGB(30, 205, 255), Deep = Color3.fromRGB(255, 60, 205), Particles = "Mote", RingShape = "Polygon", RingSides = 8 }, -- its first Qi and its magenta ring (recreated 2026-11-10)
     MossGolem = { Core = Color3.fromRGB(200, 230, 140), Main = Color3.fromRGB(110, 165, 75), Deep = Color3.fromRGB(110, 85, 55), Particles = "Mote", RingShape = "Polygon", RingSides = 5 },
     MyceliumSprite = { Core = Color3.fromRGB(190, 255, 235), Main = Color3.fromRGB(70, 215, 195), Deep = Color3.fromRGB(80, 90, 190), Particles = "Mote", RingShape = "Circle" },
     JadeSpiritPanda = { Core = Color3.fromRGB(215, 255, 225), Main = Color3.fromRGB(70, 200, 135), Deep = Color3.fromRGB(25, 70, 55), Particles = "Crystal", RingShape = "Circle" },

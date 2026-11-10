@@ -26,7 +26,10 @@ return {
         Special = { Name = "Song Between Stars", Text = "Rolls belly-up and sings on the golden strings of its throat, and rings of sound ripple out until every star around it chimes." },
     },
     NineTailMoonfox = { Lore = "A lineage of the moon that no egg carries any more. Those who own one keep a piece of a closed chapter." },
-    OriginSerpent = { Lore = "The first coil of the first spirit vein. The world's oldest Qi still flows along the path it carved." },
+    OriginSerpent = {
+        Lore = "The first coil of the first spirit vein. The world's oldest Qi still flows along the path it carved.",
+        Special = { Name = "The First Vein", Text = "Rises in its coils as light races up its veins, then roars, and a double helix of the world's first Qi erupts into the sky." },
+    },
     MossGolem = {
         Lore = "A stone guardian that stood still for so long the forest moved in. One fist is boulder, the other is root.",
         Special = { Name = "Groundbreaker", Text = "Slams both arms down, bursting stone shards and an emerald shockwave." },

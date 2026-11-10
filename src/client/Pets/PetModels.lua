@@ -68,62 +68,6 @@ local function nineTailMoonfox()
     return { Scale = 1.2, Parts = parts }
 end
 
-local function originSerpent()
-    local silver = Color3.fromRGB(225, 232, 236)
-    local teal = Color3.fromRGB(60, 215, 185)
-    local parts = {}
-    for segment = 0, 9 do
-        local t = segment / 9
-        local angle = t * 2.6 * math.pi
-        local radius = 0.65 - 0.2 * t
-        local size = 0.55 - 0.2 * t
-        local position = Vector3.new(math.cos(angle) * radius, -0.4 + t, math.sin(angle) * radius)
-        local tangent = Vector3.new(-math.sin(angle), 0.35, math.cos(angle))
-        local placement = CFrame.lookAt(position, position + tangent)
-        table.insert(parts, {
-            Shape = "Block",
-            Size = Vector3.new(size, size, size * 1.4),
-            At = placement,
-            Color = if segment % 3 == 1 then teal else silver,
-            Neon = segment % 3 == 1,
-        })
-        if segment % 2 == 0 then
-            table.insert(parts, {
-                Shape = "Wedge",
-                Size = Vector3.new(0.06, size * 0.5, size * 0.6),
-                At = placement * CFrame.new(0, size * 0.6, 0) * CFrame.Angles(0, math.pi, 0),
-                Color = teal,
-            })
-        end
-    end
-    table.insert(parts, { Shape = "Prism", Size = Vector3.new(0.6, 0.45, 0.8), At = at(0, 0.85, -0.45), Color = silver })
-    table.insert(parts, { Shape = "Wedge", Size = Vector3.new(0.42, 0.25, 0.38), At = at(0, 0.8, -0.98), Color = silver })
-    mirrored(parts, function(side)
-        return { Shape = "Wedge", Size = Vector3.new(0.08, 0.5, 0.55), At = at(side * 0.2, 1.22, -0.25, -25, 180, side * -15), Color = teal }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.4, 0.04, 0.04), At = at(side * 0.38, 0.72, -1, 0, side * 30, side * -15), Color = teal, Neon = true }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.13, 0.1, 0.06), At = at(side * 0.18, 0.95, -0.86), Color = teal, Neon = true }
-    end)
-    local orbCenter = at(0.75, 1.65, 0.25)
-    table.insert(parts, { Shape = "Prism", Axis = "Y", Size = Vector3.new(0.38, 0.38, 0.38), At = orbCenter, Color = teal, Neon = true })
-    for index = 0, 9 do
-        local angle = index / 10 * 2 * math.pi
-        table.insert(parts, {
-            Shape = "Block",
-            Size = Vector3.new(0.05, 0.04, 0.22),
-            At = orbCenter * CFrame.Angles(math.rad(20), 0, math.rad(-15))
-                * CFrame.new(math.cos(angle) * 0.42, 0, math.sin(angle) * 0.42)
-                * CFrame.Angles(0, -angle, 0),
-            Color = teal,
-            Neon = true,
-        })
-    end
-    return { Scale = 1.25, Parts = parts }
-end
-
 local function mossGolem()
     local stone = Color3.fromRGB(120, 120, 115)
     local moss = Color3.fromRGB(95, 160, 75)
@@ -322,7 +266,7 @@ PetModels.Pets = {
     VoltFox = { Scale = 1.05, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old yellow block-fox design removed (MESH_LOOKS was tuned with this scale)
     GoldenKirin = { Scale = 1.15, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old design removed (MESH_LOOKS was tuned with this scale)
     NineTailMoonfox = nineTailMoonfox(),
-    OriginSerpent = originSerpent(),
+    OriginSerpent = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old block serpent removed (MESH_LOOKS was tuned with this scale)
     AstralWhale = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted block whale removed (MESH_LOOKS was tuned with this scale)
     MossGolem = mossGolem(),
     MyceliumSprite = myceliumSprite(),
@@ -464,7 +408,7 @@ local MESH_LOOKS = {
     VoltFox = { Glow = Color3.fromRGB(70, 190, 255), Length = 2.4 }, -- nose to the back of its cloud (its longest): about 5 studs, a fox kit at its owner's feet, its cloud over its back; its old sparks removed
     GoldenKirin = { Glow = Color3.fromRGB(255, 214, 120), Length = 2.4 }, -- nose to tail-silk (its longest), 5.5 studs; its halo's top about 4.8 studs up, under its owner's head (k is about 2.3 for it: 4.4 stood it 9 studs tall)
     AstralWhale = { Glow = Color3.fromRGB(255, 176, 48), Length = 3.6 }, -- rostrum to flukes (its longest): about 7 studs, a whale calf swimming beside its owner; its old star sparkles removed
-    OriginSerpent = { Effect = "Stars", Glow = Color3.fromRGB(80, 190, 255), Length = 2.9 },
+    OriginSerpent = { Glow = Color3.fromRGB(30, 205, 255), Length = 3.0 }, -- tail root to antler tips (its tallest): about 7.5 studs, a floating helix taller than its owner; its old star sparkles removed
     SunscaleDragon = { Glow = Color3.fromRGB(255, 194, 74), Length = 4.6 },
     BonefireDragon = { Glow = Color3.fromRGB(100, 170, 255), Length = 3.4 },
     PrismaticPhoenix = { Effect = "Glitter", Glow = Color3.fromRGB(255, 175, 130), Length = 4.2 },

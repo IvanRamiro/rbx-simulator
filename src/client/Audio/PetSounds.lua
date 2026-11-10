@@ -48,6 +48,7 @@ local DATA = {
     MyceliumSprite = { Voice = { "9125409791", "9125409840" }, VoiceVolume = 1.23, Special = "9119448154", SpecialVolume = 4.8, SpecialLength = 4 },
     NebulaOwl = { Voice = { "9119439931", "9119440507", "9119440685" }, VoiceVolume = 0.94, Special = "9116409574", SpecialVolume = 0.96 },
     ObsidianGuardian = { Voice = { "9113559434", "9113559450", "9113559651" }, VoiceVolume = 0.11, Special = "9114619050", SpecialVolume = 6.86 },
+    OriginSerpent = { Voice = { "9125467848", "9125467833", "9125470164" }, VoiceVolume = 0.18, Pitch = 1.15, VoiceLength = 1.6, Special = "9119628762", SpecialVolume = 0.23, SpecialLength = 2.2, SpecialStart = 0.5 }, -- (a loong's deep guttural growl, lifted a step above the Golden Mane Lion's; its special a phased whomp swelling as its helix climbs. Measured muted in Play, 2026-11-10: the growls peak at 118, 126 and 144 at pitch 1.15; the whomp opens with 0.6 s of near-silence, so from 0.5 s, peaking at 213)
     PrismArmadillo = { Voice = { "9117345347", "9117345953" }, VoiceVolume = 3.2, Pitch = 1.25, Special = "9116409128", SpecialVolume = 1.5 },
     RuneSphinx = { Voice = { "9125471073", "9125470306", "9125470318" }, VoiceVolume = 0.49, Pitch = 0.9, Special = "9126102843", SpecialVolume = 1.66 },
     SandPhantom = { Voice = { "9118058248", "9118058375", "9118057950" }, VoiceVolume = 2.57, Special = "9114159710", SpecialVolume = 0.81 },
