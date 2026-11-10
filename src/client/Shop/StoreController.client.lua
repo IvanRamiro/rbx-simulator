@@ -1,4 +1,4 @@
--- The Store (the gift box in the HUD's top row; the owner, November 10, 2026): the game passes (GameConfig.GamePasses), each
+-- The Shop (the first button on the HUD's rail, named so players can read it; the owner, November 10, 2026): the game passes (GameConfig.GamePasses), each
 -- with its picture, what it does, and its live Robux price, and the Exclusive Egg, locked until its beast is made. A pass not on
 -- sale yet (no GamePassId) says "Coming soon"; one the player owns says so. Buying is Roblox's own prompt; the server counts
 -- the purchase (server/Shop/GamePassService) and sets the "Pass_<Id>" attribute, and this window and every other follow it.
@@ -22,9 +22,23 @@ local CARD_HEIGHT = 128
 local GAP = 8
 local EGG = GameConfig.ExclusiveEgg
 
-local toggleButton = Hud.topButton("StoreButton", UiTheme.Icons.Store, 2)
+local toggleButton = Hud.railButton("StoreButton", UiTheme.Icons.Store, "Shop", 0)
+-- on a phone the rail is a row of bare icons: the Shop keeps its name under its gift box, so players can always find it
+local caption = UiKit.label({
+    Name = "Caption", Font = "Strong", TextSize = 9, Text = "SHOP", TextColor3 = C.Highlight, TextXAlignment = Enum.TextXAlignment.Center,
+    AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 1), Size = UDim2.new(1, 0, 0, 11), ZIndex = 4, Parent = toggleButton,
+})
+local captionEdge = Instance.new("UIStroke")
+captionEdge.Color = Color3.fromRGB(14, 12, 34)
+captionEdge.Thickness = 1.5
+captionEdge.Parent = caption
+local function showCaption()
+    caption.Visible = Hud.isCompact()
+end
+Hud.CompactChanged:Connect(showCaption)
+showCaption()
 local window = Hud.window({
-    Name = "StoreWindow", Title = "STORE", Size = Vector2.new(560, 470),
+    Name = "StoreWindow", Title = "SHOP", Size = Vector2.new(560, 470),
     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 })
 local message = Toast.new("StoreMessage", C.Highlight, 5)
