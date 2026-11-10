@@ -13,7 +13,10 @@ return {
         Lore = "The jade rabbit of the moon, come down with its pestle to keep pounding the moon's elixir. It leaps only under moonlight, and each leap lands a little further from the ground than it should.",
         Special = { Name = "Moon Elixir", Text = "Pounds the moon's elixir three times with its jade pestle, until a little moon rises over its head and bursts into a ring of crescent moons." },
     },
-    VoltFox = { Lore = "A fox born from a thunderclap. Its fur remembers every storm it has run through, and it crackles when it is pleased." },
+    VoltFox = {
+        Lore = "A fox kit born from a thunderclap, still carrying a little storm cloud of its own on the end of its tail. Its cloud rumbles when it is pleased, and it has never once been rained on.",
+        Special = { Name = "Thunder Comes Home", Text = "Lifts its thundercloud high and calls down a lightning strike; the strike rolls back to it as a ball of lightning and leaps home into its cloud." },
+    },
     GoldenKirin = {
         Lore = "A white-furred qilin that treads the air on clouds of its own making. Old stories say it never steps on a living blade of grass.",
         Special = { Name = "Lotus Bloom", Text = "Rears up, its halo flaring, and a great lotus of golden light blooms on the air beneath it." },

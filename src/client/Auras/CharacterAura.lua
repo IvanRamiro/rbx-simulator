@@ -9,8 +9,8 @@ local CharacterAura = {}
 CharacterAura.REMOVE_DELAY = 2.2
 
 local SETTINGS = AuraStyles.CharacterAura
--- (empty for now: the Aqua Wisp's Tidecaller Sanctum and the Ember Wyrm's Ember Crucible went with their old designs, 2026-11-09; their new
--- auras come once the new pets are done)
+-- (empty: the Aqua Wisp's Tidecaller Sanctum and the Ember Wyrm's Ember Crucible went with their old designs, 2026-11-09, and the owner
+-- dropped their replacements, 2026-11-10: the realm aura is the cultivation look)
 local DESIGNS = {}
 local TEXTURES = SETTINGS.Textures
 local TAU = 2 * math.pi

@@ -684,7 +684,9 @@ if __name__ == "__main__" and STAGE == "all":
     print("UV OVERLAP TEXELS", uv_overlap_texels(body.data, 1024), flush=True)
     zs = [(o.matrix_world @ v.co).z for o in [body] + list(glows.values()) for v in o.data.vertices]
     lo, hi = min(zs), max(zs)
-    print("Z range", round(lo, 4), round(hi, 4), "SOLE from the box middle (root at 0 counted) down to the ground", round(hi / 2 - max(lo, 0), 4), flush=True)
+    # (the game's box counts the RootPart, a 0.05 m cube at the origin: its bottom is 0.025 m under the feet, measured in Play on the Volt Fox)
+    bottom = min(lo, -0.025)
+    print("Z range", round(lo, 4), round(hi, 4), "SOLE from the box middle (the RootPart counted) down to the ground", round((hi + bottom) / 2 - lo, 4), flush=True)
     for tag, fr in frames.items():
         h = fr.hinge
         print("EYE", tag, "hinge game axes", (round(-h.x, 4), round(h.z, 4), round(h.y, 4)), flush=True)

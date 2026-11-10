@@ -705,6 +705,7 @@ local GameConfig = {
 
     GrantDevTestPets = false,
     DevTestPetIds = { "EmberWyrm", "VoltFox", "GoldenKirin", "NineTailMoonfox", "OriginSerpent" },
+    DevTestEggs = { BeginnerQiEgg = 5 }, -- with GrantDevTestPets, in Studio, a new save also starts with these eggs (to test hatching)
 
     -- Each Pool's HatchChance values are percents and must add up to 100: PetInventory refuses to start otherwise, and the altar
     -- shows these numbers to the player exactly. tools/balance_report.py prints each egg's average Qi and any pet out of rarity order.

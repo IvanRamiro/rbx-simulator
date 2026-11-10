@@ -249,9 +249,40 @@ local function play(result)
     if focus then
         camera.CameraType = Enum.CameraType.Scriptable
     end
+    -- the shot's side: looking back toward where the player's view was, but turned off the line through their own avatar (standing close
+    -- to the altar, their head filled the frame, seen in Play, 2026-11-10; fading the avatar can't work, the camera's transparency
+    -- controller resets it every frame): the first of these turns that keeps the shot's line 3.5 studs clear of their body and head
+    local away
+    if focus then
+        local base = (saved.CFrame.Position - focus) * Vector3.new(1, 0, 1)
+        base = if base.Magnitude > 0.1 then base.Unit else Vector3.new(0, 0, 1)
+        away = base
+        local character = player.Character
+        local body = character and character:FindFirstChild("HumanoidRootPart")
+        local head = character and character:FindFirstChild("Head")
+        if body then
+            local bestGap = -1
+            for _, turn in { 0, 35, -35, 60, -60, 90, -90 } do
+                local dir = CFrame.fromAxisAngle(Vector3.yAxis, math.rad(turn)):VectorToWorldSpace(base)
+                local a = focus
+                local ab = dir * 10 + Vector3.new(0, 2.6, 0) -- (out to the shot's widest point)
+                local gap = math.huge
+                for _, part in { body, head } do
+                    if part then
+                        local t = math.clamp((part.Position - a):Dot(ab) / ab:Dot(ab), 0, 1)
+                        gap = math.min(gap, (a + ab * t - part.Position).Magnitude)
+                    end
+                end
+                if gap > bestGap then
+                    away, bestGap = dir, gap
+                end
+                if gap >= 3.5 then
+                    break
+                end
+            end
+        end
+    end
     local function shotAt(push)
-        local away = (saved.CFrame.Position - focus) * Vector3.new(1, 0, 1)
-        away = if away.Magnitude > 0.1 then away.Unit else Vector3.new(0, 0, 1)
         local distance = 10 - 2.6 * push
         return CFrame.lookAt(focus + away * distance + Vector3.new(0, 2.6 - 0.6 * push, 0), focus)
     end
@@ -730,6 +761,22 @@ end
 function HatchCeremony.play(result)
     if active then
         active.finish(true)
+    end
+    -- The staged egg rides in the result, but with streaming on it can land a moment after the remote that names it: on real hatches
+    -- Staged arrived nil and the cinematic ran without its camera or its egg (seen in Play, 2026-11-10). Wait for it at the altar, briefly
+    -- (the reel times itself to BreakAt, so the wait costs nothing).
+    if result.Staged == nil and result.PetId then
+        task.spawn(function()
+            local islands = Workspace:FindFirstChild("FloatingIslands")
+            local island = islands and islands:FindFirstChild(GameConfig.HatchingAltar.Island)
+            local altar = island and island:FindFirstChild("HatchingAltar")
+            result.Staged = altar and altar:WaitForChild("HatchingEgg", 1.5)
+            if active then
+                active.finish(true)
+            end
+            play(result)
+        end)
+        return
     end
     play(result)
 end

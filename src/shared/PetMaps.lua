@@ -49,5 +49,6 @@ return {
     ThunderclawDrake = "rbxassetid://78862187110001",
     TimekeeperTortoise = "rbxassetid://105490938991647",
     VoidscaleHydra = "rbxassetid://134504797181991",
+    VoltFox = "rbxassetid://78665478248885",
     WindSprite = "rbxassetid://100955540073927",
 }

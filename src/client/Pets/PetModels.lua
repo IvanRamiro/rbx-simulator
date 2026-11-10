@@ -57,43 +57,6 @@ local function diamond(x, y, z, size, color)
     return { Shape = "Block", Size = Vector3.new(size, size, size), At = at(x, y, z, 45, 0, 45), Color = color, Neon = true }
 end
 
-local function voltFox()
-    local fur = Color3.fromRGB(255, 205, 45)
-    local dark = Color3.fromRGB(45, 40, 40)
-    local white = Color3.fromRGB(255, 248, 225)
-    local spark = Color3.fromRGB(255, 240, 120)
-    local parts = {
-        { Shape = "Prism", Size = Vector3.new(0.75, 0.7, 1.2), At = at(0, 0, 0.1), Color = fur },
-        { Shape = "Wedge", Size = Vector3.new(0.5, 0.45, 0.32), At = at(0, 0.12, -0.6, 0, 180, 180), Color = white },
-        { Shape = "Prism", Size = Vector3.new(0.8, 0.7, 0.7), At = at(0, 0.5, -0.7), Color = fur },
-        { Shape = "Wedge", Size = Vector3.new(0.42, 0.3, 0.45), At = at(0, 0.36, -1.22), Color = white },
-        { Shape = "Block", Size = Vector3.new(0.13, 0.1, 0.08), At = at(0, 0.5, -1.45), Color = dark },
-        { Shape = "Block", Size = Vector3.new(0.3, 0.3, 0.6), At = at(0.15, 0.3, 0.9, 40, -20, 0), Color = fur },
-        { Shape = "Block", Size = Vector3.new(0.4, 0.4, 0.65), At = at(0.4, 0.75, 1.1, -30, -30, 0), Color = fur },
-        { Shape = "Block", Size = Vector3.new(0.45, 0.45, 0.6), At = at(0.65, 1.2, 1.25, 35, -40, 0), Color = fur },
-        { Shape = "Wedge", Size = Vector3.new(0.4, 0.45, 0.4), At = at(0.8, 1.62, 1.32, 0, 140, 0), Color = white },
-        { Shape = "Block", Size = Vector3.new(0.42, 0.08, 0.3), At = at(0.4, 1, 1.15, -30, -30, 0), Color = dark },
-    }
-    eyes(parts, 0.42, 0.58, -1.06, 0.2, Color3.fromRGB(60, 40, 20))
-    mirrored(parts, function(side)
-        return { Shape = "Wedge", Size = Vector3.new(0.12, 0.7, 0.42), At = at(side * 0.27, 1.1, -0.66, 0, 90 * side), Color = fur }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Wedge", Size = Vector3.new(0.13, 0.25, 0.16), At = at(side * 0.27, 1.38, -0.66, 0, 90 * side), Color = dark }
-    end)
-    for _, z in { -0.3, 0.45 } do
-        mirrored(parts, function(side)
-            return { Shape = "Block", Size = Vector3.new(0.2, 0.25, 0.2), At = at(side * 0.25, -0.38, z), Color = fur }
-        end)
-        mirrored(parts, function(side)
-            return { Shape = "Wedge", Size = Vector3.new(0.21, 0.22, 0.21), At = at(side * 0.25, -0.6, z, 0, 180, 0), Color = dark }
-        end)
-    end
-    table.insert(parts, diamond(0.7, 0.9, 0.3, 0.12, spark))
-    table.insert(parts, diamond(-0.65, 0.6, 0.9, 0.1, spark))
-    return { Scale = 1.05, Parts = parts }
-end
-
 local function astralWhale()
     local deep = Color3.fromRGB(55, 75, 195)
     local belly = Color3.fromRGB(200, 222, 255)
@@ -397,7 +360,7 @@ PetModels.Pets = {
     AquaWisp = { Scale = 0.95, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old droplet design removed (MESH_LOOKS was tuned with this scale)
     EmberWyrm = { Scale = 1.05, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old lava-bead design removed (MESH_LOOKS was tuned with this scale)
     LunarHopper = { Scale = 1.0, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted-rabbit design removed (MESH_LOOKS was tuned with this scale)
-    VoltFox = voltFox(),
+    VoltFox = { Scale = 1.05, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old yellow block-fox design removed (MESH_LOOKS was tuned with this scale)
     GoldenKirin = { Scale = 1.15, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old design removed (MESH_LOOKS was tuned with this scale)
     NineTailMoonfox = nineTailMoonfox(),
     OriginSerpent = originSerpent(),
@@ -539,7 +502,7 @@ local MESH_LOOKS = {
     AquaWisp = { Glow = Color3.fromRGB(60, 196, 232), Length = 1.8 }, -- crown to tail (its longest, upright): about 3.4 studs, a small starter beside its owner
     EmberWyrm = { Glow = Color3.fromRGB(255, 122, 30), Length = 2.4 }, -- nose to campfire (its longest): about 5 studs long and 1.5 tall, a small salamander at its owner's feet
     LunarHopper = { Glow = Color3.fromRGB(143, 188, 255), Length = 1.85 }, -- feet to ear crowns (its longest, sat up): about 3.7 studs, a little moon rabbit at its owner's feet; its old star sparkles removed
-    VoltFox = { Effect = "Sparks", Glow = Color3.fromRGB(255, 235, 110), Length = 2.91 },
+    VoltFox = { Glow = Color3.fromRGB(70, 190, 255), Length = 2.4 }, -- nose to the back of its cloud (its longest): about 5 studs, a fox kit at its owner's feet, its cloud over its back; its old sparks removed
     GoldenKirin = { Glow = Color3.fromRGB(255, 214, 120), Length = 2.4 }, -- nose to tail-silk (its longest), 5.5 studs; its halo's top about 4.8 studs up, under its owner's head (k is about 2.3 for it: 4.4 stood it 9 studs tall)
     AstralWhale = { Effect = "Stars", Glow = Color3.fromRGB(130, 125, 255), Length = 4.0 },
     OriginSerpent = { Effect = "Stars", Glow = Color3.fromRGB(80, 190, 255), Length = 2.9 },

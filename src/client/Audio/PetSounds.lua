@@ -60,6 +60,7 @@ local DATA = {
     ThunderclawDrake = { Voice = { "9113980319" }, VoiceVolume = 0.67, Pitch = 0.9, VoiceLength = 2.6, Special = "9126068434", SpecialVolume = 1.2, SpecialLength = 4 },
     TimekeeperTortoise = { Voice = { "9120881979", "9126263691", "9126264414" }, VoiceVolume = 1.47, Special = "9120288444", SpecialVolume = 4.8 },
     VoidscaleHydra = { Voice = { "9120049821", "9120049811" }, VoiceVolume = 1.41, Pitch = 0.8, Special = "9118886096", SpecialVolume = 1.6 },
+    VoltFox = { Voice = { "9113955391", "9113956166", "9113956477" }, VoiceVolume = 1.4, Pitch = 1.35, Special = "9120016256", SpecialVolume = 0.39, SpecialLength = 3 }, -- (a kit: the Starfall Fox's coyote pack, other takes, pitched up; its thunder strikes down. Measured muted in Play, 2026-11-10: takes peak 16.5-19.3, the thunder 124.6)
     WindSprite = { Voice = { "9113080660", "9113080102", "9113080104" }, VoiceVolume = 0.45, Special = "9116432084", SpecialVolume = 3.43, SpecialLength = 4 },
 }
 

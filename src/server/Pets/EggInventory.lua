@@ -2,6 +2,7 @@
 -- (PetService). Saved in PlayerData as Eggs = { [EggId] = count } and mirrored to the client as
 -- player attributes "Egg_<EggId>".
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 
@@ -34,6 +35,13 @@ end
 
 function EggInventory.setupPlayer(player, progress)
     held[player] = EggInventory.sanitize(progress and progress.Eggs)
+    if not progress and GameConfig.GrantDevTestPets and RunService:IsStudio() then -- a new save in Studio: eggs to test hatching
+        for eggId, count in GameConfig.DevTestEggs or {} do
+            if GameConfig.Eggs[eggId] then
+                held[player][eggId] = math.min(count, EggInventory.MAX_PER_EGG)
+            end
+        end
+    end
     for eggId in held[player] do
         mirror(player, eggId)
     end
