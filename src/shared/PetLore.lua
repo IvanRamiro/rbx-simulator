@@ -21,7 +21,10 @@ return {
         Lore = "A white-furred qilin that treads the air on clouds of its own making. Old stories say it never steps on a living blade of grass.",
         Special = { Name = "Lotus Bloom", Text = "Rears up, its halo flaring, and a great lotus of golden light blooms on the air beneath it." },
     },
-    AstralWhale = { Lore = "It swims the gap between stars and sings too low for mortals to hear. Cultivators who sleep near one wake with stronger Qi." },
+    AstralWhale = {
+        Lore = "It swims the gap between stars and sings too low for mortals to hear. Cultivators who sleep near one wake with stronger Qi.",
+        Special = { Name = "Song Between Stars", Text = "Rolls belly-up and sings on the golden strings of its throat, and rings of sound ripple out until every star around it chimes." },
+    },
     NineTailMoonfox = { Lore = "A lineage of the moon that no egg carries any more. Those who own one keep a piece of a closed chapter." },
     OriginSerpent = { Lore = "The first coil of the first spirit vein. The world's oldest Qi still flows along the path it carved." },
     MossGolem = {

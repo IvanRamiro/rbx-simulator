@@ -21,7 +21,7 @@ AuraStyles.Elements = {
     SunscaleDragon = { Core = Color3.fromRGB(255, 245, 170), Main = Color3.fromRGB(255, 195, 50), Deep = Color3.fromRGB(235, 115, 30), Particles = "Ember", RingShape = "Polygon", RingSides = 12 },
     DawnPhoenix = { Core = Color3.fromRGB(255, 225, 140), Main = Color3.fromRGB(255, 115, 55), Deep = Color3.fromRGB(215, 35, 85), Particles = "Ember", RingShape = "Circle" },
     LunarHopper = { Core = Color3.fromRGB(236, 244, 255), Main = Color3.fromRGB(143, 188, 255), Deep = Color3.fromRGB(70, 105, 205), Particles = "Mote", RingShape = "Circle" }, -- its moonlight (recreated 2026-11-10)
-    AstralWhale = { Core = Color3.fromRGB(195, 225, 255), Main = Color3.fromRGB(90, 125, 255), Deep = Color3.fromRGB(135, 75, 225), Particles = "Mote", RingShape = "Circle" },
+    AstralWhale = { Core = Color3.fromRGB(255, 220, 150), Main = Color3.fromRGB(160, 120, 235), Deep = Color3.fromRGB(54, 42, 112), Particles = "Mote", RingShape = "Circle" }, -- its dusk: golden strings over violet and night (recreated 2026-11-10)
     WindSprite = { Core = Color3.fromRGB(220, 255, 245), Main = Color3.fromRGB(120, 230, 200), Deep = Color3.fromRGB(50, 150, 140), Particles = "Mote", RingShape = "Circle" },
     CloudSheep = { Core = Color3.fromRGB(240, 250, 255), Main = Color3.fromRGB(150, 210, 245), Deep = Color3.fromRGB(120, 125, 200), Particles = "Mote", RingShape = "Circle" },
     SpiritCrane = { Core = Color3.fromRGB(225, 250, 250), Main = Color3.fromRGB(60, 215, 205), Deep = Color3.fromRGB(30, 110, 120), Particles = "Mote", RingShape = "Circle" },

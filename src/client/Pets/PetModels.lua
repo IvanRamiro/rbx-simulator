@@ -44,47 +44,6 @@ local function wing(side, x, y, z, span, chord, lift, color, neon)
     }
 end
 
-local function eyes(parts, apart, y, z, size, iris)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(size, size * 1.2, 0.06), At = at(side * apart / 2, y, z), Color = iris or Color3.fromRGB(25, 35, 90) }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(size * 0.38, size * 0.38, 0.04), At = at(side * apart / 2 - size * 0.18, y + size * 0.25, z - 0.04), Color = Color3.new(1, 1, 1), Neon = true }
-    end)
-end
-
-local function diamond(x, y, z, size, color)
-    return { Shape = "Block", Size = Vector3.new(size, size, size), At = at(x, y, z, 45, 0, 45), Color = color, Neon = true }
-end
-
-local function astralWhale()
-    local deep = Color3.fromRGB(55, 75, 195)
-    local belly = Color3.fromRGB(200, 222, 255)
-    local crystal = Color3.fromRGB(95, 110, 250)
-    local star = Color3.fromRGB(235, 240, 255)
-    local parts = {
-        { Shape = "Prism", Size = Vector3.new(1, 0.9, 1.7), At = at(0, 0, 0), Color = deep },
-        { Shape = "Prism", Size = Vector3.new(0.85, 0.75, 0.45), At = at(0, -0.05, -1.02), Color = deep },
-        { Shape = "Prism", Size = Vector3.new(0.7, 0.32, 1.6), At = at(0, -0.33, -0.15), Color = belly },
-        { Shape = "Prism", Size = Vector3.new(0.5, 0.45, 0.7), At = at(0, 0.12, 1.15, -12), Color = deep },
-        { Shape = "Wedge", Size = Vector3.new(0.1, 0.35, 0.35), At = at(0, 0.6, -0.35, 0, 180, 0), Color = crystal, Neon = true },
-        { Shape = "Wedge", Size = Vector3.new(0.1, 0.5, 0.45), At = at(0, 0.68, 0.1, 0, 180, 0), Color = crystal, Neon = true },
-        { Shape = "Wedge", Size = Vector3.new(0.1, 0.32, 0.32), At = at(0, 0.55, 0.55, 0, 180, 0), Color = crystal, Neon = true },
-        diamond(0.32, 0.25, -0.4, 0.07, star),
-        diamond(-0.3, 0.1, 0.2, 0.06, star),
-        diamond(0.2, 0.38, 0.5, 0.06, star),
-        diamond(-0.15, 0.42, -0.75, 0.05, star),
-    }
-    eyes(parts, 0.8, 0.02, -0.98, 0.14, Color3.fromRGB(20, 25, 70))
-    mirrored(parts, function(side)
-        return wing(side, 0.42, -0.25, -0.3, 0.75, 0.55, -25, crystal, true)
-    end)
-    mirrored(parts, function(side)
-        return wing(side, 0.05, 0.2, 1.35, 0.55, 0.55, 20, crystal, true)
-    end)
-    return { Scale = 1.25, Parts = parts }
-end
-
 local function nineTailMoonfox()
     local fur = Color3.fromRGB(245, 245, 255)
     local lilac = Color3.fromRGB(190, 160, 255)
@@ -364,7 +323,7 @@ PetModels.Pets = {
     GoldenKirin = { Scale = 1.15, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old design removed (MESH_LOOKS was tuned with this scale)
     NineTailMoonfox = nineTailMoonfox(),
     OriginSerpent = originSerpent(),
-    AstralWhale = astralWhale(),
+    AstralWhale = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted block whale removed (MESH_LOOKS was tuned with this scale)
     MossGolem = mossGolem(),
     MyceliumSprite = myceliumSprite(),
     JadeSpiritPanda = jadeSpiritPanda(),
@@ -504,7 +463,7 @@ local MESH_LOOKS = {
     LunarHopper = { Glow = Color3.fromRGB(143, 188, 255), Length = 1.85 }, -- feet to ear crowns (its longest, sat up): about 3.7 studs, a little moon rabbit at its owner's feet; its old star sparkles removed
     VoltFox = { Glow = Color3.fromRGB(70, 190, 255), Length = 2.4 }, -- nose to the back of its cloud (its longest): about 5 studs, a fox kit at its owner's feet, its cloud over its back; its old sparks removed
     GoldenKirin = { Glow = Color3.fromRGB(255, 214, 120), Length = 2.4 }, -- nose to tail-silk (its longest), 5.5 studs; its halo's top about 4.8 studs up, under its owner's head (k is about 2.3 for it: 4.4 stood it 9 studs tall)
-    AstralWhale = { Effect = "Stars", Glow = Color3.fromRGB(130, 125, 255), Length = 4.0 },
+    AstralWhale = { Glow = Color3.fromRGB(255, 176, 48), Length = 3.6 }, -- rostrum to flukes (its longest): about 7 studs, a whale calf swimming beside its owner; its old star sparkles removed
     OriginSerpent = { Effect = "Stars", Glow = Color3.fromRGB(80, 190, 255), Length = 2.9 },
     SunscaleDragon = { Glow = Color3.fromRGB(255, 194, 74), Length = 4.6 },
     BonefireDragon = { Glow = Color3.fromRGB(100, 170, 255), Length = 3.4 },

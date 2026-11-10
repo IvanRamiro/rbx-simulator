@@ -10,13 +10,14 @@ local VOICE_NEAR, VOICE_REACH = 12, 70       -- studs: full volume within, silen
 local SPECIAL_NEAR, SPECIAL_REACH = 25, 160
 
 -- [PetId] = { Voice = { takes }, VoiceVolume, Pitch (its voice's, a take a little either side), VoiceLength (seconds, cut),
--- Special = id, SpecialVolume, SpecialLength (seconds, cut) }. Volumes set from each file's measured loudness in Play
+-- VoiceStart (seconds into each take, skipping a quiet lead-in), Special = id, SpecialVolume, SpecialLength (seconds, cut), SpecialStart }. Volumes set from each file's measured loudness in Play
 -- (PlaybackLoudness, November 9, 2026): a pet's voice lands at about 24, its special at about 48, under the player's own
 -- moves (a leap about 38, a dash about 59). Picks by kind: the closest real creature, or for spirits a magical tone; pets of
 -- one family (the lions and dragons, the kirins) told apart by their pitch.
 local DATA = {
     AquaWisp = { Voice = { "9120312739", "9120312834", "9120312968" }, VoiceVolume = 0.79, Pitch = 1.15, VoiceLength = 1.6, Special = "9114455244", SpecialVolume = 0.63, SpecialLength = 3 },
     AbyssAnomalocaris = { Voice = { "9113957245", "9113957592", "9113957437" }, VoiceVolume = 1.14, Special = "9120314649", SpecialVolume = 0.49, SpecialLength = 4 },
+    AstralWhale = { Voice = { "9125927348", "9125927607" }, VoiceVolume = 0.16, Pitch = 0.72, VoiceLength = 1.8, VoiceStart = 0.6, Special = "9125927614", SpecialVolume = 0.22, SpecialLength = 3.5, SpecialStart = 0.8 }, -- (the library has no whale: a shakuhachi's long tones pitched down read as a humpback's song. Measured muted in Play, 2026-11-10: the takes open with up to 1.3 s of near-silence, skipped; from there they peak at 181 and 121, the song at 219)
     AzureSkyDragon = { Voice = { "9116291350", "9116292005", "9116292195" }, VoiceVolume = 0.41, Pitch = 0.85, Special = "9120727460", SpecialVolume = 0.41 },
     BonefireDragon = { Voice = { "9125840983", "9125841207", "9125841551" }, VoiceVolume = 0.58, Pitch = 0.9, Special = "9120575099", SpecialVolume = 0.46 },
     CelestialPearlDragon = { Voice = { "9116307261", "9116307522", "9116307242" }, VoiceVolume = 0.62, Pitch = 0.8, Special = "9120027969", SpecialVolume = 0.65 },
@@ -69,10 +70,11 @@ for petId, data in DATA do
     if data.Voice and #data.Voice > 0 then
         local pitch = data.Pitch or 1
         PetSounds.Entries["PetVoice_" .. petId] = { Id = data.Voice, Volume = data.VoiceVolume or 1, Pitch = { pitch * 0.95, pitch * 1.05 },
-            Near = VOICE_NEAR, Reach = VOICE_REACH, Length = data.VoiceLength }
+            Near = VOICE_NEAR, Reach = VOICE_REACH, Length = data.VoiceLength, Start = data.VoiceStart }
     end
     if data.Special then
-        PetSounds.Entries["PetSpecial_" .. petId] = { Id = data.Special, Volume = data.SpecialVolume or 1, Near = SPECIAL_NEAR, Reach = SPECIAL_REACH, Length = data.SpecialLength }
+        PetSounds.Entries["PetSpecial_" .. petId] = { Id = data.Special, Volume = data.SpecialVolume or 1, Near = SPECIAL_NEAR, Reach = SPECIAL_REACH, Length = data.SpecialLength,
+            Start = data.SpecialStart }
     end
 end
 
