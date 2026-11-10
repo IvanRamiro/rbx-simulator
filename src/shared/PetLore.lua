@@ -9,7 +9,10 @@ return {
         Lore = "A little salamander born in the coals of an old campfire, held together by one stubborn, molten heart. It sleeps in the warm ash of old campfires.",
         Special = { Name = "Bonfire", Text = "Rears up and swings its burning tail over its back, stoking its campfire into a roaring bonfire." },
     },
-    LunarHopper = { Lore = "It leaps only under moonlight, and each leap lands a little further from the ground than it should." },
+    LunarHopper = {
+        Lore = "The jade rabbit of the moon, come down with its pestle to keep pounding the moon's elixir. It leaps only under moonlight, and each leap lands a little further from the ground than it should.",
+        Special = { Name = "Moon Elixir", Text = "Pounds the moon's elixir three times with its jade pestle, until a little moon rises over its head and bursts into a ring of crescent moons." },
+    },
     VoltFox = { Lore = "A fox born from a thunderclap. Its fur remembers every storm it has run through, and it crackles when it is pleased." },
     GoldenKirin = {
         Lore = "A white-furred qilin that treads the air on clouds of its own making. Old stories say it never steps on a living blade of grass.",

@@ -57,40 +57,6 @@ local function diamond(x, y, z, size, color)
     return { Shape = "Block", Size = Vector3.new(size, size, size), At = at(x, y, z, 45, 0, 45), Color = color, Neon = true }
 end
 
-local function lunarHopper()
-    local fur = Color3.fromRGB(160, 145, 235)
-    local pale = Color3.fromRGB(210, 200, 255)
-    local glow = Color3.fromRGB(110, 140, 255)
-    local parts = {
-        { Shape = "Prism", Axis = "Y", Size = Vector3.new(0.95, 0.9, 1.1), At = at(0, 0, 0.1), Color = fur },
-        { Shape = "Prism", Axis = "Y", Size = Vector3.new(0.55, 0.55, 0.3), At = at(0, 0, -0.42), Color = pale },
-        { Shape = "Prism", Axis = "X", Size = Vector3.new(0.85, 0.75, 0.75), At = at(0, 0.72, -0.3), Color = pale },
-        { Shape = "Block", Size = Vector3.new(0.1, 0.07, 0.05), At = at(0, 0.6, -0.69), Color = Color3.fromRGB(255, 160, 200) },
-        { Shape = "Prism", Axis = "Y", Size = Vector3.new(0.3, 0.3, 0.3), At = at(0, -0.05, 0.7), Color = pale },
-        diamond(0.3, 0.2, 0.55, 0.08, pale),
-        diamond(-0.25, -0.1, 0.5, 0.07, pale),
-        diamond(0.75, 1.25, 0.1, 0.12, glow),
-        diamond(-0.7, 0.95, 0.35, 0.09, glow),
-    }
-    eyes(parts, 0.42, 0.78, -0.69, 0.24)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.2, 0.95, 0.12), At = at(side * 0.2, 1.45, -0.22, -10, 0, side * -12), Color = fur }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.09, 0.7, 0.04), At = at(side * 0.2, 1.42, -0.29, -10, 0, side * -12), Color = glow, Neon = true }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Prism", Size = Vector3.new(0.3, 0.35, 0.65), At = at(side * 0.4, -0.38, 0.15), Color = fur }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.18, 0.3, 0.2), At = at(side * 0.2, -0.38, -0.45), Color = pale }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.04, 0.12, 0.38), At = at(side * 0.49, 0.05, 0.15, 30, 0, 0), Color = glow, Neon = true }
-    end)
-    return { Scale = 1, Parts = parts }
-end
-
 local function voltFox()
     local fur = Color3.fromRGB(255, 205, 45)
     local dark = Color3.fromRGB(45, 40, 40)
@@ -430,7 +396,7 @@ end
 PetModels.Pets = {
     AquaWisp = { Scale = 0.95, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old droplet design removed (MESH_LOOKS was tuned with this scale)
     EmberWyrm = { Scale = 1.05, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old lava-bead design removed (MESH_LOOKS was tuned with this scale)
-    LunarHopper = lunarHopper(),
+    LunarHopper = { Scale = 1.0, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted-rabbit design removed (MESH_LOOKS was tuned with this scale)
     VoltFox = voltFox(),
     GoldenKirin = { Scale = 1.15, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old design removed (MESH_LOOKS was tuned with this scale)
     NineTailMoonfox = nineTailMoonfox(),
@@ -572,7 +538,7 @@ local MESH_LOOKS = {
     DawnPhoenix = { Glow = Color3.fromRGB(255, 170, 70), Length = 4.6 },
     AquaWisp = { Glow = Color3.fromRGB(60, 196, 232), Length = 1.8 }, -- crown to tail (its longest, upright): about 3.4 studs, a small starter beside its owner
     EmberWyrm = { Glow = Color3.fromRGB(255, 122, 30), Length = 2.4 }, -- nose to campfire (its longest): about 5 studs long and 1.5 tall, a small salamander at its owner's feet
-    LunarHopper = { Effect = "Stars", Glow = Color3.fromRGB(150, 160, 255), Length = 2.58 },
+    LunarHopper = { Glow = Color3.fromRGB(143, 188, 255), Length = 1.85 }, -- feet to ear crowns (its longest, sat up): about 3.7 studs, a little moon rabbit at its owner's feet; its old star sparkles removed
     VoltFox = { Effect = "Sparks", Glow = Color3.fromRGB(255, 235, 110), Length = 2.91 },
     GoldenKirin = { Glow = Color3.fromRGB(255, 214, 120), Length = 2.4 }, -- nose to tail-silk (its longest), 5.5 studs; its halo's top about 4.8 studs up, under its owner's head (k is about 2.3 for it: 4.4 stood it 9 studs tall)
     AstralWhale = { Effect = "Stars", Glow = Color3.fromRGB(130, 125, 255), Length = 4.0 },

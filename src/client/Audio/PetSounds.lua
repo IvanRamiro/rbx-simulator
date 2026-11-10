@@ -41,6 +41,7 @@ local DATA = {
     JadeSpiritPanda = { Voice = { "9117345956", "9117351080" }, VoiceVolume = 2.53, Pitch = 0.75, Special = "9125643566", SpecialVolume = 0.41 },
     JadeWyrmTurtle = { Voice = { "9120829704", "9120829553" }, VoiceVolume = 0.1, Special = "9118185409", SpecialVolume = 0.41 },
     LanternWarden = { Voice = { "9116163066", "9116162481" }, VoiceVolume = 4.8, Special = "9125635650", SpecialVolume = 0.59 },
+    LunarHopper = { Voice = { "9114684818", "9114684783", "9114684660" }, VoiceVolume = 0.6, Pitch = 1.15, VoiceLength = 1, Special = "9116395089", SpecialVolume = 5.3, SpecialLength = 2.5 },
     MagmaCub = { Voice = { "9116290233", "9116290245", "9116290197" }, VoiceVolume = 0.43, Pitch = 1.15, Special = "9126194761", SpecialVolume = 2 },
     MossGolem = { Voice = { "9118664610", "9118664620", "9118665020" }, VoiceVolume = 1, Special = "9118633669", SpecialVolume = 4.8 },
     MyceliumSprite = { Voice = { "9125409791", "9125409840" }, VoiceVolume = 1.23, Special = "9119448154", SpecialVolume = 4.8, SpecialLength = 4 },

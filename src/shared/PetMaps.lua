@@ -29,6 +29,7 @@ return {
     JadeSpiritPanda = "rbxassetid://81210826866538",
     JadeWyrmTurtle = "rbxassetid://131491500035808",
     LanternWarden = "rbxassetid://122411668861659",
+    LunarHopper = "rbxassetid://120581999074938",
     MagmaCub = "rbxassetid://106636941111453",
     MossGolem = "rbxassetid://135523265460762",
     MyceliumSprite = "rbxassetid://94221576326290",
