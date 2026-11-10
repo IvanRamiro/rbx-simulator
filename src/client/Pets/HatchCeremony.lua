@@ -60,6 +60,9 @@ local TIERS = {
 }
 
 local active = nil -- the playing cinematic: { finish = function(instant) }
+-- a finished cinematic still fading out: completes its restore (camera, HUD, screen) at once. A new cinematic calls it before
+-- saving the camera, or it would save the old one's Scriptable camera and leave the player's view frozen when it ends.
+local pendingRestore = nil
 
 local function rarityColor(rarity)
     return GameConfig.PetRarityColors[rarity] or Color3.new(1, 1, 1)
@@ -677,16 +680,25 @@ local function play(result)
                 child.Visible = false
             end
         end
-        if focus then
-            if seconds > 0 then
-                tween(camera, seconds, { CFrame = saved.CFrame, FieldOfView = saved.FieldOfView })
+        local cameraTween = if focus and seconds > 0
+            then tween(camera, seconds, { CFrame = saved.CFrame, FieldOfView = saved.FieldOfView })
+            else nil
+        local restored = false
+        local function restore()
+            if restored then
+                return
             end
-            task.delay(seconds, function()
+            restored = true
+            if pendingRestore == restore then
+                pendingRestore = nil
+            end
+            if focus then
+                if cameraTween then
+                    cameraTween:Cancel()
+                end
                 camera.CameraType = saved.Type
                 camera.FieldOfView = saved.FieldOfView
-            end)
-        end
-        task.delay(seconds, function()
+            end
             for _, hud in hidden do
                 hud.Enabled = true
             end
@@ -697,7 +709,13 @@ local function play(result)
                     frame:Destroy()
                 end
             end
-        end)
+        end
+        if seconds > 0 then
+            pendingRestore = restore
+            task.delay(seconds, restore)
+        else
+            restore() -- now, not deferred: a cinematic that starts next must see the camera and HUD as they were
+        end
     end
 
     tapper.Activated:Connect(function()
@@ -758,10 +776,17 @@ local function play(result)
 end
 
 -- Plays the hatch cinematic for a successful hatch result (a new one ends any still showing).
-function HatchCeremony.play(result)
+local function endShowing()
     if active then
         active.finish(true)
     end
+    if pendingRestore then
+        pendingRestore()
+    end
+end
+
+function HatchCeremony.play(result)
+    endShowing()
     -- The staged egg rides in the result, but with streaming on it can land a moment after the remote that names it: on real hatches
     -- Staged arrived nil and the cinematic ran without its camera or its egg (seen in Play, 2026-11-10). Wait for it at the altar, briefly
     -- (the reel times itself to BreakAt, so the wait costs nothing).
@@ -771,9 +796,7 @@ function HatchCeremony.play(result)
             local island = islands and islands:FindFirstChild(GameConfig.HatchingAltar.Island)
             local altar = island and island:FindFirstChild("HatchingAltar")
             result.Staged = altar and altar:WaitForChild("HatchingEgg", 1.5)
-            if active then
-                active.finish(true)
-            end
+            endShowing()
             play(result)
         end)
         return

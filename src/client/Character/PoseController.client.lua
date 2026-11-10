@@ -374,7 +374,8 @@ local function updatePoses(deltaTime)
         end
         -- Roblox can rebuild a character's joints just after it spawns, and limbs stream in late: held
         -- on to, a dead joint would leave this player unposed for the whole session, with no error
-        if now - rig.checked > JOINT_CHECK then
+        -- (not while dead: its joints break on death, and it gets a new character on respawn)
+        if now - rig.checked > JOINT_CHECK and humanoid.Health > 0 then
             rig.checked = now
             local count = 0
             local stale = false
@@ -383,9 +384,15 @@ local function updatePoses(deltaTime)
                 stale = stale or not joint:IsDescendantOf(character)
             end
             if stale or count < 15 then
-                warn("PoseController: refreshed the joints of", player.Name, "stale", stale, "count", count)
                 rig.joints = findJoints(character)
                 table.clear(rig.written)
+                local found = 0
+                for _ in rig.joints do
+                    found += 1
+                end
+                if stale or found ~= count then -- say so only when the refresh changed something (not every check of a short rig)
+                    warn("PoseController: refreshed the joints of", player.Name, "stale", stale, "count", count, "->", found)
+                end
             end
         end
 

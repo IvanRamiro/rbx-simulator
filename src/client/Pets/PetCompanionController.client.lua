@@ -93,8 +93,10 @@ local function buildPet(petId, rootPart, hidden)
     if not model then
         return nil
     end
+    -- every piece moved, before parenting: a hidden pet waits out of the world, where pieces welded to its root
+    -- wouldn't follow the root alone (they'd show offset once its owner came near)
+    model:PivotTo(rootPart.CFrame)
     model.Parent = if hidden then nil else container
-    petRoot.CFrame = rootPart.CFrame
     return {
         model = model,
         rootPart = petRoot,
