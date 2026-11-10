@@ -16,6 +16,9 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 OUT = sys.argv[1]
+# review boards go to renders/aura (git-ignored), never beside the uploaded textures
+PREVIEWS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "renders", "aura")
+os.makedirs(PREVIEWS, exist_ok=True)
 os.makedirs(OUT, exist_ok=True)
 N = 1024
 yy, xx = np.mgrid[0:N, 0:N].astype(float)
@@ -67,5 +70,5 @@ for n in ("GoldVortex.png", "GoldVortexArms.png"):
     al = a[..., 3:] / 255
     bg = np.array([12, 18, 40], dtype=float)
     tiles.append(np.clip(bg * (1 - al) + a[..., :3] * al * 1.2, 0, 255).astype(np.uint8))
-Image.fromarray(np.hstack(tiles)).save(os.path.join(OUT, "GoldVortex_preview.png"))
+Image.fromarray(np.hstack(tiles)).save(os.path.join(PREVIEWS, "GoldVortex_preview.png"))
 print("written")

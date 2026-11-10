@@ -1,7 +1,7 @@
 """The few helpers the egg, guardian, weapon, outfit and bridge scripts share (run inside Blender):
 the egg's size (H, R), rb_inv, the Neon glow materials (glow_material: an object wearing one becomes
 a Neon part named by its colour) and join. The eggs themselves are built by egg_forge.py into
-assets/eggs_v2/.
+assets/eggs/.
 """
 import math
 import os

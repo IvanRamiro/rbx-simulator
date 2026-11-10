@@ -22,7 +22,8 @@ function Codex.sanitize(raw)
         end
     end
     if typeof(raw.Claimed) == "table" then
-        for _, id in raw.Claimed do
+        for _, saved in raw.Claimed do
+            local id = CodexRules.savedId(saved)
             if CodexRules.reward(id) and not table.find(claimed, id) then
                 table.insert(claimed, id)
             end

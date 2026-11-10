@@ -16,6 +16,9 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 OUT = sys.argv[1]
+# review boards go to renders/aura (git-ignored), never beside the uploaded textures
+PREVIEWS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "renders", "aura")
+os.makedirs(PREVIEWS, exist_ok=True)
 os.makedirs(OUT, exist_ok=True)
 SS = 2
 CELL = 512 * SS
@@ -80,5 +83,5 @@ rgba.putalpha(img)
 rgba.save(os.path.join(OUT, "GoldLightning.png"))
 prev = np.asarray(img, dtype=float)[..., None] / 255
 bg = np.array([12, 18, 40], dtype=float)
-Image.fromarray(np.clip(bg * (1 - prev) + np.array([255, 245, 190]) * prev, 0, 255).astype(np.uint8)).save(os.path.join(OUT, "GoldLightning_preview.png"))
+Image.fromarray(np.clip(bg * (1 - prev) + np.array([255, 245, 190]) * prev, 0, 255).astype(np.uint8)).save(os.path.join(PREVIEWS, "GoldLightning_preview.png"))
 print("written")

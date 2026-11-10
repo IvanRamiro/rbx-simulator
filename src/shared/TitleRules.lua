@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local CodexRules = require(ReplicatedStorage:WaitForChild("CodexRules"))
 
 local TitleRules = {}
 
@@ -90,11 +91,8 @@ for _, entry in GUARDIAN_TITLES do
         How = "Carry an egg home from " .. (if guardian then guardian.DisplayName else entry.Guardian) .. "." })
 end
 
-local beastCount = 0
-for _ in GameConfig.Pets do
-    beastCount += 1
-end
-TitleRules.BeastCount = beastCount
+-- every beast that can be hatched (the Codex's own list: a retired beast in no egg doesn't count)
+local beastCount = CodexRules.Total
 TitleRules.CollectorTitles = {}
 for _, entry in COLLECTOR_TITLES do
     local count = entry.Count or beastCount

@@ -8,7 +8,6 @@ frame's content stays inside 80% of its cell (a clear margin, so neighbouring ce
   GoldRippleLiquid.png  4x4  a crest of liquid gold rolls outward, a softer swell behind it,
                              wobbling and breaking up at the end
   GoldRippleWaves.png   4x4  three thin water rings travel outward one after another
-  GoldRippleSparkle.png 4x4  a fine ring whose crest is beaded with glints that flash and fade
   GoldSmoke.png         4x4  a puff billows, tears and thins; dark amber inside, gold-lit edges
   LightPillar.png       512  a tall thin shaft of light, white-hot core, soft gold falloff,
                              fading at both ends (FacingCameraWorldUp, Squash for height)
@@ -21,6 +20,9 @@ import numpy as np
 from PIL import Image
 
 OUT = sys.argv[1]
+# review boards go to renders/aura (git-ignored), never beside the uploaded textures
+PREVIEWS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "renders", "aura")
+os.makedirs(PREVIEWS, exist_ok=True)
 os.makedirs(OUT, exist_ok=True)
 CELL = 256
 TAU = math.tau
@@ -111,23 +113,7 @@ def ripple_waves(t, f):
     return i
 
 
-GLINTS = [(rng.uniform(0, TAU), rng.uniform(0.15, 0.85), rng.uniform(0.6, 1.0)) for _ in range(26)]
-
-
-def ripple_sparkle(t, f):
-    r0 = 0.14 + 0.78 * (1 - (1 - t) ** 1.4)
-    d = RAD - r0
-    ring = np.exp(-(d / 0.014) ** 2) * 0.9 * (1 - t) ** 1.2 * smoothstep(0, 0.08, t)
-    i = ring
-    for a, when, s in GLINTS:                               # each glint flashes as the crest passes
-        life = np.exp(-((t - when) / 0.09) ** 2) * s
-        if life < 0.02:
-            continue
-        gx, gy = r0 * math.cos(a), r0 * math.sin(a)
-        dx, dy = (X - gx) / 0.11, (Y - gy) / 0.11
-        star = np.exp(-(dx ** 2 / 0.02 + dy ** 2)) + np.exp(-(dy ** 2 / 0.02 + dx ** 2))
-        i = i + life * (star * 1.2 + np.exp(-(dx ** 2 + dy ** 2) / 0.05) * 1.8)
-    return i
+rng.random(78)  # the draws of a retired texture (GoldRippleSparkle): kept so every texture after it comes out the same
 
 
 WARP_A = fbm(512, 4, 71)
@@ -172,8 +158,7 @@ def smoke(t, f):
     return dens * 0.75 + edge * dens * 1.4
 
 
-for fn, name in ((ripple_liquid, "GoldRippleLiquid.png"), (ripple_waves, "GoldRippleWaves.png"),
-                 (ripple_sparkle, "GoldRippleSparkle.png"), (smoke, "GoldSmoke.png")):
+for fn, name in ((ripple_liquid, "GoldRippleLiquid.png"), (ripple_waves, "GoldRippleWaves.png"), (smoke, "GoldSmoke.png")):
     sheet(fn, name)
 
 # the light pillar: one image, the shaft upright
@@ -209,9 +194,9 @@ def preview(name):
 
 
 tiles = [Image.fromarray(preview(n)).resize((512, 512)) for n in
-         ("GoldRippleLiquid.png", "GoldRippleWaves.png", "GoldRippleSparkle.png", "GoldSmoke.png", "LightPillar.png")]
-board = Image.new("RGB", (512 * 5 + 40, 512), (40, 40, 40))
+         ("GoldRippleLiquid.png", "GoldRippleWaves.png", "GoldSmoke.png", "LightPillar.png")]
+board = Image.new("RGB", (512 * 4 + 30, 512), (40, 40, 40))
 for k, tile in enumerate(tiles):
     board.paste(tile, (k * 522, 0))
-board.save(os.path.join(OUT, "Realm5Textures_preview.png"))
+board.save(os.path.join(PREVIEWS, "Realm5Textures_preview.png"))
 print("written:", sorted(n for n in os.listdir(OUT) if n.endswith(".png")))

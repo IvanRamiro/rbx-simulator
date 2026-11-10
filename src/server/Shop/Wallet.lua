@@ -43,7 +43,7 @@ end
 
 -- Spends stones; false (and nothing spent) when the player hasn't enough.
 function Wallet.spend(player, amount, kind, sku)
-    if stones[player] == nil or typeof(amount) ~= "number" or amount < 0 or stones[player] < amount then
+    if stones[player] == nil or typeof(amount) ~= "number" or amount ~= amount or amount < 0 or stones[player] < amount then
         return false
     end
     stones[player] -= amount

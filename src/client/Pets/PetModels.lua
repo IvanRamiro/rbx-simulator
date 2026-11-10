@@ -27,21 +27,9 @@ local function at(x, y, z, rx, ry, rz)
     return CFrame.new(x, y, z) * CFrame.Angles(math.rad(rx or 0), math.rad(ry or 0), math.rad(rz or 0))
 end
 
-local BLACK = Color3.fromRGB(25, 25, 35)
-
 local function mirrored(parts, make)
     table.insert(parts, make(-1))
     table.insert(parts, make(1))
-end
-
-local function wing(side, x, y, z, span, chord, lift, color, neon)
-    return {
-        Shape = "Wedge",
-        Size = Vector3.new(0.08, span, chord),
-        At = at(side * x, y, z) * CFrame.Angles(0, 0, math.rad(side * (lift - 90))) * CFrame.new(0, span / 2, 0),
-        Color = color,
-        Neon = neon,
-    }
 end
 
 local function nineTailMoonfox()
@@ -68,197 +56,6 @@ local function nineTailMoonfox()
     return { Scale = 1.2, Parts = parts }
 end
 
-local function mossGolem()
-    local stone = Color3.fromRGB(120, 120, 115)
-    local moss = Color3.fromRGB(95, 160, 75)
-    local glow = Color3.fromRGB(170, 255, 140)
-    local parts = {
-        { Shape = "Prism", Axis = "Y", Size = Vector3.new(1.25, 1.1, 0.95), At = at(0, 0, 0), Color = stone },
-        { Shape = "Prism", Axis = "Y", Size = Vector3.new(0.8, 0.65, 0.7), At = at(0, 0.85, -0.1), Color = stone },
-        { Shape = "Prism", Axis = "Y", Size = Vector3.new(1.35, 0.25, 1.05), At = at(0, 0.55, 0), Color = moss },
-        { Shape = "Prism", Axis = "Y", Size = Vector3.new(0.85, 0.2, 0.75), At = at(0, 1.2, -0.1), Color = moss },
-        { Shape = "Block", Size = Vector3.new(0.1, 0.4, 0.1), At = at(0, 1.45, -0.1), Color = moss },
-        { Shape = "Wedge", Size = Vector3.new(0.08, 0.15, 0.35), At = at(0.12, 1.65, -0.1, 0, 90, -30), Color = glow, Neon = true },
-    }
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.17, 0.14, 0.06), At = at(0.2 * side, 0.9, -0.46), Color = glow, Neon = true }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.4, 0.95, 0.45), At = at(0.82 * side, -0.1, 0, 0, 0, 8 * side), Color = stone }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.45, 0.45, 0.5), At = at(0.32 * side, -0.75, 0), Color = stone }
-    end)
-    return { Scale = 0.9, Parts = parts }
-end
-
-local function myceliumSprite()
-    local cap = Color3.fromRGB(70, 215, 195)
-    local stem = Color3.fromRGB(235, 230, 215)
-    local spot = Color3.fromRGB(200, 255, 245)
-    local parts = {
-        { Shape = "Prism", Axis = "Y", Size = Vector3.new(1.5, 0.4, 1.5), At = at(0, 0.35, 0), Color = cap, Neon = true, Transparency = 0.1 },
-        { Shape = "Prism", Axis = "Y", Size = Vector3.new(1, 0.3, 1), At = at(0, 0.7, 0, 0, 22.5, 0), Color = cap, Neon = true, Transparency = 0.1 },
-        { Shape = "Prism", Axis = "Y", Size = Vector3.new(0.6, 0.9, 0.6), At = at(0, -0.3, 0), Color = stem },
-        { Shape = "Block", Size = Vector3.new(0.2, 0.08, 0.2), At = at(0, 0.88, 0, 0, 45, 0), Color = spot, Neon = true },
-        { Shape = "Block", Size = Vector3.new(0.18, 0.08, 0.18), At = at(0.48, 0.57, 0.25, 0, 45, 0), Color = spot, Neon = true },
-        { Shape = "Block", Size = Vector3.new(0.18, 0.08, 0.18), At = at(-0.42, 0.57, -0.32, 0, 45, 0), Color = spot, Neon = true },
-    }
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.12, 0.14, 0.06), At = at(0.13 * side, -0.15, -0.31), Color = BLACK }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Wedge", Size = Vector3.new(0.1, 0.35, 0.15), At = at(0.36 * side, -0.35, 0, 0, 90 * side, 30 * side), Color = stem }
-    end)
-    return { Scale = 0.9, Parts = parts }
-end
-
-local function jadeSpiritPanda()
-    local white = Color3.fromRGB(245, 245, 240)
-    local black = Color3.fromRGB(30, 35, 35)
-    local jade = Color3.fromRGB(80, 210, 140)
-    local parts = {
-        { Shape = "Prism", Axis = "Y", Size = Vector3.new(1.2, 1.1, 1.1), At = at(0, 0, 0), Color = white },
-        { Shape = "Prism", Axis = "X", Size = Vector3.new(0.95, 0.9, 0.9), At = at(0, 0.8, -0.2), Color = white },
-        { Shape = "Prism", Size = Vector3.new(0.35, 0.25, 0.25), At = at(0, 0.68, -0.72), Color = white },
-        { Shape = "Block", Size = Vector3.new(0.14, 0.1, 0.06), At = at(0, 0.76, -0.86), Color = black },
-        { Shape = "Block", Size = Vector3.new(0.3, 0.3, 0.08), At = at(0, 0.05, -0.57, 0, 0, 45), Color = jade, Neon = true },
-    }
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.32, 0.32, 0.25), At = at(0.36 * side, 1.25, -0.15, 0, 0, 20 * side), Color = black }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.24, 0.3, 0.08), At = at(0.2 * side, 0.85, -0.66, 0, 0, -20 * side), Color = black }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.09, 0.09, 0.06), At = at(0.2 * side, 0.87, -0.71), Color = jade, Neon = true }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.32, 0.6, 0.32), At = at(0.58 * side, 0, -0.25, 20, 0, 15 * side), Color = black }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.4, 0.32, 0.5), At = at(0.35 * side, -0.58, -0.15), Color = black }
-    end)
-    return { Scale = 1, Parts = parts }
-end
-
-local function jadeAntlerDeer()
-    local fur = Color3.fromRGB(165, 120, 75)
-    local light = Color3.fromRGB(240, 225, 200)
-    local jade = Color3.fromRGB(120, 230, 140)
-    local parts = {
-        { Shape = "Prism", Size = Vector3.new(0.75, 0.75, 1.4), At = at(0, 0, 0), Color = fur },
-        { Shape = "Block", Size = Vector3.new(0.35, 0.7, 0.35), At = at(0, 0.5, -0.55, -25), Color = fur },
-        { Shape = "Prism", Size = Vector3.new(0.5, 0.45, 0.65), At = at(0, 0.95, -0.85), Color = fur },
-        { Shape = "Wedge", Size = Vector3.new(0.28, 0.22, 0.3), At = at(0, 0.86, -1.3), Color = light },
-        { Shape = "Wedge", Size = Vector3.new(0.22, 0.3, 0.2), At = at(0, 0.3, 0.75, 30, 180, 0), Color = light },
-        { Shape = "Block", Size = Vector3.new(0.13, 0.05, 0.13), At = at(0.18, 0.38, 0.1, 0, 45, 0), Color = light },
-        { Shape = "Block", Size = Vector3.new(0.13, 0.05, 0.13), At = at(-0.16, 0.38, -0.2, 0, 45, 0), Color = light },
-        { Shape = "Block", Size = Vector3.new(0.11, 0.05, 0.11), At = at(-0.08, 0.38, 0.4, 0, 45, 0), Color = light },
-    }
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.08, 0.75, 0.08), At = at(0.15 * side, 1.5, -0.8, 0, 0, -18 * side), Color = jade, Neon = true }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.07, 0.4, 0.07), At = at(0.32 * side, 1.55, -0.8, 0, 0, -60 * side), Color = jade, Neon = true }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.07, 0.35, 0.07), At = at(0.3 * side, 1.82, -0.8, 0, 0, -10 * side), Color = jade, Neon = true }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.1, 0.1, 0.06), At = at(0.18 * side, 1, -1.18), Color = BLACK }
-    end)
-    for _, z in { -0.45, 0.45 } do
-        mirrored(parts, function(side)
-            return { Shape = "Block", Size = Vector3.new(0.13, 0.65, 0.13), At = at(0.22 * side, -0.6, z), Color = fur }
-        end)
-    end
-    return { Scale = 1.05, Parts = parts }
-end
-
-local function magmaCub()
-    local rock = Color3.fromRGB(55, 45, 45)
-    local lava = Color3.fromRGB(255, 110, 30)
-    local parts = {
-        { Shape = "Prism", Size = Vector3.new(1.1, 0.95, 1.2), At = at(0, 0, 0.1), Color = rock },
-        { Shape = "Prism", Axis = "X", Size = Vector3.new(0.9, 0.85, 0.85), At = at(0, 0.6, -0.5), Color = rock },
-        { Shape = "Prism", Size = Vector3.new(0.42, 0.3, 0.3), At = at(0, 0.48, -1), Color = rock },
-        { Shape = "Block", Size = Vector3.new(0.14, 0.1, 0.06), At = at(0, 0.56, -1.16), Color = lava, Neon = true },
-        { Shape = "Block", Size = Vector3.new(0.7, 0.07, 0.08), At = at(0, 0.48, 0.1, 0, 0, 15), Color = lava, Neon = true },
-        { Shape = "Block", Size = Vector3.new(0.5, 0.07, 0.08), At = at(0.05, 0.47, 0.45, 0, 0, -20), Color = lava, Neon = true },
-        { Shape = "Block", Size = Vector3.new(0.08, 0.07, 0.5), At = at(-0.15, 0.48, 0.25), Color = lava, Neon = true },
-    }
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.28, 0.28, 0.18), At = at(0.32 * side, 1.02, -0.45, 0, 0, 45), Color = rock }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.15, 0.12, 0.06), At = at(0.2 * side, 0.7, -0.94), Color = lava, Neon = true }
-    end)
-    for _, z in { -0.25, 0.45 } do
-        mirrored(parts, function(side)
-            return { Shape = "Block", Size = Vector3.new(0.3, 0.4, 0.3), At = at(0.32 * side, -0.48, z), Color = rock }
-        end)
-    end
-    return { Scale = 0.95, Parts = parts }
-end
-
-local function sunscaleDragon()
-    local gold = Color3.fromRGB(255, 200, 60)
-    local amber = Color3.fromRGB(230, 120, 30)
-    local sun = Color3.fromRGB(255, 240, 150)
-    local parts = {
-        { Shape = "Prism", Size = Vector3.new(0.85, 0.75, 0.95), At = at(0, 0.45, -0.7), Color = gold },
-        { Shape = "Wedge", Size = Vector3.new(0.5, 0.35, 0.5), At = at(0, 0.35, -1.35), Color = gold },
-        { Shape = "Prism", Size = Vector3.new(0.85, 0.85, 0.8), At = at(0, 0, 0), Color = gold },
-        { Shape = "Prism", Size = Vector3.new(0.7, 0.7, 0.6), At = at(0, -0.05, 0.62, -10), Color = amber },
-        { Shape = "Prism", Size = Vector3.new(0.5, 0.5, 0.5), At = at(0, 0.15, 1.12, -25), Color = amber },
-        { Shape = "Prism", Size = Vector3.new(1.35, 1.35, 0.08), At = at(0, 0.75, -0.15), Color = sun, Neon = true, Transparency = 0.35 },
-    }
-    mirrored(parts, function(side)
-        return { Shape = "Wedge", Size = Vector3.new(0.15, 0.5, 0.35), At = at(0.25 * side, 1, -0.55, -20, 180, 0), Color = amber }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.16, 0.14, 0.08), At = at(0.3 * side, 0.6, -1.15), Color = sun, Neon = true }
-    end)
-    mirrored(parts, function(side)
-        return wing(side, 0.35, 0.35, 0.1, 1, 0.9, 30, amber)
-    end)
-    return { Scale = 1, Parts = parts }
-end
-
-local function dawnPhoenix()
-    local flame = Color3.fromRGB(255, 120, 55)
-    local gold = Color3.fromRGB(255, 205, 90)
-    local crimson = Color3.fromRGB(215, 35, 85)
-    local parts = {
-        { Shape = "Prism", Size = Vector3.new(0.8, 0.8, 1.2), At = at(0, 0, 0, -10), Color = flame },
-        { Shape = "Prism", Axis = "Y", Size = Vector3.new(0.6, 0.6, 0.6), At = at(0, 0.6, -0.55), Color = flame },
-        { Shape = "Wedge", Size = Vector3.new(0.2, 0.2, 0.35), At = at(0, 0.55, -1.02), Color = gold },
-        { Shape = "Wedge", Size = Vector3.new(0.1, 0.5, 0.3), At = at(0, 1.05, -0.5, -10, 180, 0), Color = gold, Neon = true },
-        { Shape = "Wedge", Size = Vector3.new(0.1, 0.4, 0.3), At = at(0, 0.98, -0.3, -35, 180, 0), Color = gold, Neon = true },
-    }
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.12, 0.12, 0.06), At = at(0.2 * side, 0.68, -0.86), Color = BLACK }
-    end)
-    mirrored(parts, function(side)
-        return wing(side, 0.3, 0.3, 0.05, 1.3, 1, 40, flame)
-    end)
-    mirrored(parts, function(side)
-        return wing(side, 0.3, 0.45, 0.05, 0.8, 0.6, 40, gold, true)
-    end)
-    for index, angle in { -15, 0, 15 } do
-        local length = if index == 2 then 1.4 else 1.1
-        table.insert(parts, {
-            Shape = "Wedge",
-            Size = Vector3.new(0.18, 0.12, length),
-            At = at(0, -0.05, 0.6, 15, angle, 0) * CFrame.new(0, 0, length / 2),
-            Color = crimson,
-            Neon = true,
-        })
-    end
-    return { Scale = 1.15, Parts = parts }
-end
-
 PetModels.Pets = {
     AquaWisp = { Scale = 0.95, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old droplet design removed (MESH_LOOKS was tuned with this scale)
     EmberWyrm = { Scale = 1.05, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old lava-bead design removed (MESH_LOOKS was tuned with this scale)
@@ -268,21 +65,22 @@ PetModels.Pets = {
     NineTailMoonfox = nineTailMoonfox(),
     OriginSerpent = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old block serpent removed (MESH_LOOKS was tuned with this scale)
     AstralWhale = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted block whale removed (MESH_LOOKS was tuned with this scale)
-    MossGolem = mossGolem(),
-    MyceliumSprite = myceliumSprite(),
-    JadeSpiritPanda = jadeSpiritPanda(),
-    JadeAntlerDeer = jadeAntlerDeer(),
-    MagmaCub = magmaCub(),
-    SunscaleDragon = sunscaleDragon(),
-    DawnPhoenix = dawnPhoenix(),
+    MossGolem = { Scale = 0.9, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
+    MyceliumSprite = { Scale = 0.9, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
+    JadeSpiritPanda = { Scale = 1, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
+    JadeAntlerDeer = { Scale = 1.05, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
+    MagmaCub = { Scale = 0.95, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
+    SunscaleDragon = { Scale = 1, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
+    DawnPhoenix = { Scale = 1.15, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
 }
 
+-- every other pet: its imported model at its rarity's scale; the few still without one (PetArchetypes.Specs) built from simple shapes
 do
     local PetArchetypes = require(script.Parent:WaitForChild("PetArchetypes"))
-    for petId, spec in PetArchetypes.Specs do
+    for petId, pet in GameConfig.Pets do
         if not PetModels.Pets[petId] then
-            local pet = GameConfig.Pets[petId]
-            PetModels.Pets[petId] = PetArchetypes.build(spec, pet and pet.Rarity)
+            local spec = PetArchetypes.Specs[petId]
+            PetModels.Pets[petId] = if spec then PetArchetypes.build(spec, pet.Rarity) else { Scale = PetArchetypes.scaleFor(pet.Rarity), Parts = {} }
         end
     end
 end
@@ -600,6 +398,8 @@ dressUp = function(model, rootPart, body, size, look, k, turn)
     end
 end
 
+local warnedMissing = {} -- [petId] = true once its missing model has been reported
+
 function PetModels.build(petId)
     local design = PetModels.Pets[petId]
     if not design then
@@ -625,6 +425,12 @@ function PetModels.build(petId)
     if imported and imported:IsA("Model") then
         addImported(model, rootPart, imported, design, petId)
         return model, rootPart
+    end
+
+    if #design.Parts == 0 and not warnedMissing[petId] then
+        -- a pet whose only design is its imported model: without ReplicatedStorage.PetMeshes it would be an invisible root
+        warnedMissing[petId] = true
+        warn("PetModels: no imported model for " .. petId .. " in ReplicatedStorage.PetMeshes" .. (if meshFolder then "" else " (the folder is missing)"))
     end
 
     local scale = design.Scale * PetModels.SIZE

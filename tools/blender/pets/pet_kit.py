@@ -955,9 +955,17 @@ def save_blend():
     return path
 
 
+def preview_dir():
+    """Review renders go to renders/pets/<Egg>/ (git-ignored, local only), never beside the sources."""
+    path = os.path.join(ROOT, "renders", "pets", os.path.basename(TOOLS))
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
 def save_all(preview_view):
-    """The preview beside the .blend, and the .blend. Returns its path."""
+    """The preview render (renders/pets/<Egg>/<Pet>_preview.png), and the .blend. Returns the .blend's path."""
     os.makedirs(TOOLS, exist_ok=True)
-    shots(os.path.join(TOOLS, PET + "_preview"), [preview_view])
-    os.replace(os.path.join(TOOLS, PET + "_preview_0.png"), os.path.join(TOOLS, PET + "_preview.png"))
+    out = preview_dir()
+    shots(os.path.join(out, PET + "_preview"), [preview_view])
+    os.replace(os.path.join(out, PET + "_preview_0.png"), os.path.join(out, PET + "_preview.png"))
     return save_blend()

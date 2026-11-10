@@ -1,12 +1,14 @@
 -- The Spirit Beast Codex's contents and rewards, from GameConfig.Eggs and GameConfig.Codex, shared so the
 -- window shows exactly what the server pays. A reward is claimed once:
 --   "Found:<count>"   a milestone: discover that many beasts, for Spirit Stones and a lasting Qi bonus
+--   "Found:All"       the last milestone: discover every beast (a fixed id, so a new beast never re-opens it)
 --   "Set:<eggId>"     a page: discover everything that egg hatches, for Spirit Stones by the rarest beast on it
 --
 --   CodexRules.Pets, CodexRules.Total    the beasts that count: every pet an egg can hatch, by id
 --   CodexRules.Eggs                      the eggs in the order they unlock (each { Id, DisplayName, RequiredRank, Pool, Guardian })
 --   CodexRules.Rewards                   every reward, milestones first (each { Id, Kind, Count, EggId, QiPercent })
 --   CodexRules.reward(id)                one reward, or nil
+--   CodexRules.savedId(id)               a saved claim's id today (an old "Found:<total>" is "Found:All")
 --   CodexRules.eggsOf(petId)             the eggs that hatch a pet: { { EggId, Percent } }, best chance first
 --   CodexRules.count(found)              how many beasts in a [petId] = true set count toward the Codex
 --   CodexRules.progress(reward, found)   how far along it is, and its goal
@@ -87,9 +89,12 @@ local function addReward(reward)
     table.insert(CodexRules.Rewards, reward)
     byId[reward.Id] = reward
 end
+local highestCount = 0 -- the biggest numbered milestone: a saved "Found:<n>" above it was the old id of "Found:All"
 for _, milestone in GameConfig.Codex.Milestones do
     local count = milestone.Count or CodexRules.Total -- the last has no count: it's all of them
-    addReward({ Id = "Found:" .. count, Kind = "Found", Count = count, QiPercent = milestone.QiPercent, WeaponShare = milestone.WeaponShare })
+    local id = if milestone.Count then "Found:" .. count else "Found:All"
+    highestCount = math.max(highestCount, milestone.Count or 0)
+    addReward({ Id = id, Kind = "Found", Count = count, QiPercent = milestone.QiPercent, WeaponShare = milestone.WeaponShare })
 end
 for _, egg in CodexRules.Eggs do
     local share = 0
@@ -101,6 +106,19 @@ end
 
 function CodexRules.reward(id)
     return if typeof(id) == "string" then byId[id] else nil
+end
+
+-- Until 2026-11-11 the last milestone's id was "Found:<the total then>" (60, or fewer before later beasts came):
+-- a claim saved that way is the same reward as "Found:All".
+function CodexRules.savedId(id)
+    if typeof(id) ~= "string" or byId[id] then
+        return id
+    end
+    local count = tonumber(string.match(id, "^Found:(%d+)$"))
+    if count and count > highestCount then
+        return "Found:All"
+    end
+    return id
 end
 
 function CodexRules.progress(reward, found)

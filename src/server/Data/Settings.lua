@@ -1,7 +1,7 @@
 -- A player's settings (GameConfig.Settings): Music and Sound volume (0 to 1), ReducedEffects,
 -- StatusMinimized (the profile folded to its portrait) and ShowQuest (the quest panel).
--- Saved in PlayerData as Settings, mirrored to the player's attributes (SettingMusic, SettingSound,
--- SettingReducedEffects) for their client. They change only that player's own view and sound.
+-- Saved in PlayerData as Settings, each mirrored to the player's attribute "Setting<key>" (SettingMusic, SettingSound,
+-- SettingReducedEffects, SettingStatusMinimized, SettingShowQuest) for their client. They change only that player's own view and sound.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))

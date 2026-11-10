@@ -36,10 +36,6 @@ function Tribulation.realmNumber(realmName)
     return realmNumbers[realmName]
 end
 
-function Tribulation.isActive(player)
-    return active[player] ~= nil
-end
-
 local function liveRoot(player, character)
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     if player.Parent ~= Players or player.Character ~= character or not humanoid or humanoid.Health <= 0 then
@@ -87,7 +83,7 @@ end
 
 local function run(player, character, token, realm, onPass)
     local step = math.clamp(realm - 1, 1, #CONFIG.Bolts)
-    local bolts, warn, gap = CONFIG.Bolts[step], CONFIG.Warn[step], CONFIG.Gap[step]
+    local bolts, warnTime, gap = CONFIG.Bolts[step], CONFIG.Warn[step], CONFIG.Gap[step]
     local together, lead = CONFIG.Together[step], CONFIG.Lead[step]
     local lives = CONFIG.Lives
     local lastHit = -math.huge
@@ -124,8 +120,8 @@ local function run(player, character, token, realm, onPass)
             return
         end
         -- one aimed where they are heading; the others ringing round where they are, to close the easy ways out
-        local run = root.AssemblyLinearVelocity * Vector3.new(1, 0, 1)
-        local targets = { groundBelow(root.Position + run * warn * lead) }
+        local heading = root.AssemblyLinearVelocity * Vector3.new(1, 0, 1)
+        local targets = { groundBelow(root.Position + heading * warnTime * lead) }
         local turn = math.random() * 2 * math.pi
         for j = 2, together do
             local a = turn + (j - 2) / math.max(1, together - 1) * 2 * math.pi + (math.random() - 0.5) * 0.8
@@ -135,12 +131,12 @@ local function run(player, character, token, realm, onPass)
         for _, position in targets do
             nextId += 1
             local id = nextId
-            RemoteEvents.TribulationEvent:FireAllClients("Warn", player, { Id = id, Position = position, Radius = CONFIG.Radius, Delay = warn, Left = bolts - k })
-            task.delay(warn, strike, id, position)
+            RemoteEvents.TribulationEvent:FireAllClients("Warn", player, { Id = id, Position = position, Radius = CONFIG.Radius, Delay = warnTime, Left = bolts - k })
+            task.delay(warnTime, strike, id, position)
         end
         task.wait(gap)
     end
-    task.wait(warn + 0.15)
+    task.wait(warnTime + 0.15)
     if active[player] == token then
         finish(player, token, lives > 0, false, realm, onPass)
     end

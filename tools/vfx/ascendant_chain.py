@@ -18,6 +18,9 @@ import numpy as np
 from PIL import Image
 
 OUT = sys.argv[1]
+# review boards go to renders/aura (git-ignored), never beside the uploaded textures
+PREVIEWS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "renders", "aura")
+os.makedirs(PREVIEWS, exist_ok=True)
 os.makedirs(OUT, exist_ok=True)
 SS = 4
 W, H = 256 * SS, 512 * SS
@@ -76,5 +79,5 @@ a = np.asarray(img, dtype=float)
 tile = np.vstack([a, a, a])
 al = tile[..., 3:] / 255
 bg = np.array([12, 18, 40], dtype=float)
-Image.fromarray(np.clip(bg * (1 - al) + tile[..., :3] * al, 0, 255).astype(np.uint8)).save(os.path.join(OUT, "GoldChain_preview.png"))
+Image.fromarray(np.clip(bg * (1 - al) + tile[..., :3] * al, 0, 255).astype(np.uint8)).save(os.path.join(PREVIEWS, "GoldChain_preview.png"))
 print("written")

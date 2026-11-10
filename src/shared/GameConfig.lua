@@ -918,7 +918,7 @@ local GameConfig = {
     -- The exclusive egg (the owner, November 10, 2026): shown in the Store, locked, until its beast is made. It will be sold for
     -- Robux per hatch, showing its odds, and not offered where Roblox restricts paid random items (PolicyService).
     ExclusiveEgg = {
-        Name = "Exclusive Egg", ComingSoon = true, Icon = "rbxassetid://80787462087085",
+        Name = "Exclusive Egg", Icon = "rbxassetid://80787462087085",
         Text = "A beast found in no other egg. Coming soon.",
     },
 }

@@ -15,6 +15,9 @@ import numpy as np
 from PIL import Image
 
 OUT = sys.argv[1]
+# review boards go to renders/aura (git-ignored), never beside the uploaded textures
+PREVIEWS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "renders", "aura")
+os.makedirs(PREVIEWS, exist_ok=True)
 os.makedirs(OUT, exist_ok=True)
 W, H = 256, 1024
 rng = np.random.default_rng(77)
@@ -56,5 +59,5 @@ Image.fromarray(rgba).save(os.path.join(OUT, "SmokeStream.png"))
 # preview: tiled twice, dark smoke on a light ground (to check the seam and the shape)
 t = np.vstack([a, a])
 prev = (220 - t * 200).astype(np.uint8)
-Image.fromarray(prev).save(os.path.join(OUT, "SmokeStream_preview.png"))
+Image.fromarray(prev).save(os.path.join(PREVIEWS, "SmokeStream_preview.png"))
 print("written")

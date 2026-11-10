@@ -16,7 +16,7 @@ Everything is unwrapped onto its island's existing atlas, so the one FBX brings 
 at the island's uploaded atlas. The floors don't collide, like the Beginner Isle's.
 
     import island_upgrades as U
-    U.export()                       # assets/world/IslandUpgrades.fbx
+    U.export()                       # assets/world/IslandUpgrades/IslandUpgrades.fbx
 """
 import math
 import random
@@ -878,7 +878,7 @@ def build(island):
 
 
 def export():
-    """assets/world/IslandUpgrades.fbx: every new piece at the origin, UV'd on its island's atlas, with no textures of its own."""
+    """assets/world/IslandUpgrades/IslandUpgrades.fbx: every new piece at the origin, UV'd on its island's atlas, with no textures of its own."""
     objs = []
     plain = bpy.data.materials.new("IslandUpgrade")
     for island in ISLANDS:
@@ -886,5 +886,5 @@ def export():
             o.data.materials.clear()
             o.data.materials.append(plain)
             objs.append(o)
-    W.export_batch(objs, W.REPO + "/assets/world/IslandUpgrades.fbx", anchor_name="IU_Anchor")
+    W.export_batch(objs, W.REPO + "/assets/world/IslandUpgrades/IslandUpgrades.fbx", anchor_name="IU_Anchor")
     return objs

@@ -65,11 +65,6 @@ function TitleBook.removePlayer(player)
     state[player] = nil
 end
 
-function TitleBook.has(player, id)
-    local data = state[player]
-    return data ~= nil and data.earned[id] == true
-end
-
 -- True when it is new to them.
 function TitleBook.earn(player, id)
     local data = state[player]

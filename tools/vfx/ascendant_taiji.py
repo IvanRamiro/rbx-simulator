@@ -10,7 +10,7 @@ sky), so its ImageColor3 is white.
     python3 ascendant_taiji.py assets/aura/ascendant     (needs Pillow and numpy)
 
   AscendantTaiji.png          1024x1024 RGBA
-  AscendantTaiji_preview.png  on a dark ground, and on a sky blue (how it is seen in the day)
+  AscendantTaiji_preview.png  (renders/aura) on a dark ground, and on a sky blue (how it is seen in the day)
 """
 import math
 import os
@@ -20,6 +20,9 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 OUT = sys.argv[1]
+# review boards go to renders/aura (git-ignored), never beside the uploaded textures
+PREVIEWS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "renders", "aura")
+os.makedirs(PREVIEWS, exist_ok=True)
 os.makedirs(OUT, exist_ok=True)
 N = 2048
 TAU = math.tau
@@ -105,5 +108,5 @@ al = a[..., 3:] / 255
 tiles = []
 for bg in (np.array([12, 18, 40], dtype=float), np.array([110, 170, 230], dtype=float)):
     tiles.append(np.clip(bg * (1 - al) + a[..., :3] * al, 0, 255).astype(np.uint8))
-Image.fromarray(np.hstack(tiles)).save(os.path.join(OUT, "AscendantTaiji_preview.png"))
+Image.fromarray(np.hstack(tiles)).save(os.path.join(PREVIEWS, "AscendantTaiji_preview.png"))
 print("written")

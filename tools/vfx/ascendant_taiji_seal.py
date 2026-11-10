@@ -11,7 +11,7 @@ No text, no trigrams. The texture carries its own colour and alpha, so its Image
     python3 ascendant_taiji_seal.py assets/aura/ascendant     (needs Pillow and numpy)
 
   AscendantTaijiSeal.png          1024x1024 RGBA
-  AscendantTaijiSeal_preview.png  on a dark ground and on a sky blue
+  AscendantTaijiSeal_preview.png  (renders/aura) on a dark ground and on a sky blue
 """
 import math
 import os
@@ -21,6 +21,9 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 OUT = sys.argv[1]
+# review boards go to renders/aura (git-ignored), never beside the uploaded textures
+PREVIEWS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "renders", "aura")
+os.makedirs(PREVIEWS, exist_ok=True)
 os.makedirs(OUT, exist_ok=True)
 N = 2048
 C = N / 2
@@ -170,5 +173,5 @@ a = np.asarray(img, dtype=float)
 al = a[..., 3:] / 255
 tiles = [np.clip(bg * (1 - al) + a[..., :3] * al, 0, 255).astype(np.uint8)
          for bg in (np.array([12, 18, 40], dtype=float), np.array([110, 170, 230], dtype=float))]
-Image.fromarray(np.hstack(tiles)).save(os.path.join(OUT, "AscendantTaijiSeal_preview.png"))
+Image.fromarray(np.hstack(tiles)).save(os.path.join(PREVIEWS, "AscendantTaijiSeal_preview.png"))
 print("written")

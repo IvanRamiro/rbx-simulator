@@ -2,7 +2,7 @@
 -- special move (PetRig), for the pets that have one. Original writing, English only.
 return {
     AquaWisp = {
-        Lore = "A droplet that learned to think while falling. It follows anyone whose Qi runs as calm as still water.",
+        Lore = "A little seahorse of living water, spun from the first wave of the morning tide. It follows anyone whose Qi runs as calm as still water.",
         Special = { Name = "Tide Spiral", Text = "Curls up tight and twirls until three ribbons of water spiral up around it and burst into a shower of droplets." },
     },
     EmberWyrm = {
@@ -18,7 +18,7 @@ return {
         Special = { Name = "Thunder Comes Home", Text = "Lifts its thundercloud high and calls down a lightning strike; the strike rolls back to it as a ball of lightning and leaps home into its cloud." },
     },
     GoldenKirin = {
-        Lore = "A white-furred qilin that treads the air on clouds of its own making. Old stories say it never steps on a living blade of grass.",
+        Lore = "A pearl-white qilin that treads the air on lotuses of light. Old stories say it never steps on a living blade of grass.",
         Special = { Name = "Lotus Bloom", Text = "Rears up, its halo flaring, and a great lotus of golden light blooms on the air beneath it." },
     },
     AstralWhale = {
@@ -60,7 +60,7 @@ return {
     },
     WindSprite = {
         Lore = "A curl of breeze that decided to stay. It tugs at sleeves when it wants attention.",
-        Special = { Name = "Tugging Gale", Text = "Fills its cheeks and blows three ribbons of wind that wind round each other and carry leaves away." },
+        Special = { Name = "Tugging Gale", Text = "Fills its cheeks and blows three ribbons of wind that wind round each other and carry petals away." },
     },
     CloudSheep = {
         Lore = "A sheep whose fleece is a real cloud, silver lining and all, always half asleep. It paddles its hooves on the air as if it were swimming.",

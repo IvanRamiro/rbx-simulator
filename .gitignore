@@ -8,3 +8,6 @@ Untitled.blend
 
 # Python bytecode from the Blender world scripts
 __pycache__/
+
+# Review renders (pet previews, egg review sheets, contact sheets): local only
+renders/

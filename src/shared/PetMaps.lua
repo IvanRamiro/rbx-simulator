@@ -36,6 +36,7 @@ return {
     MyceliumSprite = "rbxassetid://94221576326290",
     NebulaOwl = "rbxassetid://85013631717001",
     ObsidianGuardian = "rbxassetid://124875572363642",
+    OriginSerpent = "rbxassetid://115989097919715",
     PrismArmadillo = "rbxassetid://125786671185533",
     RuneSphinx = "rbxassetid://125628324690653",
     SandPhantom = "rbxassetid://79708404639959",

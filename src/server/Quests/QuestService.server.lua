@@ -83,7 +83,9 @@ end
 
 local function complete(player, step)
     local quest = GameConfig.Quests[step]
-    Wallet.add(player, quest.Reward, "Quest", quest.Id)
+    if not Wallet.add(player, quest.Reward, "Quest", quest.Id) then
+        return -- the wallet isn't set up yet: the quest stays done and pays on the next check, never skipped unpaid
+    end
     Analytics.questStep(player, step, quest.Id)
     Quests.set(player, step + 1)
     begin(player)

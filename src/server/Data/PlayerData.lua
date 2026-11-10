@@ -283,6 +283,20 @@ local function captureProgress(player)
     local loaded = profiles[player] and profiles[player].progress
     local titles = TitleBook.exportData(player) or (loaded and loaded.Titles) or TitleBook.sanitize(nil)
     if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings and rewards and codex) then
+        -- nothing is saved until every part is set up: say once which part is missing, or a session could go unsaved unseen
+        local profile = profiles[player]
+        if profile and profile.status == "Loaded" and not profile.warnedCapture then
+            profile.warnedCapture = true
+            local missing = {}
+            for name, value in { Qi = qi, Rank = rankValue, Pets = pets, Relics = relics, Eggs = eggs, SpiritStones = stones,
+                Weapons = weapons, ForgeElements = elements, Quest = quest, Settings = settings, Rewards = rewards, Codex = codex } do
+                if not value then
+                    table.insert(missing, name)
+                end
+            end
+            table.sort(missing)
+            warn("PlayerData: not saving " .. profile.key .. " yet: not set up: " .. table.concat(missing, ", "))
+        end
         return nil
     end
 
@@ -309,11 +323,13 @@ local function captureProgress(player)
     }
 end
 
+local NO_STORE = "PlayerData: no DataStore" -- our own error when the store never opened (matched exactly below)
+
 local function isPermanentError(message)
     message = tostring(message)
     return string.find(message, "StudioAccessToApisNotAllowed") ~= nil
         or string.find(message, "publish") ~= nil
-        or string.find(message, "unavailable") ~= nil
+        or string.find(message, NO_STORE, 1, true) ~= nil
 end
 
 local function claimSession(stored, sessionId, takeOver)
@@ -380,7 +396,7 @@ local function loadProfile(player, profile)
         local takeOver = attempt == LOAD_ATTEMPTS
         local ok, err = pcall(function()
             if not store then
-                error("DataStores are unavailable")
+                error(NO_STORE)
             end
 
             store:UpdateAsync(profile.key, function(stored)
@@ -392,6 +408,8 @@ local function loadProfile(player, profile)
         if not ok then
             result = "Error"
             warn("PlayerData: load failed for " .. profile.key .. ": " .. tostring(err))
+        elseif result == "Corrupt" then
+            warn("PlayerData: the saved record of " .. profile.key .. " is not readable (Corrupt): left untouched, player not loaded")
         end
 
         local shouldRetry = (result == "Locked" or result == "Error")

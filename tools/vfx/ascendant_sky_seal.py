@@ -13,7 +13,7 @@ colour, white-hot to the owner's gold (255,170,40) to amber, so its Color is whi
     python3 ascendant_sky_seal.py assets/aura/ascendant     (needs Pillow and numpy)
 
   AscendantSkySeal.png          1024x1024 RGBA
-  AscendantSkySeal_preview.png  on a dark ground
+  AscendantSkySeal_preview.png  (renders/aura) on a dark ground
 """
 import math
 import os
@@ -23,6 +23,9 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 OUT = sys.argv[1]
+# review boards go to renders/aura (git-ignored), never beside the uploaded textures
+PREVIEWS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "renders", "aura")
+os.makedirs(PREVIEWS, exist_ok=True)
 os.makedirs(OUT, exist_ok=True)
 N = 2048
 C = N / 2
@@ -112,5 +115,5 @@ img.save(os.path.join(OUT, "AscendantSkySeal.png"))
 a = np.asarray(img, dtype=float)
 bg = np.array([12, 18, 40], dtype=float)
 al = a[..., 3:] / 255
-Image.fromarray(np.clip(bg * (1 - al) + a[..., :3] * al * 1.3, 0, 255).astype(np.uint8)).save(os.path.join(OUT, "AscendantSkySeal_preview.png"))
+Image.fromarray(np.clip(bg * (1 - al) + a[..., :3] * al * 1.3, 0, 255).astype(np.uint8)).save(os.path.join(PREVIEWS, "AscendantSkySeal_preview.png"))
 print("written")

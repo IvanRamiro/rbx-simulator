@@ -1,0 +1,92 @@
+{
+  "AncientGroveEgg": {
+    "color": 98277052175066,
+    "metalness": 107350023122585,
+    "normal": 91422804988170,
+    "roughness": 112270633811304
+  },
+  "AstralSanctumEgg": {
+    "color": 105539314703426,
+    "metalness": 108489996892151,
+    "normal": 134605723762122,
+    "roughness": 105624472171489
+  },
+  "BeginnerQiEgg": {
+    "color": 85326742112002,
+    "metalness": 105888176874633,
+    "normal": 136538618524992,
+    "roughness": 73466012427164
+  },
+  "BloomwoodEgg": {
+    "color": 93834790753835,
+    "metalness": 103935601124013,
+    "normal": 117134430947291,
+    "roughness": 136979796642562
+  },
+  "CelestialEgg": {
+    "color": 96092447849705,
+    "metalness": 135244017994710,
+    "normal": 135242264336240,
+    "roughness": 74434308435100
+  },
+  "ElementalCoreEgg": {
+    "color": 130055108763673,
+    "metalness": 104461620818145,
+    "normal": 139285964700209,
+    "roughness": 78382156379774
+  },
+  "ForbiddenOriginEgg": {
+    "color": 70996601035868,
+    "metalness": 105796879046825,
+    "normal": 123906529940448,
+    "roughness": 128297226996809
+  },
+  "HeavenlyThroneEgg": {
+    "color": 129751212499920,
+    "metalness": 74370131045699,
+    "normal": 119124785006133,
+    "roughness": 129307775973315
+  },
+  "InfernoEgg": {
+    "color": 88239563828508,
+    "metalness": 117187413876142,
+    "normal": 90809821567851,
+    "roughness": 75205668979562
+  },
+  "JadeSpiritEgg": {
+    "color": 128790718296570,
+    "metalness": 89419935229444,
+    "normal": 111036232630283,
+    "roughness": 73061869003609
+  },
+  "MagmaHeartEgg": {
+    "color": 98793988818153,
+    "metalness": 108529450819367,
+    "normal": 111521511151629,
+    "roughness": 114931858704463
+  },
+  "PhoenixAshEgg": {
+    "color": 101161615872601,
+    "metalness": 117566528130700,
+    "normal": 124217404460169,
+    "roughness": 129516099923664
+  },
+  "PrimordialAbyssEgg": {
+    "color": 138877144790867,
+    "metalness": 105605854062028,
+    "normal": 79419205424182,
+    "roughness": 91171223663075
+  },
+  "SpiritBreezeEgg": {
+    "color": 119279393841031,
+    "metalness": 133542287659812,
+    "normal": 125984764191983,
+    "roughness": 132249929399958
+  },
+  "VoidRiftEgg": {
+    "color": 71043423081845,
+    "metalness": 135294662133150,
+    "normal": 88136549947118,
+    "roughness": 108729818191459
+  }
+}

@@ -11,7 +11,7 @@ emitter's Color is white: a tint alone can't make white-hot cores.
     python3 ascendant_energy_circle.py assets/aura/ascendant     (needs Pillow and numpy)
 
   AscendantCircle.png          1024x1024 RGBA
-  AscendantCircle_preview.png  on a dark ground
+  AscendantCircle_preview.png  (renders/aura) on a dark ground
 """
 import math
 import os
@@ -21,6 +21,9 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 OUT = sys.argv[1]
+# review boards go to renders/aura (git-ignored), never beside the uploaded textures
+PREVIEWS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "renders", "aura")
+os.makedirs(PREVIEWS, exist_ok=True)
 os.makedirs(OUT, exist_ok=True)
 rng = np.random.default_rng(5)
 N = 2048
@@ -190,5 +193,5 @@ img.save(os.path.join(OUT, "AscendantCircle.png"))
 a = np.asarray(img, dtype=float)
 bg = np.array([12, 18, 40], dtype=float)
 prev = bg * (1 - a[..., 3:] / 255) + a[..., :3] * (a[..., 3:] / 255) + a[..., :3] * (a[..., 3:] / 255) * 0.3
-Image.fromarray(np.clip(prev, 0, 255).astype(np.uint8)).save(os.path.join(OUT, "AscendantCircle_preview.png"))
+Image.fromarray(np.clip(prev, 0, 255).astype(np.uint8)).save(os.path.join(PREVIEWS, "AscendantCircle_preview.png"))
 print("written:", sorted(os.listdir(OUT)))

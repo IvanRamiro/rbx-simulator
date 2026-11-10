@@ -335,30 +335,6 @@ local function blob(spec)
     return parts
 end
 
-local function ray(spec)
-    local body, accent, belly = spec.Body, spec.Accent, spec.Belly
-    local parts = {
-        prism("Z", Vector3.new(1.3, 0.38, 0.9), at(0, 0, 0), body),
-        prism("Z", Vector3.new(1.0, 0.15, 0.7), at(0, -0.2, 0), belly),
-        prism("Z", Vector3.new(1.5, 0.08, 0.08), at(0, 0.02, 1.2, 8), accent),
-        diamond(0, 0.1, 1.95, 0.16, spec.Glow),
-    }
-    mirrored(parts, function(side)
-        return {
-            Shape = "Wedge",
-            Size = Vector3.new(0.1, 1.2, 1.1),
-            At = at(side * 0.4, 0, 0.1) * CFrame.Angles(0, 0, math.rad(side * (-80))) * CFrame.new(0, 0.6, 0),
-            Color = accent,
-        }
-    end)
-    addEyes(parts, spec, 0.42, 0.12, -0.66, 0.16)
-    for index = 0, 5 do
-        table.insert(parts, diamond((index % 3 - 1) * 0.5, 0.22, (index // 3) * 0.5 - 0.2, 0.08, spec.Glow))
-    end
-    addExtras(parts, spec, 0.9)
-    return parts
-end
-
 local function golem(spec)
     local body, accent, belly = spec.Body, spec.Accent, spec.Belly
     local parts = {
@@ -387,13 +363,17 @@ local function golem(spec)
     return parts
 end
 
-local KINDS = { Beast = beast, Bird = bird, Serpent = serpent, Blob = blob, Ray = ray, Golem = golem }
+local KINDS = { Beast = beast, Bird = bird, Serpent = serpent, Blob = blob, Golem = golem }
 local SCALE_BY_RARITY = { Common = 0.9, Uncommon = 0.95, Rare = 1, Epic = 1.05, Legendary = 1.15, Mythical = 1.2, Secret = 1.25 }
+
+function PetArchetypes.scaleFor(rarity)
+    return SCALE_BY_RARITY[rarity] or 1
+end
 
 function PetArchetypes.build(spec, rarity)
     local build = KINDS[spec.Kind]
     assert(build, "PetArchetypes: unknown Kind " .. tostring(spec.Kind))
-    return { Scale = SCALE_BY_RARITY[rarity] or 1, Parts = build(spec) }
+    return { Scale = PetArchetypes.scaleFor(rarity), Parts = build(spec) }
 end
 
 local function rgb(r, g, b)
@@ -401,52 +381,11 @@ local function rgb(r, g, b)
 end
 
 PetArchetypes.Specs = {
-    WindSprite = { Kind = "Blob", Body = rgb(175, 235, 220), Accent = rgb(110, 210, 190), Belly = rgb(230, 250, 245), Glow = rgb(150, 255, 220), Core = rgb(220, 255, 245), Wings = "Insect", Antennae = true },
-    CloudSheep = { Kind = "Beast", Body = rgb(232, 232, 240), Accent = rgb(170, 175, 215), Belly = rgb(215, 212, 210), Glow = rgb(120, 215, 245), Core = rgb(240, 248, 255), Ears = "Round", Horns = "Curled", Puffs = true, Tail = "Fluffy" },
-    SpiritCrane = { Kind = "Bird", Body = rgb(240, 240, 232), Accent = rgb(60, 90, 100), Belly = rgb(250, 250, 245), Glow = rgb(40, 210, 200), Core = rgb(225, 245, 245), Wings = "Feather", Crest = true, Tail = "Long", Legs = true },
-    AzureSkyDragon = { Kind = "Serpent", Body = rgb(30, 80, 190), Accent = rgb(160, 190, 230), Belly = rgb(150, 175, 215), Glow = rgb(70, 170, 255), Core = rgb(210, 240, 255), Horns = "Horns", Wings = "Bat" },
-    StormhornKirin = { Kind = "Beast", Body = rgb(90, 95, 140), Accent = rgb(255, 230, 90), Belly = rgb(190, 195, 230), Glow = rgb(255, 240, 120), Core = rgb(255, 250, 200), Horns = "Single", Mane = true, Tail = "Long", Gems = true },
-    GlacierPuff = { Kind = "Blob", Body = rgb(200, 235, 255), Accent = rgb(150, 210, 255), Belly = rgb(240, 250, 255), Glow = rgb(170, 235, 255), Core = rgb(240, 252, 255), Puffs = true, Spikes = true },
-    StormBumblebee = { Kind = "Blob", Body = rgb(255, 200, 60), Accent = rgb(70, 72, 96), Belly = rgb(255, 230, 150), Glow = rgb(255, 240, 120), Core = rgb(255, 250, 200), Wings = "Insect", Antennae = true },
-    CrystalBeetle = { Kind = "Blob", Body = rgb(90, 70, 150), Accent = rgb(150, 240, 255), Belly = rgb(60, 50, 100), Glow = rgb(160, 245, 255), Core = rgb(220, 250, 255), Shell = true, Horns = "Single", Antennae = true },
-    GravityImp = { Kind = "Blob", Body = rgb(80, 60, 120), Accent = rgb(200, 120, 255), Belly = rgb(140, 110, 190), Glow = rgb(210, 140, 255), Core = rgb(240, 210, 255), Horns = "Horns", Wings = "Bat", Gems = true, Tail = "Stinger" },
-    ThunderclawDrake = { Kind = "Serpent", Body = rgb(60, 60, 80), Accent = rgb(255, 220, 70), Belly = rgb(110, 110, 140), Glow = rgb(255, 235, 100), Core = rgb(255, 250, 190), Horns = "Horns", Wings = "Bat", Legs = true, Spikes = true },
-    FrostfangSerpent = { Kind = "Serpent", Body = rgb(215, 240, 255), Accent = rgb(120, 200, 255), Belly = rgb(250, 255, 255), Glow = rgb(160, 230, 255), Core = rgb(240, 252, 255), Horns = "Antlers", Spikes = true, Gems = true },
-    DreamMoth = { Kind = "Blob", Body = rgb(230, 200, 255), Accent = rgb(255, 180, 230), Belly = rgb(250, 235, 255), Glow = rgb(255, 190, 240), Core = rgb(255, 235, 250), Wings = "Insect", Antennae = true },
-    CrystalSnail = { Kind = "Blob", Body = rgb(170, 230, 190), Accent = rgb(120, 240, 220), Belly = rgb(210, 250, 225), Glow = rgb(140, 255, 230), Core = rgb(210, 255, 240), ShellSpiral = true, Antennae = true },
-    PrismArmadillo = { Kind = "Beast", Body = rgb(150, 130, 120), Accent = rgb(200, 160, 255), Belly = rgb(210, 190, 175), Glow = rgb(190, 170, 255), Core = rgb(240, 230, 255), Ears = "Round", Shell = true, Tail = "Long" },
-    LanternWarden = { Kind = "Golem", Body = rgb(90, 110, 90), Accent = rgb(255, 210, 110), Belly = rgb(130, 150, 120), Glow = rgb(255, 220, 120), Core = rgb(255, 245, 200), Halo = true, GlowEyes = true },
-    JadeWyrmTurtle = { Kind = "Beast", Body = rgb(90, 160, 110), Accent = rgb(60, 200, 150), Belly = rgb(200, 220, 170), Glow = rgb(110, 255, 190), Core = rgb(210, 255, 230), Shell = true, Horns = "Horns", Tail = "Long", Spikes = true },
     EchoBat = { Kind = "Blob", Body = rgb(90, 80, 120), Accent = rgb(170, 150, 220), Belly = rgb(150, 140, 180), Glow = rgb(200, 170, 255), Core = rgb(230, 220, 255), Ears = "Long", Wings = "Bat" },
     QiClockworkFinch = { Kind = "Bird", Body = rgb(200, 160, 90), Accent = rgb(130, 230, 210), Belly = rgb(230, 200, 140), Glow = rgb(140, 255, 230), Core = rgb(230, 255, 245), Wings = "Feather", Tail = "Fan", Gems = true },
     MoonfangTiger = { Kind = "Beast", Body = rgb(225, 225, 240), Accent = rgb(120, 130, 200), Belly = rgb(250, 250, 255), Glow = rgb(170, 180, 255), Core = rgb(240, 240, 255), Ears = "Pointed", Tail = "Long", Stripes = true },
     ThousandEyedGuardian = { Kind = "Golem", Body = rgb(70, 60, 90), Accent = rgb(255, 200, 90), Belly = rgb(110, 100, 130), Glow = rgb(255, 210, 110), Core = rgb(255, 240, 200), GlowEyes = true, Gems = true, Halo = true },
     NinefoldSpiritSerpent = { Kind = "Serpent", Body = rgb(230, 240, 250), Accent = rgb(130, 255, 210), Belly = rgb(250, 255, 255), Glow = rgb(140, 255, 220), Core = rgb(230, 255, 248), Horns = "Antlers", Whiskers = true, Gems = true },
-    WorldrootColossus = { Kind = "Golem", Body = rgb(110, 85, 60), Accent = rgb(120, 220, 110), Belly = rgb(150, 120, 90), Glow = rgb(140, 255, 140), Core = rgb(220, 255, 210), Horns = "Antlers", GlowEyes = true },
-    SandPhantom = { Kind = "Blob", Body = rgb(230, 200, 140), Accent = rgb(200, 150, 80), Belly = rgb(245, 225, 180), Glow = rgb(255, 210, 130), Core = rgb(255, 240, 200), Tentacles = true, Translucent = true },
-    SolarButterfly = { Kind = "Blob", Body = rgb(255, 200, 80), Accent = rgb(255, 130, 60), Belly = rgb(255, 230, 150), Glow = rgb(255, 210, 90), Core = rgb(255, 245, 190), Wings = "Insect", Antennae = true },
-    ObsidianGuardian = { Kind = "Golem", Body = rgb(40, 35, 50), Accent = rgb(180, 90, 255), Belly = rgb(70, 60, 80), Glow = rgb(200, 120, 255), Core = rgb(230, 200, 255), Spikes = true, GlowEyes = true },
-    GoldenManeLion = { Kind = "Beast", Body = rgb(240, 190, 90), Accent = rgb(255, 140, 40), Belly = rgb(255, 225, 160), Glow = rgb(255, 200, 90), Core = rgb(255, 245, 200), Ears = "Round", Mane = true, Tail = "Long" },
-    DreadfangCerberus = { Kind = "Beast", Body = rgb(45, 40, 50), Accent = rgb(255, 90, 50), Belly = rgb(80, 70, 80), Glow = rgb(255, 110, 60), Core = rgb(255, 200, 170), Heads = 3, Ears = "Pointed", Spikes = true, GlowEyes = true, Tail = "Flame" },
-    BonefireDragon = { Kind = "Serpent", Body = rgb(225, 220, 210), Accent = rgb(90, 255, 180), Belly = rgb(180, 175, 165), Glow = rgb(100, 255, 190), Core = rgb(220, 255, 240), Horns = "Horns", Wings = "Bat", Spikes = true, GlowEyes = true },
-    PrismaticPhoenix = { Kind = "Bird", Body = rgb(255, 140, 200), Accent = rgb(120, 220, 255), Belly = rgb(255, 230, 160), Glow = rgb(255, 200, 120), Core = rgb(255, 250, 240), Wings = "Feather", Crest = true, Tail = "Fan", Gems = true, Halo = true },
-    StarfallFox = { Kind = "Beast", Body = rgb(70, 80, 150), Accent = rgb(255, 230, 140), Belly = rgb(160, 170, 230), Glow = rgb(255, 235, 150), Core = rgb(255, 250, 220), Ears = "Pointed", Tail = "Fluffy", Gems = true },
-    CosmicJellyfish = { Kind = "Blob", Body = rgb(150, 110, 230), Accent = rgb(255, 150, 230), Belly = rgb(200, 170, 255), Glow = rgb(255, 170, 240), Core = rgb(255, 230, 250), Tentacles = true, Translucent = true, Gems = true },
-    NebulaOwl = { Kind = "Bird", Body = rgb(80, 60, 140), Accent = rgb(220, 160, 255), Belly = rgb(150, 130, 200), Glow = rgb(230, 180, 255), Core = rgb(245, 230, 255), Wings = "Feather", Ears = "Pointed", Gems = true },
-    CelestialSnowLeopard = { Kind = "Beast", Body = rgb(235, 240, 250), Accent = rgb(140, 190, 255), Belly = rgb(255, 255, 255), Glow = rgb(170, 215, 255), Core = rgb(245, 250, 255), Ears = "Round", Tail = "Fluffy", Stripes = true, Gems = true },
-    CometStag = { Kind = "Beast", Body = rgb(60, 70, 140), Accent = rgb(150, 230, 255), Belly = rgb(130, 140, 210), Glow = rgb(170, 240, 255), Core = rgb(235, 250, 255), Horns = "Antlers", Tail = "Flame", Gems = true },
-    CelestialPearlDragon = { Kind = "Serpent", Body = rgb(245, 240, 235), Accent = rgb(255, 210, 140), Belly = rgb(255, 250, 240), Glow = rgb(255, 225, 170), Core = rgb(255, 250, 235), Horns = "Antlers", Whiskers = true, Gems = true, Halo = true },
-    EclipseCat = { Kind = "Beast", Body = rgb(30, 30, 45), Accent = rgb(255, 190, 90), Belly = rgb(60, 60, 80), Glow = rgb(255, 200, 110), Core = rgb(255, 235, 190), Ears = "Pointed", Tail = "Long", Halo = true, GlowEyes = true },
-    TimekeeperTortoise = { Kind = "Beast", Body = rgb(120, 150, 140), Accent = rgb(255, 215, 120), Belly = rgb(190, 200, 170), Glow = rgb(255, 225, 140), Core = rgb(255, 245, 210), Shell = true, Halo = true, Tail = "Long" },
-    GalaxyManta = { Kind = "Ray", Body = rgb(40, 40, 110), Accent = rgb(180, 120, 255), Belly = rgb(90, 90, 170), Glow = rgb(200, 150, 255), Core = rgb(240, 225, 255), Gems = true },
-    Shadowcoil = { Kind = "Serpent", Body = rgb(35, 30, 50), Accent = rgb(160, 90, 255), Belly = rgb(70, 60, 90), Glow = rgb(170, 100, 255), Core = rgb(220, 190, 255), Spikes = true, GlowEyes = true },
-    RuneSphinx = { Kind = "Beast", Body = rgb(40, 36, 32), Accent = rgb(255, 196, 97), Belly = rgb(150, 115, 75), Glow = rgb(255, 180, 80), Core = rgb(255, 240, 200), Ears = "Pointed", Horns = "Horns", Mane = true, Tail = "Long", Gems = true },
-    ThousandYearDreamEater = { Kind = "Beast", Body = rgb(120, 90, 170), Accent = rgb(255, 170, 230), Belly = rgb(180, 160, 220), Glow = rgb(255, 180, 240), Core = rgb(255, 230, 250), Ears = "Long", Tail = "Fluffy", Gems = true, Halo = true },
-    AbyssAnomalocaris = { Kind = "Ray", Body = rgb(52, 48, 60), Accent = rgb(196, 138, 66), Belly = rgb(120, 110, 112), Glow = rgb(225, 50, 175), Core = rgb(255, 210, 240) },
-    HeavenbreakerApe = { Kind = "Golem", Body = rgb(60, 45, 40), Accent = rgb(255, 200, 80), Belly = rgb(140, 110, 90), Glow = rgb(255, 210, 100), Core = rgb(255, 245, 200), Halo = true, GlowEyes = true, Spikes = true },
-    VoidscaleHydra = { Kind = "Serpent", Body = rgb(30, 25, 55), Accent = rgb(140, 70, 255), Belly = rgb(60, 50, 90), Glow = rgb(170, 100, 255), Core = rgb(220, 190, 255), Heads = 3, Spikes = true, GlowEyes = true },
-    TheNamelessOne = { Kind = "Golem", Body = rgb(15, 15, 25), Accent = rgb(255, 255, 255), Belly = rgb(40, 40, 60), Glow = rgb(230, 220, 255), Core = rgb(255, 255, 255), GlowEyes = true, Halo = true, Gems = true },
-    EternalClockworkDragon = { Kind = "Serpent", Body = rgb(210, 170, 90), Accent = rgb(120, 240, 255), Belly = rgb(240, 210, 150), Glow = rgb(140, 245, 255), Core = rgb(235, 255, 255), Horns = "Horns", Wings = "Feather", Legs = true, Gems = true, Halo = true },
 }
 
 return PetArchetypes

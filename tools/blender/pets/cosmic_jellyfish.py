@@ -716,8 +716,9 @@ if __name__ == "__main__" and STAGE == "all":
         shots(os.path.join(REVIEW, "pose" + name), [view], target=VIEW_AT, size=540)
     pose(rig, {})
     os.makedirs(pet_kit.TOOLS, exist_ok=True)
-    shots(os.path.join(pet_kit.TOOLS, PET + "_preview"), [(0.62, -0.72, 0.28, 7.6, VIEW_AT)])
-    os.replace(os.path.join(pet_kit.TOOLS, PET + "_preview_0.png"), os.path.join(pet_kit.TOOLS, PET + "_preview.png"))
+    out = pet_kit.preview_dir()
+    shots(os.path.join(out, PET + "_preview"), [(0.62, -0.72, 0.28, 7.6, VIEW_AT)])
+    os.replace(os.path.join(out, PET + "_preview_0.png"), os.path.join(out, PET + "_preview.png"))
     glass.data.materials[0] = baked
     for o in glows.values():
         o.data.uv_layers.new(name="UVMap")

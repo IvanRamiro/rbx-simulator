@@ -1,5 +1,3 @@
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
@@ -30,11 +28,6 @@ function AuraKit.colorSequence(points)
     return ColorSequence.new(keypoints)
 end
 
-function AuraKit.smoothstep(edge0, edge1, x)
-    local t = math.clamp((x - edge0) / (edge1 - edge0), 0, 1)
-    return t * t * (3 - 2 * t)
-end
-
 function AuraKit.approach(current, target, rate, deltaTime)
     return current + (target - current) * (1 - math.exp(-rate * deltaTime))
 end
@@ -60,44 +53,6 @@ function AuraKit.newPart(aura, name, size, shape)
     return part
 end
 
-function AuraKit.template(set, name)
-    local folder = ReplicatedStorage:FindFirstChild("AuraMeshes")
-    local model = folder and folder:FindFirstChild(set)
-    return model and model:FindFirstChild(set .. "_" .. name, true)
-end
-
-function AuraKit.hasTemplates(set, names)
-    for _, name in names do
-        if not AuraKit.template(set, name) then
-            return false
-        end
-    end
-    return true
-end
-
-function AuraKit.dress(part, material)
-    part.Material = material.Material
-    part.Color = material.Color
-    part.Reflectance = material.Reflectance or 0
-    if part:IsA("MeshPart") then
-        part.TextureID = ""
-    end
-    for _, child in part:GetChildren() do
-        child:Destroy()
-    end
-end
-
-function AuraKit.meshPart(aura, name, scale, kind)
-    local template = AuraKit.template(aura.set, name)
-    local part = template:Clone()
-    part.Size = template.Size * scale
-    AuraKit.prepare(part)
-    AuraKit.dress(part, aura.style.Materials[kind])
-    part.Transparency = 1
-    part.Parent = aura.model
-    return part
-end
-
 function AuraKit.addEmitter(aura, parent, rate, properties, minStage)
     local emitter = Instance.new("ParticleEmitter")
     emitter.LightInfluence = 0
@@ -110,48 +65,6 @@ function AuraKit.addEmitter(aura, parent, rate, properties, minStage)
         table.insert(aura.emitters, { Emitter = emitter, Rate = rate * aura.detail * aura.boost, MinStage = minStage or 1 })
     end
     return emitter
-end
-
--- An emitter whose particles lie flat on the ground and stay locked to their part (rings,
--- slashes, swirls). `defaults` are the design's own base settings, `properties` the emitter's.
-function AuraKit.flatEmitter(aura, parent, rate, properties, defaults)
-    local preset = {
-        Orientation = Enum.ParticleOrientation.VelocityPerpendicular,
-        EmissionDirection = Enum.NormalId.Top,
-        Speed = NumberRange.new(0.01),
-        LockedToPart = true,
-    }
-    for _, overrides in { defaults or {}, properties } do
-        for property, value in overrides do
-            preset[property] = value
-        end
-    end
-    return AuraKit.addEmitter(aura, parent, rate, preset)
-end
-
-function AuraKit.surfaceGui(part, pixelsPerStud, brightness)
-    local gui = Instance.new("SurfaceGui")
-    gui.Face = Enum.NormalId.Top
-    gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-    gui.PixelsPerStud = pixelsPerStud
-    gui.LightInfluence = 0
-    gui.Brightness = brightness
-    gui.MaxDistance = 400
-    gui.Parent = part
-    return gui
-end
-
-function AuraKit.surfaceImage(gui, image, size, color, transparency)
-    local label = Instance.new("ImageLabel")
-    label.AnchorPoint = Vector2.new(0.5, 0.5)
-    label.Position = UDim2.fromScale(0.5, 0.5)
-    label.Size = UDim2.fromScale(size, size)
-    label.BackgroundTransparency = 1
-    label.Image = image
-    label.ImageColor3 = color
-    label.ImageTransparency = 1
-    label.Parent = gui
-    return { Image = label, Transparency = transparency }
 end
 
 function AuraKit.trail(parent, halfWidth, texture, lifetime, color, brightness)
@@ -204,23 +117,6 @@ function AuraKit.fader(beam, points)
     return { Beam = beam, Points = points, Last = -1 }
 end
 
-function AuraKit.fadeBeam(state, amount)
-    local step = math.floor(math.clamp(amount, 0, 1) * 20 + 0.5) / 20
-    if step == state.Last then
-        return
-    end
-    state.Last = step
-    if step <= 0 then
-        state.Beam.Transparency = NumberSequence.new(1)
-        return
-    end
-    local keypoints = {}
-    for _, point in state.Points do
-        table.insert(keypoints, NumberSequenceKeypoint.new(point[1], 1 - (1 - point[2]) * step))
-    end
-    state.Beam.Transparency = NumberSequence.new(keypoints)
-end
-
 function AuraKit.glow(aura, main, core, range)
     local light = Instance.new("PointLight")
     light.Color = main
@@ -262,38 +158,6 @@ function AuraKit.bodyBounds(character, rootPart)
         return Vector3.new(-1, -3, -1), Vector3.new(1, 2.5, 1)
     end
     return low, high
-end
-
-function AuraKit.newAura(player, character, rootPart, rankId, set, style)
-    local low, high = AuraKit.bodyBounds(character, rootPart)
-    local height = math.clamp(high.Y - low.Y, 3, 12)
-    local boost = AuraStyles.getBoost(rankId)
-    local model = Instance.new("Folder")
-    model.Name = player.Name .. "_Aura"
-    local fader = Instance.new("NumberValue")
-    fader.Name = "Fader"
-    fader.Parent = model
-    return {
-        player = player,
-        character = character,
-        rootPart = rootPart,
-        model = model,
-        fader = fader,
-        set = set,
-        style = style,
-        boost = boost,
-        k = height / 5 * (1 + (boost - 1) * 0.35),
-        detail = if player == Players.LocalPlayer then 1 else SETTINGS.OtherPlayers,
-        random = Random.new(),
-        emitters = {},
-        stage = 0,
-        power = 0,
-        spin = 0,
-        surgeAt = -math.huge,
-        nextGroundCheck = 0,
-        hiding = false,
-        destroyed = false,
-    }
 end
 
 function AuraKit.surge(aura, strength)
@@ -409,21 +273,6 @@ function AuraKit.step(aura, now)
         facing = CFrame.lookAt(Vector3.zero, Vector3.new(rootCFrame.LookVector.X, 0, rootCFrame.LookVector.Z)),
         charge = if aura.shownAt then math.clamp((now - aura.shownAt) / SETTINGS.ChargeSeconds, 0, 1) else 0,
     }
-end
-
-function AuraKit.showPart(part, base, amount)
-    if part.Material == Enum.Material.Glass then
-        part.Transparency = if amount > 0.04 then base else 1
-    else
-        part.Transparency = 1 - (1 - base) * math.clamp(amount, 0, 1)
-    end
-end
-
-function AuraKit.finishGlow(aura, frame, brightness, fill, outline)
-    local breathe = 0.85 + 0.15 * math.sin(os.clock() * 2)
-    aura.light.Brightness = (brightness * frame.level * breathe + 3 * frame.surge) * frame.fade
-    aura.highlight.FillTransparency = 1 - math.min(0.9, (fill * frame.level + 0.15 * frame.surge) * frame.fade)
-    aura.highlight.OutlineTransparency = 1 - math.min(1, (outline * frame.level + 0.3 * frame.surge) * frame.fade)
 end
 
 return AuraKit

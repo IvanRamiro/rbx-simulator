@@ -1,4 +1,4 @@
-"""The egg forge (run inside Blender): the egg pipeline. Everything is written to assets/eggs_v2/,
+"""The egg forge (run inside Blender): the egg pipeline. Everything is written to assets/eggs/,
 the eggs the game uses (WorldBuilder places them from ServerStorage.EggMeshes).
 
 What it does better than egg_bake.py, each fixing something seen on the first eggs in Studio:
@@ -33,7 +33,7 @@ import egg_kit as K
 W = K.W
 V = Vector
 H, R = K.H, K.R
-OUT = os.path.join(K.REPO, "assets", "eggs_v2")
+OUT = os.path.join(K.REPO, "assets", "eggs")
 TAU = 2 * math.pi
 
 
@@ -552,7 +552,7 @@ def bake(egg_id, pairs, glow_objs=(), size=1024, small=512, samples=16, ao_sampl
 
 
 def export(egg_id, lows, glows, coll, flat_body=False):
-    """assets/eggs_v2/<EggId>.fbx: the body and one Neon part per colour. Returns the parts and the
+    """assets/eggs/<EggId>.fbx: the body and one Neon part per colour. Returns the parts and the
     triangle count."""
     body = K.join(lows, egg_id + "_Body", coll)
     mat = lows[0].data.materials[0]

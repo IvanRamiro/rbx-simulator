@@ -1,4 +1,4 @@
-"""Renders each finished egg (assets/eggs_v2/<EggId>.fbx) to a transparent icon for the interface
+"""Renders each finished egg (assets/eggs/<EggId>.fbx) to a transparent icon for the interface
 (assets/ui/egg_icons/<EggId>.png; ids in egg_icons.json). Run inside Blender, one egg at a time:
 each is imported, rendered and removed before the next.
 
@@ -75,7 +75,7 @@ def _light(name, kind, loc, target, energy, size, colour=(1, 1, 1)):
 
 def render(egg_id, out_dir, size=SIZE):
     clear()
-    bpy.ops.import_scene.fbx(filepath="%s/assets/eggs_v2/%s.fbx" % (REPO, egg_id))
+    bpy.ops.import_scene.fbx(filepath="%s/assets/eggs/%s.fbx" % (REPO, egg_id))
     objs = [o for o in bpy.context.scene.objects if o.type == "MESH"]
     _glow(objs)
     lo, hi = _bounds(objs)

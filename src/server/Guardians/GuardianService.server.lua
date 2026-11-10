@@ -80,6 +80,13 @@ RunService.Heartbeat:Connect(function(dt)
         if not ok and not failed[guardian] then
             failed[guardian] = true -- once: it would repeat every frame
             warn("Guardian " .. tostring(guardian.id) .. " step failed: " .. tostring(err))
+            -- a stuck theft would leave the thief CarryingEgg (no flight, meditation or strikes): put the egg back
+            if guardian.egg and (guardian.egg.state == "Carried" or guardian.egg.state == "Dropped") then
+                local returned, returnErr = pcall(guardian.returnEgg, guardian)
+                if not returned then
+                    warn("Guardian " .. tostring(guardian.id) .. " couldn't return its egg: " .. tostring(returnErr))
+                end
+            end
         end
     end
 end)

@@ -18,7 +18,7 @@
 --
 -- Bridges (assets/world/Bridges): WB.storeBridgeKit(<import>, theme), then WB.buildBridges().
 --
--- Eggs (assets/eggs_v2/<EggId>.fbx): WB.storeEgg(<import>, eggId), then WB.buildEggStands(island).
+-- Eggs (assets/eggs/<EggId>.fbx): WB.storeEgg(<import>, eggId), then WB.buildEggStands(island).
 -- Collision fidelity applies asynchronously; confirm with WB.checkCollision in a later call.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -797,7 +797,7 @@ local function placeTemplate(island, name, frame, parent, scale)
     return part
 end
 
--- The new pieces for the outer islands come in one import (assets/world/IslandUpgrades.fbx, with no textures of its own): each goes to its
+-- The new pieces for the outer islands come in one import (assets/world/IslandUpgrades/IslandUpgrades.fbx, with no textures of its own): each goes to its
 -- island's kit by its name's prefix, painted with the atlas that island's kit already has uploaded.
 local UPGRADE_ISLANDS = {
     JG = { Island = "JadeGrove", Atlas = "JG_AncientTreeA" },

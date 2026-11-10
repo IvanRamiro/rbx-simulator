@@ -15,7 +15,6 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local PetRules = {}
 
 local RULES = GameConfig.PetFusion
-PetRules.MaxLevel = RULES.MaxLevel
 
 function PetRules.level(pet)
     local level = pet and pet.Level

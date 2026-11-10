@@ -339,7 +339,7 @@ Specials are visual only.
 
 ### Pet voices and specials' sounds (November 9, 2026)
 
-The owner chose it from the suggestions ("do the 3"): the pets were silent. Each of the 44 animated pets now has a **voice**, a short call it gives every 9 to 18 seconds as it idles in the world (a take picked at random, its pitch a little either side of its own), and a **sound on its special**, played at its climax as the burst goes off (`client/Audio/PetSounds`, played from `PetRig`). Never from a Codex portrait, never over a special, heard within 70 studs (a special within 160).
+The owner chose it from the suggestions ("do the 3"): the pets were silent. Each animated pet (49 of the 50 with a rig; the Sunscale Dragon still has none, 2026-11-11) has a **voice**, a short call it gives every 9 to 18 seconds as it idles in the world (a take picked at random, its pitch a little either side of its own), and a **sound on its special**, played at its climax as the burst goes off (`client/Audio/PetSounds`, played from `PetRig`). Never from a Codex portrait, never over a special, heard within 70 studs (a special within 160).
 
 - **Only Roblox's licensed library** (Pro Sound Effects), each file checked to load in this place: 168 measured. Picks by kind: the closest real creature (the bee's buzz, the serpent's snake hiss, the lion's growl, the sheep's bleat, the fox's yips, the owl a reverberant cosmic cry since the library's owl hoots are all long), or for spirits and stranger things a magical tone (the crane's soft synth tones, the Nameless One's unintelligible whispers, the Obsidian Guardian's low ceramic ring, the Lantern Warden's key dings). Specials match their moment (fire bursts for the fire beasts, ice crackles and shatters for the ice ones, a lightning burst for the bee's sting, a tuning fork for the Timekeeper's stopped time).
 - **No two pets share a voice**; pets of one family (the lions and the dragons that borrow lion growls, the two kirins, the panda and the armadillo's grunts) are told apart by pitch. The Thunderclaw Drake has a giant creature growl, not the hiss the Ember Xuanwu guardian uses.
@@ -348,7 +348,7 @@ The owner chose it from the suggestions ("do the 3"): the pets were silent. Each
 
 ### Roster by first egg
 
-**Beginner Qi Egg (Yggdrasil)**
+**Beginner Qi Egg (Beginner Isle)**
 
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
@@ -360,7 +360,7 @@ The owner chose it from the suggestions ("do the 3"): the pets were silent. Each
 | Astral Whale ★ | Mythical | Cosmic | +100% |
 | Origin Serpent ★ | Secret | Primordial | +150% |
 
-**Spirit Breeze Egg (Yggdrasil)**
+**Spirit Breeze Egg (Beginner Isle)**
 
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
@@ -370,7 +370,7 @@ The owner chose it from the suggestions ("do the 3"): the pets were silent. Each
 | Azure Sky Dragon ★ | Epic | Wind and sky | +60% |
 | Stormhorn Kirin ★ | Legendary | Storms | +70% |
 
-**Elemental Core Egg (Yggdrasil)**
+**Elemental Core Egg (Beginner Isle)**
 
 | Pet | Rarity | Theme | Qi bonus |
 |---|---|---|---|
@@ -607,7 +607,7 @@ The owner's account always takes Floating Ascension, which their own aura was bu
 
 ## 5. Eggs
 
-Fifteen eggs, **three on every island**, each needing a higher rank than the last.
+Fifteen eggs, **three on each of the five outer islands** (none on Yggdrasil, the hub), each needing a higher rank than the last.
 
 - **Hatching** (since November 2, 2026, section 7): only at Yggdrasil's **Hatching Altar**, from the player's **egg inventory** (`EggInventory`, saved as `Eggs`, at most 99 of each), filled by carrying eggs home from the guardians' stands. The stands no longer hatch; their prompt is "Take". (Before: free stand hatches with a 45-second cooldown.)
 - **Three separate numbers** (`GameConfig`; the owner's request, November 5, 2026): a pet's **Rarity** is its classification (colour, sell value, what's protected), its **QiBonus** what it adds to cultivation, and its **HatchChance** how likely one egg is to hatch it, set per egg in percent. None is worked out from another, so an egg can be balanced without changing what a rarity means. Each egg's chances must add up to 100, or the server refuses to start. `tools/balance_report.py` prints each egg's average Qi and any rarer pet that's the weaker.
@@ -620,9 +620,9 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 
 | Island | Egg | Needs | Chances |
 |---|---|---|---|
-| Yggdrasil | Beginner Qi Egg | Qi Initiate | Aqua Wisp 45%, Ember Wyrm 27%, Lunar Hopper 15%, Volt Fox 8%, Golden Kirin 4%, Astral Whale 0.9%, Origin Serpent 0.1% |
-| Yggdrasil | Spirit Breeze Egg | Qi Adept | Wind Sprite 45%, Cloud Sheep 27%, Spirit Crane 15%, Azure Sky Dragon 8%, Stormhorn Kirin 5% |
-| Yggdrasil | Elemental Core Egg | Foundation Initiate | Glacier Puff 45%, Storm Bumblebee 27%, Crystal Beetle 15%, Gravity Imp 8%, Thunderclaw Drake 4%, Frostfang Serpent 1% |
+| Beginner Isle | Beginner Qi Egg | Qi Initiate | Aqua Wisp 45%, Ember Wyrm 27%, Lunar Hopper 15%, Volt Fox 8%, Golden Kirin 4%, Astral Whale 0.9%, Origin Serpent 0.1% |
+| Beginner Isle | Spirit Breeze Egg | Qi Adept | Wind Sprite 45%, Cloud Sheep 27%, Spirit Crane 15%, Azure Sky Dragon 8%, Stormhorn Kirin 5% |
+| Beginner Isle | Elemental Core Egg | Foundation Initiate | Glacier Puff 45%, Storm Bumblebee 27%, Crystal Beetle 15%, Gravity Imp 8%, Thunderclaw Drake 4%, Frostfang Serpent 1% |
 | Jade Grove | Jade Spirit Egg | Qi Gatherer | Moss Golem 45%, Mycelium Sprite 27%, Jade Spirit Panda 15%, Jade Antler Deer 8%, Golden Kirin 5% |
 | Jade Grove | Bloomwood Egg | Foundation Adept | Dream Moth 45%, Crystal Snail 27%, Prism Armadillo 15%, Lantern Warden 8%, Jade Wyrm Turtle 5% |
 | Jade Grove | Ancient Grove Egg | Core Initiate | Echo Bat 45%, Qi Clockwork Finch 27%, Moonfang Tiger 15%, Thousand-Eyed Guardian 8%, Ninefold Spirit Serpent 4%, Worldroot Colossus 1% |
@@ -638,7 +638,7 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 
 ### Egg designs
 
-- **Source:** the 15-egg concept sheet. The designs in the table below were the first generation; its scripts and exports were removed from the project on November 5, 2026 and remain in git history. Eggs are modelled in Blender by a script (second generation, below; shared helpers in `egg_kit.py`) and exported to `assets/eggs_v2/<EggId>.fbx`. An export holds an `<EggId>_Body` mesh coloured by an atlas (`<EggId>_atlas.png`) and `<EggId>_Glow_<hex>` parts, which become Neon in that colour.
+- **Source:** the 15-egg concept sheet. The designs in the table below were the first generation; its scripts and exports were removed from the project on November 5, 2026 and remain in git history. Eggs are modelled in Blender by a script (second generation, below; shared helpers in `egg_kit.py`) and exported to `assets/eggs/<EggId>.fbx`. An export holds an `<EggId>_Body` mesh coloured by an atlas (`<EggId>_atlas.png`) and `<EggId>_Glow_<hex>` parts, which become Neon in that colour.
 - **Detailed eggs, built like the sculpted pets:**
   - High-detail pieces with procedural Cycles shaders (`egg_hi.py`): knotted bark with grain, veined leaves, marbled jade, gold-veined crystal, carved wood planks, leafy crowns.
   - Baked by `egg_bake.py` onto one game mesh of about 14,000 triangles, with `<EggId>_color.png` (ambient occlusion included), `_normal.png`, `_roughness.png` and `_metalness.png`.
@@ -667,7 +667,7 @@ Fifteen eggs, **three on every island**, each needing a higher rank than the las
 | Primordial Abyss Egg | The first egg: primordial stone in warped dark layers with thin ochre seams, a great fossil ammonite coiled on its front with magenta light in its spiral seam and its mouth, a bronze clockwork belt of gear teeth round its base and a small gear set in each shoulder |
 | Ancient Grove Egg | Carved wood planks in fourteen upright columns, each split at its own heights, every plank its own tone; dark bark in the grooves, pale heartwood showing at the crown. A mossy trunk behind it sends roots gripping the egg and branches spreading into lumpy crowns of leaves, and a spiral of Qi glows on its front |
 
-**Second generation (in the game since November 4, 2026):** all 15 eggs rebuilt, each with its own idea written at the top of its script, reviewed and passed by the owner on a flat board. Scripts: `tools/blender/eggs/egg_forge.py` and `v2_<island>.py`. Output: `assets/eggs_v2/` (the first generation's meshes stay in `ServerStorage.DevStage.EggMeshesV1`). Magma Heart ("fresh from the forge"), Astral Sanctum ("the astrolabe") and Heavenly Throne ("the sky itself") are **just an egg**, the whole idea on the shell, on the owner's word; they replace those three eggs' earlier designs in the table above. Magma Heart has no Neon part. `File > Import 3D` reads all four maps from these FBX files.
+**Second generation (in the game since November 4, 2026):** all 15 eggs rebuilt, each with its own idea written at the top of its script, reviewed and passed by the owner on a flat board. Scripts: `tools/blender/eggs/egg_forge.py` and `v2_<island>.py`. Output: `assets/eggs/` (the first generation's meshes stay in `ServerStorage.DevStage.EggMeshesV1`). Magma Heart ("fresh from the forge"), Astral Sanctum ("the astrolabe") and Heavenly Throne ("the sky itself") are **just an egg**, the whole idea on the shell, on the owner's word; they replace those three eggs' earlier designs in the table above. Magma Heart has no Neon part. `File > Import 3D` reads all four maps from these FBX files.
 
 ### Egg effects
 

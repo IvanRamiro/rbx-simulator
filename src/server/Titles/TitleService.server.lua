@@ -10,6 +10,7 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local TitleRules = require(ReplicatedStorage:WaitForChild("TitleRules"))
+local CodexRules = require(ReplicatedStorage:WaitForChild("CodexRules"))
 
 local serverRoot = script.Parent.Parent
 local PlayerData = require(serverRoot:WaitForChild("Data"):WaitForChild("PlayerData"))
@@ -40,12 +41,13 @@ local function award(player, id)
     return false
 end
 
+-- counted over the beasts that can be hatched, as the Codex window counts them (CodexRules.Pets)
 local function beastsFound(player)
     local count, secret = 0, false
-    for petId, pet in GameConfig.Pets do
+    for _, petId in CodexRules.Pets do
         if Codex.isFound(player, petId) then
             count += 1
-            secret = secret or pet.Rarity == "Secret"
+            secret = secret or GameConfig.Pets[petId].Rarity == "Secret"
         end
     end
     return count, secret
