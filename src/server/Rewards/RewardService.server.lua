@@ -85,7 +85,7 @@ function actions.ClaimDaily(player)
         return
     end
     local day = RewardRules.nextDay(data.LastDay, data.Streak)
-    local stones, minutes = RewardRules.daily(day, Shop.playerRealmIndex(player))
+    local stones, minutes = RewardRules.daily(day, Shop.playerRealmIndex(player), player)
     data.LastDay, data.Streak = today, day
     Wallet.add(player, stones, "Daily", "Day" .. day)
     local qi = if minutes > 0 then QiReward.grantMinutes(player, minutes) else 0

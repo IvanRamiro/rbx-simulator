@@ -1,4 +1,4 @@
--- Every title a cultivator can earn and wear (the owner, November 9, 2026): Developer, Content Creator, Beta Tester, one for each of the twelve
+-- Every title a cultivator can earn and wear (the owner, November 9, 2026): Developer, Content Creator, VIP (the pass, November 10), Beta Tester, one for each of the twelve
 -- realms, one for securing an egg from each guardian, the beast collector titles, Keeper of Secrets and Relic Seeker.
 -- A worn title shows over the player's head (TitleController) in its own colour, a sheen of light sweeping across it now and
 -- then; a Shimmer is the colour of a grander title's sheen (it sweeps more often).
@@ -70,6 +70,8 @@ add({ Id = "ContentCreator", Group = "Special", Text = "Content Creator", Color 
     How = "Given to creators who make videos and streams of the game." })
 add({ Id = "BetaTester", Group = "Special", Text = "Beta Tester", Color = rgb(96, 240, 210), Shimmer = rgb(130, 170, 255),
     How = "Played during the beta, before the game's launch." })
+add({ Id = "VIP", Group = "Special", Text = "VIP", Color = rgb(255, 206, 84), Shimmer = rgb(255, 250, 220),
+    How = "Own the VIP pass, in the Store." })
 
 TitleRules.RealmTitleIds = {} -- [realm name] = its title's id
 for index, entry in REALM_TITLES do
@@ -114,6 +116,7 @@ local FONTS = {
     Developer = { "Sarpanch", 900 },
     ContentCreator = { "LuckiestGuy", 400 },
     BetaTester = { "Michroma", 400 },
+    VIP = { "Bangers", 400 },                    -- a bold marquee face, in gold
     Realm1 = { "Fondamento", 400, "Italic" },    -- the Awakened
     Realm2 = { "Oswald", 600 },                  -- Bedrock Disciple
     Realm3 = { "Sarpanch", 700 },                -- Core Forger
@@ -144,14 +147,17 @@ for order, entry in TitleRules.List do
     entry.Font = FONTS[entry.Id] or { "Merriweather", 700 }
 end
 
--- What a player wearing "Auto" (their choice until they pick one) shows: Developer, else Content Creator, else Beta Tester,
--- else their highest realm's title. earned: { [id] = true }
+-- What a player wearing "Auto" (their choice until they pick one) shows: Developer, else Content Creator, else VIP, else
+-- Beta Tester, else their highest realm's title. earned: { [id] = true }
 function TitleRules.autoPick(earned)
     if earned.Developer then
         return "Developer"
     end
     if earned.ContentCreator then
         return "ContentCreator"
+    end
+    if earned.VIP then
+        return "VIP"
     end
     if earned.BetaTester then
         return "BetaTester"

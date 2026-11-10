@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local Discoveries = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("Discoveries"))
 local EggInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("EggInventory"))
@@ -209,7 +210,7 @@ local function sanitizeProgress(raw)
 
     if typeof(raw.EquippedPetIds) == "table" then
         for _, instanceId in raw.EquippedPetIds do
-            if #progress.EquippedPetIds >= GameConfig.MaxEquippedPets then
+            if #progress.EquippedPetIds >= PassRules.MostEquipped then -- (the slots pass's owners: GamePassService trims the rest)
                 break
             end
 

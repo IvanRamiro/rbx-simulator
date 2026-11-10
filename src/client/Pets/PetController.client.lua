@@ -2,9 +2,11 @@
 -- its portrait (the pet itself, in a ViewportFrame), name, rarity, level and Qi bonus, its lock, and its Equip and
 -- Aura buttons, and Fuse when a spare copy can go into it. Equipped pets come first, then by rarity. The server owns the
 -- inventory (PetInventoryUpdatedEvent sends it; Equip / Unequip / SetAura / TogglePetLock / FusePet ask).
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local UI = script.Parent.Parent:WaitForChild("UI")
@@ -147,7 +149,7 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
         action("UNEQUIP", "Quiet", 0, function()
             RemoteEvents.UnequipPetEvent:FireServer(pet.InstanceId)
         end)
-    elseif equippedCount < GameConfig.MaxEquippedPets then
+    elseif equippedCount < PassRules.maxEquipped(Players.LocalPlayer) then
         action("EQUIP", "Accent", 0, function()
             RemoteEvents.EquipPetEvent:FireServer(pet.InstanceId)
         end)
@@ -227,9 +229,9 @@ local function renderInventory(snapshot)
         end
     end
     bonusPercent += snapshot.CodexQiPercent or 0
-    local equippedText = equippedCount .. "/" .. GameConfig.MaxEquippedPets
-    setPetBadge(equippedText)
-    equippedLabel.Text = "EQUIPPED  " .. equippedCount .. " / " .. GameConfig.MaxEquippedPets
+    local slots = PassRules.maxEquipped(Players.LocalPlayer) -- (the slots pass adds more)
+    setPetBadge(equippedCount .. "/" .. slots)
+    equippedLabel.Text = "EQUIPPED  " .. equippedCount .. " / " .. slots
     bonusLabel.Text = "QI BONUS  +" .. bonusPercent .. "%"
 
     if #snapshot.Pets == 0 then
@@ -261,6 +263,15 @@ local function renderInventory(snapshot)
 end
 
 RemoteEvents.PetInventoryUpdatedEvent.OnClientEvent:Connect(renderInventory)
+for _, pass in PassRules.List do
+    if pass.ExtraSlots then -- bought in the Store: the limit and every Equip button change at once
+        Players.LocalPlayer:GetAttributeChangedSignal("Pass_" .. pass.Id):Connect(function()
+            if lastSnapshot then
+                renderInventory(lastSnapshot)
+            end
+        end)
+    end
+end
 
 -- a fusion's answer: the inventory has already redrawn, so the card it raised can be found and lit
 RemoteEvents.PetActionResultEvent.OnClientEvent:Connect(function(ok, text, fused)

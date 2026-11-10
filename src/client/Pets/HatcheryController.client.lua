@@ -4,7 +4,8 @@
 -- it needs. One egg is hatched per press (HatchEggEvent); the window stays open to hatch the next,
 -- and closes when the player walks away. The hatch itself plays on the altar (HatchCeremony, from
 -- PetController's result).
--- Each egg opens to show exactly what it can hatch: every pet's rarity and its HatchChance as configured, the rarest
+-- Each egg opens to show exactly what it can hatch: every pet's rarity and its HatchChance as configured (with the Luck pass,
+-- the player's own lucky odds, marked so: PassRules.luckyPool, as the server rolls them), the rarest
 -- last. A beast not yet in the player's Codex stays a silhouette named "???", marked New; the rest show their name, Qi and how many they hold.
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -12,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local UI = script.Parent.Parent:WaitForChild("UI")
@@ -77,9 +79,9 @@ end
 local render
 local openEgg = nil -- the egg whose chances are showing; the first one held, until the player picks another
 
--- A HatchChance as it's configured, with no rounding: 2.5%, 0.05%.
+-- A HatchChance to three figures: 2.5%, 0.05%, and a lucky 17.1% (every configured one shows exactly as it's configured).
 local function percentText(chance)
-    return string.format("%g%%", chance)
+    return string.format("%.3g%%", chance)
 end
 
 -- One pet the egg can hatch: its picture, name and tags, and its chance at the right.
@@ -225,11 +227,17 @@ function render()
             rows.Name = "Odds"
             rows.BackgroundTransparency = 1
             rows.Position = UDim2.fromOffset(12, CARD_HEIGHT + 2)
-            rows.Size = UDim2.new(1, -22, 0, #entry.egg.Pool * ROW_HEIGHT)
+            local luck = PassRules.luck(Players.LocalPlayer)
+            rows.Size = UDim2.new(1, -22, 0, #entry.egg.Pool * ROW_HEIGHT + (if luck > 1 then 22 else 0))
             rows.Parent = card
             UiKit.list(rows, { Padding = UDim.new(0, 4) })
+            if luck > 1 then -- the Luck pass: these are their own odds, and say so
+                local lucky = UiKit.tag(luck .. "x luck: your odds", C.Highlight)
+                lucky.LayoutOrder = 0
+                lucky.Parent = rows
+            end
             -- likeliest first, the way the chances read down to the rarest
-            local pool = table.clone(entry.egg.Pool)
+            local pool = PassRules.luckyPool(entry.egg.Pool, luck)
             table.sort(pool, function(a, b)
                 return a.HatchChance > b.HatchChance
             end)

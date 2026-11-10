@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CodexRules = require(ReplicatedStorage:WaitForChild("CodexRules"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
@@ -47,9 +48,10 @@ local function handleRequest(remoteEvent, action)
     end)
 end
 
--- A pet from the egg's pool, by its HatchChance (percents that add up to 100, PetInventory checks), and that chance.
-local function rollEggPet(egg)
-    local pool = egg.Pool
+-- A pet from the egg's pool, by its HatchChance (percents that add up to 100, PetInventory checks) with the player's luck
+-- (the Luck pass: PassRules.luckyPool), and that chance.
+local function rollEggPet(egg, player)
+    local pool = PassRules.luckyPool(egg.Pool, PassRules.luck(player))
     local roll = random:NextNumber() * 100
     for _, entry in pool do
         if roll < entry.HatchChance then
@@ -145,7 +147,7 @@ local function onHatchRequest(player, eggId)
     if not EggInventory.take(player, eggId) then
         return
     end
-    local petId, chance = rollEggPet(egg)
+    local petId, chance = rollEggPet(egg, player)
     local isNew = not Codex.isFound(player, petId)
     if not PetInventory.grantPet(player, petId) then
         EggInventory.grant(player, eggId)

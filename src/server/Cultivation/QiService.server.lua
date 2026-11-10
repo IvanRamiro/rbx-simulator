@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
@@ -155,7 +156,7 @@ local function awardCultivationQi(player)
         bonusPercent += GameConfig.TrainingStation.QiBonusPercent
     end
     local _, rankValue = PlayerData.getStats(player)
-    local multiplier = Ranks.getQiMultiplier(rankValue and rankValue.Value)
+    local multiplier = Ranks.getQiMultiplier(rankValue and rankValue.Value) * PassRules.qiMultiplier(player)
     qi.Value += math.floor(GameConfig.CultivationQiReward * multiplier * (100 + bonusPercent) / 100)
 end
 

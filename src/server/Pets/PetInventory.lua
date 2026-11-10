@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Codex = require(script.Parent:WaitForChild("Codex"))
@@ -73,6 +74,29 @@ function PetInventory.setupPlayer(player, savedProgress)
     end
 end
 
+function PetInventory.isSetUp(player)
+    return playerData[player] ~= nil
+end
+
+-- Unequips the last-equipped beasts over their limit (PassRules.maxEquipped): once a player is known not to own the slots
+-- pass, its extra beasts come off (a save may hold up to PassRules.MostEquipped). True if any did.
+function PetInventory.trimEquipped(player)
+    local data = playerData[player]
+    if not data then
+        return false
+    end
+    local limit = PassRules.maxEquipped(player)
+    local changed = false
+    while #data.equipped > limit do
+        local removed = table.remove(data.equipped)
+        if removed == data.auraPetInstanceId then
+            data.auraPetInstanceId = nil
+        end
+        changed = true
+    end
+    return changed
+end
+
 function PetInventory.removePlayer(player)
     playerData[player] = nil
     Codex.removePlayer(player)
@@ -107,7 +131,7 @@ function PetInventory.equip(player, instanceId)
         return false
     end
 
-    if #data.equipped >= GameConfig.MaxEquippedPets then
+    if #data.equipped >= PassRules.maxEquipped(player) then
         return false
     end
 

@@ -1,4 +1,4 @@
--- Qi from outside meditation, all at the cultivating rate (the player's pets count, the Qi Spring
+-- Qi from outside meditation, all at the cultivating rate (the player's pets and Qi passes count, the Qi Spring
 -- doesn't). Securing a stolen egg pays a burst worth EggTheft.SecureQiMinutes, so the chase is the
 -- fastest way to grow and meditation stays the steady base. Its realm multiplier is the lower of the
 -- player's and the egg's, so a high realm farming a beginner's guardian earns a beginner's Qi, and
@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local Server = script.Parent.Parent
 local PetInventory = require(Server:WaitForChild("Pets"):WaitForChild("PetInventory"))
@@ -20,7 +21,7 @@ function QiReward.grantAtRate(player, seconds, maxMultiplier)
     if not (qi and rankValue) then
         return 0
     end
-    local multiplier = math.min(Ranks.getQiMultiplier(rankValue.Value), maxMultiplier or math.huge)
+    local multiplier = math.min(Ranks.getQiMultiplier(rankValue.Value), maxMultiplier or math.huge) * PassRules.qiMultiplier(player)
     local perSecond = GameConfig.CultivationQiReward / GameConfig.CultivationInterval * multiplier
         * (100 + PetInventory.getQiBonusPercent(player)) / 100
     local amount = math.floor(perSecond * seconds)

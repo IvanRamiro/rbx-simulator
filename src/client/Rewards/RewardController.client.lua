@@ -92,7 +92,7 @@ local function render()
     local current = player:GetAttribute("DailyDay") or 1
     local realm = Shop.playerRealmIndex(player)
     for day, c in cards do
-        local stones, minutes = RewardRules.daily(day, realm)
+        local stones, minutes = RewardRules.daily(day, realm, player)
         c.amount.Text = NumberFormat.compact(stones)
         c.extra.Text = if minutes > 0 then "+" .. minutes .. " MIN QI" else ""
         local claimed = day < current or (day == current and not isReady)
@@ -114,7 +114,7 @@ local function render()
     end
 end
 
-for _, name in { "DailyReady", "DailyDay", "GroupClaimed" } do
+for _, name in { "DailyReady", "DailyDay", "GroupClaimed", "Pass_VIP" } do
     player:GetAttributeChangedSignal(name):Connect(render)
 end
 task.spawn(function()

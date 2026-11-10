@@ -57,6 +57,7 @@ UiTheme.Icons = {
     Codex = "rbxassetid://77528485832233", -- an open book with a spirit's paw print
     Lock = "rbxassetid://125417292249654", -- a gold padlock
     Titles = "rbxassetid://75199333846945", -- an honour banner with a star medallion
+    Store = "rbxassetid://89947110374361", -- a crimson gift box tied in gold (tools/ui/draw_store_icons.py)
 }
 
 -- Each egg's own picture, rendered from its 3D model (tools/blender/eggs/egg_icons.py, assets/ui/egg_icons)
