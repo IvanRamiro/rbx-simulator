@@ -58,6 +58,7 @@ local DATA = {
     StarfallFox = { Voice = { "9113955372", "9113955728", "9113956187" }, VoiceVolume = 2.32, Special = "9114157695", SpecialVolume = 0.86 },
     StormBumblebee = { Voice = { "9113414107", "9113414119", "9113414621" }, VoiceVolume = 1.12, Special = "9116277062", SpecialVolume = 0.3 },
     StormhornKirin = { Voice = { "9113630351", "9113629973", "9113630346" }, VoiceVolume = 1.11, Pitch = 0.9, Special = "9126100173", SpecialVolume = 0.53 },
+    SunscaleDragon = { Voice = { "9120049293", "9120048536" }, VoiceVolume = 0.35, Pitch = 0.75, VoiceLength = 2.4, Special = "9114439212", SpecialVolume = 0.43, SpecialLength = 4 }, -- (tiger roars pitched below every other dragon; the special a searing fire burst for its sun. Measured muted in Play, 2026-11-11: voice means 103 and 65, peaks 603 and 372 at full volume; the special 134, peak 420 over its first 4 s)
     TheNamelessOne = { Voice = { "9126213993", "9126213984", "9126213992" }, VoiceVolume = 0.53, Special = "9119468901", SpecialVolume = 1.55, SpecialLength = 4 },
     ThunderclawDrake = { Voice = { "9113980319" }, VoiceVolume = 0.67, Pitch = 0.9, VoiceLength = 2.6, Special = "9126068434", SpecialVolume = 1.2, SpecialLength = 4 },
     TimekeeperTortoise = { Voice = { "9120881979", "9126263691", "9126264414" }, VoiceVolume = 1.47, Special = "9120288444", SpecialVolume = 4.8 },

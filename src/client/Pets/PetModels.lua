@@ -4,6 +4,11 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local PetRig = require(script.Parent:WaitForChild("PetRig"))
 
 local meshFolder = ReplicatedStorage:WaitForChild("PetMeshes", 10)
+-- the folder, looked for again while it's missing (it can replicate after the 10 s wait on a slow join)
+local function meshes()
+    meshFolder = meshFolder or ReplicatedStorage:FindFirstChild("PetMeshes")
+    return meshFolder
+end
 
 local PetModels = {}
 
@@ -421,7 +426,7 @@ function PetModels.build(petId)
     rootPart.Parent = model
     model.PrimaryPart = rootPart
 
-    local imported = meshFolder and meshFolder:FindFirstChild(petId, true)
+    local imported = meshes() and meshFolder:FindFirstChild(petId, true)
     if imported and imported:IsA("Model") then
         addImported(model, rootPart, imported, design, petId)
         return model, rootPart

@@ -2,10 +2,12 @@
 type: build
 tags: [roblox, ugc, hair, marketplace]
 created: 2026-11-02
-status: built, close-up pass done, exported and maps uploaded; Studio fit test pending the owner's import; not yet published
+status: files deleted 2026-11-11 at the owner's word (paused since 2026-11-02, never published); kept as a record
 ---
 
 # Murim High Ponytail
+
+> **Deleted (2026-11-11):** the owner chose to delete this hair's files (`assets/ugc/Hair/MurimHighPonytail/`, `tools/blender/ugc/hair/`). They remain in git history (last present in commit 0b179a4). This note stays as the record of how it was built.
 
 A Roblox marketplace hair (a rigid accessory on HairAttachment), made for the owner to sell; not
 part of Qi Aura Simulator. It is the first item of the hair category: scripts in

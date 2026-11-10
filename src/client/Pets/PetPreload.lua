@@ -11,6 +11,11 @@ local PetPreload = {}
 local TIMEOUT = 8 -- seconds before a wanted pet counts as ready, fetched or not
 
 local meshFolder = ReplicatedStorage:WaitForChild("PetMeshes", 10)
+-- the folder, looked for again while it's missing (it can replicate after the 10 s wait on a slow join)
+local function meshes()
+    meshFolder = meshFolder or ReplicatedStorage:FindFirstChild("PetMeshes")
+    return meshFolder
+end
 local ready = {}     -- [petId] = true
 local wanted = {}    -- [petId] = true: its timeout is running
 local queue = {}     -- petIds, first in line first
@@ -25,7 +30,7 @@ local function work()
         while #queue > 0 do
             local petId = table.remove(queue, 1)
             if not ready[petId] then
-                local imported = meshFolder and meshFolder:FindFirstChild(petId, true)
+                local imported = meshes() and meshFolder:FindFirstChild(petId, true)
                 if imported then
                     pcall(function()
                         ContentProvider:PreloadAsync({ imported })

@@ -29,7 +29,7 @@ function SpecialPreview.play(petId, onDone)
             PetPreload.want(petId)
             task.wait(0.1)
         end
-        local model, petRoot = PetModels.build(petId)
+        local model = PetModels.build(petId)
         local rig = model and PetModels.getRig(model)
         if rig then
             rig.owner = Players.LocalPlayer
@@ -51,23 +51,33 @@ function SpecialPreview.play(petId, onDone)
         local hit = workspace:Raycast(spot + Vector3.new(0, 30, 0), Vector3.new(0, -90, 0), params)
         local groundY = if hit then hit.Position.Y else root.Position.Y - 3
         local at = Vector3.new(spot.X, groundY + HOVER, spot.Z)
-        petRoot.CFrame = CFrame.lookAt(at, Vector3.new(root.Position.X, at.Y, root.Position.Z)) -- pets face -Z: it faces the player
+        -- every piece moved before it enters the world (pieces welded to the root don't follow it outside the world)
+        model:PivotTo(CFrame.lookAt(at, Vector3.new(root.Position.X, at.Y, root.Position.Z))) -- pets face -Z: it faces the player
         model.Parent = workspace
 
         local elapsed, fired = 0, false
         local connection
+        local function stop(ok)
+            connection:Disconnect()
+            model:Destroy()
+            playing = false
+            onDone(ok)
+        end
         connection = RunService.RenderStepped:Connect(function(dt)
             elapsed += dt
-            if not fired and elapsed >= LEAD_IN then
-                fired = true
-                PetRig.nova(rig)
-            end
-            PetRig.update(rig, dt, { speed = 0, flying = false })
-            if elapsed >= LEAD_IN + PetRig.NOVA_TIME + LEAD_OUT then
-                connection:Disconnect()
-                model:Destroy()
-                playing = false
-                onDone(true)
+            -- an error in a pet's animation ends this preview, rather than leaving Watch dead for the session
+            local ok, err = pcall(function()
+                if not fired and elapsed >= LEAD_IN then
+                    fired = true
+                    PetRig.nova(rig)
+                end
+                PetRig.update(rig, dt, { speed = 0, flying = false })
+            end)
+            if not ok then
+                warn("SpecialPreview: " .. tostring(petId) .. ": " .. tostring(err))
+                stop(false)
+            elseif elapsed >= LEAD_IN + PetRig.NOVA_TIME + LEAD_OUT then
+                stop(true)
             end
         end)
     end)

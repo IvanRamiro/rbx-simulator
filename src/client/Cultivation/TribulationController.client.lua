@@ -223,6 +223,14 @@ end
 local panel -- the local player's own panel, while their tribulation lasts
 
 local function strike(owner, data)
+    -- the cultivator's own panel and hit, even if their storm couldn't be drawn (no character yet when it started)
+    if owner == player and panel then
+        panel.setLives(data.Lives)
+    end
+    if owner == player and data.Hit then
+        screenFlash()
+        Sfx.play("Knockback")
+    end
     local storm = storms[owner]
     if not storm then
         return
@@ -233,13 +241,6 @@ local function strike(owner, data)
         for _, p in ring do
             p:Destroy()
         end
-    end
-    if owner == player and panel then
-        panel.setLives(data.Lives)
-    end
-    if owner == player and data.Hit then
-        screenFlash()
-        Sfx.play("Knockback")
     end
     if not inSight(data.Position) then
         return
@@ -336,6 +337,7 @@ RemoteEvents.TribulationEvent.OnClientEvent:Connect(function(kind, owner, data)
         return
     end
     if kind == "Start" then
+        endStorm(owner) -- (a storm still showing for them is ended first, not left behind with its looping sound)
         startStorm(owner, data)
         if owner == player then
             if panel then
@@ -343,6 +345,10 @@ RemoteEvents.TribulationEvent.OnClientEvent:Connect(function(kind, owner, data)
             end
             panel = makePanel(data)
             notice:show("THE HEAVENS TEST YOU: survive the lightning", C.Highlight)
+            if grade then
+                grade:Destroy() -- (one from a run that never ended: never two darkening the screen)
+                grade = nil
+            end
             if not reduced() then
                 grade = Instance.new("ColorCorrectionEffect")
                 grade.Name = "TribulationDark"

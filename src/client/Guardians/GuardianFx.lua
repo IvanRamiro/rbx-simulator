@@ -369,6 +369,9 @@ end
 -- beam's holder: destroy it when the egg is picked up.
 function GuardianFx.beacon(eggModel)
     local body = eggModel.PrimaryPart
+    if not body then
+        return nil -- (not streamed in yet: no beacon, rather than an error)
+    end
     local holder = Instance.new("Part")
     holder.Anchored, holder.CanCollide, holder.CanQuery, holder.CanTouch, holder.CastShadow = true, false, false, false, false
     holder.Transparency = 1

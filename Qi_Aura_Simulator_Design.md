@@ -121,7 +121,7 @@ The owner chose it from the suggestions ("do the 3"). Breaking through **into a 
 - **The button** reads FACE THE TRIBULATION: <REALM>. Pressing it stops meditation and lands a sword flight; neither can start until it is over, and it can't begin while carrying a guardian's egg.
 - **The storm:** dark cloud gathers 55 studs over them and follows them, lightning flickering inside it; the world dims for them (not with Reduced Effects). After 2.5 seconds, rings of light mark the ground where bolts will fall, each filling as its bolt comes, a beam of light above it; then the bolt falls, with a flash, a scorch and sparks. They dodge on foot, leaping and dashing.
 - **Harder each realm** (`GameConfig.Tribulation`): 8 bolts entering Qi Foundation up to 18 entering Eternal Transcendence; the warning from 1.45 down to 0.85 seconds; the gap between bolts from 1.1 to 0.6; from the Ascendant Realm, two fall at once, from the Cosmic Realm three (the others ringing the cultivator, closing the easy ways out); and more and more aimed where they are running, not where they stand.
-- **Three lives** (gold diamonds on the panel at the top, which also counts the bolts to come). A bolt reaches 6 studs round its ring's middle, at any height (a column of lightning); bolts falling together cost one life between them. Three hits and it is over: no Qi lost, and the button counts down a minute before they may try again. Survive every bolt and the breakthrough is theirs, with its usual effect. Dying or leaving ends it with no wait.
+- **Three lives** (gold diamonds on the panel at the top, which also counts the bolts to come). A bolt reaches 6 studs round its ring's middle, at any height (a column of lightning); bolts falling together cost one life between them. Three hits and it is over: no Qi lost, and the button counts down a minute before they may try again. Survive every bolt and the breakthrough is theirs, with its usual effect. Dying counts as failing it, with the same minute's wait (the owner, 2026-11-11: otherwise a reset skipped the wait); leaving the game ends it with no wait.
 - **Fair and server-checked:** the server places every ring and judges every hit from where the cultivator really is (`server/Cultivation/Tribulation`); every client draws everyone's storm within 320 studs (`client/Cultivation/TribulationController`). A hit flashes the screen white and shakes the camera (not with Reduced Effects). Analytics: TribulationStarted, TribulationPassed, TribulationFailed.
 - **Sounds** (licensed Pro Sound Effects, levels still to be judged by ear): a deep pulsing rumble under the storm, thunder rolling in, a charging arc for each ring, a crack and a boom for each bolt.
 - **Tested in Play** on a test save: standing still, three hits and a fall, the rank kept, the button counting down 60 s; dodging, every bolt missed and the rank went up (into Qi Foundation, then Spirit Core); the storm and the darkening cleared after; no errors.
@@ -367,7 +367,7 @@ The owner chose it from the suggestions ("do the 3"): the pets were silent. Each
 | Wind Sprite ★ | Common | Wind | +10% |
 | Cloud Sheep ★ | Uncommon | Clouds | +25% |
 | Spirit Crane ★ | Rare | Spiritual energy | +40% |
-| Azure Sky Dragon ★ | Epic | Wind and sky | +60% |
+| Azure Sky Dragon ★ | Epic | Wind and sky | +55% |
 | Stormhorn Kirin ★ | Legendary | Storms | +70% |
 
 **Elemental Core Egg (Beginner Isle)**

@@ -42,7 +42,7 @@ UiTheme.Ornaments = {
 UiTheme.Margin = 16 -- from the screen's edges
 
 -- The icons: original full-colour pictures (tools/ui/draw_icons.py, assets/ui/icons; ids in icons.json),
--- shown untinted. No text in any language on an icon. (icons.json also lists the ones the HUD doesn't show.)
+-- shown untinted. No text in any language on an icon.
 UiTheme.Icons = {
     Qi = "rbxassetid://92441554457364", -- a flame of energy
     Stones = "rbxassetid://115509307959601",    -- a faceted crystal

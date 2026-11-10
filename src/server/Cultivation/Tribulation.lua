@@ -4,7 +4,8 @@
 -- is; every client is told, to draw the storm (TribulationController). Survive every bolt and the breakthrough is theirs
 -- (RankService's onPass); Lives hits and it is over, and they may try again RetryAfter seconds later (their
 -- "TribulationRetryAt" attribute, in server time). Their "InTribulation" attribute holds while it lasts: meditation and
--- sword flight stop and can't start (QiService, FlightService). Dying or leaving ends it with no wait.
+-- sword flight stop and can't start (QiService, FlightService). Dying counts as failing it (the owner, 2026-11-11: else a
+-- cultivator about to lose their last life could reset and retry at once); leaving ends it with no wait.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -165,7 +166,7 @@ function Tribulation.start(player, realm, onPass)
     Analytics.event(player, "TribulationStarted", realm)
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     humanoid.Died:Once(function()
-        finish(player, token, false, true, realm, onPass)
+        finish(player, token, false, false, realm, onPass) -- a failed try: RetryAfter applies
     end)
     task.spawn(run, player, character, token, realm, onPass)
     return true

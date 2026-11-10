@@ -125,7 +125,9 @@ function GuardianAnim.new(model, rig)
     self.joints = {}
     self.parents = {}
     if rig.Skinned then
-        self:findBones()
+        if not self:findBones() then
+            return nil -- the model left the world before its bones arrived
+        end
     else
         for _, joint in rig.Joints do
             self.joints[joint] = model:WaitForChild("Joints"):WaitForChild(joint)
@@ -190,7 +192,12 @@ function GuardianAnim:findBones()
     for _ in wanted do
         need += 1
     end
+    -- bones can stream in late: wait for them, but not for a model that is gone, and say once which never came
+    local started, warned = os.clock(), false
     while count < need do
+        if not self.model:IsDescendantOf(workspace) then
+            return false
+        end
         for _, d in self.model:GetDescendants() do
             if d:IsA("Bone") and wanted[d.Name] and not found[d.Name] then
                 found[d.Name] = d
@@ -198,6 +205,16 @@ function GuardianAnim:findBones()
             end
         end
         if count < need then
+            if not warned and os.clock() - started > 10 then
+                warned = true
+                local missing = {}
+                for name in wanted do
+                    if not found[name] then
+                        table.insert(missing, name)
+                    end
+                end
+                warn("GuardianAnim: " .. self.model.Name .. " is still missing bones: " .. table.concat(missing, ", "))
+            end
             task.wait(0.1)
         end
     end
@@ -214,6 +231,7 @@ function GuardianAnim:findBones()
         end
         self.parents[joint] = if up and up:IsA("Bone") then up.Name else nil
     end
+    return true
 end
 
 -- Sets a bone outside the rig's joints (the eyes in their sockets) to a pose in the guardian's axes.

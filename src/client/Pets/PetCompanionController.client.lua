@@ -21,7 +21,8 @@ local ORBIT_RADIUS = 6.5
 local ORBIT_HEIGHT = 1.6
 local ORBIT_SPEED = 0.6
 local NOVA_INTERVAL = 25
-local CULL_DISTANCE = if require(script.Parent.Parent:WaitForChild("Quality")).Low then 80 else 250 -- studs from the camera: other players' pets farther away are hidden and not animated
+local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local CULL_DISTANCE = if Quality.Low then 80 else 250 -- studs from the camera: other players' pets farther away are hidden and not animated
 local RANK_CHECK_INTERVAL = 0.5
 
 local container = Instance.new("Folder")
@@ -156,6 +157,13 @@ local function syncPets(player, entry)
             if pet then
                 if pet.rig then
                     pet.rig.owner = player -- (a special can show its owner: the Obsidian Guardian's)
+                elseif Quality.Low and player ~= Players.LocalPlayer then
+                    -- an unrigged pet's light (PetRig's sweep covers rigged ones): another player's pet on a phone gives it up
+                    for _, d in pet.model:GetDescendants() do
+                        if d:IsA("PointLight") then
+                            d.Enabled = false
+                        end
+                    end
                 end
                 table.insert(entry.pets, pet)
             end

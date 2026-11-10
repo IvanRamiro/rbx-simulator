@@ -153,21 +153,6 @@ a.poly([(280, 560), (744, 560), (756, 680), (268, 680)], "F0433C", "B81E30")
 a.ellipse(512, 620, 58, 58, "FFE27A", "E89A18")
 a.save("Robes")
 
-# Qinggong: a swallow diving, wings swept back
-a = Art()
-wing_l = bez((512, 420), (360, 260), (190, 130), (50, 120)) + bez((50, 120), (130, 330), (280, 520), (470, 590))[1:]
-a.poly(wing_l, "2F7CFF", "7FE0FF")
-a.poly(mirror(wing_l), "2F7CFF", "7FE0FF")
-tail_l = [(470, 640), (512, 690), (400, 960)]
-a.poly(tail_l, "2060E0", "0E3CA8")
-a.poly(mirror(tail_l), "2060E0", "0E3CA8")
-body = bez((512, 190), (620, 300), (610, 590), (512, 760)) + bez((512, 760), (414, 590), (404, 300), (512, 190))[1:]
-a.poly(body, "FFFFFF", "BDEBFF")
-a.poly(bez((512, 190), (570, 250), (580, 340), (560, 400)) + bez((560, 400), (530, 420), (494, 420), (464, 400))[1:]
-       + bez((464, 400), (444, 340), (454, 250), (512, 190))[1:], "1E4FC8", "123490")
-a.ellipse(512, 330, 24, 24, "FFD84A")
-a.save("Qinggong")
-
 # Guardian: a crimson shield, a gold rim, a beast's slit eye
 a = Art()
 shield = [(512, 60), (880, 180)] + bez((880, 180), (880, 560), (740, 820), (512, 970)) + bez((512, 970), (284, 820), (144, 560), (144, 180))[1:]
@@ -191,31 +176,6 @@ crack = [(150, 520), (300, 440), (400, 560), (512, 420), (620, 560), (724, 440),
          (874, 620), (724, 540), (620, 660), (512, 520), (400, 660), (300, 540), (150, 620)]
 a.poly(crack, "FFF29A", "FF9A1E")
 a.save("Hatch")
-
-# Shop: the Jade Scale: a gold balance, jade in one pan and stones in the other
-a = Art()
-a.poly([(482, 150), (542, 150), (560, 830), (464, 830)], "FFE27A", "D88A1C")
-a.poly([(300, 830), (724, 830), (780, 940), (244, 940)], "FFD866", "C8780C")
-a.line([(130, 240), (894, 240)], 56, "FFE27A", "E89A18")
-a.ellipse(512, 180, 66, 66, "A8FFD0", "2FB878")
-for side in (0, 1):
-    cx = 190 if side == 0 else 834
-    a.line([(cx, 250), (cx - 120, 560)], 18, "FFE27A")
-    a.line([(cx, 250), (cx + 120, 560)], 18, "FFE27A")
-    a.ellipse(cx, 470 if side else 490, 90, 80, "8CF0A8" if side == 0 else "7FF4FF", "1E9F68" if side == 0 else "1466F0")
-    a.poly([(cx - 165, 560), (cx + 165, 560)] + bez((cx + 165, 560), (cx + 120, 680), (cx - 120, 680), (cx - 165, 560))[1:], "FFD866", "C8780C")
-a.save("Shop")
-
-# Forge: a hammer over an anvil, sparks flying
-a = Art()
-a.poly([(180, 620), (850, 620), (720, 740), (640, 760), (680, 900), (340, 900), (380, 760), (300, 740)], "B8C8E0", "4A5878")
-a.poly([(180, 620), (850, 620), (800, 670), (230, 670)], "F4F8FF", "B8C8E0")
-a.line([(620, 150), (390, 520)], 62, "B87A3C", "6A3C18")
-a.poly([(360, 70), (660, 240), (560, 400), (260, 230)], "D8E4F4", "6A7898")
-a.line([(700, 540), (800, 430)], 34, "FFE27A", "FF7A1E")
-a.line([(780, 590), (930, 540)], 28, "FFE27A", "FF7A1E")
-a.line([(640, 500), (660, 390)], 26, "FFE27A", "FF7A1E")
-a.save("Forge")
 
 # Quest: an open scroll with a red seal
 a = Art()

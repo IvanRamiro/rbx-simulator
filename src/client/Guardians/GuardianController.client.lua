@@ -569,7 +569,9 @@ local function watchEgg(egg)
             end
             dropped[egg] = entry
         elseif not isDropped and entry then
-            entry.beacon:Destroy()
+            if entry.beacon then
+                entry.beacon:Destroy()
+            end
             if entry.gui then
                 entry.gui:Destroy()
             end
@@ -588,7 +590,12 @@ local function watchEgg(egg)
     end)
     egg.AncestryChanged:Connect(function()
         if not egg:IsDescendantOf(Workspace) and dropped[egg] then
-            dropped[egg].beacon:Destroy()
+            if dropped[egg].beacon then
+                dropped[egg].beacon:Destroy()
+            end
+            if dropped[egg].gui then
+                dropped[egg].gui:Destroy()
+            end
             dropped[egg] = nil
         end
     end)
@@ -626,7 +633,7 @@ local function track(model)
     rigs[model] = rig
     task.spawn(function()
         local anim = GuardianAnim.new(model, rig)
-        if model:IsDescendantOf(Workspace) then
+        if anim and model:IsDescendantOf(Workspace) then
             anims[model] = anim
         end
     end)
