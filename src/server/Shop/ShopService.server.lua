@@ -128,7 +128,8 @@ function actions.Buy(player, weaponId)
     end
     WeaponInventory.equip(player, WeaponInventory.grant(player, weapon.Id))
     Quests.Moment:Fire(player, "BuyWeapon")
-    return true, "Forged the " .. weapon.Name .. "!"
+    -- "Bought", not "Forged": forging is its own step (the Forge tab, its own quest), and a purchase said it too
+    return true, "Bought the " .. weapon.Name .. ": it's your weapon now."
 end
 
 function actions.Equip(player, instanceId)

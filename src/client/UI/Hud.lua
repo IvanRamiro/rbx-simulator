@@ -101,13 +101,27 @@ Hud.Banner = region("Banner", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, M), Enum
 -- where the notification shows: top centre, hanging just under whatever the Banner holds (it follows the Banner's foot)
 Hud.Notice = region("Notice", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, M), Enum.FillDirection.Vertical,
     Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top, 6, noticeGui)
+-- Under the Banner; but where an open window would be covered (its title, its tabs), it moves down to sit just over the
+-- window's foot instead (a short screen: a purchase's message hid the Blacksmith's title, a new player's run, 2026-11-11).
+local openWindowFrame = nil -- set by Hud.window: the frame of the window that is open, if any
 local function placeNotice()
     local banner = Hud.Banner
-    local foot = if banner.AbsoluteSize.Y > 1 then banner.AbsolutePosition.Y + banner.AbsoluteSize.Y + 6 * HudMetrics.scale() else M
-    Hud.Notice.Position = UDim2.new(0.5, 0, 0, foot)
+    local scale = HudMetrics.scale()
+    local foot = if banner.AbsoluteSize.Y > 1 then banner.AbsolutePosition.Y + banner.AbsoluteSize.Y + 6 * scale else M
+    local notice = Hud.Notice
+    local frame = openWindowFrame
+    if frame and frame.Visible and notice.AbsoluteSize.Y > 1 and foot + notice.AbsoluteSize.Y > frame.AbsolutePosition.Y then
+        local bottom = frame.AbsolutePosition.Y + frame.AbsoluteSize.Y - 12 * scale -- over the window's lowest part
+        notice.AnchorPoint = Vector2.new(0.5, 1)
+        notice.Position = UDim2.new(0.5, 0, 0, bottom)
+        return
+    end
+    notice.AnchorPoint = Vector2.new(0.5, 0)
+    notice.Position = UDim2.new(0.5, 0, 0, foot)
 end
 Hud.Banner:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeNotice)
 Hud.Banner:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeNotice)
+Hud.Notice:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeNotice)
 Hud.Quest = region("Quest", Vector2.new(1, 0), UDim2.new(1, -M, 0, M), Enum.FillDirection.Vertical,
     Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Top, 6)
 Hud.Currency = region("Currency", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 8), Enum.FillDirection.Horizontal,
@@ -370,6 +384,10 @@ function Hud.window(props)
         if linked then
             linked:SetAttribute("Tone", "Quiet")
         end
+        if openWindowFrame == frame then
+            openWindowFrame = nil
+            task.defer(placeNotice)
+        end
         stepAside()
         shown += 1
         local this = shown
@@ -395,6 +413,8 @@ function Hud.window(props)
             if linked then
                 linked:SetAttribute("Tone", "Accent")
             end
+            openWindowFrame = frame
+            task.delay(0.3, placeNotice) -- once it has risen into place
             stepAside()
             shown += 1
             local this = shown

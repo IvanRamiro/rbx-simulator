@@ -12,6 +12,7 @@ local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local RunService = game:GetService("RunService")
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
+local WorldMarkers = require(UI:WaitForChild("WorldMarkers"))
 local Toast = require(UI:WaitForChild("Toast"))
 local UiFx = require(UI:WaitForChild("UiFx"))
 local UiKit = require(UI:WaitForChild("UiKit"))
@@ -180,8 +181,26 @@ local function renderProgress()
 end
 
 -- It rests while the egg's own way home is showing, and within sight of the place.
+-- The place is also marked in the world (WorldMarkers): its name and distance over it, or at the screen's edge with an
+-- arrow when it's out of view (a new player's run, 2026-11-11: the only guide to the Stone Lion 609 studs away was the
+-- small arrow in this panel). A Way gives the ground's x and z; its height is found once, by a ray down.
 local WAY_NEAR, WAY_EVERY = 25, 0.15
+local WAY_ABOVE = 9 -- studs over the ground the marker hangs
+local WAY_MARKER_NEAR = 60 -- studs: closer, the place is in sight (and a guardian's own bar marks it), so the marker goes
 local nextWay = 0
+local wayMarker = WorldMarkers.new(UiTheme.Colors.Highlight, true)
+local wayGround = {} -- [quest step] = the ground's height at its Way
+local reachedWay = {} -- [quest step] = true once the player has been at its Way (its Then takes over)
+local function groundAt(step, x, z)
+    if wayGround[step] == nil then
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = { player.Character }
+        local hit = workspace:Raycast(Vector3.new(x, 1500, z), Vector3.new(0, -3000, 0), params)
+        wayGround[step] = if hit then hit.Position.Y else false
+    end
+    return wayGround[step] or nil
+end
 RunService.RenderStepped:Connect(function()
     local now = os.clock()
     if now < nextWay then
@@ -205,6 +224,25 @@ RunService.RenderStepped:Connect(function()
     end
     if way.Visible ~= show then
         way.Visible = show
+    end
+    local near = root and target and Vector3.new(target[2] - root.Position.X, 0, target[3] - root.Position.Z).Magnitude < WAY_MARKER_NEAR
+    -- a Way with a Then (x, y, z): once the player has reached the Way, the marker points there instead (the great root's
+    -- top, then the relic at its foot: without it the marker pointed back up the root at the player climbing down)
+    if near and target and target.Then then
+        reachedWay[step] = true
+    end
+    local after = target and target.Then and reachedWay[step] and target.Then
+    if after and root then
+        local to = Vector3.new(after[2], after[3], after[4]) - root.Position
+        wayMarker.world = if to.Magnitude > WAY_NEAR then Vector3.new(after[2], after[3], after[4]) else nil
+        wayMarker.label.Text = string.upper(after[1]) .. "  " .. NumberFormat.compact(math.floor(to.Magnitude)) .. "m"
+        return
+    end
+    local ground = show and not near and groundAt(step, target[2], target[3])
+    wayMarker.world = if ground then Vector3.new(target[2], ground + WAY_ABOVE, target[3]) else nil
+    if ground then
+        local to = Vector3.new(target[2] - root.Position.X, 0, target[3] - root.Position.Z)
+        wayMarker.label.Text = string.upper(target[1]) .. "  " .. NumberFormat.compact(math.floor(to.Magnitude)) .. "m"
     end
 end)
 

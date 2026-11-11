@@ -53,6 +53,7 @@ local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForCh
 local FLAT = Vector3.new(1, 0, 1)
 local DECIDE_EVERY = 0.1        -- seconds between decisions; movement runs every frame
 local CHASE_STOP = 13           -- it stops this far from its prey (its face is ~20 studs ahead of the chest); config.ChaseStop overrides
+local SAFE_WAYPOINT_INSET = 20 -- studs inside the hub's edge the way home points (inSafeZone secures 8 inside it)
 local KNOCK_IMMUNITY = 0.6      -- seconds
 local TELEPORT_JUMP = 40        -- a thief moving this far in one frame was returned by the world
 local CARRY_SLACK = 40          -- studs of allowance on the carry's speed check (knockbacks, falls)
@@ -123,7 +124,19 @@ function Guardian.new(id, config, source, folder)
     -- the hub: secured on setting foot on it; the waypoint is its end of this island's bridge
     self.safeIsland = WorldConfig.Islands[config.SafeZone.Island]
     assert(self.safeIsland, "guardian " .. id .. ": SafeZone.Island must name an island")
-    self.safeCentre = WorldConfig.bridgeLanding(config.Island) or self.safeIsland.Centre
+    -- the waypoint is pulled in from the bridge's end to a little inside the line that secures the egg (inSafeZone): at the
+    -- bridge's very end (245 studs from Yggdrasil's middle, the line at 242) a thief could stand at "0m" and nothing happened
+    -- (a new player's run, 2026-11-11)
+    local landing = WorldConfig.bridgeLanding(config.Island)
+    if landing then
+        local hub = self.safeIsland
+        local out = flat(landing - hub.Centre)
+        local inside = hub.Radius - SAFE_WAYPOINT_INSET
+        if out.Magnitude > inside then
+            landing = hub.Centre + out.Unit * inside + Vector3.new(0, landing.Y - hub.Centre.Y, 0)
+        end
+    end
+    self.safeCentre = landing or self.safeIsland.Centre
 
     local model = source:Clone()
     model.Name = id

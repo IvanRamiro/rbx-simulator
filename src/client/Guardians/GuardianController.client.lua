@@ -29,6 +29,7 @@ local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKi
 local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiTheme"))
 local UiFx = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiFx"))
 local HudMetrics = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudMetrics"))
+local WorldMarkers = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("WorldMarkers"))
 
 local player = Players.LocalPlayer
 
@@ -467,8 +468,15 @@ local function updateBar(dt)
         local height = barHeights[best] + BAR_ABOVE
         local point = onScreen(height)
         local half = barWidth() * scale / 2
+        -- across, it keeps on the screen and clear of the left column (the profile and the menu): a guardian at the edge
+        -- of the view had the bar half off the screen, under the menu
+        local view = camera.ViewportSize
+        local status = Hud.Status
+        local leftLimit = (if status.Visible then status.AbsolutePosition.X + status.AbsoluteSize.X else 0) + BAR_GAP * scale
+        local rightLimit = view.X - BAR_GAP * scale
+        local barX = if leftLimit + half <= rightLimit - half then math.clamp(point.X, leftLimit + half, rightLimit - half) else view.X / 2
         -- the bar hangs from the point: its bottom sits there, so the point must be a bar's height under the HUD above it
-        local margin = hudBottomOver(point.X - half, point.X + half) + BAR_GAP * scale + 72 * scale
+        local margin = hudBottomOver(barX - half, barX + half) + BAR_GAP * scale + 72 * scale
         -- eased: a notification coming or going moves the HUD's foot, and the bar glides to it instead of jumping
         shownMargin = if shownMargin then shownMargin + (margin - shownMargin) * (1 - math.exp(-dt * 12)) else margin
         margin = shownMargin
@@ -487,7 +495,7 @@ local function updateBar(dt)
         if point.Z > 0 then
             placed = true
             barScale.Scale = scale
-            bar.Position = UDim2.fromOffset(point.X, math.max(point.Y, margin))
+            bar.Position = UDim2.fromOffset(barX, math.max(point.Y, margin))
         end
     end
     barLayer.Enabled = placed
@@ -541,6 +549,7 @@ end
 
 -- ---------- the way to the safe zone, for a thief ----------
 local waypoint = nil
+local waypointMarker = nil -- its label on the screen (placeMarkers)
 local function updateWaypoint()
     local guardianId = player:GetAttribute("CarryingGuardian")
     local model = guardianId and guardianModel(guardianId)
@@ -550,6 +559,8 @@ local function updateWaypoint()
             waypoint:Destroy()
             waypoint = nil
         end
+        WorldMarkers.drop(waypointMarker)
+        waypointMarker = nil
         return
     end
     if waypoint then
@@ -561,20 +572,8 @@ local function updateWaypoint()
     anchor.Transparency = 1
     anchor.Size = Vector3.new(0.4, 0.4, 0.4)
     anchor.CFrame = CFrame.new(centre + Vector3.new(0, 10, 0))
-    local gui = Instance.new("BillboardGui")
-    gui.AlwaysOnTop = true
-    gui.Size = UDim2.fromOffset(170, 46)
-    gui.LightInfluence = 0
-    gui.Parent = anchor
-    local label = Instance.new("TextLabel")
-    label.Name = "Label"
-    label.BackgroundTransparency = 1
-    label.Size = UDim2.fromScale(1, 1)
-    label.Font = Enum.Font.GothamBlack
-    label.TextScaled = true
-    label.TextColor3 = GOLD
-    label.TextStrokeTransparency = 0.3
-    label.Parent = gui
+    waypointMarker = WorldMarkers.new(GOLD, true)
+    waypointMarker.world = anchor.Position
     local bottom, top = Instance.new("Attachment"), Instance.new("Attachment")
     bottom.Position = Vector3.new(0, -10, 0)
     top.Position = Vector3.new(0, 40, 0)
@@ -598,12 +597,12 @@ updateWaypoint()
 
 local function updateWaypointText()
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not (waypoint and root) then
+    if not (waypoint and waypointMarker and root) then
         return
     end
     local config = GameConfig.Guardians[player:GetAttribute("CarryingGuardian")]
     local distance = ((waypoint.Position - root.Position) * Vector3.new(1, 0, 1)).Magnitude
-    waypoint.BillboardGui.Label.Text = string.upper(config.SafeZone.Name) .. "  " .. math.floor(distance) .. "m"
+    waypointMarker.label.Text = string.upper(config.SafeZone.Name) .. "  " .. math.floor(distance) .. "m"
 end
 
 -- ---------- dropped eggs ----------
@@ -621,31 +620,16 @@ local function watchEgg(egg)
         local entry = dropped[egg]
         if isDropped and not entry then
             entry = { beacon = GuardianFx.beacon(egg) }
-            if mine then
-                local gui = Instance.new("BillboardGui")
-                gui.AlwaysOnTop = true
-                gui.Size = UDim2.fromOffset(150, 34)
-                gui.StudsOffsetWorldSpace = Vector3.new(0, 3.5, 0)
-                gui.Parent = egg.PrimaryPart
-                local label = Instance.new("TextLabel")
-                label.BackgroundTransparency = 1
-                label.Size = UDim2.fromScale(1, 1)
-                label.Font = Enum.Font.GothamBlack
-                label.TextScaled = true
-                label.TextColor3 = Color3.fromRGB(150, 210, 255)
-                label.TextStrokeTransparency = 0.3
-                label.Parent = gui
-                entry.countdown = label
-                entry.gui = gui
+            if mine then -- its thief is shown where it lies, at the screen's edge if it's out of view
+                entry.marker = WorldMarkers.new(Color3.fromRGB(150, 210, 255), true)
+                entry.countdown = entry.marker.label
             end
             dropped[egg] = entry
         elseif not isDropped and entry then
             if entry.beacon then
                 entry.beacon:Destroy()
             end
-            if entry.gui then
-                entry.gui:Destroy()
-            end
+            WorldMarkers.drop(entry.marker)
             dropped[egg] = nil
         end
     end
@@ -664,9 +648,7 @@ local function watchEgg(egg)
             if dropped[egg].beacon then
                 dropped[egg].beacon:Destroy()
             end
-            if dropped[egg].gui then
-                dropped[egg].gui:Destroy()
-            end
+            WorldMarkers.drop(dropped[egg].marker)
             dropped[egg] = nil
         end
     end)
@@ -682,6 +664,8 @@ local function updateCountdowns()
         if entry.countdown then
             local left = math.max(0, math.ceil((egg:GetAttribute("DropUntil") or now) - now))
             entry.countdown.Text = "RECOVER · " .. left .. "s"
+            local body = egg.PrimaryPart
+            entry.marker.world = body and body.Position + Vector3.new(0, 3.5, 0)
         end
     end
 end

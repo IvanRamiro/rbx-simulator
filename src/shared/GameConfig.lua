@@ -582,7 +582,7 @@ local GameConfig = {
             Way = { "the Blacksmith", -172, 46 },
             Text = "Visit the Blacksmith on Yggdrasil and buy a spear or a better sword." },
         { Id = "Root", Kind = "Relic", Goal = "IslandRoot", Reward = 40, Title = "The Root of the Island",
-            Way = { "the great root", 1, 238 },
+            Way = { "the great root", 1, 238, Then = { "the relic", 88.5, 127, 153.3 } }, -- Then: where the world marker points once the player has reached the Way (QuestController)
             Text = "Climb down the great root of the World Tree and attune the relic at its foot." },
         { Id = "JadeBridge", Kind = "Visit", Goal = "JadeGrove", Reward = 40, Title = "The Jade Bridge",
             Way = { "the Jade bridge", -160, -186 },
