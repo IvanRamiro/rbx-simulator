@@ -562,28 +562,12 @@ Each kind has its own visual purpose. None is a recolour of another.
 - **Culling:** other players' auras switch off past 120 studs from the camera. Roblox draws at most 31 Highlights per client.
 - **One source of truth:** the Studio test range (`ServerStorage.DevStage.AuraTestRange`; drag it to Workspace to use it) uses the same module, so a realm enhanced there is the realm the game shows.
 
-**Pet designs over the realm aura:** an equipped pet with a design of its own adds it (below) on top of the realm aura while the player meditates. None are live now: the Aqua Wisp's Tidecaller Sanctum and the Ember Wyrm's Ember Crucible were removed with their old designs (2026-11-09, the owner's choices "Remove both, make new" and "Remove, make new"); the owner dropped their replacements (November 10, 2026), so none is planned. The element-coloured flame aura no longer shows, and the old default (Verdant Gale) was removed on November 8, 2026; the realm aura is the cultivation look.
-
-**Character auras** (one module per aura, all on the `CharacterAura` interface: build, show, hide, pulse, update, destroy)
-
-- **Shared pieces:**
-  - Every aura is built on the shared helpers in `src/client/Auras/AuraKit.lua`.
-  - Each is registered in `DESIGNS` in `src/client/Auras/CharacterAura.lua`.
-  - Its settings live in `src/client/Auras/AuraStyles.lua`, and its meshes in `ReplicatedStorage.AuraMeshes` (sources in `tools/blender/auras`).
-- **Stages:** each aura charges up, then grows from idle to charged to awakened the longer the player cultivates.
-- **Fallback:** without its meshes, a pet falls back to the anime flame aura, which is coloured by the pet's element.
-
-| Pet | Aura | What it is | Module |
-|---|---|---|---|
-
-**Pet auras:** each equipped pet of a cultivating player shows its own element's aura (`src/client/Auras/AuraBuilder.lua`). None are live now: the Aqua Wisp's orbiting droplets and its Tidecaller Sanctum were removed with its old design (2026-11-09, the owner's choice: "Remove both, make new"; a new aura comes once the new water seahorse is done), and the Golden Kirin's crown-and-leaves aura was removed with its old design (2026-11-09, at the owner's word: "remove that", "I don't need that anymore".)
+**No pet auras** (removed November 11, 2026, before the public test): the per-pet aura layer (`CharacterAura`, `AuraBuilder`) never ran, because no pet had a design of its own after the old ones went (the Tidecaller Sanctum, Ember Crucible, the Aqua Wisp's droplets and the Golden Kirin's leaves, 2026-11-09; the owner dropped their replacements, 2026-11-10). It was deleted with its flame-aura fallback. The realm aura is the cultivation look. `AuraStyles` keeps each pet's colours and the breakthrough settings, and `AuraKit` keeps the shared sequence helpers.
 
 **Poses and breakthroughs**
 
 - A flying pose while airborne, and each realm's own meditation idle while cultivating (below).
 - A burst effect on every rank-up, bigger at milestones.
-
-**Next:** every remaining element gets its own aura concept. Each its own concept, never a shared aura recoloured.
 
 ### The twelve meditation idles (the owner, November 4, 2026)
 

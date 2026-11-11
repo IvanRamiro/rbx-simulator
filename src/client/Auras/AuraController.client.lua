@@ -5,124 +5,20 @@ local RunService = game:GetService("RunService")
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local AuraConfig = require(ReplicatedStorage:WaitForChild("AuraConfig"))
 local RealmAura = require(script.Parent:WaitForChild("RealmAura"))
-local CharacterAura = require(script.Parent:WaitForChild("CharacterAura"))
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local BreakthroughEffect = require(script.Parent:WaitForChild("BreakthroughEffect"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local PRINT_BUILD_SUMMARY = RunService:IsStudio()
--- studs from the camera: other players' auras farther away are hidden and not stepped
-local CULL_DISTANCE = 250
 
+-- breakthrough effects are built in here (the pet aura layer that also lived here was removed,
+-- 2026-11-11: no pet had a design of its own, so it never ran)
 local container = Instance.new("Folder")
 container.Name = "CultivationAuras"
 container.Parent = workspace
 
-local activeAuras = {}
-local fadingAuras = {} -- [player] = the aura fading out after they stopped or changed it
-local liveAuras = {}
 local connections = {}
 local activeBreakthroughs = {}
-
-local updateConnection = nil
-local refreshAura
-
-local function destroyAura(aura)
-    if aura.destroyed then
-        return
-    end
-
-    liveAuras[aura] = nil
-    if activeAuras[aura.player] == aura then
-        activeAuras[aura.player] = nil
-    end
-    CharacterAura.destroy(aura)
-
-    if next(liveAuras) == nil and updateConnection then
-        updateConnection:Disconnect()
-        updateConnection = nil
-    end
-end
-
-local function removeAura(aura)
-    if activeAuras[aura.player] == aura then
-        activeAuras[aura.player] = nil
-    end
-
-    if not aura.rootPart:IsDescendantOf(workspace) then
-        destroyAura(aura)
-        return
-    end
-
-    -- one fading aura per player: switching auras quickly never stacks several
-    local previous = fadingAuras[aura.player]
-    if previous then
-        destroyAura(previous)
-    end
-    fadingAuras[aura.player] = aura
-    CharacterAura.hide(aura)
-    task.delay(CharacterAura.REMOVE_DELAY, function()
-        if fadingAuras[aura.player] == aura then
-            fadingAuras[aura.player] = nil
-        end
-        destroyAura(aura)
-    end)
-end
-
-local function updateAuras()
-    local now = os.clock()
-    local parts, cframes = {}, {}
-    local camera = workspace.CurrentCamera
-    local eye = camera and camera.CFrame.Position
-    local revealed = {}
-
-    for aura in liveAuras do
-        if aura.rootPart:IsDescendantOf(workspace) and (aura.model.Parent or aura.culled) then
-            local far = eye ~= nil and aura.player ~= Players.LocalPlayer
-                and (aura.rootPart.Position - eye).Magnitude > CULL_DISTANCE
-            if far and not aura.culled then
-                aura.culled = true
-                aura.model.Parent = nil
-            elseif not far then
-                if aura.culled then
-                    -- placed this frame before it is shown again, so its trails don't streak
-                    aura.culled = false
-                    table.insert(revealed, aura)
-                end
-                CharacterAura.update(aura, now, parts, cframes)
-            end
-        elseif activeAuras[aura.player] == aura then
-            destroyAura(aura)
-            task.defer(refreshAura, aura.player)
-        else
-            destroyAura(aura)
-        end
-    end
-
-    if #parts > 0 then
-        workspace:BulkMoveTo(parts, cframes, Enum.BulkMoveMode.FireCFrameChanged)
-    end
-    for _, aura in revealed do
-        aura.model.Parent = container
-    end
-end
-
-local function printSummary(aura, petId, rankId)
-    local counts = {}
-    for _, descendant in aura.model:GetDescendants() do
-        counts[descendant.ClassName] = (counts[descendant.ClassName] or 0) + 1
-    end
-    print(string.format(
-        "[Aura] %s: %s / %s - %d moving parts, %d trails, %d particle emitters, %d lights",
-        aura.player.Name,
-        petId or "Neutral",
-        tostring(rankId),
-        (counts.Part or 0) + (counts.MeshPart or 0),
-        counts.Trail or 0,
-        counts.ParticleEmitter or 0,
-        counts.PointLight or 0
-    ))
-end
 
 local function isAlive(character)
     local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -167,7 +63,7 @@ local function hiddenByReducedEffects(player)
     return player ~= Players.LocalPlayer and Players.LocalPlayer:GetAttribute("SettingReducedEffects") == true
 end
 
-local function refreshRealmAura(player)
+local function refreshAura(player)
     local character = player.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
     local rank = Ranks.getRank(Ranks.getPlayerRankName(player))
@@ -186,51 +82,6 @@ local function refreshRealmAura(player)
     local fx = RealmAura.build(rootPart, realm, rank.Level, { isLocal = player == Players.LocalPlayer })
     if fx then
         realmAuras[player] = { fx = fx, root = rootPart, realm = realm, sub = rank.Level }
-    end
-end
-
--- the pet layer: an aura pet with its own design over the realm aura,
--- while the player meditates
-function refreshAura(player)
-    refreshRealmAura(player)
-
-    local character = player.Character
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    local rankId = getRankId(player)
-    local petId = getAuraPetId(player)
-    local shouldShow = player:GetAttribute("IsCultivating") == true
-        and not hiddenByReducedEffects(player)
-        and CharacterAura.hasPetDesign(petId)
-        and rootPart ~= nil
-        and rankId ~= nil
-        and isAlive(character)
-
-    local rank = rankId and Ranks.getRankById(rankId)
-    local lookKey = tostring(rank and rank.AuraTier) .. "/" .. tostring(petId)
-    local current = activeAuras[player]
-    if current and shouldShow and current.rootPart == rootPart and current.lookKey == lookKey then
-        return
-    end
-
-    if current then
-        removeAura(current)
-    end
-
-    local aura = shouldShow and CharacterAura.build(player, character, rootPart, petId, rankId)
-    if aura then
-        aura.lookKey = lookKey
-        aura.model.Parent = container
-        activeAuras[player] = aura
-        liveAuras[aura] = true
-        CharacterAura.show(aura)
-
-        if not updateConnection then
-            updateConnection = RunService.RenderStepped:Connect(updateAuras)
-        end
-
-        if PRINT_BUILD_SUMMARY then
-            printSummary(aura, petId, rankId)
-        end
     end
 end
 
@@ -286,11 +137,6 @@ local function playBreakthrough(player)
     activeBreakthroughs[player] = effect
     Sfx.play("Breakthrough", rootPart)
 
-    local aura = activeAuras[player]
-    if aura then
-        CharacterAura.pulse(aura)
-    end
-
     if PRINT_BUILD_SUMMARY then
         printBreakthroughSummary(player, effect, petId, rankId)
     end
@@ -324,10 +170,6 @@ local function watchCharacter(player, character)
         end
 
         table.insert(watching, humanoid.Died:Connect(function()
-            local aura = activeAuras[player]
-            if aura and aura.character == character then
-                destroyAura(aura)
-            end
             local realmAura = realmAuras[player]
             if realmAura and realmAura.root.Parent == character then
                 removeRealmAura(player)
@@ -348,7 +190,6 @@ local function watchPlayer(player)
     end
 
     table.insert(playerConnections, player:GetAttributeChangedSignal("IsCultivating"):Connect(refresh))
-    table.insert(playerConnections, player:GetAttributeChangedSignal("AuraPetId"):Connect(refresh))
     table.insert(playerConnections, player.CharacterAdded:Connect(function(character)
         watchCharacter(player, character)
     end))
@@ -389,12 +230,6 @@ local function unwatchPlayer(player)
     end
     disconnectCharacter(player)
     removeRealmAura(player)
-
-    for aura in liveAuras do
-        if aura.player == player then
-            destroyAura(aura)
-        end
-    end
     stopBreakthrough(player)
 end
 

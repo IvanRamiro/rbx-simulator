@@ -21,6 +21,14 @@ FLUTES = 7
 FLUTE_BEARING = 38.0             # a flute (and its root) points this way at the ground
 TRUNK_BASE, TRUNK_TOP = -8.0, 112.0
 LONG_ROOTS = (0, 2, 4)           # the flutes whose roots arch over the Root Court
+# The trunk (and its veins) squashed toward its foot so its top ends inside the six limbs: built to
+# TRUNK_TOP, its rim and cap showed between them as a cut stub (the owner, 2026-11-11: "a problem in
+# trunk"). The placed meshes in the game were scaled the same way in Studio (124 -> 106 studs tall).
+TRUNK_SQUASH = 106 / 124
+
+
+def squashed(y):
+    return TRUNK_BASE + (y - TRUNK_BASE) * TRUNK_SQUASH
 
 
 # ---------- trunk ----------
@@ -68,7 +76,7 @@ def trunk(coll, mat, bands):
         for i in range(seg):
             th = TAU * i / seg
             r = trunk_r(th, y)
-            verts.append(W.rb(math.cos(th) * r, y, math.sin(th) * r))
+            verts.append(W.rb(math.cos(th) * r, squashed(y), math.sin(th) * r))
     for k in range(len(ys) - 1):
         for i in range(seg):
             j = (i + 1) % seg
@@ -83,7 +91,7 @@ def trunk(coll, mat, bands):
             vb = v0 + (v1 - v0) * (ys[k + 1] - TRUNK_BASE) / (TRUNK_TOP - TRUNK_BASE)
             uvs.append([(ua, va), (ud, vb), (uc, vb), (ub, va)])
     top = len(verts)
-    verts.append(W.rb(0, TRUNK_TOP + 4, 0))
+    verts.append(W.rb(0, squashed(TRUNK_TOP + 4), 0))
     base = (len(ys) - 1) * seg
     for i in range(seg):
         faces.append([base + i, base + (i + 1) % seg, top])
@@ -108,8 +116,8 @@ def veins(coll):
             side = Vector((-math.sin(th), math.cos(th))) * width
             live = W.noise2(k * 3.1, y / 9, seed=17) > 0.18
             pair = (len(verts), len(verts) + 1)
-            verts.append(W.rb(centre.x - side.x, y, centre.y - side.y))
-            verts.append(W.rb(centre.x + side.x, y, centre.y + side.y))
+            verts.append(W.rb(centre.x - side.x, squashed(y), centre.y - side.y))
+            verts.append(W.rb(centre.x + side.x, squashed(y), centre.y + side.y))
             if prev and live:
                 faces.append([prev[0], pair[0], pair[1], prev[1]])
             prev = pair

@@ -11,7 +11,7 @@
 --   -- each import uploads its own atlas copy: point all pieces at one (WB.shareTexture or TextureID)
 --   WB.placeKit(island); WB.buildEggStands(island); WB.buildRelics(island)
 --   Yggdrasil (the hub): WB.buildWaystones, WB.buildSpawn, WB.buildSpawnSlots, WB.buildLeaderboard,
---   WB.buildShops, WB.buildQiSpring, WB.buildAltar
+--   WB.buildShops, WB.buildQiSpring, WB.buildAltar, WB.buildRootColliders
 --   every other island: WB.buildCheckpoint(island); Ember Peak also WB.buildLavafall, Moonlit Isle
 --   WB.buildStarWell
 --   terrain colours (once, after any terrain build): WB.applyMaterialColors()
@@ -381,6 +381,12 @@ WorldBuilder.Appearance = {
     YG_CrownLower = { CanCollide = false },
     YG_CrownUpper = { CanCollide = false },
     YG_AerialRoots = { CanCollide = false },
+    -- the three long roots arch over the paths (about 12 studs clear), but their collision closed the
+    -- arches (the owner, 2026-11-11: "I still can't go through in the root near buy and sell"): the
+    -- meshes don't collide; WB.buildRootColliders lays invisible cylinders along them instead
+    YG_MoundRoot0 = { CanCollide = false },
+    YG_MoundRoot2 = { CanCollide = false },
+    YG_MoundRoot4 = { CanCollide = false },
     YG_TrunkVeins = table.clone(GLOW),
     YG_SeedLanterns = table.clone(GLOW),
     YG_SpawnDaisGlow = table.clone(GLOW),
@@ -1632,6 +1638,63 @@ local SHOP_FX = {
 -- The shops on their plots (FloatingIslands.<island>.Shops.<Shop>): the building's pieces, the name
 -- board over the entrance ("Sign"), the prompt that opens the shop ("Prompt", at the Blacksmith's
 -- anvil and the foot of the Jade Scale) and the effect points ("Fx").
+-- ---------- the long roots' collision (Yggdrasil) ----------
+
+-- Each long root's centre line and thickness, as tools/blender/world/ygg_tree.py builds the
+-- mesh (root_points, catmull with 8 steps, radius 11 -> 3.5): island-local studs.
+local function longRootCurve(k)
+    local bearing = math.rad(38) + 2 * math.pi * k / 7
+    local drift = 0.1 * (if k % 2 == 1 then 1 else -1)
+    local function at(r, y, curl)
+        local a = bearing + drift * curl
+        return Vector3.new(math.cos(a) * r, y, math.sin(a) * r)
+    end
+    local pts = { at(14, 14, 0), at(30, 9, 0), at(44, 6, 0.2), at(56, 9, 0.5), at(67, 14.5, 0.8), at(77, 18.5, 1.0),
+        at(87, 17.5, 1.1), at(98, 11, 1.1), at(109, 3, 0.9), at(119, -5, 0.7) }
+    table.insert(pts, 1, pts[1] * 2 - pts[2])
+    table.insert(pts, pts[#pts] * 2 - pts[#pts - 1])
+    local curve = {}
+    for i = 2, #pts - 2 do
+        local p0, p1, p2, p3 = pts[i - 1], pts[i], pts[i + 1], pts[i + 2]
+        for step = 0, 7 do
+            local t = step / 8
+            table.insert(curve, 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t
+                + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t))
+        end
+    end
+    table.insert(curve, pts[#pts - 1])
+    return curve
+end
+
+-- Invisible cylinders along the long roots (0, 2, 4), so players walk under their arches and
+-- still meet their sides and can stand on them. Replaces any built before.
+function WorldBuilder.buildRootColliders(island)
+    island = island or "Yggdrasil"
+    local folder = WorldBuilder.islandFolder(island, "RootColliders")
+    folder:ClearAllChildren()
+    local count = 0
+    for _, k in { 0, 2, 4 } do
+        local curve = longRootCurve(k)
+        local n = #curve
+        for i = 1, n - 1, 2 do
+            local j = math.min(i + 2, n)
+            local a, b = islandPoint(island, curve[i]), islandPoint(island, curve[j])
+            local t = ((i + j) / 2 - 1) / (n - 1)
+            local radius = 11 + (3.5 - 11) * t ^ 0.7
+            local part = Instance.new("Part")
+            part.Name = string.format("YG_RootCollider%d_%02d", k, count)
+            part.Shape = Enum.PartType.Cylinder
+            part.Size = Vector3.new((b - a).Magnitude + radius * 0.6, radius * 2, radius * 2)
+            part.CFrame = CFrame.lookAt((a + b) / 2, b) * CFrame.Angles(0, math.rad(90), 0) -- a cylinder runs along its X
+            part.Anchored, part.CanCollide, part.CanTouch, part.CastShadow = true, true, false, false
+            part.Transparency = 1
+            part.Parent = folder
+            count += 1
+        end
+    end
+    return count
+end
+
 function WorldBuilder.buildShops(island)
     local placements = placementsFor(island)
     local folder = WorldBuilder.islandFolder(island, "Shops")

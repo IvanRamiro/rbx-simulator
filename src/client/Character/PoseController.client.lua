@@ -390,7 +390,7 @@ local function updatePoses(deltaTime)
                 for _ in rig.joints do
                     found += 1
                 end
-                if stale or found ~= count then -- say so only when the refresh changed something (not every check of a short rig)
+                if count > 0 and (stale or found ~= count) then -- say so only when a refresh changed something (not the first fill, nor every check of a short rig)
                     warn("PoseController: refreshed the joints of", player.Name, "stale", stale, "count", count, "->", found)
                 end
             end

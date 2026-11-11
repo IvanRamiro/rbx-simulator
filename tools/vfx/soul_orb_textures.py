@@ -11,9 +11,6 @@ can't drop a black background); the game tints them.
   SmokePuff.png  1024x1024  4x4 flipbook (OneShot): a puff of smoke billows out, tears into wisps
                             and dissolves over its life, inside the middle 78% of its cell
                             (a clear margin round every frame)
-  SoulSeal.png   1024x1024  the ground circle under the Spirit Soul aura: a double rim with ticks,
-                            three soul nodes (one under each orb) joined by a fine triangle, a ring
-                            of curling soul flames, an inner ring; the centre is left open
   SmokeRing.png  1024x1024  a ripple of smoke: wispy strands round a ring, broken and uneven,
                             sampled on the circle (no seam), exactly zero well inside the border
                             (a borrowed ring's faint border showed as a square at 19 studs)
@@ -129,81 +126,6 @@ def smoke():
 
 
 # ---------- the Soul Seal: drawn at 4096 with Pillow, reduced ----------
-def soul_seal():
-    S = 4096
-    c = S / 2
-    R = S * 0.48
-    img = Image.new("L", (S, S), 0)
-    d = ImageDraw.Draw(img)
-
-    def P(r, a):
-        return c + math.cos(a) * r * R, c + math.sin(a) * r * R
-
-    def ring(r, w):
-        d.ellipse([c - r * R, c - r * R, c + r * R, c + r * R], outline=255, width=int(w))
-
-    # the rim: two rings, fine ticks between, a longer tick every sixth
-    ring(1.0, 20)
-    ring(0.94, 10)
-    for k in range(72):
-        a = k / 72 * math.tau
-        d.line([P(0.947, a), P(0.985 if k % 6 else 0.995, a)], fill=255, width=8 if k % 6 else 14)
-    # the three soul nodes on the rim's inner edge (they sit under the three orbs), joined by a fine
-    # triangle; the ring and tick marks break round each node
-    nodes = [k * math.tau / 3 for k in range(3)]
-    for a in nodes:
-        x, y = P(0.86, a)
-        rr = 0.075 * R
-        d.ellipse([x - rr * 1.25, y - rr * 1.25, x + rr * 1.25, y + rr * 1.25], fill=0)
-        d.ellipse([x - rr, y - rr, x + rr, y + rr], outline=255, width=14)
-        d.ellipse([x - rr * 0.35, y - rr * 0.35, x + rr * 0.35, y + rr * 0.35], fill=255)
-    for k in range(3):
-        a0, a1 = nodes[k], nodes[(k + 1) % 3]
-        # stop the side short of each node's circle
-        x0, y0 = P(0.86, a0)
-        x1, y1 = P(0.86, a1)
-        dx, dy = x1 - x0, y1 - y0
-        L = math.hypot(dx, dy)
-        g = 0.075 * R * 1.5 / L
-        d.line([(x0 + dx * g, y0 + dy * g), (x1 - dx * g, y1 - dy * g)], fill=255, width=7)
-    # a ring of curling soul flames: a teardrop head trailing a tapering curl, all turning one way.
-    # Each is traced densely (no dotted tail) and first cut out of what lies under it with a thin
-    # dark gap, so the triangle's sides pass behind the flames instead of through them
-    flames = []
-    for k in range(12):
-        a = k / 12 * math.tau + math.tau / 24
-        pts = []
-        for i in range(120):
-            t = i / 119
-            ang = a - 0.42 * t                        # the tail curls back round the circle
-            rad = 0.66 + 0.07 * math.sin(t * math.pi)  # swelling out, then back in
-            w = 0.036 * (1 - t) ** 1.3 + 0.003
-            pts.append((P(rad, ang), w))
-        flames.append(pts)
-    for gap, fill in ((1.0, 0), (0, 255)):
-        for pts in flames:
-            for (x, y), w in pts:
-                rr = w * R + gap * 0.012 * R
-                d.ellipse([x - rr, y - rr, x + rr, y + rr], fill=fill)
-    for pts in flames:                                # hollow the head so it reads as a flame
-        (hx, hy), hw = pts[0]
-        rr = hw * R * 0.45
-        d.ellipse([hx - rr, hy - rr, hx + rr, hy + rr], fill=0)
-    # the inner ring, broken into three arcs between the triangle's sides
-    for k in range(3):
-        a = math.degrees(nodes[k]) + 60
-        box = [c - 0.46 * R, c - 0.46 * R, c + 0.46 * R, c + 0.46 * R]
-        d.arc(box, a - 45, a + 45, fill=255, width=12)
-    ring(0.4, 6)
-    # a soft glow under every line, so the seal reads as light
-    glow = img.filter(ImageFilter.GaussianBlur(26)).point(lambda v: int(min(255, v * 1.4)))
-    a = np.maximum(np.asarray(img, dtype=float) / 255, np.asarray(glow, dtype=float) / 255 * 0.55)
-    yy, xx = np.mgrid[0:S, 0:S]
-    a *= 1 - smoothstep(0.985, 1.0, np.hypot(xx - c, yy - c) / (S / 2))
-    save(a, "SoulSeal.png", (1024, 1024))
-
-
-# ---------- the smoke ripple ring ----------
 def smoke_ring():
     S = 1024
     v = np.linspace(-1, 1, S)
@@ -230,6 +152,5 @@ def smoke_ring():
 
 star()
 smoke()
-soul_seal()
 smoke_ring()
 print("written:", sorted(os.listdir(OUT)))

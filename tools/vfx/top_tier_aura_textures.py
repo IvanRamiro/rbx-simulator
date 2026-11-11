@@ -5,7 +5,6 @@ are original sacred geometry, trigram bars and abstract marks.
 
     python3 top_tier_aura_textures.py assets/aura/top_tier     (needs Pillow and numpy)
 
-  DaoRunes.png     1024x1024  Heavenly Dao: concentric law circles for the turning ground disc
   LawStreak.png     256x1024  Heavenly Dao: razor-thin vertical threads, with breaks, for the law
                               beams shooting into the sky (VelocityParallel particles)
   NebulaMask.png   1024x1024  Eternal: fractal nebula and star clusters, fading to the edge, for
@@ -32,94 +31,6 @@ def save_alpha(mask, name, size):
 
 
 # ---------- Dao Runes: concentric law circles ----------
-def dao_runes():
-    S = 4096
-    c = S / 2
-    R = S * 0.49
-    img = Image.new("L", (S, S), 0)
-    d = ImageDraw.Draw(img)
-
-    def ring(r, w):
-        d.ellipse([c - r * R, c - r * R, c + r * R, c + r * R], outline=255, width=int(w))
-
-    def polar(r, a):
-        return c + math.cos(a) * r * R, c + math.sin(a) * r * R
-
-    # the rim: a double ring with a tick band between
-    ring(1.0, 22)
-    ring(0.94, 12)
-    for i in range(96):
-        a = i / 96 * math.tau
-        inner = 0.955 if i % 4 else 0.945
-        d.line([polar(inner, a), polar(0.99, a)], fill=255, width=10 if i % 4 else 16)
-
-    # eight trigram cartouches: three bars each, broken or whole (the eight patterns in turn)
-    for k in range(8):
-        a = k / 8 * math.tau - math.pi / 2
-        for bar in range(3):
-            whole = (k >> bar) & 1
-            r = 0.835 + (bar - 1) * 0.035
-            half = 0.1
-            if whole:
-                pts = [polar(r, a - half), polar(r, a + half)]
-                d.line(pts, fill=255, width=34)
-            else:
-                d.line([polar(r, a - half), polar(r, a - 0.022)], fill=255, width=34)
-                d.line([polar(r, a + 0.022), polar(r, a + half)], fill=255, width=34)
-        # its frame: two arcs closed by ticks
-        for r in (0.775, 0.895):
-            box = [c - r * R, c - r * R, c + r * R, c + r * R]
-            d.arc(box, math.degrees(a - 0.135), math.degrees(a + 0.135), fill=255, width=10)
-        for side in (-1, 1):
-            d.line([polar(0.775, a + side * 0.135), polar(0.895, a + side * 0.135)], fill=255, width=10)
-
-    # between the cartouches: abstract marks (geometric symbols, never letters)
-    def mark(kind, x, y, s, a):
-        rot = lambda px, py: (x + px * math.cos(a) - py * math.sin(a), y + px * math.sin(a) + py * math.cos(a))
-        if kind == 0:   # a ring with a dot
-            d.ellipse([x - s, y - s, x + s, y + s], outline=255, width=10)
-            d.ellipse([x - s * 0.25, y - s * 0.25, x + s * 0.25, y + s * 0.25], fill=255)
-        elif kind == 1:  # a triangle
-            d.polygon([rot(0, -s), rot(s * 0.87, s * 0.5), rot(-s * 0.87, s * 0.5)], outline=255, width=10)
-        elif kind == 2:  # a diamond with a bar through it
-            d.polygon([rot(0, -s), rot(s * 0.7, 0), rot(0, s), rot(-s * 0.7, 0)], outline=255, width=10)
-            d.line([rot(-s, 0), rot(s, 0)], fill=255, width=10)
-        else:            # three dots in a line
-            for t in (-0.7, 0, 0.7):
-                px, py = rot(t * s, 0)
-                d.ellipse([px - s * 0.2, py - s * 0.2, px + s * 0.2, py + s * 0.2], fill=255)
-    for k in range(8):
-        for j in range(1, 3):
-            a = (k + j / 3) / 8 * math.tau - math.pi / 2
-            x, y = polar(0.835, a)
-            mark((k + j) % 4, x, y, R * 0.035, a)
-
-    # the inner law: a ring, an eight-pointed star, a ring of dots, sixteen petals, the centre
-    ring(0.74, 14)
-    for turn in (0, math.pi / 4):
-        pts = [polar(0.7, turn + q * math.pi / 2) for q in range(4)]
-        d.polygon(pts, outline=255, width=12)
-    ring(0.5, 10)
-    for i in range(32):
-        x, y = polar(0.6, i / 32 * math.tau)
-        rr = R * (0.014 if i % 2 else 0.022)
-        d.ellipse([x - rr, y - rr, x + rr, y + rr], fill=255)
-    for i in range(16):
-        a = i / 16 * math.tau
-        tip, base = polar(0.48, a), polar(0.3, a)
-        left, right = polar(0.39, a - 0.13), polar(0.39, a + 0.13)
-        d.polygon([base, left, tip, right], outline=255, width=9)
-    ring(0.27, 12)
-    ring(0.12, 26)
-    d.ellipse([c - 0.05 * R, c - 0.05 * R, c + 0.05 * R, c + 0.05 * R], fill=255)
-
-    # a faint glow under the lines, so the disc reads as light, not wire
-    glow = img.filter(ImageFilter.GaussianBlur(28)).point(lambda v: int(v * 0.55))
-    out = Image.fromarray(np.maximum(np.asarray(img), np.asarray(glow)).astype(np.uint8))
-    save_alpha(out, "DaoRunes.png", (1024, 1024))
-
-
-# ---------- Law Streak: thin vertical threads with breaks ----------
 def law_streak():
     W, H = 1024, 4096
     x = np.arange(W)[None, :]
@@ -178,7 +89,6 @@ def nebula():
     save_alpha(Image.fromarray(np.clip(mask * 255, 0, 255).astype(np.uint8)), "NebulaMask.png", (1024, 1024))
 
 
-dao_runes()
 law_streak()
 nebula()
 print("written:", sorted(os.listdir(OUT)))

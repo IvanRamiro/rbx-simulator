@@ -6,7 +6,6 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local PetModels = require(script.Parent:WaitForChild("PetModels"))
 local PetRig = require(script.Parent:WaitForChild("PetRig"))
 local PetPreload = require(script.Parent:WaitForChild("PetPreload"))
-local AuraBuilder = require(script.Parent.Parent:WaitForChild("Auras"):WaitForChild("AuraBuilder"))
 
 -- where each pet walks, in studs from its owner (x to the right, z behind): beside them, never in the line between them and
 -- the camera, which sits straight behind them. Pets are about 6 studs long.
@@ -31,19 +30,7 @@ container.Parent = workspace
 
 local companions = {}
 
-local function destroyAura(aura)
-    if not aura.destroyed then
-        AuraBuilder.destroy(aura)
-    end
-end
-
 local function destroyPet(pet)
-    if pet.aura then
-        destroyAura(pet.aura)
-    end
-    for _, aura in pet.fading do
-        destroyAura(aura)
-    end
     pet.model:Destroy()
 end
 
@@ -54,38 +41,8 @@ local function clearPets(entry)
     entry.pets = {}
 end
 
-local function getRankId(player)
-    local rank = Ranks.getRank(Ranks.getPlayerRankName(player))
-    return rank and rank.Id
-end
-
 local function getRankNumber(player)
     return Ranks.getIndex(Ranks.getPlayerRankName(player))
-end
-
-local function syncPetAura(player, pet, cultivating)
-    if cultivating and not pet.aura and not pet.noAura then
-        local aura = AuraBuilder.build(player, pet.model, pet.rootPart, pet.petId, getRankId(player))
-        if aura then
-            aura.model.Parent = if pet.model.Parent then container else nil
-            AuraBuilder.show(aura)
-            pet.aura = aura
-        else
-            pet.noAura = true
-        end
-    elseif not cultivating and pet.aura then
-        local aura = pet.aura
-        pet.aura = nil
-        table.insert(pet.fading, aura)
-        AuraBuilder.hide(aura)
-        task.delay(AuraBuilder.REMOVE_DELAY, function()
-            local index = table.find(pet.fading, aura)
-            if index then
-                table.remove(pet.fading, index)
-            end
-            destroyAura(aura)
-        end)
-    end
 end
 
 -- `hidden`: its owner is culled (far away), so it waits out of the world like their other pets.
@@ -105,7 +62,6 @@ local function buildPet(petId, rootPart, hidden)
         petId = petId,
         rig = PetModels.getRig(model),
         speed = 0,
-        fading = {},
     }
 end
 
@@ -176,18 +132,12 @@ local function syncPets(player, entry)
     end
 end
 
--- Hides or shows a player's pets and their auras.
+-- Hides or shows a player's pets.
 local function setCulled(entry, culled)
     entry.culled = culled
     local parent = if culled then nil else container
     for _, pet in entry.pets do
         pet.model.Parent = parent
-        if pet.aura then
-            pet.aura.model.Parent = parent
-        end
-        for _, aura in pet.fading do
-            aura.model.Parent = parent
-        end
     end
 end
 
@@ -294,26 +244,6 @@ local function updateCompanions(deltaTime)
             end
             PetRig.update(rig, deltaTime, { speed = pet.speed, flying = flying })
         end
-    end
-
-    local auraParts, auraCFrames = {}, {}
-    for player, entry in companions do
-        if entry.culled then
-            continue
-        end
-        local cultivating = player:GetAttribute("IsCultivating") == true
-        for _, pet in entry.pets do
-            syncPetAura(player, pet, cultivating)
-            if pet.aura then
-                AuraBuilder.update(pet.aura, now, auraParts, auraCFrames)
-            end
-            for _, aura in pet.fading do
-                AuraBuilder.update(aura, now, auraParts, auraCFrames)
-            end
-        end
-    end
-    if #auraParts > 0 then
-        workspace:BulkMoveTo(auraParts, auraCFrames, Enum.BulkMoveMode.FireCFrameChanged)
     end
 end
 

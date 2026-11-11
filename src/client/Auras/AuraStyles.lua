@@ -70,37 +70,6 @@ AuraStyles.Elements = {
     EternalClockworkDragon = { Core = Color3.fromRGB(235, 255, 255), Main = Color3.fromRGB(220, 190, 110), Deep = Color3.fromRGB(110, 80, 40), Particles = "Spark", RingShape = "Polygon", RingSides = 12 },
 }
 
-AuraStyles.Auras = {} -- per-pet aura styles (AuraBuilder); the old Aqua Wisp and Golden Kirin ones went with their old designs
-
-AuraStyles.CharacterAura = {
-    Textures = {
-        Flame = "rbxassetid://125999209006478",
-        Streak = "rbxassetid://122993805328140",
-        Ring = "rbxassetid://81408609196943",
-        Shockwave = "rbxassetid://81927825399672",
-        Glow = "rbxassetid://118436603702034",
-        Spark = "rbxassetid://112814194154292",
-        Smoke = "rbxasset://textures/particles/smoke_main.dds",
-    },
-    ChargeSeconds = 1.3,
-    Stages = {
-        { Name = "Idle", After = 0, Power = 0.5, PulseEvery = 2.6 },
-        { Name = "Charged", After = 6, Power = 0.78, PulseEvery = 1.8, LightningEvery = 2.6, Rocks = true },
-        { Name = "Awakened", After = 15, Power = 1, PulseEvery = 1.2, LightningEvery = 1.1, SurgeEvery = 9, Rocks = true, Halo = true },
-    },
-    Tongues = 8,
-    Ribbons = 3,
-    Rocks = 7,
-    Arcs = 3,
-    OtherPlayers = 0.6,
-}
-
-function AuraStyles.getBoost(rankId)
-    local rank = Ranks.getRankById(rankId)
-    local tier = if rank then rank.AuraTier else 1
-    return 1 + (tier - 1) * 0.15
-end
-
 AuraStyles.Breakthroughs = {
     Step = { Duration = 1.6, Scale = 1, Shockwaves = 1, Rings = 1, Streaks = 4, Burst = 14, PillarHeight = 0, Flash = 3 },
     Milestone = { Duration = 2.4, Scale = 1.3, Shockwaves = 2, Rings = 2, Streaks = 8, Burst = 26, PillarHeight = 18, Flash = 5 },
@@ -129,9 +98,6 @@ end
 
 for petId in GameConfig.Pets do
     assert(AuraStyles.Elements[petId], "AuraStyles.Elements has no colours for pet " .. petId)
-end
-for petId in AuraStyles.Auras do
-    assert(AuraStyles.Elements[petId], "AuraStyles.Auras has an aura for an unknown pet: " .. petId)
 end
 
 return AuraStyles
