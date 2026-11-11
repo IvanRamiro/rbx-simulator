@@ -20,6 +20,7 @@ local EVENT_NAMES = {
     "OutfitEvent",
     "FlightEvent",
     "CombatEvent",
+    "WeaponDrawEvent",
     "GuardianEvent",
     "ShopEvent",
     "HatchEggEvent",

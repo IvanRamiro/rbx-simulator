@@ -3,7 +3,8 @@
 --     (GuardianRigs/<GuardianId>; GuardianAnim drives it, GuardianFx gives the building blocks);
 --   - knockback: a guardian's blow throws this player's character (the client owns it) off its
 --     feet for a moment; nothing ever kills;
---   - the health bar of the guardian this player is fighting, with its state and weak mark;
+--   - the health bar of the guardian this player is fighting, with its state and weak mark, floating over the guardian
+--     itself (the owner, 2026-11-11: "the boss Hp should be above on the boss, not in the player screen");
 --   - each guardian's voice and blows (VOICES), and the egg's sounds;
 --   - a thief is shown the way to the safe zone (home to Yggdrasil: its end of the island's bridge);
 --     a dropped egg stands under a pillar of light,
@@ -112,19 +113,31 @@ end
 -- ---------- the HUD ----------
 local message = Toast.new("GuardianMessage", Color3.new(1, 1, 1), 4)
 
--- the health bar of the guardian being fought: first in the HUD's top-centre stack, so the
--- messages (Toast) fall in below it instead of under it
-local function smallBar() -- on a phone it has to fit between the profile and the QUEST panel
+-- the health bar of the guardian being fought, over the guardian itself: a screen panel placed each frame at the point
+-- over its body (as DamageNumbers places its numbers), so nothing in the world can hide it and it reads the same at any
+-- distance. (A BillboardGui drawn AlwaysOnTop didn't show in Studio, 2026-11-11; one that isn't would sink into the
+-- guardian's body as the bar slides down it.)
+local function smallBar() -- on a phone it shouldn't take the whole screen
     return Hud.isCompact()
 end
--- as wide as there is room for between the profile and the quest panel
 local function barWidth()
-    if smallBar() then
-        return 340
-    end
-    return math.clamp(HudMetrics.viewport().X / HudMetrics.scale() - 620, 340, 460)
+    return if smallBar() then 300 else 360
 end
-local bar = UiKit.panel({ Name = "GuardianBar", Size = UDim2.fromOffset(barWidth(), 72), LayoutOrder = -2, Visible = false, Parent = Hud.Banner })
+local BAR_ABOVE = 3 -- studs over the top of the guardian's body
+local BAR_TOP_MARGIN = 235 -- pixels (at the HUD's scale) the bar keeps clear of the top of the screen, under the profile, the
+-- notifications and the QUEST panel: a guardian is 30-45 studs tall, so close by its head is up there, and the bar slides down
+-- the guardian until it's clear
+local barLayer = Instance.new("ScreenGui")
+barLayer.Name = "GuardianBarLayer"
+barLayer.ResetOnSpawn = false
+barLayer.IgnoreGuiInset = true -- so the bar's place is the viewport's own pixel
+barLayer.DisplayOrder = -1     -- under the HUD's panels
+barLayer.Enabled = false
+barLayer.Parent = player:WaitForChild("PlayerGui")
+local bar = UiKit.panel({ Name = "GuardianBar", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(barWidth(), 72), Parent = barLayer })
+local barScale = Instance.new("UIScale")
+barScale.Parent = bar
+local barHeights = {} -- [model] = studs from its PrimaryPart up to over its body, measured once
 local barIcon = UiKit.icon(UiTheme.Icons.Guardian, 34, "Danger")
 barIcon.Position = UDim2.fromOffset(14, 19)
 barIcon.Parent = bar
@@ -368,7 +381,8 @@ local function updateTakeIndicator()
         takePanel.Visible = false
         return
     end
-    takePanel.Visible = true
+    -- in the fight it waits while a notification is up: one thing at a time at the top of the screen
+    takePanel.Visible = not Toast.showing()
     if not wasAbleToTake then
         wasAbleToTake = true
         Sfx.play("Attune")
@@ -419,7 +433,42 @@ local function updateBar(dt)
             end
         end
     end
-    bar.Visible = best ~= nil
+    Toast.setSingle(best ~= nil) -- in a fight, one notification at a time
+    local camera = Workspace.CurrentCamera
+    local placed = false
+    if best and camera then
+        local body = best.PrimaryPart
+        if not barHeights[best] then
+            local box, size = best:GetBoundingBox()
+            barHeights[best] = box.Position.Y + size.Y / 2 - body.Position.Y
+        end
+        local scale = HudMetrics.scale()
+        local margin = (BAR_TOP_MARGIN + 72) * scale -- the bar hangs from the point: its bottom sits there
+        local function onScreen(h)
+            local point = camera:WorldToViewportPoint(body.Position + Vector3.new(0, h, 0))
+            return point
+        end
+        local height = barHeights[best] + BAR_ABOVE
+        local point = onScreen(height)
+        if point.Z > 0 and point.Y < margin then
+            local low, high = 0, height -- the highest point on the guardian that is still in view
+            for _ = 1, 8 do
+                local middle = (low + high) / 2
+                if onScreen(middle).Y < margin then
+                    high = middle
+                else
+                    low = middle
+                end
+            end
+            point = onScreen(low)
+        end
+        if point.Z > 0 then
+            placed = true
+            barScale.Scale = scale
+            bar.Position = UDim2.fromOffset(point.X, math.max(point.Y, margin))
+        end
+    end
+    barLayer.Enabled = placed
     if not best then
         outline.Enabled = false
         alertState = nil

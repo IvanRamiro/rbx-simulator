@@ -564,7 +564,7 @@ Each kind has its own visual purpose. None is a recolour of another.
   | Eternal Transcendence | Aurora Veil: gold, cyan and violet curtains overhead |
 
 - **Ribbons** (from Ascendant: more of them, larger and quicker with the level; the owner's look, November 11, 2026: their flipbook 98818011129942): thin, sharp, glowing swooshes whipping round the body. Each swoosh is a particle playing the owner's 8x8 flipbook of one stroke circling once. It lies round the body at a small random tilt, so it rings the body in 3D and the body hides its back half. A softer, wider copy behind it is its glow. The realm's hot colour fades to its main colour.
-- **Floating poses:** the meditation poses move the body, not the root, and from Ascendant up the body floats. The body glow, the outline's light, the void core and the unique piece follow the hips' shift from rest each frame (players' rigs join with AnimationConstraints, the test dummies with Motor6Ds; both are read). Ground layers stay on the floor.
+- **Body-following pieces:** the meditation pose moves the body, not the root (the lotus seat lowers it to the ground, or from Ascendant on floats it 1.2 to 2.2 studs up). The body glow, the outline's light, the void core and the unique piece follow the hips' shift from rest each frame (players' rigs join with AnimationConstraints, the test dummies with Motor6Ds; both are read). Ground layers stay on the floor.
 - **Only particles, beams and trails** (the owner, November 11, 2026: "Remove all the magic circle for all realms", "Remove the hard objects on the aura"). There are no ground circles and no meshes. The sigils, Realm 4's Soul Seal, the signature meshes (crown, orrery, shards, coils) and the top two realms' rigs are gone, along with their mesh templates. The only parts are invisible emitter hosts.
 - **Rebuilds** happen on rank-up and respawn; the aura goes on death.
 - **Culling:** other players' auras switch off past 120 studs from the camera. Roblox draws at most 31 Highlights per client.
@@ -574,29 +574,14 @@ Each kind has its own visual purpose. None is a recolour of another.
 
 **Poses and breakthroughs**
 
-- A flying pose while airborne, and each realm's own meditation idle while cultivating (below).
+- A flying pose while airborne, and the lotus seat while cultivating, floating from Ascendant on (below).
 - A burst effect on every rank-up, bigger at milestones.
 
-### The twelve meditation idles (the owner, November 4, 2026)
+### The meditation idle: the lotus seat, every realm (the owner, November 11, 2026)
 
-"Make 12 unique and different idle, there should be no similar or reuse idle", and "the beginner idle should be lotus sit". Each realm has its own (`client/Character/MeditationPoses.lua`, played by `PoseController`, easing in over 3 seconds). The pose places the body itself, on the ground or up on the air; the character's own height doesn't change, and a cultivator can't walk or jump (`MeditationStillness`).
+"Replace all the idle when cultivating to lotus sit, this is for all realms", then "the character will remain floating even in lotus sit while cultivating". Every cultivator, on any account, takes the lotus seat: hands on the knees, the back straight, a slow deep breath (`client/Character/MeditationPoses.lua`, played by `PoseController`, easing in over 3 seconds). The first four realms sit on the ground. From Ascendant Realm on, the seat floats, 1.2 studs off the floor at Ascendant rising evenly to 2.2 at Eternal Transcendence, with a slow bob. The character's own height doesn't change, and a cultivator can't walk or jump (`MeditationStillness`).
 
-| Realm | Idle |
-|---|---|
-| Qi Awakening | The lotus seat on the ground, hands on the knees, a slow deep breath |
-| Qi Foundation | Standing post: knees soft, the arms rounded as if round a tree, sinking and rising |
-| Spirit Core | Kneeling, the hands circling each other round the core at the belly, head bowed |
-| Spirit Soul | The crane: on one leg, the knee drawn high, the arms spread low like wings |
-| Ascendant Realm | Floating Ascension: reclined on the air, a wide wingspan, a knee to the sky |
-| Immortal Realm | Standing on air: sword fingers at the chest, a hand behind the back, chin up |
-| Divine Realm | On one knee in the air, an arm driven straight at the heavens |
-| Cosmic Realm | Upside down, legs crossed above, the arms spread, orbiting slowly |
-| Void Realm | Curled tight, knees to chest, tumbling end over end |
-| Heavenly Dao | Cloud hands: a low stance, the hands passing in unbroken circles |
-| Primordial Realm | Holding up the sky: a wide squat, both palms pressing up, the strain trembling through the body |
-| Eternal Transcendence | Spread as a star, face to the sky, turning high up |
-
-Every account, the owner's too, takes its realm's idle (the owner's own aura and fixed pose were removed on November 11, 2026, before the public test: "remove my character aura, and let me use our game aura"). To review any idle on any account, set `MeditationPoses.Preview` to its realm number. Tested in Play: all twelve run with no errors, planted feet stay flat within 0.07 studs of the floor, and walking and jumping return on stopping.
+This replaced the twelve realm idles of November 4, 2026 ("make 12 unique and different idle", with the lotus seat as the beginner's); they were deleted. Tested in Play: Soul Awakening seated on the ground, Ascendant Initiate floating about 1 stud, Eternal Origin about 2 studs, no errors, and walking returns on stopping.
 
 ### Aura VFX brief (the project owner's requirements, kept verbatim)
 
@@ -900,6 +885,7 @@ The server decides every hit; the client only sends "strike" and shows it.
 - **Output:** `ServerStorage.CombatHit` (a BindableEvent: player, target, damage, position) for the guardian code, and `CombatEvent` to every client for the effects: the striker, the kind of strike, and for one that landed where (on the target's near side, at the height of the striker's chest), its damage, whether it was critical and the target.
 - **Effects** (`CombatFx`): the Qi Palm throws a great palm print of Qi (`QiPalm` texture) in the realm's colour.
 - **Weapons are held in the hand** (the owner, November 4, 2026): welded to the right hand's grip, out for 5 seconds after the last strike, and put away on death or on starting to cultivate. A held weapon has a stance (`SwordReady`; for a spear a low stance, then its guard).
+- **Draw and sheathe** (the owner, November 11, 2026: "add equip and unequip for weapons", a draw / sheathe toggle): key **1**, gamepad **X**, or the **DRAW / SHEATHE** button over the Cultivation dock. Drawn, the weapon stays in the hand in its stance until it's sheathed; sheathed, it rests across the back, a sword point down with its hilt over the right shoulder, a spear head up over the right shoulder (centred on each weapon's measured length). Everyone sees everyone's within 250 studs. The server keeps the `WeaponDrawn` attribute (`CombatService`, `WeaponDrawEvent`): only a player with a weapon, alive, not cultivating and not carrying an egg can draw; cultivating, picking up an egg, changing weapon and respawning sheathe it; a strike with a weapon draws it. Sheathing puts it away at once, even straight after a strike. Bare hands (the Qi Palm) have nothing to draw, and the button hides. Tested in Play: draw, kept out past 5 seconds, sheathed by cultivating, drawn by a strike, sheathed straight after a strike, a sword and a spear on the back.
 - **Sword, a combo of three:** a diagonal cut down across the body, a backhand rising the other way, an overhead finisher that shakes the striker's camera. Strikes within 1.1 seconds continue it (`WeaponKinds.Sword.ComboWindow`).
 - **Spear, thrust then slash** (the owner: its slash "goes in different direction", its thrust "didn't make a good impression because it lasted a second"): held in both hands in the owner's stances. The thrust coils, lunges with a real step and holds its reach with the shaft humming (0.85 s). A strike within 1.7 seconds is one wide slash, right to left round the body.
 - **Bare hands** (the owner, November 4, 2026: "add that punch animation, if the player avatar is not equipped with weapons"): a straight punch, right then left within 1.1 seconds, the hips first and the fist last, still with the Qi Palm's print, damage and cooldown.
@@ -1020,6 +1006,8 @@ With nobody within 60 studs for 12 s, it heals and sleeps.
 - **Dropped:** at a clear spot on the ground near where the thief was (never inside the lion), under a pillar of Qi light; only the thief sees its prompt and the 30-second countdown. A thief who leaves the game, or lets the countdown run out, sends the egg back to its stand. Falling off the island drops it where the thief last stood.
 - **The Hatching Altar is its sanctuary:** the egg is secured within 12 studs of the altar's centre, the lion never comes within 12 studs of its edge, and nobody inside it can be knocked back.
 - **The client** (`GuardianController`, `GuardianAnim`, `GuardianFx`): the health bar (name, state, the 10% weakened mark, a trailing loss), procedural animation (state poses, a walk turning into a gallop, breathing, the head turned toward its target, and the moves, all through springs: see How guardians move), stone-dust effects (the roar's rolling dust wall, slam and landing bursts, dust stirring where a pounce will land), camera shake, the way to the Hatching Altar for a thief, and the knockback on your own character.
+- **The health bar floats over the guardian** (the owner, November 11, 2026: "the boss Hp should be above on the boss, not in the player screen"): a screen panel placed each frame at the point 3 studs over the guardian's body, so nothing in the world hides it and it reads the same at any distance. A guardian is 30 to 45 studs tall, so close by its head is off the screen: the bar slides down the guardian until it clears the top of the HUD (the profile, the notifications, the QUEST panel). It shows for the nearest awake guardian within 130 studs, and hides while that guardian is behind the camera. (A BillboardGui drawn AlwaysOnTop didn't show in Studio; one that isn't would sink into the guardian's body.)
+- **One notification at a time in a fight** (the owner: "don't make 2 notification at once when fighting a boss"): while a guardian's bar shows, a new notification puts away any other (`Toast.setSingle`), and the TAKE AN EGG panel waits until no notification is up. Tested: weakening the Ember Xuanwu showed only its hint, then the panel once the hint faded.
 
 **Rebuilt from nothing (November 5, 2026, the owner: "like a total change", "Make a more realistic animation"):** `tools/blender/guardians/stone_lion_v2.py` makes a lion in carved granite, not a temple dog: one skin on 39 bones, the mane one carving, the gold collar and jade orb a rigid piece on the neck, no egg. A foreleg is a shoulder blade, an upper arm, a forearm, a pastern and toes; a hind leg a thigh, a shin, a hock and toes (`rig.Legs` `Chain` carries the joints below the two solved ones). It sits as a statue until it wakes, rises, and shakes its mane; it walks in a lateral sequence with its head level, and gallops in a rotary gallop with its back gathering and stretching. `write_clips` generates `GuardianRigs/StoneLionClips.lua`, played by `GuardianRigs/StoneLionSkinned.lua`; `write_placement` writes `Placements/StoneLionSkinned.lua`. A move is solved every frame, so a planted paw doesn't leave its spot, and the tail is lifted just enough to stay above the ground; while it walks or runs, a landed paw is locked to its spot in the world until it lifts (`rig.Legs` `Lock`).
 

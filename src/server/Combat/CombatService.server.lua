@@ -13,6 +13,11 @@
 --
 -- A landing strike may be critical (GameConfig.Combat.Crit): rolled here, never by a client.
 --
+-- Drawing and sheathing (the owner, 2026-11-11: "add equip and unequip for weapons"): WeaponDrawEvent(wanted) sets the
+-- player's "WeaponDrawn" attribute, which keeps their weapon in the hand (CombatFx) until they sheathe it. Only a player
+-- with a weapon, alive, not cultivating and not carrying an egg can draw; starting to cultivate, picking up an egg,
+-- changing weapon and respawning sheathe it. A strike with a weapon draws it.
+--
 -- Every stored weapon (ServerStorage.Weapons: the flying sword and the realm weapons, OutfitBuilder)
 -- is copied to ReplicatedStorage.Weapons so clients can show it striking.
 local CollectionService = game:GetService("CollectionService")
@@ -48,6 +53,54 @@ do
         end
         folder.Parent = ReplicatedStorage
     end
+end
+
+-- ---------- drawing and sheathing ----------
+local function canDraw(player)
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    return humanoid ~= nil and humanoid.Health > 0 and player:GetAttribute("WeaponId") ~= nil
+        and player:GetAttribute("IsCultivating") ~= true and player:GetAttribute("CarryingEgg") == nil
+end
+
+local function setDrawn(player, drawn)
+    drawn = drawn and canDraw(player)
+    if (player:GetAttribute("WeaponDrawn") == true) ~= drawn then
+        player:SetAttribute("WeaponDrawn", drawn)
+    end
+end
+
+RemoteEvents.WeaponDrawEvent.OnServerEvent:Connect(function(player, wanted)
+    if typeof(wanted) == "boolean" then
+        setDrawn(player, wanted)
+    end
+end)
+
+local function watch(player)
+    player:SetAttribute("WeaponDrawn", false)
+    local function sheatheIf(condition)
+        return function()
+            if condition() then
+                setDrawn(player, false)
+            end
+        end
+    end
+    player:GetAttributeChangedSignal("IsCultivating"):Connect(sheatheIf(function()
+        return player:GetAttribute("IsCultivating") == true
+    end))
+    player:GetAttributeChangedSignal("CarryingEgg"):Connect(sheatheIf(function()
+        return player:GetAttribute("CarryingEgg") ~= nil
+    end))
+    player:GetAttributeChangedSignal("WeaponId"):Connect(sheatheIf(function()
+        return true
+    end))
+    player.CharacterAdded:Connect(function()
+        setDrawn(player, false)
+    end)
+end
+Players.PlayerAdded:Connect(watch)
+for _, player in Players:GetPlayers() do
+    watch(player)
 end
 
 -- the nearest target in front within reach, and where the strike meets it
@@ -86,6 +139,9 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
         return
     end
     local strike = Combat.strikeOf(player)
+    if strike.Kind ~= "Palm" then
+        setDrawn(player, true) -- striking with a weapon draws it
+    end
     local now = os.clock()
     local due = nextStrike[player]
     if due and now < due - strike.Cooldown * COOLDOWN_SLACK then

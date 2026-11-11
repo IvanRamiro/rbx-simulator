@@ -1,6 +1,6 @@
 -- Blends whole-body poses into every R15 character's joints, before physics each frame: the
 -- Qinggong poses (QinggongFx.pose: steps, tucks, the crane glide), the combat poses (CombatFx.pose)
--- carrying an egg in both arms, and each realm's meditation idle while cultivating (MeditationPoses). Each pose is a table of joint name -> target Transform;
+-- carrying an egg in both arms, and the lotus seat while cultivating, floating from Ascendant on (MeditationPoses). Each pose is a table of joint name -> target Transform;
 -- poses fade in and out by weight, and the default animations stay underneath.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")

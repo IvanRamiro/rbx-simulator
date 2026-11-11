@@ -377,7 +377,7 @@ end
 
 -- ---------- the weapon in the hand ----------
 -- A sword or spear is welded to the striker's right hand, so it moves exactly as the arm does, and
--- stays there HOLD_TIME after the last strike, in that kind's ready stance (PoseController's SwordReady,
+-- stays there HOLD_TIME after the last strike (or, drawn, until it is sheathed), in that kind's ready stance (PoseController's SwordReady,
 -- SpearReady), put away sooner if they meditate, die, change weapon or strike with the palm, or once a
 -- strike made in flight is over. The strike itself is the arm's motion (PoseController): a sword's
 -- a clip in WeaponClips.
@@ -400,7 +400,10 @@ local function watchHeld()
         local now = os.clock()
         for player, entry in held do
             local striking = strikes[player] ~= nil and now < strikes[player].untilTime
-            local stale = now > entry.untilTime or player:GetAttribute("IsFlying") == true
+            local drawn = player:GetAttribute("WeaponDrawn") == true and entry.source.Name == player:GetAttribute("WeaponId")
+            local sheathedNow = entry.drawn and not drawn -- put back while it was drawn: at once, not when the strike's hold runs out
+            entry.drawn = drawn
+            local stale = (now > entry.untilTime and not drawn) or sheathedNow or player:GetAttribute("IsFlying") == true
             local humanoid = entry.hand.Parent and entry.hand.Parent:FindFirstChildOfClass("Humanoid")
             if not entry.hand:IsDescendantOf(Workspace) or not humanoid or humanoid.Health <= 0
                 or player:GetAttribute("IsCultivating") == true or player:GetAttribute("WeaponId") ~= entry.weaponId
@@ -512,6 +515,17 @@ local function slashCrescent(slash, p, root, echo)
         { Size = size * Vector3.new(grow, 1, grow), CFrame = frame + root.CFrame.LookVector * travel }):Play()
 end
 
+-- How a weapon of `kind` is held: its trail's two weapon-space points, lifetime, facing and transparency (glow: the
+-- spear's trail colour; a sword's takes the palette's)
+local function holdSpec(kind, source, glow)
+    if kind == "Spear" then
+        return { from = source:GetAttribute("Hilt") + Vector3.new(0, 0, 3.5), to = source:GetAttribute("Tip"),
+            glow = glow, life = 0.2, faceCamera = true, transparency = 0.3 }
+    end
+    return { from = source:GetAttribute("Hilt") or Vector3.new(0, 0, 1.2), to = source:GetAttribute("Tip") or Vector3.new(0, 0, -4.3),
+        life = 0.22, faceCamera = false, transparency = 0.2 }
+end
+
 local function sword(player, p, root, step, strike)
     local source, flying = weaponSource(player, "Sword")
     if not source then
@@ -521,10 +535,8 @@ local function sword(player, p, root, step, strike)
     p = strikePalette(p, element)
     strike.palette = p
     local slash = SLASHES[step]
-    local entry = hold(player, "Sword", source, flying, if flying then swordGlow(player) else element and element.Color, {
-        from = source:GetAttribute("Hilt") or Vector3.new(0, 0, 1.2), to = source:GetAttribute("Tip") or Vector3.new(0, 0, -4.3),
-        life = 0.22, faceCamera = false, transparency = 0.2,
-    }, p)
+    local entry = hold(player, "Sword", source, flying, if flying then swordGlow(player) else element and element.Color,
+        holdSpec("Sword", source), p)
     local clip, scale = slash.Clip, CombatFx.TimeScale
     if entry then -- the finisher's light hangs in the air longer
         entry.trail.Lifetime, entry.edge.Lifetime = if slash.Finisher then 0.32 else 0.22, if slash.Finisher then 0.36 else 0.26
@@ -557,10 +569,7 @@ local function spear(player, p, root, step, strike)
     p = strikePalette(p, element)
     strike.palette = p
     local glow = if element then element.Color else swordGlow(player)
-    local entry = hold(player, "Spear", source, false, element and element.Color, {
-        from = source:GetAttribute("Hilt") + Vector3.new(0, 0, 3.5), to = source:GetAttribute("Tip"),
-        glow = glow, life = 0.2, faceCamera = true, transparency = 0.3,
-    }, p)
+    local entry = hold(player, "Spear", source, false, element and element.Color, holdSpec("Spear", source, glow), p)
     local scale = CombatFx.TimeScale
     if step == 2 then
         local clip = SPEAR_SLASH.Clip
@@ -850,6 +859,110 @@ function CombatFx.play(player, weapon, step)
     end
 end
 
+-- ---------- drawn and sheathed (the owner, 2026-11-11: "add equip and unequip for weapons", a draw / sheathe toggle) ----------
+-- A player's "WeaponDrawn" attribute (set by the server, CombatService) keeps their own weapon in the hand, in its ready
+-- stance, until they sheathe it. Sheathed, it rests across the back. Both show on every player within MAX_DISTANCE.
+local TEND_EVERY = 0.25 -- seconds between looks at who should hold or wear what
+-- on the back, in the UpperTorso's space (its back is +Z): where the weapon's middle sits, and the way its point runs.
+-- A sword (about 6 studs) hangs point down, the hilt over the right shoulder; a spear (about 10) rides head up over the
+-- right shoulder, steep and high enough that its butt clears the ground
+local SHEATH = {
+    Sword = { Centre = Vector3.new(0.05, 0.05, 0.62), Point = Vector3.new(-0.55, -0.83, 0) },
+    Spear = { Centre = Vector3.new(0, 1.3, 0.62), Point = Vector3.new(0.4, 0.92, 0) },
+}
+local sheathed = {} -- [player] = { model, source, element, torso }
+
+-- the player's own weapon (their "WeaponId") and its kind, or nil for bare hands
+local function ownWeapon(player)
+    local folder = ReplicatedStorage:FindFirstChild("Weapons")
+    local source = folder and folder:FindFirstChild(player:GetAttribute("WeaponId") or "")
+    local kind = source and source:GetAttribute("Kind")
+    if kind == "Sword" or kind == "Spear" then
+        return source, kind
+    end
+    return nil, nil
+end
+
+local function unsheathe(player)
+    local entry = sheathed[player]
+    if entry then
+        sheathed[player] = nil
+        entry.model:Destroy()
+    end
+end
+
+-- the weapon across the back, welded to the torso
+local function sheathe(torso, source, kind, tint)
+    local model, parts = weaponModel(source, tint, false)
+    local spec = SHEATH[kind]
+    -- the weapon's length along its own Z (the point is -Z), from its parts: its Hilt and Tip mark the blade, not the whole
+    local low, high = math.huge, -math.huge
+    for part, offset in parts do
+        local size = part.Size
+        local half = 0.5 * (math.abs(offset.XVector.Z) * size.X + math.abs(offset.YVector.Z) * size.Y + math.abs(offset.ZVector.Z) * size.Z)
+        low, high = math.min(low, offset.Position.Z - half), math.max(high, offset.Position.Z + half)
+    end
+    local middle = Vector3.new(0, 0, (low + high) / 2)
+    local turn = CFrame.lookAt(Vector3.zero, spec.Point, Vector3.zAxis) -- the point (-Z) along spec.Point, flat to the back
+    local origin = CFrame.new(spec.Centre - turn:VectorToWorldSpace(middle)) * turn
+    for part, offset in parts do
+        part.Anchored = false
+        part.Massless = true
+        part.CanCollide, part.CanTouch, part.CanQuery = false, false, false
+        local weld = Instance.new("Weld")
+        weld.Part0, weld.Part1 = torso, part
+        weld.C0 = origin * offset
+        weld.Parent = part
+    end
+    return model
+end
+
+local function draw(player, source, kind)
+    local _, element = elementOf(player, source, false)
+    local p = strikePalette(QinggongFx.palette(player), element)
+    local glow = if kind == "Spear" then (if element then element.Color else swordGlow(player)) else nil
+    hold(player, kind, source, false, element and element.Color, holdSpec(kind, source, glow), p)
+end
+
+local function tend()
+    local camera = Workspace.CurrentCamera
+    for _, player in Players:GetPlayers() do
+        local character = player.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local torso = character and character:FindFirstChild("UpperTorso")
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        local source, kind = ownWeapon(player)
+        local shown = source ~= nil and torso ~= nil and root ~= nil and humanoid ~= nil and humanoid.Health > 0
+            and (player == Players.LocalPlayer or (camera ~= nil and (camera.CFrame.Position - root.Position).Magnitude <= MAX_DISTANCE))
+        if shown and player:GetAttribute("WeaponDrawn") == true and not held[player] and player:GetAttribute("IsCultivating") ~= true
+            and player:GetAttribute("CarryingEgg") == nil and player:GetAttribute("IsFlying") ~= true then
+            draw(player, source, kind)
+        end
+        local element = player:GetAttribute("WeaponElement")
+        local entry = sheathed[player]
+        local wanted = shown and not held[player]
+        if entry and not (wanted and entry.source == source and entry.element == element and entry.torso == torso) then
+            unsheathe(player)
+            entry = nil
+        end
+        if wanted and not entry then
+            local info = typeof(element) == "string" and GameConfig.Forge.Elements[element]
+            sheathed[player] = { model = sheathe(torso, source, kind, info and info.Color), source = source, element = element, torso = torso }
+        end
+    end
+end
+
+do
+    local waited = 0
+    RunService.Heartbeat:Connect(function(dt)
+        waited += dt
+        if waited >= TEND_EVERY then
+            waited = 0
+            tend()
+        end
+    end)
+end
+
 -- The server's count of a spear's combo (it decides the slash's reach): the next strike follows on from it.
 function CombatFx.syncCombo(player, weapon, step)
     local combo = combos[player]
@@ -897,6 +1010,7 @@ Players.PlayerRemoving:Connect(function(player)
     strikes[player] = nil
     combos[player] = nil
     putAway(player)
+    unsheathe(player)
 end)
 
 return CombatFx

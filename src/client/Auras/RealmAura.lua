@@ -111,8 +111,8 @@ end
 
 local spinners = {}
 
--- The meditation poses move the body, not the root (PoseController sets the root joint's Transform):
--- from Ascendant on the body floats 1 to 2.5 studs up, upside down at Cosmic. What sits on the body
+-- The meditation pose moves the body, not the root (PoseController sets the root joint's Transform):
+-- the lotus seat sinks it to the ground, and from Ascendant on floats it 1.2 to 2.2 studs up. What sits on the body
 -- (the glow, the outline's light, the void core, the realm's unique piece) follows the hips'
 -- shift from where it rests; what lies on the floor doesn't. lifted() marks a root attachment to
 -- follow it, while an aura is being built.

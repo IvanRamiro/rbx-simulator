@@ -3,6 +3,9 @@
 -- effects play here at once (CombatFx) and the server is asked to resolve it (CombatEvent); the
 -- server relays every strike back for everyone's effects, where it landed, and what it did there
 -- (its damage, whether it was critical, the target struck).
+--
+-- Drawing and sheathing (the owner, 2026-11-11): key 1, gamepad X or the DRAW / SHEATHE button over the Cultivation
+-- dock asks the server (WeaponDrawEvent) to draw the weapon into the hand or put it back across the back.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -11,8 +14,11 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local CombatFx = require(script.Parent:WaitForChild("CombatFx"))
-local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
-local TouchActions = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("TouchActions"))
+local UI = script.Parent.Parent:WaitForChild("UI")
+local Hud = require(UI:WaitForChild("Hud"))
+local Toast = require(UI:WaitForChild("Toast"))
+local TouchActions = require(UI:WaitForChild("TouchActions"))
+local UiKit = require(UI:WaitForChild("UiKit"))
 
 local player = Players.LocalPlayer
 local readyAt = 0
@@ -49,12 +55,49 @@ local function strike()
     RemoteEvents.CombatEvent:FireServer()
 end
 
+-- ---------- drawing and sheathing ----------
+local DRAW_KEYS = { [Enum.KeyCode.One] = true, [Enum.KeyCode.ButtonX] = true }
+
+-- a weapon to draw, and nothing in the way: not cultivating, not carrying an egg
+local function canToggle()
+    return player:GetAttribute("WeaponId") ~= nil and player:GetAttribute("IsCultivating") ~= true
+        and player:GetAttribute("CarryingEgg") == nil
+end
+
+local function toggleDrawn()
+    if canToggle() then
+        RemoteEvents.WeaponDrawEvent:FireServer(player:GetAttribute("WeaponDrawn") ~= true)
+    end
+end
+
+local drawButton = UiKit.button({
+    Name = "DrawButton", Tone = "Quiet", Font = "Strong", TextSize = 13, Text = "DRAW",
+    Size = UDim2.fromOffset(140, 30), LayoutOrder = 26, Visible = false, Parent = Hud.Dock,
+})
+local drawKey = UiKit.keycap("1")
+drawKey.AnchorPoint = Vector2.new(1, 0.5)
+drawKey.Position = UDim2.new(1, -5, 0.5, 0)
+drawKey.Size = UDim2.fromOffset(20, 20)
+drawKey.Parent = drawButton
+drawButton.Activated:Connect(toggleDrawn)
+
+local function refreshDrawButton()
+    drawButton.Visible = canToggle()
+    drawButton.Text = if player:GetAttribute("WeaponDrawn") == true then "SHEATHE" else "DRAW"
+end
+for _, name in { "WeaponId", "WeaponDrawn", "IsCultivating", "CarryingEgg" } do
+    player:GetAttributeChangedSignal(name):Connect(refreshDrawButton)
+end
+refreshDrawButton()
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then
         return
     end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.KeyCode == Enum.KeyCode.ButtonR2 then
         strike()
+    elseif DRAW_KEYS[input.KeyCode] then
+        toggleDrawn()
     end
 end)
 
