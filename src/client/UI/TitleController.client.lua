@@ -22,7 +22,7 @@ local C = UiTheme.Colors
 
 local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
 local PLATE_DISTANCE = if Quality.Low then 55 else 90 -- studs past which a nameplate isn't drawn (nearer on a phone)
-local ROW = 54
+local ROW = 62 -- room for a two-line How at the readable text floor (UI audit 2026-11-11: six were cut off)
 
 -- ---------- a title, drawn ----------
 -- Every title in its own lettering (TitleRules' Font) and colour, and now and then a sheen sweeps across it: a slanted band
@@ -227,9 +227,9 @@ UiKit.label({ Name = "ShowingWord", Font = "Strong", TextSize = 11, TextColor3 =
 local showing = UiKit.label({ Name = "Showing", Font = "Title", TextSize = 20, Position = UDim2.fromOffset(0, 15),
     Size = UDim2.new(1, -150, 0, 24), TextTruncate = Enum.TextTruncate.AtEnd, Parent = body })
 local autoButton = UiKit.button({ Name = "Auto", Font = "Strong", Text = "AUTO", TextSize = 12, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, -74, 0, 6), Size = UDim2.fromOffset(66, 28), Parent = body })
+    Position = UDim2.new(1, -74, 0, 2), Size = UDim2.fromOffset(66, 36), Parent = body })
 local hideButton = UiKit.button({ Name = "Hide", Font = "Strong", Text = "HIDE", TextSize = 12, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, 0, 0, 6), Size = UDim2.fromOffset(66, 28), Parent = body })
+    Position = UDim2.new(1, 0, 0, 2), Size = UDim2.fromOffset(66, 36), Parent = body })
 local count = UiKit.label({ Name = "Count", TextSize = 11, TextColor3 = C.Muted, Position = UDim2.fromOffset(0, 42),
     Size = UDim2.new(1, 0, 0, 14), Parent = body })
 local list = UiKit.scroll({ Name = "List", Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 1, -62), Parent = body })
@@ -269,9 +269,9 @@ for _, group in TitleRules.Groups do
             Size = UDim2.new(1, -112, 0, 22), TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
         title.FontFace = fontOf(entry)
         local how = UiKit.label({ Name = "How", TextSize = 11, TextColor3 = C.Muted, Text = entry.How, TextWrapped = true,
-            TextYAlignment = Enum.TextYAlignment.Top, Position = UDim2.fromOffset(12, 28), Size = UDim2.new(1, -112, 0, 24), Parent = card })
+            TextYAlignment = Enum.TextYAlignment.Top, Position = UDim2.fromOffset(12, 28), Size = UDim2.new(1, -112, 0, 30), Parent = card })
         local button = UiKit.button({ Name = "Wear", Font = "Strong", TextSize = 11, AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(86, 28), Parent = card })
+            Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(86, 38), Parent = card })
         button.Activated:Connect(function()
             if earnedSet[entry.Id] and book.Worn ~= entry.Id then
                 wear(entry.Id)

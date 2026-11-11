@@ -104,7 +104,8 @@ end
 
 local staminaText = UiKit.label({ -- on the bar's frame, not its track, which would clip it on a small screen
     Name = "StaminaText", Font = "Strong", TextSize = 10, TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.25,
-    TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 4, Parent = dock.Bar,
+    TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, 0.5),
+    Size = UDim2.new(1, 0, 0, 16), ZIndex = 4, Parent = dock.Bar, -- taller than the bar, which on a phone is 8 pixels
 })
 
 local barHome = dock.Bar.Position

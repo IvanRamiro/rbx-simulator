@@ -149,7 +149,7 @@ local function passCard(pass, parent, slot)
     picture.Parent = card
     UiKit.label({
         Name = "PassName", Font = "Title", TextSize = 15, Text = pass.Name, TextTruncate = Enum.TextTruncate.AtEnd,
-        Position = UDim2.fromOffset(84, 10), Size = UDim2.new(1, if pass.Luck then -150 else -92, 0, 20), Parent = card,
+        Position = UDim2.fromOffset(84, 10), Size = UDim2.new(1, if pass.Luck then -154 else -92, 0, 20), Parent = card,
     })
     UiKit.label({
         Name = "What", Font = "Body", TextSize = 12, Text = pass.Text, TextColor3 = C.Muted, TextWrapped = true,
@@ -170,7 +170,7 @@ local function passCard(pass, parent, slot)
     end)
     if pass.Luck then -- its effect, in numbers, before anyone buys it
         local oddsButton = UiKit.button({ Name = "Odds", Font = "Strong", TextSize = 11, Text = "ODDS", Tone = "Accent",
-            AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 8), Size = UDim2.fromOffset(54, 22), Parent = card })
+            AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 8), Size = UDim2.fromOffset(58, 32), Parent = card })
         oddsButton.Activated:Connect(function()
             Sfx.play("Click")
             showOdds(pass)

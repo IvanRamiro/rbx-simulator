@@ -55,7 +55,7 @@ for day = 1, DAYS do
     local amount = UiKit.label({ Name = "Amount", Font = "Title", TextSize = 14, TextColor3 = C.Text,
         Position = UDim2.fromOffset(0, 38), Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
     local extra = UiKit.label({ Name = "Extra", Font = "Strong", TextSize = 9, TextColor3 = C.AccentBright,
-        Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 0, 12), TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
+        Position = UDim2.fromOffset(0, 55), Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
     cards[day] = { card = card, word = word, amount = amount, extra = extra, stone = stone }
 end
 
@@ -103,7 +103,7 @@ local function render()
     for day, c in cards do
         local stones, minutes = RewardRules.daily(day, realm, player)
         c.amount.Text = NumberFormat.compact(stones)
-        c.extra.Text = if minutes > 0 then "+" .. minutes .. " MIN QI" else ""
+        c.extra.Text = if minutes > 0 then "+" .. minutes .. "m Qi" else "" -- ("+2 MIN QI" didn't fit a day card)
         local claimed = day < current or (day == current and not isReady)
         local isNext = day == current and isReady
         c.word.TextColor3 = if isNext then C.Highlight elseif claimed then C.AccentBright else C.Muted

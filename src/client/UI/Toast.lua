@@ -36,8 +36,23 @@ local OUT = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 local HOLD = 1.6      -- seconds a notification is up before the next may take its place
 local QUEUE_MAX = 4   -- the most waiting: past that the oldest waiting is dropped
 local SEAL = 34
-local function width() -- fits between the profile and the QUEST panel
-    return if Hud.isCompact() then 334 else 420
+local HudMetrics = require(script.Parent:WaitForChild("HudMetrics"))
+local MIN_WIDTH = 200 -- a tablet leaves about 215 between the side panels
+local SIDE_GAP = 10 -- px kept from the profile and the QUEST panel
+-- as wide as the room between the profile and the QUEST panel allows (UI audit 2026-11-11: a fixed 420 overlapped both on a
+-- tablet, 334 the profile on a small phone), up to the nominal width; in the HUD's own units (its scale applies after)
+local function width()
+    local nominal = if Hud.isCompact() then 334 else 420
+    local view, scale = HudMetrics.viewport(), HudMetrics.scale()
+    local profile = Hud.Status:FindFirstChild("StatusWindow")
+    local left = if profile and profile.Visible then profile.AbsolutePosition.X + profile.AbsoluteSize.X else 0
+    local quest = Hud.Quest
+    local camera = workspace.CurrentCamera -- (the quest panel's place is on the real screen, even under HudTestViewport)
+    local screenX = if camera then camera.ViewportSize.X else view.X
+    local right = if quest.Visible and quest.AbsoluteSize.X > 1 then screenX - quest.AbsolutePosition.X else 0
+    local side = math.max(left, right) + SIDE_GAP * scale
+    local room = (view.X - 2 * side) / scale
+    return math.clamp(room, MIN_WIDTH, nominal)
 end
 
 -- ---------- the window ----------
@@ -51,8 +66,12 @@ group.LayoutOrder = 1
 group.Visible = false
 group.Parent = Hud.Notice
 UiKit.padding(group, 3, 3)
-Hud.CompactChanged:Connect(function()
+local function resize()
     group.Size = UDim2.fromOffset(width() + 6, 0)
+end
+Hud.CompactChanged:Connect(resize)
+HudMetrics.Changed:Connect(function()
+    task.defer(resize) -- once the side panels have their new sizes
 end)
 
 local window = UiKit.panel({ Name = "Window", Brackets = false, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0), Parent = group })
@@ -192,6 +211,7 @@ local function arm(entry)
 end
 
 function present(entry)
+    resize()
     local kind = KINDS[entry.kind]
     current = entry
     for name, frame in marks do

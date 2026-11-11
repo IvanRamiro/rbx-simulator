@@ -43,10 +43,10 @@ local function volumeRow(key, word, order)
         AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, y), Size = UDim2.new(0.4, 0, 0, 18),
         TextXAlignment = Enum.TextXAlignment.Right, Parent = body })
     local less = UiKit.button({ Name = key .. "Less", Font = "Strong", Text = "-", TextSize = 18, Tone = "Quiet",
-        Position = UDim2.fromOffset(0, y + 20), Size = UDim2.fromOffset(32, 28), Parent = body })
+        Position = UDim2.fromOffset(0, y + 20), Size = UDim2.fromOffset(40, 36), Parent = body })
     local more = UiKit.button({ Name = key .. "More", Font = "Strong", Text = "+", TextSize = 18, Tone = "Quiet",
-        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, y + 20), Size = UDim2.fromOffset(32, 28), Parent = body })
-    local bar = UiKit.bar({ Name = key .. "Bar", Position = UDim2.fromOffset(40, y + 29), Size = UDim2.new(1, -80, 0, 10), Parent = body })
+        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, y + 20), Size = UDim2.fromOffset(40, 36), Parent = body })
+    local bar = UiKit.bar({ Name = key .. "Bar", Position = UDim2.fromOffset(48, y + 33), Size = UDim2.new(1, -96, 0, 10), Parent = body })
     local function render(value)
         percent.Text = math.round(value * 100) .. "%"
         UiKit.setBar(bar, value)
@@ -81,7 +81,7 @@ local y = 2 * ROW
 UiKit.label({ Name = "ReducedLabel", Font = "Strong", TextSize = 13, TextColor3 = C.Text, Text = "REDUCED EFFECTS",
     Position = UDim2.fromOffset(0, y + 4), Size = UDim2.new(1, -70, 0, 18), Parent = body })
 local reduced = UiKit.button({ Name = "Reduced", Font = "Strong", TextSize = 12, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, 0, 0, y), Size = UDim2.fromOffset(62, 28), Parent = body })
+    Position = UDim2.new(1, 0, 0, y), Size = UDim2.fromOffset(68, 36), Parent = body })
 UiKit.label({ Name = "ReducedHelp", TextSize = 12, TextColor3 = C.Muted, TextWrapped = true,
     Text = "Hides other players' auras, and turns off screen flashes and camera shake.",
     Position = UDim2.fromOffset(0, y + 34), Size = UDim2.new(1, 0, 0, 34), Parent = body })
@@ -105,7 +105,7 @@ if isDeveloper then
     UiKit.label({ Name = "PerfLabel", Font = "Strong", TextSize = 13, TextColor3 = C.Text, Text = "PERFORMANCE READOUT",
         Position = UDim2.fromOffset(0, devY + 4), Size = UDim2.new(1, -70, 0, 18), Parent = body })
     local perf = UiKit.button({ Name = "PerfReadout", Font = "Strong", TextSize = 12, AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, 0, 0, devY), Size = UDim2.fromOffset(62, 28), Parent = body })
+        Position = UDim2.new(1, 0, 0, devY), Size = UDim2.fromOffset(68, 36), Parent = body })
     local function renderPerf()
         local on = player:GetAttribute("PerfReadout") == true
         perf.Text = if on then "ON" else "OFF"

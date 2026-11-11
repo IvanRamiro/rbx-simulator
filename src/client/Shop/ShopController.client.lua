@@ -85,7 +85,7 @@ end
 local tabs = Instance.new("Frame")
 tabs.Name = "Tabs"
 tabs.BackgroundTransparency = 1
-tabs.Size = UDim2.new(1, -210, 0, 26)
+tabs.Size = UDim2.new(1, -210, 0, 30)
 tabs.Visible = false
 tabs.Parent = body
 UiKit.list(tabs, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6) })
@@ -93,7 +93,7 @@ local tabButtons = {}
 for index, name in { "Weapons", "Forge" } do
     local tab = UiKit.button({
         Name = name, Font = "Strong", TextSize = 12, Text = string.upper(name), Tone = "Quiet", LayoutOrder = index,
-        Size = UDim2.fromOffset(110, 26), Parent = tabs,
+        Size = UDim2.fromOffset(110, 30), Parent = tabs,
     })
     tab.Activated:Connect(function()
         current.tab = name
@@ -175,7 +175,7 @@ local function weaponCard(parent, x, weapon, contents, realmIndex)
         TextSize = 11, TextColor3 = C.Muted, Text = string.format("%s  ·  %d dmg  ·  %d reach", weapon.Kind, math.floor(weapon.Damage + 0.5), kind.Range),
         Position = UDim2.fromOffset(86, 25), Size = UDim2.new(1, -94, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = box,
     })
-    local size, position = UDim2.new(1, -94, 0, 26), UDim2.new(0, 86, 1, -33)
+    local size, position = UDim2.new(1, -94, 0, 32), UDim2.new(0, 86, 1, -38) -- (26 was small for a thumb: UI audit 2026-11-11)
     if mine and mine.InstanceId == contents.Weapons.Equipped then
         button(box, "WIELDING", "Active", size, position, nil) -- a state, not an action: not the gold of something to press
     elseif mine then
@@ -183,7 +183,7 @@ local function weaponCard(parent, x, weapon, contents, realmIndex)
             ask("Equip", mine.InstanceId)
         end)
     elseif weapon.Tier > realmIndex then
-        button(box, "NEEDS " .. string.upper(weapon.Realm), "Quiet", size, position, nil)
+        button(box, "NEEDS THIS REALM", "Quiet", size, position, nil) -- (its realm heads the row; "NEEDS ETERNAL TRANSCENDENCE" didn't fit)
     elseif contents.Stones < weapon.Price then
         button(box, NumberFormat.compact(weapon.Price) .. " STONES", "Quiet", size, position, nil)
     else
@@ -279,8 +279,8 @@ local function renderBlacksmith(contents)
     UiKit.label({
         TextSize = 11, TextColor3 = C.Muted, Text = "Fight bare-handed", Position = UDim2.fromOffset(12, 22), Size = UDim2.new(0.6, 0, 0, 14), Parent = palm,
     })
-    button(palm, if unarmed then "USING" else "USE", if unarmed then "Highlight" else "Accent", UDim2.fromOffset(110, 26),
-        UDim2.new(1, -120, 0, 8), if unarmed then nil else function()
+    button(palm, if unarmed then "USING" else "USE", if unarmed then "Highlight" else "Accent", UDim2.fromOffset(110, 32),
+        UDim2.new(1, -120, 0, 5), if unarmed then nil else function()
             ask("Equip", nil)
         end)
     for tier, info in GameConfig.WeaponTiers do

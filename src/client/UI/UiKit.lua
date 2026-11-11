@@ -325,7 +325,9 @@ function UiKit.button(props)
         end
         edge.Color = tone.edge
         edge.Transparency = if button.Active then 0.05 else 0.6
-        edge.Thickness = if lit then 2 else 1
+        if not edge:GetAttribute("Breathes") then -- a breathing edge (UiFx.attention) is its tween's: writing here fought it
+            edge.Thickness = if lit then 2 else 1
+        end
     end
     button:SetAttribute("Tone", toneName)
     button:GetAttributeChangedSignal("Tone"):Connect(paint)

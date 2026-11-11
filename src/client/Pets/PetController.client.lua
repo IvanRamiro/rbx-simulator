@@ -77,7 +77,7 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
     local rarityColor = GameConfig.PetRarityColors[definition.Rarity] or C.Text
 
     local level = PetRules.level(pet)
-    local card = UiKit.card({ Name = "PetCard", LayoutOrder = layoutOrder, Size = UDim2.new(1, 0, 0, 76), Stripe = rarityColor, Parent = petList })
+    local card = UiKit.card({ Name = "PetCard", LayoutOrder = layoutOrder, Size = UDim2.new(1, 0, 0, 90), Stripe = rarityColor, Parent = petList })
     card:SetAttribute("InstanceId", pet.InstanceId)
     local picture = Portraits.pet(pet.PetId, 58)
     picture.Position = UDim2.fromOffset(10, 9)
@@ -89,7 +89,7 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
     -- the lock: gold while it's on, faint while it's off
     local lock = UiKit.button({
         Name = "Lock", Text = "", Tone = if pet.Locked then "Highlight" else "Quiet", AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -6, 0, 5), Size = UDim2.fromOffset(24, 24), Parent = card,
+        Position = UDim2.new(1, -6, 0, 5), Size = UDim2.fromOffset(34, 34), Parent = card,
     })
     local padlock = Instance.new("ImageLabel")
     padlock.BackgroundTransparency = 1
@@ -137,7 +137,7 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
         local share = -(86 + (buttons - 1) * 4) / buttons
         local b = UiKit.button({
             Font = "Strong", TextSize = 11, Text = text, Tone = tone, Active = onClick ~= nil,
-            Position = UDim2.new(slot / buttons, 78 + slot * (share + 4), 0, 49), Size = UDim2.new(1 / buttons, share, 0, 22),
+            Position = UDim2.new(slot / buttons, 78 + slot * (share + 4), 0, 49), Size = UDim2.new(1 / buttons, share, 0, 34), -- (22 was too small to tap: UI audit 2026-11-11)
             Parent = card,
         })
         if onClick then

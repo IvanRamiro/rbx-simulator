@@ -80,14 +80,14 @@ drawStrip.Visible = false
 drawStrip.Parent = Hud.Dock
 local drawButton = UiKit.button({
     Name = "DrawButton", Tone = "Quiet", Font = "Strong", TextSize = 13, Text = "DRAW",
-    AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(140, 30), Parent = drawStrip,
+    AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(150, 38), Parent = drawStrip,
 })
 local function placeDrawButton(size)
     if not size then
         return
     end
     local plateLeft = math.floor(size.Emblem * 0.45) -- as Hud lays out the dock's plate
-    drawStrip.Size = UDim2.fromOffset(size.Width, 30)
+    drawStrip.Size = UDim2.fromOffset(size.Width, 38)
     drawButton.Position = UDim2.fromOffset(plateLeft + (size.Width - plateLeft) / 2, 0)
 end
 Hud.CultivationDock.Resized:Connect(placeDrawButton)

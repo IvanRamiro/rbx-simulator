@@ -72,18 +72,21 @@ local fold = Instance.new("TextButton") -- the whole header
 fold.Name = "Fold"
 fold.Text = ""
 fold.BackgroundTransparency = 1
-fold.Size = UDim2.fromScale(1, 1)
+-- taller than the header it lies over (invisible): the header is a thin line, too thin to hit with a thumb (UI audit 2026-11-11)
+fold.AnchorPoint = Vector2.new(0, 0.5)
+fold.Position = UDim2.fromScale(0, 0.5)
+fold.Size = UDim2.new(1, 0, 1, 16)
 fold.ZIndex = 3
 fold.Parent = header
 local foldMark = UiKit.label({
     Name = "FoldMark", Font = "Strong", TextSize = 15, TextColor3 = C.Muted, AnchorPoint = Vector2.new(0, 0.5),
-    Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromOffset(16, 14), Parent = header,
+    Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromOffset(18, 18), Parent = header,
 })
 
 local footer = Instance.new("Frame")
 footer.Name = "Footer"
 footer.BackgroundTransparency = 1
-footer.Size = UDim2.new(1, 0, 0, 22)
+footer.Size = UDim2.new(1, 0, 0, 30)
 footer.LayoutOrder = 5
 footer.Parent = inner
 local rewardIcon = Instance.new("ImageLabel")
@@ -101,7 +104,7 @@ local reward = UiKit.label({
 local SKIP = "Skip" -- its label at rest (it asks "SURE?" when pressed once)
 local skip = UiKit.button({
     Name = "Skip", Font = "Strong", TextSize = 11, Text = SKIP, Tone = "Quiet", AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.fromScale(1, 0), Size = UDim2.fromOffset(62, 22), Parent = footer,
+    Position = UDim2.fromScale(1, 0), Size = UDim2.fromOffset(66, 30), Parent = footer,
 })
 
 local message = Toast.new("QuestMessage", C.Highlight, 4)

@@ -12,6 +12,7 @@
 -- Each region scales with the screen (HudScale, HudMetrics), and text stays readable at any scale. Hud.isCompact() is true on a
 -- short screen (a phone in landscape): pieces change their layout on it, following Hud.CompactChanged. The first script to require this builds it.
 local GuiService = game:GetService("GuiService")
+local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -171,10 +172,17 @@ local function layoutRail(isCompact)
     rail:FindFirstChildOfClass("UIListLayout").FillDirection = if isCompact then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical
     for _, button in rail:GetChildren() do
         if button:IsA("TextButton") then
-            button.Size = UDim2.fromOffset(if isCompact then 44 else 150, 42)
+            -- 54 at a phone's scale (0.8) is 43 pixels: the least a thumb hits reliably (UI audit 2026-11-11: 35 by 33)
+            button.Size = UDim2.fromOffset(if isCompact then 54 else 150, if isCompact then 52 else 42)
             local word = button:FindFirstChild("Word")
             if word then
                 word.Visible = not isCompact
+            end
+            local icon = button:FindFirstChild("Icon") -- alone on a phone's square button, it sits in its middle
+            if icon then
+                icon.AnchorPoint = if isCompact then Vector2.new(0.5, 0.5) else Vector2.new(0, 0.5)
+                icon.Position = if isCompact then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 6, 0.5, 0)
+                icon.Size = UDim2.fromOffset(if isCompact then 36 else 32, if isCompact then 36 else 32)
             end
         end
     end
@@ -236,7 +244,7 @@ local function addBadge(button)
     local badge = UiKit.label({
         Name = "Badge", Font = "Strong", TextSize = 11, TextColor3 = UiTheme.Colors.Panel,
         BackgroundTransparency = 0, BackgroundColor3 = UiTheme.Colors.Accent,
-        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 6, 0, -6), Size = UDim2.fromOffset(0, 18),
+        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 6, 0, -3), Size = UDim2.fromOffset(0, 18),
         AutomaticSize = Enum.AutomaticSize.X, TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
         ZIndex = 5, Parent = button,
     })
@@ -274,6 +282,12 @@ end
 -- A small round button in the top row, with the same badge.
 function Hud.topButton(name, image, order)
     local button = UiKit.button({ Name = name, Text = "", Size = UDim2.fromOffset(42, 42), LayoutOrder = order, Tone = "Quiet", Parent = Hud.TopRight })
+    -- bigger on a phone, where 42 at the phone's scale is too small for a thumb (UI audit 2026-11-11: 33 by 33)
+    local function sizeFor(isCompact)
+        button.Size = UDim2.fromOffset(if isCompact then 52 else 42, if isCompact then 52 else 42)
+    end
+    Hud.CompactChanged:Connect(sizeFor)
+    sizeFor(compact == true)
     button:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
     button:SetAttribute("NoSheen", true) -- a band of light would show this round button's square corners
     local icon = UiKit.icon(image, 32)
@@ -283,6 +297,52 @@ function Hud.topButton(name, image, order)
     icon.Position = UDim2.fromScale(0.5, 0.5)
     icon.Parent = button
     return button, addBadge(button)
+end
+
+-- ---------- a controller's selection ----------
+-- A gamepad moves a selection through the buttons (Roblox's own UI navigation). Its frame is the interface's gold, not
+-- Roblox's default box, so it reads as part of the game (UI audit 2026-11-11: no menu supported a controller at all).
+do
+    local selection = Instance.new("Frame")
+    selection.Name = "Selection"
+    selection.BackgroundTransparency = 1
+    selection.Size = UDim2.new(1, 8, 1, 8)
+    selection.Position = UDim2.fromOffset(-4, -4)
+    UiKit.corner(selection, UiTheme.Corner + 4)
+    local ring = Instance.new("UIStroke")
+    ring.Color = UiTheme.Colors.Highlight
+    ring.Thickness = 2.5
+    ring.Parent = selection
+    playerGui.SelectionImageObject = selection
+end
+
+local function usingGamepad()
+    local last = UserInputService:GetLastInputType()
+    return last.Name:find("^Gamepad") ~= nil
+end
+
+-- the first button a window's selection lands on: its uppermost, then leftmost, active and shown button (its close
+-- button only if it has no other)
+local function firstButton(root, closeButton)
+    local best, bestY, bestX = nil, math.huge, math.huge
+    for _, d in root:GetDescendants() do
+        if d:IsA("GuiButton") and d ~= closeButton and d.Active and d.Selectable and d.AbsoluteSize.X > 0 then
+            local shown = true
+            local x = d
+            while x and x ~= root do
+                if x:IsA("GuiObject") and not x.Visible then
+                    shown = false
+                    break
+                end
+                x = x.Parent
+            end
+            local p = d.AbsolutePosition
+            if shown and (p.Y < bestY - 2 or (math.abs(p.Y - bestY) <= 2 and p.X < bestX)) then
+                best, bestY, bestX = d, p.Y, p.X
+            end
+        end
+    end
+    return best or closeButton
 end
 
 -- ---------- windows ----------
@@ -296,6 +356,30 @@ end
 -- Returns { Frame, Body, open(), close(), isOpen(), setTitle(text), link(button) }.
 local windows = {}
 local LEFT_COLUMN = 270 -- the profile's width: the menu sits under it
+local CLOSE_ACTION = "HudCloseWindow"
+local function openWindow()
+    for _, win in windows do
+        if win.isOpen() then
+            return win
+        end
+    end
+    return nil
+end
+-- gamepad B closes the open window (bound only while one is open, over the dash B otherwise gives)
+local function bindClose()
+    if openWindow() then
+        ContextActionService:BindActionAtPriority(CLOSE_ACTION, function(_, state)
+            local win = openWindow()
+            if state == Enum.UserInputState.Begin and win then
+                win.close()
+                return Enum.ContextActionResult.Sink
+            end
+            return Enum.ContextActionResult.Pass
+        end, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.ButtonB)
+    else
+        ContextActionService:UnbindAction(CLOSE_ACTION)
+    end
+end
 
 local function stepAside()
     local open = false
@@ -355,7 +439,7 @@ function Hud.window(props)
     local _, title = UiKit.header(inner, props.Title, { TextSize = 16 })
     local closeButton = UiKit.button({
         Name = "Close", Tone = "Danger", Font = "Strong", Text = "X", TextSize = 14, AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, 4, 0, -4), Size = if UserInputService.TouchEnabled then UDim2.fromOffset(38, 38) else UDim2.fromOffset(28, 28),
+        Position = UDim2.new(1, 4, 0, -4), Size = if UserInputService.TouchEnabled then UDim2.fromOffset(46, 46) else UDim2.fromOffset(32, 32),
         Parent = inner,
     })
     local body = Instance.new("Frame")
@@ -389,6 +473,12 @@ function Hud.window(props)
             task.defer(placeNotice)
         end
         stepAside()
+        task.defer(bindClose)
+        -- a controller's selection inside it goes back to the button that opened it
+        local selected = GuiService.SelectedObject
+        if selected and selected:IsDescendantOf(frame) then
+            GuiService.SelectedObject = if usingGamepad() and linked and linked.Visible then linked else nil
+        end
         shown += 1
         local this = shown
         UiFx.tween(hudScale, 0.09, { Scale = restScale() * 0.95 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
@@ -416,6 +506,13 @@ function Hud.window(props)
             openWindowFrame = frame
             task.delay(0.3, placeNotice) -- once it has risen into place
             stepAside()
+            task.defer(bindClose)
+            -- with a controller, the selection moves into it (once whoever opened it has filled it)
+            task.delay(0.3, function()
+                if opened and usingGamepad() then
+                    GuiService.SelectedObject = firstButton(frame, closeButton)
+                end
+            end)
             shown += 1
             local this = shown
             task.delay(0.25, function() -- (the screen changed while it unfolded: the tween ended on the old scale)
