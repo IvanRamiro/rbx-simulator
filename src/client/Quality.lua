@@ -5,7 +5,6 @@
 -- What Low does:
 --   RealmAura     half the emission, nearer culling, the body aura on 6 parts instead of 15; other
 --                 players' auras lose their Highlight and PointLight (your own keeps them)
---   OwnerAura     half the emission
 --   WorldQuality  the islands' own emitters at 40%
 --   EggGlow       eggs' Highlights switch off sooner
 --   GuardianAnim  coarser springs; GuardianController: animated within 150 studs, half rate at rest

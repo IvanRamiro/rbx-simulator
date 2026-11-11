@@ -514,12 +514,53 @@ Each kind has its own visual purpose. None is a recolour of another.
 **Realm auras (the cultivation aura, live since November 3, 2026)**
 
 - **Only while meditating** (the owner, November 4, 2026: "there should be no aura, if the player is not meditating"): a cultivating player wears their realm's aura, built by `src/client/Auras/RealmAura.lua`. It builds up when they start and clears when they stop. Realm 4's ground layers quicken with it.
-- **Twelve realms:** each has its own layers. Palettes come from the owner's `src/shared/AuraConfig.lua`, matched to the rank's `Realm` name. The sub-rank (`Level` 1–5) moves it along one continuous level, so a breakthrough never looks weaker.
-- **On every realm:** the owner's body aura (smoke, a dark shadow, sparks, star glints), fainter at low Qi and bigger at high Qi.
-- **Top-realm meshes** are templates in `ReplicatedStorage.AuraMeshes.TopTier`.
+- **Twelve realms:** each has its own layers, matched to the rank's `Realm` name. The sub-rank (`Level` 1–5) moves it along one continuous level, so a breakthrough never looks weaker.
+- **Colours (the owner's set, November 11, 2026: "Don't repeat same color to aura"):** no two realms alike, each a gradient from a hot colour to a deep one, in `src/shared/AuraConfig.lua` (`Palette`):
+
+  | Realm | Colour |
+  |---|---|
+  | Qi Awakening | jade green |
+  | Qi Foundation | teal |
+  | Spirit Core | gold |
+  | Spirit Soul | royal blue |
+  | Ascendant Realm | solar orange |
+  | Immortal Realm | silver-white |
+  | Divine Realm | crimson |
+  | Cosmic Realm | violet |
+  | Void Realm | ice blue round a black core |
+  | Heavenly Dao | rose pink |
+  | Primordial Realm | lava: an orange core, dark red, black edges |
+  | Eternal Transcendence | prismatic: gold, cyan, magenta |
+
+- **On every realm, the owner's base aura** (built by the owner on dummy 1 of `Workspace.AuraDummies`, November 11, 2026: "apply that aura to all realms ... The higher the realm, the bigger the effects"):
+  - **On the ground:** a burst, a smoke spreading outward, a slash and a crescent turning. Each but the burst is a light layer over a half-strength black copy of itself.
+  - **A wisp** rising from the feet past the head, narrowing to a point, and **sparkles** rising from a ring round the feet.
+  - **A soft glow** over the body (none round a void core), and from Ascendant on, the breathing outline and PointLight.
+  - **Scale:** the dummy's look is Ascendant's base. Sizes and reach run from 0.6 times that at Qi Awakening to 1.8 times at Eternal's Peak. The ground layers' count barely grows and they dim as they grow, so a high realm's core never burns white.
+- **On every realm, the owner's body aura:** smoke, a dark shadow, sparks and star glints, fainter at low Qi and bigger at high Qi.
+- **Each realm's unique piece** (the owner, November 11, 2026: "add each realm a unique particle emitter, trails or beam", built in Studio as instances, no code): a Model per realm in `ReplicatedStorage.AuraMeshes.RealmUnique` (`Tier01` to `Tier12`, pivot where the root stands), copied onto the player by `RealmAura`. Edit them there in Studio.
+
+  | Realm | Unique piece |
+  |---|---|
+  | Qi Awakening | First Breath: jade motes drawn in toward the body |
+  | Qi Foundation | Meridian Current: flowing teal currents round the waist and chest |
+  | Spirit Core | Core Pulse: a golden shell swelling out from the chest |
+  | Spirit Soul | Soul Flames: blue flames on both shoulders (the owner's FireFB16 flipbook) |
+  | Ascendant Realm | Ascending Gale: white-gold wind streaks rushing upward |
+  | Immortal Realm | Heaven's Light: three pillars of light falling from the sky |
+  | Divine Realm | Divine Lightning: split-second crimson bolts round the body |
+  | Cosmic Realm | Star Drift: violet stars drifting and twinkling |
+  | Void Realm | Void Pull: dark shards and ice streaks sucked inward |
+  | Heavenly Dao | Radiant Rays: a fan of rose light rays behind the back |
+  | Primordial Realm | Magma Rise: magma chunks thrown up and falling back (stays on the floor) |
+  | Eternal Transcendence | Aurora Veil: gold, cyan and violet curtains overhead |
+
+- **Ribbons** (from Ascendant: more of them, larger and quicker with the level; the owner's look, November 11, 2026: their flipbook 98818011129942): thin, sharp, glowing swooshes whipping round the body. Each swoosh is a particle playing the owner's 8x8 flipbook of one stroke circling once. It lies round the body at a small random tilt, so it rings the body in 3D and the body hides its back half. A softer, wider copy behind it is its glow. The realm's hot colour fades to its main colour.
+- **Floating poses:** the meditation poses move the body, not the root, and from Ascendant up the body floats. The body glow, the outline's light, the void core and the unique piece follow the hips' shift from rest each frame (players' rigs join with AnimationConstraints, the test dummies with Motor6Ds; both are read). Ground layers stay on the floor.
+- **Only particles, beams and trails** (the owner, November 11, 2026: "Remove all the magic circle for all realms", "Remove the hard objects on the aura"). There are no ground circles and no meshes. The sigils, Realm 4's Soul Seal, the signature meshes (crown, orrery, shards, coils) and the top two realms' rigs are gone, along with their mesh templates. The only parts are invisible emitter hosts.
 - **Rebuilds** happen on rank-up and respawn; the aura goes on death.
 - **Culling:** other players' auras switch off past 120 studs from the camera. Roblox draws at most 31 Highlights per client.
-- **One source of truth:** the Studio test range (`workspace.AuraTestRange`) uses the same module, so a realm enhanced there is the realm the game shows.
+- **One source of truth:** the Studio test range (`ServerStorage.DevStage.AuraTestRange`; drag it to Workspace to use it) uses the same module, so a realm enhanced there is the realm the game shows.
 
 **Pet designs over the realm aura:** an equipped pet with a design of its own adds it (below) on top of the realm aura while the player meditates. None are live now: the Aqua Wisp's Tidecaller Sanctum and the Ember Wyrm's Ember Crucible were removed with their old designs (2026-11-09, the owner's choices "Remove both, make new" and "Remove, make new"); the owner dropped their replacements (November 10, 2026), so none is planned. The element-coloured flame aura no longer shows, and the old default (Verdant Gale) was removed on November 8, 2026; the realm aura is the cultivation look.
 
@@ -554,7 +595,7 @@ Each kind has its own visual purpose. None is a recolour of another.
 | Qi Foundation | Standing post: knees soft, the arms rounded as if round a tree, sinking and rising |
 | Spirit Core | Kneeling, the hands circling each other round the core at the belly, head bowed |
 | Spirit Soul | The crane: on one leg, the knee drawn high, the arms spread low like wings |
-| Ascendant Realm | Floating Ascension (the owner's): reclined on the air, a wide wingspan, a knee to the sky |
+| Ascendant Realm | Floating Ascension: reclined on the air, a wide wingspan, a knee to the sky |
 | Immortal Realm | Standing on air: sword fingers at the chest, a hand behind the back, chin up |
 | Divine Realm | On one knee in the air, an arm driven straight at the heavens |
 | Cosmic Realm | Upside down, legs crossed above, the arms spread, orbiting slowly |
@@ -563,7 +604,7 @@ Each kind has its own visual purpose. None is a recolour of another.
 | Primordial Realm | Holding up the sky: a wide squat, both palms pressing up, the strain trembling through the body |
 | Eternal Transcendence | Spread as a star, face to the sky, turning high up |
 
-The owner's account always takes Floating Ascension, which their own aura was built round. To review any idle on any account, set `MeditationPoses.Preview` to its realm number. Tested in Play: all twelve run with no errors, planted feet stay flat within 0.07 studs of the floor, and walking and jumping return on stopping.
+Every account, the owner's too, takes its realm's idle (the owner's own aura and fixed pose were removed on November 11, 2026, before the public test: "remove my character aura, and let me use our game aura"). To review any idle on any account, set `MeditationPoses.Preview` to its realm number. Tested in Play: all twelve run with no errors, planted feet stay flat within 0.07 studs of the floor, and walking and jumping return on stopping.
 
 ### Aura VFX brief (the project owner's requirements, kept verbatim)
 
@@ -1243,7 +1284,7 @@ The game had no audio. Every sound comes from Roblox's licensed libraries only: 
 
 ### Settings and analytics (November 4, 2026)
 
-- **Settings** (the Settings button on the rail; `client/UI/SettingsController`, `server/Data/Settings`, saved as `Settings`, save version 10): Music and Sound volume, and Reduced Effects, which hides other players' auras and turns off the owner aura's screen flash and camera shake on that player's own client.
+- **Settings** (the Settings button on the rail; `client/UI/SettingsController`, `server/Data/Settings`, saved as `Settings`, save version 10): Music and Sound volume, and Reduced Effects, which hides other players' auras and turns off screen flashes and camera shake on that player's own client.
 - **Analytics** (`server/Analytics/Analytics`, for the Creator Dashboard): the quest path as an onboarding funnel; every Spirit Stone in and out, by cause and item (through `Wallet`); and the moments RankUp, EggTaken, EggDropped, EggSecured, EggHatched and QuestsSkipped, each by guardian, egg or rank. Studio only prints these: real data needs a live server.
 
 ### Rewards (November 4, 2026)
@@ -1272,7 +1313,7 @@ Our own line drawings, white so the interface tints them: `tools/ui/draw_icons.p
 - **Others' pets:** hidden past 80 studs instead of 250. **Others' poses:** stop past 80 studs. **Robes:** sway within 40 instead of 120.
 - **Everyone, PC too:** the pose loop no longer allocates a table per joint per frame, a robe still loading looks for its pieces once a second instead of every frame, and the rounded interface dropped a glow stroke and eight tick frames per panel.
 
-Not yet measured on a real phone. The owner's account wears `OwnerAura`, the costliest, so a normal account should be tested too.
+Not yet measured on a real phone.
 
 **The phone pass (November 9, 2026, the owner's "do the 3"):**
 - **Measured on real devices, as players play** (`client/Performance/PerfProbe`, `server/Analytics/PerfService`): every client measures its own frame rate (the average and the slow end, its slowest 5% of frames) and memory, and reports every two minutes after the first minute; they land on the Creator Dashboard as the custom events **ClientFps** (value: average frames a second; by device, Phone, Tablet, PC or Console, marked when the phone tier is on; and the slow end in a band) and **ClientMemory** (value: MB; by device; in a band). Phone versus tablet is by the screen's shorter side (under 600 px: a phone).

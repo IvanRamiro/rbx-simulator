@@ -385,13 +385,6 @@ local GameConfig = {
         { Id = "VoidShard", DisplayName = "Void Shard", QiReward = 1000000, RequiredRank = "VoidWalker", Element = "Void" },
     },
 
-    -- The owner's own aura (src/client/Auras/OwnerAura, built on the AuraWorkbench and kept in
-    -- ReplicatedStorage.AuraMeshes.OwnerAura): worn by these user ids in place of their realm aura,
-    -- with the floating meditation pose (Character/MeditationPoses, Realm 5's) instead of their realm's.
-    OwnerAura = {
-        UserIds = { 4993575280 },
-    },
-
     StartingRank = "Qi Initiate",
 
     Ranks = {

@@ -6,16 +6,16 @@
 -- continuous level, t = (realm - 1 + progress) / 11, progress = (sub - 1) / 5: Peak (0.8) sits just
 -- short of the next realm's base, so a breakthrough never looks weaker. Every size, rate and speed
 -- follows t (rates capped at 60 per emitter for mobile); the layers a realm adds are the visible jump.
+--   Every realm: the owner's base aura (baseAura: the ground burst, smoke and slashes, the rising
+--   wisp and sparkles, the body glow; bigger with the level) and body aura (bodyAura), in the realm's
+--   own colours (AuraConfig's Palette, no two alike).
 --   Realms 1-4: their own builds (realm1 .. realm4).
---   Early (1-2): a soft glow close to the torso, glints rising round the body.
---   Mid (3-6): + a stream rising from a ring at the feet; ribbon arcs (one from Spirit Soul, two
---   from Immortal).
---   High (7-12): + a turning ground sigil, a rising column; a dark void core inside a bright rim
---   for Cosmic, Void and Eternal; a third ribbon and a second sigil ring from Heavenly Dao.
---   Signature pieces (ReplicatedStorage.AuraMeshes.TopTier): a crown of flames (Divine), an orrery
---   (Cosmic), drifting shards (Void), twin coils (Primordial); Heavenly Dao and Eternal have whole
---   rigs (topTier).
---   Every realm: the owner's body aura (bodyAura), scaled by the level.
+--   From Ascendant (5): the breathing outline and light; ribbon arcs (one at Ascendant, two from
+--   Immortal).
+--   Cosmic, Void and Eternal: a dark void core inside a bright rim (in place of the body glow).
+--   From Heavenly Dao (10): a third ribbon; Heavenly Dao's streaks of law, Eternal's nebula.
+--   Only particles, beams and trails (and the outline and light): no magic circles and no solid
+--   pieces (the owner, 2026-11-11), so the only parts are invisible emitter hosts.
 --
 -- RealmAura.build(root, realm, sub) returns the aura's folder (ActiveAuraFX, under the root);
 -- destroying it removes everything the aura made, on the root and the body parts too. The module
@@ -31,15 +31,9 @@ local LOW = Quality.Low
 local RATE_SCALE = if LOW then 0.5 else 1 -- every emitter's rate, on a phone
 local CULL_DISTANCE_LIVE = if LOW then 60 else 120 -- studs from the camera
 local CULL_CHECK = 0.25        -- seconds between distance checks
-local CULLED_CLASSES = { "ParticleEmitter", "Beam", "Trail", "Highlight", "Light", "SurfaceGui", "BillboardGui" }
+local CULLED_CLASSES = { "ParticleEmitter", "Beam", "Trail", "Highlight", "Light", "BillboardGui" }
 
 local building = nil -- the record of the aura being built (bodyAura dresses parts that arrive later)
-
--- the top realms' mesh templates (tools/vfx/top_tier_aura_meshes.py), kept in the place
-local function meshLibrary()
-    local meshes = ReplicatedStorage:FindFirstChild("AuraMeshes")
-    return meshes and meshes:FindFirstChild("TopTier")
-end
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -48,12 +42,9 @@ local AuraConfig = require(ReplicatedStorage:WaitForChild("AuraConfig"))
 
 local TEX = {
     Glow = "rbxassetid://135169457468310",
-    Streak = "rbxassetid://115312010132075",
-    Ribbon = "rbxassetid://99893839045856",
-    Formation = "rbxassetid://86025672711867",
+    SoftGlow = "rbxassetid://243664672",        -- a soft round glow (PDS kit): Realm 4's orb core and rim
+    Swoosh = "rbxassetid://98818011129942",     -- the owner's pick: an 8x8 flipbook of a thin glowing stroke whipping a full circle
     Ring = "rbxassetid://130173906719836",
-    Glitter = "rbxassetid://14049414463",
-    DaoRunes = "rbxassetid://80369515975276",   -- tools/vfx/top_tier_aura_textures.py
     LawStreak = "rbxassetid://75983337371298",
     Nebula = "rbxassetid://128568519603570",
     -- Realm 1, from the PDS' Particles & Models Kit (Workspace)
@@ -62,7 +53,6 @@ local TEX = {
     Wisp = "rbxassetid://7216854921",          -- a faint soft smoke wisp (Fogs)
     -- Realm 2, from the PDS kit
     Spark = "rbxassetid://16511998441",         -- a small dot with a faint cross flare (Sparkles&Debris)
-    RiseStar = "rbxassetid://12363775390",      -- a small six-ray star (PDS, Sparkles&Debris)
     -- Realm 3, from the PDS kit (Rings)
     EnergyRing = "rbxassetid://12403112662",    -- a thin glowing ring with brighter arcs
     SwirlRing = "rbxassetid://6250126210",      -- a thin ring of wispy strokes
@@ -80,37 +70,19 @@ local TEX = {
     VortexCloud = "rbxassetid://12683695494",   -- an 8x8 flipbook: a small rolling smoke cloud (Isathyst)
     -- Realm 4's smoke orbs (the owner's design): their star and lightning, smoke from the PDS kit (Fogs)
     OrbStar = "rbxassetid://84556863870846",      -- our own short cross flare (tools/vfx/soul_orb_textures.py)
-    SoulSeal = "rbxassetid://93159167451330",     -- our own ground circle: three soul nodes, soul flames (same tool)
     SmokePuff = "rbxassetid://80021798595720",    -- our own 4x4 flipbook: a puff billows, tears and dissolves
                                                   -- (inside 78% of each frame: a clear margin, so no cell edges show)
     ElectricRing = "rbxassetid://6900421398",     -- a crackling electric ring (PDS Rings)
     BoltBurst = "rbxassetid://7216850580",        -- a small burst of lightning (PDS Fogs)
     SmokeRipple = "rbxassetid://133636855384267", -- our own ripple of smoke strands, zero at its border (tools/vfx/soul_orb_textures.py;
                                                   -- the PDS ring 12878479033's faint border showed as a square at 19 studs)
-}
--- the top realms' meshes (tools/vfx/top_tier_aura_meshes.py, imported into TopTierMeshes): where
--- each sits round the root, as built
-local MESHES = {
-    DaoRing_Outer = Vector3.new(0, -1.6, 0),
-    DaoRing_Inner = Vector3.new(0, -2.85, 0),
-    LawPillars = Vector3.new(0, 0.1, 0),
-    EventHorizon = Vector3.new(0, 0, 0),
-    OrbitalHelices = Vector3.new(0, 0.3, 0),
-    TranscendenceCrown = Vector3.new(0, 2.4, 0.9),
-    DivineFlameCrown = Vector3.new(0, 0.999, 0),
-    CosmicOrrery = Vector3.new(0, 0.574, 0),
-    VoidShards = Vector3.new(0.022, 0.978, -0.041),
-    PrimordialCoils = Vector3.new(0, 0.9, 0),
-}
-local TOP = { [10] = true, [12] = true }
--- one signature piece each for the realms between: its mesh, look and motion. Colours from each
--- realm's palette, saturated: Neon blooms paler ones to yellow or white
-local SIGNATURE = {
-    [7] = { mesh = "DivineFlameCrown", material = Enum.Material.Neon, color = Color3.fromRGB(255, 100, 50), transparency = 0.15, kind = "flicker", speed = 0.3 },
-    [8] = { mesh = "CosmicOrrery", material = Enum.Material.Neon, color = Color3.fromRGB(140, 80, 255), transparency = 0.2, kind = "mesh", speed = 0.5 },
-    [9] = { mesh = "VoidShards", material = Enum.Material.Glass, color = Color3.fromRGB(10, 12, 24), transparency = 0.15, kind = "mesh", speed = 0.25,
-        edge = { material = Enum.Material.ForceField, color = Color3.fromRGB(90, 160, 220), scale = 1.06 } },
-    [11] = { mesh = "PrimordialCoils", material = Enum.Material.Neon, color = Color3.fromRGB(210, 40, 25), transparency = 0.1, kind = "mesh", speed = 1.1 },
+    -- the owner's base aura, every realm (their picks on Workspace.AuraDummies.AuraDummy_1, 2026-11-11)
+    BaseBurst = "rbxassetid://13455668887",       -- a 4x4 flipbook burst, lying flat on the ground
+    BaseSmoke = "rbxassetid://113821949376919",   -- the ground smoke spreading out (light over dark)
+    BaseSlash = "rbxassetid://127353288690632",   -- a slash turning on the ground
+    BaseCrescent = "rbxassetid://13367229656",    -- a spiny crescent turning on the ground
+    BaseWisp = "rbxassetid://12191903502",        -- the wisp rising from the feet (a Beam)
+    BaseGlint = "rbxassetid://12386384198",       -- a thin upright glint (the rising sparkles)
 }
 local VOID_CORE = { [8] = true, [9] = true, [12] = true }
 local MAX_RATE = if LOW then 30 else 60
@@ -139,6 +111,38 @@ end
 
 local spinners = {}
 
+-- The meditation poses move the body, not the root (PoseController sets the root joint's Transform):
+-- from Ascendant on the body floats 1 to 2.5 studs up, upside down at Cosmic. What sits on the body
+-- (the glow, the outline's light, the void core, the realm's unique piece) follows the hips'
+-- shift from where it rests; what lies on the floor doesn't. lifted() marks a root attachment to
+-- follow it, while an aura is being built.
+local function lifted(attachment)
+    if building then
+        table.insert(building.lifted, { attachment, attachment.Position })
+    end
+end
+
+-- the body's resting place in the root's space: the hips, which the pose's root joint moves (the
+-- upper torso won't do: Cosmic's pose turns the body upside down round the hips and brings it back
+-- down beside the root). Players' rigs join with AnimationConstraints, the test dummies with Motor6Ds
+-- (R6: the root's RootJoint). nil when neither is there
+local function restingBody(character)
+    local lower = character:FindFirstChild("LowerTorso")
+    local joint = lower and lower:FindFirstChild("Root")
+    if not joint then
+        lower = character:FindFirstChild("Torso")
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        joint = hrp and hrp:FindFirstChild("RootJoint")
+    end
+    if lower and joint and joint:IsA("Motor6D") then
+        return lower, (joint.C0 * joint.C1:Inverse()).Position
+    end
+    if lower and joint and joint:IsA("AnimationConstraint") and joint.Attachment0 and joint.Attachment1 then
+        return lower, (joint.Attachment0.CFrame * joint.Attachment1.CFrame:Inverse()).Position
+    end
+    return nil, nil
+end
+
 -- an invisible part for a ring-shaped emitter (from an attachment an emitter emits from a point). It
 -- follows the root (a player may shift a few studs while cultivating, QiService.STILL_RADIUS);
 -- grounded: the "ground" spinner moves it instead, on the floor under the feet.
@@ -156,27 +160,6 @@ local function host(fx, root, r, h, y, grounded)
     return part
 end
 
--- a copy of a realm's mesh, placed round the root (nil until the meshes are imported)
-local function meshPart(name, fx, root)
-    local library = meshLibrary()
-    local template = library and library:FindFirstChild(name, true)
-    if not template then
-        return nil
-    end
-    local part = template:Clone()
-    part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch = true, false, false, false
-    part.CastShadow = false
-    part.CFrame = root.CFrame * CFrame.new(MESHES[name])
-    part.Parent = fx
-    return part
-end
-
-local function hasMesh(name)
-    local library = meshLibrary()
-    return library ~= nil and library:FindFirstChild(name, true) ~= nil
-end
-
-local topTier, signature -- below
 
 -- mist ribbons revolving round the body (the owner's brief: "smooth, no edge, not flat, mist or
 -- smoke, long length"). Each is a Trail behind a point racing round its own tilted circle and
@@ -227,6 +210,7 @@ local function bodyGlow(root, fx, main, line, fill, glow, range)
     local centre = Instance.new("Attachment")
     centre.Name = "AuraCentre"
     centre.Parent = root
+    lifted(centre)
     local outline = Instance.new("Highlight")
     outline.Adornee = root.Parent
     outline.FillColor = main
@@ -295,8 +279,8 @@ end
 
 -- Realm 2, Qi Foundation: the foundation is laid, and Qi now circulates in steady orbits. Two
 -- tilted rings of small energy sparks circle the body, turning opposite ways (the signature);
--- Realm 1's arcs keep turning, quicker; small sparks rise round the legs, the first Qi flowing
--- out. Every value starts a step above Realm 1's Peak.
+-- Realm 1's arcs keep turning, quicker. Every value starts a step above Realm 1's Peak. (Its rising
+-- stars gave way to the base aura's sparkles, 2026-11-11.)
 local function realm2(root, fx, tint, p)
     local main = lastColor(tint)
     for i, o in { { r = 2.7, y = 0.3, tilt = 0.35, turn = 2.2 }, { r = 2.4, y = -0.7, tilt = -0.45, turn = -1.8 } } do
@@ -309,25 +293,18 @@ local function realm2(root, fx, tint, p)
             speed = o.turn * (1 + 0.3 * p), angle = i * 1.7 })
     end
     qiArcs(root, tint, 3, 0.3 - 0.05 * p, 1.3 + 0.3 * p)
-    -- rising sparks: small six-ray stars spinning as they rise and slow; few and soft
-    emitter(host(fx, root, 2.2, 0.2, -2.9), { Texture = TEX.RiseStar, Color = tint, LightEmission = 0.4,
-        Shape = Enum.ParticleEmitterShape.Disc, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface, EmissionDirection = Enum.NormalId.Top,
-        Size = seq({ { 0, 0 }, { 0.15, 0.9 + 0.2 * p }, { 0.7, 0.7 + 0.2 * p }, { 1, 0 } }),
-        Transparency = seq({ { 0, 1 }, { 0.15, 0.45 }, { 0.75, 0.6 }, { 1, 1 } }), Lifetime = NumberRange.new(1.4, 2),
-        Rate = 4 + 4 * p, Speed = NumberRange.new(2, 3.2), SpreadAngle = Vector2.new(12, 12), Drag = 0.6,
-        Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-90, 90) })
     bodyGlow(root, fx, main, 0.3 - 0.12 * p, 0.85 - 0.06 * p, 1.05 + 0.4 * p, 12 + 2 * p)
 end
 -- Realm 3, Spirit Core: the Qi condenses into a core, and its orbits close into rings. Rings swirl
 -- round the body like a gyroscope, each at its own tilt, turning while the tilt swings round (a
 -- third from sub-rank 4). Each ring is an invisible part: Realm 2's sparks ride its edge, and from
 -- two of our own mist ribbons revolve round the body (they replaced the owner's borrowed crescent
--- flipbook at their request for our own asset). Small stars keep rising round the legs. Every value starts a step above Realm 2's Peak (the sparks are
--- fewer: they ride the rings now, and the owner wants particles sparse).
+-- flipbook at their request for our own asset). Every value starts a step above Realm 2's Peak (the
+-- sparks are fewer: they ride the rings now, and the owner wants particles sparse). Its colour is
+-- the realm's gold (the owner's set of 2026-11-11, which replaced the jade), and its rising stars
+-- gave way to the base aura's sparkles.
 local function realm3(root, fx, tint, p)
-    -- jade, as the design doc gives Spirit Core (the owner didn't want AuraConfig's yellow)
-    local main = Color3.fromRGB(0, 190, 120)
-    tint = ColorSequence.new(main)
+    local main = lastColor(tint)
     local rings = {
         { r = 2.9, y = 0.2, tilt = 0.5, turn = 0.5, spin = 1.6, tex = TEX.EnergyRing },
         { r = 3.2, y = -0.3, tilt = -0.62, turn = -0.4, spin = -1.2, tex = TEX.SwirlRing },
@@ -351,12 +328,6 @@ local function realm3(root, fx, tint, p)
             speed = o.turn * (1 + 0.3 * p), angle = i * 2.1, spin = 0, spinSpeed = o.spin * (1 + 0.3 * p) })
     end
     mistRibbons(root, fx, main, 2, 2.5 + 0.5 * p, 0.5 - 0.05 * p)
-    emitter(host(fx, root, 2.2, 0.2, -2.9), { Texture = TEX.RiseStar, Color = tint, LightEmission = 0.4,
-        Shape = Enum.ParticleEmitterShape.Disc, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface, EmissionDirection = Enum.NormalId.Top,
-        Size = seq({ { 0, 0 }, { 0.15, 1.1 + 0.2 * p }, { 0.7, 0.9 + 0.2 * p }, { 1, 0 } }),
-        Transparency = seq({ { 0, 1 }, { 0.15, 0.42 }, { 0.75, 0.58 }, { 1, 1 } }), Lifetime = NumberRange.new(1.5, 2.1),
-        Rate = 7.5 + 4 * p, Speed = NumberRange.new(2.2, 3.4), SpreadAngle = Vector2.new(12, 12), Drag = 0.6,
-        Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-90, 90) })
     bodyGlow(root, fx, main, 0.2 - 0.08 * p, 0.88 - 0.03 * p, 1.4 + 0.3 * p, 14 + 2 * p) -- gold fills strongly: kept light
 end
 
@@ -378,13 +349,6 @@ local BODY_SHARE = {
     Torso = 1, ["Left Arm"] = 1, ["Right Arm"] = 1, ["Left Leg"] = 1, ["Right Leg"] = 1,
 }
 
-local BODY_COLOR = {
-    [3] = Color3.fromRGB(0, 190, 120),     -- the owner's jade for Spirit Core (the config's gold was rejected)
-    [6] = Color3.fromRGB(255, 240, 200),   -- Immortal: its beam's warm white, not pure white (glare)
-    [8] = Color3.fromRGB(120, 40, 200),    -- Cosmic: its violet, not the white its gradient ends in
-    [10] = Color3.fromRGB(200, 230, 255),  -- Heavenly Dao: its beam's pale blue, not near-white
-}
-
 -- a at the first realm (t = 0), b at Realm 4's middle sub-rank (the approved look), c at t = 1
 -- on a phone: the fewest parts that still surround the whole body, and a share of the rate
 local LOW_BODY_PARTS = { Head = true, UpperTorso = true, LeftUpperArm = true, RightUpperArm = true, LeftUpperLeg = true, RightUpperLeg = true,
@@ -398,14 +362,20 @@ local function byLevel(t, a, b, c)
     return b + (c - b) * math.min(1, (t - 0.31) / 0.69)
 end
 
-local function bodyAura(root, fx, color, t)
-    local glow = ColorSequence.new(color)
+-- smoke: the coloured smoke's LightEmission and Brightness (default 1 and 3, the approved look).
+-- The realms pass dummy 1's 0.4 and 2 (2026-11-11): against a bright sky,
+-- smoke that only adds light washes to white.
+local function bodyAura(root, fx, color, t, smokeLook)
+    local glow = if typeof(color) == "ColorSequence" then color else ColorSequence.new(color)
     local black = ColorSequence.new(Color3.new(0, 0, 0))
     local spread = byLevel(t, 45, 60, 75)
+    local smokeLight = smokeLook and smokeLook.LightEmission or 1
+    local smokeBrightness = smokeLook and smokeLook.Brightness or 3
     local function smoke(c, light, peak, z)
         return { Texture = TEX.BodySmoke, FlipbookLayout = Enum.ParticleFlipbookLayout.Grid8x8,
-            FlipbookFramerate = NumberRange.new(10, 40), FlipbookStartRandom = true, Color = c, LightEmission = light,
-            Brightness = 3, LightInfluence = 0, Size = seq({ { 0, byLevel(t, 0.9, 1.2, 1.8) }, { 1, byLevel(t, 2.4, 4, 6.5) } }),
+            FlipbookFramerate = NumberRange.new(10, 40), FlipbookStartRandom = true, Color = c,
+            LightEmission = if light > 0 then smokeLight else 0,
+            Brightness = if light > 0 then smokeBrightness else 3, LightInfluence = 0, Size = seq({ { 0, byLevel(t, 0.9, 1.2, 1.8) }, { 1, byLevel(t, 2.4, 4, 6.5) } }),
             Transparency = seq({ { 0, peak + (1 - peak) * 0.97 }, { 0.2, peak }, { 1, 1 } }),
             Lifetime = NumberRange.new(byLevel(t, 0.5, 0.6, 0.8), byLevel(t, 0.9, 1.1, 1.4)),
             Speed = NumberRange.new(byLevel(t, 1, 1.5, 2.5), byLevel(t, 3, 4.5, 6.5)), SpreadAngle = Vector2.new(spread, spread), Drag = 2.5,
@@ -477,7 +447,7 @@ end
 -- electric ring (PDS) hugs the cloud's edge, with bursts flashing from the rim. Star and lightning
 -- are on a billboard, so they draw over the smoke (the owner: "the lightning should be the edge
 -- of the cloud, not the cloud overlapping it"). Spiral wisps rise round the body; nothing sits
--- on its middle. On the ground, inside the still Soul Seal: the owner's vortex ripple, a smoke
+-- on its middle. On the ground (its Soul Seal circle was removed, 2026-11-11): the owner's vortex ripple, a smoke
 -- ripple and a rolling mist, all quickening while the player meditates.
 local function realm4(root, fx, tint, p)
     local main = lastColor(tint)
@@ -496,10 +466,17 @@ local function realm4(root, fx, tint, p)
         ball.Parent = fx
         local orb = Instance.new("Attachment")
         orb.Parent = ball
+        -- the sphere holds its shape (the owner, 2026-11-11: "The dark sphere in tier 4 is breaking"):
+        -- a solid soft dark core, and the rolling smoke round it fading out before its flipbook's
+        -- tearing frames, so no shred ever leaves the ball
+        emitter(orb, { Name = "OrbCore", Texture = TEX.SoftGlow, Color = black, LightEmission = 0, LightInfluence = 0,
+            LockedToPart = true, ZOffset = -1.4, Size = NumberSequence.new(2.7 + 0.12 * p), Transparency = NumberSequence.new(0.02),
+            Lifetime = NumberRange.new(0.8, 1), Rate = 8, Speed = NumberRange.new(0), Rotation = NumberRange.new(0, 360) })
         emitter(orb, { Name = "OrbSmoke", Texture = TEX.SmokePuff, FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4,
             FlipbookMode = Enum.ParticleFlipbookMode.OneShot, Color = black, LightEmission = 0, LightInfluence = 0, LockedToPart = true, ZOffset = -1.5,
-            Size = NumberSequence.new(2.95 + 0.13 * p), Transparency = NumberSequence.new(0.15),
-            Lifetime = NumberRange.new(1.2, 1.6), Rate = 10 + 2 * p, Speed = NumberRange.new(0.05, 0.15), SpreadAngle = Vector2.new(180, 180),
+            Size = NumberSequence.new(2.95 + 0.13 * p),
+            Transparency = seq({ { 0, 0.6 }, { 0.1, 0.15 }, { 0.4, 0.2 }, { 0.6, 1 }, { 1, 1 } }),
+            Lifetime = NumberRange.new(1.2, 1.6), Rate = 12 + 2 * p, Speed = NumberRange.new(0), SpreadAngle = Vector2.new(0, 0),
             Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-40, 40) })
         -- the star and the lightning: billboard images on the sphere (a billboard draws over the smoke,
         -- which hid them as particles, and still hides behind the body). The lightning plays its 16
@@ -511,13 +488,13 @@ local function realm4(root, fx, tint, p)
         gui.LightInfluence = 0
         gui.Brightness = 2.4
         gui.MaxDistance = 250
-        gui.StudsOffset = Vector3.new(0, 0, 1.6)      -- toward the camera: always drawn over the smoke
+        -- no offset toward the camera: seen from an angle it slid the ring and star off the ball (the
+        -- owner: "the particles are off"); the smoke is pushed back by its ZOffset, so they still draw over it
         gui.Parent = ball
-        emitter(orb, { Name = "OrbGlow", Texture = TEX.SmokePuff, FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4,
-            FlipbookMode = Enum.ParticleFlipbookMode.OneShot, Color = tint, LightEmission = 0.5, LightInfluence = 0, LockedToPart = true, ZOffset = -1.5,
-            Size = NumberSequence.new(4 + 0.25 * p), Transparency = NumberSequence.new(0.55),
-            Lifetime = NumberRange.new(1.3, 1.7), Rate = 6, Speed = NumberRange.new(0.05, 0.15), SpreadAngle = Vector2.new(180, 180),
-            Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-30, 30) })
+        -- the glow is a rim behind the ball (drawn over it, it washed the black out)
+        emitter(orb, { Name = "OrbGlow", Texture = TEX.SoftGlow, Color = tint, LightEmission = 1, LightInfluence = 0, LockedToPart = true, ZOffset = -2.2,
+            Size = NumberSequence.new(4.2 + 0.25 * p), Transparency = seq({ { 0, 1 }, { 0.3, 0.6 }, { 0.7, 0.62 }, { 1, 1 } }),
+            Lifetime = NumberRange.new(1, 1.4), Rate = 5, Speed = NumberRange.new(0), Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-20, 20) })
         -- the lightning (the owner: "a ring or better lightning"): a crackling electric ring hugging the
         -- cloud's edge, a fainter one turning the other way, and bursts flashing out from the rim
         local function image(id, size, z)
@@ -554,30 +531,7 @@ local function realm4(root, fx, tint, p)
             sparkAt = math.random() * 0.5, star = star, root = root, speed = 1.4 + 0.3 * p,
             angle = -(i - 1) * GAP, tilt = 0.3, radius = 4.2, height = 0.4, clock = 0 })
     end
-    -- the Soul Seal: the ground circle under the aura (our own). It stays still under the feet (the
-    -- owner: "don't rotate the ground ring"); it only follows the character
-    local seal = Instance.new("Part")
-    seal.Name = "SoulSeal"
-    seal.Anchored, seal.CanCollide, seal.CanQuery, seal.CanTouch = true, false, false, false
-    seal.Transparency = 1
-    seal.Size = Vector3.new(9.6, 0.05, 9.6)
-    seal.CFrame = root.CFrame * CFrame.new(0, -2.95, 0)
-    local sealGui = Instance.new("SurfaceGui")
-    sealGui.Face = Enum.NormalId.Top
-    sealGui.LightInfluence = 0
-    sealGui.Brightness = 1.3 + 0.3 * p
-    sealGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-    sealGui.PixelsPerStud = 60
-    sealGui.Parent = seal
-    local sealImage = Instance.new("ImageLabel")
-    sealImage.BackgroundTransparency = 1
-    sealImage.Size = UDim2.fromScale(1, 1)
-    sealImage.Image = TEX.SoulSeal
-    sealImage.ImageColor3 = main:Lerp(Color3.new(1, 1, 1), 0.2)
-    sealImage.ImageTransparency = 0.35 - 0.1 * p
-    sealImage.Parent = sealGui
-    seal.Parent = fx
-    -- two ground smokes rippling out past the seal (the owner: "2 different type of smoke in the
+    -- two ground smokes rippling out past where the seal lay (9.6 studs across; the owner: "2 different type of smoke in the
     -- ground, bigger than the circle, like a ripple"):
     -- 1. the ripple: a wispy ring of smoke lying flat, expanding from 6 to ~19 studs as it fades
     local rippleHost = host(fx, root, 0.1, 0.1, -2.85, true)
@@ -589,7 +543,7 @@ local function realm4(root, fx, tint, p)
         Size = seq({ { 0, 2 }, { 1, 7.5 } }), Transparency = seq({ { 0, 1 }, { 0.12, 0.3 }, { 0.6, 0.55 }, { 1, 1 } }),
         Lifetime = NumberRange.new(1.6, 1.9), Rate = 1.8 + 0.4 * p, Speed = NumberRange.new(0.01),  -- the owner: more, faster
         Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-12, 12) })
-    -- 2. the rolling mist: billowy torn puffs born round the seal's rim, lying flat just above the
+    -- 2. the rolling mist: billowy torn puffs born round the old seal's rim, lying flat just above the
     -- ground and swelling outward as they turn and fade. Flat, because a camera-facing puff this
     -- low dips into the floor, which cuts it with a hard straight line (Roblox has no soft particles)
     local mistHost = Instance.new("Part")
@@ -609,19 +563,18 @@ local function realm4(root, fx, tint, p)
         Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-30, 30) })
     -- 3. the owner's vortex ripple (their idea, built on the AuraWorkbench, 2026-11-03): glinting
     -- rings swirling out from the feet over a dark cloud. On the ripple host, so it follows the floor.
-    -- The rings grow fast and slow down as they pass the seal's rim, turn one way, and fade in and
-    -- out (they had popped off); the cloud lies just under the seal, a dark ground for it (above it,
-    -- an alpha cloud would cover the seal)
+    -- The rings grow fast and slow down as they pass the old seal's rim, turn one way, and fade in and
+    -- out (they had popped off); the cloud lies just under them, a dark ground for them
     local vortexAt = Instance.new("Attachment")
     vortexAt.Name = "Vortex"
     vortexAt.Parent = rippleHost
     local cloudAt = Instance.new("Attachment")
     cloudAt.Name = "VortexCloud"
-    cloudAt.Position = Vector3.new(0, -0.13, 0)              -- 0.02 above the floor, below the seal
+    cloudAt.Position = Vector3.new(0, -0.13, 0)              -- 0.02 above the floor
     cloudAt.Parent = rippleHost
     local vortex = emitter(vortexAt, { Name = "VortexRings", Texture = TEX.VortexRings,
         FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4, FlipbookMode = Enum.ParticleFlipbookMode.OneShot,
-        -- Brightness 5 (the owner's 10 burned the thin rings white; 2 lost them on the seal)
+        -- Brightness 5 (the owner's 10 burned the thin rings white; 2 lost them on the old seal)
         Color = ColorSequence.new(main), LightEmission = 1, Brightness = 5, LightInfluence = 0,
         Orientation = Enum.ParticleOrientation.VelocityPerpendicular, EmissionDirection = Enum.NormalId.Top,
         Speed = NumberRange.new(0.01), SpreadAngle = Vector2.new(0, 0),
@@ -640,14 +593,14 @@ local function realm4(root, fx, tint, p)
         Size = NumberSequence.new(12), Transparency = seq({ { 0, 1 }, { 0.15, 0.2 }, { 1, 1 } }),
         Lifetime = NumberRange.new(2.5, 4), Rate = 2.5, Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(10),
         ZOffset = -0.5 })
-    -- the ground pieces (the seal, the mist, the ripples) follow the floor under the feet, so they sit
+    -- the ground pieces (the mist, the ripples) follow the floor under the feet, so they sit
     -- on slopes and steps. (The ground wind that raced out across the floor was removed at the
     -- owner's word, 2026-11-03: "REMOVE THE GROUND WIND".)
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
     rayParams.FilterDescendantsInstances = { root.Parent, fx }
     table.insert(spinners, { kind = "ground", root = root, fx = fx, rayParams = rayParams,
-        grounded = { { seal, 0.03, true }, { mistHost, 0.08, false }, { rippleHost, 0.15, false } },
+        grounded = { { mistHost, 0.08, false }, { rippleHost, 0.15, false } },
         rayClock = 0, speed = 0, angle = 0 })
     -- the ground smoke follows meditation (the owner): calm as it starts, the ripple quickening and the
     -- mist rushing out while the player cultivates (the player's IsCultivating; a test dummy's own
@@ -661,6 +614,147 @@ local function realm4(root, fx, tint, p)
         Transparency = seq({ { 0, 0.3 }, { 1, 1 } }), SpreadAngle = Vector2.new(20, 20), Drag = 1.2,
         Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-120, 120) })
     bodyGlow(root, fx, main, 0.13 - 0.05 * p, 0.86 - 0.03 * p, 1.65 + 0.3 * p, 16 + 2 * p)
+end
+
+-- The owner's base aura, on every realm under the realm's own pieces (built by the owner on
+-- Workspace.AuraDummies.AuraDummy_1, 2026-11-11: "apply that aura to all realms", "change the color
+-- depending on realm, Don't repeat same color to aura", "The higher the realm, the bigger the
+-- effects"). The dummy wore it in Ascendant's orange, so its values are Realm 5's base; sizes, reach
+-- and rates follow the level from there.
+--   On the ground: a burst, a smoke spreading out, a slash and a crescent turning; each but the
+--   burst a light layer over a black copy of itself (the owner's pairs: the copy at ZOffset -0.001,
+--   two thirds the rate, half as opaque; fully opaque black was "way too intense").
+--   A wisp (Beam) rising from the feet past the head, narrowing to a point.
+--   Sparkles rising from a ring round the feet to above the head.
+--   A soft glow over the body, in front of it (behind, the body hides it); none round a void core.
+-- The light layers run Hot to Main to Deep (the realm's Palette) at Brightness 4 scaled by its Glow:
+-- the owner's pale orange at 10 burned to white, and the smoke kept Main to its edge (ending in Deep,
+-- its outward spread disappeared).
+local BASE_FLOOR = -2.95 -- the floor under the root
+
+local function halfOpacity(points)
+    local out = {}
+    for _, point in points do
+        table.insert(out, { point[1], 1 - (1 - point[2]) * 0.5 })
+    end
+    return seq(out)
+end
+
+local function baseAura(root, fx, palette, t, voidCore)
+    local k = 0.6 + 1.1 * t                 -- size and reach: 0.6 at the first realm, 1 at Ascendant's base, 1.8 at Eternal's Peak
+    local n = 0.7 + 0.8 * t                 -- the sparkles' rate: 0.7 to 1.55
+    -- Every ground layer is born on one point, so all of them cover the centre: their count grows
+    -- little (0.8 to 1.12) and they dim as they grow, or a high realm's core burns white (seen on
+    -- Eternal at the sparkles' rate, 2026-11-11)
+    local nGround = 0.8 + 0.3 * t
+    local dim = 1 / (0.6 + 0.4 * k)
+    local bright = palette.Glow or 1
+    local hot, main, deep = palette.Hot, palette.Main, palette.Deep
+    local fire = ColorSequence.new({ ColorSequenceKeypoint.new(0, hot), ColorSequenceKeypoint.new(0.4, main),
+        ColorSequenceKeypoint.new(1, deep) })
+    local black = ColorSequence.new(Color3.new(0, 0, 0))
+    local function rate(base)
+        return math.min(MAX_RATE, base * n)
+    end
+    local function groundRate(base)
+        return math.min(MAX_RATE, base * nGround)
+    end
+
+    -- the ground layers: flat on the floor (VelocityPerpendicular, rising at a near-zero speed),
+    -- spinning where they were born. Rates and brightness are given at Ascendant's base
+    local ground = Instance.new("Attachment")
+    ground.Name = "BaseGround"
+    ground.Position = Vector3.new(0, BASE_FLOOR + 0.42, 0)
+    ground.Parent = root
+    local function layer(name, props, darkRate)
+        props.Name = name
+        props.LightEmission, props.LightInfluence = 1, 0
+        props.Orientation = Enum.ParticleOrientation.VelocityPerpendicular
+        props.EmissionDirection = Enum.NormalId.Top
+        props.Rotation = NumberRange.new(-360, 360)
+        props.Rate = groundRate(props.Rate)
+        props.Brightness *= bright * dim
+        local points = props.Transparency
+        props.Transparency = seq(points)
+        emitter(ground, props)
+        if darkRate then
+            local dark = table.clone(props)
+            dark.Name = name .. "Dark"
+            dark.Color, dark.LightEmission = black, 0
+            dark.Transparency = halfOpacity(points)
+            dark.Rate = groundRate(darkRate)
+            dark.ZOffset = -0.001
+            emitter(ground, dark)
+        end
+    end
+    layer("BaseBurst", { Texture = TEX.BaseBurst, Color = fire, Brightness = 4,
+        FlipbookLayout = Enum.ParticleFlipbookLayout.Grid4x4, FlipbookMode = Enum.ParticleFlipbookMode.OneShot,
+        Size = seq({ { 0, 1 * k }, { 1, 10 * k } }), Transparency = { { 0, 0 }, { 1, 1 } },
+        Lifetime = NumberRange.new(0.8, 1.8), Speed = NumberRange.new(0.001), SpreadAngle = Vector2.new(3, 3), Rate = 7 })
+    layer("BaseSmoke", { Texture = TEX.BaseSmoke, Color = ColorSequence.new(hot, main), Brightness = 7,
+        Size = seq({ { 0, 1 * k }, { 1, 10 * k } }), Transparency = { { 0, 0 }, { 1, 1 } },
+        Lifetime = NumberRange.new(0.5, 1), Speed = NumberRange.new(0.001), SpreadAngle = Vector2.new(2, 2), Rate = 15 }, 10)
+    layer("BaseSlash", { Texture = TEX.BaseSlash, Color = fire, Brightness = 4,
+        Size = seq({ { 0, 5 * k }, { 1, 10 * k } }), Transparency = { { 0, 1 }, { 0.2, 0.4 }, { 1, 1 } },
+        Lifetime = NumberRange.new(0.4, 1.2), Speed = NumberRange.new(0.001, 10 * k), SpreadAngle = Vector2.new(15, 15), Drag = 2.5,
+        RotSpeed = NumberRange.new(-200, -100), Rate = 15 }, 10)
+    layer("BaseCrescent", { Texture = TEX.BaseCrescent, Color = fire, Brightness = 4,
+        Size = seq({ { 0, 5 * k }, { 1, 10 * k } }), Transparency = { { 0, 0.5 }, { 1, 1 } },
+        Lifetime = NumberRange.new(0.5, 1), Speed = NumberRange.new(0.001, 5 * k), SpreadAngle = Vector2.new(12, 12),
+        RotSpeed = NumberRange.new(-200, -100), Rate = 20 }, 13)
+
+    -- the wisp: from just under the feet to well over the head, wide at the feet, narrowing to a point
+    local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
+    a0.Name, a1.Name = "BaseWispA", "BaseWispB"
+    a0.Position = Vector3.new(0, BASE_FLOOR - 0.3, 0)
+    a1.Position = Vector3.new(0, BASE_FLOOR - 0.3 + 10 * k, 0)
+    a0.Parent, a1.Parent = root, root
+    local wisp = Instance.new("Beam")
+    wisp.Name = "BaseWisp"
+    wisp.Attachment0, wisp.Attachment1 = a0, a1
+    wisp.Texture = TEX.BaseWisp
+    wisp.TextureMode = Enum.TextureMode.Stretch
+    wisp.TextureSpeed = 1
+    wisp.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, main), ColorSequenceKeypoint.new(0.5, main:Lerp(hot, 0.5)),
+        ColorSequenceKeypoint.new(1, hot) })
+    wisp.Brightness = 3 * bright
+    wisp.LightEmission, wisp.LightInfluence = 1, 0
+    wisp.Transparency = seq({ { 0, 0.5 }, { 0.394, 0.634 }, { 1, 1 } })
+    wisp.Width0, wisp.Width1 = 8 * k, 0
+    wisp.Segments = 10
+    wisp.FaceCamera = true
+    wisp.ZOffset = 1
+    wisp.Parent = a0
+
+    -- the sparkles: thin upright glints rising from a ring round the feet (a Disc host: from an
+    -- attachment an emitter emits from one point), twinkling as they go, gone above the head
+    local s = 0.7 + 0.3 * k
+    emitter(host(fx, root, 2.5 * (0.85 + 0.15 * k), 0.2, BASE_FLOOR + 0.35), { Name = "BaseSparkles", Texture = TEX.BaseGlint,
+        Color = ColorSequence.new(main:Lerp(hot, 0.5)), LightEmission = 0.6, Brightness = 4 * bright, LightInfluence = 0,
+        Shape = Enum.ParticleEmitterShape.Disc, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+        ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward, ShapePartial = 0.45, EmissionDirection = Enum.NormalId.Top,
+        Orientation = Enum.ParticleOrientation.FacingCameraWorldUp,
+        Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.1, 0.55 * s, 0.08 * s),
+            NumberSequenceKeypoint.new(0.35, 0.36 * s, 0.06 * s), NumberSequenceKeypoint.new(0.55, 0.6 * s, 0.08 * s),
+            NumberSequenceKeypoint.new(0.8, 0.3 * s, 0.05 * s), NumberSequenceKeypoint.new(1, 0) }),
+        Transparency = seq({ { 0, 1 }, { 0.08, 0 }, { 0.7, 0.15 }, { 1, 1 } }), Squash = seq({ { 0, -0.3 }, { 1, 0.3 } }),
+        Lifetime = NumberRange.new(1.1, 1.3), Speed = NumberRange.new(6 * k, 7.5 * k), SpreadAngle = Vector2.new(6, 6),
+        ZOffset = 1, Rate = rate(25) })
+
+    -- the glow over the body
+    if not voidCore then
+        local centre = Instance.new("Attachment")
+        centre.Name = "BaseGlow"
+        centre.Position = Vector3.new(0, 0.5, 0)
+        centre.Parent = root
+        lifted(centre)
+        local g = 0.75 + 0.25 * k
+        emitter(centre, { Name = "BaseGlow", Texture = TEX.Glow, Color = ColorSequence.new(main), LightEmission = 0.5,
+            Brightness = 1.2 * bright, LightInfluence = 0, Size = seq({ { 0, 5.5 * g }, { 1, 6.8 * g } }),
+            Transparency = seq({ { 0, 1 }, { 0.3, 0.86 }, { 0.7, 0.86 }, { 1, 1 } }), Lifetime = NumberRange.new(1.2, 1.6),
+            Speed = NumberRange.new(0), LockedToPart = true, Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-15, 15),
+            ZOffset = 0.5, Rate = 4 })
+    end
 end
 
 local function buildRealm(root, tier, sub)
@@ -678,19 +772,22 @@ local function buildRealm(root, tier, sub)
     local function rate(base)
         return math.min(MAX_RATE, base)
     end
-    local mid, high = tier >= 3, tier >= 7
     local tint = config.Color
-    local light = math.clamp(config.LightEmission, 0, 1)
+    local palette = config.Palette
 
     local core = Instance.new("Attachment")
     core.Name = "Core"
     core.Parent = root
+    lifted(core)
 
-    -- the owner's body aura, on every realm (its colour and scale by realm and level)
-    bodyAura(root, fx, BODY_COLOR[tier] or lastColor(tint), t)
+    -- the owner's body aura, on every realm (its colour and scale by realm and level; Eternal's runs
+    -- through its three hues)
+    bodyAura(root, fx, if tier == 12 then tint else palette.Main, t, { LightEmission = 0.4, Brightness = 2 })
+    -- the owner's base aura, on every realm (bigger with the level)
+    baseAura(root, fx, palette, t, VOID_CORE[tier])
 
-    -- the glow close to the torso (in front of the body: behind it, the body hides it), or a dark
-    -- void core inside a bright rim
+    -- the realm's own core: a dark void core inside a bright rim, or Realms 1 to 4's own layers; from
+    -- Ascendant on, the base aura's glow and the breathing outline and light
     if VOID_CORE[tier] then
         emitter(core, { Texture = TEX.Glow, Color = ColorSequence.new(Color3.fromRGB(4, 2, 12)), LightEmission = 0,
             Size = seq({ { 0, 2.6 + 0.6 * t }, { 1, 3.2 + 0.8 * t } }), Transparency = seq({ { 0, 0.15 }, { 1, 1 } }),
@@ -706,183 +803,115 @@ local function buildRealm(root, tier, sub)
         realm3(root, fx, tint, p)
     elseif tier == 4 then
         realm4(root, fx, tint, p)
-    else
-        emitter(core, { Texture = TEX.Glow, Color = tint, LightEmission = if mid then 1 else 0.6,
-            Size = seq({ { 0, 4.5 + 2 * t }, { 1, 5.5 + 2.5 * t } }),
-            Transparency = seq({ { 0, 0.4 - 0.15 * t }, { 0.5, 0.55 }, { 1, 1 } }), Lifetime = NumberRange.new(0.8, 1.2),
-            Rate = rate(6 + 4 * t), Speed = NumberRange.new(0), LockedToPart = true, ZOffset = 1.5 })
+    end
+    if tier >= 5 then
+        -- Realm 4's breathing outline and light, carried on and growing (a PointLight and a Highlight are
+        -- the owner's must-haves)
+        bodyGlow(root, fx, palette.Main, 0.1, 0.87, 2 * (palette.Glow or 1), 16 + 8 * t)
     end
 
-    -- glints rising round the body (Realms 1 to 4 have their own)
-    if tier > 4 then emitter(host(fx, root, 1.9, 5, -0.4), { Texture = TEX.Glow, Color = tint, LightEmission = light,
-        Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
-        ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward, Size = seq({ { 0, 0 }, { 0.2, 0.6 + 0.3 * t }, { 1, 0 } }),
-        Transparency = seq({ { 0, 0 }, { 1, 1 } }), Lifetime = NumberRange.new(1.2, 1.8), Rate = rate(10 + 30 * t),
-        Speed = NumberRange.new(0.3), Acceleration = Vector3.new(0, 2.5 + 3 * t, 0) }) end
-
-    local feet = host(fx, root, 2.3, 0.2, -2.9) -- a ring at the feet
-
-    -- mid: a stream of streaks rising from the ring. A Disc emits along its axis (a Cylinder emits
-    -- out through its sides, along the floor); the streak image is upright, so it faces the camera
-    -- world-up (VelocityParallel laid it flat)
-    if mid and tier > 4 then -- (Realms 3 and 4 have their own)
-        emitter(feet, { Texture = TEX.Streak, Color = tint, LightEmission = light, Orientation = Enum.ParticleOrientation.FacingCameraWorldUp,
-            Shape = Enum.ParticleEmitterShape.Disc, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
-            Size = seq({ { 0, 2 + 1.2 * t }, { 1, 0.4 } }), Transparency = seq({ { 0, 0 }, { 1, 1 } }),
-            Lifetime = NumberRange.new(0.5, 0.9), Rate = rate(14 + 30 * t),
-            Speed = NumberRange.new(6 + 4 * t, 10 + 5 * t), EmissionDirection = Enum.NormalId.Top })
+    -- ribbon arcs orbiting the body: one at Ascendant, two from Immortal, three from Heavenly Dao
+    local ribbons = if tier >= 10 then 3 elseif tier >= 6 then 2 elseif tier >= 5 then 1 else 0
+    -- The ribbons (the owner, 2026-11-11, after the beam and trail tries: "98818011129942 I need a
+    -- look something like this"): their pick is an 8x8 flipbook of one thin, sharp, glowing stroke
+    -- whipping a full circle. Each swoosh is a particle lying round the body (VelocityPerpendicular,
+    -- at a small random tilt), so the stroke circles the body like a ring in 3D and the body hides
+    -- its back half; it plays its 64 frames once, whipping all the way round. Born at heights from
+    -- the waist to the shoulders on a host that rides the body; a softer, wider copy behind each
+    -- stroke is its glow. More of them, larger and quicker, the higher the realm.
+    if ribbons > 0 then
+        local glowK = palette.Glow or 1
+        local swirlHost = Instance.new("Part")
+        swirlHost.Name = "SwooshHost"
+        swirlHost.Anchored, swirlHost.CanCollide, swirlHost.CanQuery, swirlHost.CanTouch, swirlHost.CastShadow = true, false, false, false, false
+        swirlHost.Transparency = 1
+        swirlHost.Size = Vector3.new(0.2, 2.4, 0.2)
+        swirlHost.CFrame = root.CFrame * CFrame.new(0, 0.4, 0)
+        swirlHost.Parent = fx
+        table.insert(spinners, { kind = "follow", part = swirlHost, root = root, offset = CFrame.new(0, 0.4, 0), speed = 0, angle = 0, lifted = true })
+        local size = 6.2 + 1.6 * t
+        local life = NumberRange.new(1.1 - 0.3 * t, 1.3 - 0.3 * t)
+        local swoosh = { Texture = TEX.Swoosh, FlipbookLayout = Enum.ParticleFlipbookLayout.Grid8x8,
+            FlipbookMode = Enum.ParticleFlipbookMode.OneShot, Orientation = Enum.ParticleOrientation.VelocityPerpendicular,
+            EmissionDirection = Enum.NormalId.Top, Shape = Enum.ParticleEmitterShape.Box, ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume,
+            Speed = NumberRange.new(0.01), SpreadAngle = Vector2.new(22, 22), Rotation = NumberRange.new(0, 360),
+            LockedToPart = true, LightInfluence = 0, Lifetime = life }
+        local stroke = table.clone(swoosh)
+        stroke.Name = "Swoosh"
+        stroke.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, palette.Hot), ColorSequenceKeypoint.new(1, palette.Main) })
+        stroke.LightEmission, stroke.Brightness = 1, 3 * glowK
+        stroke.Size = NumberSequence.new(size)
+        stroke.Transparency = seq({ { 0, 1 }, { 0.08, 0 }, { 0.85, 0 }, { 1, 1 } })
+        stroke.Rate = 1.6 * ribbons
+        stroke.ZOffset = 1
+        emitter(swirlHost, stroke)
+        local glow = table.clone(swoosh)
+        glow.Name = "SwooshGlow"
+        glow.Color = ColorSequence.new(palette.Main)
+        glow.LightEmission, glow.Brightness = 1, 1.5 * glowK
+        glow.Size = NumberSequence.new(size * 1.04)
+        glow.Squash = NumberSequence.new(-0.25) -- a little wider: the soft halo round the stroke
+        glow.Transparency = seq({ { 0, 1 }, { 0.08, 0.55 }, { 0.85, 0.55 }, { 1, 1 } })
+        glow.Rate = 1.6 * ribbons
+        glow.ZOffset = 0.9
+        emitter(swirlHost, glow)
     end
 
-    -- ribbon arcs orbiting the body: one from Spirit Soul, two from Immortal, three from Heavenly Dao;
-    -- one beside a signature piece, none round the top two realms' rigs
-    local ribbons = if TOP[tier] then 0
-        elseif SIGNATURE[tier] and hasMesh(SIGNATURE[tier].mesh) then 1
-        elseif tier >= 10 then 3 elseif tier >= 6 then 2 elseif tier >= 5 then 1 else 0
-    for i = 1, ribbons do
-        local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
-        a0.Parent, a1.Parent = root, root
-        local beam = Instance.new("Beam")
-        beam.Attachment0, beam.Attachment1 = a0, a1
-        beam.Texture = TEX.Ribbon
-        beam.TextureMode = Enum.TextureMode.Stretch
-        beam.TextureSpeed = 0.8 + 2 * t
-        beam.Color = ColorSequence.new((config.BeamColor or lastColor(tint)):Lerp(Color3.new(1, 1, 1), 0.25))
-        beam.LightEmission = 1
-        beam.Transparency = seq({ { 0, 1 }, { 0.2, 0.05 }, { 0.8, 0.05 }, { 1, 1 } })
-        local width = 0.9 + 0.9 * t
-        beam.Width0, beam.Width1 = width, width
-        beam.CurveSize0, beam.CurveSize1 = 2.2 + t, -(2.2 + t)
-        beam.Segments = 24
-        beam.Parent = root
-        table.insert(spinners, { kind = "ribbon", a0 = a0, a1 = a1,
-            speed = (1.55 + 1.65 * t) * (if i % 2 == 0 then -1 else 1),
-            height = ({ 0.4, -0.9, 1.6 })[i], tilt = ({ 0.25, -0.35, 0.5 })[i], radius = 2.4 + 0.25 * i + 0.5 * t,
-            angle = i * 2.1, root = root })
-    end
-
-    -- high: a turning ground sigil (a second ring from Heavenly Dao) and a rising column
-    if high then
-        for ring = 1, if tier >= 10 then 2 else 1 do
-            local disc = Instance.new("Part")
-            disc.Name = "Sigil"
-            disc.Anchored, disc.CanCollide, disc.CanQuery, disc.CanTouch = true, false, false, false
-            disc.Transparency = 1
-            local size = (if ring == 1 then 9 else 13) + 4 * t
-            disc.Size = Vector3.new(size, 0.05, size)
-            disc.CFrame = root.CFrame * CFrame.new(0, -2.95, 0)
-            local gui = Instance.new("SurfaceGui")
-            gui.Face = Enum.NormalId.Top
-            gui.LightInfluence = 0
-            gui.Brightness = 1.5 + 2 * t
-            gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-            gui.PixelsPerStud = 40
-            gui.Parent = disc
-            local image = Instance.new("ImageLabel")
-            image.BackgroundTransparency = 1
-            image.Size = UDim2.fromScale(1, 1)
-            image.Image = if ring == 1 then (if tier == 10 then TEX.DaoRunes else TEX.Formation) else TEX.Ring
-            image.ImageColor3 = lastColor(tint)
-            image.ImageTransparency = if ring == 1 then 0.15 else 0.4
-            image.Parent = gui
-            disc.Parent = fx
-            table.insert(spinners, { kind = "sigil", part = disc, root = root, speed = (if ring == 1 then 0.5 else -0.8) * (1 + 0.4 * t), angle = 0 })
-        end
-        -- the column; the top two realms' rigs rise their own way (law streaks, nebula), and their pale
-        -- colours turn a column into a white wall over the body
-        if not TOP[tier] then
-            emitter(feet, { Texture = TEX.Glitter, Color = tint, LightEmission = light, Shape = Enum.ParticleEmitterShape.Disc,
-                ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface, Size = seq({ { 0, 0 }, { 0.3, 2 + 1 * t }, { 1, 0 } }),
-                Transparency = seq({ { 0, 0.15 }, { 1, 1 } }), Lifetime = NumberRange.new(1, 1.6), Rate = rate(24 + 30 * t),
-                Speed = NumberRange.new(5, 8 + 4 * t), EmissionDirection = Enum.NormalId.Top,
-                Rotation = NumberRange.new(0, 360) })
-        end
-    end
-    -- the realm's own piece grows a little through its sub-ranks (it isn't carried past a breakthrough)
+    -- The magic circles and solid pieces (the sigils, Realm 4's seal, the signature meshes, the top
+    -- realms' rigs) were removed at the owner's word, 2026-11-11: "Remove all the magic circle for all
+    -- realms", "Remove the hard objects on the aura, just keep only the particle emitters and beams,
+    -- trails". The top two realms keep their particles, a little stronger through the sub-ranks (not
+    -- carried past a breakthrough): Heavenly Dao's streaks of law shooting into the sky, Eternal's
+    -- nebula round the core.
     local grow = 1 + 0.3 * p
-    if TOP[tier] then
-        topTier(root, tier, fx, tint, grow, grow, p)
-    elseif SIGNATURE[tier] then
-        signature(root, SIGNATURE[tier], fx, grow)
-    end
-    return fx
-end
-
-function signature(root, sig, fx, grow)
-    local part = meshPart(sig.mesh, fx, root)
-    if not part then
-        return
-    end
-    part.Material, part.Color, part.Transparency = sig.material, sig.color, sig.transparency
-    table.insert(spinners, { kind = sig.kind, part = part, root = root, offset = MESHES[sig.mesh], speed = sig.speed * grow,
-        angle = 0, clock = 0, base = sig.transparency })
-    if sig.edge then
-        -- a slightly larger copy in a shimmering field, turning with it: the shards' glowing edges
-        local edge = meshPart(sig.mesh, fx, root)
-        edge.Size *= sig.edge.scale
-        edge.Material, edge.Color, edge.Transparency = sig.edge.material, sig.edge.color, 0
-        table.insert(spinners, { kind = sig.kind, part = edge, root = root, offset = MESHES[sig.mesh], speed = sig.speed * grow, angle = 0 })
-    end
-end
-
-function topTier(root, tier, fx, tint, sizeK, speedK, p)
     if tier == 10 then
-        -- the law: a cone band of runes, rings turning against it, shards drifting, and streaks of law into the sky
-        local outer = meshPart("DaoRing_Outer", fx, root)
-        if outer then
-            outer.Material = Enum.Material.ForceField
-            outer.TextureID = TEX.DaoRunes
-            outer.Color = Color3.fromRGB(150, 210, 255)
-            outer.Transparency = 0 -- the templates are hidden; each copy sets its own
-            table.insert(spinners, { kind = "mesh", part = outer, root = root, offset = MESHES.DaoRing_Outer, speed = 0.35 * speedK, angle = 0 })
-        end
-        local inner = meshPart("DaoRing_Inner", fx, root)
-        if inner then
-            inner.Material = Enum.Material.Neon
-            inner.Color = Color3.fromRGB(205, 232, 255)
-            inner.Transparency = 0.25
-            table.insert(spinners, { kind = "mesh", part = inner, root = root, offset = MESHES.DaoRing_Inner, speed = -0.6 * speedK, angle = 0 })
-        end
-        local pillars = meshPart("LawPillars", fx, root)
-        if pillars then
-            pillars.Material = Enum.Material.Neon
-            pillars.Color = Color3.fromRGB(225, 240, 255)
-            pillars.Transparency = 0.35
-            table.insert(spinners, { kind = "bob", part = pillars, root = root, offset = MESHES.LawPillars, speed = 0.2 * speedK, angle = 0, clock = 0 })
-        end
-        emitter(host(fx, root, 3, 0.2, -2.9), { Texture = TEX.LawStreak, Color = ColorSequence.new(Color3.fromRGB(225, 240, 255)),
+        emitter(host(fx, root, 3, 0.2, -2.9), { Texture = TEX.LawStreak, Color = ColorSequence.new(palette.Hot),
             LightEmission = 1, Orientation = Enum.ParticleOrientation.FacingCameraWorldUp, Shape = Enum.ParticleEmitterShape.Disc,
-            ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface, Size = seq({ { 0, 0.7 * sizeK }, { 1, 0.4 * sizeK } }),
+            ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface, Size = seq({ { 0, 0.7 * grow }, { 1, 0.4 * grow } }),
             Transparency = seq({ { 0, 0.1 }, { 0.7, 0.3 }, { 1, 1 } }), Lifetime = NumberRange.new(0.6, 0.9),
-            Rate = math.min(MAX_RATE, 14 * (1 + p)), Speed = NumberRange.new(45 * speedK, 70 * speedK), EmissionDirection = Enum.NormalId.Top })
-    else
-        -- eternity: a breathing event horizon of nebula, two knots of light in orbit, a crown behind the head
-        local horizon = meshPart("EventHorizon", fx, root)
-        if horizon then
-            horizon.Material = Enum.Material.ForceField
-            horizon.TextureID = TEX.Nebula
-            horizon.Color = Color3.fromRGB(255, 120, 230)
-            table.insert(spinners, { kind = "breathe", part = horizon, root = root, offset = MESHES.EventHorizon, speed = 0.25, angle = 0, clock = 0 })
-        end
-        local helices = meshPart("OrbitalHelices", fx, root)
-        if helices then
-            helices.Material = Enum.Material.Neon
-            helices.Color = Color3.fromRGB(255, 225, 150)
-            helices.Transparency = 0.15
-            table.insert(spinners, { kind = "mesh", part = helices, root = root, offset = MESHES.OrbitalHelices, speed = 0.9 * speedK, angle = 0 })
-        end
-        local crown = meshPart("TranscendenceCrown", fx, root)
-        if crown then
-            crown.Material = Enum.Material.Neon
-            crown.Color = Color3.fromRGB(255, 236, 190)
-            crown.Transparency = 0.1
-            table.insert(spinners, { kind = "crown", part = crown, root = root, offset = MESHES.TranscendenceCrown, speed = 0.4 * speedK, angle = 0 })
-        end
-        -- cosmic depth round the core
-        emitter(root:FindFirstChild("Core") or root, { Texture = TEX.Nebula, Color = tint, LightEmission = 0.6,
-            Size = seq({ { 0, 5 * sizeK }, { 1, 7 * sizeK } }), Transparency = seq({ { 0, 1 }, { 0.3, 0.55 }, { 1, 1 } }),
+            Rate = math.min(MAX_RATE, 14 * (1 + p)), Speed = NumberRange.new(45 * grow, 70 * grow), EmissionDirection = Enum.NormalId.Top })
+    elseif tier == 12 then
+        emitter(core, { Texture = TEX.Nebula, Color = tint, LightEmission = 0.6,
+            Size = seq({ { 0, 5 * grow }, { 1, 7 * grow } }), Transparency = seq({ { 0, 1 }, { 0.3, 0.55 }, { 1, 1 } }),
             Lifetime = NumberRange.new(2, 3), Rate = 2.5, Speed = NumberRange.new(0), LockedToPart = true,
             Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-15, 15), ZOffset = 0.8 })
     end
+
+    -- the realm's unique piece (the owner's call, 2026-11-11: "add each realm a unique particle
+    -- emitter, trails or beam"), built by hand in Studio as instances, no code: a Model per realm in
+    -- ReplicatedStorage.AuraMeshes.RealmUnique (Tier01 .. Tier12), its pivot where the root stood.
+    -- Its invisible host parts ride on the body; one with a Ground attribute stays on the floor
+    local library = ReplicatedStorage:FindFirstChild("AuraMeshes")
+    library = library and library:FindFirstChild("RealmUnique")
+    local template = library and library:FindFirstChild(string.format("Tier%02d", tier))
+    local riders = {}
+    -- (a test-range dummy already wearing its preview copy, a Model named Unique, keeps that one)
+    if template and not (root.Parent and root.Parent:FindFirstChild("Unique")) then
+        local copy = template:Clone()
+        local pivot = copy:GetPivot()
+        for _, inst in copy:GetDescendants() do
+            if inst:IsA("BasePart") then
+                inst.Anchored, inst.CanCollide, inst.CanQuery, inst.CanTouch = true, false, false, false
+                table.insert(riders, { inst, pivot:ToObjectSpace(inst.CFrame), inst:GetAttribute("Ground") == true })
+            elseif inst:IsA("ParticleEmitter") then
+                inst.Rate *= RATE_SCALE
+            elseif inst:IsA("BaseScript") then
+                inst:Destroy() -- instances only, never code
+            end
+        end
+        copy:PivotTo(root.CFrame)
+        copy.Parent = fx
+    end
+
+    -- one step per aura moves everything that rides on the body (lifted attachments, the unique
+    -- piece's parts) by the hips' shift from rest
+    local torso, rest = restingBody(root.Parent)
+    local attachments = building and building.lifted or {}
+    if #attachments > 0 or #riders > 0 then
+        table.insert(spinners, { kind = "lift", root = root, torso = torso, rest = rest, attachments = attachments,
+            riders = riders, speed = 0, angle = 0 })
+    end
+    return fx
 end
 
 -- the auras alive now (and each folder's)
@@ -963,30 +992,15 @@ local function step(dt)
             continue
         end
         s.angle += dt * s.speed
-        if s.kind == "ribbon" then
-            local tiltCF = CFrame.Angles(s.tilt, 0, 0)
-            local a = s.angle
-            s.a0.Position = tiltCF * Vector3.new(math.cos(a) * s.radius, s.height, math.sin(a) * s.radius)
-            s.a1.Position = tiltCF * Vector3.new(math.cos(a + math.pi) * s.radius, s.height, math.sin(a + math.pi) * s.radius)
-        elseif s.kind == "mesh" then        -- turning round the body
+        if s.kind == "mesh" then        -- an emitter host turning round the body (Realm 1's mote rings)
             s.part.CFrame = s.root.CFrame * CFrame.Angles(0, s.angle, 0) * CFrame.new(s.offset)
-        elseif s.kind == "bob" then         -- turning slowly and drifting up and down
-            s.clock += dt
-            s.part.CFrame = s.root.CFrame * CFrame.Angles(0, s.angle, 0) * CFrame.new(s.offset + Vector3.new(0, math.sin(s.clock * 1.3) * 0.35, 0))
-        elseif s.kind == "breathe" then     -- slowly turning, its field breathing
-            s.clock += dt
-            s.part.CFrame = s.root.CFrame * CFrame.Angles(0, s.angle, 0) * CFrame.new(s.offset)
-            s.part.Transparency = 0.15 + 0.25 * (0.5 + 0.5 * math.sin(s.clock * 1.6))
-        elseif s.kind == "flicker" then     -- turning slowly, its flames flickering
-            s.clock += dt
-            s.part.CFrame = s.root.CFrame * CFrame.Angles(0, s.angle, 0) * CFrame.new(s.offset)
-            s.part.Transparency = s.base + 0.25 * (0.5 + 0.5 * math.noise(s.clock * 3, 0.5))
         elseif s.kind == "orbit" then       -- a tilted ring turning round the body
             s.part.CFrame = s.root.CFrame * CFrame.new(s.offset) * CFrame.Angles(s.tilt, 0, 0) * CFrame.Angles(0, s.angle, 0)
         elseif s.kind == "mist" then        -- a mist ribbon's head racing round its tilted circle
             s.clock += dt
             local tiltCF = CFrame.Angles(s.tilt, 0, 0)
-            local pos = tiltCF * Vector3.new(math.cos(s.angle) * s.radius, 0.3 + 0.6 * math.sin(s.clock * 1.3), math.sin(s.angle) * s.radius)
+            local pos = tiltCF * Vector3.new(math.cos(s.angle) * s.radius, (s.height or 0.3) + (s.weave or 0.6) * math.sin(s.clock * 1.3),
+                math.sin(s.angle) * s.radius) + (s.record and s.record.shift or Vector3.zero)
             local up = tiltCF * Vector3.yAxis
             local out = tiltCF * Vector3.new(math.cos(s.angle), 0, math.sin(s.angle))
             for _, L in s.layers do
@@ -1061,6 +1075,24 @@ local function step(dt)
                     end
                 end
             end
+        elseif s.kind == "lift" then        -- what rides on the body, moved by the hips' shift from rest
+            local shift = Vector3.zero
+            if s.torso and s.rest and s.torso.Parent then
+                shift = s.root.CFrame:PointToObjectSpace(s.torso.Position) - s.rest
+            end
+            if s.record then
+                s.record.shift = shift -- the ribbons and mist ride on it too
+            end
+            for _, item in s.attachments do
+                if item[1].Parent then
+                    item[1].Position = item[2] + shift
+                end
+            end
+            local base = s.root.CFrame
+            local raised = base * CFrame.new(shift)
+            for _, rider in s.riders do
+                rider[1].CFrame = (if rider[3] then base else raised) * rider[2]
+            end
         elseif s.kind == "gyro" then        -- a tilted ring: turning in its plane, its tilt swinging round
             s.spin += dt * s.spinSpeed
             s.part.CFrame = s.root.CFrame * CFrame.new(s.offset) * CFrame.Angles(0, s.angle, 0) * CFrame.Angles(s.tilt, 0, 0) * CFrame.Angles(0, s.spin, 0)
@@ -1078,12 +1110,9 @@ local function step(dt)
             s.highlight.OutlineTransparency = s.line + 0.18 * out
             s.highlight.FillTransparency = s.fill + 0.04 * out
             s.light.Brightness = s.glow * (1 - 0.35 * out)
-        elseif s.kind == "follow" then      -- an emitter host, keeping its place round the root
-            s.part.CFrame = s.root.CFrame * s.offset
-        elseif s.kind == "crown" then       -- turning in its own plane, behind the head
-            s.part.CFrame = s.root.CFrame * CFrame.new(s.offset) * CFrame.Angles(0, 0, s.angle)
-        else                                -- "sigil": a disc turning flat at the feet
-            s.part.CFrame = s.root.CFrame * CFrame.new(0, -2.95, 0) * CFrame.Angles(0, s.angle, 0)
+        elseif s.kind == "follow" then      -- an emitter host, keeping its place round the root (riding the body's lift if marked)
+            local shift = if s.lifted and s.record and s.record.shift then s.record.shift else Vector3.zero
+            s.part.CFrame = s.root.CFrame * CFrame.new(shift) * s.offset
         end
     end
 end
@@ -1098,7 +1127,7 @@ function RealmAura.build(root, realm, sub, options)
     for _, child in root:GetChildren() do
         before[child] = true
     end
-    local record = { root = root, items = {}, saved = {}, cleanups = {}, culled = false, cullClock = 0,
+    local record = { root = root, items = {}, saved = {}, cleanups = {}, lifted = {}, culled = false, cullClock = 0,
         isLocal = options.isLocal == true, cullDistance = options.cullDistance or CULL_DISTANCE_LIVE }
     local first = #spinners + 1
     building = record
@@ -1166,9 +1195,5 @@ function RealmAura.build(root, realm, sub, options)
     end
     return fx
 end
-
--- the body aura on its own (OwnerAura wears it): builds on root's character, cleaned up when fx goes;
--- returns a function that removes it at once
-RealmAura.bodyAura = bodyAura
 
 return RealmAura

@@ -363,14 +363,11 @@ for index, tier in GameConfig.WeaponTiers do
     realmNumbers[tier.Realm] = index
 end
 
--- the pose a cultivating player takes: their realm's, or the owner's Floating Ascension, which their
--- own aura (GameConfig.OwnerAura) was built round
+-- the pose a cultivating player takes: their realm's (the owner too, since 2026-11-11: their own
+-- aura and its Floating Ascension pose were removed for the public test)
 function MeditationPoses.forPlayer(player)
     if MeditationPoses.Preview then
         return poses[MeditationPoses.Preview]
-    end
-    if table.find(GameConfig.OwnerAura.UserIds, player.UserId) then
-        return poses[5]
     end
     local rank = Ranks.getRank(Ranks.getPlayerRankName(player))
     return poses[rank and realmNumbers[rank.Realm] or 1]
