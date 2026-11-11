@@ -63,6 +63,18 @@ windowGui.DisplayOrder = 20
 windowGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 windowGui.Parent = playerGui
 
+-- Notifications (Toast) get a screen of their own too, over the windows: a shop's refusal mustn't hide behind the shop
+local oldNotice = playerGui:FindFirstChild("HudNotice")
+if oldNotice then
+    oldNotice:Destroy()
+end
+local noticeGui = Instance.new("ScreenGui")
+noticeGui.Name = "HudNotice"
+noticeGui.ResetOnSpawn = false
+noticeGui.DisplayOrder = 25
+noticeGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+noticeGui.Parent = playerGui
+
 local function region(name, anchor, position, direction, horizontal, vertical, gap, parent)
     local frame = Instance.new("Frame")
     frame.Name = name
@@ -86,6 +98,16 @@ Hud.Dock = region("Dock", Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -M), Enum.Fi
     Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Bottom, 8)
 Hud.Banner = region("Banner", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, M), Enum.FillDirection.Vertical,
     Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top, 6)
+-- where the notification shows: top centre, hanging just under whatever the Banner holds (it follows the Banner's foot)
+Hud.Notice = region("Notice", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, M), Enum.FillDirection.Vertical,
+    Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top, 6, noticeGui)
+local function placeNotice()
+    local banner = Hud.Banner
+    local foot = if banner.AbsoluteSize.Y > 1 then banner.AbsolutePosition.Y + banner.AbsoluteSize.Y + 6 * HudMetrics.scale() else M
+    Hud.Notice.Position = UDim2.new(0.5, 0, 0, foot)
+end
+Hud.Banner:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeNotice)
+Hud.Banner:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeNotice)
 Hud.Quest = region("Quest", Vector2.new(1, 0), UDim2.new(1, -M, 0, M), Enum.FillDirection.Vertical,
     Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Top, 6)
 Hud.Currency = region("Currency", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 8), Enum.FillDirection.Horizontal,
@@ -252,9 +274,23 @@ end
 -- ---------- windows ----------
 -- A window over the HUD: a TITLE header, a close button, and its Body. One is open at
 -- a time: opening one closes the other (its OnClose runs), so they never stack.
--- props: Name, Title, Size (Vector2), AnchorPoint, Position (UDim2), OnClose (function)
--- Returns { Frame, Body, open(), close(), isOpen(), setTitle(text) }.
+-- props: Name, Title, Size (Vector2), OnClose (function); Side = true keeps the AnchorPoint and Position given (the
+-- Hatching Altar's, which stands beside the altar it belongs to). Every other window opens in the same place: the middle
+-- of the room beside the left column (the profile and the menu), or of the screen on a phone.
+-- While one is open the quest panel and the Cultivation dock step aside, so nothing shows through or round it, and the
+-- menu button that opened it (win.link(button)) stays lit.
+-- Returns { Frame, Body, open(), close(), isOpen(), setTitle(text), link(button) }.
 local windows = {}
+local LEFT_COLUMN = 270 -- the profile's width: the menu sits under it
+
+local function stepAside()
+    local open = false
+    for _, win in windows do
+        open = open or win.isOpen()
+    end
+    Hud.Quest.Visible = not open
+    Hud.Dock.Visible = not open
+end
 local WINDOW_MARGIN = 24
 local SLIDE = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
@@ -274,10 +310,35 @@ function Hud.window(props)
         local across = (view.X - WINDOW_MARGIN) / scale
         frame.Size = UDim2.fromOffset(math.min(props.Size.X, across), math.min(props.Size.Y, room))
     end
-    HudMetrics.Changed:Connect(fitToScreen)
-    fitToScreen()
+    -- where it rests: the middle of the screen; moved right only as far as it takes to clear the left column (the profile
+    -- and the menu), and only if it then still fits on the screen. (Centring it in the room beside the column put every
+    -- window visibly right of the middle: the owner, "the position of UI are off".)
+    local home = props.Position
+    local function place()
+        fitToScreen()
+        if props.Side then
+            return
+        end
+        local view, scale = HudMetrics.viewport(), HudMetrics.scale()
+        local width = frame.Size.X.Offset * scale
+        local centre = view.X / 2
+        if not Hud.isCompact() then
+            local clear = (M + LEFT_COLUMN + M) * scale + width / 2 -- the leftmost centre that clears the column
+            local farthest = view.X - M * scale - width / 2 -- the rightmost centre that stays on the screen
+            if clear > centre and clear <= farthest then
+                centre = clear
+            end
+        end
+        frame.AnchorPoint = Vector2.new(0.5, 0.5)
+        home = UDim2.new(0, centre, 0.5, 0)
+        if frame.Visible then
+            frame.Position = home
+        end
+    end
+    HudMetrics.Changed:Connect(place)
+    place()
     local inner = UiKit.content(frame, 14, 10)
-    local _, title = UiKit.header(inner, props.Title, { TextSize = 14 })
+    local _, title = UiKit.header(inner, props.Title, { TextSize = 16 })
     local closeButton = UiKit.button({
         Name = "Close", Tone = "Danger", Font = "Strong", Text = "X", TextSize = 14, AnchorPoint = Vector2.new(1, 0),
         Position = UDim2.new(1, 4, 0, -4), Size = if UserInputService.TouchEnabled then UDim2.fromOffset(38, 38) else UDim2.fromOffset(28, 28),
@@ -291,8 +352,8 @@ function Hud.window(props)
     body.Parent = inner
 
     local win = { Frame = frame, Body = body }
-    local home = props.Position
     local opened = false
+    local linked = nil -- the menu button that opens it
     local shown = 0 -- which opening or closing is the latest: a quick reopen cancels a closing
     local hudScale = frame:FindFirstChildOfClass("UIScale")
     -- its rest scale is the screen's (HudScale), read each time: the screen may change while it is open
@@ -306,6 +367,10 @@ function Hud.window(props)
             return
         end
         opened = false
+        if linked then
+            linked:SetAttribute("Tone", "Quiet")
+        end
+        stepAside()
         shown += 1
         local this = shown
         UiFx.tween(hudScale, 0.09, { Scale = restScale() * 0.95 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
@@ -327,6 +392,10 @@ function Hud.window(props)
         end
         if not opened then
             opened = true
+            if linked then
+                linked:SetAttribute("Tone", "Accent")
+            end
+            stepAside()
             shown += 1
             local this = shown
             task.delay(0.25, function() -- (the screen changed while it unfolded: the tween ended on the old scale)
@@ -347,6 +416,10 @@ function Hud.window(props)
     end
     function win.setTitle(text)
         title.Text = text
+    end
+    function win.link(button)
+        linked = button
+        button:SetAttribute("Tone", if opened then "Accent" else "Quiet")
     end
     closeButton.Activated:Connect(win.close)
     table.insert(windows, win)

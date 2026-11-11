@@ -628,9 +628,12 @@ local GameConfig = {
     -- the player's realm), and any minutes of Qi. Offline: the share
     -- of the cultivating rate paid for time away. Group: set GroupId to turn the group reward on.
     Rewards = {
+        -- Spirit Stones at realm 1 (RewardRules scales them by realm). Raised four times on November 11, 2026: a day used to
+        -- pay 5 stones against the 40 one stolen egg pays (15 seconds of play), so logging in wasn't worth it. Now day 1 is
+        -- about half an egg, day 7 about six, and a full week about four weapons of the player's realm.
         Daily = {
-            { Stones = 2 }, { Stones = 3 }, { Stones = 4, QiMinutes = 2 }, { Stones = 5 },
-            { Stones = 8, QiMinutes = 3 }, { Stones = 10 }, { Stones = 25, QiMinutes = 5 },
+            { Stones = 20 }, { Stones = 25 }, { Stones = 30, QiMinutes = 2 }, { Stones = 35 },
+            { Stones = 45, QiMinutes = 3 }, { Stones = 55 }, { Stones = 100, QiMinutes = 5 },
         },
         Offline = { Share = 0.2, MaxHours = 8, MinMinutes = 10 },
         Group = { GroupId = 0, Stones = 200 },

@@ -49,6 +49,7 @@ local petList = UiKit.scroll({ Name = "PetList", Position = UDim2.fromOffset(0, 
 
 local hatchMessage = Toast.new("HatchMessage", Color3.new(1, 1, 1), 3.5)
 
+window.link(toggleButton)
 toggleButton.Activated:Connect(function()
     if window.isOpen() then
         window.close()
@@ -276,13 +277,13 @@ end
 RemoteEvents.PetActionResultEvent.OnClientEvent:Connect(function(ok, text, fused)
     if not ok then
         Sfx.play("Error")
-        hatchMessage:show(tostring(text), Color3.new(1, 1, 1))
+        hatchMessage:show(tostring(text), "Error")
         return
     end
     local definition = fused and GameConfig.Pets[fused.PetId]
     local color = definition and GameConfig.PetRarityColors[definition.Rarity] or Color3.new(1, 1, 1)
     Sfx.play("RareReveal")
-    hatchMessage:show(tostring(text), color)
+    hatchMessage:show(tostring(text), "Success", color)
     for _, card in petList:GetChildren() do
         if card:IsA("GuiObject") and fused and card:GetAttribute("InstanceId") == fused.InstanceId then
             UiFx.pop(card, 1.04, 0.3)
@@ -300,8 +301,9 @@ function onWindowClosed()
 end
 
 
-local function showMessage(text, color)
-    hatchMessage:show(text, color)
+-- a refusal: something the player can do about it (a Warning), or simply can't right now (an Error)
+local function showMessage(text, kind)
+    hatchMessage:show(text, kind)
 end
 
 local function onHatchResult(result)
@@ -316,27 +318,27 @@ local function onHatchResult(result)
         Sfx.play("Error") -- refused: the egg is locked, guarded, or the bag is full
     end
     if result.Reason == "Locked" then
-        showMessage(eggName .. " needs " .. tostring(result.RequiredRank) .. " to hatch.", Color3.new(1, 1, 1))
+        showMessage(eggName .. " needs " .. tostring(result.RequiredRank) .. " to hatch.", "Warning")
     elseif result.Reason == "TakeLocked" then
-        showMessage(eggName .. " needs " .. tostring(result.RequiredRank) .. ": you can't carry it yet.", Color3.new(1, 1, 1))
+        showMessage(eggName .. " needs " .. tostring(result.RequiredRank) .. ": you can't carry it yet.", "Warning")
     elseif result.Reason == "Guarded" then
         local who = result.Called or ("the " .. tostring(result.Guardian))
         local text = if result.Busy then "An egg is already being carried off. Wait for " .. who .. " to calm."
             else "Weaken " .. who .. " first: its eggs can be taken once it falters."
-        showMessage(text, Color3.new(1, 1, 1))
+        showMessage(text, "Warning")
     elseif result.Reason == "NoShare" then
         local who = result.Called or ("the " .. tostring(result.Guardian))
-        showMessage("You haven't earned this egg: strike " .. who .. " yourself before you take one.", Color3.new(1, 1, 1))
+        showMessage("You haven't earned this egg: strike " .. who .. " yourself before you take one.", "Warning")
     elseif result.Reason == "Retake" then
-        showMessage("You just let an egg go back. You can take another in " .. tostring(result.Seconds) .. " s.", Color3.new(1, 1, 1))
+        showMessage("You just let an egg go back. You can take another in " .. tostring(result.Seconds) .. " s.", "Warning")
     elseif result.Reason == "NotAtAltar" then
-        showMessage("Stand by the altar and try again: your egg is safe.", Color3.new(1, 1, 1))
+        showMessage("Stand by the altar and try again: your egg is safe.", "Warning")
     elseif result.Reason == "HatchBusy" then
-        showMessage("An egg is still hatching. Try again in a moment: your egg is safe.", Color3.new(1, 1, 1))
+        showMessage("An egg is still hatching. Try again in a moment: your egg is safe.", "Warning")
     elseif result.Reason == "NoEgg" then
-        showMessage("You don't have that egg any more.", Color3.new(1, 1, 1))
+        showMessage("You don't have that egg any more.", "Error")
     elseif result.Reason == "InventoryFull" then
-        showMessage("Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets). Fuse or sell your spares.", Color3.new(1, 1, 1))
+        showMessage("Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets). Fuse or sell your spares.", "Warning")
     else
         -- the hatch cinematic: the camera to the egg, the reel of its beasts, the crack and the reveal card (HatchCeremony)
         HatchCeremony.play(result)

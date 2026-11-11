@@ -124,9 +124,26 @@ local function barWidth()
     return if smallBar() then 300 else 360
 end
 local BAR_ABOVE = 3 -- studs over the top of the guardian's body
-local BAR_TOP_MARGIN = 235 -- pixels (at the HUD's scale) the bar keeps clear of the top of the screen, under the profile, the
--- notifications and the QUEST panel: a guardian is 30-45 studs tall, so close by its head is up there, and the bar slides down
--- the guardian until it's clear
+local BAR_GAP = 8 -- pixels between the bar and the HUD above it
+-- The lowest bottom (viewport pixels) of the HUD's top pieces over the screen's columns x0 to x1: the profile, the
+-- currencies, the notification and the egg panel, the QUEST panel. The bar keeps under them (a guardian is 30-45 studs
+-- tall, so close by its head is up there, and the bar slides down the guardian until it's clear). Measured each frame,
+-- not a fixed margin: on a short screen a fixed one put the bar in the middle of it (the owner, "the position of UI are off").
+local GuiService = game:GetService("GuiService")
+local function hudBottomOver(x0, x1)
+    -- read each time: when this script starts the top bar may not be laid out yet, and its height reads 0
+    local guiInset = GuiService:GetGuiInset()
+    local lowest = guiInset.Y -- never into Roblox's own top bar (its menu and chat buttons)
+    for _, piece in { Hud.Status:FindFirstChild("StatusWindow"), Hud.Currency, Hud.Banner, Hud.Notice, Hud.Quest } do
+        if piece and piece.Visible and piece.AbsoluteSize.Y > 1 then
+            local left = piece.AbsolutePosition.X
+            if left < x1 and left + piece.AbsoluteSize.X > x0 then
+                lowest = math.max(lowest, piece.AbsolutePosition.Y + piece.AbsoluteSize.Y + guiInset.Y)
+            end
+        end
+    end
+    return lowest
+end
 local barLayer = Instance.new("ScreenGui")
 barLayer.Name = "GuardianBarLayer"
 barLayer.ResetOnSpawn = false
@@ -417,6 +434,7 @@ local function updateTakeIndicator()
 end
 
 local shownTrail = 1
+local shownMargin = nil -- the bar's eased top limit, in viewport pixels
 local function updateBar(dt)
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     local best, bestDistance = nil, BAR_DISTANCE
@@ -433,7 +451,6 @@ local function updateBar(dt)
             end
         end
     end
-    Toast.setSingle(best ~= nil) -- in a fight, one notification at a time
     local camera = Workspace.CurrentCamera
     local placed = false
     if best and camera then
@@ -443,13 +460,18 @@ local function updateBar(dt)
             barHeights[best] = box.Position.Y + size.Y / 2 - body.Position.Y
         end
         local scale = HudMetrics.scale()
-        local margin = (BAR_TOP_MARGIN + 72) * scale -- the bar hangs from the point: its bottom sits there
         local function onScreen(h)
             local point = camera:WorldToViewportPoint(body.Position + Vector3.new(0, h, 0))
             return point
         end
         local height = barHeights[best] + BAR_ABOVE
         local point = onScreen(height)
+        local half = barWidth() * scale / 2
+        -- the bar hangs from the point: its bottom sits there, so the point must be a bar's height under the HUD above it
+        local margin = hudBottomOver(point.X - half, point.X + half) + BAR_GAP * scale + 72 * scale
+        -- eased: a notification coming or going moves the HUD's foot, and the bar glides to it instead of jumping
+        shownMargin = if shownMargin then shownMargin + (margin - shownMargin) * (1 - math.exp(-dt * 12)) else margin
+        margin = shownMargin
         if point.Z > 0 and point.Y < margin then
             local low, high = 0, height -- the highest point on the guardian that is still in view
             for _ = 1, 8 do
@@ -718,11 +740,11 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
         end
         local info = typeof(element) == "string" and GameConfig.Forge.Elements[element]
         local relic = if info then " Its relic unlocks " .. info.DisplayName .. " at the Blacksmith's forge." else ""
-        message:show((egg and egg.DisplayName or "The egg") .. " secured! Hatch it at the Hatching Altar." .. reward .. relic, Color3.fromRGB(255, 214, 110))
+        message:show((egg and egg.DisplayName or "The egg") .. " secured! Hatch it at the Hatching Altar." .. reward .. relic, "Reward")
         return
     elseif action == "BagFull" then
         Sfx.play("Error")
-        message:show("You can't hold any more of that egg: hatch some first.", Color3.new(1, 1, 1))
+        message:show("You can't hold any more of that egg: hatch some first.", "Warning")
         return
     end
     if not (typeof(model) == "Instance" and model.Parent) then
@@ -748,23 +770,23 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
     end
     if action == "Awaken" then
         if isNear(model, BAR_DISTANCE) then
-            message:show((config.Called or "The " .. config.DisplayName) .. " awakens!", Color3.fromRGB(150, 210, 255))
+            message:show((config.Called or "The " .. config.DisplayName) .. " awakens!", "Info")
         end
     elseif action == "Weaken" then
         if isNear(model, BAR_DISTANCE) then
-            message:show((config.Called or "The " .. config.DisplayName) .. " " .. config.WeakenedHint, Color3.fromRGB(255, 214, 110))
+            message:show((config.Called or "The " .. config.DisplayName) .. " " .. config.WeakenedHint, "Info")
         end
     elseif action == "Steal" and style then
         GuardianFx.steal((...), style)
         if player:GetAttribute("CarryingGuardian") == model:GetAttribute("GuardianId") then
             local goal = "Carry it home to " .. config.SafeZone.Name .. "!"
-            message:show("You took the egg! " .. goal, Color3.fromRGB(255, 214, 110))
+            message:show("You took the egg! " .. goal, "Success")
         end
     elseif action == "Drop" and style then
         GuardianFx.drop((...), style)
         local egg = eggsFolder:FindFirstChild(model.Name .. "_Egg")
         if egg and egg:GetAttribute("OwnerUserId") == player.UserId then
-            message:show("You dropped the egg! Recover it within " .. config.DropTime .. "s.", Color3.new(1, 1, 1))
+            message:show("You dropped the egg! Recover it within " .. config.DropTime .. "s.", "Warning")
         end
     elseif action == "Secure" then
         GuardianFx.secure((...))

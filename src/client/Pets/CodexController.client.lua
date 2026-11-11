@@ -54,6 +54,7 @@ local window = Hud.window({
 })
 local body = window.Body
 
+window.link(toggleButton)
 toggleButton.Activated:Connect(function()
     if window.isOpen() then
         window.close()
@@ -447,13 +448,13 @@ local function renderEntry(petId)
                 window.close()
                 local started = SpecialPreview.play(petId, function(ok)
                     if not ok then
-                        message:show("That special can't be shown right now.", Color3.new(1, 1, 1))
+                        message:show("That special can't be shown right now.", "Warning")
                     end
                     render()
                     window.open()
                 end)
                 if started then
-                    message:show(lore.Special.Name, color)
+                    message:show(lore.Special.Name, "Info", color)
                 else
                     window.open()
                 end
@@ -511,7 +512,7 @@ RemoteEvents.CodexEvent.OnClientEvent:Connect(function(action, data)
         if data.QiPercent > 0 then
             text ..= " and +" .. data.QiPercent .. "% Qi forever"
         end
-        message:show(text .. "!", C.Highlight)
+        message:show(text .. "!", "Reward")
     end
 end)
 

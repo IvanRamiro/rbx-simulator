@@ -109,12 +109,12 @@ RemoteEvents.RelicResultEvent.OnClientEvent:Connect(function(result)
 
     if result.Reason == "Locked" then
         Sfx.play("Error")
-        message:show(relic.DisplayName .. " needs " .. tostring(result.RequiredRank) .. " to attune.")
+        message:show(relic.DisplayName .. " needs " .. tostring(result.RequiredRank) .. " to attune.", "Warning")
     else
         local stones = if typeof(result.Stones) == "number" and result.Stones > 0 then ", +" .. result.Stones .. " Spirit Stones" else ""
         local info = typeof(result.Element) == "string" and GameConfig.Forge.Elements[result.Element]
         local element = if info then ". " .. info.DisplayName .. " unlocked at the Blacksmith's forge" else ""
         Sfx.play("Attune")
-        message:show("Attuned to " .. relic.DisplayName .. "! +" .. tostring(result.QiReward) .. " Qi" .. stones .. element)
+        message:show("Attuned to " .. relic.DisplayName .. "! +" .. tostring(result.QiReward) .. " Qi" .. stones .. element, "Reward")
     end
 end)

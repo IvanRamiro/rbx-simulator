@@ -162,7 +162,7 @@ local function passCard(pass, parent, slot)
     button.Activated:Connect(function()
         if pass.Luck and luckRestricted and not PassRules.owns(player, pass.Id) then
             Sfx.play("Error")
-            message:show(pass.Name .. " isn't available in your region: luck boosts follow Roblox's rules on paid random items.", C.Text)
+            message:show(pass.Name .. " isn't available in your region: luck boosts follow Roblox's rules on paid random items.", "Warning")
         elseif button.Active and (pass.GamePassId or 0) > 0 and not PassRules.owns(player, pass.Id) then
             Sfx.play("Click")
             MarketplaceService:PromptGamePassPurchase(player, pass.GamePassId)
@@ -267,12 +267,13 @@ for _, pass in PassRules.List do
         render()
         if PassRules.owns(player, pass.Id) and player:GetAttribute("PassesChecked") then -- bought just now, not found on joining
             Sfx.play("RareReveal")
-            message:show(pass.Name .. " is yours. Thank you for supporting the game!", C.Highlight)
+            message:show(pass.Name .. " is yours. Thank you for supporting the game!", "Reward")
         end
     end)
 end
 render()
 
+window.link(toggleButton)
 toggleButton.Activated:Connect(function()
     if window.isOpen() then
         window.close()

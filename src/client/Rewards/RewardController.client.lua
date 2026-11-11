@@ -43,11 +43,20 @@ for day = 1, DAYS do
     })
     local word = UiKit.label({ Name = "Word", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = "DAY " .. day,
         Position = UDim2.fromOffset(0, 6), Size = UDim2.new(1, 0, 0, 14), TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
+    -- what the day gives: the Spirit Stone's own picture over its number, so the number isn't bare
+    local stone = Instance.new("ImageLabel")
+    stone.Name = "Stone"
+    stone.BackgroundTransparency = 1
+    stone.Image = UiTheme.Icons.Stones
+    stone.AnchorPoint = Vector2.new(0.5, 0)
+    stone.Position = UDim2.new(0.5, 0, 0, 21)
+    stone.Size = UDim2.fromOffset(16, 16)
+    stone.Parent = card
     local amount = UiKit.label({ Name = "Amount", Font = "Title", TextSize = 14, TextColor3 = C.Text,
-        Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
-    local extra = UiKit.label({ Name = "Extra", Font = "Strong", TextSize = 10, TextColor3 = C.AccentBright,
-        Position = UDim2.fromOffset(0, 48), Size = UDim2.new(1, 0, 0, 14), TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
-    cards[day] = { card = card, word = word, amount = amount, extra = extra }
+        Position = UDim2.fromOffset(0, 38), Size = UDim2.new(1, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
+    local extra = UiKit.label({ Name = "Extra", Font = "Strong", TextSize = 9, TextColor3 = C.AccentBright,
+        Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 0, 12), TextXAlignment = Enum.TextXAlignment.Center, Parent = card })
+    cards[day] = { card = card, word = word, amount = amount, extra = extra, stone = stone }
 end
 
 local claim = UiKit.button({ Name = "Claim", Tone = "Highlight", Font = "Title", TextSize = 16, Text = "CLAIM",
@@ -100,6 +109,9 @@ local function render()
         c.word.TextColor3 = if isNext then C.Highlight elseif claimed then C.AccentBright else C.Muted
         c.amount.TextColor3 = if claimed then C.Muted else C.Text
         c.word.Text = if claimed then "DONE" else "DAY " .. day
+        c.stone.ImageTransparency = if claimed then 0.55 else 0
+        -- today's card is lit gold (its fill: a card's edge is its hover's); the days taken fall back
+        c.card.BackgroundColor3 = if isNext then C.Raised:Lerp(C.Highlight, 0.28) else C.Raised
     end
     claim.Active = isReady
     claim.AutoButtonColor = false
@@ -123,6 +135,7 @@ task.spawn(function()
 end)
 render()
 
+window.link(toggleButton)
 toggleButton.Activated:Connect(function()
     if window.isOpen() then
         window.close()
@@ -137,14 +150,14 @@ RemoteEvents.RewardEvent.OnClientEvent:Connect(function(kind, a, b, c)
         local hours = b / 3600
         local away = if hours >= 1 then string.format("%.1f hours", hours) else math.floor(b / 60) .. " minutes"
         Sfx.play("Attune")
-        message:show("Your Qi kept flowing for " .. away .. " while you were away: +" .. NumberFormat.compact(a) .. " Qi.", C.Highlight)
+        message:show("Your Qi kept flowing for " .. away .. " while you were away: +" .. NumberFormat.compact(a) .. " Qi.", "Reward")
     elseif kind == "Daily" and typeof(a) == "number" then
         Sfx.play("Attune")
         local qi = if typeof(b) == "number" and b > 0 then "  +" .. NumberFormat.compact(b) .. " Qi" else ""
-        message:show("Day " .. tostring(c) .. " claimed: +" .. NumberFormat.compact(a) .. " Spirit Stones" .. qi, C.Highlight)
+        message:show("Day " .. tostring(c) .. " claimed: +" .. NumberFormat.compact(a) .. " Spirit Stones" .. qi, "Reward")
     elseif (kind == "Code" or kind == "Group") and typeof(b) == "string" then
         Sfx.play(if a then "Attune" else "Error")
-        message:show(b, if a then C.Highlight else Color3.new(1, 1, 1))
+        message:show(b, if a then "Reward" else "Error")
         if kind == "Code" and a then
             codeBox.Text = ""
         end

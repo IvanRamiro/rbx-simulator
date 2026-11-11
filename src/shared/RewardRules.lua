@@ -1,6 +1,6 @@
 -- The rules of the daily reward, shared so the window shows exactly what the server will pay
 -- (GameConfig.Rewards). A day is a UTC calendar day. Stones scale by SpiritStones.RealmFactor per
--- realm, as weapon and pet prices do, so a full week stays worth about one weapon of the player's realm.
+-- realm, as weapon and pet prices do, so a full week stays worth about four weapons of the player's realm.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))

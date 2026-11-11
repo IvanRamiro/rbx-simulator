@@ -112,9 +112,12 @@ local function questAllowed()
     if chosen == nil then
         chosen = GameConfig.Settings.ShowQuest
     end
-    questButton:SetAttribute("Tone", if chosen then "Accent" else "Quiet")
+    -- lit while its panel is on the screen, as a window's button is while the window is open: a window steps the panel
+    -- aside (Hud.window), and two lit buttons would say two things are open
+    questButton:SetAttribute("Tone", if chosen and Hud.Quest.Visible then "Accent" else "Quiet")
     return chosen == true
 end
+Hud.Quest:GetPropertyChangedSignal("Visible"):Connect(questAllowed)
 
 local PHONE_WIDTH, FULL_WIDTH = 224, 270
 local chosenFold = nil -- what the player chose: until then a phone starts folded
@@ -233,9 +236,9 @@ RemoteEvents.QuestEvent.OnClientEvent:Connect(function(kind, step, stones)
     Sfx.play("Attune")
     local paid = if typeof(stones) == "number" and stones > 0 then "  +" .. NumberFormat.compact(stones) .. " Spirit Stones" else ""
     if step == #QUESTS then
-        message:show("Quest complete: " .. QUESTS[step].Title .. "." .. paid .. "\nThe path is yours now, cultivator.", C.Highlight)
+        message:show("Quest complete: " .. QUESTS[step].Title .. "." .. paid .. "\nThe path is yours now, cultivator.", "Reward")
     else
-        message:show("Quest complete: " .. QUESTS[step].Title .. "." .. paid, C.Highlight)
+        message:show("Quest complete: " .. QUESTS[step].Title .. "." .. paid, "Reward")
     end
 end)
 

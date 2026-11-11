@@ -309,13 +309,17 @@ function UiKit.button(props)
         end
     end
     local function paint()
-        local tone = BUTTON_TONES[button:GetAttribute("Tone")] or BUTTON_TONES.Quiet
+        local toneName = button:GetAttribute("Tone")
+        local tone = BUTTON_TONES[toneName] or BUTTON_TONES.Quiet
         local lit = hovered and button.Active
+        -- a button that can't be pressed must not look as if it can: it sinks into the panel, its words go quiet. A state
+        -- shown on a button (the Active tone: OWNED, WIELDING, ON) keeps its colours, since it says something true
+        local disabled = not button.Active and toneName ~= "Active"
         button.BackgroundColor3 = if lit then tone.back:Lerp(tone.edge, 0.25) else tone.back
-        button.BackgroundTransparency = if tone.glow then 0 else 0.08
-        button.TextColor3 = tone.text
+        button.BackgroundTransparency = if disabled then 0.55 elseif tone.glow then 0 else 0.08
+        button.TextColor3 = if disabled then C.Muted else tone.text
         halo.Visible = tone.glow ~= nil and button.Active and button.AutomaticSize == Enum.AutomaticSize.None
-        gloss.Visible = tone.glow ~= nil
+        gloss.Visible = tone.glow ~= nil and not disabled
         if tone.glow then
             haloEdge.Color = tone.glow
         end
@@ -325,7 +329,15 @@ function UiKit.button(props)
     end
     button:SetAttribute("Tone", toneName)
     button:GetAttributeChangedSignal("Tone"):Connect(paint)
-    button:GetPropertyChangedSignal("Active"):Connect(paint)
+    button:GetPropertyChangedSignal("Active"):Connect(function()
+        paint()
+        if not button.Active then -- disabled under the pointer: it drops its hover size with its hover colours
+            TweenService:Create(scale, EASE, { Scale = 1 }):Play()
+            iconGrow(0.86)
+        elseif hovered then
+            TweenService:Create(scale, BOUNCE, { Scale = 1.035 }):Play()
+        end
+    end)
     button.MouseEnter:Connect(function()
         if not canHover then
             return
@@ -355,7 +367,7 @@ function UiKit.button(props)
     end)
     button.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            TweenService:Create(scale, BOUNCE, { Scale = if hovered then 1.035 else 1 }):Play()
+            TweenService:Create(scale, BOUNCE, { Scale = if hovered and button.Active then 1.035 else 1 }):Play()
         end
     end)
     apply(button, copy)
@@ -535,12 +547,39 @@ function UiKit.textbox(props)
     return box
 end
 
+-- An empty list's message: its first line as a headline, a short gold rule, and the rest (what to do about it) under
+-- it in the quiet colour, set down a little from the top so the window doesn't read as broken.
 function UiKit.empty(parent, text)
-    return UiKit.label({
-        Name = "Empty", Text = text, TextSize = 14, TextColor3 = C.Muted, TextWrapped = true,
-        TextXAlignment = Enum.TextXAlignment.Center, AutomaticSize = Enum.AutomaticSize.Y,
-        Size = UDim2.new(1, 0, 0, 0), Parent = parent,
+    local headline, hint = string.match(text, "^([^\n]*)\n?(.*)$")
+    local box = Instance.new("Frame")
+    box.Name = "Empty"
+    box.BackgroundTransparency = 1
+    box.AutomaticSize = Enum.AutomaticSize.Y
+    box.Size = UDim2.new(1, 0, 0, 0)
+    box.Parent = parent
+    UiKit.padding(box, 18, 26)
+    UiKit.list(box, { Padding = UDim.new(0, 8), HorizontalAlignment = Enum.HorizontalAlignment.Center })
+    UiKit.label({
+        Name = "Headline", Font = "Title", Text = headline, TextSize = 16, TextColor3 = C.AccentBright, TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Center, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0),
+        LayoutOrder = 1, Parent = box,
     })
+    if hint ~= "" then
+        local rule = Instance.new("Frame")
+        rule.Name = "Rule"
+        rule.BorderSizePixel = 0
+        rule.BackgroundColor3 = C.Edge
+        rule.BackgroundTransparency = 0.3
+        rule.Size = UDim2.fromOffset(46, 1)
+        rule.LayoutOrder = 2
+        rule.Parent = box
+        UiKit.label({
+            Name = "Hint", Text = hint, TextSize = 13, TextColor3 = C.Muted, TextWrapped = true,
+            TextXAlignment = Enum.TextXAlignment.Center, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0),
+            LayoutOrder = 3, Parent = box,
+        })
+    end
+    return box
 end
 
 return UiKit

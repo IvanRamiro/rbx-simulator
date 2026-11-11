@@ -344,7 +344,7 @@ RemoteEvents.TribulationEvent.OnClientEvent:Connect(function(kind, owner, data)
                 panel.frame:Destroy()
             end
             panel = makePanel(data)
-            notice:show("THE HEAVENS TEST YOU: survive the lightning", C.Highlight)
+            notice:show("The heavens test you: survive the lightning.", "Warning")
             if grade then
                 grade:Destroy() -- (one from a run that never ended: never two darkening the screen)
                 grade = nil
@@ -377,9 +377,9 @@ RemoteEvents.TribulationEvent.OnClientEvent:Connect(function(kind, owner, data)
                 Debris:AddItem(g, 1.6)
             end
             if data.Passed then
-                notice:show("TRIBULATION SURVIVED: the realm is yours", C.Highlight)
+                notice:show("Tribulation survived: the realm is yours.", "Success")
             elseif not data.Cancelled then
-                notice:show("THE HEAVENS STRUCK YOU DOWN: gather yourself and try again in a minute", C.Danger)
+                notice:show("The heavens struck you down: gather yourself and try again in a minute.", "Error")
                 Sfx.play("Error")
             end
         end

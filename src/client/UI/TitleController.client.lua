@@ -334,7 +334,7 @@ RemoteEvents.TitleEvent.OnClientEvent:Connect(function(kind, data)
             unseen += data
             setBadge(tostring(unseen), "Highlight")
         end
-        notice:show(if data == 1 then "NEW TITLE: open Titles to wear it" else data .. " NEW TITLES: open Titles to wear them", C.Highlight)
+        notice:show(if data == 1 then "New title: open Titles to wear it." else data .. " new titles: open Titles to wear them.", "Reward")
         Sfx.play("Attune")
     elseif kind == "Earned" then
         local entry = TitleRules.ById[data]
@@ -343,12 +343,13 @@ RemoteEvents.TitleEvent.OnClientEvent:Connect(function(kind, data)
                 unseen += 1
                 setBadge(tostring(unseen), "Highlight")
             end
-            notice:show("NEW TITLE: " .. entry.Text, entry.Color)
+            notice:show("New title: " .. entry.Text, "Reward", entry.Color)
             Sfx.play("Attune")
         end
     end
 end)
 
+window.link(toggleButton)
 toggleButton.Activated:Connect(function()
     if window.isOpen() then
         window.close()

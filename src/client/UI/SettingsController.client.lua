@@ -51,6 +51,8 @@ local function volumeRow(key, word, order)
         percent.Text = math.round(value * 100) .. "%"
         UiKit.setBar(bar, value)
         Sfx.setVolume(key, value)
+        less.Active = value > 0 -- at an end, its button has nothing to do and shows it
+        more.Active = value < 1
     end
     local function change(delta)
         local value = math.round(math.clamp(read(key) + delta, 0, 1) * 10) / 10
@@ -86,7 +88,7 @@ UiKit.label({ Name = "ReducedHelp", TextSize = 12, TextColor3 = C.Muted, TextWra
 local function renderReduced()
     local on = read("ReducedEffects")
     reduced.Text = if on then "ON" else "OFF"
-    reduced:SetAttribute("Tone", if on then "Accent" else "Quiet")
+    reduced:SetAttribute("Tone", if on then "Active" else "Quiet") -- on reads as running, not as something to press
 end
 reduced.Activated:Connect(function()
     local on = not read("ReducedEffects")
@@ -107,7 +109,7 @@ if isDeveloper then
     local function renderPerf()
         local on = player:GetAttribute("PerfReadout") == true
         perf.Text = if on then "ON" else "OFF"
-        perf:SetAttribute("Tone", if on then "Accent" else "Quiet")
+        perf:SetAttribute("Tone", if on then "Active" else "Quiet") -- on reads as running, not as something to press
     end
     perf.Activated:Connect(function()
         player:SetAttribute("PerfReadout", player:GetAttribute("PerfReadout") ~= true)
@@ -116,6 +118,7 @@ if isDeveloper then
     renderPerf()
 end
 
+window.link(toggleButton)
 toggleButton.Activated:Connect(function()
     if window.isOpen() then
         window.close()

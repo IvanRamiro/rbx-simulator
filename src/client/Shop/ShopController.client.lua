@@ -177,7 +177,7 @@ local function weaponCard(parent, x, weapon, contents, realmIndex)
     })
     local size, position = UDim2.new(1, -94, 0, 26), UDim2.new(0, 86, 1, -33)
     if mine and mine.InstanceId == contents.Weapons.Equipped then
-        button(box, "WIELDING", "Highlight", size, position, nil)
+        button(box, "WIELDING", "Active", size, position, nil) -- a state, not an action: not the gold of something to press
     elseif mine then
         button(box, "WIELD", "Accent", size, position, function()
             ask("Equip", mine.InstanceId)
@@ -219,7 +219,7 @@ local function renderForge(contents)
                 current.element = name
                 render()
             else
-                message:show("Find " .. info.Source .. " to forge with " .. info.DisplayName .. ".", Color3.new(1, 1, 1))
+                message:show("Find " .. info.Source .. " to forge with " .. info.DisplayName .. ".", "Info")
             end
         end)
     end
@@ -512,7 +512,7 @@ RemoteEvents.ShopEvent.OnClientEvent:Connect(function(kind, ...)
     elseif kind == "Result" then
         local ok, text, contents = ...
         Sfx.play(if ok then "Purchase" else "Error")
-        message:show(text, if ok then C.AccentBright else Color3.fromRGB(255, 150, 140))
+        message:show(text, if ok then "Success" else "Error")
         if contents then
             current.contents = contents
             if current.shop then
