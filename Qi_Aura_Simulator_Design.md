@@ -1,6 +1,12 @@
 # Qi Aura Simulator — Game Design
 
-**Platform:** Roblox · **Project:** `qi-aura-simulator` · **Last updated:** November 5, 2026
+**Platform:** Roblox · **Project:** `qi-aura-simulator` · **Last updated:** November 11, 2026
+
+**Public title: Steal a Spirit Egg** (the owner's pick, November 11, 2026, before the first public test; the project and
+this document keep the working name). The title carries the search words players type. The cultivation and auras show in
+the thumbnail and the description. **Thumbnail:** `assets/ui/thumbnail/StealASpiritEgg_1920x1080.jpg`, a real Play
+screenshot of the egg heist (the player, in the owner's Murim Robes, running off with the Inferno Egg, the enraged Ember Xuanwu behind), lightly graded,
+with the title in the UI's Merriweather and Montserrat. It is rebuilt with `tools/ui/thumbnail.py`.
 
 The single design reference for the game: what is fixed, what is built, and what comes next.
 Exact numbers live in code and data, and the tables below are generated from them:
