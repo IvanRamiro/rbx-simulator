@@ -344,8 +344,13 @@ def fit_crescent(frames, swing):
     centre = mean + u * centre2[0] + v * centre2[1]
     mid = pts[len(pts) // 2]
     bulge = (mid - centre) / np.linalg.norm(mid - centre)
-    # the sweep's own direction, so the normal is the same way round for every clip
-    if np.cross(pts[0] - centre, pts[-1] - centre) @ n < 0:
+    # the sweep's own direction, so the normal is the same way round for every clip: the tip goes round it the way
+    # n x bulge points at the arc's middle. Taken from the tip's own motion there (the cross product of the arc's two
+    # ends says the opposite for a sweep of more than half a turn, as the spear's slash is: the game then drew its
+    # light, and threw a hit's sparks, backwards)
+    i = len(pts) // 2
+    travel = pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)]
+    if np.cross(n, bulge) @ travel < 0:
         n = -n
     return {"Centre": centre, "Radius": radius, "Face": n, "Bulge": bulge}
 

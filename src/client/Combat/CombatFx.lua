@@ -10,7 +10,12 @@
 --   Spear  the striker's spear in both hands, in a combo of two, also clips: a thrust, coiled then
 --          lunging with a real step, holding its reach, a lance of streaks running on from its tip; then
 --          a slash, one wide sweep right to left round the body, with a crescent on the tip's true path.
---   hit    where a strike lands: a burst of light, a shockwave and scattering sparks.
+--   hit    where a strike lands, by the kind of blow: a cut (a sword, a spear's slash) leaves a line of light
+--          along the blade's path and throws sparks the way it travelled; a pierce (a spear's thrust) punches a
+--          ring and drives a narrow jet of sparks on through; a blunt blow (bare hands) bursts in a ring with
+--          sparks all round and a puff of dust. The struck target flashes; the striker's pose holds for an
+--          instant (hit-stop) and their own camera kicks; their own strikes show their damage (DamageNumbers).
+--          A critical strike (the server's roll) is bigger, gold, crossed with a flare of light and rung.
 --
 -- A forged weapon (the striker's "WeaponElement", GameConfig.Forge) glows, trails and slashes in its
 -- element's colours and bursts with its element where it strikes: Fire rising embers and a lick of
@@ -32,6 +37,8 @@ local AuraKit = require(script.Parent.Parent:WaitForChild("Auras"):WaitForChild(
 local QinggongFx = require(script.Parent.Parent:WaitForChild("Qinggong"):WaitForChild("QinggongFx"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 local GuardianFx = require(script.Parent.Parent:WaitForChild("Guardians"):WaitForChild("GuardianFx"))
+local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local DamageNumbers = require(script.Parent:WaitForChild("DamageNumbers"))
 
 local numberSequence = AuraKit.numberSequence
 local colorSequence = AuraKit.colorSequence
@@ -47,6 +54,7 @@ local TEXTURES = {
     Glow = "rbxassetid://135169457468310",
     Shockwave = "rbxassetid://130173906719836",
     Streak = "rbxassetid://115312010132075",
+    Spike = "rbxassetid://89522570963572",    -- QiSpike, a sharp shard (shared with QinggongFx): the sparks a blow throws
     Fire = "rbxasset://textures/particles/fire_main.dds",
     Smoke = "rbxasset://textures/particles/smoke_main.dds",
 }
@@ -81,13 +89,32 @@ local GRIP_TURN = { Sword = CFrame.Angles(math.rad(80), 0, 0), Spear = CFrame.id
 local PUNCHES = { WeaponClips.Clips.PunchRight, WeaponClips.Clips.PunchLeft } -- bare hands: right, then left
 local PUNCH_WINDOW = 1.1 -- seconds in which the next punch uses the other hand
 local SWING = { Palm = "PalmStrike" } -- a strike's sound at once (SoundCatalog; a weapon's plays with its blow)
+-- where a strike lands (landHit), by the kind of blow
+local HIT_SOUND = { Cut = "BladeHit", Pierce = "SpearHit", Blunt = "PalmHit" }
+-- the farthest from the striker a blow shows, in studs: about where the weapon and its light reach. The server's point is
+-- on the target's near side by its HitRadius, which for a big guardian close by is deep inside its body
+local HIT_REACH = { Cut = 8, Pierce = 10, Blunt = 6 }
+local HIT_DEPTH = 3 -- studs toward the camera a blow's light is drawn (ZOffset), so a guardian's skin just in front can't hide it
+local CRIT_GOLD = Color3.fromRGB(255, 205, 80)
+local EDGE_SHARE = 0.16 -- the outer share of a blade that draws the bright edge of its trail
+-- seconds the striker's pose holds as a blow lands: longer for a combo's finisher and a critical strike
+local HIT_STOP = { Normal = 0.045, Finisher = 0.07, Critical = 0.09 }
+-- the camera's kick for the striker's own blow: degrees, seconds (GuardianFx.shake)
+local HIT_SHAKE = { Normal = { 0.3, 0.12 }, Finisher = { 0.5, 0.16 }, Critical = { 0.95, 0.22 } }
+-- a crescent draws on along the blade's path: a UIGradient's transparency, slid across the plate. One
+-- shows from the image's left, the other from its right
+local WIPE_FROM_LEFT = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.35, 0),
+    NumberSequenceKeypoint.new(0.65, 1), NumberSequenceKeypoint.new(1, 1) })
+local WIPE_FROM_RIGHT = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.35, 1),
+    NumberSequenceKeypoint.new(0.65, 0), NumberSequenceKeypoint.new(1, 0) })
 
 local fxFolder = Instance.new("Folder")
 fxFolder.Name = "CombatFx"
 fxFolder.Parent = Workspace
 
 local COMBO_STEPS = { Sword = #SLASHES, Spear = 2 } -- how many strikes each weapon's combo has
-local strikes = {} -- [player] = { weapon, started, untilTime, step (its place in the weapon's combo) }
+local strikes = {} -- [player] = { weapon, started, untilTime, step (its place in the weapon's combo), palette (what it draws with),
+                   -- holdAt, holdUntil (a hit-stop: its clip holds at holdAt seconds until then) }
 local combos = {}  -- [player] = { weapon, step, at }: their last strike in a combo
 
 local function rootOf(player)
@@ -241,6 +268,27 @@ local function weaponTrail(part, offset, a, b, p, glow, lifetime, faceCamera, tr
     trail.TextureMode = Enum.TextureMode.Stretch
     trail.Color = colorSequence({ { 0, p.Core }, { 1, glow } })
     trail.Transparency = numberSequence({ { 0, transparency }, { 1, 1 } })
+    trail.Parent = part
+    return trail
+end
+
+-- The bright edge of a weapon's trail: a thin line the tip draws, sharpening to a point as it fades (the
+-- soft sheet behind it is weaponTrail's). No texture: a narrow ribbon reads as a drawn line.
+local function edgeTrail(part, offset, a, b, p, glow)
+    local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
+    a0.Position, a1.Position = offset:PointToObjectSpace(a), offset:PointToObjectSpace(b)
+    a0.Parent, a1.Parent = part, part
+    local trail = Instance.new("Trail")
+    trail.Name = "EdgeTrail"
+    trail.Attachment0, trail.Attachment1 = a0, a1
+    trail.Lifetime = 0.26
+    trail.FaceCamera = true
+    trail.LightEmission = 1
+    trail.LightInfluence = 0
+    trail.Brightness = 3
+    trail.Color = colorSequence({ { 0, p.Core }, { 1, glow } })
+    trail.Transparency = numberSequence({ { 0, 0 }, { 0.6, 0.35 }, { 1, 1 } })
+    trail.WidthScale = numberSequence({ { 0, 1 }, { 1, 0 } })
     trail.Parent = part
     return trail
 end
@@ -399,21 +447,28 @@ local function hold(player, kind, source, flying, tint, spec, p)
     local body = model:FindFirstChild("Body")
     local trail = weaponTrail(body, parts[body], spec.from, spec.to, p, spec.glow or p.Main, spec.life, spec.faceCamera, spec.transparency)
     trail.Enabled = false
-    entry = { kind = kind, model = model, trail = trail, hand = hand, source = source, weaponId = player:GetAttribute("WeaponId"),
+    local edge = edgeTrail(body, parts[body], spec.from:Lerp(spec.to, 1 - EDGE_SHARE), spec.to, p, spec.glow or p.Main)
+    edge.Enabled = false
+    entry = { kind = kind, model = model, trail = trail, edge = edge, hand = hand, source = source, weaponId = player:GetAttribute("WeaponId"),
         untilTime = os.clock() + HOLD_TIME }
     held[player] = entry
     watchHeld()
     return entry
 end
 
--- the blow lands after the wind-up: the trail draws through it, and `effect` plays
+-- the blow lands after the wind-up: the trail draws through it (to swingEnds, which a hit-stop puts back), and `effect` plays
 local function afterWindUp(player, entry, windUp, duration, root, effect)
     task.delay(windUp, function()
         if entry and held[player] == entry then
-            entry.trail.Enabled = true
-            task.delay(duration, function()
-                if entry.trail.Parent then
-                    entry.trail.Enabled = false
+            local swing = {}
+            entry.swing, entry.swingEnds = swing, os.clock() + duration
+            entry.trail.Enabled, entry.edge.Enabled = true, true
+            task.spawn(function()
+                while entry.swing == swing and os.clock() < entry.swingEnds do
+                    task.wait()
+                end
+                if entry.swing == swing and entry.trail.Parent then -- (a newer swing keeps drawing)
+                    entry.trail.Enabled, entry.edge.Enabled = false, false
                 end
             end)
         end
@@ -423,8 +478,9 @@ local function afterWindUp(player, entry, windUp, duration, root, effect)
     end)
 end
 
--- a crescent of light on the arc the blade draws, swelling and carrying ahead as it fades
-local function slashCrescent(slash, p, root)
+-- a crescent of light on the arc the blade draws: it draws on along the blade's own path, the way the tip
+-- travels, then swells and carries ahead as it fades. echo: a paler one after it, for a finisher's weight
+local function slashCrescent(slash, p, root, echo)
     local half = slash.Radius / CRESCENT_RADIUS
     local across = -slash.Bulge.Unit -- a Top face's gui has its top towards the part's -X, a Bottom's +X
     local along = across:Cross(slash.Face.Unit).Unit
@@ -432,36 +488,59 @@ local function slashCrescent(slash, p, root)
     local size = Vector3.new(half * 2, 0.05, half * 2)
     local scale = CombatFx.TimeScale
     local plate = host(frame, size, 0.5 / scale)
+    local swing = (slash.Clip.SwingEnd - slash.Clip.SwingStart) / scale
     for _, face in { Enum.NormalId.Top, Enum.NormalId.Bottom } do
-        local gui, label = flat(face, TEXTURES.Slash, p.Main:Lerp(p.Core, 0.25), 0.05)
+        local gui, label = flat(face, TEXTURES.Slash, if echo then p.Core else p.Main:Lerp(p.Core, 0.25), if echo then 0.55 else 0.05)
         gui.Brightness = 2.6
         label.Rotation = if face == Enum.NormalId.Bottom then 180 else 0
+        -- the tip travels along the plate's +Z (`along`): across the image from its left on the top face, and (the label
+        -- turned half round) from its right on the bottom (seen in Play in slow motion from over the plate: the other way
+        -- round, the light ran ahead of the blade)
+        local fromLeft = face == Enum.NormalId.Top
+        local wipe = Instance.new("UIGradient")
+        wipe.Transparency = if fromLeft then WIPE_FROM_LEFT else WIPE_FROM_RIGHT
+        wipe.Offset = Vector2.new(if fromLeft then -1 else 1, 0)
+        wipe.Parent = label
         gui.Parent = plate
+        TweenService:Create(wipe, TweenInfo.new(swing, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+            { Offset = Vector2.new(if fromLeft then 1 else -1, 0) }):Play()
         TweenService:Create(label, TweenInfo.new(0.16 / scale, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, 0.08 / scale),
             { ImageTransparency = 1 }):Play()
     end
+    local grow, travel = slash.Grow * (if echo then 1.2 else 1), slash.Travel * (if echo then 1.35 else 1)
     TweenService:Create(plate, TweenInfo.new(0.24 / scale, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        { Size = size * Vector3.new(slash.Grow, 1, slash.Grow), CFrame = frame + root.CFrame.LookVector * slash.Travel }):Play()
+        { Size = size * Vector3.new(grow, 1, grow), CFrame = frame + root.CFrame.LookVector * travel }):Play()
 end
 
-local function sword(player, p, root, step)
+local function sword(player, p, root, step, strike)
     local source, flying = weaponSource(player, "Sword")
     if not source then
         return
     end
     local elementName, element = elementOf(player, source, flying)
     p = strikePalette(p, element)
+    strike.palette = p
     local slash = SLASHES[step]
     local entry = hold(player, "Sword", source, flying, if flying then swordGlow(player) else element and element.Color, {
         from = source:GetAttribute("Hilt") or Vector3.new(0, 0, 1.2), to = source:GetAttribute("Tip") or Vector3.new(0, 0, -4.3),
         life = 0.22, faceCamera = false, transparency = 0.2,
     }, p)
     local clip, scale = slash.Clip, CombatFx.TimeScale
+    if entry then -- the finisher's light hangs in the air longer
+        entry.trail.Lifetime, entry.edge.Lifetime = if slash.Finisher then 0.32 else 0.22, if slash.Finisher then 0.36 else 0.26
+    end
     afterWindUp(player, entry, clip.SwingStart / scale, (clip.SwingEnd - clip.SwingStart) / scale, root, function()
         Sfx.play("SwordSwing", root, slash.Pitch)
         slashCrescent(slash, p, root)
-        if slash.Finisher and player == Players.LocalPlayer then
-            GuardianFx.shake(root.Position, 0.7, 0.2)
+        if slash.Finisher then
+            task.delay(0.06 / scale, function()
+                if root.Parent then
+                    slashCrescent(slash, p, root, true)
+                end
+            end)
+            if player == Players.LocalPlayer then
+                GuardianFx.shake(root.Position, 0.7, 0.2)
+            end
         end
         if elementName then
             elementBurst(elementName, root.CFrame * CFrame.new(slash.Centre + slash.Bulge.Unit * slash.Radius))
@@ -469,13 +548,14 @@ local function sword(player, p, root, step)
     end)
 end
 
-local function spear(player, p, root, step)
+local function spear(player, p, root, step, strike)
     local source = weaponSource(player, "Spear")
     if not source then
         return
     end
     local elementName, element = elementOf(player, source, false)
     p = strikePalette(p, element)
+    strike.palette = p
     local glow = if element then element.Color else swordGlow(player)
     local entry = hold(player, "Spear", source, false, element and element.Color, {
         from = source:GetAttribute("Hilt") + Vector3.new(0, 0, 3.5), to = source:GetAttribute("Tip"),
@@ -485,7 +565,7 @@ local function spear(player, p, root, step)
     if step == 2 then
         local clip = SPEAR_SLASH.Clip
         afterWindUp(player, entry, clip.SwingStart / scale, (clip.SwingEnd - clip.SwingStart) / scale, root, function()
-            Sfx.play("SwordSwing", root, 0.72)
+            Sfx.play("SpearSwing", root)
             slashCrescent(SPEAR_SLASH, p, root)
             if elementName then
                 elementBurst(elementName, root.CFrame * CFrame.new(SPEAR_SLASH.Centre + SPEAR_SLASH.Bulge.Unit * SPEAR_SLASH.Radius))
@@ -516,36 +596,207 @@ local function spear(player, p, root, step)
 end
 
 -- ---------- where a strike lands ----------
-local function landHit(player, position)
-    Sfx.play("QiImpact", position)
-    local p = QinggongFx.palette(player)
-    local holder = host(CFrame.new(position), Vector3.new(0.4, 0.4, 0.4), 1)
+-- The kind of blow a strike is: "Cut" (a sword, a spear's slash), "Pierce" (a spear's thrust) or "Blunt" (bare hands).
+local function blowOf(strike)
+    if strike and strike.weapon == "Sword" then
+        return "Cut", SLASHES[strike.step]
+    elseif strike and strike.weapon == "Spear" then
+        if strike.step == 2 then
+            return "Cut", SPEAR_SLASH
+        end
+        return "Pierce", nil
+    end
+    return "Blunt", nil
+end
+
+-- The way a blow travels as it lands: a cut along its blade's path (the tip goes round its arc's Face, so at
+-- the arc's middle it moves along Face x Bulge), a thrust and a punch straight ahead.
+local function blowDirection(root, slash)
+    if not root then
+        return Vector3.yAxis
+    end
+    if slash then
+        return root.CFrame:VectorToWorldSpace(slash.Face.Unit:Cross(slash.Bulge.Unit)).Unit
+    end
+    return root.CFrame.LookVector
+end
+
+-- The struck target flashes: one Highlight, moved to whichever was struck last.
+local hitFlash, flashCount = nil, 0
+local function flashTarget(target, color, critical)
+    if not target or not target:IsDescendantOf(Workspace) then
+        return
+    end
+    if not hitFlash then
+        hitFlash = Instance.new("Highlight")
+        hitFlash.Name = "HitFlash"
+        hitFlash.OutlineTransparency = 1
+        hitFlash.DepthMode = Enum.HighlightDepthMode.Occluded
+        hitFlash.Parent = fxFolder
+    end
+    flashCount += 1
+    local mine = flashCount
+    hitFlash.Adornee = target
+    hitFlash.FillColor = color
+    hitFlash.FillTransparency = if critical then 0.3 else 0.55
+    hitFlash.Enabled = true
+    local fade = TweenService:Create(hitFlash, TweenInfo.new((if critical then 0.24 else 0.15) / CombatFx.TimeScale, Enum.EasingStyle.Quad,
+        Enum.EasingDirection.Out), { FillTransparency = 1 })
+    fade.Completed:Once(function()
+        if flashCount == mine then -- (a newer flash cancels this one, and keeps the Highlight)
+            hitFlash.Enabled = false
+            hitFlash.Adornee = nil
+        end
+    end)
+    fade:Play()
+end
+
+-- The striker's pose holds for `seconds` as their blow lands: the clip stops where it is, then goes on.
+local function hitStop(player, strike, seconds)
+    if not strike or strikes[player] ~= strike then
+        return
+    end
+    seconds /= CombatFx.TimeScale
+    local now = os.clock()
+    strike.holdAt = (now - strike.started) * CombatFx.TimeScale
+    strike.holdUntil = now + seconds
+    strike.started += seconds
+    strike.untilTime += seconds
+    local entry = held[player]
+    if entry and entry.swingEnds then
+        entry.swingEnds += seconds -- the trail draws on through the rest of the swing
+    end
+end
+
+-- strike: the striker's strike as the server's answer came (nil if they had none: the blunt burst).
+local function landHit(player, position, info, strike)
+    local blow, slash = blowOf(strike)
+    local critical = info.critical == true
+    Sfx.play(HIT_SOUND[blow], position, if blow == "Cut" and strike.weapon == "Spear" then 0.8 else nil)
+    if critical then
+        Sfx.play("CritHit", position)
+    end
+    local mine = player == Players.LocalPlayer
+    local camera = Workspace.CurrentCamera
+    if not mine and (not camera or (camera.CFrame.Position - position).Magnitude > MAX_DISTANCE) then
+        return
+    end
+    local root = rootOf(player)
+    local p = (strike and strike.palette) or QinggongFx.palette(player)
+    local finisher = slash ~= nil and slash.Finisher == true
+    local grade = if critical then "Critical" elseif finisher then "Finisher" else "Normal"
+    -- thinner for another player's blow on a phone, and with reduced effects
+    local thin = (Quality.Low and not mine) or Players.LocalPlayer:GetAttribute("SettingReducedEffects") == true
+    local power = if critical then 1.5 else 1
+    local hot = if critical then CRIT_GOLD else p.Core
+    local direction = blowDirection(root, slash)
+    if root then
+        local from = root.Position + Vector3.new(0, 0.5, 0)
+        local to = position - from
+        if to.Magnitude > HIT_REACH[blow] then
+            position = from + to.Unit * HIT_REACH[blow]
+        end
+    end
+    local holder = host(CFrame.lookAt(position, position + direction), Vector3.new(0.4, 0.4, 0.4), 1)
+
+    -- where it landed: a flash of light
     emitter(holder, {
-        Texture = TEXTURES.Glow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.18), ZOffset = 1,
-        Size = numberSequence({ { 0, 2.5 }, { 1, 5 } }), Transparency = numberSequence({ { 0, 0.2 }, { 1, 1 } }),
-        Color = colorSequence({ { 0, p.Accent }, { 1, p.Main } }), Brightness = 2.5,
+        Texture = TEXTURES.Glow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.14), ZOffset = HIT_DEPTH + 1,
+        Size = numberSequence({ { 0, 2.2 * power }, { 1, 4.4 * power } }), Transparency = numberSequence({ { 0, 0.15 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, hot }, { 1, p.Main } }), Brightness = if critical then 1.8 else 2.5,
     }):Emit(1)
+
+    -- how hard and which way: sparks thrown along the blow, falling as they go
+    -- (a thrust goes into its target, away from whoever is watching it: its sparks spray back off the point)
+    local sparks = if blow == "Cut" then { Count = 9, Spread = 26, Speed = NumberRange.new(26, 44), Fall = -34, Way = Enum.NormalId.Front }
+        elseif blow == "Pierce" then { Count = 9, Spread = 52, Speed = NumberRange.new(24, 40), Fall = -20, Way = Enum.NormalId.Back }
+        else { Count = 10, Spread = 180, Speed = NumberRange.new(14, 24), Fall = -26, Way = Enum.NormalId.Front }
     emitter(holder, {
-        Texture = TEXTURES.Shockwave, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.3), ZOffset = 0.8,
-        Size = numberSequence({ { 0, 1 }, { 1, 7 } }), Transparency = numberSequence({ { 0, 0.2 }, { 1, 1 } }),
-        Color = colorSequence({ { 0, p.Core }, { 1, p.Main } }), Brightness = 2,
-    }):Emit(1)
-    emitter(holder, {
-        Texture = TEXTURES.Streak, Orientation = Enum.ParticleOrientation.VelocityParallel, SpreadAngle = Vector2.new(180, 180),
-        Speed = NumberRange.new(20, 34), Drag = 4, Lifetime = NumberRange.new(0.2, 0.32),
-        Size = numberSequence({ { 0, 1.1 }, { 1, 0.2 } }), Transparency = numberSequence({ { 0, 0 }, { 1, 1 } }),
-        Color = colorSequence({ { 0, p.Core }, { 1, p.Main } }), Brightness = 2.4,
-    }):Emit(10)
+        Texture = TEXTURES.Spike, Orientation = Enum.ParticleOrientation.VelocityParallel, EmissionDirection = sparks.Way,
+        SpreadAngle = Vector2.new(sparks.Spread, sparks.Spread), Speed = sparks.Speed, Drag = 5, Acceleration = Vector3.new(0, sparks.Fall, 0),
+        Lifetime = NumberRange.new(0.18, 0.34), Size = numberSequence({ { 0, 0.9 * power }, { 1, 0.15 } }),
+        Transparency = numberSequence({ { 0, 0 }, { 0.7, 0.2 }, { 1, 1 } }), Color = colorSequence({ { 0, hot }, { 1, p.Main } }), Brightness = 2.6,
+        ZOffset = HIT_DEPTH,
+    }):Emit(math.ceil(sparks.Count * power * (if thin then 0.6 else 1)))
+
+    -- what kind of blow
+    if blow == "Cut" then
+        -- the cut itself: a line of light through the point, along the blade's path
+        emitter(holder, {
+            Texture = TEXTURES.Streak, Orientation = Enum.ParticleOrientation.VelocityParallel, EmissionDirection = Enum.NormalId.Front,
+            SpreadAngle = Vector2.new(0, 0), Speed = NumberRange.new(3), Lifetime = NumberRange.new(0.2), ZOffset = HIT_DEPTH + 1.2,
+            Size = numberSequence({ { 0, 5 * power }, { 1, 8.5 * power } }), Transparency = numberSequence({ { 0, 0 }, { 0.5, 0.1 }, { 1, 1 } }),
+            Color = colorSequence({ { 0, Color3.new(1, 1, 1) }, { 1, hot } }), Brightness = 3,
+        }):Emit(1)
+    else
+        -- a ring punched out round the point: small and quick for a pierce, broad for a blunt blow
+        local reach = if blow == "Pierce" then 5.5 else 7.5
+        emitter(holder, {
+            Texture = TEXTURES.Shockwave, Speed = NumberRange.new(0), Lifetime = NumberRange.new(if blow == "Pierce" then 0.22 else 0.3), ZOffset = HIT_DEPTH + 0.8,
+            Size = numberSequence({ { 0, 0.9 }, { 1, reach * power } }), Transparency = numberSequence({ { 0, 0.15 }, { 1, 1 } }),
+            Color = colorSequence({ { 0, hot }, { 1, p.Main } }), Brightness = 2,
+        }):Emit(1)
+        if blow == "Pierce" then
+            -- the lance driving in: a line of light that starts short of the point and runs on through it
+            local behind = Instance.new("Attachment")
+            behind.Position = Vector3.new(0, 0, 3.5) -- (the holder faces the way the blow travels: +Z is back toward the striker)
+            behind.Parent = holder
+            emitter(behind, {
+                Texture = TEXTURES.Streak, Orientation = Enum.ParticleOrientation.VelocityParallel, EmissionDirection = Enum.NormalId.Front,
+                SpreadAngle = Vector2.new(0, 0), Speed = NumberRange.new(42), Lifetime = NumberRange.new(0.13), ZOffset = HIT_DEPTH + 1,
+                Size = numberSequence({ { 0, 3.5 * power }, { 1, 6.5 * power } }), Transparency = numberSequence({ { 0, 0 }, { 1, 1 } }),
+                Color = colorSequence({ { 0, Color3.new(1, 1, 1) }, { 1, hot } }), Brightness = 3,
+            }):Emit(1)
+        elseif not thin then
+            -- dust knocked off it
+            emitter(holder, {
+                Texture = TEXTURES.Smoke, LightEmission = 0.2, Speed = NumberRange.new(2, 4), SpreadAngle = Vector2.new(180, 180), Drag = 3,
+                Lifetime = NumberRange.new(0.4, 0.55), Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-40, 40),
+                Size = numberSequence({ { 0, 1.2 }, { 1, 3.4 } }), Transparency = numberSequence({ { 0, 0.6 }, { 1, 1 } }),
+                Color = ColorSequence.new(p.Main:Lerp(Color3.fromRGB(150, 150, 160), 0.6)),
+            }):Emit(3)
+        end
+    end
+
+    -- a critical strike: a cross of light through the point, and a second ring of gold
+    if critical then
+        for _, turn in { 45, -45 } do
+            emitter(holder, {
+                Texture = TEXTURES.Streak, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.24), ZOffset = HIT_DEPTH + 1.4,
+                Rotation = NumberRange.new(turn), Size = numberSequence({ { 0, 5 }, { 0.3, 8.5 }, { 1, 9.5 } }), Squash = NumberSequence.new(-1),
+                Transparency = numberSequence({ { 0, 0 }, { 0.4, 0.15 }, { 1, 1 } }),
+                Color = colorSequence({ { 0, CRIT_GOLD:Lerp(Color3.new(1, 1, 1), 0.5) }, { 1, CRIT_GOLD } }), Brightness = 2.4, LightEmission = 0.7,
+            }):Emit(1)
+        end
+        emitter(holder, {
+            Texture = TEXTURES.Shockwave, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.34), ZOffset = HIT_DEPTH + 0.6,
+            Size = numberSequence({ { 0, 1.5 }, { 1, 11 } }), Transparency = numberSequence({ { 0, 0.1 }, { 1, 1 } }),
+            Color = ColorSequence.new(CRIT_GOLD), Brightness = 2.2, LightEmission = 0.6, -- (fully additive, gold washed to white in Play)
+        }):Emit(1)
+    end
+
+    if not (Quality.Low and not mine) then
+        flashTarget(info.target, hot:Lerp(Color3.new(1, 1, 1), 0.5), critical)
+    end
+    hitStop(player, strike, HIT_STOP[grade])
+    if mine then
+        GuardianFx.shake(position, HIT_SHAKE[grade][1], HIT_SHAKE[grade][2])
+        if info.damage then
+            DamageNumbers.show(position + Vector3.new(0, 1.5, 0), info.damage, critical, p.Main)
+        end
+    end
 end
 
 -- The server answers at once, but the blow lands part way through the strike's clip: the impact waits for it.
-function CombatFx.hit(player, position)
+-- info: what the server said it did: { damage, critical, target }.
+function CombatFx.hit(player, position, info)
+    info = info or {}
     local strike = strikes[player]
     local wait = strike and strike.hitAt and (strike.hitAt - (os.clock() - strike.started) * CombatFx.TimeScale) / CombatFx.TimeScale or 0
     if wait > 0.01 then
-        task.delay(wait, landHit, player, position)
+        task.delay(wait, landHit, player, position, info, strike)
     else
-        landHit(player, position)
+        landHit(player, position, info, strike)
     end
 end
 
@@ -584,10 +835,11 @@ function CombatFx.play(player, weapon, step)
         Sfx.play(SWING[weapon], root)
     end
     local p = QinggongFx.palette(player)
+    strike.palette = p
     if weapon == "Sword" then
-        sword(player, p, root, strike.step)
+        sword(player, p, root, strike.step, strike)
     elseif weapon == "Spear" then
-        spear(player, p, root, strike.step)
+        spear(player, p, root, strike.step, strike)
     else
         -- the Qi print flies as the fist lands
         task.delay(clip.Hit / CombatFx.TimeScale, function()
@@ -629,10 +881,13 @@ function CombatFx.pose(player)
     return entry and entry.kind .. "Ready"
 end
 
--- Which strike of the combo a player is in, and how far through it in real-time seconds.
+-- Which strike of the combo a player is in, and how far through it in real-time seconds (held still through a hit-stop).
 function CombatFx.slash(player)
     local strike = strikes[player]
     if strike and strike.step then
+        if strike.holdUntil and os.clock() < strike.holdUntil then
+            return strike.step, strike.holdAt
+        end
         return strike.step, (os.clock() - strike.started) * CombatFx.TimeScale
     end
     return 1, 0

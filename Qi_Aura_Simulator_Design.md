@@ -863,7 +863,8 @@ The server decides every hit; the client only sends "strike" and shows it.
   - Damage grows 12% per rank (`GameConfig.Combat.RankPowerStep`).
 - **Targets:** any Model tagged `CombatTarget` with a PrimaryPart and a `HitRadius` attribute. The nearest one in range and in the arc in front is hit; an `Invulnerable` attribute skips it.
 - **Validation:** cooldown (with 15% slack for latency), alive, not cultivating.
-- **Output:** `ServerStorage.CombatHit` (a BindableEvent: player, target, damage, position) for the guardian code, and `CombatEvent` to every client for the effects.
+- **Critical strikes** (the owner, November 11, 2026): a strike that lands has a 10% chance of striking 1.5 times as hard (`GameConfig.Combat.Crit`). The server rolls it; a client only shows it.
+- **Output:** `ServerStorage.CombatHit` (a BindableEvent: player, target, damage, position) for the guardian code, and `CombatEvent` to every client for the effects: the striker, the kind of strike, and for one that landed where (on the target's near side, at the height of the striker's chest), its damage, whether it was critical and the target.
 - **Effects** (`CombatFx`): the Qi Palm throws a great palm print of Qi (`QiPalm` texture) in the realm's colour.
 - **Weapons are held in the hand** (the owner, November 4, 2026): welded to the right hand's grip, out for 5 seconds after the last strike, and put away on death or on starting to cultivate. A held weapon has a stance (`SwordReady`; for a spear a low stance, then its guard).
 - **Sword, a combo of three:** a diagonal cut down across the body, a backhand rising the other way, an overhead finisher that shakes the striker's camera. Strikes within 1.1 seconds continue it (`WeaponKinds.Sword.ComboWindow`).
@@ -872,6 +873,16 @@ The server decides every hit; the client only sends "strike" and shows it.
 - **Running stays Roblox's default run** (the owner, November 4, 2026). A keyed sprint with torn 2D edges on the limbs was tried after hovark_'s video and removed: "just revert it to the original running position, we will keep only the punch animation".
 - **Both are keyed in Blender** (`tools/blender/animation`: `r15_rig.py`, `stances.py`, `weapon_moves.py`; the owner: "try to create in blender"): an exact copy of the game's R15 skeleton with two-bone IK, where the weapon itself is animated through space and the hands, arms, hips and feet follow. `M.export_all()` bakes 60 frames a second to `client/Character/WeaponClips.lua`, played by `PoseController`. Each clip carries the arc its tip truly drew, fitted when baked, so the crescent of light can't disagree with the weapon, and the sound and impact wait for the moment of the blow. Moving or airborne, the hips and legs stay out of it and the chest takes the hips' turn.
 - **Carrying an egg takes both arms** (the owner, November 4, 2026: eggs used to ride on the head): it's welded before the chest with the arms round it (`CARRY_EGG`), the weapon is put away, and the carrier can't strike or cultivate.
+- **A blow that lands is felt** (the owner, November 11, 2026: "Combat / Impact VFX ... Weapon VFX"; `CombatFx.hit`, `DamageNumbers`). Each layer says one thing, and the three kinds of blow look different:
+  - **A cut** (a sword, a spear's slash): a line of light through the point along the blade's own path, and sharp sparks thrown the way it travelled.
+  - **A pierce** (a spear's thrust): a ring punched out round the point, a lance of light driving in through it, sparks spraying back off it.
+  - **A blunt blow** (bare hands): a broad ring, sparks all round and a puff of dust, under the Qi Palm's print.
+  - **Every blow:** the target flashes (one Highlight, moved to whichever was struck); the striker's pose holds for an instant (hit-stop: 0.045 s, 0.07 s for the sword's finisher, 0.09 s for a critical strike); the striker's own camera kicks; and the striker's own strikes show their damage as a number that pops, rises and fades.
+  - **A critical strike:** bigger, gold, crossed with a flare of light and a second ring, rung with an anvil's ding, its number gold with a "!".
+  - **Sounds:** a blade's cut, a spear's thrust and a fist each have their own impact, and the spear its own swings (it used the sword's, pitched down).
+  - Other players' blows on a phone, and all with Reduced Effects, throw fewer sparks; another player's blow on a phone doesn't flash the target. Numbers are only ever your own.
+- **The weapon's light** (`CombatFx`): its trail is a soft sheet with a thin bright edge at the tip that sharpens to a point as it fades; the crescent of a slash draws on along the blade's path behind the blade, then swells and fades; the sword's finisher leaves its light longer and a second, paler crescent after the first.
+- **Each clip's arc knows which way the blade went round it** (`weapon_moves.fit_crescent`): from the tip's own motion at the arc's middle. It was taken from the arc's two ends, which is backwards for a sweep of more than half a turn (the spear's slash) and was for the sword's backhand.
 - **Strikes from sword flight swing but don't land** (November 4, 2026): guardians can't reach a flyer, so a flyer can't reach them. A note says so once a session.
 - Input: left mouse, R2 or the touch "Strike" button.
 

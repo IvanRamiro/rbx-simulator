@@ -8,7 +8,10 @@
 -- thrust and a sweeping slash with its own reach (WeaponKinds.Spear.Slash); the server keeps the count,
 -- so a client can't choose the wider reach. A landing strike
 -- fires Combat.Hit; every strike is relayed to all clients (CombatEvent: striker, kind ("Palm",
--- "Sword" or "Spear"), hit position or nil, a spear's step in its combo or nil).
+-- "Sword" or "Spear"), hit position or nil, a spear's step in its combo or nil, and for a strike that
+-- landed: its damage (a whole number), true if it was critical, and the target it struck).
+--
+-- A landing strike may be critical (GameConfig.Combat.Crit): rolled here, never by a client.
 --
 -- Every stored weapon (ServerStorage.Weapons: the flying sword and the realm weapons, OutfitBuilder)
 -- is copied to ReplicatedStorage.Weapons so clients can show it striking.
@@ -29,6 +32,7 @@ local lastStrike = {}
 -- allows gets the same strikes a second as anyone else.
 local nextStrike = {}
 local spearSlashNext = {} -- [player] = true: their last strike was a thrust, inside the combo window
+local roll = Random.new() -- critical strikes
 
 do
     local stored = ServerStorage:FindFirstChild("Weapons")
@@ -63,7 +67,10 @@ local function findTarget(rootPart, spec)
             local vertical = math.abs(offset.Y) <= radius + 4
             if distance <= spec.Range and inFront and vertical and distance < bestDistance then
                 best, bestDistance = target, distance
-                bestPoint = body.Position - (if flat.Magnitude > 0 then flat.Unit else facing) * math.min(radius, flat.Magnitude) * 0.9
+                -- on its near side, at the height of the striker's chest (where the weapon is), never at the height of its
+                -- own centre: a big guardian's is at its base, and the blow showed at the striker's feet
+                local near = body.Position - (if flat.Magnitude > 0 then flat.Unit else facing) * math.min(radius, flat.Magnitude) * 0.9
+                bestPoint = Vector3.new(near.X, rootPart.Position.Y + 0.5, near.Z)
             end
         end
     end
@@ -96,10 +103,15 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
     if player:GetAttribute("IsFlying") ~= true and not MovementGuard.isSuspect(player) then
         target, point = findTarget(rootPart, if slashing then strike.Slash else strike)
     end
+    local damage, critical = nil, nil
     if target then
-        Combat.Hit:Fire(player, target, strike.Damage * Combat.powerOf(player), point)
+        local crit = GameConfig.Combat.Crit
+        critical = roll:NextNumber() < crit.Chance
+        damage = strike.Damage * Combat.powerOf(player) * (if critical then crit.Multiplier else 1)
+        Combat.Hit:Fire(player, target, damage, point)
     end
-    RemoteEvents.CombatEvent:FireAllClients(player, strike.Kind, point, if strike.Slash then (if slashing then 2 else 1) else nil)
+    RemoteEvents.CombatEvent:FireAllClients(player, strike.Kind, point, if strike.Slash then (if slashing then 2 else 1) else nil,
+        if damage then math.round(damage) else nil, critical or nil, target)
 end)
 
 Players.PlayerRemoving:Connect(function(player)

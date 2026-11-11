@@ -91,8 +91,19 @@ local catalog = {
     -- ---------- strikes and movement ----------
     PalmStrike = { Id = { "9125496394", "9119699577" }, Volume = 1.2, Pitch = { 1, 1.15 }, Reach = 90 },
     SwordSwing = { Id = { "9126014082", "9126013811", "9119700022" }, Volume = 1.3, Pitch = { 0.95, 1.1 }, Reach = 90 },
-    SpearThrust = { Id = { "9126014082", "9126013811", "9119700022" }, Volume = 1.4, Pitch = { 0.75, 0.85 }, Reach = 90 },
+    -- the spear's own voice (November 11, 2026; it used the sword's swishes pitched down): a heavy whoosh for the thrust (its files
+    -- open with a tenth of a second of quiet, skipped), a thick bamboo swish for the slash
+    SpearThrust = { Id = { "9120729007", "9120729339" }, Volume = 0.54, Pitch = { 0.85, 0.95 }, Start = 0.07, Reach = 90 },
+    SpearSwing = { Id = { "9125495638", "9125495498" }, Volume = 3.1, Pitch = { 0.8, 0.9 }, Reach = 90 },
     QiImpact = { Id = { "9113572426", "9113484814" }, Volume = 0.55, Pitch = { 0.9, 1.05 }, Near = 15, Reach = 150 },
+    -- where a strike lands, by the kind of blow (CombatFx.hit; measured muted in Play, November 11, 2026: peaks 407 and 460, about 300 at
+    -- pitch 0.8, 90, and 118, levelled to the swings' and QiImpact's 145 to 165): a blade's cut (a sword slicing through with a ring of
+    -- metal), a spear's thrust (a blade struck on a metal rod), a fist (a boxer's thud under the burst of Qi), and the ring of a
+    -- critical strike over any of them (an anvil's bright ding)
+    BladeHit = { Id = { "9119746598", "9119746751" }, Volume = 0.37, Pitch = { 0.95, 1.08 }, Length = 0.6, Near = 15, Reach = 150 },
+    SpearHit = { Id = { "9113449585", "9113449244", "9113449377" }, Volume = 0.55, Pitch = { 0.75, 0.85 }, Near = 15, Reach = 150 },
+    PalmHit = { Id = { "9113565281", "9113576289" }, Volume = 1.0, Pitch = { 0.95, 1.08 }, Near = 15, Reach = 150, With = "QiImpact" },
+    CritHit = { Id = "9113133466", Volume = 1.3, Pitch = { 1.0, 1.1 }, Near = 15, Reach = 150 },
     Knockback = { Id = "9113502359", Volume = 1 },
     Dash = { Id = "9119467121", Volume = 1.8, Pitch = { 1, 1.1 }, Start = 0.3, Reach = 90 },
     Leap = { Id = "9125496163", Volume = 1.8, Pitch = { 1, 1.15 }, Reach = 90 },

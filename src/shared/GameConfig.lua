@@ -51,6 +51,9 @@ local GameConfig = {
         TargetTag = "CombatTarget",
         RankPowerStep = 0.12,
         Palm = { Damage = 10, Range = 9, Cooldown = 0.45, Arc = 75 },
+        -- A critical strike (the owner, November 11, 2026): any strike that lands has this Chance of striking Multiplier times as
+        -- hard. The server rolls it (CombatService) and tells the clients, who only show it (CombatFx).
+        Crit = { Chance = 0.1, Multiplier = 1.5 },
     },
 
     -- Weapons (src/server/Shop; the Blacksmith on Yggdrasil): a sword and a spear for every realm,

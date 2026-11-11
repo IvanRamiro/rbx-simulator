@@ -1,7 +1,8 @@
 -- Striking with the equipped weapon (the "WeaponId" attribute; GameConfig.WeaponKinds) or the Qi
 -- Palm (GameConfig.Combat.Palm): left click, gamepad R2 or the touch Strike button. The strike's
 -- effects play here at once (CombatFx) and the server is asked to resolve it (CombatEvent); the
--- server relays every strike back for everyone's effects and where it landed.
+-- server relays every strike back for everyone's effects, where it landed, and what it did there
+-- (its damage, whether it was critical, the target struck).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -57,7 +58,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-RemoteEvents.CombatEvent.OnClientEvent:Connect(function(source, kind, position, step)
+RemoteEvents.CombatEvent.OnClientEvent:Connect(function(source, kind, position, step, damage, critical, target)
     if typeof(source) ~= "Instance" or not source:IsA("Player") then
         return
     end
@@ -67,7 +68,11 @@ RemoteEvents.CombatEvent.OnClientEvent:Connect(function(source, kind, position, 
         CombatFx.syncCombo(player, kind, step) -- a press the server dropped can't leave the count wrong
     end
     if typeof(position) == "Vector3" then
-        CombatFx.hit(source, position)
+        CombatFx.hit(source, position, {
+            damage = if typeof(damage) == "number" then damage else nil,
+            critical = critical == true,
+            target = if typeof(target) == "Instance" and target:IsA("Model") then target else nil,
+        })
     end
 end)
 
