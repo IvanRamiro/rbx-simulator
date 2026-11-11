@@ -213,7 +213,7 @@ local MESH_LOOKS = {
     AstralWhale = { Glow = Color3.fromRGB(255, 176, 48), Length = 3.6 }, -- rostrum to flukes (its longest): about 7 studs, a whale calf swimming beside its owner; its old star sparkles removed
     OriginSerpent = { Glow = Color3.fromRGB(30, 205, 255), Length = 3.0 }, -- tail root to antler tips (its tallest): about 7.5 studs, a floating helix taller than its owner; its old star sparkles removed
     SunscaleDragon = { Glow = Color3.fromRGB(255, 194, 74), Length = 4.6 },
-    BonefireDragon = { Glow = Color3.fromRGB(100, 170, 255), Length = 3.4 },
+    BonefireDragon = { Glow = Color3.fromRGB(61, 123, 255), Length = 4.6 }, -- nose to tail (its box's longest side); in Play about 10.6 studs, its raised wing bones half that high
     PrismaticPhoenix = { Effect = "Glitter", Glow = Color3.fromRGB(255, 175, 130), Length = 4.2 },
     RuneSphinx = { Glow = Color3.fromRGB(255, 190, 90), Length = 4.0 },
     WorldrootColossus = { Effect = "Glitter", Glow = Color3.fromRGB(90, 235, 120), Length = 3.6 },

@@ -49,7 +49,7 @@ AuraStyles.Elements = {
     ObsidianGuardian = { Core = Color3.fromRGB(230, 200, 255), Main = Color3.fromRGB(150, 80, 240), Deep = Color3.fromRGB(50, 30, 90), Particles = "Crystal", RingShape = "Polygon", RingSides = 6 },
     GoldenManeLion = { Core = Color3.fromRGB(255, 245, 200), Main = Color3.fromRGB(255, 190, 70), Deep = Color3.fromRGB(210, 110, 30), Particles = "Ember", RingShape = "Polygon", RingSides = 12 },
     DreadfangCerberus = { Core = Color3.fromRGB(200, 250, 255), Main = Color3.fromRGB(40, 210, 255), Deep = Color3.fromRGB(40, 25, 90), Particles = "Ember", RingShape = "Circle" },
-    BonefireDragon = { Core = Color3.fromRGB(225, 240, 255), Main = Color3.fromRGB(110, 175, 255), Deep = Color3.fromRGB(35, 60, 170), Particles = "Ember", RingShape = "Circle" },
+    BonefireDragon = { Core = Color3.fromRGB(200, 228, 255), Main = Color3.fromRGB(61, 123, 255), Deep = Color3.fromRGB(40, 30, 150), Particles = "Ember", RingShape = "Polygon", RingSides = 7 }, -- its soul fire: white-hot to cobalt to deep indigo (recreated 2026-11-11)
     PrismaticPhoenix = { Core = Color3.fromRGB(255, 250, 240), Main = Color3.fromRGB(255, 150, 220), Deep = Color3.fromRGB(120, 120, 255), Particles = "Ember", RingShape = "Circle" },
     StarfallFox = { Core = Color3.fromRGB(255, 250, 220), Main = Color3.fromRGB(150, 160, 255), Deep = Color3.fromRGB(60, 60, 160), Particles = "Mote", RingShape = "Circle" },
     CosmicJellyfish = { Core = Color3.fromRGB(255, 230, 250), Main = Color3.fromRGB(200, 140, 255), Deep = Color3.fromRGB(90, 60, 190), Particles = "Mote", RingShape = "Circle" },

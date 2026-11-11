@@ -145,8 +145,8 @@ return {
         Special = { Name = "Sovereign Roar", Text = "Opens its jaw as golden shockwave rings roll out, solar rays flare behind its crest and a ring spreads beneath its paws." },
     },
     BonefireDragon = {
-        Lore = "The bones of a dragon that refused to finish dying, with a blue soul flame still burning in its ribs.",
-        Special = { Name = "Soul Lantern", Text = "The soul rises out of the ribs while the ghost of the living dragon appears around the bones." },
+        Lore = "The bones of a dragon that refused to finish dying, with a blue soul flame still burning in its ribs. The fire holds every bone in place and keeps it off the ground, and it glares out of both empty sockets.",
+        Special = { Name = "Ossuary Pyre", Text = "Rears up as the fire in its ribs blazes, then slams down: a ring of burning bone spires bursts from the ground around it and a pillar of soul fire roars out of its chest." },
     },
     DreadfangCerberus = {
         Lore = "A hulking three-headed hellhound, its dark hide split by glowing cyan cracks. Each head has its own opinion about you.",
