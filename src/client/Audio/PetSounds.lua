@@ -30,6 +30,7 @@ local DATA = {
     DawnPhoenix = { Voice = { "9114661938", "9114661950" }, VoiceVolume = 1.78, Special = "9114431819", SpecialVolume = 0.53, SpecialLength = 4 },
     DreadfangCerberus = { Voice = { "9113973520", "9113973521" }, VoiceVolume = 0.52, Special = "9114444008", SpecialVolume = 2.29 },
     DreamMoth = { Voice = { "9116383039", "9116383270" }, VoiceVolume = 6.86, Pitch = 0.85, Special = "9116380049", SpecialVolume = 10 },
+    EchoBat = { Voice = { "9117008748", "9117007477", "9117008751" }, VoiceVolume = 0.9, Pitch = 1.15, Special = "9120114259", SpecialVolume = 1.4, SpecialLength = 3 }, -- (the library has no bat: a mouse's squeaky chatter pitched up; its special glass rings passing by, its rings of sound going out and coming home. Measured in Play, 2026-11-12: the takes' means 25.5, 29.6 and 25.1 at pitch 1.15; the rings 33.3, peak 249, over their first 3 s)
     EclipseCat = { Voice = { "9113984339", "9113984510", "9113984650" }, VoiceVolume = 1.89, Special = "9125484367", SpecialVolume = 0.83 },
     EmberWyrm = { Voice = { "9117987278", "9117987286", "9117983605" }, VoiceVolume = 0.66, Pitch = 1.3, VoiceLength = 1.2, Special = "9117984812", SpecialVolume = 0.55, SpecialLength = 3 },
     FrostfangSerpent = { Voice = { "9119299847", "9119300024", "9119300025" }, VoiceVolume = 0.38, Special = "9114856117", SpecialVolume = 0.98 },

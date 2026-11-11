@@ -122,7 +122,10 @@ return {
         Lore = "Half wyrm, half mountain, and in no hurry. Whole gardens have grown on its back between one step and the next.",
         Special = { Name = "Between One Step and the Next", Text = "Raises one forefoot, slowly, the whole mountain leaning off it, then sets it down: the ground throws up dust, the plum on its back shakes loose a flurry of petals, and the garden has grown." },
     },
-    EchoBat = { Lore = "It speaks only in sounds it has already heard. Ask it a question and you may hear a voice from a hundred years ago." },
+    EchoBat = {
+        Lore = "It speaks only in sounds it has already heard. Ask it a question and you may hear a voice from a hundred years ago.",
+        Special = { Name = "A Voice from a Hundred Years Ago", Text = "It draws its wings up and lays its ears back, listening. Then it rears, head high, and rings of sound pour out of its ears and ripple out round it. Out of the distance, older rings come back to it, gold, and its ears glow gold as they land." },
+    },
     QiClockworkFinch = { Lore = "Built by a forgotten artisan and wound with pure Qi. It still sings the hour of a city that no longer exists." },
     MoonfangTiger = { Lore = "A tiger whose fangs catch moonlight and keep it. It hunts only when the moon can watch." },
     ThousandEyedGuardian = { Lore = "Nobody has seen all of its eyes open at once, and nobody has lied to it and prospered." },
