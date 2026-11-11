@@ -249,6 +249,12 @@ def build_skin():
     loft(core, BODY_PATH, lambda f: prof(BODY_W, f), lambda f: prof(BODY_H, f), lambda f: prof(BODY_DROP, f))
     core.tube(NECK, lambda f: prof(NECK_R, f), sides=40)
     core.ball(SPINE[0] + V(0, 0.012, -0.004), (0.092, 0.08, 0.09))                         # the rump
+    # the tail's root: a tapering bridge from inside the rump down the tail's first third, smoothed with the body, so the back flows on into
+    # the tail (without it the rump's round back dropped into a V-shaped notch before the thinner tail began: the owner, 2026-11-11, "There's
+    # a cut look in the tail for sky dragon")
+    root = [SPINE[1], SPINE[0]] + [path_at(TAIL, f) for f in (0.1, 0.2, 0.3)]
+    loft(core, catmull(root, 8), lambda f: 0.112 + (prof(TAIL_PROFILE, 0.3) - 0.112) * f ** 0.8,
+         lambda f: 0.1 + (prof(TAIL_PROFILE, 0.3) * 0.92 - 0.1) * f ** 0.8, nt=32)
     core.ball(V(0, -0.27, 0.56), (0.1, 0.09, 0.11))                                        # the breast under the neck: a great keel of muscle
     core.ball(V(0, -0.33, 0.66), (0.086, 0.082, 0.084))                                    # the neck's base, a heavy column
     for side in (1, -1):
@@ -883,8 +889,33 @@ SCALES = {"EyeL": 3.0, "EyeR": 3.0, "LidUL": 1.4, "LidUR": 1.4, "LidLL": 1.4, "L
           "Membranes": 0.8, "WingBones": 1.0}
 
 
+def unfold(o, rounds=24):
+    """Relax the game skin where QuadriFlow folded it (a pinch in a concave crease, as the right elbow's: neighbouring faces turned
+    against each other): smooth the verts within two rings of every folded edge (faces turned over 107 degrees against each other; a lip's crease stays) until none is left. Before the bake, so the maps follow."""
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    for _ in range(rounds):
+        bm.normal_update()
+        bad = set()
+        for e in bm.edges:
+            if len(e.link_faces) == 2 and e.link_faces[0].normal.dot(e.link_faces[1].normal) < -0.3:
+                bad.update(e.verts)
+        if not bad:
+            break
+        ring = set(bad)
+        for _ in range(2):
+            ring |= {w for v in list(ring) for ed in v.link_edges for w in ed.verts}
+        bmesh.ops.smooth_vert(bm, verts=list(ring), factor=0.6, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    bm.normal_update()
+    left = sum(1 for e in bm.edges if len(e.link_faces) == 2 and e.link_faces[0].normal.dot(e.link_faces[1].normal) < -0.3)
+    bm.to_mesh(o.data)
+    bm.free()
+    print("UNFOLD", o.name, "folded edges left", left, flush=True)
+
+
 def build_low(pieces, frames, data):
     lows = {"Skin": retopo_skin(pieces["Skin"], N + "SkinLow", SKIN_QUADS)}
+    unfold(lows["Skin"])
     for side, tag in ((1, "L"), (-1, "R")):
         lows["Eye" + tag] = low_eye(frames[tag], N + "Eye" + tag + "Low", 24, 16)
         lows["LidU" + tag] = low_lid(frames[tag], True, N + "LidU" + tag + "Low")

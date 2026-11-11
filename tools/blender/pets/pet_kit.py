@@ -533,8 +533,8 @@ def decimated(hi, name, target):
     return o
 
 
-def retopo_skin(hi, name, quads):
-    """Even quads over the whole skin: no slivers for the bake to miss, and better bends."""
+def retopo_skin(hi, name, quads, seed=3):
+    """Even quads over the whole skin: no slivers for the bake to miss, and better bends. seed: QuadriFlow's (another seed moves a fold)."""
     me = hi.data.copy()
     o = bpy.data.objects.new(name, me)
     GAME.objects.link(o)
@@ -554,7 +554,7 @@ def retopo_skin(hi, name, quads):
         bm.to_mesh(o.data)
         bm.free()
         select_only([o])
-        res = bpy.ops.object.quadriflow_remesh(use_mesh_symmetry=False, use_preserve_sharp=False, use_preserve_boundary=False, preserve_attributes=False, smooth_normals=False, mode="FACES", target_faces=quads, seed=3)
+        res = bpy.ops.object.quadriflow_remesh(use_mesh_symmetry=False, use_preserve_sharp=False, use_preserve_boundary=False, preserve_attributes=False, smooth_normals=False, mode="FACES", target_faces=quads, seed=seed)
         print("QUADRIFLOW", size, res, len(o.data.polygons), "faces", flush=True)
         if "FINISHED" in res:
             break

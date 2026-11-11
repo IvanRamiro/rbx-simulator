@@ -880,7 +880,8 @@ local function buildRealm(root, tier, sub)
     -- the realm's unique piece (the owner's call, 2026-11-11: "add each realm a unique particle
     -- emitter, trails or beam"), built by hand in Studio as instances, no code: a Model per realm in
     -- ReplicatedStorage.AuraMeshes.RealmUnique (Tier01 .. Tier12), its pivot where the root stood.
-    -- Its invisible host parts ride on the body; one with a Ground attribute stays on the floor
+    -- Its invisible host parts ride on the body; one with a Ground attribute stays on the floor, and one with a
+    -- Spin attribute (radians a second) turns round the body as it rides
     local library = ReplicatedStorage:FindFirstChild("AuraMeshes")
     library = library and library:FindFirstChild("RealmUnique")
     local template = library and library:FindFirstChild(string.format("Tier%02d", tier))
@@ -892,7 +893,8 @@ local function buildRealm(root, tier, sub)
         for _, inst in copy:GetDescendants() do
             if inst:IsA("BasePart") then
                 inst.Anchored, inst.CanCollide, inst.CanQuery, inst.CanTouch = true, false, false, false
-                table.insert(riders, { inst, pivot:ToObjectSpace(inst.CFrame), inst:GetAttribute("Ground") == true })
+                table.insert(riders, { inst, pivot:ToObjectSpace(inst.CFrame), inst:GetAttribute("Ground") == true,
+                    tonumber(inst:GetAttribute("Spin")) or 0 })
             elseif inst:IsA("ParticleEmitter") then
                 inst.Rate *= RATE_SCALE
             elseif inst:IsA("BaseScript") then
@@ -1090,8 +1092,13 @@ local function step(dt)
             end
             local base = s.root.CFrame
             local raised = base * CFrame.new(shift)
+            local now = os.clock()
             for _, rider in s.riders do
-                rider[1].CFrame = (if rider[3] then base else raised) * rider[2]
+                local frame = if rider[3] then base else raised
+                if rider[4] ~= 0 then
+                    frame *= CFrame.Angles(0, now * rider[4], 0)
+                end
+                rider[1].CFrame = frame * rider[2]
             end
         elseif s.kind == "gyro" then        -- a tilted ring: turning in its plane, its tilt swinging round
             s.spin += dt * s.spinSpeed
