@@ -71,8 +71,8 @@ return {
         Special = { Name = "Halo Ascension", Text = "Lifts its neck skyward as three luminous rings rise from feet to crown and burst into drifting pearl feathers." },
     },
     AzureSkyDragon = {
-        Lore = "A lean sapphire wyvern that strides on two legs and trails wind ribbons behind it. Storm clouds part to let it pass.",
-        Special = { Name = "Skyburst", Text = "Spreads its wings and throws up three rising wind spirals, gust rings and sky-crystal shards." },
+        Lore = "A great dragon of the high sky that has not touched the ground in a thousand years. It glides where the aurora burns, and the cold light in its throat is the wind of the top of the world.",
+        Special = { Name = "Aurora Gale", Text = "Rears back, wings raised, the light gathering in its throat, then lunges and breathes a cone of aurora wind." },
     },
     StormhornKirin = {
         Lore = "Its horn calls the rain and its hooves answer with thunder. Farmers and generals alike have prayed to it.",

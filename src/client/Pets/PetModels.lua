@@ -171,7 +171,7 @@ local MESH_LOOKS = {
     JadeSpiritPanda = { Glow = Color3.fromRGB(60, 225, 130), Length = 3.3 },
     JadeAntlerDeer = { Glow = Color3.fromRGB(60, 225, 140), Length = 4.2 },
     MagmaCub = { Glow = Color3.fromRGB(255, 120, 30), Length = 2.6 },
-    AzureSkyDragon = { Glow = Color3.fromRGB(70, 170, 255), Length = 4.4 },
+    AzureSkyDragon = { Glow = Color3.fromRGB(90, 215, 255), Length = 5.0 }, -- its box's longest side is its gliding wingspan (nose to tail 0.88 of it); in Play, 10.5 studs tip to tip and 9.3 nose to tail, as long as the Sunscale Dragon
     SpiritCrane = { Glow = Color3.fromRGB(40, 210, 200), Length = 4.2 },
     CloudSheep = { Glow = Color3.fromRGB(120, 215, 245), Length = 3.0 },
     WindSprite = { Glow = Color3.fromRGB(30, 235, 180), Length = 3.5 },

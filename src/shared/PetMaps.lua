@@ -7,7 +7,7 @@ return {
     AbyssAnomalocaris = "rbxassetid://72650000114111",
     AquaWisp = "rbxassetid://134367609264611",
     AstralWhale = "rbxassetid://134672918195690",
-    AzureSkyDragon = "rbxassetid://102035306549567",
+    AzureSkyDragon = "rbxassetid://106188428782675",
     CelestialPearlDragon = "rbxassetid://88231363393309",
     CelestialSnowLeopard = "rbxassetid://73710725624687",
     CloudSheep = "rbxassetid://137454504415941",

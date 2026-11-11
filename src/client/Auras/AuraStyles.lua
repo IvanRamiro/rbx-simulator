@@ -25,7 +25,7 @@ AuraStyles.Elements = {
     WindSprite = { Core = Color3.fromRGB(220, 255, 245), Main = Color3.fromRGB(120, 230, 200), Deep = Color3.fromRGB(50, 150, 140), Particles = "Mote", RingShape = "Circle" },
     CloudSheep = { Core = Color3.fromRGB(240, 250, 255), Main = Color3.fromRGB(150, 210, 245), Deep = Color3.fromRGB(120, 125, 200), Particles = "Mote", RingShape = "Circle" },
     SpiritCrane = { Core = Color3.fromRGB(225, 250, 250), Main = Color3.fromRGB(60, 215, 205), Deep = Color3.fromRGB(30, 110, 120), Particles = "Mote", RingShape = "Circle" },
-    AzureSkyDragon = { Core = Color3.fromRGB(220, 245, 255), Main = Color3.fromRGB(90, 170, 255), Deep = Color3.fromRGB(40, 80, 200), Particles = "Spark", RingShape = "Circle" },
+    AzureSkyDragon = { Core = Color3.fromRGB(200, 245, 255), Main = Color3.fromRGB(110, 200, 255), Deep = Color3.fromRGB(120, 90, 230), Particles = "Spark", RingShape = "Circle" }, -- the aurora it glides through: ice to violet
     StormhornKirin = { Core = Color3.fromRGB(255, 250, 200), Main = Color3.fromRGB(150, 160, 255), Deep = Color3.fromRGB(70, 60, 170), Particles = "Spark", RingShape = "Polygon", RingSides = 6 },
     GlacierPuff = { Core = Color3.fromRGB(240, 252, 255), Main = Color3.fromRGB(150, 215, 255), Deep = Color3.fromRGB(80, 140, 220), Particles = "Crystal", RingShape = "Circle" },
     StormBumblebee = { Core = Color3.fromRGB(255, 250, 200), Main = Color3.fromRGB(255, 220, 80), Deep = Color3.fromRGB(170, 110, 255), Particles = "Spark", RingShape = "Circle" },
