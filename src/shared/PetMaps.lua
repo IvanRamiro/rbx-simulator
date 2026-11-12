@@ -34,6 +34,7 @@ return {
     LanternWarden = "rbxassetid://122411668861659",
     LunarHopper = "rbxassetid://120581999074938",
     MagmaCub = "rbxassetid://106636941111453",
+    MoonfangTiger = "rbxassetid://139222299027370",
     MossGolem = "rbxassetid://135523265460762",
     MyceliumSprite = "rbxassetid://94221576326290",
     NebulaOwl = "rbxassetid://85013631717001",

@@ -130,7 +130,10 @@ return {
         Lore = "Built by a forgotten artisan and wound with pure Qi. It still sings the hour of a city that no longer exists.",
         Special = { Name = "The Hour of a Lost City", Text = "Its key spins hard, winding it tight. It rears and sings, tail fanned, and round it a city of jade light rises out of the ground: towers and pagodas of a place that no longer exists. The hour strikes three times through every window, and then the city sinks away." },
     },
-    MoonfangTiger = { Lore = "A tiger whose fangs catch moonlight and keep it. It hunts only when the moon can watch." },
+    MoonfangTiger = {
+        Lore = "A tiger whose fangs catch moonlight and keep it. It hunts only when the moon can watch.",
+        Special = { Name = "When the Moon Watches", Text = "It sinks low into a stalk, ears flat, its fangs filling with light. Then it pounces, and over it a full moon opens, its light falling on the tiger. Where it lands, two crescents of moonlight are cut into the ground like a bite. It looks up at the moon, and the moon fades." },
+    },
     ThousandEyedGuardian = { Lore = "Nobody has seen all of its eyes open at once, and nobody has lied to it and prospered." },
     NinefoldSpiritSerpent = { Lore = "Nine coils, one for each meridian. Cultivators meditate beside it to feel their own Qi move." },
     WorldrootColossus = { Lore = "A walking piece of the root under all forests. When it sleeps, new islands of moss rise around it." },

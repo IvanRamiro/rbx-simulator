@@ -351,8 +351,9 @@ def lid_patch(fr, upper, res=(96, 64), thick=0.0045):
     return m
 
 
-def build_lid(fr, upper, name, skin, line, lower_share=0.5):
-    """skin: its colour. line: the lash line's colour. Returns the object."""
+def build_lid(fr, upper, name, skin, line, lower_share=0.5, line_w=2.4):
+    """skin: its colour. line: the lash line's colour; line_w: its width in degrees back from the edge (a game lid's few texels lose a fine
+    one). Returns the object."""
     m = lid_patch(fr, upper)
     o = m.finish(N + name + "Hi", HI)
     nu, nv = 64, 96
@@ -371,10 +372,10 @@ def build_lid(fr, upper, name, skin, line, lower_share=0.5):
     outer = np.cos(h0 + (h1 - h0) * vv) * (1 if fr.hinge.dot(fr.outer) > 0 else -1)   # +1 at the outer corner
     col = np.broadcast_to(skin, (count, 3)).copy()
     if upper:
-        w = 2.4 + 3.4 * np.maximum(outer, 0) ** 2
+        w = line_w + 3.4 * np.maximum(outer, 0) ** 2
         col = mix(col, line, 1 - smooth(w, w + 1.5, deg))
     else:
-        col = mix(col, line, (1 - smooth(1.1, 2.4, deg)) * lower_share)
+        col = mix(col, line, (1 - smooth(line_w * 0.46, line_w, deg)) * lower_share)
     paint(o, col, np.full(count, 0.5))
     return o
 
@@ -390,13 +391,14 @@ def low_eye(fr, name, u_segments=22, v_segments=14):
     return m.finish(name, GAME)
 
 
-def low_lid(fr, upper, name):
-    """One outward layer: nobody sees the inside of a lid."""
+def low_lid(fr, upper, name, lift=0.0):
+    """One outward layer: nobody sees the inside of a lid. lift: out from the lid's middle toward its outer face (half the high lid's
+    thickness puts it where the high lid shows; at its middle a close-fitting game skin can bury it)."""
     e, far, gap = fr.lids[upper]
     h0, h1 = fr.shell
     nu, nv = (7, 14) if upper else (5, 10)
     m = Mesh()
-    rows = [[m.bm.verts.new(fr.centre + fr.lid(math.radians(e + (far - e) * (i / nu) ** 1.3), h0 + (h1 - h0) * j / nv) * (fr.radius + gap)) for j in range(nv + 1)] for i in range(nu + 1)]
+    rows = [[m.bm.verts.new(fr.centre + fr.lid(math.radians(e + (far - e) * (i / nu) ** 1.3), h0 + (h1 - h0) * j / nv) * (fr.radius + gap + lift)) for j in range(nv + 1)] for i in range(nu + 1)]
     for i in range(nu):
         for j in range(nv):
             m.bm.faces.new((rows[i][j], rows[i + 1][j], rows[i + 1][j + 1], rows[i][j + 1]))
