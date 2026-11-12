@@ -742,8 +742,11 @@ def bleed_gutters(images):
         img.update()
 
 
-def bake_all(lows, pieces, hi_mat=None, size=1024, colour_size=None, far=("Skin",), fill=(0.6, 0.6, 0.6, 1), metal=False, reach=(0.012, 0.03), far_reach=(0.014, 0.045), reaches=None):
-    """Every low piece from its own high piece, so neighbours can't project on each other. reaches: {key: (cage, ray)} for a piece that needs its own. Returns the material."""
+def bake_all(lows, pieces, hi_mat=None, size=1024, colour_size=None, far=("Skin",), fill=(0.6, 0.6, 0.6, 1), metal=False, reach=(0.012, 0.03), far_reach=(0.014, 0.045), reaches=None,
+             margin_share=None):
+    """Every low piece from its own high piece, so neighbours can't project on each other. reaches: {key: (cage, ray)} for a piece that needs its own.
+    margin_share: the bake's margin as a share of the map (default: res / 256, at least 4 px); keep it under half the gap between UV islands, or a piece
+    baked later paints over its neighbour's edge. Returns the material."""
     os.makedirs(OUT, exist_ok=True)
 
     def image(name, fill_with, colour, res):
@@ -788,7 +791,7 @@ def bake_all(lows, pieces, hi_mat=None, size=1024, colour_size=None, far=("Skin"
         for key, low in lows.items():
             select_only([pieces[key], low], low)
             cage, ray = (reaches or {}).get(key) or (far_reach if key in far else reach)
-            bpy.ops.object.bake(type=kind, use_selected_to_active=True, cage_extrusion=cage, max_ray_distance=ray, margin=max(4, res // 256), use_clear=False, target="IMAGE_TEXTURES", **kw)
+            bpy.ops.object.bake(type=kind, use_selected_to_active=True, cage_extrusion=cage, max_ray_distance=ray, margin=(max(2, int(res * margin_share)) if margin_share else max(4, res // 256)), use_clear=False, target="IMAGE_TEXTURES", **kw)
     if hi_bsdf:
         hi_bsdf.inputs["Emission Strength"].default_value = 0.0
     bleed_gutters([img for img, _ in saves])

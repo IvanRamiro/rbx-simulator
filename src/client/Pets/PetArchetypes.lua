@@ -381,7 +381,6 @@ local function rgb(r, g, b)
 end
 
 PetArchetypes.Specs = {
-    QiClockworkFinch = { Kind = "Bird", Body = rgb(200, 160, 90), Accent = rgb(130, 230, 210), Belly = rgb(230, 200, 140), Glow = rgb(140, 255, 230), Core = rgb(230, 255, 245), Wings = "Feather", Tail = "Fan", Gems = true },
     MoonfangTiger = { Kind = "Beast", Body = rgb(225, 225, 240), Accent = rgb(120, 130, 200), Belly = rgb(250, 250, 255), Glow = rgb(170, 180, 255), Core = rgb(240, 240, 255), Ears = "Pointed", Tail = "Long", Stripes = true },
     ThousandEyedGuardian = { Kind = "Golem", Body = rgb(70, 60, 90), Accent = rgb(255, 200, 90), Belly = rgb(110, 100, 130), Glow = rgb(255, 210, 110), Core = rgb(255, 240, 200), GlowEyes = true, Gems = true, Halo = true },
     NinefoldSpiritSerpent = { Kind = "Serpent", Body = rgb(230, 240, 250), Accent = rgb(130, 255, 210), Belly = rgb(250, 255, 255), Glow = rgb(140, 255, 220), Core = rgb(230, 255, 248), Horns = "Antlers", Whiskers = true, Gems = true },

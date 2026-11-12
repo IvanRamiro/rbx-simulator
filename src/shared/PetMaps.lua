@@ -40,6 +40,7 @@ return {
     ObsidianGuardian = "rbxassetid://124875572363642",
     OriginSerpent = "rbxassetid://115989097919715",
     PrismArmadillo = "rbxassetid://125786671185533",
+    QiClockworkFinch = "rbxassetid://75289128921876",
     RuneSphinx = "rbxassetid://125628324690653",
     SandPhantom = "rbxassetid://79708404639959",
     Shadowcoil = "rbxassetid://88845337375470",

@@ -39,7 +39,7 @@ AuraStyles.Elements = {
     LanternWarden = { Core = Color3.fromRGB(255, 245, 200), Main = Color3.fromRGB(255, 200, 100), Deep = Color3.fromRGB(180, 110, 40), Particles = "Ember", RingShape = "Circle" },
     JadeWyrmTurtle = { Core = Color3.fromRGB(210, 255, 230), Main = Color3.fromRGB(80, 210, 150), Deep = Color3.fromRGB(30, 110, 80), Particles = "Crystal", RingShape = "Polygon", RingSides = 6 },
     EchoBat = { Core = Color3.fromRGB(205, 255, 246), Main = Color3.fromRGB(31, 224, 198), Deep = Color3.fromRGB(120, 70, 94), Particles = "Mote", RingShape = "Circle" }, -- the sounds it keeps: sea-glass teal over its plum wings (recreated 2026-11-12)
-    QiClockworkFinch = { Core = Color3.fromRGB(230, 255, 245), Main = Color3.fromRGB(210, 180, 110), Deep = Color3.fromRGB(120, 90, 50), Particles = "Spark", RingShape = "Polygon", RingSides = 8 },
+    QiClockworkFinch = { Core = Color3.fromRGB(210, 255, 230), Main = Color3.fromRGB(236, 192, 96), Deep = Color3.fromRGB(34, 58, 150), Particles = "Spark", RingShape = "Polygon", RingSides = 12 }, -- gilt wire over lapis enamel, its Qi jade: a clock's twelve sides (recreated 2026-11-12)
     MoonfangTiger = { Core = Color3.fromRGB(240, 240, 255), Main = Color3.fromRGB(170, 175, 240), Deep = Color3.fromRGB(90, 95, 180), Particles = "Mote", RingShape = "Circle" },
     ThousandEyedGuardian = { Core = Color3.fromRGB(255, 240, 200), Main = Color3.fromRGB(230, 180, 90), Deep = Color3.fromRGB(120, 70, 150), Particles = "Mote", RingShape = "Polygon", RingSides = 8 },
     NinefoldSpiritSerpent = { Core = Color3.fromRGB(230, 255, 248), Main = Color3.fromRGB(120, 240, 200), Deep = Color3.fromRGB(50, 140, 140), Particles = "Mote", RingShape = "Circle" },

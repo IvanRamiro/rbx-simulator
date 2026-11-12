@@ -126,7 +126,10 @@ return {
         Lore = "It speaks only in sounds it has already heard. Ask it a question and you may hear a voice from a hundred years ago.",
         Special = { Name = "A Voice from a Hundred Years Ago", Text = "It draws its wings up and lays its ears back, listening. Then it rears, head high, and rings of sound pour out of its ears and ripple out round it. Out of the distance, older rings come back to it, gold, and its ears glow gold as they land." },
     },
-    QiClockworkFinch = { Lore = "Built by a forgotten artisan and wound with pure Qi. It still sings the hour of a city that no longer exists." },
+    QiClockworkFinch = {
+        Lore = "Built by a forgotten artisan and wound with pure Qi. It still sings the hour of a city that no longer exists.",
+        Special = { Name = "The Hour of a Lost City", Text = "Its key spins hard, winding it tight. It rears and sings, tail fanned, and round it a city of jade light rises out of the ground: towers and pagodas of a place that no longer exists. The hour strikes three times through every window, and then the city sinks away." },
+    },
     MoonfangTiger = { Lore = "A tiger whose fangs catch moonlight and keep it. It hunts only when the moon can watch." },
     ThousandEyedGuardian = { Lore = "Nobody has seen all of its eyes open at once, and nobody has lied to it and prospered." },
     NinefoldSpiritSerpent = { Lore = "Nine coils, one for each meridian. Cultivators meditate beside it to feel their own Qi move." },
