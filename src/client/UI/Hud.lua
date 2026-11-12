@@ -381,6 +381,15 @@ local function bindClose()
     end
 end
 
+-- Closes whatever window is open; true if one was.
+function Hud.closeWindows()
+    local win = openWindow()
+    if win then
+        win.close()
+    end
+    return win ~= nil
+end
+
 local function stepAside()
     local open = false
     for _, win in windows do

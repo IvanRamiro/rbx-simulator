@@ -602,7 +602,7 @@ local function updateWaypointText()
     end
     local config = GameConfig.Guardians[player:GetAttribute("CarryingGuardian")]
     local distance = ((waypoint.Position - root.Position) * Vector3.new(1, 0, 1)).Magnitude
-    waypointMarker.label.Text = string.upper(config.SafeZone.Name) .. "  " .. math.floor(distance) .. "m"
+    waypointMarker.label.Text = string.upper(config.SafeZone.Name) .. "  " .. math.floor(distance) .. " studs"
 end
 
 -- ---------- dropped eggs ----------

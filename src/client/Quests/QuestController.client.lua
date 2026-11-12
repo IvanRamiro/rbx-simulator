@@ -238,14 +238,14 @@ RunService.RenderStepped:Connect(function()
     if after and root then
         local to = Vector3.new(after[2], after[3], after[4]) - root.Position
         wayMarker.world = if to.Magnitude > WAY_NEAR then Vector3.new(after[2], after[3], after[4]) else nil
-        wayMarker.label.Text = string.upper(after[1]) .. "  " .. NumberFormat.compact(math.floor(to.Magnitude)) .. "m"
+        wayMarker.label.Text = string.upper(after[1]) .. "  " .. NumberFormat.compact(math.floor(to.Magnitude)) .. " studs"
         return
     end
     local ground = show and not near and groundAt(step, target[2], target[3])
     wayMarker.world = if ground then Vector3.new(target[2], ground + WAY_ABOVE, target[3]) else nil
     if ground then
         local to = Vector3.new(target[2] - root.Position.X, 0, target[3] - root.Position.Z)
-        wayMarker.label.Text = string.upper(target[1]) .. "  " .. NumberFormat.compact(math.floor(to.Magnitude)) .. "m"
+        wayMarker.label.Text = string.upper(target[1]) .. "  " .. NumberFormat.compact(math.floor(to.Magnitude)) .. " studs"
     end
 end)
 
@@ -284,7 +284,13 @@ RemoteEvents.QuestEvent.OnClientEvent:Connect(function(kind, step, stones)
 end)
 
 questButton.Activated:Connect(function()
-    local shown = not questAllowed()
+    -- with a window open the panel is stepped aside, so the press means "show me my quest": close the window, never hide it
+    -- (a new player's run, 2026-11-12: pressed over the Codex, it switched the quest off unseen, and it stayed off)
+    local chosen = questAllowed()
+    if Hud.closeWindows() and chosen then
+        return
+    end
+    local shown = not chosen
     player:SetAttribute("SettingShowQuest", shown)
     RemoteEvents.SettingsEvent:FireServer("ShowQuest", shown)
 end)

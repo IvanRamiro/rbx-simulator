@@ -522,6 +522,16 @@ RemoteEvents.ShopEvent.OnClientEvent:Connect(function(kind, ...)
     end
 end)
 
+-- Stones that arrive while the window is open (a quest reward, a relic) move its balance and what it can afford: it showed
+-- the balance from when it opened (a new player's run, 2026-11-12: 250 in the window, 290 on the HUD after a quest paid out)
+player:GetAttributeChangedSignal("SpiritStones"):Connect(function()
+    local stones = player:GetAttribute("SpiritStones")
+    if current.shop and current.contents and typeof(stones) == "number" and stones ~= current.contents.Stones then
+        current.contents.Stones = stones
+        render()
+    end
+end)
+
 -- walking away closes the window
 RunService.Heartbeat:Connect(function()
     if not current.shop then
