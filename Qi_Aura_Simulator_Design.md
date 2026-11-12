@@ -243,7 +243,7 @@ Pets give **Qi bonuses** (every equipped pet) and **aura style** (the one chosen
 **Roster:** all 60 pets from the original concept are in the game, plus the retired Nine-Tail Moonfox.
 
 - **★ = sculpted in Blender:** source at `tools/blender/pets/<EggId>/<PetId>.blend`, exported to `assets/pets/<EggId>/`. A pet sits under the first egg that drops it.
-- **Unmarked pets** use procedural low-poly models (`src/client/Pets/PetArchetypes.lua`) until they get their own Blender model.
+- **Every pet has its own Blender model** (since 2026-11-12, when the Ninefold Spirit Serpent replaced the last placeholder); the procedural placeholder builder is gone.
 - **Every pet is its own species**, with its own anatomy, silhouette and face. No two share a body plan or head design. Its eyes suit what it is: big, expressive eyes where the creature calls for them, natural ones where they would fight it (the Galaxy Manta has a real manta's small, deep eyes on the sides of its head). The Cosmic Jellyfish has none, by the owner's decision (November 6, 2026). Never a plain glowing ball.
 
 ### Duplicates

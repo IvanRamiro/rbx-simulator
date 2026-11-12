@@ -898,18 +898,19 @@ local GameConfig = {
         },
     },
 
-    -- The Store's game passes (the owner, November 10, 2026), in the order it shows them (shared/PassRules applies them). Each is
+    -- The Store's game passes (the owner, November 10, 2026), in the order it shows them (shared/PassRules applies them). Created on
+    -- Roblox and put on sale 2026-11-12 (the owner: "make my game passes live"). Each is
     -- sold once its GamePassId is set (the owner creates the pass in the Creator Dashboard); at 0 it shows "Coming soon" and
     -- nobody can buy it. Price is a fallback: the Store shows the pass's live price from Roblox. Icon: its picture
     -- (tools/ui/draw_store_icons.py: assets/ui/store/<Id>.png; <Id>_512.png is the picture to give the pass on Roblox).
     GamePasses = {
-        { Id = "Luck", Name = "Lucky Cultivator", GamePassId = 0, Price = 149, Icon = "rbxassetid://129170449479441",
+        { Id = "Luck", Name = "Lucky Cultivator", GamePassId = 2082626429, Price = 149, Icon = "rbxassetid://129170449479441",
             Text = "2x luck: Rare and rarer beasts hatch twice as often from every egg.", Luck = 2 }, -- (shortened: the longer text was cut off in its card, UI audit 2026-11-11)
-        { Id = "QiSurge", Name = "Qi Surge", GamePassId = 0, Price = 199, Icon = "rbxassetid://71034417049645",
+        { Id = "QiSurge", Name = "Qi Surge", GamePassId = 2083202424, Price = 199, Icon = "rbxassetid://71034417049645",
             Text = "2x Qi from cultivating, while you're away and from every Qi reward.", QiMultiplier = 2 },
-        { Id = "PetSlots", Name = "+3 Pet Slots", GamePassId = 0, Price = 249, Icon = "rbxassetid://90769324952400",
+        { Id = "PetSlots", Name = "+3 Pet Slots", GamePassId = 2081480484, Price = 249, Icon = "rbxassetid://90769324952400",
             Text = "Equip 6 beasts at once instead of 3.", ExtraSlots = 3 },
-        { Id = "VIP", Name = "VIP", GamePassId = 0, Price = 299, Icon = "rbxassetid://97387314672491",
+        { Id = "VIP", Name = "VIP", GamePassId = 2083352447, Price = 299, Icon = "rbxassetid://97387314672491",
             Text = "The VIP title and chat tag, +10% Qi and +50% daily Spirit Stones.", QiMultiplier = 1.1, DailyStones = 1.5, Title = "VIP" },
     },
     -- Lucky hatches (the Luck pass): every Rare-or-rarer beast that is also rarer than an egg's commonest is that many times likelier,

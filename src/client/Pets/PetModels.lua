@@ -79,14 +79,12 @@ PetModels.Pets = {
     DawnPhoenix = { Scale = 1.15, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
 }
 
--- every other pet: its imported model at its rarity's scale; the few still without one (PetArchetypes.Specs) built from simple shapes
-do
-    local PetArchetypes = require(script.Parent:WaitForChild("PetArchetypes"))
-    for petId, pet in GameConfig.Pets do
-        if not PetModels.Pets[petId] then
-            local spec = PetArchetypes.Specs[petId]
-            PetModels.Pets[petId] = if spec then PetArchetypes.build(spec, pet.Rarity) else { Scale = PetArchetypes.scaleFor(pet.Rarity), Parts = {} }
-        end
+-- every other pet: its imported model at its rarity's scale (every pet has its own model since 2026-11-12: the placeholder
+-- builder, PetArchetypes, is gone)
+local SCALE_BY_RARITY = { Common = 0.9, Uncommon = 0.95, Rare = 1, Epic = 1.05, Legendary = 1.15, Mythical = 1.2, Secret = 1.25 }
+for petId, pet in GameConfig.Pets do
+    if not PetModels.Pets[petId] then
+        PetModels.Pets[petId] = { Scale = SCALE_BY_RARITY[pet.Rarity] or 1, Parts = {} }
     end
 end
 

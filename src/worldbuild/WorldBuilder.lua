@@ -662,6 +662,7 @@ WorldBuilder.MaterialLooks = {
     Shade = { Material = Enum.Material.Marble, Color = Color3.fromRGB(176, 176, 180) }, -- grout lines, undersides
     Lapis = { Material = Enum.Material.Marble, Color = Color3.fromRGB(40, 62, 138) },
     Gold = { Material = Enum.Material.Metal, Color = Color3.fromRGB(242, 194, 82) }, -- (226, 178, 64 read olive in shade)
+    GoldFlat = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(226, 176, 70) }, -- gold faces looking straight up: Metal mirrored the sky on them, green-olive
     Steel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(170, 176, 186) },
     Slate = { Material = Enum.Material.Slate, Color = Color3.fromRGB(64, 66, 76) },
     Crystal = { Material = Enum.Material.Glass, Color = Color3.fromRGB(175, 215, 255), Transparency = 0.35, CastShadow = false },

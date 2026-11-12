@@ -149,7 +149,7 @@ local function passCard(pass, parent, slot)
     picture.Parent = card
     UiKit.label({
         Name = "PassName", Font = "Title", TextSize = 15, Text = pass.Name, TextTruncate = Enum.TextTruncate.AtEnd,
-        Position = UDim2.fromOffset(84, 10), Size = UDim2.new(1, if pass.Luck then -154 else -92, 0, 20), Parent = card,
+        Position = UDim2.fromOffset(84, 10), Size = UDim2.new(1, -92, 0, 20), Parent = card,
     })
     UiKit.label({
         Name = "What", Font = "Body", TextSize = 12, Text = pass.Text, TextColor3 = C.Muted, TextWrapped = true,
@@ -157,7 +157,7 @@ local function passCard(pass, parent, slot)
     })
     local button = UiKit.button({
         Name = "Buy", Font = "Strong", TextSize = 14, Text = "", AnchorPoint = Vector2.new(0, 1),
-        Position = UDim2.new(0, 10, 1, -10), Size = UDim2.new(1, -20, 0, 34), Parent = card,
+        Position = UDim2.new(0, 10, 1, -10), Size = UDim2.new(1, if pass.Luck then -86 else -20, 0, 34), Parent = card,
     })
     button.Activated:Connect(function()
         if pass.Luck and luckRestricted and not PassRules.owns(player, pass.Id) then
@@ -168,9 +168,10 @@ local function passCard(pass, parent, slot)
             MarketplaceService:PromptGamePassPurchase(player, pass.GamePassId)
         end
     end)
-    if pass.Luck then -- its effect, in numbers, before anyone buys it
-        local oddsButton = UiKit.button({ Name = "Odds", Font = "Strong", TextSize = 11, Text = "ODDS", Tone = "Accent",
-            AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 8), Size = UDim2.fromOffset(58, 32), Parent = card })
+    if pass.Luck then -- its effect, in numbers, before anyone buys it: beside its Buy button (in the top corner it covered the
+        -- description's first line, seen in Play 2026-11-12)
+        local oddsButton = UiKit.button({ Name = "Odds", Font = "Strong", TextSize = 12, Text = "ODDS", Tone = "Accent",
+            AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -10, 1, -10), Size = UDim2.fromOffset(70, 34), Parent = card })
         oddsButton.Activated:Connect(function()
             Sfx.play("Click")
             showOdds(pass)

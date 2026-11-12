@@ -16,6 +16,7 @@ import hub_celestial as H
 # atlas strip -> the material suffix the game reads (Shade: the darker marble of grout lines and undersides)
 SUFFIX = {H.MARBLE: "Marble", H.SHADE: "Shade", H.MARBLE2: "Marble", H.LAPIS: "Lapis", H.GOLD: "Gold",
           H.CRYSTAL: "Crystal", H.GLOW: "Glow", H.SLATE: "Slate", H.STEEL: "Steel"}
+FLAT_UP = 0.94                    # a gold face this level (its normal's z) takes the matte gold
 SMOOTH_ANGLE = math.radians(62)   # a 6-sided tube's edges (60 degrees) smooth out; a box's (90) stay crisp
 BEVEL_ANGLE = math.radians(75)
 BEVEL = 0.05                      # studs
@@ -36,7 +37,10 @@ def split(obj, bands, coll):
     groups = {}
     for p in me.polygons:
         k = _band_of(uv[p.loop_indices[0]].uv[1], bands)
-        groups.setdefault(SUFFIX[k], []).append(p.index)
+        suffix = SUFFIX[k]
+        if suffix == "Gold" and p.normal.z > FLAT_UP:
+            suffix = "GoldFlat"    # (Metal mirrors the sky on a face looking straight up: those read green-olive, seen in Studio)
+        groups.setdefault(suffix, []).append(p.index)
     out = []
     for suffix, polys in sorted(groups.items()):
         bm = bmesh.new()
@@ -118,6 +122,7 @@ def preview_materials(objs, core=("HB_BlacksmithCore",)):
         "Shade": _mat("pv_shade", (0.62, 0.62, 0.62, 1), 0.4, veins=(1.1, (0.52, 0.53, 0.55, 1))),
         "Lapis": _mat("pv_lapis", (0.03, 0.06, 0.26, 1), 0.3, veins=(1.4, (0.1, 0.17, 0.45, 1))),
         "Gold": _mat("pv_gold", (0.85, 0.6, 0.2, 1), 0.32, metal=1.0),
+        "GoldFlat": _mat("pv_goldflat", (0.78, 0.55, 0.2, 1), 0.45),
         "Slate": _mat("pv_slate", (0.06, 0.065, 0.08, 1), 0.7),
         "Steel": _mat("pv_steel", (0.62, 0.64, 0.68, 1), 0.3, metal=1.0),
         "Crystal": _mat("pv_crystal", (0.6, 0.82, 1.0, 1), 0.05, alpha=0.55),
