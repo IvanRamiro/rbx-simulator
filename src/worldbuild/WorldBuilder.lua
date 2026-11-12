@@ -2339,7 +2339,7 @@ function WorldBuilder.buildRelic(island, relicId, localPosition)
     prompt.ObjectText = relicConfig.DisplayName
     prompt.KeyboardKeyCode = Enum.KeyCode.F
     prompt.HoldDuration = 1
-    prompt.MaxActivationDistance = 12
+    prompt.MaxActivationDistance = relicConfig.Reach or 12
     prompt.RequiresLineOfSight = false
     prompt.Parent = crystal
 

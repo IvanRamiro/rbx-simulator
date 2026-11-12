@@ -374,7 +374,7 @@ local GameConfig = {
     -- a barrier at each island bridge: only players of its RankId pass
     BridgeBarrierTag = "QiBarrier",
     Relics = {
-        { Id = "IslandRoot", DisplayName = "Root of the Island", QiReward = 300, RequiredRank = "QiInitiate", Element = "Wood" },
+        { Id = "IslandRoot", DisplayName = "Root of the Island", QiReward = 300, RequiredRank = "QiInitiate", Element = "Wood", Reach = 16 }, -- Reach: its prompt's studs (default 12). The rebuilt hub's cradle roots close round it, so it is attuned from the last root shelf, 13 studs off (2026-11-12)
         { Id = "GroveHeart", DisplayName = "Grove Heart", QiReward = 800, RequiredRank = "QiGatherer", Element = "Wood" },
         { Id = "JadeSeed", DisplayName = "Jade Seed", QiReward = 800, RequiredRank = "QiGatherer", Element = "Wood" },
         { Id = "WhisperingSpring", DisplayName = "Whispering Spring", QiReward = 800, RequiredRank = "QiGatherer", Element = "Wood" },

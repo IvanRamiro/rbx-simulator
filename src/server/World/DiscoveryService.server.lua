@@ -72,6 +72,11 @@ local function connectRelic(model)
     end
     connectedRelics[model] = true
 
+    -- a relic set deep among roots is reached from farther (GameConfig Relics: Reach)
+    local relic = Discoveries.getRelic(relicId)
+    if relic and relic.Reach then
+        prompt.MaxActivationDistance = relic.Reach
+    end
     local maxDistance = PromptRules.maxDistance(prompt)
     prompt.Triggered:Connect(function(player)
         onRelicTriggered(player, relicId, crystal, maxDistance)
