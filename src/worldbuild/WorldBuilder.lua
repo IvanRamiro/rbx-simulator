@@ -1277,10 +1277,10 @@ function WorldBuilder.buildEggStands(island)
     return #folder:GetChildren()
 end
 
--- ---------- route waystones ----------
+-- ---------- route names ----------
 
--- Where each waystone points: the destination and its glow. The rank it names is its bridge's
--- (Placements/Bridges.lua), the same one the bridge's Qi barrier checks, so the two can't differ.
+-- Each route's destination, name and glow: read by buildBridges for the name on its gate. (The waystones
+-- that once carried them, and buildWaystones, were removed 2026-11-13: nothing placed them any more.)
 WorldBuilder.Waystones = {
     JadeRoute = { Island = "JadeGrove", Title = "Jade Grove", Color = Color3.fromRGB(40, 215, 110) },
     EmberRoute = { Island = "EmberPeak", Title = "Ember Peak", Color = Color3.fromRGB(255, 105, 25) },
@@ -1289,47 +1289,6 @@ WorldBuilder.Waystones = {
     OriginRoute = { Island = "OriginAbyss", Title = "Origin Abyss", Color = Color3.fromRGB(175, 45, 255) },
     RootPath = { Title = "Root of the Island", Subtitle = "Climb down the great root", Color = Color3.fromRGB(255, 170, 40) },
 }
-
-local function rankLine(rankId)
-    local rankName
-    for _, rank in GameConfig.Ranks do
-        if rank.Id == rankId then
-            rankName = rank.Name
-        end
-    end
-    assert(rankName, "no rank " .. tostring(rankId))
-    return string.format("Bridge opens at\n%s", rankName)
-end
-
-local function inscribe(panel, title, subtitle, color)
-    local gui = Instance.new("SurfaceGui")
-    gui.Face = Enum.NormalId.Back -- the panel part's +Z face, the stele's front
-    gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-    gui.PixelsPerStud = 60
-    gui.LightInfluence = 0.4
-    gui.MaxDistance = 90
-    gui.Parent = panel
-    local layout = Instance.new("UIListLayout")
-    layout.FillDirection = Enum.FillDirection.Vertical
-    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    layout.VerticalAlignment = Enum.VerticalAlignment.Center
-    layout.Padding = UDim.new(0, 14)
-    layout.Parent = gui
-    for index, line in { { title, 0.55, Enum.Font.Garamond, Color3.fromRGB(240, 222, 170) }, { subtitle, 0.3, Enum.Font.Garamond, color } } do
-        local label = Instance.new("TextLabel")
-        label.Name = if index == 1 then "Title" else "Subtitle"
-        label.LayoutOrder = index
-        label.Size = UDim2.fromScale(0.94, line[2])
-        label.BackgroundTransparency = 1
-        label.Font = line[3]
-        label.TextScaled = true
-        label.TextWrapped = true
-        label.TextColor3 = line[4]
-        label.Text = line[1]
-        label.Parent = gui
-    end
-    return gui
-end
 
 -- An invisible anchored part that nothing touches: a panel to write on, or a marker.
 local function marker(name, size, cframe, parent)
@@ -1394,35 +1353,6 @@ local function spawnPoint(name, cframe, parent)
     end
     spawn.Parent = parent
     return spawn
-end
-
-function WorldBuilder.buildWaystones(island)
-    local placements = placementsFor(island)
-    local folder = WorldBuilder.islandFolder(island, "Waystones")
-    folder:ClearAllChildren()
-    local bridges = require(ServerStorage.WorldBuild.Placements.Bridges:Clone()).Bridges
-    for _, entry in placements.Waystones do
-        local info = WorldBuilder.Waystones[entry.Route]
-        assert(info, "no waystone info for " .. entry.Route)
-        local bridge = bridges[entry.Route]
-        local frame = standFrame(island, entry)
-        local model = Instance.new("Model")
-        model.Name = "Waystone_" .. entry.Route
-        model:SetAttribute("Route", entry.Route)
-        placeTemplate(island, "SI_Waystone", frame, model).Name = "Stele"
-        local glow = placeTemplate(island, "SI_WaystoneGlow", frame, model)
-        glow.Name = "Glow"
-        glow.Color = info.Color
-        addLight(glow, info.Color, 10, 0.8)
-
-        local panelSize = placements.WaystonePanel.Size
-        local panel = marker("Inscription", Vector3.new(panelSize.X, panelSize.Y, 0.05),
-            frame * CFrame.new(placements.WaystonePanel.Centre), model)
-        inscribe(panel, info.Title, info.Subtitle or rankLine(bridge and bridge.RankId), info.Color)
-        model.Parent = folder
-    end
-    WorldBuilder.applyCollision(folder)
-    return #folder:GetChildren()
 end
 
 -- ---------- bridges ----------
