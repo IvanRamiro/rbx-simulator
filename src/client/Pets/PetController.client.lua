@@ -68,6 +68,26 @@ local fresh = {}  -- [InstanceId] = true: new since the player last looked
 local CONFIRM_SECONDS = 3
 local lastSnapshot = nil
 
+-- Portraits kept from the last drawing, by pet: a redraw moves them to the new cards instead of building a ViewportFrame
+-- and cloning a model per card (release audit, 2026-11-12: every equip, lock or hatch rebuilt up to 50 of them)
+local portraitPool = {} -- [petId] = { frame, ... }
+
+-- the portraits a drawing didn't reuse: pets no longer owned
+local function clearPool()
+    for petId, spare in portraitPool do
+        for _, frame in spare do
+            frame:Destroy()
+        end
+        portraitPool[petId] = nil
+    end
+end
+
+local function takePortrait(petId)
+    local spare = portraitPool[petId]
+    local frame = spare and table.remove(spare)
+    return frame or Portraits.pet(petId, 58)
+end
+
 local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
     local definition = GameConfig.Pets[pet.PetId]
     if not definition then
@@ -79,7 +99,9 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
     local level = PetRules.level(pet)
     local card = UiKit.card({ Name = "PetCard", LayoutOrder = layoutOrder, Size = UDim2.new(1, 0, 0, 90), Stripe = rarityColor, Parent = petList })
     card:SetAttribute("InstanceId", pet.InstanceId)
-    local picture = Portraits.pet(pet.PetId, 58)
+    local picture = takePortrait(pet.PetId)
+    picture.Name = "Portrait"
+    picture:SetAttribute("PetId", pet.PetId)
     picture.Position = UDim2.fromOffset(10, 9)
     picture.Parent = card
     UiKit.label({
@@ -194,6 +216,10 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
     end
 end
 
+local drawList -- (below)
+local listDirty = false   -- the inventory changed while the window was closed
+local scrollToTop = false -- a new pet arrived: the next drawing starts at the top, where it is
+
 local function renderInventory(snapshot)
     for _, pet in if snapshot then snapshot.Pets else {} do
         PetPreload.soon(pet.PetId) -- ready before their portraits or their first walk
@@ -213,11 +239,7 @@ local function renderInventory(snapshot)
     for _, pet in snapshot.Pets do
         known[pet.InstanceId] = true
     end
-    for _, child in petList:GetChildren() do
-        if child:IsA("GuiObject") then
-            child:Destroy()
-        end
-    end
+    scrollToTop = scrollToTop or arrived
 
     local equippedCount = 0
     local bonusPercent = 0
@@ -234,8 +256,40 @@ local function renderInventory(snapshot)
     equippedLabel.Text = "EQUIPPED  " .. equippedCount .. " / " .. slots
     bonusLabel.Text = "QI BONUS  +" .. bonusPercent .. "%"
 
+    -- the cards only while someone can see them: a closed window is drawn when it opens
+    if window.isOpen() then
+        drawList(snapshot, equippedCount)
+    else
+        listDirty = true
+    end
+end
+
+function drawList(snapshot, equippedCount)
+    listDirty = false
+    for _, child in petList:GetChildren() do
+        if child:IsA("GuiObject") then
+            local portrait = child:FindFirstChild("Portrait")
+            local petId = portrait and portrait:GetAttribute("PetId")
+            if petId then
+                portrait.Parent = nil
+                portraitPool[petId] = portraitPool[petId] or {}
+                table.insert(portraitPool[petId], portrait)
+            end
+            child:Destroy()
+        end
+    end
+    if equippedCount == nil then
+        equippedCount = 0
+        for _, pet in snapshot.Pets do
+            if pet.Equipped and GameConfig.Pets[pet.PetId] then
+                equippedCount += 1
+            end
+        end
+    end
+
     if #snapshot.Pets == 0 then
         UiKit.empty(petList, "No pets yet.\nTake an egg from a guardian, carry it home, and hatch it at the Hatching Sanctum.")
+        clearPool()
         return
     end
     -- new first, then equipped, then the rarest, then by name
@@ -257,10 +311,18 @@ local function renderInventory(snapshot)
     for index, pet in pets do
         createPetCard(pet, index, equippedCount, snapshot.AuraPetInstanceId)
     end
-    if arrived then
+    clearPool()
+    if scrollToTop then
+        scrollToTop = false
         petList.CanvasPosition = Vector2.zero
     end
 end
+
+window.Frame:GetPropertyChangedSignal("Visible"):Connect(function()
+    if window.Frame.Visible and listDirty and lastSnapshot then
+        drawList(lastSnapshot)
+    end
+end)
 
 RemoteEvents.PetInventoryUpdatedEvent.OnClientEvent:Connect(renderInventory)
 for _, pass in PassRules.List do
