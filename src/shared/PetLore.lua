@@ -134,7 +134,10 @@ return {
         Lore = "A tiger whose fangs catch moonlight and keep it. It hunts only when the moon can watch.",
         Special = { Name = "When the Moon Watches", Text = "It sinks low into a stalk, ears flat, its fangs filling with light. Then it pounces, and over it a full moon opens, its light falling on the tiger. Where it lands, two crescents of moonlight are cut into the ground like a bite. It looks up at the moon, and the moon fades." },
     },
-    ThousandEyedGuardian = { Lore = "Nobody has seen all of its eyes open at once, and nobody has lied to it and prospered." },
+    ThousandEyedGuardian = {
+        Lore = "It carries a lotus pond on its back and the rain in its trunk. No field it has walked through has ever gone dry.",
+        Special = { Name = "Rain Over Dry Fields", Text = "It raises its trunk to the sky as the lotus on its back opens wide, its seeds blazing gold. Then it sprays: a fountain of golden water arcs up and falls in a ring around it, ripples spreading wherever the drops land." },
+    },
     NinefoldSpiritSerpent = { Lore = "Nine coils, one for each meridian. Cultivators meditate beside it to feel their own Qi move." },
     WorldrootColossus = { Lore = "A walking piece of the root under all forests. When it sleeps, new islands of moss rise around it." },
     SandPhantom = {

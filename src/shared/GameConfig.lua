@@ -506,7 +506,7 @@ local GameConfig = {
         EchoBat = { DisplayName = "Echo Bat", Rarity = "Common", Theme = "Sound", QiBonus = 15 },
         QiClockworkFinch = { DisplayName = "Qi Clockwork Finch", Rarity = "Uncommon", Theme = "Magical machinery", QiBonus = 30 },
         MoonfangTiger = { DisplayName = "Moonfang Tiger", Rarity = "Rare", Theme = "Moonlight", QiBonus = 55 },
-        ThousandEyedGuardian = { DisplayName = "Thousand-Eyed Guardian", Rarity = "Epic", Theme = "Mysticism", QiBonus = 80 },
+        ThousandEyedGuardian = { DisplayName = "Lotus Elephant", Rarity = "Epic", Theme = "Rain and lotus", QiBonus = 80 }, -- (was the Thousand-Eyed Guardian; the id kept for saves)
         NinefoldSpiritSerpent = { DisplayName = "Ninefold Spirit Serpent", Rarity = "Legendary", Theme = "Spiritual energy", QiBonus = 95 },
         WorldrootColossus = { DisplayName = "Worldroot Colossus", Rarity = "Mythical", Theme = "Ancient nature", QiBonus = 160 },
 
