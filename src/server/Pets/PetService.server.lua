@@ -173,7 +173,6 @@ RemoteEvents.HatchEggEvent.OnServerEvent:Connect(onHatchRequest)
 
 handleRequest(RemoteEvents.EquipPetEvent, PetInventory.equip)
 handleRequest(RemoteEvents.UnequipPetEvent, PetInventory.unequip)
-handleRequest(RemoteEvents.SetAuraPetEvent, PetInventory.setAuraPet)
 
 -- ---------- duplicates and the Codex ----------
 -- Each changes what's saved, so an accepted one saves soon. Every reply is sent after the new inventory, so the window has redrawn by then.

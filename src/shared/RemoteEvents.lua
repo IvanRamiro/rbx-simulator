@@ -8,7 +8,6 @@ local EVENT_NAMES = {
     "RankUpEvent",
     "EquipPetEvent",
     "UnequipPetEvent",
-    "SetAuraPetEvent",
     "PetInventoryUpdatedEvent",
     "TogglePetLockEvent",
     "FusePetEvent",

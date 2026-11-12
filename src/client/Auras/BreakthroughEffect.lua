@@ -327,8 +327,8 @@ local groundParams = RaycastParams.new()
 groundParams.FilterType = Enum.RaycastFilterType.Exclude
 groundParams.IgnoreWater = true
 
-function BreakthroughEffect.play(container, character, rootPart, petId, rankId, onFinished)
-    local element = AuraStyles.Elements[petId or "Neutral"] or AuraStyles.Elements.Neutral
+function BreakthroughEffect.play(container, character, rootPart, rankId, onFinished)
+    local element = AuraStyles.Elements.Neutral -- (pets no longer colour it: SET AURA removed, the owner 2026-11-12)
     local breakthrough = AuraStyles.getBreakthrough(rankId)
     local look = { Element = element, Breakthrough = breakthrough }
 

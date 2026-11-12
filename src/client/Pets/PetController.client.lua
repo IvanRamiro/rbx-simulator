@@ -1,7 +1,7 @@
 -- The pets window (the Pets button on the HUD's rail) and the hatch results. Each pet is a card:
 -- its portrait (the pet itself, in a ViewportFrame), name, rarity, level and Qi bonus, its lock, and its Equip and
 -- Aura buttons, and Fuse when a spare copy can go into it. Equipped pets come first, then by rarity. The server owns the
--- inventory (PetInventoryUpdatedEvent sends it; Equip / Unequip / SetAura / TogglePetLock / FusePet ask).
+-- inventory (PetInventoryUpdatedEvent sends it; Equip / Unequip / TogglePetLock / FusePet ask).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -88,12 +88,11 @@ local function takePortrait(petId)
     return frame or Portraits.pet(petId, 58)
 end
 
-local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
+local function createPetCard(pet, layoutOrder, equippedCount)
     local definition = GameConfig.Pets[pet.PetId]
     if not definition then
         return
     end
-    local isAuraPet = pet.InstanceId == auraPetInstanceId
     local rarityColor = GameConfig.PetRarityColors[definition.Rarity] or C.Text
 
     local level = PetRules.level(pet)
@@ -146,15 +145,10 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
         Font = "Strong", TextSize = 11, TextColor3 = C.AccentBright, Text = "+" .. PetRules.qiBonus(pet.PetId, level) .. "% Qi",
         AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 16), LayoutOrder = 1, Parent = tags,
     })
-    if isAuraPet then
-        local aura = UiKit.tag("Aura", C.Highlight)
-        aura.LayoutOrder = 2
-        aura.Parent = tags
-    end
 
     -- buttons side by side, from the portrait's edge to the card's (78 px in, 8 px short, 4 apart)
     local material = PetRules.findMaterial(lastSnapshot.Pets, pet)
-    local buttons = if material then 3 else 2
+    local buttons = if material then 2 else 1 -- (SET AURA removed, the owner 2026-11-12: pets no longer colour the aura)
     local function action(text, tone, slot, onClick)
         local share = -(86 + (buttons - 1) * 4) / buttons
         local b = UiKit.button({
@@ -178,21 +172,12 @@ local function createPetCard(pet, layoutOrder, equippedCount, auraPetInstanceId)
     else
         action("SLOTS FULL", "Quiet", 0, nil)
     end
-    if isAuraPet then
-        action("AURA ON", "Highlight", 1, function()
-            RemoteEvents.SetAuraPetEvent:FireServer(nil)
-        end)
-    else
-        action("SET AURA", "Quiet", 1, if pet.Equipped then function()
-            RemoteEvents.SetAuraPetEvent:FireServer(pet.InstanceId)
-        end else nil)
-    end
     -- Fuse asks once more, naming the level it reaches; a Secret copy asks properly, with a wait
     if material then
         local reaches = level + PetRules.level(material)
         local fuse
         local armedUntil = 0
-        fuse = action("FUSE", "Accent", 2, function()
+        fuse = action("FUSE", "Accent", 1, function()
             if definition.Rarity == "Secret" then
                 ConfirmDialog.show({
                     Title = "FUSE A SECRET PET", Picture = Portraits.pet(pet.PetId, 72), ConfirmText = "FUSE IT",
@@ -309,7 +294,7 @@ function drawList(snapshot, equippedCount)
         return (da and da.DisplayName or a.PetId) < (db and db.DisplayName or b.PetId)
     end)
     for index, pet in pets do
-        createPetCard(pet, index, equippedCount, snapshot.AuraPetInstanceId)
+        createPetCard(pet, index, equippedCount)
     end
     clearPool()
     if scrollToTop then

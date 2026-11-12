@@ -35,11 +35,6 @@ local function getRankId(player)
     return rank and rank.Id
 end
 
-local function getAuraPetId(player)
-    local petId = player:GetAttribute("AuraPetId")
-    return if typeof(petId) == "string" then petId else nil
-end
-
 -- every player's realm aura (RealmAura), only while they meditate (the owner, 2026-11-04: "there
 -- should be no aura if the player is not meditating"): built round the character for their realm and
 -- sub-rank, rebuilt when either changes, removed when they stop or die
@@ -98,8 +93,8 @@ local function stopBreakthrough(player)
     end
 end
 
-local function printBreakthroughSummary(player, effect, petId, rankId)
-    print(string.format("[Breakthrough] %s: %s / %s", player.Name, petId or "Neutral", rankId))
+local function printBreakthroughSummary(player, effect, rankId)
+    print(string.format("[Breakthrough] %s: %s", player.Name, tostring(rankId)))
 
     task.delay(1.2, function()
         if effect.stopped then
@@ -139,9 +134,9 @@ local function playBreakthrough(player)
     end
 
     stopBreakthrough(player)
-    local petId, rankId = getAuraPetId(player), getRankId(player)
+    local rankId = getRankId(player)
     local effect
-    effect = BreakthroughEffect.play(container, character, rootPart, petId, rankId, function()
+    effect = BreakthroughEffect.play(container, character, rootPart, rankId, function()
         if activeBreakthroughs[player] == effect then
             activeBreakthroughs[player] = nil
         end
@@ -150,7 +145,7 @@ local function playBreakthrough(player)
     Sfx.play("Breakthrough", rootPart)
 
     if PRINT_BUILD_SUMMARY then
-        printBreakthroughSummary(player, effect, petId, rankId)
+        printBreakthroughSummary(player, effect, rankId)
     end
 end
 

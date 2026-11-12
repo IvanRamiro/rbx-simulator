@@ -156,7 +156,6 @@ local function sanitizeProgress(raw)
         RankId = startingRank.Id,
         Pets = {},
         EquippedPetIds = {},
-        AuraPetInstanceId = nil,
         Relics = {},
         OutfitId = nil,
         Eggs = {},
@@ -226,9 +225,7 @@ local function sanitizeProgress(raw)
         end
     end
 
-    if typeof(raw.AuraPetInstanceId) == "string" and table.find(progress.EquippedPetIds, raw.AuraPetInstanceId) then
-        progress.AuraPetInstanceId = raw.AuraPetInstanceId
-    end
+    -- (raw.AuraPetInstanceId, from before SET AURA was removed on 2026-11-12, is dropped: the next save leaves it out)
 
     if typeof(raw.Relics) == "table" then
         for _, relicId in raw.Relics do
@@ -316,7 +313,6 @@ local function captureProgress(player)
         RankId = rank.Id,
         Pets = pets.Pets,
         EquippedPetIds = pets.EquippedPetIds,
-        AuraPetInstanceId = pets.AuraPetInstanceId,
         Relics = relics,
         OutfitId = player:GetAttribute("OutfitId"),
         Eggs = eggs,

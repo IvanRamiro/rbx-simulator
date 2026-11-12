@@ -40,7 +40,6 @@ function PetInventory.setupPlayer(player, savedProgress)
     local data = {
         ownedPets = {},
         equipped = {},
-        auraPetInstanceId = nil,
     }
     playerData[player] = data
     Codex.setupPlayer(player, savedProgress)
@@ -55,7 +54,6 @@ function PetInventory.setupPlayer(player, savedProgress)
             })
         end
         data.equipped = table.clone(savedProgress.EquippedPetIds)
-        data.auraPetInstanceId = savedProgress.AuraPetInstanceId
     else
         for _, petId in GameConfig.StarterPetIds do
             addPet(data, petId)
@@ -88,10 +86,7 @@ function PetInventory.trimEquipped(player)
     local limit = PassRules.maxEquipped(player)
     local changed = false
     while #data.equipped > limit do
-        local removed = table.remove(data.equipped)
-        if removed == data.auraPetInstanceId then
-            data.auraPetInstanceId = nil
-        end
+        table.remove(data.equipped)
         changed = true
     end
     return changed
@@ -151,10 +146,6 @@ function PetInventory.unequip(player, instanceId)
     end
 
     table.remove(data.equipped, index)
-
-    if data.auraPetInstanceId == instanceId then
-        data.auraPetInstanceId = nil
-    end
 
     return true
 end
@@ -228,26 +219,6 @@ function PetInventory.take(player, instanceId)
     return nil
 end
 
-function PetInventory.setAuraPet(player, instanceId)
-    local data = playerData[player]
-    if not data then
-        return false
-    end
-
-    if instanceId ~= nil then
-        if typeof(instanceId) ~= "string" or not table.find(data.equipped, instanceId) then
-            return false
-        end
-    end
-
-    if data.auraPetInstanceId == instanceId then
-        return false
-    end
-
-    data.auraPetInstanceId = instanceId
-    return true
-end
-
 function PetInventory.getQiBonusPercent(player)
     local data = playerData[player]
     if not data then
@@ -279,7 +250,6 @@ function PetInventory.exportData(player)
     return {
         Pets = pets,
         EquippedPetIds = table.clone(data.equipped),
-        AuraPetInstanceId = data.auraPetInstanceId,
     }
 end
 
@@ -302,7 +272,6 @@ function PetInventory.getSnapshot(player)
 
     return {
         Pets = pets,
-        AuraPetInstanceId = data.auraPetInstanceId,
         CodexQiPercent = Codex.qiPercent(player),
     }
 end
@@ -328,20 +297,12 @@ for eggId, egg in GameConfig.Eggs do
 end
 
 -- Sends the player their inventory (PetInventoryUpdatedEvent) and sets the attributes every client
--- reads: "AuraPetId" and "EquippedPetIds" (comma-separated PetIds).
+-- reads: "EquippedPetIds" (comma-separated PetIds).
 function PetInventory.publish(player)
     local snapshot = PetInventory.getSnapshot(player)
     RemoteEvents.PetInventoryUpdatedEvent:FireClient(player, snapshot)
 
-    local auraPetId = nil
-    if snapshot and snapshot.AuraPetInstanceId then
-        for _, pet in snapshot.Pets do
-            if pet.InstanceId == snapshot.AuraPetInstanceId then
-                auraPetId = pet.PetId
-            end
-        end
-    end
-    player:SetAttribute("AuraPetId", auraPetId)
+    player:SetAttribute("AuraPetId", nil) -- (SET AURA removed, the owner 2026-11-12: clears it for anyone who had one)
 
     local equippedPetIds = {}
     if snapshot then

@@ -34,7 +34,7 @@ PetModels.Pets = {
     LunarHopper = { Scale = 1.0, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted-rabbit design removed (MESH_LOOKS was tuned with this scale)
     VoltFox = { Scale = 1.05, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old yellow block-fox design removed (MESH_LOOKS was tuned with this scale)
     GoldenKirin = { Scale = 1.15, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old design removed (MESH_LOOKS was tuned with this scale)
-    NineTailMoonfox = { Scale = 1.2, Parts = {} }, -- recreated (2026-11-12) in Studio: only its imported model (PetMeshes.LostLineages); its old procedural design removed
+    NineTailMoonfox = { Scale = 1.2, Parts = {} }, -- recreated (2026-11-12) in Studio, then remade grown the same day: only its imported model (PetMeshes.LostLineages); its old procedural design removed
     OriginSerpent = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old block serpent removed (MESH_LOOKS was tuned with this scale)
     AstralWhale = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted block whale removed (MESH_LOOKS was tuned with this scale)
     MossGolem = { Scale = 0.9, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
@@ -169,7 +169,7 @@ local MESH_LOOKS = {
     NebulaOwl = { Glow = Color3.fromRGB(176, 122, 255), Length = 4.0 },
     CosmicJellyfish = { Glow = Color3.fromRGB(245, 120, 180), Length = 3.3 },
     StarfallFox = { Glow = Color3.fromRGB(150, 160, 255), Length = 3.6 },
-    NineTailMoonfox = { Glow = Color3.fromRGB(150, 215, 255), Length = 2.5 }, -- crown of its tails to its paws (its tallest): about 6 studs, a moon fox kit with its nine tails streaming behind it
+    NineTailMoonfox = { Glow = Color3.fromRGB(150, 215, 255), Length = 2.6 }, -- crown of its tails to its paws (its tallest): about 6.2 studs, a grown moon vixen with her nine tails fanned behind her
     LanternWarden = { Glow = Color3.fromRGB(255, 176, 70), Length = 3.2 },
     DreamMoth = { Glow = Color3.fromRGB(230, 170, 255), Length = 3.2 },
     PrismArmadillo = { Glow = Color3.fromRGB(190, 150, 255), Length = 4.0 },
@@ -185,94 +185,13 @@ local MESH_LOOKS = {
     OriginSerpent = { Glow = Color3.fromRGB(30, 205, 255), Length = 3.0 }, -- tail root to antler tips (its tallest): about 7.5 studs, a floating helix taller than its owner; its old star sparkles removed
     SunscaleDragon = { Glow = Color3.fromRGB(255, 194, 74), Length = 4.6 },
     BonefireDragon = { Glow = Color3.fromRGB(61, 123, 255), Length = 4.6 }, -- nose to tail (its box's longest side); in Play about 10.6 studs, its raised wing bones half that high
-    PrismaticPhoenix = { Effect = "Glitter", Glow = Color3.fromRGB(255, 175, 130), Length = 4.2 },
+    PrismaticPhoenix = { Glow = Color3.fromRGB(255, 175, 130), Length = 4.2 },
     RuneSphinx = { Glow = Color3.fromRGB(255, 190, 90), Length = 4.0 },
-    WorldrootColossus = { Effect = "Glitter", Glow = Color3.fromRGB(90, 235, 120), Length = 3.6 },
-    ThousandYearDreamEater = { Effect = "Stars", Glow = Color3.fromRGB(170, 120, 255), Length = 3.7 },
-    EternalClockworkDragon = { Effect = "Sparks", Glow = Color3.fromRGB(255, 200, 90), Length = 4.3 },
-    HeavenbreakerApe = { Effect = "Sparks", Glow = Color3.fromRGB(255, 215, 110), Length = 3.4 },
+    WorldrootColossus = { Glow = Color3.fromRGB(90, 235, 120), Length = 3.6 },
+    ThousandYearDreamEater = { Glow = Color3.fromRGB(170, 120, 255), Length = 3.7 },
+    EternalClockworkDragon = { Glow = Color3.fromRGB(255, 200, 90), Length = 4.3 },
+    HeavenbreakerApe = { Glow = Color3.fromRGB(255, 215, 110), Length = 3.4 },
     DreadfangCerberus = { Glow = Color3.fromRGB(40, 200, 255), Length = 3.4 },
-}
-
-local TEXTURES = {
-    Glow = "rbxasset://textures/particles/explosion01_implosion_main.dds",
-    Sparkle = "rbxasset://textures/particles/sparkles_main.dds",
-    Fire = "rbxasset://textures/particles/fire_main.dds",
-    Sparks = "rbxasset://textures/particles/fire_sparks_main.dds",
-}
-
-local function emitter(parent, properties)
-    local particles = Instance.new("ParticleEmitter")
-    particles.LightInfluence = 0
-    for property, value in properties do
-        particles[property] = value
-    end
-    particles.Parent = parent
-    return particles
-end
-
-local function sizeCurve(peak, k)
-    return NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0),
-        NumberSequenceKeypoint.new(0.3, peak * k),
-        NumberSequenceKeypoint.new(1, 0),
-    })
-end
-
-local MESH_EFFECTS = {
-    Bubbles = function(body, tail, glow, k)
-        emitter(body, {
-            Texture = TEXTURES.Glow, Color = ColorSequence.new(glow), LightEmission = 0.4, Brightness = 2,
-            Size = sizeCurve(0.22, k), Transparency = NumberSequence.new(0.2), Rate = 5,
-            Lifetime = NumberRange.new(1.2, 1.8), Speed = NumberRange.new(0.3, 0.8), SpreadAngle = Vector2.new(180, 180),
-            Acceleration = Vector3.new(0, 1, 0),
-        })
-    end,
-    TailFlame = function(body, tail, glow, k)
-        emitter(tail, {
-            Texture = TEXTURES.Fire, Brightness = 5, LightEmission = 0.4,
-            Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 220, 120)),
-                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 120, 40)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 40, 20)),
-            }),
-            Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7 * k), NumberSequenceKeypoint.new(1, 0.15 * k) }),
-            Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.15), NumberSequenceKeypoint.new(1, 1) }),
-            Rate = 18, Lifetime = NumberRange.new(0.35, 0.55), Speed = NumberRange.new(1, 2),
-            SpreadAngle = Vector2.new(15, 15), Acceleration = Vector3.new(0, 6, 0),
-            Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-90, 90),
-        })
-        emitter(body, {
-            Texture = TEXTURES.Glow, Color = ColorSequence.new(glow), LightEmission = 0.5, Brightness = 2,
-            Size = sizeCurve(0.12, k), Rate = 6, Lifetime = NumberRange.new(0.8, 1.3),
-            Speed = NumberRange.new(0.5, 1.2), SpreadAngle = Vector2.new(40, 40), Acceleration = Vector3.new(0, 2.5, 0),
-        })
-    end,
-    Stars = function(body, tail, glow, k)
-        emitter(body, {
-            Texture = TEXTURES.Sparkle, Color = ColorSequence.new(glow), LightEmission = 0.6, Brightness = 2,
-            Size = sizeCurve(0.35, k), Rate = 6, Lifetime = NumberRange.new(0.5, 0.9),
-            Speed = NumberRange.new(0.1, 0.4), SpreadAngle = Vector2.new(180, 180), Rotation = NumberRange.new(0, 90),
-        })
-    end,
-    Sparks = function(body, tail, glow, k)
-        for _, source in { body, tail } do
-            emitter(source, {
-                Texture = TEXTURES.Sparks, Color = ColorSequence.new(glow), LightEmission = 0.6, Brightness = 2.5,
-                Orientation = Enum.ParticleOrientation.VelocityParallel,
-                Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3 * k), NumberSequenceKeypoint.new(1, 0.05 * k) }),
-                Rate = 6, Lifetime = NumberRange.new(0.12, 0.25), Speed = NumberRange.new(4, 7),
-                SpreadAngle = Vector2.new(180, 180), Drag = 6,
-            })
-        end
-    end,
-    Glitter = function(body, tail, glow, k)
-        emitter(body, {
-            Texture = TEXTURES.Sparkle, Color = ColorSequence.new(Color3.fromRGB(255, 225, 120), glow), LightEmission = 0.6,
-            Brightness = 2, Size = sizeCurve(0.25, k), Rate = 7, Lifetime = NumberRange.new(0.6, 1),
-            Speed = NumberRange.new(0.2, 0.5), SpreadAngle = Vector2.new(180, 180), Acceleration = Vector3.new(0, 0.6, 0),
-        })
-    end,
 }
 
 local function weldTo(rootPart, part)
@@ -287,8 +206,6 @@ local function weldTo(rootPart, part)
     weld.Part1 = part
     weld.Parent = part
 end
-
-local dressUp
 
 local function addImported(model, rootPart, template, design, petId)
     local look = MESH_LOOKS[petId] or {}
@@ -311,7 +228,6 @@ local function addImported(model, rootPart, template, design, petId)
         return
     end
 
-    local body
     for _, piece in template:GetDescendants() do
         if not piece:IsA("BasePart") then
             continue
@@ -334,44 +250,12 @@ local function addImported(model, rootPart, template, design, petId)
             end
         else
             part.Material = Enum.Material.SmoothPlastic
-            body = body or part
         end
         weldTo(rootPart, part)
         part.Parent = model
     end
-    if body then
-        dressUp(model, rootPart, body, boxSize * scale, look, k, turn)
-    end
-end
-
-dressUp = function(model, rootPart, body, size, look, k, turn)
-    local glow = look.Glow or Color3.new(1, 1, 1)
-    local shell = body:Clone()
-    shell.Name = "EnergyShell"
-    shell:ClearAllChildren()
-    shell.Material = Enum.Material.ForceField
-    shell.Color = glow
-    if shell:IsA("MeshPart") then
-        shell.TextureID = ""
-    end
-    shell.Size = body.Size * 1.06
-    weldTo(rootPart, shell)
-    shell.Parent = model
-
-    local light = Instance.new("PointLight")
-    light.Color = glow
-    light.Brightness = 1.2
-    light.Range = 3 * k
-    light.Parent = body
-
-    local effect = MESH_EFFECTS[look.Effect]
-    if effect then
-        local tail = Instance.new("Attachment")
-        tail.Name = "TailTip"
-        tail.Position = (turn or CFrame.identity) * Vector3.new(0, size.Y * 0.25, size.Z * 0.45)
-        tail.Parent = rootPart
-        effect(body, tail, glow, k)
-    end
+    -- (no energy shell, light or particles any more: the owner removed the pets' auras on 2026-11-12; every imported pet is rigged and
+    -- moves instead. This plain path is only a fallback for a pet whose rig hasn't been made yet)
 end
 
 local warnedMissing = {} -- [petId] = true once its missing model has been reported

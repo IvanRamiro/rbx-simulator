@@ -5,69 +5,10 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 
 local AuraStyles = {}
 
+-- The breakthrough flash's colours. Pets used to give their own (SET AURA); the owner removed that on 2026-11-12, so
+-- every breakthrough uses Neutral, and each realm's own aura (RealmAura) carries the variety.
 AuraStyles.Elements = {
     Neutral = { Core = Color3.fromRGB(235, 248, 255), Main = Color3.fromRGB(125, 200, 255), Deep = Color3.fromRGB(55, 120, 210), Particles = "Mote", RingShape = "Circle" },
-    EmberWyrm = { Core = Color3.fromRGB(255, 205, 110), Main = Color3.fromRGB(255, 125, 35), Deep = Color3.fromRGB(215, 45, 20), Particles = "Ember", RingShape = "Circle" },
-    AquaWisp = { Core = Color3.fromRGB(165, 232, 255), Main = Color3.fromRGB(55, 185, 255), Deep = Color3.fromRGB(35, 85, 215), Particles = "Droplet", RingShape = "Circle" },
-    GoldenKirin = { Core = Color3.fromRGB(255, 244, 206), Main = Color3.fromRGB(245, 190, 70), Deep = Color3.fromRGB(210, 140, 40), Particles = "Crystal", RingShape = "Polygon", RingSides = 6 },
-    VoltFox = { Core = Color3.fromRGB(196, 246, 255), Main = Color3.fromRGB(70, 190, 255), Deep = Color3.fromRGB(64, 74, 140), Particles = "Spark", RingShape = "Circle" }, -- its storm: lightning blue over storm slate (recreated 2026-11-10)
-    NineTailMoonfox = { Core = Color3.fromRGB(240, 248, 255), Main = Color3.fromRGB(160, 220, 255), Deep = Color3.fromRGB(45, 55, 150), Particles = "Crystal", RingShape = "Polygon", RingSides = 9 }, -- moonlight and midnight; a nine-sided ring for its nine tails (remade 2026-11-12 with the pet)
-    OriginSerpent = { Core = Color3.fromRGB(170, 245, 255), Main = Color3.fromRGB(30, 205, 255), Deep = Color3.fromRGB(255, 60, 205), Particles = "Mote", RingShape = "Polygon", RingSides = 8 }, -- its first Qi and its magenta ring (recreated 2026-11-10)
-    MossGolem = { Core = Color3.fromRGB(200, 230, 140), Main = Color3.fromRGB(110, 165, 75), Deep = Color3.fromRGB(110, 85, 55), Particles = "Mote", RingShape = "Polygon", RingSides = 5 },
-    MyceliumSprite = { Core = Color3.fromRGB(190, 255, 235), Main = Color3.fromRGB(70, 215, 195), Deep = Color3.fromRGB(80, 90, 190), Particles = "Mote", RingShape = "Circle" },
-    JadeSpiritPanda = { Core = Color3.fromRGB(215, 255, 225), Main = Color3.fromRGB(70, 200, 135), Deep = Color3.fromRGB(25, 70, 55), Particles = "Crystal", RingShape = "Circle" },
-    JadeAntlerDeer = { Core = Color3.fromRGB(235, 255, 175), Main = Color3.fromRGB(165, 215, 80), Deep = Color3.fromRGB(150, 110, 60), Particles = "Mote", RingShape = "Circle" },
-    MagmaCub = { Core = Color3.fromRGB(255, 185, 80), Main = Color3.fromRGB(235, 80, 25), Deep = Color3.fromRGB(70, 30, 25), Particles = "Ember", RingShape = "Circle" },
-    SunscaleDragon = { Core = Color3.fromRGB(255, 245, 170), Main = Color3.fromRGB(255, 195, 50), Deep = Color3.fromRGB(235, 115, 30), Particles = "Ember", RingShape = "Polygon", RingSides = 12 },
-    DawnPhoenix = { Core = Color3.fromRGB(255, 225, 140), Main = Color3.fromRGB(255, 115, 55), Deep = Color3.fromRGB(215, 35, 85), Particles = "Ember", RingShape = "Circle" },
-    LunarHopper = { Core = Color3.fromRGB(236, 244, 255), Main = Color3.fromRGB(143, 188, 255), Deep = Color3.fromRGB(70, 105, 205), Particles = "Mote", RingShape = "Circle" }, -- its moonlight (recreated 2026-11-10)
-    AstralWhale = { Core = Color3.fromRGB(255, 220, 150), Main = Color3.fromRGB(160, 120, 235), Deep = Color3.fromRGB(54, 42, 112), Particles = "Mote", RingShape = "Circle" }, -- its dusk: golden strings over violet and night (recreated 2026-11-10)
-    WindSprite = { Core = Color3.fromRGB(220, 255, 245), Main = Color3.fromRGB(120, 230, 200), Deep = Color3.fromRGB(50, 150, 140), Particles = "Mote", RingShape = "Circle" },
-    CloudSheep = { Core = Color3.fromRGB(240, 250, 255), Main = Color3.fromRGB(150, 210, 245), Deep = Color3.fromRGB(120, 125, 200), Particles = "Mote", RingShape = "Circle" },
-    SpiritCrane = { Core = Color3.fromRGB(225, 250, 250), Main = Color3.fromRGB(60, 215, 205), Deep = Color3.fromRGB(30, 110, 120), Particles = "Mote", RingShape = "Circle" },
-    AzureSkyDragon = { Core = Color3.fromRGB(200, 245, 255), Main = Color3.fromRGB(110, 200, 255), Deep = Color3.fromRGB(120, 90, 230), Particles = "Spark", RingShape = "Circle" }, -- the aurora it glides through: ice to violet
-    StormhornKirin = { Core = Color3.fromRGB(255, 250, 200), Main = Color3.fromRGB(150, 160, 255), Deep = Color3.fromRGB(70, 60, 170), Particles = "Spark", RingShape = "Polygon", RingSides = 6 },
-    GlacierPuff = { Core = Color3.fromRGB(240, 252, 255), Main = Color3.fromRGB(150, 215, 255), Deep = Color3.fromRGB(80, 140, 220), Particles = "Crystal", RingShape = "Circle" },
-    StormBumblebee = { Core = Color3.fromRGB(255, 250, 200), Main = Color3.fromRGB(255, 220, 80), Deep = Color3.fromRGB(170, 110, 255), Particles = "Spark", RingShape = "Circle" },
-    CrystalBeetle = { Core = Color3.fromRGB(220, 250, 255), Main = Color3.fromRGB(130, 220, 255), Deep = Color3.fromRGB(90, 60, 170), Particles = "Crystal", RingShape = "Polygon", RingSides = 6 },
-    GravityImp = { Core = Color3.fromRGB(240, 210, 255), Main = Color3.fromRGB(170, 100, 255), Deep = Color3.fromRGB(70, 30, 140), Particles = "Mote", RingShape = "Circle" },
-    ThunderclawDrake = { Core = Color3.fromRGB(255, 250, 190), Main = Color3.fromRGB(255, 215, 60), Deep = Color3.fromRGB(120, 90, 220), Particles = "Spark", RingShape = "Circle" },
-    FrostfangSerpent = { Core = Color3.fromRGB(240, 252, 255), Main = Color3.fromRGB(130, 210, 255), Deep = Color3.fromRGB(60, 120, 210), Particles = "Crystal", RingShape = "Polygon", RingSides = 6 },
-    DreamMoth = { Core = Color3.fromRGB(255, 235, 250), Main = Color3.fromRGB(230, 170, 255), Deep = Color3.fromRGB(140, 90, 210), Particles = "Mote", RingShape = "Circle" },
-    CrystalSnail = { Core = Color3.fromRGB(210, 255, 240), Main = Color3.fromRGB(110, 230, 200), Deep = Color3.fromRGB(40, 140, 130), Particles = "Crystal", RingShape = "Circle" },
-    PrismArmadillo = { Core = Color3.fromRGB(240, 230, 255), Main = Color3.fromRGB(190, 150, 255), Deep = Color3.fromRGB(100, 80, 190), Particles = "Crystal", RingShape = "Polygon", RingSides = 8 },
-    LanternWarden = { Core = Color3.fromRGB(255, 245, 200), Main = Color3.fromRGB(255, 200, 100), Deep = Color3.fromRGB(180, 110, 40), Particles = "Ember", RingShape = "Circle" },
-    JadeWyrmTurtle = { Core = Color3.fromRGB(210, 255, 230), Main = Color3.fromRGB(80, 210, 150), Deep = Color3.fromRGB(30, 110, 80), Particles = "Crystal", RingShape = "Polygon", RingSides = 6 },
-    EchoBat = { Core = Color3.fromRGB(205, 255, 246), Main = Color3.fromRGB(31, 224, 198), Deep = Color3.fromRGB(120, 70, 94), Particles = "Mote", RingShape = "Circle" }, -- the sounds it keeps: sea-glass teal over its plum wings (recreated 2026-11-12)
-    QiClockworkFinch = { Core = Color3.fromRGB(210, 255, 230), Main = Color3.fromRGB(236, 192, 96), Deep = Color3.fromRGB(34, 58, 150), Particles = "Spark", RingShape = "Polygon", RingSides = 12 }, -- gilt wire over lapis enamel, its Qi jade: a clock's twelve sides (recreated 2026-11-12)
-    MoonfangTiger = { Core = Color3.fromRGB(215, 235, 255), Main = Color3.fromRGB(60, 150, 255), Deep = Color3.fromRGB(214, 104, 26), Particles = "Crystal", RingShape = "Circle" }, -- the moonlight its fangs keep (and the full moon) over its orange coat; shards of moonstone (recreated 2026-11-12)
-    ThousandEyedGuardian = { Core = Color3.fromRGB(255, 236, 240), Main = Color3.fromRGB(240, 130, 160), Deep = Color3.fromRGB(60, 130, 80), Particles = "Droplet", RingShape = "Polygon", RingSides = 8 }, -- the Lotus Elephant: lotus pink over leaf green, its rain in drops, the lotus's eight petals (recreated 2026-11-12)
-    NinefoldSpiritSerpent = { Core = Color3.fromRGB(236, 255, 248), Main = Color3.fromRGB(28, 226, 160), Deep = Color3.fromRGB(24, 110, 86), Particles = "Mote", RingShape = "Polygon", RingSides = 9 }, -- its jade light over pearl scales; nine sides, one for each meridian (recreated 2026-11-12)
-    WorldrootColossus = { Core = Color3.fromRGB(220, 255, 210), Main = Color3.fromRGB(120, 210, 100), Deep = Color3.fromRGB(60, 100, 50), Particles = "Crystal", RingShape = "Polygon", RingSides = 5 },
-    SandPhantom = { Core = Color3.fromRGB(255, 240, 200), Main = Color3.fromRGB(225, 185, 110), Deep = Color3.fromRGB(150, 100, 50), Particles = "Mote", RingShape = "Circle" },
-    SolarButterfly = { Core = Color3.fromRGB(255, 245, 190), Main = Color3.fromRGB(255, 190, 70), Deep = Color3.fromRGB(230, 110, 40), Particles = "Ember", RingShape = "Circle" },
-    ObsidianGuardian = { Core = Color3.fromRGB(230, 200, 255), Main = Color3.fromRGB(150, 80, 240), Deep = Color3.fromRGB(50, 30, 90), Particles = "Crystal", RingShape = "Polygon", RingSides = 6 },
-    GoldenManeLion = { Core = Color3.fromRGB(255, 245, 200), Main = Color3.fromRGB(255, 190, 70), Deep = Color3.fromRGB(210, 110, 30), Particles = "Ember", RingShape = "Polygon", RingSides = 12 },
-    DreadfangCerberus = { Core = Color3.fromRGB(200, 250, 255), Main = Color3.fromRGB(40, 210, 255), Deep = Color3.fromRGB(40, 25, 90), Particles = "Ember", RingShape = "Circle" },
-    BonefireDragon = { Core = Color3.fromRGB(200, 228, 255), Main = Color3.fromRGB(61, 123, 255), Deep = Color3.fromRGB(40, 30, 150), Particles = "Ember", RingShape = "Polygon", RingSides = 7 }, -- its soul fire: white-hot to cobalt to deep indigo (recreated 2026-11-11)
-    PrismaticPhoenix = { Core = Color3.fromRGB(255, 250, 240), Main = Color3.fromRGB(255, 150, 220), Deep = Color3.fromRGB(120, 120, 255), Particles = "Ember", RingShape = "Circle" },
-    StarfallFox = { Core = Color3.fromRGB(255, 250, 220), Main = Color3.fromRGB(150, 160, 255), Deep = Color3.fromRGB(60, 60, 160), Particles = "Mote", RingShape = "Circle" },
-    CosmicJellyfish = { Core = Color3.fromRGB(255, 230, 250), Main = Color3.fromRGB(200, 140, 255), Deep = Color3.fromRGB(90, 60, 190), Particles = "Mote", RingShape = "Circle" },
-    NebulaOwl = { Core = Color3.fromRGB(245, 230, 255), Main = Color3.fromRGB(190, 140, 255), Deep = Color3.fromRGB(80, 50, 170), Particles = "Mote", RingShape = "Circle" },
-    CelestialSnowLeopard = { Core = Color3.fromRGB(245, 250, 255), Main = Color3.fromRGB(160, 200, 255), Deep = Color3.fromRGB(90, 120, 210), Particles = "Crystal", RingShape = "Circle" },
-    CometStag = { Core = Color3.fromRGB(235, 250, 255), Main = Color3.fromRGB(130, 200, 255), Deep = Color3.fromRGB(60, 70, 180), Particles = "Spark", RingShape = "Circle" },
-    CelestialPearlDragon = { Core = Color3.fromRGB(255, 250, 235), Main = Color3.fromRGB(255, 215, 150), Deep = Color3.fromRGB(200, 150, 90), Particles = "Mote", RingShape = "Polygon", RingSides = 8 },
-    EclipseCat = { Core = Color3.fromRGB(255, 235, 190), Main = Color3.fromRGB(230, 170, 90), Deep = Color3.fromRGB(40, 30, 70), Particles = "Mote", RingShape = "Circle" },
-    TimekeeperTortoise = { Core = Color3.fromRGB(255, 245, 210), Main = Color3.fromRGB(230, 200, 120), Deep = Color3.fromRGB(110, 100, 70), Particles = "Mote", RingShape = "Polygon", RingSides = 12 },
-    GalaxyManta = { Core = Color3.fromRGB(240, 225, 255), Main = Color3.fromRGB(150, 110, 255), Deep = Color3.fromRGB(50, 40, 150), Particles = "Mote", RingShape = "Circle" },
-    Shadowcoil = { Core = Color3.fromRGB(220, 190, 255), Main = Color3.fromRGB(130, 70, 230), Deep = Color3.fromRGB(40, 20, 80), Particles = "Mote", RingShape = "Circle" },
-    RuneSphinx = { Core = Color3.fromRGB(255, 240, 200), Main = Color3.fromRGB(255, 180, 80), Deep = Color3.fromRGB(60, 45, 30), Particles = "Mote", RingShape = "Polygon", RingSides = 4 },
-    ThousandYearDreamEater = { Core = Color3.fromRGB(255, 230, 250), Main = Color3.fromRGB(200, 140, 255), Deep = Color3.fromRGB(90, 50, 160), Particles = "Mote", RingShape = "Circle" },
-    HeavenbreakerApe = { Core = Color3.fromRGB(255, 245, 200), Main = Color3.fromRGB(255, 180, 70), Deep = Color3.fromRGB(150, 70, 30), Particles = "Ember", RingShape = "Circle" },
-    AbyssAnomalocaris = { Core = Color3.fromRGB(255, 210, 240), Main = Color3.fromRGB(225, 50, 175), Deep = Color3.fromRGB(70, 30, 80), Particles = "Mote", RingShape = "Circle" },
-    VoidscaleHydra = { Core = Color3.fromRGB(220, 190, 255), Main = Color3.fromRGB(120, 60, 240), Deep = Color3.fromRGB(30, 10, 80), Particles = "Mote", RingShape = "Circle" },
-    TheNamelessOne = { Core = Color3.fromRGB(255, 255, 255), Main = Color3.fromRGB(200, 170, 255), Deep = Color3.fromRGB(40, 20, 90), Particles = "Mote", RingShape = "Polygon", RingSides = 8 },
-    EternalClockworkDragon = { Core = Color3.fromRGB(235, 255, 255), Main = Color3.fromRGB(220, 190, 110), Deep = Color3.fromRGB(110, 80, 40), Particles = "Spark", RingShape = "Polygon", RingSides = 12 },
 }
 
 AuraStyles.Breakthroughs = {
@@ -94,10 +35,6 @@ function AuraStyles.getBreakthrough(rankId)
         return AuraStyles.Breakthroughs.Milestone
     end
     return AuraStyles.Breakthroughs.Step
-end
-
-for petId in GameConfig.Pets do
-    assert(AuraStyles.Elements[petId], "AuraStyles.Elements has no colours for pet " .. petId)
 end
 
 return AuraStyles

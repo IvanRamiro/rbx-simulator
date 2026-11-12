@@ -5370,17 +5370,17 @@ end
 
 local animateNineTailMoonfox -- animateNineTailMoonfox's section below (its own locals stay in its block)
 do
-    -- The Nine-Tail Moonfox (jointed, built in Studio 2026-11-12): a moon fox kit with nine plush tails that stream back from its rump. It trots
+    -- The Nine-Tail Moonfox (jointed, built in Studio 2026-11-12; remade grown, the owner: "a mature version of it, and our own styles"): a
+    -- grown moon vixen with nine long silken tails fanned up behind her. She trots
     -- after its owner, looks about with a little tilt of its head, and its tails sway one after another, a wave running across the fan; when its
     -- owner flies its legs tuck and the tails stream out behind it. The special, Full Moon (Blasts.FullMoon): the tails fan wide and lift, its
     -- head rises, and a light leaves every tail tip to meet above it as a full moon.
     local LEGS = { LegFL = 0, LegBR = 0, LegFR = math.pi, LegBL = math.pi } -- a trot: diagonal pairs together
     local TAILS = 9
-    local SOLE = 1.77 -- template units from the middle of its box (the pet's root) down to its paws: it stands on the ground
 
     function animateNineTailMoonfox(rig, s, moving, fly, nova)
         local m, u, t, dt = rig.motors, rig.unit, s.time, rig.deltaTime
-        local drop = dropToGround(rig, s, t, u, fly, SOLE)
+        local drop = dropToGround(rig, s, t, u, fly, rig.profile.Sole)
         s.stride = (s.stride or 0) + dt * (2 + 9 * moving)
         local stride = s.stride
         local breathe = math.sin(t * 1.6)
@@ -5416,6 +5416,89 @@ do
             local roll = 0.12 * wave - side * (0.4 * fan - 0.12 * fly)
             pose(m["Tail" .. i], CFrame.Angles(lift, 0.08 * wave, roll))
         end
+    end
+end
+
+local animateBrute, animateWinged, animateDreamEater -- the five pets rigged in Studio (2026-11-12): their sections below
+do
+    -- The owner, 2026-11-12: "remove all the aura in pet, just add a rig animation for them". These five were single meshes that showed only
+    -- a see-through energy shell, a light and particles; their meshes were split into limbs in Studio (segment) and now move.
+
+    -- Brutes (the Heavenbreaker Ape, the Worldroot Colossus): they stand on the ground and knuckle-walk, arms swinging in turn with a heavy
+    -- roll of the shoulders; standing, they breathe deep and the ape looks about. Flying, the arms trail back. The special: both arms rise
+    -- over the head and slam down (its Blast lands with the slam). rig.profile.Sole: template units from its middle down to its feet.
+    function animateBrute(rig, s, moving, fly, nova)
+        local m, u, t, dt = rig.motors, rig.unit, s.time, rig.deltaTime
+        local drop = dropToGround(rig, s, t, u, fly, rig.profile.Sole)
+        s.stride = (s.stride or 0) + dt * (1.4 + 6 * moving)
+        local stride, breathe = s.stride, math.sin(t * 1.3)
+        local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+        local raise = smoothstep(0.05, 0.38, progress) * (1 - smoothstep(0.42, 0.5, progress))
+        local slam = smoothstep(0.42, 0.5, progress) * (1 - smoothstep(0.62, 0.85, progress))
+        local roll = math.sin(stride) * moving
+        pose(m.Body, CFrame.new(0, -drop + (0.03 * breathe + 0.06 * math.abs(roll) - 0.08 * slam) * u, 0)
+            * CFrame.Angles(0.025 * breathe - 0.12 * moving - 0.15 * raise + 0.25 * slam, 0.06 * roll, 0.07 * roll))
+        s.nextGlance = s.nextGlance or 0
+        if t >= s.nextGlance then
+            s.nextGlance = t + 3 + math.random() * 4
+            s.glance = (math.random() - 0.5) * 0.9
+        end
+        s.yaw = (s.yaw or 0) + ((s.glance or 0) * (1 - moving) * (1 - raise) - (s.yaw or 0)) * math.min(1, dt * 2)
+        pose(m.Head, CFrame.Angles(0.04 * breathe + 0.25 * raise - 0.15 * slam, s.yaw, 0.03 * math.sin(t * 0.7)))
+        for _, name in { "ArmL", "ArmR" } do
+            local side = rig.sides[name] or 0
+            local phase = if side > 0 then 0 else math.pi
+            local swing = 0.55 * math.sin(stride + phase) * moving
+            local hang = 0.04 * math.sin(t * 1.3 + phase)
+            pose(m[name], CFrame.Angles(swing + hang - 0.6 * fly - 2.4 * raise + 0.4 * slam, 0, side * (0.08 * fly + 0.15 * raise)))
+        end
+        pose(m.Legs, CFrame.Angles(-0.12 * roll, 0, 0.05 * roll))
+    end
+
+    -- Winged (the Prismatic Phoenix, the Eternal Clockwork Dragon): they hover by their owner. Their wings beat slow, long strokes at rest and
+    -- quicker, deeper ones when they move or fly; the body rises on each down-stroke; the tail sways and lifts against the beat; the head looks
+    -- about. The special: wings swept wide and held, head thrown up (its Blast opens from it).
+    function animateWinged(rig, s, moving, fly, nova)
+        local m, u, t, dt = rig.motors, rig.unit, s.time, rig.deltaTime
+        local pace = math.max(moving, fly)
+        s.flap = (s.flap or 0) + dt * (2.2 + 4.5 * pace)
+        local beat = math.sin(s.flap)
+        local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+        local spread = smoothstep(0.05, 0.3, progress) * (1 - smoothstep(0.75, 0.95, progress))
+        local still = 1 - spread
+        pose(m.Body, CFrame.new(0, (-0.08 * beat * still + 0.05 * math.sin(t * 0.9)) * u, 0)
+            * CFrame.Angles(-0.1 * pace + 0.04 * beat * still - 0.12 * spread, 0, 0.04 * math.sin(t * 0.6)))
+        s.nextGlance = s.nextGlance or 0
+        if t >= s.nextGlance then
+            s.nextGlance = t + 2.5 + math.random() * 3.5
+            s.glance = (math.random() - 0.5) * 0.8
+        end
+        s.yaw = (s.yaw or 0) + ((s.glance or 0) * (1 - pace) * still - (s.yaw or 0)) * math.min(1, dt * 3)
+        pose(m.Head, CFrame.Angles(0.05 * math.sin(t * 1.1) - 0.05 * beat * still + 0.4 * spread, s.yaw, 0))
+        local depth = 0.35 + 0.25 * pace
+        for _, name in { "WingL", "WingR" } do
+            local side = rig.sides[name] or 0
+            pose(m[name], CFrame.Angles(0, side * (0.1 * beat * still - 0.25 * spread), side * ((depth * beat + 0.05) * still + 0.55 * spread)))
+        end
+        if m.Tail then
+            pose(m.Tail, CFrame.Angles(0.12 * beat * still - 0.1 * pace - 0.25 * spread, 0.18 * math.sin(t * 0.8), 0.05 * math.sin(t * 1.3)))
+        end
+    end
+
+    -- The Thousand-Year Dream Eater: it swims through the air beside its owner, a slow wave running from its head through its body to its fins,
+    -- rolling a little as it turns. The special: it opens up, head raised and fins spread, and draws in a dream (Blasts.SwallowedDream).
+    function animateDreamEater(rig, s, moving, fly, nova)
+        local m, u, t = rig.motors, rig.unit, s.time
+        local pace = math.max(moving, fly)
+        local speed = 1.2 + 2.2 * pace
+        s.swim = (s.swim or 0) + rig.deltaTime * speed
+        local w = s.swim
+        local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+        local open = smoothstep(0.05, 0.3, progress) * (1 - smoothstep(0.7, 0.95, progress))
+        pose(m.Body, CFrame.new(0, (0.12 * math.sin(w) + 0.05 * open) * u, 0)
+            * CFrame.Angles(0.08 * math.sin(w - 0.6) - 0.08 * pace - 0.1 * open, 0.05 * math.sin(w * 0.5), 0.07 * math.sin(w * 0.5 + 1)))
+        pose(m.Head, CFrame.Angles(0.1 * math.sin(w + 0.9) + 0.3 * open, 0.06 * math.sin(w * 0.5 + 0.5), 0))
+        pose(m.Fins, CFrame.Angles(0.07 * math.sin(w - 1.4) - 0.05 * open, 0.05 * math.sin(w - 1), 0.05 * math.sin(w * 0.5 - 0.8)))
     end
 end
 
@@ -6422,7 +6505,48 @@ PetRig.Profiles.TimekeeperTortoise = {
     Animate = animateTimekeeperTortoise,
 }
 
+-- The five rigged in Studio (2026-11-12; animateBrute, animateWinged, animateDreamEater). No standing light or motes: the owner removed the
+-- pets' auras; their glow pieces stay as part of their designs, and the special keeps its burst.
+PetRig.Profiles.HeavenbreakerApe = {
+    Joints = { Body = "Root", Head = "Body", ArmL = "Body", ArmR = "Body", Legs = "Body" },
+    Sole = 1.531, -- template units from its middle to its feet
+    Effects = { Pulse = "Body", Burst = "Body", Blast = "HeavenQuake", NovaLight = 2 },
+    Colors = { Gold = Color3.fromRGB(255, 215, 110), Amber = Color3.fromRGB(150, 110, 40), Orange = Color3.fromRGB(255, 180, 60),
+        Sun = Color3.fromRGB(255, 245, 210), Ivory = Color3.fromRGB(235, 245, 255) },
+    Animate = animateBrute,
+}
+PetRig.Profiles.WorldrootColossus = {
+    Joints = { Body = "Root", ArmL = "Body", ArmR = "Body", Legs = "Body" },
+    Sole = 1.868,
+    Effects = { Pulse = "Body", Burst = "Body", Blast = "Rootwake", NovaLight = 2 },
+    Colors = { Gold = Color3.fromRGB(120, 255, 140), Amber = Color3.fromRGB(70, 45, 25), Orange = Color3.fromRGB(60, 200, 90),
+        Sun = Color3.fromRGB(210, 255, 200), Ivory = Color3.fromRGB(240, 255, 235) },
+    Animate = animateBrute,
+}
+PetRig.Profiles.PrismaticPhoenix = {
+    Joints = { Body = "Root", Head = "Body", WingL = "Body", WingR = "Body", Tail = "Body" },
+    Effects = { Pulse = "Body", Burst = "Body", Blast = "PrismBloom", NovaLight = 2.5 },
+    Colors = { Gold = Color3.fromRGB(255, 200, 120), Amber = Color3.fromRGB(200, 80, 160), Orange = Color3.fromRGB(255, 120, 200),
+        Sun = Color3.fromRGB(255, 250, 230), Ivory = Color3.fromRGB(255, 255, 255) },
+    Animate = animateWinged,
+}
+PetRig.Profiles.EternalClockworkDragon = {
+    Joints = { Body = "Root", Head = "Body", WingL = "Body", WingR = "Body", Tail = "Body" },
+    Effects = { Pulse = "Body", Burst = "Body", Blast = "Clockstrike", NovaLight = 2.5 },
+    Colors = { Gold = Color3.fromRGB(255, 210, 90), Amber = Color3.fromRGB(120, 90, 30), Orange = Color3.fromRGB(90, 190, 255),
+        Sun = Color3.fromRGB(255, 245, 205), Ivory = Color3.fromRGB(230, 245, 255) },
+    Animate = animateWinged,
+}
+PetRig.Profiles.ThousandYearDreamEater = {
+    Joints = { Body = "Root", Head = "Body", Fins = "Body" },
+    Effects = { Pulse = "Body", Burst = "Body", Blast = "SwallowedDream", NovaLight = 2 },
+    Colors = { Gold = Color3.fromRGB(150, 175, 255), Amber = Color3.fromRGB(40, 30, 110), Orange = Color3.fromRGB(255, 130, 230),
+        Sun = Color3.fromRGB(235, 235, 255), Ivory = Color3.fromRGB(250, 245, 255) },
+    Animate = animateDreamEater,
+}
+
 PetRig.Profiles.NineTailMoonfox = {
+    Sole = 2.334, -- template units from the middle of its box (the pet's root) down to its paws: it stands on the ground
     Joints = {
         Body = "Root",
         Head = "Body",
@@ -9862,6 +9986,125 @@ function Blasts.SovereignRoar(rig, fx)
 end
 
 local blastWarned = {} -- [petId] = true once its special has failed and been reported
+
+-- Heaven Quake (the Heavenbreaker Ape): its fists land and a gold ring of force runs out over the ground, chips of light kicked up behind it.
+function Blasts.HeavenQuake(rig, fx)
+    local colors, u, neon = rig.profile.Colors, rig.unit, fx.neon
+    local ground = rig.rootPart.Position - Vector3.new(0, rig.profile.Sole * u, 0)
+    local ring = neon(Vector3.new(0.12 * u, 1, 1), CFrame.new(ground) * CFrame.Angles(0, 0, math.rad(90)), colors.Gold)
+    ring.Shape = Enum.PartType.Cylinder
+    ring.Transparency = 0.2
+    TweenService:Create(ring, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = Vector3.new(0.04 * u, 9 * u, 9 * u), Transparency = 1, Color = colors.Sun,
+    }):Play()
+    for i = 1, 10 do
+        local a = i / 10 * math.pi * 2
+        local chip = neon(Vector3.one * 0.18 * u, CFrame.new(ground + Vector3.new(math.cos(a), 0.2, math.sin(a)) * u), colors.Orange)
+        TweenService:Create(chip, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            CFrame = CFrame.new(ground + Vector3.new(math.cos(a) * 3, 1.4 + (i % 3) * 0.4, math.sin(a) * 3) * u) * CFrame.Angles(a, a, 0),
+            Size = Vector3.one * 0.05 * u, Transparency = 1,
+        }):Play()
+    end
+end
+
+-- Rootwake (the Worldroot Colossus): its fists strike the earth and green shoots spring up in a ring round it, open, and fade.
+function Blasts.Rootwake(rig, fx)
+    local colors, u, neon = rig.profile.Colors, rig.unit, fx.neon
+    local ground = rig.rootPart.Position - Vector3.new(0, rig.profile.Sole * u, 0)
+    for i = 1, 12 do
+        local a = i / 12 * math.pi * 2
+        local at = ground + Vector3.new(math.cos(a), 0, math.sin(a)) * (2 + (i % 2) * 0.6) * u
+        task.delay(i * 0.03, function()
+            local shoot = neon(Vector3.new(0.12 * u, 0.05 * u, 0.12 * u), CFrame.new(at), colors.Orange)
+            TweenService:Create(shoot, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = Vector3.new(0.12 * u, 1.3 * u, 0.12 * u), CFrame = CFrame.new(at + Vector3.new(0, 0.65 * u, 0)),
+            }):Play()
+            local leaf = neon(Vector3.one * 0.08 * u, CFrame.new(at), colors.Gold)
+            TweenService:Create(leaf, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                CFrame = CFrame.new(at + Vector3.new(0, 1.6 * u, 0)) * CFrame.Angles(0, a, math.rad(45)), Size = Vector3.new(0.4, 0.05, 0.25) * u,
+                Transparency = 1,
+            }):Play()
+            task.delay(0.45, function()
+                TweenService:Create(shoot, TweenInfo.new(0.5), { Transparency = 1, Size = Vector3.new(0.05, 1.3, 0.05) * u }):Play()
+            end)
+        end)
+    end
+end
+
+-- Prism Bloom (the Prismatic Phoenix): with its wings swept wide, seven feathers of light in the colours of the spectrum open round it like a
+-- fan, turn once, and scatter.
+function Blasts.PrismBloom(rig, fx)
+    local u, neon = rig.unit, fx.neon
+    local at = (rig.parts.Body or rig.rootPart).Position
+    local facing = fx.facing
+    local hues = { "ff5061", "ffa227", "ffe538", "7ced7c", "38e1ff", "6190ff", "c46cff" }
+    for i, hex in hues do
+        local a = math.rad(-90 + (i - 1) * 30)
+        local dir = facing:VectorToWorldSpace(Vector3.new(math.sin(a), math.cos(a), 0.4))
+        local feather = neon(Vector3.new(0.12, 0.7, 0.05) * u, CFrame.lookAt(at, at + dir) * CFrame.Angles(math.rad(90), 0, 0), Color3.fromHex(hex))
+        feather.Transparency = 0.15
+        TweenService:Create(feather, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            CFrame = CFrame.lookAt(at + dir * 1.6 * u, at + dir * 3 * u) * CFrame.Angles(math.rad(90), 0, 0), Size = Vector3.new(0.18, 1.2, 0.05) * u,
+        }):Play()
+        task.delay(0.6, function()
+            TweenService:Create(feather, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                CFrame = CFrame.lookAt(at + dir * 3.4 * u, at + dir * 5 * u) * CFrame.Angles(math.rad(90), math.rad(180), 0), Transparency = 1,
+            }):Play()
+        end)
+    end
+end
+
+-- Clockstrike (the Eternal Clockwork Dragon): a dial of gold opens behind it, twelve hour marks round its rim; the hand sweeps once round
+-- and every mark flashes as it passes, then the dial fades.
+function Blasts.Clockstrike(rig, fx)
+    local colors, u, neon = rig.profile.Colors, rig.unit, fx.neon
+    local centre = (rig.parts.Body or rig.rootPart).CFrame.Position + fx.facing:VectorToWorldSpace(Vector3.new(0, 1.2, 1.2)) * u
+    local dial = fx.facing + centre
+    local marks = {}
+    for i = 1, 12 do
+        local a = i / 12 * math.pi * 2
+        local mark = neon(Vector3.new(0.08, 0.35, 0.05) * u, dial * CFrame.Angles(0, 0, a) * CFrame.new(0, 1.6 * u, 0), colors.Gold)
+        mark.Transparency = 0.4
+        marks[i] = mark
+    end
+    local hand = neon(Vector3.new(0.07, 1.5, 0.05) * u, dial * CFrame.new(0, 0.75 * u, 0), colors.Sun)
+    for step = 1, 12 do
+        task.delay(step * 0.06, function()
+            local a = step / 12 * math.pi * 2
+            hand.CFrame = dial * CFrame.Angles(0, 0, a) * CFrame.new(0, 0.75 * u, 0)
+            local mark = marks[step]
+            mark.Transparency = 0
+            mark.Color = colors.Orange
+            TweenService:Create(mark, TweenInfo.new(0.5), { Color = colors.Gold, Transparency = 0.3 }):Play()
+        end)
+    end
+    task.delay(0.85, function()
+        for _, piece in { hand, table.unpack(marks) } do
+            TweenService:Create(piece, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1 }):Play()
+        end
+    end)
+end
+
+-- Swallowed Dream (the Thousand-Year Dream Eater): pale motes drift in toward its open mouth from all round, and it closes on them in a
+-- soft flash.
+function Blasts.SwallowedDream(rig, fx)
+    local colors, u, neon = rig.profile.Colors, rig.unit, fx.neon
+    local mouth = (rig.parts.Head or rig.rootPart).Position
+    for i = 1, 14 do
+        local a = i / 14 * math.pi * 2
+        local from = mouth + Vector3.new(math.cos(a) * 3, math.sin(a * 2) * 1.2 + 0.4, math.sin(a) * 3) * u
+        local mote = neon(Vector3.one * 0.14 * u, CFrame.new(from), if i % 2 == 0 then colors.Orange else colors.Gold)
+        mote.Shape = Enum.PartType.Ball
+        TweenService:Create(mote, TweenInfo.new(0.7 + (i % 3) * 0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            CFrame = CFrame.new(mouth), Size = Vector3.one * 0.04 * u, Transparency = 0.6,
+        }):Play()
+    end
+    task.delay(0.95, function()
+        local flash = neon(Vector3.one * 0.3 * u, CFrame.new(mouth), colors.Sun)
+        flash.Shape = Enum.PartType.Ball
+        TweenService:Create(flash, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * 1.4 * u, Transparency = 1 }):Play()
+    end)
+end
 
 -- Full Moon (the Nine-Tail Moonfox): its tails fan wide (animateNineTailMoonfox) and a light leaves every tail tip; the nine meet above
 -- its head and swell into a full moon, which flares once, rings the air with pale light and fades.
