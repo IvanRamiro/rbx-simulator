@@ -28,46 +28,13 @@ end
 
 PetModels.SIZE = 2
 
-local function at(x, y, z, rx, ry, rz)
-    return CFrame.new(x, y, z) * CFrame.Angles(math.rad(rx or 0), math.rad(ry or 0), math.rad(rz or 0))
-end
-
-local function mirrored(parts, make)
-    table.insert(parts, make(-1))
-    table.insert(parts, make(1))
-end
-
-local function nineTailMoonfox()
-    local fur = Color3.fromRGB(245, 245, 255)
-    local lilac = Color3.fromRGB(190, 160, 255)
-    local violet = Color3.fromRGB(150, 110, 255)
-    local parts = {
-        { Shape = "Prism", Size = Vector3.new(0.75, 0.7, 1.2), At = at(0, 0, 0.1), Color = fur },
-        { Shape = "Prism", Size = Vector3.new(0.8, 0.7, 0.7), At = at(0, 0.45, -0.65), Color = fur },
-        { Shape = "Wedge", Size = Vector3.new(0.4, 0.3, 0.45), At = at(0, 0.32, -1.18), Color = fur },
-        { Shape = "Block", Size = Vector3.new(0.12, 0.12, 0.05), At = at(0, 0.72, -1.01, 0, 0, 45), Color = lilac, Neon = true },
-    }
-    mirrored(parts, function(side)
-        return { Shape = "Wedge", Size = Vector3.new(0.12, 0.5, 0.35), At = at(0.25 * side, 0.92, -0.6, 0, 90 * side), Color = fur }
-    end)
-    mirrored(parts, function(side)
-        return { Shape = "Block", Size = Vector3.new(0.15, 0.1, 0.06), At = at(0.2 * side, 0.52, -1.01), Color = violet, Neon = true }
-    end)
-    for tail = 1, 9 do
-        local base = at(0, 0.15, 0.75, 25, 0, -60 + (tail - 1) * 15)
-        table.insert(parts, { Shape = "Wedge", Size = Vector3.new(0.12, 0.85, 0.25), At = base * CFrame.new(0, 0.5, 0), Color = fur })
-        table.insert(parts, { Shape = "Block", Size = Vector3.new(0.15, 0.15, 0.15), At = base * CFrame.new(0, 0.98, 0) * CFrame.Angles(0, 0, math.rad(45)), Color = lilac, Neon = true })
-    end
-    return { Scale = 1.2, Parts = parts }
-end
-
 PetModels.Pets = {
     AquaWisp = { Scale = 0.95, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old droplet design removed (MESH_LOOKS was tuned with this scale)
     EmberWyrm = { Scale = 1.05, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old lava-bead design removed (MESH_LOOKS was tuned with this scale)
     LunarHopper = { Scale = 1.0, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted-rabbit design removed (MESH_LOOKS was tuned with this scale)
     VoltFox = { Scale = 1.05, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old yellow block-fox design removed (MESH_LOOKS was tuned with this scale)
     GoldenKirin = { Scale = 1.15, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old design removed (MESH_LOOKS was tuned with this scale)
-    NineTailMoonfox = nineTailMoonfox(),
+    NineTailMoonfox = { Scale = 1.2, Parts = {} }, -- recreated (2026-11-12) in Studio: only its imported model (PetMeshes.LostLineages); its old procedural design removed
     OriginSerpent = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old block serpent removed (MESH_LOOKS was tuned with this scale)
     AstralWhale = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted block whale removed (MESH_LOOKS was tuned with this scale)
     MossGolem = { Scale = 0.9, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
@@ -202,6 +169,7 @@ local MESH_LOOKS = {
     NebulaOwl = { Glow = Color3.fromRGB(176, 122, 255), Length = 4.0 },
     CosmicJellyfish = { Glow = Color3.fromRGB(245, 120, 180), Length = 3.3 },
     StarfallFox = { Glow = Color3.fromRGB(150, 160, 255), Length = 3.6 },
+    NineTailMoonfox = { Glow = Color3.fromRGB(150, 215, 255), Length = 2.5 }, -- crown of its tails to its paws (its tallest): about 6 studs, a moon fox kit with its nine tails streaming behind it
     LanternWarden = { Glow = Color3.fromRGB(255, 176, 70), Length = 3.2 },
     DreamMoth = { Glow = Color3.fromRGB(230, 170, 255), Length = 3.2 },
     PrismArmadillo = { Glow = Color3.fromRGB(190, 150, 255), Length = 4.0 },

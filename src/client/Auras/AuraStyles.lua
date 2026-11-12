@@ -11,7 +11,7 @@ AuraStyles.Elements = {
     AquaWisp = { Core = Color3.fromRGB(165, 232, 255), Main = Color3.fromRGB(55, 185, 255), Deep = Color3.fromRGB(35, 85, 215), Particles = "Droplet", RingShape = "Circle" },
     GoldenKirin = { Core = Color3.fromRGB(255, 244, 206), Main = Color3.fromRGB(245, 190, 70), Deep = Color3.fromRGB(210, 140, 40), Particles = "Crystal", RingShape = "Polygon", RingSides = 6 },
     VoltFox = { Core = Color3.fromRGB(196, 246, 255), Main = Color3.fromRGB(70, 190, 255), Deep = Color3.fromRGB(64, 74, 140), Particles = "Spark", RingShape = "Circle" }, -- its storm: lightning blue over storm slate (recreated 2026-11-10)
-    NineTailMoonfox = { Core = Color3.fromRGB(225, 210, 255), Main = Color3.fromRGB(195, 175, 255), Deep = Color3.fromRGB(110, 85, 215), Particles = "Mote", RingShape = "Circle" },
+    NineTailMoonfox = { Core = Color3.fromRGB(240, 248, 255), Main = Color3.fromRGB(160, 220, 255), Deep = Color3.fromRGB(45, 55, 150), Particles = "Crystal", RingShape = "Polygon", RingSides = 9 }, -- moonlight and midnight; a nine-sided ring for its nine tails (remade 2026-11-12 with the pet)
     OriginSerpent = { Core = Color3.fromRGB(170, 245, 255), Main = Color3.fromRGB(30, 205, 255), Deep = Color3.fromRGB(255, 60, 205), Particles = "Mote", RingShape = "Polygon", RingSides = 8 }, -- its first Qi and its magenta ring (recreated 2026-11-10)
     MossGolem = { Core = Color3.fromRGB(200, 230, 140), Main = Color3.fromRGB(110, 165, 75), Deep = Color3.fromRGB(110, 85, 55), Particles = "Mote", RingShape = "Polygon", RingSides = 5 },
     MyceliumSprite = { Core = Color3.fromRGB(190, 255, 235), Main = Color3.fromRGB(70, 215, 195), Deep = Color3.fromRGB(80, 90, 190), Particles = "Mote", RingShape = "Circle" },

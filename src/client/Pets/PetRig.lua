@@ -5368,6 +5368,57 @@ do
     end
 end
 
+local animateNineTailMoonfox -- animateNineTailMoonfox's section below (its own locals stay in its block)
+do
+    -- The Nine-Tail Moonfox (jointed, built in Studio 2026-11-12): a moon fox kit with nine plush tails that stream back from its rump. It trots
+    -- after its owner, looks about with a little tilt of its head, and its tails sway one after another, a wave running across the fan; when its
+    -- owner flies its legs tuck and the tails stream out behind it. The special, Full Moon (Blasts.FullMoon): the tails fan wide and lift, its
+    -- head rises, and a light leaves every tail tip to meet above it as a full moon.
+    local LEGS = { LegFL = 0, LegBR = 0, LegFR = math.pi, LegBL = math.pi } -- a trot: diagonal pairs together
+    local TAILS = 9
+    local SOLE = 1.77 -- template units from the middle of its box (the pet's root) down to its paws: it stands on the ground
+
+    function animateNineTailMoonfox(rig, s, moving, fly, nova)
+        local m, u, t, dt = rig.motors, rig.unit, s.time, rig.deltaTime
+        local drop = dropToGround(rig, s, t, u, fly, SOLE)
+        s.stride = (s.stride or 0) + dt * (2 + 9 * moving)
+        local stride = s.stride
+        local breathe = math.sin(t * 1.6)
+        local fan = math.sin(math.min(nova * 1.4, 1) * math.pi / 2) -- the special: 0 to 1 and back
+
+        pose(m.Body, CFrame.new(0, -drop + (0.015 * breathe + 0.05 * math.abs(math.sin(stride)) * moving + 0.06 * math.sin(t * 2.4) * fly) * u, 0)
+            * CFrame.Angles(0.02 * breathe - 0.08 * fly - 0.1 * fan, 0, 0.03 * math.sin(stride) * moving))
+
+        -- looking about: a glance every few seconds, a tilt of the head, held while it trots
+        s.nextGlance = s.nextGlance or 0
+        if t >= s.nextGlance then
+            s.nextGlance = t + 2.5 + math.random() * 3.5
+            s.glanceYaw = (math.random() - 0.5) * 0.9
+            s.glanceTilt = (math.random() - 0.5) * 0.35
+        end
+        local calm = (1 - 0.6 * moving) * (1 - fan)
+        s.yaw = (s.yaw or 0) + ((s.glanceYaw or 0) * calm - (s.yaw or 0)) * math.min(1, dt * 3)
+        s.tilt = (s.tilt or 0) + ((s.glanceTilt or 0) * calm - (s.tilt or 0)) * math.min(1, dt * 3)
+        pose(m.Head, CFrame.Angles(0.04 * math.sin(t * 1.1) + 0.05 * math.sin(stride * 2) * moving - 0.1 * fly + 0.3 * fan, s.yaw, s.tilt))
+
+        for name, lead in LEGS do
+            local front = string.sub(name, 4, 4) == "F"
+            local swing = 0.5 * math.sin(stride + lead) * moving
+            local tuck = (if front then -0.9 else 0.8) * fly
+            pose(m[name], CFrame.Angles(swing + tuck, 0, 0))
+        end
+
+        -- the tails: a wave across the fan (each a beat behind the one before), streaming back as it runs or flies, fanned wide in the special
+        for i = 1, TAILS do
+            local side = (i - 1) / (TAILS - 1) * 2 - 1 -- -1 (its right) .. 1 (its left)
+            local wave = math.sin(t * (1.6 + 2.5 * moving) - i * 0.55)
+            local lift = -0.12 + 0.06 * math.sin(t * 1.3 - i * 0.4) + 0.3 * moving + 0.55 * fly - 0.15 * fan -- (rests raised a little: the fan dragged low behind it)
+            local roll = 0.12 * wave - side * (0.4 * fan - 0.12 * fly)
+            pose(m["Tail" .. i], CFrame.Angles(lift, 0.08 * wave, roll))
+        end
+    end
+end
+
 PetRig.Profiles = {
     SunscaleDragon = {
         Joints = {
@@ -6369,6 +6420,37 @@ PetRig.Profiles.TimekeeperTortoise = {
         Ivory = Color3.fromRGB(250, 244, 226),
     },
     Animate = animateTimekeeperTortoise,
+}
+
+PetRig.Profiles.NineTailMoonfox = {
+    Joints = {
+        Body = "Root",
+        Head = "Body",
+        LegFL = "Body", LegFR = "Body", LegBL = "Body", LegBR = "Body",
+        Tail1 = "Body", Tail2 = "Body", Tail3 = "Body", Tail4 = "Body", Tail5 = "Body",
+        Tail6 = "Body", Tail7 = "Body", Tail8 = "Body", Tail9 = "Body",
+    },
+    Effects = {
+        Motes = "Tail5",
+        Light = "Head",
+        Burst = "Body",
+        Sparks = { "Head_Crescent" },
+        Trail = { "Tail1_Tip", "Tail5_Tip", "Tail9_Tip" },
+        TrailWidth = 0.18,
+        TrailTaper = true,
+        Blast = "FullMoon",
+        NovaLight = 2.5,
+    },
+    LightScale = 0.6,
+    -- moonlight in the slots the shared effects read (Gold: light and motes, Sun/Orange: sparks and the burst)
+    Colors = {
+        Gold = Color3.fromRGB(150, 215, 255),
+        Amber = Color3.fromRGB(40, 60, 140),
+        Orange = Color3.fromRGB(90, 140, 255),
+        Sun = Color3.fromRGB(235, 248, 255),
+        Ivory = Color3.fromRGB(245, 250, 255),
+    },
+    Animate = animateNineTailMoonfox,
 }
 
 PetRig.Profiles.GravityImp = {
@@ -9780,6 +9862,55 @@ function Blasts.SovereignRoar(rig, fx)
 end
 
 local blastWarned = {} -- [petId] = true once its special has failed and been reported
+
+-- Full Moon (the Nine-Tail Moonfox): its tails fan wide (animateNineTailMoonfox) and a light leaves every tail tip; the nine meet above
+-- its head and swell into a full moon, which flares once, rings the air with pale light and fades.
+function Blasts.FullMoon(rig, fx)
+    local colors, u, neon = rig.profile.Colors, rig.unit, fx.neon
+    local head = rig.parts.Head or rig.rootPart
+    local above = head.Position + Vector3.new(0, 2.2 * u, 0)
+    for i = 1, 9 do
+        local tail = rig.parts["Tail" .. i]
+        if tail then
+            local tip = (tail.CFrame * CFrame.new(0, tail.Size.Y / 2, 0)).Position
+            task.delay(0.04 * i, function()
+                local mote = neon(Vector3.one * 0.16 * u, CFrame.new(tip), colors.Gold)
+                mote.Shape = Enum.PartType.Ball
+                TweenService:Create(mote, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                    CFrame = CFrame.new(above), Size = Vector3.one * 0.08 * u, Color = colors.Sun,
+                }):Play()
+            end)
+        end
+    end
+    task.delay(0.62, function()
+        local moon = neon(Vector3.one * 0.2 * u, CFrame.new(above), colors.Sun)
+        moon.Shape = Enum.PartType.Ball
+        moon.Transparency = 0.1
+        TweenService:Create(moon, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = Vector3.one * 1.1 * u }):Play()
+        task.delay(0.55, function()
+            TweenService:Create(moon, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Size = Vector3.one * 1.5 * u, Transparency = 1, Color = colors.Gold,
+            }):Play()
+        end)
+        local light = Instance.new("PointLight")
+        light.Color = colors.Gold
+        light.Range = 9 * u
+        light.Brightness = 3
+        light.Shadows = false
+        light.Parent = moon
+        TweenService:Create(light, TweenInfo.new(1.05, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Brightness = 0 }):Play()
+        -- a thin ring of moonlight widening round it, level with the moon
+        local ring = neon(Vector3.new(0.05 * u, 0.6 * u, 0.6 * u), CFrame.new(above) * CFrame.Angles(0, 0, math.rad(90)), colors.Ivory)
+        ring.Shape = Enum.PartType.Cylinder
+        ring.Transparency = 0.35
+        local hole = Instance.new("SpecialMesh") -- (a flat disc that thins as it widens reads as a ring)
+        hole.MeshType = Enum.MeshType.Cylinder
+        hole.Parent = ring
+        TweenService:Create(ring, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = Vector3.new(0.02 * u, 4.2 * u, 4.2 * u), Transparency = 1,
+        }):Play()
+    end)
+end
 
 local function burst(rig)
     local profile = rig.profile
