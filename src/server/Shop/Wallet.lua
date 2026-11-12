@@ -23,6 +23,9 @@ end
 
 function Wallet.setupPlayer(player, progress)
     stones[player] = Wallet.sanitize(progress and progress.SpiritStones)
+    if not progress and GameConfig.GrantDevTestPets and game:GetService("RunService"):IsStudio() then
+        stones[player] = Wallet.sanitize(GameConfig.DevTestStones) -- a new save in Studio: stones to test buying
+    end
     mirror(player)
 end
 

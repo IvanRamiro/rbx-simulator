@@ -272,7 +272,7 @@ function actions.BuyEgg(player, eggId)
         Wallet.add(player, price, "BuyEggRefund", eggId)
         return false, "You can't hold any more of that egg."
     end
-    return true, "Bought a " .. egg.DisplayName .. ". Hatch it at the Hatching Altar."
+    return true, "Bought a " .. egg.DisplayName .. ". Hatch it at the Hatching Sanctum."
 end
 
 RemoteEvents.ShopEvent.OnServerEvent:Connect(function(player, action, id, extra)

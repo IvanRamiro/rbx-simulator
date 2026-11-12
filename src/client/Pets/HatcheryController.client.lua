@@ -40,7 +40,7 @@ local press = 0 -- the latest press: a timer from an older one does nothing
 
 -- at the screen's right edge, so the cradle (mid-screen behind the player) stays in sight
 local window = Hud.window({
-    Name = "HatcheryWindow", Title = "HATCHING ALTAR", Size = Vector2.new(380, 420), Side = true, AnchorPoint = Vector2.new(1, 0.5),
+    Name = "HatcheryWindow", Title = "HATCHING SANCTUM", Size = Vector2.new(380, 420), Side = true, AnchorPoint = Vector2.new(1, 0.5),
     Position = UDim2.new(1, -UiTheme.Margin, 0.5, 0), OnClose = function()
         altarPart = nil
     end,

@@ -357,7 +357,7 @@ end
 local function renderMarket(contents)
     window.setTitle("MARKETPLACE")
     local rankName = Ranks.getPlayerRankName(player)
-    heading(0, "Spirit eggs: hatch them at the Hatching Altar")
+    heading(0, "Spirit eggs: hatch them at the Hatching Sanctum")
     for index, entry in marketEggs do
         local open = rankName ~= "" and Ranks.isAtLeast(rankName, entry.egg.RequiredRank)
         local affordable = contents.Stones >= entry.price

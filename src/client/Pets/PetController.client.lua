@@ -235,7 +235,7 @@ local function renderInventory(snapshot)
     bonusLabel.Text = "QI BONUS  +" .. bonusPercent .. "%"
 
     if #snapshot.Pets == 0 then
-        UiKit.empty(petList, "No pets yet.\nTake an egg from a guardian, carry it home, and hatch it at the Hatching Altar.")
+        UiKit.empty(petList, "No pets yet.\nTake an egg from a guardian, carry it home, and hatch it at the Hatching Sanctum.")
         return
     end
     -- new first, then equipped, then the rarest, then by name

@@ -10,8 +10,10 @@
 --   WB.storeKit(island, <each kit/props import>, <anchor>)
 --   -- each import uploads its own atlas copy: point all pieces at one (WB.shareTexture or TextureID)
 --   WB.placeKit(island); WB.buildEggStands(island); WB.buildRelics(island)
---   Yggdrasil (the hub): WB.buildWaystones, WB.buildSpawn, WB.buildSpawnSlots, WB.buildLeaderboard,
---   WB.buildShops, WB.buildQiSpring, WB.buildAltar, WB.buildRootColliders
+--   Yggdrasil (the hub, the celestial city since 2026-11-12: tools/blender/world/hub_ground.py exports its terrain,
+--   placements and Yggdrasil_Celestial.fbx; WB.storeKit("Yggdrasil", <import>, "HB_Anchor")): WB.buildTerrain,
+--   WB.placeKit, WB.buildShops, WB.buildAltar, WB.buildQiSpring, WB.buildLeaderboard, WB.buildSpawn, WB.buildRootColliders,
+--   WB.buildHubNpcs, WB.buildMerchantTemplate; the bridges (WB.buildBridges) take the hub's gate from its kit
 --   every other island: WB.buildCheckpoint(island); Ember Peak also WB.buildLavafall, Moonlit Isle
 --   WB.buildStarWell
 --   terrain colours (once, after any terrain build): WB.applyMaterialColors()
@@ -22,6 +24,7 @@
 -- Collision fidelity applies asynchronously; confirm with WB.checkCollision in a later call.
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 
 -- Modules are required as clones so Studio's require cache never serves a stale copy.
@@ -234,8 +237,6 @@ WorldBuilder.Collision = {
     { Prefix = "SI_LotusStone", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "SI_MossRock", Fidelity = Enum.CollisionFidelity.Hull },
     -- Yggdrasil: the Hatching Altar's dais must be walkable, under its arching roots
-    { Prefix = "YG_AltarRoots", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
-    { Prefix = "YG_Altar", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     -- the outer islands' landmarks: you walk in and through them
     { Prefix = "JG_Hermitage", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "MI_MoonGate", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
@@ -291,10 +292,30 @@ WorldBuilder.Collision = {
     { Prefix = "OA_SlateRock", Fidelity = Enum.CollisionFidelity.Hull },
     -- Yggdrasil: the roots arch over paths and carry the climb down, so they keep their shape;
     -- the stele's roof and the shops' open halls would close a hull over the space under them
-    { Prefix = "YG_Stele", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
-    { Prefix = "YG_Blacksmith", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
-    { Prefix = "YG_BuySell", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
-    { Prefix = "YG_Market", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    -- the celestial hub: you walk into the Sanctum, the Market's arcade, the forge and round the vault (longest names first: a
+    -- prefix matches every piece that starts with it)
+    { Prefix = "HB_HatchSanctum", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "HB_HatchGlass", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "HB_MarketCanopy", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_MarketGlow", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_Market", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "HB_BlacksmithCore", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_BlacksmithCrystal", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_Blacksmith", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "HB_BuySellStones", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_BuySell", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "HB_BridgeGateGlow", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_BridgeGate", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "HB_LeaderboardGlow", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_Leaderboard", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "HB_QiSpring", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "HB_SpringChannelWater", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_SpringChannel", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "HB_SpringWater", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_SpringGlow", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_CrystalLampGlow", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_CrystalLampLight", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_CrystalLamp", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "YG_MoundRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_GripRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_PathRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
@@ -389,19 +410,6 @@ WorldBuilder.Appearance = {
     YG_MoundRoot4 = { CanCollide = false },
     YG_TrunkVeins = table.clone(GLOW),
     YG_SeedLanterns = table.clone(GLOW),
-    YG_SpawnDaisGlow = table.clone(GLOW),
-    YG_SteleGlow = table.clone(GLOW),
-    YG_BlacksmithGlow = table.clone(GLOW),
-    YG_BuySellStones = table.clone(GLOW),
-    YG_BuySellLanterns = table.clone(GLOW),
-    YG_MarketCoins = table.clone(GLOW),
-    YG_MarketLanterns = table.clone(GLOW),
-    YG_AltarPool = table.clone(GLOW),
-    YG_AltarGemYggdrasil = table.clone(GLOW),
-    YG_AltarGemJade = table.clone(GLOW),
-    YG_AltarGemEmber = table.clone(GLOW),
-    YG_AltarGemMoonlit = table.clone(GLOW),
-    YG_AltarGemOrigin = table.clone(GLOW),
 }
 -- the Lion Court's flagstones lie on level terrain: decoration underfoot, so nothing catches on them
 WorldBuilder.Appearance.BI_CourtPaving = { CanCollide = false, CastShadow = false }
@@ -411,9 +419,43 @@ WorldBuilder.Appearance.EP_ArenaFloor = { CanCollide = false, CastShadow = false
 WorldBuilder.Appearance.MI_ArenaFloor = { CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance.OA_ArenaFloor = { CanCollide = false, CastShadow = false }
 -- and the paved ground of the hub and the Beginner Isle
-for _, name in { "YG_Roads", "YG_Bridgeheads", "YG_PlotEdges", "YG_CompassRing", "BI_CourtApron", "BI_Roads", "BI_YardFloor" } do
+for _, name in { "BI_CourtApron", "BI_Roads", "BI_YardFloor" } do
     WorldBuilder.Appearance[name] = { CanCollide = false, CastShadow = false }
 end
+-- the celestial hub (tools/blender/world/hub_celestial.py, hub_ground.py; the hub rebuilt 2026-11-12): white crystal glows, blue runes,
+-- glass, and paving you walk over the terrain beneath
+do
+    local CRYSTAL = Color3.fromRGB(226, 240, 255) -- white with a glow (the owner); Neon blooms it
+    local RUNE = Color3.fromRGB(120, 200, 255)
+    local glass = { Material = Enum.Material.Glass, Color = Color3.fromRGB(175, 215, 255), Transparency = 0.45, CastShadow = false }
+    for _, name in { "HB_RingPlaza", "HB_Plazas", "HB_Avenues" } do
+        WorldBuilder.Appearance[name] = { CanCollide = false, CastShadow = false }
+    end
+    -- the paving's gold lines: Metal on the flat, seen at a grazing angle, mirrored the blue sky and read olive (seen in Studio)
+    for _, name in { "HB_RingPlaza__Gold", "HB_Plazas__Gold", "HB_Avenues__Gold" } do
+        WorldBuilder.Appearance[name] = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(226, 176, 70) }
+    end
+    WorldBuilder.Appearance.HB_PavingRunes = { Material = Enum.Material.Neon, Color = RUNE, CanCollide = false, CastShadow = false }
+    WorldBuilder.Appearance.HB_HatchRunes = { Material = Enum.Material.Neon, Color = RUNE, CanCollide = false, CastShadow = false }
+    for _, name in { "HB_HatchCrystal", "HB_MarketGlow", "HB_BlacksmithCrystal", "HB_BuySellStones", "HB_CrystalLampGlow", "HB_CrystalLampLight", "HB_ClusterGlow" } do
+        WorldBuilder.Appearance[name] = { Material = Enum.Material.Neon, Color = CRYSTAL, CanCollide = false, CastShadow = false }
+    end
+    -- the market's great egg: at full Neon it bloomed into a white blob that lost its egg shape (seen in Studio)
+    WorldBuilder.Appearance.HB_MarketGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(200, 226, 255), Transparency = 0.3, CanCollide = false, CastShadow = false }
+    WorldBuilder.Appearance.HB_BlacksmithCore = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 110, 30), CanCollide = false, CastShadow = false }
+    WorldBuilder.Appearance.HB_HatchGlass = table.clone(glass)
+    WorldBuilder.Appearance.HB_MarketCanopy = table.clone(glass)
+    WorldBuilder.Appearance.HB_MarketCanopy.CanCollide = false
+    WorldBuilder.Appearance.HB_Cluster = { CanCollide = false } -- floating overhead
+    -- the Qi Spring: water you wade in (it doesn't collide: you stand on the pool's floor), Qi glowing under it
+    local water = { Material = Enum.Material.Glass, Color = Color3.fromRGB(120, 200, 235), Transparency = 0.3, CanCollide = false, CastShadow = false }
+    WorldBuilder.Appearance.HB_SpringWater = table.clone(water)
+    WorldBuilder.Appearance.HB_SpringChannelWater = table.clone(water)
+    WorldBuilder.Appearance.HB_BridgeGateGlow = { Material = Enum.Material.Neon, CanCollide = false, CastShadow = false } -- (coloured per route)
+    WorldBuilder.Appearance.HB_LeaderboardGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(226, 240, 255), CanCollide = false, CastShadow = false }
+    WorldBuilder.Appearance.HB_SpringGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(90, 220, 255), CanCollide = false, CastShadow = false }
+end
+
 WorldBuilder.Appearance.EP_ArenaGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 78, 14), CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance.EP_PylonFire = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 120, 20), Transparency = 0.35, CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance.OA_ArenaGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(115, 40, 255), CanCollide = false, CastShadow = false }
@@ -449,21 +491,6 @@ WorldBuilder.Appearance.OA_VoidCrystals.Color = Color3.fromRGB(55, 22, 100)
 WorldBuilder.Appearance.OA_VoidCrystalGlow.Color = Color3.fromRGB(160, 55, 255)
 WorldBuilder.Appearance.YG_TrunkVeins.Color = Color3.fromRGB(40, 210, 235) -- the Qi Spring's and the compass's Qi
 WorldBuilder.Appearance.YG_SeedLanterns.Color = Color3.fromRGB(255, 170, 40)
-WorldBuilder.Appearance.YG_BlacksmithGlow.Color = Color3.fromRGB(255, 105, 20)
-WorldBuilder.Appearance.YG_BuySellStones.Color = Color3.fromRGB(30, 215, 170) -- the Spirit Stones' jade
-WorldBuilder.Appearance.YG_BuySellLanterns.Color = Color3.fromRGB(235, 60, 30)
-WorldBuilder.Appearance.YG_MarketCoins.Color = Color3.fromRGB(255, 170, 40)
-WorldBuilder.Appearance.YG_MarketLanterns.Color = Color3.fromRGB(235, 60, 30)
--- the Hatching Altar's pool of golden Qi, and its seals' gems in each island's glow (the waystones')
--- a deep amber, a little clear: Neon blooms a paler gold to a flat lemon disc, and the jade heart
--- showing through reads as liquid in the lotus
-WorldBuilder.Appearance.YG_AltarPool.Color = Color3.fromRGB(255, 110, 0)
-WorldBuilder.Appearance.YG_AltarPool.Transparency = 0.3
-WorldBuilder.Appearance.YG_AltarGemYggdrasil.Color = Color3.fromRGB(40, 210, 235)
-WorldBuilder.Appearance.YG_AltarGemJade.Color = Color3.fromRGB(40, 215, 110)
-WorldBuilder.Appearance.YG_AltarGemEmber.Color = Color3.fromRGB(255, 105, 25)
-WorldBuilder.Appearance.YG_AltarGemMoonlit.Color = Color3.fromRGB(120, 100, 255)
-WorldBuilder.Appearance.YG_AltarGemOrigin.Color = Color3.fromRGB(175, 45, 255)
 
 -- Kit pieces that carry a PointLight (lights take the piece's colour).
 WorldBuilder.Lights = {
@@ -475,6 +502,9 @@ WorldBuilder.Lights = {
     MI_StarLanternCore = { Range = 14, Brightness = 0.9 },
     OA_ColossusEyes = { Range = 16, Brightness = 1.4 },
     EP_PylonFire = { Range = 26, Brightness = 1.6 },
+    HB_CrystalLampLight = { Range = 16, Brightness = 0.8 },  -- (one lamp of each pair: hub_ground.write_placements)
+    HB_ClusterGlow = { Range = 14, Brightness = 0.7 },
+    HB_MarketGlow = { Range = 16, Brightness = 0.8 },
 }
 
 -- Kit pieces that throw off particles (one or more presets each).
@@ -624,23 +654,57 @@ local function addEmitterPreset(part, preset)
     end
 end
 
--- A piece's look from WorldBuilder.Appearance (keyed by its template's name).
+-- Pieces split by material (tools/blender/world/hub_finish.py: the hub since 2026-11-12) come as
+-- <piece>__<Material>, one MeshPart each, untextured: each takes a real Roblox material, so the hub
+-- reads as stone and metal, not painted plastic (the owner: "make it feel realistic").
+WorldBuilder.MaterialLooks = {
+    Marble = { Material = Enum.Material.Marble, Color = Color3.fromRGB(238, 236, 232) },
+    Shade = { Material = Enum.Material.Marble, Color = Color3.fromRGB(176, 176, 180) }, -- grout lines, undersides
+    Lapis = { Material = Enum.Material.Marble, Color = Color3.fromRGB(40, 62, 138) },
+    Gold = { Material = Enum.Material.Metal, Color = Color3.fromRGB(242, 194, 82) }, -- (226, 178, 64 read olive in shade)
+    Steel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(170, 176, 186) },
+    Slate = { Material = Enum.Material.Slate, Color = Color3.fromRGB(64, 66, 76) },
+    Crystal = { Material = Enum.Material.Glass, Color = Color3.fromRGB(175, 215, 255), Transparency = 0.35, CastShadow = false },
+    Glow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(226, 240, 255), CastShadow = false, CanCollide = false },
+}
+
+local function splitName(name)
+    local base, material = string.match(name, "^(.-)__(%a+)$")
+    return base or name, material
+end
+WorldBuilder.splitName = splitName
+
+local function setLook(part, look)
+    if look.Material then
+        part.TextureID = "" -- Neon and Glass pieces are coloured, not textured
+    end
+    for property, value in look do
+        if property == "Tag" then
+            CollectionService:AddTag(part, value)
+        else
+            part[property] = value
+        end
+    end
+    if look.CanCollide == false then
+        part.CanQuery = false
+    end
+end
+
+-- A piece's look: its material's (when split by material), then WorldBuilder.Appearance for the piece
+-- (keyed by its template's name, without the material suffix), then for the exact part.
 local function applyLook(part, name)
-    local look = WorldBuilder.Appearance[name or part.Name]
+    name = name or part.Name
+    local base, material = splitName(name)
+    local matLook = material and WorldBuilder.MaterialLooks[material]
+    if matLook then
+        setLook(part, matLook)
+    end
+    if base ~= name and WorldBuilder.Appearance[base] then
+        setLook(part, WorldBuilder.Appearance[base])
+    end
+    local look = WorldBuilder.Appearance[name]
     if look then
-        if look.Material then
-            part.TextureID = "" -- Neon and Glass pieces are coloured, not textured
-        end
-        for property, value in look do
-            if property == "Tag" then
-                CollectionService:AddTag(part, value)
-            else
-                part[property] = value
-            end
-        end
-        if look.CanCollide == false then
-            part.CanQuery = false
-        end
+        setLook(part, look)
     end
 end
 
@@ -784,23 +848,43 @@ local function placementsFor(island)
     return require(ServerStorage.WorldBuild.Placements:FindFirstChild(island):Clone())
 end
 
-local function template(island, name)
-    local part = ServerStorage.WorldKit[island]:FindFirstChild(name)
-    assert(part, "missing kit template " .. name .. " (import and store the island's kit first)")
-    return part
+-- A piece's templates: the one named `name`, or its material parts (<name>__Marble, <name>__Gold, ...).
+local function templates(island, name)
+    local folder = ServerStorage.WorldKit[island]
+    local part = folder:FindFirstChild(name)
+    if part then
+        return { part }
+    end
+    local list = {}
+    for _, child in folder:GetChildren() do
+        if child:IsA("MeshPart") and splitName(child.Name) == name and child.Name ~= name then
+            table.insert(list, child)
+        end
+    end
+    assert(#list > 0, "missing kit template " .. name .. " (import and store the island's kit first)")
+    table.sort(list, function(a, b) return a.Name < b.Name end)
+    return list
 end
 
--- Places a template so its authored origin lands on `frame`, optionally scaled about that origin. Its look
--- comes from WorldBuilder.Appearance as it is now, not as it was when the template was stored.
+local function template(island, name)
+    return templates(island, name)[1]
+end
+
+-- Places a template (every material part of it) so its authored origin lands on `frame`, optionally scaled
+-- about that origin; returns its first part. Its look comes from the material and WorldBuilder.Appearance as
+-- they are now, not as they were when the template was stored.
 local function placeTemplate(island, name, frame, parent, scale)
-    local source = template(island, name)
-    local part = source:Clone()
     scale = scale or 1
-    part.Size = source.Size * scale
-    part.CFrame = frame * (source.CFrame.Rotation + source.CFrame.Position * scale)
-    applyLook(part, name)
-    part.Parent = parent
-    return part
+    local first
+    for _, source in templates(island, name) do
+        local part = source:Clone()
+        part.Size = source.Size * scale
+        part.CFrame = frame * (source.CFrame.Rotation + source.CFrame.Position * scale)
+        applyLook(part, source.Name)
+        part.Parent = parent
+        first = first or part
+    end
+    return first
 end
 
 -- The new pieces for the outer islands come in one import (assets/world/IslandUpgrades/IslandUpgrades.fbx, with no textures of its own): each goes to its
@@ -955,6 +1039,141 @@ function WorldBuilder.placeKit(island)
     end
     WorldBuilder.applyCollision(folder)
     return placed
+end
+
+-- ---------- the hub's people (tools/blender/npcs/hub_npcs.py; the owner approved them 2026-11-12) ----------
+-- Each NPC is Roblox's default R15 body, its part colours its base clothes, dressed in pieces stored from assets/npcs/HubNpcs.fbx
+-- (WB.storeKit("HubNpcs", <import>, "NPC_Anchor")): ServerStorage.WorldKit.HubNpcs.<Npc>_<Piece>__<Material>, each welded to the
+-- body part Placements/HubNpcs.lua names, in the colour and Roblox material it gives. The stock painted face is cleared: each has
+-- its own, modelled. Their root is anchored; NpcService plays their idle. Tagged "HubNpc".
+--   WB.buildHubNpcs("Yggdrasil")       the Blacksmith's, the Marketplace's and Buy & Sell's keepers and the Guide (who talks:
+--                                      her prompt has the Guide attribute, GuideController)
+--   WB.buildMerchantTemplate("Yggdrasil")  ServerStorage.WanderingMerchant: his camp and him, where MerchantService puts them
+local function npcData()
+    return require(ServerStorage.WorldBuild.Placements.HubNpcs:Clone())
+end
+
+local function dressPiece(template, data, owner, at, parent, weldTo)
+    local base, material = splitName(template.Name)
+    local piece = template:Clone()
+    piece.CFrame = at * template.CFrame
+    piece.TextureID = ""
+    piece.Material = data.Materials[material] or Enum.Material.SmoothPlastic
+    local colour = data.Colours[owner] and data.Colours[owner][string.sub(base, #owner + 2) .. "__" .. material]
+    if colour then
+        piece.Color = colour
+    end
+    piece.Transparency = if material == "Glass" then 0.35 else 0
+    piece.CastShadow = material ~= "Glow" and material ~= "Glass"
+    piece.CanTouch = false
+    if weldTo then
+        piece.Anchored = false
+        piece.Massless = true
+        piece.CanCollide = false
+        piece.CanQuery = false
+        local weld = Instance.new("WeldConstraint")
+        weld.Part0 = weldTo
+        weld.Part1 = piece
+        weld.Parent = piece
+    else
+        piece.Anchored = true
+    end
+    piece.Parent = parent
+    return piece
+end
+
+function WorldBuilder.buildNpc(npc, rootCFrame, data)
+    data = data or npcData()
+    local body = data.Body[npc]
+    assert(body, "no NPC " .. npc .. " in Placements.HubNpcs")
+    local description = Instance.new("HumanoidDescription")
+    description.HeadColor = body.Head
+    description.TorsoColor = body.Torso
+    description.LeftArmColor, description.RightArmColor = body.Arms, body.Arms
+    description.LeftLegColor, description.RightLegColor = body.Legs, body.Legs
+    local rig = Players:CreateHumanoidModelFromDescription(description, Enum.HumanoidRigType.R15)
+    rig.Name = npc
+    rig.Head.TextureID = "" -- the stock face: each NPC wears its own
+    rig:PivotTo(rootCFrame)
+    rig.HumanoidRootPart.Anchored = true
+    local kit = ServerStorage.WorldKit.HubNpcs
+    for _, template in kit:GetChildren() do
+        local base = splitName(template.Name)
+        if template:IsA("MeshPart") and string.sub(base, 1, #npc + 1) == npc .. "_" then
+            local bodyPart = rig:FindFirstChild(data.Pieces[base] or "")
+            assert(bodyPart, template.Name .. " rides no body part")
+            dressPiece(template, data, npc, rootCFrame, rig, bodyPart)
+        end
+    end
+    local humanoid = rig:FindFirstChildOfClass("Humanoid")
+    humanoid.DisplayName = data.Titles[npc] or npc
+    humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer
+    humanoid.NameDisplayDistance = 45
+    humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+    CollectionService:AddTag(rig, "HubNpc")
+    return rig
+end
+
+function WorldBuilder.buildHubNpcs(island)
+    local placements = placementsFor(island)
+    local data = npcData()
+    local folder = WorldBuilder.islandFolder(island, "Npcs")
+    folder:ClearAllChildren()
+    for npc, spot in placements.Npcs do
+        local rig = WorldBuilder.buildNpc(npc, islandFrame(island) * CFrame.new(spot.Position) * CFrame.Angles(0, spot.Yaw, 0), data)
+        if npc == "Guide" then
+            local prompt = Instance.new("ProximityPrompt")
+            prompt.ActionText = "Talk"
+            prompt.ObjectText = data.Titles.Guide
+            prompt.KeyboardKeyCode = Enum.KeyCode.F
+            prompt.HoldDuration = 0
+            prompt.MaxActivationDistance = 10
+            prompt.RequiresLineOfSight = false
+            prompt:SetAttribute("Guide", true)
+            prompt.Parent = rig.HumanoidRootPart
+        end
+        rig.Parent = folder
+    end
+    return #folder:GetChildren()
+end
+
+function WorldBuilder.buildMerchantTemplate(island)
+    local placements = placementsFor(island)
+    local data = npcData()
+    local spot = placements.Merchant
+    local frame = islandFrame(island) * CFrame.new(spot.Centre) * CFrame.Angles(0, spot.Yaw, 0)
+    local old = ServerStorage:FindFirstChild("WanderingMerchant")
+    if old then
+        old:Destroy()
+    end
+    local model = Instance.new("Model")
+    model.Name = "WanderingMerchant"
+    local camp = Instance.new("Model")
+    camp.Name = "Camp"
+    camp.Parent = model
+    for _, template in ServerStorage.WorldKit.HubNpcs:GetChildren() do
+        if template:IsA("MeshPart") and string.sub(template.Name, 1, 5) == "Camp_" then
+            local piece = dressPiece(template, data, "Camp", frame, camp, nil)
+            piece.CanCollide = string.find(template.Name, "Crates") ~= nil or string.find(template.Name, "Chest_") ~= nil
+            if string.find(template.Name, "LanternLight") then
+                addLight(piece, Color3.fromRGB(255, 196, 106), 14, 0.9)
+            end
+        end
+    end
+    -- he stands at the back of his rug, facing the tree (his front is -Z: turned half round)
+    local merchant = WorldBuilder.buildNpc("Merchant", frame * CFrame.new(0, 3.192, -0.6) * CFrame.Angles(0, math.pi, 0), data)
+    merchant.Parent = model
+    local prompt = Instance.new("ProximityPrompt")
+    prompt.ActionText = "Trade"
+    prompt.ObjectText = data.Titles.Merchant
+    prompt.KeyboardKeyCode = Enum.KeyCode.F
+    prompt.HoldDuration = 0
+    prompt.MaxActivationDistance = 12
+    prompt.RequiresLineOfSight = false
+    prompt.Parent = merchant.HumanoidRootPart
+    model.PrimaryPart = merchant.HumanoidRootPart
+    model.Parent = ServerStorage
+    return model
 end
 
 -- ---------- egg stands ----------
@@ -1126,6 +1345,37 @@ local function marker(name, size, cframe, parent)
     return part
 end
 
+-- ---------- text panels (the shops' name boards) ----------
+
+-- An invisible part carrying a SurfaceGui on its +Z face (the face a kit's text panel looks out of).
+local function textPanel(name, size, cframe, parent, pixelsPerStud)
+    local panel = marker(name, Vector3.new(size.X, size.Y, 0.05), cframe, parent)
+    local gui = Instance.new("SurfaceGui")
+    gui.Face = Enum.NormalId.Back
+    gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+    gui.PixelsPerStud = pixelsPerStud
+    gui.LightInfluence = 0.2
+    gui.MaxDistance = 160
+    gui.Parent = panel
+    return panel, gui
+end
+
+local function steleLabel(name, parent, size, position, alignment, color)
+    local label = Instance.new("TextLabel")
+    label.Name = name
+    label.Size = size
+    label.Position = position
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.Garamond
+    label.TextScaled = true
+    label.TextColor3 = color
+    label.TextXAlignment = alignment
+    label.Text = ""
+    label.Parent = parent
+    return label
+end
+
+
 -- An invisible, neutral SpawnLocation (no decal, no forcefield).
 local function spawnPoint(name, cframe, parent)
     local spawn = Instance.new("SpawnLocation")
@@ -1182,6 +1432,13 @@ end
 -- players through; WorldService returns the rest). Zone parts past the gate tell the server who is
 -- on the bridge. The deck and rails are the collision, a plain blockout until the themed kit dresses
 -- them.
+-- The hub's bridge gates (hub_celestial.bridge_gate): the island each leads to, on the board under its arch, and where that board
+-- sits in the gate's frame (hub_celestial.BG_PLAQUE, just off its lapis face).
+WorldBuilder.GateNames = {
+    BeginnerRoute = "Beginner Isle", JadeRoute = "Jade Grove", EmberRoute = "Ember Peak", MoonlitRoute = "Moonlit Isle", OriginRoute = "Origin Abyss",
+}
+WorldBuilder.GatePlaque = { Centre = Vector3.new(0, 18.2, 1.63), Size = Vector2.new(12, 2) }
+
 WorldBuilder.BridgeThemes = {
     Jade = { Deck = Color3.fromRGB(150, 110, 70), DeckMaterial = Enum.Material.WoodPlanks, Rail = Color3.fromRGB(80, 160, 110), Glow = Color3.fromRGB(40, 215, 110) },
     Ember = { Deck = Color3.fromRGB(55, 48, 46), DeckMaterial = Enum.Material.Basalt, Rail = Color3.fromRGB(35, 30, 30), Glow = Color3.fromRGB(255, 105, 25) },
@@ -1369,7 +1626,38 @@ local function dressBridge(model, theme)
     end
     local gate = model:FindFirstChild("Gate")
     local barrier = gate and gate:FindFirstChild("QiBarrier")
-    if barrier then
+    local hubKit = ServerStorage:FindFirstChild("WorldKit") and ServerStorage.WorldKit:FindFirstChild("Yggdrasil")
+    local hubGate = hubKit and (hubKit:FindFirstChild("HB_BridgeGate__Marble") ~= nil)
+    if barrier and hubGate then
+        -- the hub's side: the celestial city's gate (hub_celestial.bridge_gate; the islands' own gates there were Chinese,
+        -- the owner 2026-11-12), its crystals in the island's colour, the island's name hung under its arch. Its front (+Z)
+        -- faces the hub: the barrier's frame looks out along the bridge.
+        local base = barrier.CFrame * CFrame.new(0, -barrier.Size.Y / 2, 0)
+        local themeInfo = WorldBuilder.BridgeThemes[theme]
+        for _, piece in { "HB_BridgeGate", "HB_BridgeGateGlow" } do
+            for _, source in templates("Yggdrasil", piece) do
+                local p = source:Clone()
+                p.CFrame = base * source.CFrame
+                applyLook(p, source.Name)
+                if piece == "HB_BridgeGateGlow" and themeInfo then
+                    p.Color = themeInfo.Glow
+                end
+                p.Parent = dressing
+            end
+        end
+        local name = WorldBuilder.GateNames[model.Name]
+        if name then
+            local _, gui = textPanel("GateName", WorldBuilder.GatePlaque.Size, base * CFrame.new(WorldBuilder.GatePlaque.Centre), dressing, 50)
+            steleLabel("Text", gui, UDim2.fromScale(0.96, 0.86), UDim2.fromScale(0.02, 0.07), Enum.TextXAlignment.Center,
+                Color3.fromRGB(240, 222, 170)).Text = name
+        end
+        count += 1
+        for _, part in gate:GetChildren() do
+            if part.Name == "Pillar" or part.Name == "Lintel" then
+                part.Transparency = 1
+            end
+        end
+    elseif barrier then
         local base = barrier.CFrame * CFrame.new(0, -barrier.Size.Y / 2, 0)
         if placeKitPiece(theme, "Gate", base, dressing) then
             count += 1
@@ -1465,6 +1753,59 @@ function WorldBuilder.buildBridges(only)
     return #folder:GetChildren()
 end
 
+-- ---------- the Ascension Board (the leaderboard; hub_celestial.leaderboard, rebuilt 2026-11-12) ----------
+-- FloatingIslands.<island>.Leaderboard: the board's pieces at Placements.<island>.Leaderboard, the title plaque ("Title") and the board
+-- ("Board"), whose SurfaceGui holds a heading and rows "Row1".."Row<BoardRows>", each with Place, Cultivator, Rank and Qi labels.
+-- LeaderboardService writes the names; the builder leaves the rows empty.
+WorldBuilder.BoardRows = 10
+WorldBuilder.Board = {
+    Pieces = { "HB_Leaderboard", "HB_LeaderboardGlow" },
+    Title = { Centre = Vector3.new(0, 12.15, 0.65), Size = Vector2.new(8.2, 1.3) },   -- (hub_celestial.LB_TITLE, just off its face)
+    Face = { Centre = Vector3.new(0, 6.6, 0.6), Size = Vector2.new(10.4, 8.6) },     -- (hub_celestial.LB_BOARD)
+    Star = Vector3.new(0, 15.8, 0),
+}
+local BOARD_INK = { Color3.fromRGB(255, 210, 95), Color3.fromRGB(225, 232, 245), Color3.fromRGB(235, 160, 95) } -- the top three
+local BOARD_TEXT = Color3.fromRGB(236, 230, 214)
+
+function WorldBuilder.buildLeaderboard(island)
+    local placements = placementsFor(island)
+    local spot = placements.Leaderboard
+    local folder = WorldBuilder.islandFolder(island, "Leaderboard")
+    folder:ClearAllChildren()
+    local frame = islandFrame(island) * CFrame.new(spot.Centre) * CFrame.Angles(0, spot.Yaw, 0)
+    for _, piece in WorldBuilder.Board.Pieces do
+        placeTemplate(island, piece, frame, folder)
+    end
+    local star = marker("Star", Vector3.new(1, 1, 1), frame * CFrame.new(WorldBuilder.Board.Star), folder)
+    addLight(star, Color3.fromRGB(220, 236, 255), 16, 0.7)
+
+    local _, titleGui = textPanel("Title", WorldBuilder.Board.Title.Size, frame * CFrame.new(WorldBuilder.Board.Title.Centre), folder, 60)
+    steleLabel("Text", titleGui, UDim2.fromScale(0.96, 0.86), UDim2.fromScale(0.02, 0.07), Enum.TextXAlignment.Center,
+        Color3.fromRGB(240, 222, 170)).Text = "Ascension Board"
+
+    local _, gui = textPanel("Board", WorldBuilder.Board.Face.Size, frame * CFrame.new(WorldBuilder.Board.Face.Centre), folder, 40)
+    local heading = steleLabel("Heading", gui, UDim2.fromScale(0.9, 0.1), UDim2.fromScale(0.05, 0.02), Enum.TextXAlignment.Center, BOARD_INK[1])
+    heading.Text = "The most Qi in all the realms"
+    local rowHeight = 0.84 / WorldBuilder.BoardRows
+    for index = 1, WorldBuilder.BoardRows do
+        local row = Instance.new("Frame")
+        row.Name = "Row" .. index
+        row.Size = UDim2.fromScale(0.94, rowHeight * 0.92)
+        row.Position = UDim2.fromScale(0.03, 0.14 + (index - 1) * rowHeight)
+        row.BackgroundColor3 = Color3.new(1, 1, 1)
+        row.BackgroundTransparency = if index % 2 == 0 then 0.94 else 1
+        row.BorderSizePixel = 0
+        row.Parent = gui
+        local ink = BOARD_INK[index] or BOARD_TEXT
+        steleLabel("Place", row, UDim2.fromScale(0.08, 1), UDim2.fromScale(0, 0), Enum.TextXAlignment.Center, ink).Text = tostring(index)
+        steleLabel("Cultivator", row, UDim2.fromScale(0.44, 1), UDim2.fromScale(0.1, 0), Enum.TextXAlignment.Left, ink)
+        steleLabel("Rank", row, UDim2.fromScale(0.28, 0.8), UDim2.fromScale(0.55, 0.1), Enum.TextXAlignment.Left, BOARD_TEXT)
+        steleLabel("Qi", row, UDim2.fromScale(0.16, 1), UDim2.fromScale(0.84, 0), Enum.TextXAlignment.Right, ink)
+    end
+    WorldBuilder.applyCollision(folder)
+    return folder
+end
+
 -- ---------- spawn, Qi Spring, relic ----------
 
 function WorldBuilder.buildSpawn(island)
@@ -1477,130 +1818,22 @@ function WorldBuilder.buildSpawn(island)
     return spawnPoint("IslandSpawn", CFrame.new(islandPoint(island, placements.Spawn + Vector3.new(0, 0.5, 0))), model)
 end
 
--- ---------- spawn slots and plots (Yggdrasil) ----------
-
--- One slot per player (Placements.<island>.SpawnSlots), each a Model "Slot<n>" in
--- FloatingIslands.<island>.SpawnSlots: its dais, the dais's ring ("Ring"), a SpawnLocation ("Spawn")
--- facing the island's centre and the inscription on its name stone ("Plaque"). WorldService gives
--- each player a slot, lights its ring and cuts their name into the stone.
-function WorldBuilder.buildSpawnSlots(island)
-    local placements = placementsFor(island)
-    local folder = WorldBuilder.islandFolder(island, "SpawnSlots")
-    folder:ClearAllChildren()
-    local centre = islandFrame(island).Position
-    for index, entry in placements.SpawnSlots do
-        local frame = standFrame(island, entry)
-        local model = Instance.new("Model")
-        model.Name = "Slot" .. index
-        model:SetAttribute("Slot", index)
-        placeTemplate(island, "YG_SpawnDais", frame, model).Name = "Dais"
-        placeTemplate(island, "YG_SpawnDaisGlow", frame, model).Name = "Ring"
-
-        local top = frame.Position + Vector3.new(0, placements.SlotTop + 0.5, 0)
-        spawnPoint("Spawn", CFrame.lookAt(top, Vector3.new(centre.X, top.Y, centre.Z)), model)
-
-        local plaqueSize = placements.SlotPanel.Size
-        local plaque = marker("Plaque", Vector3.new(plaqueSize.X, plaqueSize.Y, 0.05),
-            frame * CFrame.new(placements.SlotPanel.Centre), model)
-        inscribe(plaque, "", "", Color3.new(1, 1, 1)) -- WorldService writes the owner
-        model.Parent = folder
-    end
-    WorldBuilder.applyCollision(folder)
-    return #folder:GetChildren()
-end
+-- ---------- plots (Yggdrasil) ----------
 
 -- What will stand on each plot, named on its notice board. Built names the building that stands
--- there now (buildLeaderboard, buildShops), and that plot is left unmarked.
+-- there now (buildShops), and that plot is left unmarked.
 WorldBuilder.Plots = {
-    Leaderboard = { Title = "Leaderboard", Subtitle = "The greatest cultivators, carved here soon", Built = "Ascension Stele" },
-    Blacksmith = { Title = "Blacksmith", Subtitle = "Swords and spears for every realm", Built = "Dragon-Kiln Forge" },
-    Marketplace = { Title = "Marketplace", Subtitle = "Spirit eggs for Spirit Stones", Built = "Coin-Tree Market" },
-    BuySell = { Title = "Buy & Sell", Subtitle = "Sell pets and weapons for Spirit Stones", Built = "Jade Scale" },
+    Blacksmith = { Title = "Blacksmith", Subtitle = "Swords and spears for every realm", Built = "Celestial Forge" },
+    Marketplace = { Title = "Marketplace", Subtitle = "Spirit eggs for Spirit Stones", Built = "Crystal Market" },
+    BuySell = { Title = "Buy & Sell", Subtitle = "Sell pets and weapons for Spirit Stones", Built = "Gilded Vault" },
 }
--- ---------- the Ascension Stele (the leaderboard) ----------
-WorldBuilder.SteleRows = 10
-WorldBuilder.SteleGlow = Color3.fromRGB(205, 120, 20) -- deep amber: a paler gold blooms into a loud frame round the names
-local STELE_INK = { Color3.fromRGB(255, 205, 90), Color3.fromRGB(225, 230, 240), Color3.fromRGB(230, 150, 90) } -- the top three
-local STELE_TEXT = Color3.fromRGB(236, 226, 200)
-
--- An invisible part carrying a SurfaceGui on its +Z face (the face a kit's text panel looks out of).
-local function textPanel(name, size, cframe, parent, pixelsPerStud)
-    local panel = marker(name, Vector3.new(size.X, size.Y, 0.05), cframe, parent)
-    local gui = Instance.new("SurfaceGui")
-    gui.Face = Enum.NormalId.Back
-    gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-    gui.PixelsPerStud = pixelsPerStud
-    gui.LightInfluence = 0.2
-    gui.MaxDistance = 160
-    gui.Parent = panel
-    return panel, gui
-end
-
-local function steleLabel(name, parent, size, position, alignment, color)
-    local label = Instance.new("TextLabel")
-    label.Name = name
-    label.Size = size
-    label.Position = position
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.Garamond
-    label.TextScaled = true
-    label.TextColor3 = color
-    label.TextXAlignment = alignment
-    label.Text = ""
-    label.Parent = parent
-    return label
-end
-
--- The Ascension Stele on the Leaderboard plot (FloatingIslands.<island>.Leaderboard): the stele and
--- its glow, the title plaque ("Title") and the board ("Board"), whose SurfaceGui holds a heading and
--- rows "Row1".."Row<SteleRows>", each with Place, Cultivator, Rank and Qi labels. LeaderboardService
--- writes the names; the builder leaves the rows empty.
-function WorldBuilder.buildLeaderboard(island)
-    local placements = placementsFor(island)
-    local plot = placements.Plots.Leaderboard
-    local folder = WorldBuilder.islandFolder(island, "Leaderboard")
-    folder:ClearAllChildren()
-    local frame = islandFrame(island) * CFrame.new(plot.Centre) * CFrame.Angles(0, plot.Yaw, 0)
-    placeTemplate(island, "YG_Stele", frame, folder).Name = "Stele"
-    local glow = placeTemplate(island, "YG_SteleGlow", frame, folder)
-    glow.Name = "Glow"
-    glow.Color = WorldBuilder.SteleGlow
-    addLight(glow, WorldBuilder.SteleGlow, 16, 0.7)
-
-    local _, titleGui = textPanel("Title", placements.SteleTitle.Size, frame * CFrame.new(placements.SteleTitle.Centre), folder, 60)
-    steleLabel("Text", titleGui, UDim2.fromScale(0.96, 0.9), UDim2.fromScale(0.02, 0.05), Enum.TextXAlignment.Center,
-        Color3.fromRGB(240, 222, 170)).Text = "Ascension Stele"
-
-    local _, gui = textPanel("Board", placements.SteleBoard.Size, frame * CFrame.new(placements.SteleBoard.Centre), folder, 40)
-    local heading = steleLabel("Heading", gui, UDim2.fromScale(0.9, 0.1), UDim2.fromScale(0.05, 0.02), Enum.TextXAlignment.Center, STELE_INK[1])
-    heading.Text = "The most Qi under Heaven"
-    local rowHeight = 0.84 / WorldBuilder.SteleRows
-    for index = 1, WorldBuilder.SteleRows do
-        local row = Instance.new("Frame")
-        row.Name = "Row" .. index
-        row.Size = UDim2.fromScale(0.94, rowHeight * 0.92)
-        row.Position = UDim2.fromScale(0.03, 0.14 + (index - 1) * rowHeight)
-        row.BackgroundColor3 = Color3.new(1, 1, 1)
-        row.BackgroundTransparency = if index % 2 == 0 then 0.94 else 1
-        row.BorderSizePixel = 0
-        row.Parent = gui
-        local ink = STELE_INK[index] or STELE_TEXT
-        steleLabel("Place", row, UDim2.fromScale(0.08, 1), UDim2.fromScale(0, 0), Enum.TextXAlignment.Center, ink).Text = tostring(index)
-        steleLabel("Cultivator", row, UDim2.fromScale(0.44, 1), UDim2.fromScale(0.1, 0), Enum.TextXAlignment.Left, ink)
-        steleLabel("Rank", row, UDim2.fromScale(0.28, 0.8), UDim2.fromScale(0.55, 0.1), Enum.TextXAlignment.Left, STELE_TEXT)
-        steleLabel("Qi", row, UDim2.fromScale(0.16, 1), UDim2.fromScale(0.84, 0), Enum.TextXAlignment.Right, ink)
-    end
-    WorldBuilder.applyCollision(folder)
-    return folder
-end
-
 -- ---------- the shops (Yggdrasil) ----------
--- Each shop's building (tools/blender/world/ygg_shops.py): its plot, the kit pieces it is made of
+-- Each shop's building (tools/blender/world/hub_celestial.py): its plot, the kit pieces it is made of
 -- and what its prompt says. ShopService opens the shop named by the prompt's "Shop" attribute.
 WorldBuilder.Shops = {
-    Blacksmith = { Plot = "Blacksmith", Pieces = { "YG_Blacksmith", "YG_BlacksmithGlow" }, Action = "Browse" },
-    BuySell = { Plot = "BuySell", Pieces = { "YG_BuySell", "YG_BuySellStones", "YG_BuySellLanterns" }, Action = "Trade" },
-    Marketplace = { Plot = "Marketplace", Pieces = { "YG_Market", "YG_MarketCoins", "YG_MarketLanterns" }, Action = "Browse" },
+    Blacksmith = { Plot = "Blacksmith", Pieces = { "HB_Blacksmith", "HB_BlacksmithCore", "HB_BlacksmithCrystal" }, Action = "Browse" },
+    BuySell = { Plot = "BuySell", Pieces = { "HB_BuySell", "HB_BuySellStones" }, Action = "Trade" },
+    Marketplace = { Plot = "Marketplace", Pieces = { "HB_Market", "HB_MarketCanopy", "HB_MarketGlow" }, Action = "Browse" },
 }
 WorldBuilder.ForgeLight = Color3.fromRGB(255, 120, 40)
 WorldBuilder.LanternLight = Color3.fromRGB(255, 130, 70) -- warm: a red light tints the paving pink
@@ -1625,13 +1858,13 @@ local SHOP_FX = {
         addEmitterPreset(part, "Smoke")
     end,
     Stones = function(part)
-        addLight(part, WorldBuilder.Appearance.YG_BuySellStones.Color, 14, 0.9)
+        addLight(part, WorldBuilder.MaterialLooks.Glow.Color, 14, 0.9)
     end,
     Lantern = function(part)
         addLight(part, WorldBuilder.LanternLight, 12, 0.5)
     end,
     Coins = function(part)
-        addLight(part, WorldBuilder.Appearance.YG_MarketCoins.Color, 14, 0.7)
+        addLight(part, WorldBuilder.MaterialLooks.Glow.Color, 14, 0.7)
     end,
 }
 
@@ -1738,17 +1971,17 @@ function WorldBuilder.buildShops(island)
     return #folder:GetChildren()
 end
 
--- The Hatching Altar (tools/blender/world/ygg_altar.py), where eggs carried home are hatched
+-- The Hatching Sanctum (tools/blender/world/hub_celestial.py), where eggs carried home are hatched
 -- (PetService): FloatingIslands.<island>.HatchingAltar, placed by GameConfig.HatchingAltar, with
 -- "Prompt" (its prompt, attribute Hatchery, opens the hatching window), "Cradle" (where PetService
 -- lays an egg, on the pool's surface) and "Motes" (golden motes over the pool, and its light).
--- Spots in the altar's frame, as authored (ygg_altar.CRADLE, PROMPT, FX).
+-- Spots in the sanctum's frame, as authored (hub_celestial CRADLE_TOP, FLOOR).
+-- Since the hub's rebuild (2026-11-12) it is the Hatching Sanctum (hub_celestial.py): the egg rests in the lapis well of the cradle.
 WorldBuilder.Altar = {
-    Pieces = { "YG_Altar", "YG_AltarRoots", "YG_AltarPool", "YG_AltarGemYggdrasil", "YG_AltarGemJade", "YG_AltarGemEmber",
-        "YG_AltarGemMoonlit", "YG_AltarGemOrigin" },
-    Cradle = Vector3.new(0, 4.15, 0),
-    Prompt = Vector3.new(0, 3.2, 3.2),
-    Motes = Vector3.new(0, 4.45, 0),
+    Pieces = { "HB_HatchSanctum", "HB_HatchGlass", "HB_HatchCrystal", "HB_HatchRunes" },
+    Cradle = Vector3.new(0, 4.1, 0),
+    Prompt = Vector3.new(0, 3.4, 6.0),
+    Motes = Vector3.new(0, 4.5, 0),
 }
 
 function WorldBuilder.buildAltar(island)
@@ -1769,58 +2002,101 @@ function WorldBuilder.buildAltar(island)
     local holder = marker("Prompt", Vector3.new(1, 1, 1), frame * CFrame.new(WorldBuilder.Altar.Prompt), model)
     local prompt = Instance.new("ProximityPrompt")
     prompt.ActionText = "Hatch"
-    prompt.ObjectText = "Hatching Altar"
+    prompt.ObjectText = "Hatching Sanctum"
     prompt.KeyboardKeyCode = Enum.KeyCode.F
     prompt.HoldDuration = 0
-    prompt.MaxActivationDistance = 12
+    prompt.MaxActivationDistance = 12 * (config.Scale or 1) -- (reached from the edge of the altar's floor, as it grew)
     prompt.RequiresLineOfSight = false
     prompt:SetAttribute("Hatchery", true)
     prompt.Parent = holder
     local motes = marker("Motes", Vector3.new(4.4, 0.2, 4.4), frame * CFrame.new(WorldBuilder.Altar.Motes), model)
     addEmitterPreset(motes, "GoldenMotes")
     addLight(motes, Color3.fromRGB(255, 170, 60), 18, 1.1)
+    -- (scaled about its base, on the ground: at its authored size, beside the shops it read as a small fountain)
+    model.WorldPivot = frame
+    if config.Scale and config.Scale ~= 1 then
+        model:ScaleTo(config.Scale)
+    end
     model.Parent = folder
     WorldBuilder.applyCollision(model)
     return model
 end
 
+-- The Qi Spring (tools/blender/world/hub_celestial.py qi_spring; rebuilt 2026-11-12, the owner: "a qi spring that give 50%
+-- bonus but a better one"): FloatingIslands.<island>.QiSpring, placed by Placements.<island>.QiSpring, with "SpringWater"
+-- (QiService measures GameConfig.TrainingStation.Radius from it: the rune ring on the platform marks that edge), Qi
+-- motes rising off the pool, spray off the fountain's tiers, and the waterfall where its channel pours off the island.
+-- Spots in the spring's frame, as authored (hub_celestial QS_*).
+WorldBuilder.QiSpring = {
+    Pieces = { "HB_QiSpring", "HB_SpringWater", "HB_SpringGlow" },
+    Water = Vector3.new(0, 0.8, 0),
+    Tiers = { Vector3.new(0, 4.8, 0), Vector3.new(0, 7.35, 0) },
+    Sign = Vector3.new(0, 12.5, 0),
+}
+
 function WorldBuilder.buildQiSpring(island)
     local placements = placementsFor(island)
+    local spot = placements.QiSpring
     local stationRules = GameConfig.TrainingStation
     local model = WorldBuilder.islandFolder(island)
     local old = model:FindFirstChild("QiSpring")
     if old then
         old:Destroy()
     end
-    local glow = Color3.fromRGB(40, 210, 235)
+    local glow = Color3.fromRGB(70, 215, 255)
     local station = Instance.new("Model")
     station.Name = "QiSpring"
+    local frame = islandFrame(island) * CFrame.new(spot.Centre) * CFrame.Angles(0, spot.Yaw, 0)
+    for _, piece in WorldBuilder.QiSpring.Pieces do
+        placeTemplate(island, piece, frame, station)
+    end
 
     -- QiService measures the cultivation radius from this part
-    local centre = islandPoint(island, placements.SpringCentre)
-    local water = marker("SpringWater", Vector3.new(2, 0.2, 2), CFrame.new(centre), station)
-    addLight(water, glow, 22, 0.9)
+    local water = marker("SpringWater", Vector3.new(2, 0.2, 2), frame * CFrame.new(WorldBuilder.QiSpring.Water), station)
+    addLight(water, glow, 20, 0.8)
 
-    local mist = marker("QiMotes", Vector3.new(stationRules.Radius * 1.6, 0.2, stationRules.Radius * 1.6), CFrame.new(centre + Vector3.new(0, 0.3, 0)), station)
+    -- Qi rising off the pool, in a disc the pool's size
     local motes = Instance.new("ParticleEmitter")
-    motes.Shape = Enum.ParticleEmitterShape.Box
+    motes.Name = "QiMotes"
+    motes.Shape = Enum.ParticleEmitterShape.Disc
     motes.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
     motes.EmissionDirection = Enum.NormalId.Top
-    motes.Color = ColorSequence.new(glow, Color3.fromRGB(150, 245, 255))
+    motes.Color = ColorSequence.new(glow, Color3.fromRGB(190, 250, 255))
     motes.LightEmission = 0.8
     motes.LightInfluence = 0
-    motes.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 0.22), NumberSequenceKeypoint.new(1, 0) })
+    motes.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 0.24), NumberSequenceKeypoint.new(1, 0) })
     motes.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
-    motes.Lifetime = NumberRange.new(2.5, 4)
-    motes.Speed = NumberRange.new(0.8, 1.6)
-    motes.SpreadAngle = Vector2.new(12, 12)
-    motes.Rate = 10
-    motes.Parent = mist
+    motes.Lifetime = NumberRange.new(2.5, 4.5)
+    motes.Speed = NumberRange.new(0.8, 1.8)
+    motes.SpreadAngle = Vector2.new(10, 10)
+    motes.Rate = 14
+    local disc = marker("QiMotes", Vector3.new(13, 0.2, 13), frame * CFrame.new(WorldBuilder.QiSpring.Water + Vector3.new(0, 0.1, 0)), station)
+    motes.Parent = disc
+
+    -- spray off each tier's lip: fine droplets falling into the water below
+    for index, at in WorldBuilder.QiSpring.Tiers do
+        local lip = marker("Spray" .. index, Vector3.new(1, 0.2, 1), frame * CFrame.new(at), station)
+        local spray = Instance.new("ParticleEmitter")
+        spray.Name = "Spray"
+        spray.Shape = Enum.ParticleEmitterShape.Disc -- (Surface: from the disc's edge, the tier's lip)
+        spray.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+        spray.EmissionDirection = Enum.NormalId.Bottom
+        spray.Color = ColorSequence.new(Color3.fromRGB(225, 248, 255))
+        spray.LightEmission = 0.3
+        spray.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.12), NumberSequenceKeypoint.new(1, 0.05) })
+        spray.Transparency = NumberSequence.new(0.3, 1)
+        spray.Lifetime = NumberRange.new(0.5, 0.8)
+        spray.Speed = NumberRange.new(1, 2)
+        spray.Acceleration = Vector3.new(0, -20, 0)
+        spray.Rate = 24
+        lip.Size = if index == 1 then Vector3.new(6.9, 0.2, 6.9) else Vector3.new(4.1, 0.2, 4.1)
+        spray.Parent = lip
+    end
 
     local sign = Instance.new("BillboardGui")
     sign.Name = "Sign"
     sign.Size = UDim2.fromOffset(240, 56)
-    sign.StudsOffsetWorldSpace = Vector3.new(0, 9, 0)
+    sign.StudsOffsetWorldSpace = WorldBuilder.QiSpring.Sign - WorldBuilder.QiSpring.Water
     sign.MaxDistance = 80
     sign.LightInfluence = 0
     sign.Parent = water
@@ -1834,8 +2110,9 @@ function WorldBuilder.buildQiSpring(island)
     label.Text = stationRules.DisplayName .. "\nCultivate here: +" .. stationRules.QiBonusPercent .. "% Qi"
     label.Parent = sign
 
-    WorldBuilder.buildWaterfall(station, islandPoint(island, placements.SpillEnd), centre, WorldBuilder.Falls.Water)
+    WorldBuilder.buildWaterfall(station, islandPoint(island, spot.SpillEnd), frame.Position, WorldBuilder.Falls.Water)
     station.Parent = model
+    WorldBuilder.applyCollision(station)
     return station
 end
 

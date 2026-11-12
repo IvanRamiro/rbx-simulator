@@ -30,6 +30,7 @@ local EVENT_NAMES = {
     "TitleEvent",
     "TribulationEvent",
     "PerfEvent",
+    "MerchantEvent",
 }
 
 local RemoteEvents = {}

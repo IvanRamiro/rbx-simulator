@@ -34,7 +34,10 @@ local startIsland = islandsFolder:WaitForChild(WorldConfig.StartIsland)
 assert(startIsland:FindFirstChild("IslandSpawn"), "Workspace." .. WorldConfig.FolderName .. "." .. WorldConfig.StartIsland .. " has no IslandSpawn")
 local slotRules = WorldConfig.SpawnSlots
 local slots = {}
-for _, slot in startIsland:WaitForChild(slotRules.FolderName):GetChildren() do
+-- (the slots are optional: without them everyone spawns at the IslandSpawn. The hub's rebuild of 2026-11-12 removed them;
+-- waiting for the folder here stalled the whole script and nobody spawned anywhere)
+local slotFolder = startIsland:FindFirstChild(slotRules.FolderName)
+for _, slot in if slotFolder then slotFolder:GetChildren() else {} do
     table.insert(slots, slot)
 end
 table.sort(slots, function(a, b)

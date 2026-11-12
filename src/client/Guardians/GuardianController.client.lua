@@ -724,7 +724,7 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
         end
         local info = typeof(element) == "string" and GameConfig.Forge.Elements[element]
         local relic = if info then " Its relic unlocks " .. info.DisplayName .. " at the Blacksmith's forge." else ""
-        message:show((egg and egg.DisplayName or "The egg") .. " secured! Hatch it at the Hatching Altar." .. reward .. relic, "Reward")
+        message:show((egg and egg.DisplayName or "The egg") .. " secured! Hatch it at the Hatching Sanctum." .. reward .. relic, "Reward")
         return
     elseif action == "BagFull" then
         Sfx.play("Error")

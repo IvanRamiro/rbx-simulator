@@ -376,12 +376,7 @@ function PetArchetypes.build(spec, rarity)
     return { Scale = PetArchetypes.scaleFor(rarity), Parts = build(spec) }
 end
 
-local function rgb(r, g, b)
-    return Color3.fromRGB(r, g, b)
-end
-
-PetArchetypes.Specs = {
-    NinefoldSpiritSerpent = { Kind = "Serpent", Body = rgb(230, 240, 250), Accent = rgb(130, 255, 210), Belly = rgb(250, 255, 255), Glow = rgb(140, 255, 220), Core = rgb(230, 255, 248), Horns = "Antlers", Whiskers = true, Gems = true },
+PetArchetypes.Specs = { -- (empty since the Ninefold Spirit Serpent, the last placeholder, was recreated, 2026-11-12)
 }
 
 return PetArchetypes

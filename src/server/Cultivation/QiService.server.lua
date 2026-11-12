@@ -176,8 +176,11 @@ end
 
 task.spawn(function()
     local island = workspace:WaitForChild(WorldConfig.FolderName):WaitForChild(WorldConfig.StartIsland)
-    local station = island:WaitForChild("QiSpring")
-    stationCenter = station:WaitForChild("SpringWater").Position
+    -- (optional: the hub's rebuild of 2026-11-12 removed the Qi Spring; without it there is no station bonus)
+    local station = island:WaitForChild("QiSpring", 10)
+    if station then
+        stationCenter = station:WaitForChild("SpringWater").Position
+    end
 end)
 
 while true do

@@ -20,8 +20,7 @@ local rules = WorldConfig.Leaderboard
 local island = workspace:WaitForChild(WorldConfig.FolderName):WaitForChild(WorldConfig.StartIsland)
 local stele = island:WaitForChild(rules.FolderName, 30)
 if not stele then
-    warn("LeaderboardService: no Ascension Stele on " .. WorldConfig.StartIsland .. " (WorldBuilder.buildLeaderboard)")
-    return
+    return -- no board on the hub (removed in its rebuild of 2026-11-12): nothing to write
 end
 local board = stele:WaitForChild("Board"):WaitForChild("SurfaceGui")
 local rows = {}

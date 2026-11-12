@@ -138,7 +138,10 @@ return {
         Lore = "It carries a lotus pond on its back and the rain in its trunk. No field it has walked through has ever gone dry.",
         Special = { Name = "Rain Over Dry Fields", Text = "It raises its trunk to the sky as the lotus on its back opens wide, its seeds blazing gold. Then it sprays: a fountain of golden water arcs up and falls in a ring around it, ripples spreading wherever the drops land." },
     },
-    NinefoldSpiritSerpent = { Lore = "Nine coils, one for each meridian. Cultivators meditate beside it to feel their own Qi move." },
+    NinefoldSpiritSerpent = {
+        Lore = "Nine coils, one for each meridian. Cultivators meditate beside it to feel their own Qi move.",
+        Special = { Name = "Nine Gates, One Breath", Text = "It draws itself up tall and still, its fins spread wide, and light climbs its nine rings one by one until the gem on its brow blazes. Then its Qi leaves it as a ribbon of jade light that circles its owner once, up their back and down their front the way a cultivator's Qi turns, and flows home into its tail." },
+    },
     WorldrootColossus = { Lore = "A walking piece of the root under all forests. When it sleeps, new islands of moss rise around it." },
     SandPhantom = {
         Lore = "A shape in the blowing sand that is gone when you look straight at it. Caravans leave it water, just in case.",

@@ -154,7 +154,7 @@ local GameConfig = {
     -- hatched. Centre is island-local (on the ground), Yaw turns its front (local +Z) toward the
     -- World Tree and the bridges. Stage: seconds an egg rests in the cradle before it breaks (one
     -- egg at a time per player: the client's Hatch button waits as long).
-    HatchingAltar = { Island = "Yggdrasil", Centre = Vector3.new(100, -0.2, -130), Yaw = -1.4, Stage = 3.8 }, -- Stage: seconds to the crack, the length of the hatch cinematic's reel (HatchCeremony)
+    HatchingAltar = { Island = "Yggdrasil", Centre = Vector3.new(142.83, 0.25, 51.99), Yaw = -1.92, Stage = 3.8 }, -- the Hatching Sanctum, east of the World Tree, facing it (the hub rebuilt 2026-11-12: hub_ground.SITES). Stage: seconds to the crack, the length of the hatch cinematic
     -- the size of a stand's egg (and a carried one): studs per unit of its Blender model
     EggStudsPerUnit = 1.3,
     EggGlowTag = "GlowingEgg",
@@ -575,11 +575,11 @@ local GameConfig = {
             Way = { "the Stone Lion", -480, 24 },
             Text = "Weaken a guardian until it falters, then take an egg from its stands. It will chase you!" },
         { Id = "Hatch", Kind = "Hatch", Reward = 80, Title = "Hatch It",
-            Way = { "the Hatching Altar", 97, -129 },
-            Text = "Carry the egg home across the bridge to Yggdrasil, then hatch it at the Hatching Altar." },
+            Way = { "the Hatching Sanctum", 128, 47 },
+            Text = "Carry the egg home across the bridge to Yggdrasil, then hatch it at the Hatching Sanctum." },
         -- the path on, island by island. Append only: a save holds its step number
         { Id = "Weapon", Kind = "BuyWeapon", Reward = 40, Title = "A Weapon of Your Own",
-            Way = { "the Blacksmith", -172, 46 },
+            Way = { "the Blacksmith", -118, 74 },
             Text = "Visit the Blacksmith on Yggdrasil and buy a spear or a better sword." },
         { Id = "Root", Kind = "Relic", Goal = "IslandRoot", Reward = 40, Title = "The Root of the Island",
             Way = { "the great root", 1, 238, Then = { "the relic", 88.5, 127, 153.3 } }, -- Then: where the world marker points once the player has reached the Way (QuestController)
@@ -599,7 +599,7 @@ local GameConfig = {
             Way = { "the Ember Xuanwu", -128, -693 },
             Text = "Steal an egg from the Ember Xuanwu and carry it home. Jump its quake rings." },
         { Id = "Forge", Kind = "Forge", Reward = 100, Title = "Forge a Weapon",
-            Way = { "the Blacksmith", -172, 46 },
+            Way = { "the Blacksmith", -118, 74 },
             Text = "Secured eggs and relics unlock elements. Forge and name a weapon at the Blacksmith." },
         { Id = "Flight", Kind = "Rank", Goal = "FoundationInitiate", Reward = 150, Title = "Sword Flight",
             Text = "Break through to Foundation Initiate: you can ride your sword through the air." },
@@ -705,6 +705,7 @@ local GameConfig = {
     GrantDevTestPets = false,
     DevTestPetIds = { "EmberWyrm", "VoltFox", "GoldenKirin", "NineTailMoonfox", "OriginSerpent" },
     DevTestEggs = { BeginnerQiEgg = 5 }, -- with GrantDevTestPets, in Studio, a new save also starts with these eggs (to test hatching)
+    DevTestStones = 2000, -- with GrantDevTestPets, in Studio, a new save also starts with these Spirit Stones (to test buying)
 
     -- Each Pool's HatchChance values are percents and must add up to 100: PetInventory refuses to start otherwise, and the altar
     -- shows these numbers to the player exactly. tools/balance_report.py prints each egg's average Qi and any pet out of rarity order.
@@ -919,6 +920,52 @@ local GameConfig = {
     ExclusiveEgg = {
         Name = "Exclusive Egg", Icon = "rbxassetid://80787462087085",
         Text = "A beast found in no other egg. Coming soon.",
+    },
+
+    -- The Wandering Merchant (the owner, 2026-11-12, verbatim: "Implement wandering merchant for every 1 hour and the wandering
+    -- merchant will only stay for 10 mins every 1 hour"; asked, the owner chose rotating 3 to 4 rare deals, at a fixed spot in the
+    -- hub). He is in the hub (Placements/Yggdrasil.lua: Merchant) while os.time() % Every < Stay: the first Stay seconds of every
+    -- UTC hour, the same in every server. Each visit offers Deals of the Pool, drawn without repeats from a seed of the visit's
+    -- number (shared/Merchant.lua), so every server shows the same ones; each player can buy each deal once a visit. All in
+    -- Spirit Stones (MerchantService):
+    --   Egg  Count eggs at Discount off the Marketplace's price (Shop.marketEggPrice), for the egg's RequiredRank. At most
+    --        MaxEggDiscount: an egg's pet sells on average for under half its Marketplace price (SpiritStones.MarketEggShare),
+    --        so even at the deepest discount buying eggs to sell their pets loses stones.
+    --   Pet  one beast, chosen, no luck involved: Rare, Epic or Legendary only, for PetMarkup times what it sells for
+    --        (Shop.petValue, at level 1: at least MinPetMarkup, so buying one to sell it always loses stones), for the rank
+    --        that can hatch it (Shop.petEggRank). Each is far less than hatching it would cost on average, which is the deal.
+    -- Merchant.lua checks these rules as it loads.
+    WanderingMerchant = {
+        Every = 3600,        -- seconds: he comes once an hour
+        Stay = 600,          -- seconds he stays: 10 minutes
+        LeaveWarning = 60,   -- seconds before he leaves that everyone is told
+        Deals = { Min = 3, Max = 4 },
+        PetMarkup = 4,
+        MinPetMarkup = 2.5,
+        MaxEggDiscount = 0.4,
+        PetRarities = { Rare = true, Epic = true, Legendary = true },
+        Pool = { -- an array, in a fixed order: the draw depends on it (changing it changes every visit's deals)
+            { Kind = "Egg", EggId = "BeginnerQiEgg", Count = 3, Discount = 0.25 },
+            { Kind = "Egg", EggId = "SpiritBreezeEgg", Count = 3, Discount = 0.3 },
+            { Kind = "Egg", EggId = "ElementalCoreEgg", Count = 3, Discount = 0.25 },
+            { Kind = "Egg", EggId = "AncientGroveEgg", Count = 3, Discount = 0.3 },
+            { Kind = "Egg", EggId = "CelestialEgg", Count = 3, Discount = 0.3 },
+            { Kind = "Egg", EggId = "HeavenlyThroneEgg", Count = 3, Discount = 0.25 },
+            { Kind = "Egg", EggId = "ForbiddenOriginEgg", Count = 3, Discount = 0.3 },
+            { Kind = "Egg", EggId = "VoidRiftEgg", Count = 3, Discount = 0.25 },
+            { Kind = "Pet", PetId = "GoldenKirin" },
+            { Kind = "Pet", PetId = "AzureSkyDragon" },
+            { Kind = "Pet", PetId = "DawnPhoenix" },
+            { Kind = "Pet", PetId = "GravityImp" },
+            { Kind = "Pet", PetId = "JadeWyrmTurtle" },
+            { Kind = "Pet", PetId = "MoonfangTiger" },
+            { Kind = "Pet", PetId = "NinefoldSpiritSerpent" },
+            { Kind = "Pet", PetId = "CelestialSnowLeopard" },
+            { Kind = "Pet", PetId = "CometStag" },
+            { Kind = "Pet", PetId = "TimekeeperTortoise" },
+            { Kind = "Pet", PetId = "RuneSphinx" },
+            { Kind = "Pet", PetId = "HeavenbreakerApe" },
+        },
     },
 }
 

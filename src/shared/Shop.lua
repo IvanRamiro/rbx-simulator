@@ -8,6 +8,7 @@
 --   Shop.forgePrice(id)       what forging a weapon with an element costs (GameConfig.Forge)
 --   Shop.element(name)        an element's GameConfig.Forge entry, or nil
 --   Shop.petValue(petId, level)  what a pet sells for: a fused pet is worth every copy it took in
+--   Shop.petEggRank(petId)    the rank of the earliest egg that hatches it (what a player needs to hatch it), or nil
 --   Shop.rankValue(rankId)    the rewards' ladder: a weapon's price at its realm's first rank, between
 --   Shop.eggStones(eggId)     what securing this egg pays
 --   Shop.marketEggPrice(eggId)  what the Marketplace asks for this egg
@@ -76,14 +77,25 @@ function Shop.weaponRefund(id, element)
     return math.floor(paid * GameConfig.SpiritStones.WeaponRefund)
 end
 
--- a pet's egg realm: the earliest realm whose egg can hatch it
+-- a pet's egg realm: the earliest realm whose egg can hatch it; and that earliest egg's required rank
 local petRealm = {}
+local petRank = {} -- [petId] = { Id, Index }
 for _, egg in GameConfig.Eggs do
     local rank = Ranks.getRankById(egg.RequiredRank)
     local realm = rank and Shop.realmIndex(rank.Realm) or 1
+    local index = rank and Ranks.getIndex(rank.Name) or 1
     for _, entry in egg.Pool do
         petRealm[entry.PetId] = math.min(petRealm[entry.PetId] or realm, realm)
+        if not petRank[entry.PetId] or index < petRank[entry.PetId].Index then
+            petRank[entry.PetId] = { Id = egg.RequiredRank, Index = index }
+        end
     end
+end
+
+-- the rank a player needs to hatch this pet from any egg (the earliest egg whose pool holds it), or nil if none can
+function Shop.petEggRank(petId)
+    local entry = petRank[petId]
+    return entry and entry.Id
 end
 
 function Shop.petValue(petId, level)

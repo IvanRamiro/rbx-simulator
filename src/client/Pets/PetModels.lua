@@ -193,6 +193,7 @@ local MESH_LOOKS = {
     ThunderclawDrake = { Glow = Color3.fromRGB(255, 235, 100), Length = 5.8 }, -- its box's longest side is its raised wingspan; nose to tail it is three quarters of that (at 5.2 its head came only to its owner's, lost in tall grass)
     FrostfangSerpent = { Glow = Color3.fromRGB(130, 210, 255), Length = 3.4 }, -- its box's longest side is its height, reared: about the Pearl Dragon's
     QiClockworkFinch = { Glow = Color3.fromRGB(28, 245, 143), Length = 3.3 }, -- its wingspan, wings raised (its length nine tenths of it): a small songbird
+    NinefoldSpiritSerpent = { Glow = Color3.fromRGB(28, 226, 160), Length = 3.0 }, -- its height, risen, to the tips of its fins: about 6.9 studs, a little over its owner (at 3.8, 8.7 studs: taller than the Mythical Frostfang, seen in Play)
     ThousandEyedGuardian = { Glow = Color3.fromRGB(255, 170, 30), Length = 3.2 }, -- the Lotus Elephant, nose to tail (its longest): its back at its owner's chest, its lotus over its owner's head
     MoonfangTiger = { Glow = Color3.fromRGB(60, 150, 255), Length = 4.6 }, -- nose to tail tip: a grown tiger, longer than the Snow Leopard (4.2); in Play 9.2 studs long and 4.2 tall, its head at its owner's waist
     EchoBat = { Glow = Color3.fromRGB(31, 224, 198), Length = 3.4 }, -- its wingspan, wings half open (its height nine tenths of it): a small bat
