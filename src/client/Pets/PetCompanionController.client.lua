@@ -24,6 +24,11 @@ local NOVA_INTERVAL = 25
 local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
 local CULL_DISTANCE = if Quality.Low then 80 else 250 -- studs from the camera: other players' pets farther away are hidden and not animated
 local RANK_CHECK_INTERVAL = 0.5
+-- Another player's pets farther from the camera pose less often: every 2nd frame past LOD_HALF, every 3rd past LOD_THIRD
+-- (they still move every frame). A rig's pose costs 20-40 microseconds a frame (measured in Play, 2026-11-12), and a busy hub
+-- holds dozens. The player's own pets always pose every frame.
+local LOD_HALF = if Quality.Low then 30 else 60
+local LOD_THIRD = if Quality.Low then 55 else 140
 -- another player's pets play their specials only this near the camera, and never with Reduced Effects on (release audit,
 -- 2026-11-12: each makes parts, emitters and a light, every 25 s per pet of everyone cultivating)
 local NOVA_REACH = if Quality.Low then 40 else 60
@@ -196,6 +201,12 @@ local function updateCompanions(deltaTime)
         if far ~= (entry.culled == true) then
             setCulled(entry, far)
         end
+        local every = 1
+        if player ~= Players.LocalPlayer and rootPart and eye then
+            local distance = (rootPart.Position - eye).Magnitude
+            every = if distance > LOD_THIRD then 3 elseif distance > LOD_HALF then 2 else 1
+        end
+        entry.every = every
         if far then
             continue
         end
@@ -259,8 +270,17 @@ local function updateCompanions(deltaTime)
             if rankedUp and novaAllowed(player, pet) then
                 PetRig.nova(rig)
             end
+            -- posed every entry.every frames, with the time since its last pose (each pet on its own beat, so a crowd's
+            -- poses spread over the frames)
+            pet.poseTime = (pet.poseTime or 0) + deltaTime
+            pet.beat = ((pet.beat or math.random(0, 5)) + 1) % 6
+            if pet.beat % (entry.every or 1) ~= 0 then
+                continue
+            end
+            local poseTime = pet.poseTime
+            pet.poseTime = 0
             -- (guarded: one rig that throws must not stop every pet after it this frame, release audit 2026-11-12)
-            local ok, err = pcall(PetRig.update, rig, deltaTime, { speed = pet.speed, flying = flying })
+            local ok, err = pcall(PetRig.update, rig, poseTime, { speed = pet.speed, flying = flying })
             if not ok and not updateWarned[rig.petId] then
                 updateWarned[rig.petId] = true
                 warn("PetCompanionController: " .. tostring(rig.petId) .. " failed to update: " .. tostring(err))
