@@ -137,6 +137,19 @@ local function placeMarkers()
         local reachX = if toward.X < 0 then (centre.X - left) / -toward.X else (view.X - margin - centre.X) / math.max(toward.X, 1e-3)
         local reachY = if toward.Y < 0 then (centre.Y - top) / -toward.Y else (bottom - centre.Y) / math.max(toward.Y, 1e-3)
         local at = centre + toward * math.max(0, math.min(reachX, reachY))
+        -- the words are wider than the marker's frame: at a side edge the centre comes in by half their width, so they stay
+        -- on the screen (2026-11-12: "THE GREAT ROOT  398 stud" ran off the right edge)
+        local halfText = marker.label.TextBounds.X / 2 + 6 * scale
+        at = Vector2.new(math.clamp(at.X, math.max(left, halfText), math.max(view.X - halfText, math.max(left, halfText))), at.Y)
+        -- and below the quest panel at the top right, which it lay on (2026-11-12)
+        local quest = Hud.Quest
+        if quest and quest.Visible and quest.AbsoluteSize.Y > 1 then
+            local questTop = quest.AbsolutePosition.Y + inset
+            local questBottom = questTop + quest.AbsoluteSize.Y
+            if at.X + halfText > quest.AbsolutePosition.X and at.Y > questTop - 30 * scale and at.Y < questBottom + 30 * scale then
+                at = Vector2.new(at.X, math.min(questBottom + 30 * scale, math.max(bottom, centre.Y + 1)))
+            end
+        end
         marker.frame.Visible = true
         marker.frame.Position = UDim2.fromOffset(at.X, at.Y)
         -- the arrow leans out of the label toward the place ("v" points down: rotation 0 is downward)

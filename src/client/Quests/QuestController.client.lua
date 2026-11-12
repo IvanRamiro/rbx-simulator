@@ -210,6 +210,12 @@ RunService.RenderStepped:Connect(function()
         return
     end
     nextWay = now + WAY_EVERY
+    -- the place's marker goes with the panel: while a window steps the panel aside (or the player hid it) the marker lay
+    -- over the window's edge (a new player's run, 2026-11-12)
+    if not Hud.Quest.Visible then
+        wayMarker.world = nil
+        return
+    end
     local step = player:GetAttribute("QuestStep")
     local quest = typeof(step) == "number" and QUESTS[step]
     local target = quest and quest.Way

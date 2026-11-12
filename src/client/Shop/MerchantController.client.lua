@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
+local Merchant = require(ReplicatedStorage:WaitForChild("Merchant"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
@@ -16,6 +17,7 @@ local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Toast = require(UI:WaitForChild("Toast"))
 local Portraits = require(UI:WaitForChild("Portraits"))
+local PetPreload = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetPreload"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
@@ -41,6 +43,27 @@ end
 local function isHere()
     return workspace:GetAttribute("MerchantOpen") == true
 end
+
+-- His beasts start downloading when he arrives (each visit's wares are known from the timetable), so their portraits are
+-- there when his window opens: a beast never fetched before showed an empty frame for its first seconds (2026-11-12)
+local preloadedVisit = nil
+local function preloadWares()
+    if not isHere() then
+        return
+    end
+    local visit = Merchant.visitIndex(math.floor(serverNow()))
+    if visit == preloadedVisit then
+        return
+    end
+    preloadedVisit = visit
+    for _, deal in Merchant.dealsFor(visit) do
+        if deal.Kind == "Pet" then
+            PetPreload.soon(deal.ItemId)
+        end
+    end
+end
+workspace:GetAttributeChangedSignal("MerchantOpen"):Connect(preloadWares)
+task.defer(preloadWares)
 
 local function secondsLeft()
     local leaves = workspace:GetAttribute("MerchantLeavesAt")

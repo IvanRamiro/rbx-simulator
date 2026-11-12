@@ -6,6 +6,8 @@
 local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local PetMaps = require(ReplicatedStorage:WaitForChild("PetMaps"))
+
 local PetPreload = {}
 
 local TIMEOUT = 8 -- seconds before a wanted pet counts as ready, fetched or not
@@ -31,9 +33,18 @@ local function work()
             local petId = table.remove(queue, 1)
             if not ready[petId] then
                 local imported = meshes() and meshFolder:FindFirstChild(petId, true)
+                -- and its colour map as a plain image too: portraits paint it on as a texture (UI/Portraits), a fetch of its own,
+                -- and without it a portrait showed the beast grey for its first seconds (2026-11-12)
+                local list = {}
                 if imported then
+                    table.insert(list, imported)
+                end
+                if PetMaps[petId] then
+                    table.insert(list, PetMaps[petId])
+                end
+                if #list > 0 then
                     pcall(function()
-                        ContentProvider:PreloadAsync({ imported })
+                        ContentProvider:PreloadAsync(list)
                     end)
                 end
                 ready[petId] = true
