@@ -709,6 +709,10 @@ local GameConfig = {
     },
 
     StarterPetIds = { "AquaWisp" },
+    -- Pets the game's creators always hold (server/Pets/PetInventory): on joining, a creator in UserIds who owns none of a pet here is
+    -- given one, so a pet that no egg carries (the Nine-Tail Moonfox, a Lost Lineage) can still be shown off. The owner, 2026-11-12:
+    -- "allow me to equip the fox".
+    CreatorPets = { UserIds = { 4993575280 }, PetIds = { "NineTailMoonfox" } },
 
     GrantDevTestPets = false,
     DevTestPetIds = { "EmberWyrm", "VoltFox", "GoldenKirin", "NineTailMoonfox", "OriginSerpent" },

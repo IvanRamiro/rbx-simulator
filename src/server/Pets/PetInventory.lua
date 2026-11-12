@@ -66,6 +66,23 @@ function PetInventory.setupPlayer(player, savedProgress)
         end
     end
 
+    -- a creator always holds the pets in GameConfig.CreatorPets (one each, if they have none; never past the inventory's cap)
+    local creatorPets = GameConfig.CreatorPets
+    if creatorPets and table.find(creatorPets.UserIds, player.UserId) then
+        for _, petId in creatorPets.PetIds do
+            local owned = false
+            for _, pet in data.ownedPets do
+                if pet.PetId == petId then
+                    owned = true
+                    break
+                end
+            end
+            if not owned and GameConfig.Pets[petId] and #data.ownedPets < GameConfig.MaxOwnedPets then
+                addPet(data, petId)
+            end
+        end
+    end
+
     -- whatever they hold is in the book, including every pet from before the Codex existed
     for _, pet in data.ownedPets do
         Codex.discover(player, pet.PetId)
@@ -276,7 +293,7 @@ function PetInventory.getSnapshot(player)
     }
 end
 
-for _, petIds in { GameConfig.StarterPetIds, GameConfig.DevTestPetIds } do
+for _, petIds in { GameConfig.StarterPetIds, GameConfig.DevTestPetIds, GameConfig.CreatorPets.PetIds } do
     for _, petId in petIds do
         assert(GameConfig.Pets[petId], "Unknown pet ID in GameConfig: " .. tostring(petId))
     end
