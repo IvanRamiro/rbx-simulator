@@ -131,7 +131,13 @@ end
 function Shop.eggStones(eggId)
     local egg = GameConfig.Eggs[eggId]
     local rules = GameConfig.SpiritStones
-    return if egg then Shop.roundNice(math.max(rules.MinReward, Shop.rankValue(egg.RequiredRank) * rules.EggShare)) else 0
+    if not egg then
+        return 0
+    end
+    local rank = Ranks.getRankById(egg.RequiredRank)
+    local realm = rank and Shop.realmIndex(rank.Realm) or 1
+    local share = rules.EggShare * (rules.EggShareFalloff or 1) ^ (realm - 1)
+    return Shop.roundNice(math.max(rules.MinReward, Shop.rankValue(egg.RequiredRank) * share))
 end
 
 function Shop.relicStones(relic)

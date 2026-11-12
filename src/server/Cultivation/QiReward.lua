@@ -33,11 +33,34 @@ function QiReward.grantMinutes(player, minutes)
     return QiReward.grantAtRate(player, minutes * 60)
 end
 
--- The burst for securing this egg.
+-- The highest realm multiplier among the guardians' eggs a player of this rank can take.
+local function bestEggMultiplier(rankName)
+    local index = Ranks.getIndex(rankName) or 1
+    local best = 1
+    for _, guardian in GameConfig.Guardians do
+        for _, eggId in guardian.Eggs or {} do
+            local egg = GameConfig.Eggs[eggId]
+            local eggRank = egg and Ranks.getRankById(egg.RequiredRank)
+            if eggRank and (Ranks.getIndex(eggRank.Name) or math.huge) <= index then
+                best = math.max(best, Ranks.getQiMultiplier(eggRank.Name))
+            end
+        end
+    end
+    return best
+end
+
+-- The burst for securing this egg. Its multiplier is capped at the egg's own realm, so a high realm farming a beginner's egg earns a
+-- beginner's Qi; but the best egg a player can take pays their own realm in full. (Release balance, 2026-11-12: the Cosmic, Heavenly Dao
+-- and Eternal realms have no egg of their own, so the best egg there paid half the realm and the climb stalled each time.)
 function QiReward.grantEggBurst(player, eggId)
     local egg = GameConfig.Eggs[eggId]
     local eggRank = egg and Ranks.getRankById(egg.RequiredRank)
-    return QiReward.grantAtRate(player, GameConfig.EggTheft.SecureQiMinutes * 60, if eggRank then Ranks.getQiMultiplier(eggRank.Name) else 1)
+    local _, rankValue = PlayerData.getStats(player)
+    local cap = if eggRank then Ranks.getQiMultiplier(eggRank.Name) else 1
+    if rankValue and cap >= bestEggMultiplier(rankValue.Value) then
+        cap = nil
+    end
+    return QiReward.grantAtRate(player, GameConfig.EggTheft.SecureQiMinutes * 60, cap)
 end
 
 return QiReward
