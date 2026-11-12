@@ -9779,6 +9779,8 @@ function Blasts.SovereignRoar(rig, fx)
     end
 end
 
+local blastWarned = {} -- [petId] = true once its special has failed and been reported
+
 local function burst(rig)
     local profile = rig.profile
     local folder = Instance.new("Folder")
@@ -9803,8 +9805,13 @@ local function burst(rig)
             return part
         end,
     }
-    Blasts[profile.Effects.Blast](rig, fx)
-    Debris:AddItem(folder, 2) -- the longest blast (Sacred Grove's branches) has faded by 1.75 s
+    Debris:AddItem(folder, 2) -- the longest blast (Sacred Grove's branches) has faded by 1.75 s. (Set first: a blast that throws
+    -- must not leave its parts in the world, release audit 2026-11-12)
+    local ok, err = pcall(Blasts[profile.Effects.Blast], rig, fx)
+    if not ok and not blastWarned[rig.petId] then
+        blastWarned[rig.petId] = true
+        warn("PetRig: " .. tostring(rig.petId) .. "'s special failed: " .. tostring(err))
+    end
     if PetRig.PetSounds.special(rig.petId) and rig.rootPart:IsDescendantOf(workspace) then -- (never from a portrait)
         PetRig.Sfx.play(PetRig.PetSounds.special(rig.petId), rig.rootPart)
     end
@@ -14953,7 +14960,7 @@ do
         ECHO_BRIGHT = Color3.fromRGB(140, 255, 236),
         OLD = Color3.fromRGB(240, 192, 104), -- a voice from a hundred years ago: old gold
         RING_OUT = Color3.fromRGB(90, 255, 225), -- its rings of sound (particles: saturated, or they wash out white)
-        RING_OLD, RING_OLD_DEEP = Color3.fromRGB(255, 196, 80), Color3.fromRGB(230, 150, 50),
+        RING_OLD = Color3.fromRGB(255, 196, 80), RING_OLD_DEEP = Color3.fromRGB(230, 150, 50), -- (in a table, "A, B = x, y" made A a nil entry: the Echo Bat's special threw on every use, release audit 2026-11-12)
         PLUM = Color3.fromRGB(150, 90, 120),
         IVORY = Color3.fromRGB(246, 234, 214),
     }

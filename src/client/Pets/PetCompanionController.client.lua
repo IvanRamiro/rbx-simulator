@@ -19,10 +19,25 @@ local BOB_SPEED = 2
 local ORBIT_RADIUS = 6.5
 local ORBIT_HEIGHT = 1.6
 local ORBIT_SPEED = 0.6
+local updateWarned = {} -- [petId] = true once its update has failed and been reported
 local NOVA_INTERVAL = 25
 local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
 local CULL_DISTANCE = if Quality.Low then 80 else 250 -- studs from the camera: other players' pets farther away are hidden and not animated
 local RANK_CHECK_INTERVAL = 0.5
+-- another player's pets play their specials only this near the camera, and never with Reduced Effects on (release audit,
+-- 2026-11-12: each makes parts, emitters and a light, every 25 s per pet of everyone cultivating)
+local NOVA_REACH = if Quality.Low then 40 else 60
+
+local function novaAllowed(player, pet)
+    if player == Players.LocalPlayer then
+        return true
+    end
+    if Players.LocalPlayer:GetAttribute("SettingReducedEffects") == true then
+        return false
+    end
+    local camera = workspace.CurrentCamera
+    return camera ~= nil and pet.rootPart ~= nil and (camera.CFrame.Position - pet.rootPart.Position).Magnitude <= NOVA_REACH
+end
 
 local container = Instance.new("Folder")
 container.Name = "PetCompanions"
@@ -234,15 +249,22 @@ local function updateCompanions(deltaTime)
                 pet.nextNova = pet.nextNova or now + 6
                 if now >= pet.nextNova then
                     pet.nextNova = now + NOVA_INTERVAL
-                    PetRig.nova(rig)
+                    if novaAllowed(player, pet) then
+                        PetRig.nova(rig)
+                    end
                 end
             else
                 pet.nextNova = nil
             end
-            if rankedUp then
+            if rankedUp and novaAllowed(player, pet) then
                 PetRig.nova(rig)
             end
-            PetRig.update(rig, deltaTime, { speed = pet.speed, flying = flying })
+            -- (guarded: one rig that throws must not stop every pet after it this frame, release audit 2026-11-12)
+            local ok, err = pcall(PetRig.update, rig, deltaTime, { speed = pet.speed, flying = flying })
+            if not ok and not updateWarned[rig.petId] then
+                updateWarned[rig.petId] = true
+                warn("PetCompanionController: " .. tostring(rig.petId) .. " failed to update: " .. tostring(err))
+            end
         end
     end
 end

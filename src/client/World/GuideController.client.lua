@@ -46,7 +46,8 @@ local nextButton = UiKit.button({
 local page = 1
 
 local function show()
-    text.Text = string.format(PAGES[page], player.DisplayName)
+    -- (only the first page carries a name: formatting every page broke on page 3's "% more Qi", release audit 2026-11-12)
+    text.Text = if page == 1 then string.format(PAGES[1], player.DisplayName) else PAGES[page]
     pageLabel.Text = page .. " / " .. #PAGES
     nextButton.Text = if page < #PAGES then "NEXT" else "THANK YOU"
 end

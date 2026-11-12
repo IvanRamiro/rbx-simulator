@@ -15,6 +15,7 @@ local WeaponInventory = require(script.Parent.Parent:WaitForChild("Shop"):WaitFo
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
 local Codex = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("Codex"))
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
+local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local Quests = require(script.Parent.Parent:WaitForChild("Quests"):WaitForChild("Quests"))
 local Settings = require(script.Parent:WaitForChild("Settings"))
 local Rewards = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("Rewards"))
@@ -22,7 +23,7 @@ local TitleBook = require(script.Parent.Parent:WaitForChild("Titles"):WaitForChi
 local MerchantLedger = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("MerchantLedger"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 15
+local SCHEMA_VERSION = 16
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -80,7 +81,9 @@ end
 -- version 10 added Settings and version 11 Rewards, which sanitizeProgress starts at their defaults;
 -- version 12 added Codex and a pet's Level and Locked, which start empty, at 1 and unlocked (PetInventory enters owned pets in the Codex);
 -- version 14 added Titles, which start with none earned (TitleService gives a returning player the ones they qualify for);
--- version 15 added Merchant (the Wandering Merchant's deals bought this visit: MerchantLedger), which starts with none.
+-- version 15 added Merchant (the Wandering Merchant's deals bought this visit: MerchantLedger), which starts with none;
+-- version 16 added Codex.Earned (the realm each unclaimed Codex reward was earned in), which starts empty: a reward earned
+-- before it pays at the claim's realm, as it always did (the bump stops older servers from dropping it).
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -339,6 +342,37 @@ local function isPermanentError(message)
         or string.find(message, NO_STORE, 1, true) ~= nil
 end
 
+-- Whether a saved record holds a pet, egg or weapon this server's GameConfig doesn't know: it comes from newer content (a server
+-- not yet updated during a release's rollout). Sanitizing would drop it and the next save would make the loss permanent, so it is
+-- refused like a newer schema, whether or not the schema number was raised with the content (release audit, 2026-11-12).
+local function holdsUnknownContent(progress)
+    if typeof(progress) ~= "table" then
+        return false
+    end
+    if typeof(progress.Pets) == "table" then
+        for _, pet in progress.Pets do
+            if typeof(pet) == "table" and typeof(pet.PetId) == "string" and GameConfig.Pets[pet.PetId] == nil then
+                return true
+            end
+        end
+    end
+    if typeof(progress.Eggs) == "table" then
+        for eggId in progress.Eggs do
+            if typeof(eggId) == "string" and GameConfig.Eggs[eggId] == nil then
+                return true
+            end
+        end
+    end
+    if typeof(progress.Weapons) == "table" then
+        for _, weapon in progress.Weapons do
+            if typeof(weapon) == "table" and typeof(weapon.WeaponId) == "string" and Shop.weapon(weapon.WeaponId) == nil then
+                return true
+            end
+        end
+    end
+    return false
+end
+
 local function claimSession(stored, sessionId, takeOver)
     stored = if stored == nil then {} else stored
 
@@ -347,6 +381,9 @@ local function claimSession(stored, sessionId, takeOver)
     end
 
     if typeof(stored.SchemaVersion) == "number" and stored.SchemaVersion > SCHEMA_VERSION then
+        return "TooNew", nil
+    end
+    if holdsUnknownContent(stored.Progress) then
         return "TooNew", nil
     end
 
@@ -434,11 +471,24 @@ local function loadProfile(player, profile)
     end
 
     if result == "Loaded" then
+        -- (guarded: an error migrating or tidying a record left the player stuck "Loading" forever, everything waiting on it with
+        -- them; now it fails like any unreadable record: the save is left untouched, never written over. Release audit, 2026-11-12)
         local version = if typeof(record.SchemaVersion) == "number" then record.SchemaVersion else SCHEMA_VERSION
-        profile.isNew = record.Progress == nil
-        profile.progress = sanitizeProgress(if record.Progress then migrate(record.Progress, version) else nil)
-        profile.canSave = true
-        profile.status = "Loaded"
+        local ok, progressOrError = pcall(function()
+            return sanitizeProgress(if record.Progress then migrate(record.Progress, version) else nil)
+        end)
+        if ok then
+            profile.isNew = record.Progress == nil
+            profile.progress = progressOrError
+            profile.canSave = true
+            profile.status = "Loaded"
+        else
+            warn("PlayerData: the saved record of " .. profile.key .. " couldn't be read: " .. tostring(progressOrError))
+            result = "Corrupt"
+        end
+    end
+    if profile.status == "Loaded" then
+        -- loaded above
     elseif RunService:IsStudio() then
         warn("PlayerData: couldn't load data (" .. result .. "). This Studio session will NOT be saved.")
         profile.isNew = true

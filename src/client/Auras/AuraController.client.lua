@@ -7,6 +7,11 @@ local AuraConfig = require(ReplicatedStorage:WaitForChild("AuraConfig"))
 local RealmAura = require(script.Parent:WaitForChild("RealmAura"))
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))
 local BreakthroughEffect = require(script.Parent:WaitForChild("BreakthroughEffect"))
+local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+
+-- another player's breakthrough plays only within this many studs of the camera (release audit, 2026-11-12: each is up to 40
+-- beams, 10 trails and a light, and every rank-up anywhere on the map played)
+local BREAKTHROUGH_REACH = if Quality.Low then 120 else 250
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local PRINT_BUILD_SUMMARY = RunService:IsStudio()
@@ -124,6 +129,13 @@ local function playBreakthrough(player)
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
     if not rootPart or not isAlive(character) then
         return
+    end
+    if player ~= Players.LocalPlayer then
+        local camera = workspace.CurrentCamera
+        if hiddenByReducedEffects(player)
+            or (camera and (camera.CFrame.Position - rootPart.Position).Magnitude > BREAKTHROUGH_REACH) then
+            return
+        end
     end
 
     stopBreakthrough(player)

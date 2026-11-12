@@ -62,6 +62,8 @@ local EGG_PROMPT_DISTANCE = 12
 local POUNCE_HEIGHT = 9
 local POUNCE_LEAD = 0.85        -- how far ahead it aims: a straight runner is caught, one who turns or dashes is not
 local MAX_AIRBORNE = 12         -- seconds a thief may stay off the ground: every air leap and a long glide fit
+local GROUND_TO_CLEAR = 0.2     -- seconds back on the ground (two checks in a row) that end a thief's airborne time: longer, a bunny-hopping honest thief could lose their egg
+local THIEF_REACH_UP = 80       -- studs over or under the guardian its attacks still find its egg's thief
 local MAX_CARRY = 300           -- seconds a thief may carry the egg (home across the longest bridge); nobody hides it forever
 
 local TAKER_CHECK = 0.4 -- seconds between looks at who could take an egg
@@ -402,10 +404,12 @@ function Guardian:takeFromStand(player, slot)
         return
     end
     local position = slot.rest.Position
+    -- the carried egg is built before the stand is emptied: built after, a build that failed left the stand empty for good
+    -- (release audit, 2026-11-12)
+    self:makeEgg(eggId, self.config.Egg.CarriedHeight)
     EggStands.take(slot)
     self.egg.slot = slot
     self.egg.carryStarted = nil
-    self:makeEgg(eggId, self.config.Egg.CarriedHeight)
     self:carry(player)
     self.egg.model.Parent = eggsFolder
     self:setState("Enraged")
@@ -557,8 +561,14 @@ function Guardian:watchThief()
         egg.nextGroundCheck = now + 0.2
         if isGrounded(root, humanoid) then
             egg.lastGrounded = position
-            egg.airborneSince = nil
+            -- back on the ground for a moment, not a single touch: a hovering cheat dipping for one check every few
+            -- seconds kept clearing it (release audit, 2026-11-12)
+            egg.groundedSince = egg.groundedSince or now
+            if now - egg.groundedSince >= GROUND_TO_CLEAR then
+                egg.airborneSince = nil
+            end
         else
+            egg.groundedSince = nil
             egg.airborneSince = egg.airborneSince or now
         end
     end
@@ -616,7 +626,9 @@ function Guardian:playersNear(radius)
     local centre = self.root.Position
     for _, player in Players:GetPlayers() do
         local root = rootOf(player)
-        if root and math.abs(root.Position.Y - centre.Y) < 30 then
+        -- (its egg's thief within THIEF_REACH_UP: hovering more than 30 studs over it kept a cheating thief out of every attack)
+        local reachUp = if self.egg and self.egg.owner == player then THIEF_REACH_UP else 30
+        if root and math.abs(root.Position.Y - centre.Y) < reachUp then
             local distance = flat(root.Position - centre).Magnitude
             if distance <= radius then
                 table.insert(list, { player = player, root = root, distance = distance })
@@ -805,7 +817,9 @@ function Guardian:updateTakers(now)
     end
     self.nextTakerCheck = now + TAKER_CHECK
     local id = self.model:GetAttribute("GuardianId")
-    local open = self.state == "Weakened" and self.egg.state == "Available"
+    -- (and an egg on a stand to take: after a few thefts every stand can stand empty while it respawns, and players were sent to
+    -- empty stands, release audit 2026-11-12)
+    local open = self.state == "Weakened" and self.egg.state == "Available" and EggStands.anyEgg(self.config.Island)
     local need = self.config.MaxHealth * (1 - self.config.WeakenedAt) * GameConfig.EggTheft.TakeShare
     for _, player in Players:GetPlayers() do
         local can = open and (self.damageBy[player] or 0) >= need and now >= (self.retakeAfter[player] or 0)

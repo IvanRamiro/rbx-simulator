@@ -1,6 +1,7 @@
 -- What this player's Codex holds, kept here so every window reads the same copy (the server sends it as CodexEvent "State").
 --   CodexState.found      [petId] = true for every beast ever owned
 --   CodexState.claimed    [rewardId] = true
+--   CodexState.earned     [rewardId] = the realm an earned, unclaimed reward pays at
 --   CodexState.owned      [petId] = { Count, Level } for what they hold now
 --   CodexState.loaded     false until the first arrives
 --   CodexState.Changed    fires with a list of the beasts just discovered
@@ -10,7 +11,7 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 
 local changed = Instance.new("BindableEvent")
 
-local CodexState = { found = {}, claimed = {}, owned = {}, loaded = false, Changed = changed.Event }
+local CodexState = { found = {}, claimed = {}, earned = {}, owned = {}, loaded = false, Changed = changed.Event }
 
 RemoteEvents.CodexEvent.OnClientEvent:Connect(function(action, data)
     if action ~= "State" or typeof(data) ~= "table" then
@@ -28,6 +29,7 @@ RemoteEvents.CodexEvent.OnClientEvent:Connect(function(action, data)
         claimed[id] = true
     end
     CodexState.found, CodexState.claimed, CodexState.owned = found, claimed, data.Owned or {}
+    CodexState.earned = if typeof(data.Earned) == "table" then data.Earned else {}
     CodexState.loaded = true
     changed:Fire(discovered)
 end)

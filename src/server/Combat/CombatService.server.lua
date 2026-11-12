@@ -70,9 +70,32 @@ local function setDrawn(player, drawn)
     end
 end
 
+-- At most one change every DRAW_GAP seconds: a cheat flipping it as fast as it can sent every client's weapon effects a flood
+-- (release audit, 2026-11-12). Requests in between aren't dropped: the last one is applied when the gap is up.
+local DRAW_GAP = 0.2
+local lastDraw, pendingDraw = {}, {}
+
 RemoteEvents.WeaponDrawEvent.OnServerEvent:Connect(function(player, wanted)
-    if typeof(wanted) == "boolean" then
+    if typeof(wanted) ~= "boolean" then
+        return
+    end
+    local wait = DRAW_GAP - (os.clock() - (lastDraw[player] or 0))
+    if wait <= 0 then
+        lastDraw[player] = os.clock()
         setDrawn(player, wanted)
+        return
+    end
+    local scheduled = pendingDraw[player] ~= nil
+    pendingDraw[player] = wanted
+    if not scheduled then
+        task.delay(wait, function()
+            local latest = pendingDraw[player]
+            pendingDraw[player] = nil
+            if latest ~= nil and player.Parent then
+                lastDraw[player] = os.clock()
+                setDrawn(player, latest)
+            end
+        end)
     end
 end)
 
@@ -171,6 +194,7 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
+    lastDraw[player], pendingDraw[player] = nil, nil
     lastStrike[player] = nil
     nextStrike[player] = nil
     spearSlashNext[player] = nil

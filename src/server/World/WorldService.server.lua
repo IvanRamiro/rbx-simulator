@@ -109,8 +109,9 @@ local function returnToCheckpoint(player, character, islandName)
     local checkpoint = checkpointOf(player, islandName) or checkpointOf(player, WorldConfig.StartIsland)
     if rootPart and checkpoint then
         rootPart.AssemblyLinearVelocity = Vector3.zero
-        MovementGuard.reset(player)
-        character:PivotTo(checkpoint.CFrame + Vector3.new(0, 4, 0))
+        local to = checkpoint.CFrame + Vector3.new(0, 4, 0)
+        MovementGuard.reset(player, to.Position)
+        character:PivotTo(to)
     end
 end
 
@@ -215,7 +216,7 @@ while true do
             local blocked = trespass(player, rootPart.Position)
             if blocked and blocked.ReturnTo then
                 rootPart.AssemblyLinearVelocity = Vector3.zero
-                MovementGuard.reset(player)
+                MovementGuard.reset(player, blocked.ReturnTo)
                 character:PivotTo(CFrame.lookAt(blocked.ReturnTo, blocked.ReturnTo - (blocked.Model.Gate.QiBarrier.Position - blocked.ReturnTo) * Vector3.new(1, 0, 1)))
                 setIsland(player, WorldConfig.StartIsland)
                 continue

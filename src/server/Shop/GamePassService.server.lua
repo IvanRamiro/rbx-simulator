@@ -86,8 +86,11 @@ local function setOwned(player, pass, owned)
     apply(player, pass, owned)
 end
 
+local RETRY_TRIES, RETRY_GAP = 5, 60
+
 local function checkPlayer(player)
     local testing = studioPasses()
+    local unanswered = {}
     for _, pass in PassRules.List do
         local owned
         if testing.All or testing[pass.Id] then
@@ -102,16 +105,74 @@ local function checkPlayer(player)
         end
         if owned ~= nil then -- (Roblox could not be asked: leave it as it is rather than take anything away)
             setOwned(player, pass, owned)
+        else
+            table.insert(unanswered, pass)
         end
     end
     player:SetAttribute("PassesChecked", true)
+    -- the passes Roblox didn't answer for are asked again now and then: a buyer shouldn't go a whole session without what they
+    -- paid for because one check failed (release audit, 2026-11-12)
+    if #unanswered > 0 then
+        task.spawn(function()
+            for _ = 1, RETRY_TRIES do
+                task.wait(RETRY_GAP)
+                if player.Parent ~= Players then
+                    return
+                end
+                for index = #unanswered, 1, -1 do
+                    local pass = unanswered[index]
+                    local owned = ownsOnRoblox(player, pass.GamePassId)
+                    if player.Parent ~= Players then
+                        return
+                    end
+                    if owned ~= nil then
+                        setOwned(player, pass, owned)
+                        table.remove(unanswered, index)
+                    end
+                end
+                if #unanswered == 0 then
+                    return
+                end
+            end
+        end)
+    end
 end
+
+-- A purchase in the Store: the event's word is never taken (a cheat client can claim it fired: release audit, 2026-11-12). Roblox
+-- is asked whether they own it now, for a little while since ownership can lag a moment behind a real purchase; a buyer it
+-- still lags for gets the pass on their next join (checkPlayer).
+local confirming = {} -- [player] = { [gamePassId] = true } while being checked
+local CONFIRM_TRIES, CONFIRM_GAP = 6, 2.5
 
 MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gamePassId, wasPurchased)
     local pass = byGamePassId[gamePassId]
-    if wasPurchased and pass and player.Parent == Players and not PassRules.owns(player, pass.Id) then
-        setOwned(player, pass, true)
+    if not (wasPurchased and pass) or player.Parent ~= Players or PassRules.owns(player, pass.Id) then
+        return
     end
+    confirming[player] = confirming[player] or {}
+    if confirming[player][gamePassId] then
+        return
+    end
+    confirming[player][gamePassId] = true
+    task.spawn(function()
+        for _ = 1, CONFIRM_TRIES do
+            if player.Parent ~= Players then
+                break
+            end
+            if ownsOnRoblox(player, gamePassId) == true then
+                setOwned(player, pass, true)
+                break
+            end
+            task.wait(CONFIRM_GAP)
+        end
+        if confirming[player] then
+            confirming[player][gamePassId] = nil
+        end
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    confirming[player] = nil
 end)
 
 Players.PlayerAdded:Connect(checkPlayer)

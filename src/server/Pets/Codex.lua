@@ -1,5 +1,10 @@
--- A player's Spirit Beast Codex, saved in PlayerData as Codex: every beast they have ever owned (Found) and the
--- rewards they have taken (Claimed). An entry is never lost: selling or fusing the pet leaves it in the book.
+-- A player's Spirit Beast Codex, saved in PlayerData as Codex: every beast they have ever owned (Found), the
+-- rewards they have taken (Claimed), and the realm each reward was earned in (Earned: { [rewardId] = realm index }). An entry
+-- is never lost: selling or fusing the pet leaves it in the book.
+--
+-- A reward's stones are a weapon's share of the realm it was EARNED in (release audit, 2026-11-12: paid at the claim's realm,
+-- holding claims back to the top realm multiplied them up to ~37,000x and punished players who claimed at once). A reward
+-- earned before Earned existed has no entry and pays at the claim's realm, as it always did.
 -- CodexRules holds what counts and what it pays; PetService pays it.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -9,7 +14,30 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 
 local Codex = {}
 
-local state = {} -- [player] = { found = { [petId] = true }, claimed = { [rewardId] = true } }
+local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
+
+local state = {} -- [player] = { found = { [petId] = true }, claimed = { [rewardId] = true }, earned = { [rewardId] = realm } }
+
+-- The player's realm now, or nil while their rank isn't loaded (then nothing is recorded: it pays at the claim's realm).
+local function realmNow(player)
+    local rank = Ranks.getRank(Ranks.getPlayerRankName(player))
+    return if rank then Shop.realmIndex(rank.Realm) else nil
+end
+
+-- Records the realm of every reward that has just become earned.
+local function noteEarned(player, data)
+    local realm = nil
+    for _, reward in CodexRules.Rewards do
+        if not data.earned[reward.Id] and not data.claimed[reward.Id] and CodexRules.isEarned(reward, data.found) then
+            realm = realm or realmNow(player)
+            if not realm then
+                return
+            end
+            data.earned[reward.Id] = realm
+        end
+    end
+end
 
 function Codex.sanitize(raw)
     raw = if typeof(raw) == "table" then raw else {}
@@ -29,12 +57,21 @@ function Codex.sanitize(raw)
             end
         end
     end
-    return { Found = found, Claimed = claimed }
+    local earned = {}
+    if typeof(raw.Earned) == "table" then
+        for id, realm in raw.Earned do
+            local reward = CodexRules.reward(id)
+            if reward and typeof(realm) == "number" and realm == realm and not table.find(claimed, reward.Id) then
+                earned[reward.Id] = math.clamp(math.floor(realm), 1, #GameConfig.WeaponTiers)
+            end
+        end
+    end
+    return { Found = found, Claimed = claimed, Earned = earned }
 end
 
 function Codex.setupPlayer(player, progress)
     local saved = Codex.sanitize(progress and progress.Codex)
-    local data = { found = {}, claimed = {} }
+    local data = { found = {}, claimed = {}, earned = table.clone(saved.Earned) }
     for _, petId in saved.Found do
         data.found[petId] = true
     end
@@ -65,6 +102,7 @@ function Codex.discover(player, petId)
         return false
     end
     data.found[petId] = true
+    noteEarned(player, data)
     return true
 end
 
@@ -73,7 +111,8 @@ function Codex.qiPercent(player)
     return if data then CodexRules.qiPercent(data.claimed) else 0
 end
 
--- Marks a reward taken and returns it; nil if it isn't earned, or was taken already.
+-- Marks a reward taken and returns it and the realm it pays at (where it was earned, else now); nil if it isn't earned, or was
+-- taken already.
 function Codex.claim(player, rewardId)
     local data = state[player]
     local reward = CodexRules.reward(rewardId)
@@ -81,7 +120,9 @@ function Codex.claim(player, rewardId)
         return nil
     end
     data.claimed[reward.Id] = true
-    return reward
+    local realm = data.earned[reward.Id] or Shop.playerRealmIndex(player)
+    data.earned[reward.Id] = nil
+    return reward, realm
 end
 
 local function sorted(set)
@@ -98,7 +139,7 @@ function Codex.exportData(player)
     if not data then
         return nil
     end
-    return { Found = sorted(data.found), Claimed = sorted(data.claimed) }
+    return { Found = sorted(data.found), Claimed = sorted(data.claimed), Earned = table.clone(data.earned) }
 end
 
 -- owned: { [petId] = { Count, Level } }, what they hold now, for the book's pages

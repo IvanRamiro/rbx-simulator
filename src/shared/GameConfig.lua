@@ -125,8 +125,10 @@ local GameConfig = {
         -- secured, a relic RelicShare of its own on first attunement, each at least MinReward
         EggShare = 0.25,
         -- what the Marketplace asks for an egg, as a share of its required rank's value: 4 times what stealing
-        -- one pays, and with no Qi or element. On average its pet sells for under half this, so buying
-        -- eggs to sell their pets loses stones (checked against every egg's pool, 2026-11-04)
+        -- one pays, and with no Qi or element. On average its pet sells for less than this, so buying
+        -- eggs to sell their pets loses stones (checked against every egg's pool, 2026-11-04; re-measured 2026-11-12 with the
+        -- Luck pass: at most 0.88 of the Marketplace price, the Primordial Abyss Egg. Re-check whenever pet values, pools, luck
+        -- or discounts change)
         MarketEggShare = 1,
         RelicShare = 0.5,
         MinReward = 40,
@@ -624,13 +626,13 @@ local GameConfig = {
     },
 
     -- reasons to come back (server/Rewards/RewardService, shared/RewardRules). Daily: each streak day's
-    -- Spirit Stones, times SpiritStones.RealmFactor per realm (a full week is worth about one weapon of
+    -- Spirit Stones, times SpiritStones.RealmFactor per realm (a full week is worth about five weapons of
     -- the player's realm), and any minutes of Qi. Offline: the share
     -- of the cultivating rate paid for time away. Group: set GroupId to turn the group reward on.
     Rewards = {
         -- Spirit Stones at realm 1 (RewardRules scales them by realm). Raised four times on November 11, 2026: a day used to
         -- pay 5 stones against the 40 one stolen egg pays (15 seconds of play), so logging in wasn't worth it. Now day 1 is
-        -- about half an egg, day 7 about six, and a full week about four weapons of the player's realm.
+        -- about half an egg, day 7 about six, and a full week about five weapons of the player's realm (measured 2026-11-12).
         Daily = {
             { Stones = 20 }, { Stones = 25 }, { Stones = 30, QiMinutes = 2 }, { Stones = 35 },
             { Stones = 45, QiMinutes = 3 }, { Stones = 55 }, { Stones = 100, QiMinutes = 5 },
@@ -697,7 +699,7 @@ local GameConfig = {
     Titles = {
         DeveloperUserIds = { 4993575280 },
         ContentCreatorUserIds = {},
-        BetaEndsAt = nil,
+        BetaEndsAt = 1794758400, -- the launch: Monday 2026-11-16 00:00 in the owner's time (UTC+8), 2026-11-15 16:00 UTC. Move it if the launch moves
     },
 
     StarterPetIds = { "AquaWisp" },
@@ -905,7 +907,7 @@ local GameConfig = {
     -- (tools/ui/draw_store_icons.py: assets/ui/store/<Id>.png; <Id>_512.png is the picture to give the pass on Roblox).
     GamePasses = {
         { Id = "Luck", Name = "Lucky Cultivator", GamePassId = 2082626429, Price = 149, Icon = "rbxassetid://129170449479441",
-            Text = "2x luck: Rare and rarer beasts hatch twice as often from every egg.", Luck = 2 }, -- (shortened: the longer text was cut off in its card, UI audit 2026-11-11)
+            Text = "2x luck: each egg's rarer beasts hatch twice as often (see ODDS).", Luck = 2 }, -- (shortened: the longer text was cut off in its card, UI audit 2026-11-11)
         { Id = "QiSurge", Name = "Qi Surge", GamePassId = 2083202424, Price = 199, Icon = "rbxassetid://71034417049645",
             Text = "2x Qi from cultivating, while you're away and from every Qi reward.", QiMultiplier = 2 },
         { Id = "PetSlots", Name = "+3 Pet Slots", GamePassId = 2081480484, Price = 249, Icon = "rbxassetid://90769324952400",
@@ -930,8 +932,9 @@ local GameConfig = {
     -- number (shared/Merchant.lua), so every server shows the same ones; each player can buy each deal once a visit. All in
     -- Spirit Stones (MerchantService):
     --   Egg  Count eggs at Discount off the Marketplace's price (Shop.marketEggPrice), for the egg's RequiredRank. At most
-    --        MaxEggDiscount: an egg's pet sells on average for under half its Marketplace price (SpiritStones.MarketEggShare),
-    --        so even at the deepest discount buying eggs to sell their pets loses stones.
+    --        MaxEggDiscount: with the Luck pass an egg's pet sells on average for at most 0.8 of the discounted price at today's
+    --        deals (measured 2026-11-12; at 40% off it would come close to even): re-check whenever pet values, pools, luck or
+    --        discounts change.
     --   Pet  one beast, chosen, no luck involved: Rare, Epic or Legendary only, for PetMarkup times what it sells for
     --        (Shop.petValue, at level 1: at least MinPetMarkup, so buying one to sell it always loses stones), for the rank
     --        that can hatch it (Shop.petEggRank). Each is far less than hatching it would cost on average, which is the deal.

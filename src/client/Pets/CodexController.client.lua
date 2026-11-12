@@ -187,7 +187,8 @@ local function claimButton(parent, reward, position, anchor)
 end
 
 local function rewardText(reward)
-    local stones = CodexRules.stones(reward, Shop.playerRealmIndex(Players.LocalPlayer))
+    -- (what the server will pay: the realm it was earned in, else the player's realm now: server/Pets/Codex)
+    local stones = CodexRules.stones(reward, CodexState.earned[reward.Id] or Shop.playerRealmIndex(Players.LocalPlayer))
     local text = NumberFormat.compact(stones) .. " Stones"
     if reward.QiPercent > 0 then
         text = "+" .. reward.QiPercent .. "% Qi forever  ·  " .. text

@@ -10,7 +10,7 @@
 --
 --   MovementGuard.isSuspect(player)          true while rewards should be refused
 --   MovementGuard.maxTravel(player, seconds) the farthest they could honestly get in that time
---   MovementGuard.reset(player)              the server moved them itself (checkpoint, a gate's return)
+--   MovementGuard.reset(player, to)          the server moved them itself (checkpoint, a gate's return) to `to` (a Vector3)
 --   MovementGuard.allow(player, studs)       the server threw them that far (a guardian's knockback)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -65,10 +65,18 @@ function MovementGuard.isSuspect(player)
     return state ~= nil and os.clock() < state.suspectUntil
 end
 
-function MovementGuard.reset(player)
+-- Their next move is measured from where the server put them, not from wherever they report next: forgetting the position here
+-- let a cheat teleport anywhere for free right after a checkpoint return (release audit, 2026-11-12). For RESET_GRACE seconds a
+-- report far from `to` is taken for the client still showing where they were before the server moved them, and skipped.
+local RESET_GRACE = 1
+local RESET_NEAR = 25
+
+function MovementGuard.reset(player, to)
     local state = states[player]
     if state then
-        state.position = nil
+        state.position = to
+        state.landing = to
+        state.graceUntil = if to then os.clock() + RESET_GRACE else 0
     end
 end
 
@@ -95,6 +103,15 @@ local function sample(dt)
             state.extra = 0
         end
         local now = root.Position
+        if state.landing then
+            if (now - state.landing).Magnitude <= RESET_NEAR then
+                state.landing = nil -- there: measure on from here
+            elseif os.clock() < (state.graceUntil or 0) then
+                continue -- still reporting where they were before the server moved them
+            else
+                state.landing = nil -- never got there: what they moved since is charged from where they were put
+            end
+        end
         local from = state.position
         state.position = now
         if from then
@@ -123,6 +140,7 @@ local function watch(player)
     states[player] = state
     player.CharacterAdded:Connect(function()
         state.position = nil
+        state.landing = nil
         state.budget = burst(levelOf(player))
     end)
 end

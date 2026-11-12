@@ -73,6 +73,15 @@ local function setupPlayer(player)
     end
     publish(player)
     ready[player] = true
+    -- offline Qi counts the Qi passes: wait (a little) for GamePassService to have asked Roblox which they own, or a Qi Surge
+    -- owner could be paid at 1x (release audit, 2026-11-12)
+    local passDeadline = os.clock() + 10
+    while not player:GetAttribute("PassesChecked") and player.Parent == Players and os.clock() < passDeadline do
+        task.wait(0.2)
+    end
+    if player.Parent ~= Players then
+        return
+    end
     grantOffline(player, Rewards.get(player).LastSeen)
 end
 
@@ -83,6 +92,9 @@ function actions.ClaimDaily(player)
     local today = RewardRules.today()
     if data.LastDay == today then
         return
+    end
+    if Wallet.exportData(player) == nil then
+        return -- their wallet isn't set up yet: claiming now would mark the day taken and lose its stones (release audit, 2026-11-12)
     end
     local day = RewardRules.nextDay(data.LastDay, data.Streak)
     local stones, minutes = RewardRules.daily(day, Shop.playerRealmIndex(player), player)

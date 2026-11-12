@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
+local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Discoveries = require(script.Parent:WaitForChild("Discoveries"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
@@ -48,13 +49,15 @@ local function onRelicTriggered(player, relicId, crystal, maxDistance)
         return
     end
 
-    qi.Value += relic.QiReward
+    -- (the Qi passes multiply it as they do every Qi reward: Qi Surge promises it, release audit 2026-11-12)
+    local qiReward = math.floor(relic.QiReward * PassRules.qiMultiplier(player))
+    qi.Value += qiReward
     local stones = Shop.relicStones(relic)
     Wallet.add(player, stones, "Relic", relicId)
     publishFound(player)
     PlayerData.saveSoon(player)
     -- Element: the forge element this relic unlocked, when the player didn't have it yet
-    RemoteEvents.RelicResultEvent:FireClient(player, { RelicId = relicId, QiReward = relic.QiReward, Stones = stones,
+    RemoteEvents.RelicResultEvent:FireClient(player, { RelicId = relicId, QiReward = qiReward, Stones = stones,
         Element = if relic.Element and not hadElement then relic.Element else nil })
 end
 

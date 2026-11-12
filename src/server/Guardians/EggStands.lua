@@ -147,6 +147,16 @@ function EggStands.load()
     end
 end
 
+-- Whether any of the island's stands holds an egg right now.
+function EggStands.anyEgg(island)
+    for slot in slotsOf[island] or {} do
+        if slot.eggId ~= nil then
+            return true
+        end
+    end
+    return false
+end
+
 -- What to do when a player asks to take a stand's egg: function(player, slot).
 function EggStands.setTakeHandler(handler)
     onTake = handler

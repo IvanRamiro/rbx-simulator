@@ -6,7 +6,6 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
-local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local Codex = require(script.Parent:WaitForChild("Codex"))
 local EggInventory = require(script.Parent:WaitForChild("EggInventory"))
 local PetInventory = require(script.Parent:WaitForChild("PetInventory"))
@@ -112,7 +111,7 @@ local function onHatchRequest(player, eggId)
     lastHatchRequest[player] = now
     local egg = typeof(eggId) == "string" and GameConfig.Eggs[eggId]
     local altar, promptPart, prompt = altarParts()
-    if not egg or player.Parent ~= Players or not promptPart then
+    if not egg or player.Parent ~= Players or not promptPart or not prompt then
         return
     end
     -- every refusal is answered: the player has pressed Hatch and is waiting to see an egg
@@ -212,11 +211,11 @@ RemoteEvents.CodexEvent.OnServerEvent:Connect(function(player, action, rewardId)
     if action ~= "Claim" or throttled(player) or Wallet.exportData(player) == nil then
         return
     end
-    local reward = Codex.claim(player, rewardId)
+    local reward, realm = Codex.claim(player, rewardId)
     if not reward then
         return
     end
-    local stones = CodexRules.stones(reward, Shop.playerRealmIndex(player))
+    local stones = CodexRules.stones(reward, realm) -- (the realm it was earned in: Codex.lua)
     Wallet.add(player, stones, "Codex", reward.Id)
     PetInventory.publish(player) -- its Qi bonus shows in the pets window, the claim in the Codex
     PlayerData.saveSoon(player)
