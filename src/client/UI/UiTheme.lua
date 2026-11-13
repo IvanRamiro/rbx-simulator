@@ -21,6 +21,11 @@ UiTheme.Colors = {
     Text = Color3.fromRGB(246, 245, 255),
     Muted = Color3.fromRGB(172, 170, 204),
     Sky = Color3.fromRGB(150, 226, 255),       -- Qi, Qinggong
+    -- "Cultivation Bold" (the owner, 2026-11-13: the top games' patterns in our colours): buying is green, as players
+    -- expect from every Roblox shop; heavy words carry a dark outline
+    Buy = Color3.fromRGB(46, 190, 88),
+    BuyBright = Color3.fromRGB(168, 255, 176),
+    Outline = Color3.fromRGB(10, 8, 26),
 }
 
 local FAMILY = "rbxasset://fonts/families/"
@@ -30,6 +35,7 @@ UiTheme.Fonts = {
     Body = Font.new(FAMILY .. "Montserrat.json", Enum.FontWeight.Medium),
     Strong = Font.new(FAMILY .. "Montserrat.json", Enum.FontWeight.SemiBold),
     Number = Font.new(FAMILY .. "Montserrat.json", Enum.FontWeight.ExtraBold),
+    Heavy = Font.new(FAMILY .. "Montserrat.json", Enum.FontWeight.Heavy), -- a shop card's name, a price, a rail tile's word
 }
 
 UiTheme.PanelTransparency = 0.14 -- nearly solid, so gold trim has something to sit on

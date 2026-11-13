@@ -2,6 +2,8 @@
 -- with its picture, what it does, and its live Robux price, and the Exclusive Egg, locked until its beast is made. A pass not on
 -- sale yet (no GamePassId) says "Coming soon"; one the player owns says so. Buying is Roblox's own prompt; the server counts
 -- the purchase (server/Shop/GamePassService) and sets the "Pass_<Id>" attribute, and this window and every other follow it.
+-- Its look is "Cultivation Bold" (the owner, 2026-11-13: the top Roblox shops' patterns in our colours): two tabs (GAME PASSES,
+-- EXCLUSIVE EGG), cards with heavy outlined words, and each price on a big green Robux button, the old price struck above it.
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local PolicyService = game:GetService("PolicyService")
@@ -20,7 +22,8 @@ local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
 local ROBUX = utf8.char(0xE002) -- Roblox's Robux sign, in its own fonts
-local CARD_HEIGHT = 128
+local CARD_HEIGHT = 168
+local TABS_HEIGHT = 40
 local GAP = 8
 local EGG = GameConfig.ExclusiveEgg
 
@@ -40,11 +43,46 @@ end
 Hud.CompactChanged:Connect(showCaption)
 showCaption()
 local window = Hud.window({
-    Name = "StoreWindow", Title = "SHOP", Size = Vector2.new(560, 470),
+    Name = "StoreWindow", Title = "SHOP", Size = Vector2.new(640, 470),
     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 })
 local message = Toast.new("StoreMessage", C.Highlight, 5)
-local list = UiKit.scroll({ Name = "List", Size = UDim2.fromScale(1, 1), Parent = window.Body })
+-- the tabs, across the top of the window's body; each shows its own page under them
+local tabBar = Instance.new("Frame")
+tabBar.Name = "Tabs"
+tabBar.BackgroundTransparency = 1
+tabBar.Size = UDim2.new(1, 0, 0, TABS_HEIGHT - 6)
+tabBar.Parent = window.Body
+UiKit.list(tabBar, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8) })
+local function page(name)
+    local frame = UiKit.scroll({ Name = name, Position = UDim2.fromOffset(0, TABS_HEIGHT), Size = UDim2.new(1, 0, 1, -TABS_HEIGHT),
+        Parent = window.Body })
+    return frame
+end
+local list = page("List")
+local eggPage = page("EggPage")
+eggPage.Visible = false
+local tabs = {}
+local function showTab(name)
+    local oddsView = window.Body:FindFirstChild("Odds") -- (built below) a tab press closes the odds
+    if oddsView then
+        oddsView.Visible = false
+    end
+    for tabName, tab in tabs do
+        tab.button:SetAttribute("Tone", if tabName == name then "Highlight" else "Tile")
+        tab.page.Visible = tabName == name
+    end
+end
+local function tab(name, text, pageFrame, order)
+    local button = UiKit.button({ Name = name .. "Tab", Font = "Heavy", TextSize = 14, Text = text, Tone = "Tile",
+        Size = UDim2.fromOffset(170, TABS_HEIGHT - 6), LayoutOrder = order, Parent = tabBar })
+    button:SetAttribute("EdgeThickness", 2)
+    tabs[name] = { button = button, page = pageFrame }
+    button.Activated:Connect(function()
+        Sfx.play("Click")
+        showTab(name)
+    end)
+end
 
 local render -- (below)
 local prices = {} -- [GamePassId] = its live price in Robux, once Roblox has said
@@ -65,7 +103,8 @@ end)
 local odds = Instance.new("Frame")
 odds.Name = "Odds"
 odds.BackgroundTransparency = 1
-odds.Size = UDim2.fromScale(1, 1)
+odds.Position = UDim2.fromOffset(0, TABS_HEIGHT)
+odds.Size = UDim2.new(1, 0, 1, -TABS_HEIGHT)
 odds.Visible = false
 odds.Parent = window.Body
 local oddsBack = UiKit.button({ Name = "Back", Font = "Strong", TextSize = 12, Text = "< BACK", Tone = "Quiet",
@@ -134,30 +173,59 @@ oddsBack.Activated:Connect(function()
     list.Visible = true
 end)
 
--- one pass: its picture, name, what it does, and its button
+-- words in the heavy face with a dark outline (the bold look)
+local function bold(props)
+    props.Font = props.Font or "Heavy"
+    local label = UiKit.label(props)
+    UiKit.outline(label, props.TextSize >= 18 and 2 or 1.5)
+    return label
+end
+
+-- one pass: its picture, its name and headline, what it does, the old price struck through, and its big price button
 local function passCard(pass, parent, slot)
     local card = UiKit.card({
         Name = pass.Id, Position = UDim2.new(slot * 0.5, if slot == 0 then 0 else GAP / 2, 0, 0),
-        Size = UDim2.new(0.5, -GAP / 2, 1, 0), Stripe = C.Accent, Parent = parent,
+        Size = UDim2.new(0.5, -GAP / 2, 1, 0), Parent = parent,
     })
+    card.BackgroundTransparency = 0.1
+    local edge = card:FindFirstChildOfClass("UIStroke")
+    edge.Thickness = 2
+    card:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
     local picture = Instance.new("ImageLabel")
     picture.Name = "Picture"
     picture.BackgroundTransparency = 1
     picture.Image = pass.Icon
-    picture.Position = UDim2.fromOffset(10, 10)
-    picture.Size = UDim2.fromOffset(64, 64)
+    picture.Position = UDim2.fromOffset(8, 8)
+    picture.Size = UDim2.fromOffset(84, 84)
     picture.Parent = card
-    UiKit.label({
-        Name = "PassName", Font = "Title", TextSize = 15, Text = pass.Name, TextTruncate = Enum.TextTruncate.AtEnd,
-        Position = UDim2.fromOffset(84, 10), Size = UDim2.new(1, -92, 0, 20), Parent = card,
+    bold({
+        Name = "PassName", Text = string.upper(pass.Name), TextSize = 17, TextTruncate = Enum.TextTruncate.AtEnd,
+        Position = UDim2.fromOffset(100, 10), Size = UDim2.new(1, -108, 0, 22), Parent = card,
+    })
+    bold({
+        Name = "Headline", Text = pass.Headline or "", TextSize = 20, TextColor3 = C.Highlight,
+        Position = UDim2.fromOffset(100, 34), Size = UDim2.new(1, -108, 0, 24), Parent = card,
     })
     UiKit.label({
-        Name = "What", Font = "Body", TextSize = 12, Text = pass.Text, TextColor3 = C.Muted, TextWrapped = true,
-        TextYAlignment = Enum.TextYAlignment.Top, Position = UDim2.fromOffset(84, 32), Size = UDim2.new(1, -92, 0, 48), Parent = card,
+        Name = "What", Font = "Strong", TextSize = 12, Text = pass.Text, TextColor3 = C.Muted, TextWrapped = true,
+        TextYAlignment = Enum.TextYAlignment.Top, Position = UDim2.fromOffset(100, 60), Size = UDim2.new(1, -108, 0, 44), Parent = card,
+    })
+    -- the price it had before the cut, struck through, just over the button (shown by render only while the live price is lower)
+    local was = bold({
+        Name = "WasPrice", Text = "", RichText = true, TextSize = 14, TextColor3 = C.Danger,
+        TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 1),
+        Position = UDim2.new(1, -12, 1, -56), Size = UDim2.new(1, -24, 0, 16), Visible = false, Parent = card,
     })
     local button = UiKit.button({
-        Name = "Buy", Font = "Strong", TextSize = 14, Text = "", AnchorPoint = Vector2.new(0, 1),
-        Position = UDim2.new(0, 10, 1, -10), Size = UDim2.new(1, if pass.Luck then -86 else -20, 0, 34), Parent = card,
+        Name = "Buy", Font = "Heavy", TextSize = 20, Text = "", AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.new(0, 10, 1, -10), Size = UDim2.new(1, if pass.Luck then -94 else -20, 0, 42), Parent = card,
+    })
+    button:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
+    button:SetAttribute("EdgeThickness", 2)
+    -- the words on their own label, so they can carry an outline (the button's own stroke is its border)
+    local price = bold({
+        Name = "Price", Text = "", TextSize = 20, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center,
+        Size = UDim2.fromScale(1, 1), ZIndex = button.ZIndex + 1, Parent = button,
     })
     button.Activated:Connect(function()
         if pass.Luck and luckRestricted and not PassRules.owns(player, pass.Id) then
@@ -170,21 +238,17 @@ local function passCard(pass, parent, slot)
     end)
     if pass.Luck then -- its effect, in numbers, before anyone buys it: beside its Buy button (in the top corner it covered the
         -- description's first line, seen in Play 2026-11-12)
-        local oddsButton = UiKit.button({ Name = "Odds", Font = "Strong", TextSize = 12, Text = "ODDS", Tone = "Accent",
-            AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -10, 1, -10), Size = UDim2.fromOffset(70, 34), Parent = card })
+        local oddsButton = UiKit.button({ Name = "Odds", Font = "Heavy", TextSize = 13, Text = "ODDS", Tone = "Accent",
+            AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -10, 1, -10), Size = UDim2.fromOffset(76, 42), Parent = card })
+        oddsButton:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
         oddsButton.Activated:Connect(function()
             Sfx.play("Click")
             showOdds(pass)
         end)
     end
-    cards[pass.Id] = { pass = pass, button = button }
+    cards[pass.Id] = { pass = pass, button = button, price = price, was = was }
 end
 
-local function sectionHeader(text, order)
-    UiKit.header(list, text, { TextSize = 13, LayoutOrder = order })
-end
-
-sectionHeader("GAME PASSES", 1)
 for row = 0, math.ceil(#PassRules.List / 2) - 1 do
     local frame = Instance.new("Frame")
     frame.Name = "Row" .. row + 1
@@ -201,29 +265,40 @@ for row = 0, math.ceil(#PassRules.List / 2) - 1 do
 end
 
 -- the Exclusive Egg: locked, until its beast is made
-sectionHeader("EXCLUSIVE EGG", 50)
-local eggCard = UiKit.card({ Name = "ExclusiveEgg", Size = UDim2.new(1, 0, 0, 92), LayoutOrder = 51, Stripe = C.Highlight, Parent = list })
+-- one big card: the egg large on the left, its name and promise beside it (filled in when its beast is made)
+local eggCard = UiKit.card({ Name = "ExclusiveEgg", Size = UDim2.new(1, 0, 0, 300), LayoutOrder = 1, Parent = eggPage })
+eggCard.BackgroundTransparency = 0.1
+eggCard:FindFirstChildOfClass("UIStroke").Thickness = 2
+eggCard:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
 local eggPicture = Instance.new("ImageLabel")
 eggPicture.Name = "Picture"
 eggPicture.BackgroundTransparency = 1
 eggPicture.Image = EGG.Icon
-eggPicture.Position = UDim2.fromOffset(10, 8)
-eggPicture.Size = UDim2.fromOffset(76, 76)
+eggPicture.AnchorPoint = Vector2.new(0, 0.5)
+eggPicture.Position = UDim2.new(0, 16, 0.5, 0)
+eggPicture.Size = UDim2.fromOffset(220, 220)
 eggPicture.Parent = eggCard
-UiKit.label({ Name = "EggName", Font = "Title", TextSize = 16, Text = EGG.Name, Position = UDim2.fromOffset(96, 14),
-    Size = UDim2.new(1, -250, 0, 20), Parent = eggCard })
-UiKit.label({ Name = "What", Font = "Body", TextSize = 12, Text = EGG.Text, TextColor3 = C.Muted, TextWrapped = true,
-    TextYAlignment = Enum.TextYAlignment.Top, Position = UDim2.fromOffset(96, 38), Size = UDim2.new(1, -250, 0, 40), Parent = eggCard })
-local soon = UiKit.button({ Name = "Soon", Font = "Strong", TextSize = 13, Text = "COMING SOON", Tone = "Quiet",
-    AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(136, 36), Parent = eggCard })
+local EGG_TEXT_X = 252
+bold({ Name = "EggName", Text = string.upper(EGG.Name), TextSize = 26, Position = UDim2.fromOffset(EGG_TEXT_X, 40),
+    Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 32), Parent = eggCard })
+bold({ Name = "Headline", Text = "COMING SOON!", TextSize = 20, TextColor3 = C.Highlight, Position = UDim2.fromOffset(EGG_TEXT_X, 78),
+    Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 24), Parent = eggCard })
+UiKit.label({ Name = "What", Font = "Strong", TextSize = 14, Text = EGG.Text, TextColor3 = C.Muted, TextWrapped = true,
+    TextYAlignment = Enum.TextYAlignment.Top, Position = UDim2.fromOffset(EGG_TEXT_X, 110), Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 60),
+    Parent = eggCard })
+local soon = UiKit.button({ Name = "Soon", Font = "Heavy", TextSize = 16, Text = "", Tone = "Quiet",
+    AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, EGG_TEXT_X, 1, -24), Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 46), Parent = eggCard })
+soon:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
 soon.Active = false
+bold({ Name = "Word", Text = "LOCKED", TextSize = 18, TextColor3 = C.Muted, TextXAlignment = Enum.TextXAlignment.Center,
+    Size = UDim2.fromScale(1, 1), Parent = soon })
 local padlock = Instance.new("ImageLabel")
 padlock.Name = "Lock"
 padlock.BackgroundTransparency = 1
 padlock.Image = UiTheme.Icons.Lock
 padlock.AnchorPoint = Vector2.new(1, 1)
-padlock.Position = UDim2.new(0, 88, 0, 86)
-padlock.Size = UDim2.fromOffset(26, 26)
+padlock.Position = UDim2.new(0, 228, 1, -40)
+padlock.Size = UDim2.fromOffset(52, 52)
 padlock.Parent = eggCard
 
 function render()
@@ -231,6 +306,7 @@ function render()
         local pass, button = entry.pass, entry.button
         local onSale = (pass.GamePassId or 0) > 0
         local owned = PassRules.owns(player, pass.Id)
+        local livePrice = prices[pass.GamePassId] or pass.Price
         local tone, text
         if owned then
             tone, text = "Active", "OWNED"
@@ -239,11 +315,15 @@ function render()
         elseif not onSale then
             tone, text = "Quiet", "COMING SOON"
         else
-            tone, text = "Primary", ROBUX .. " " .. tostring(prices[pass.GamePassId] or pass.Price)
+            tone, text = "Buy", ROBUX .. " " .. tostring(livePrice)
         end
         button.Active = onSale and not owned
         button:SetAttribute("Tone", tone)
-        button.Text = text
+        entry.price.Text = text
+        entry.price.TextSize = if tone == "Buy" then 22 else 15
+        local cut = tone == "Buy" and pass.WasPrice and livePrice < pass.WasPrice
+        entry.was.Visible = cut == true
+        entry.was.Text = if cut then "<s>" .. ROBUX .. " " .. pass.WasPrice .. "</s>" else ""
     end
 end
 
@@ -272,6 +352,9 @@ for _, pass in PassRules.List do
         end
     end)
 end
+tab("Passes", "GAME PASSES", list, 1)
+tab("Egg", "EXCLUSIVE EGG", eggPage, 2)
+showTab("Passes")
 render()
 
 window.link(toggleButton)

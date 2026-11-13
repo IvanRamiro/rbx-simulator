@@ -138,8 +138,14 @@ rail.AutomaticSize = Enum.AutomaticSize.XY
 rail.Size = UDim2.new()
 rail.LayoutOrder = 20
 rail.Parent = Hud.Status
-UiKit.list(rail, { FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 6) })
+-- square tiles, two to a row (the owner, 2026-11-13: "Cultivation Bold", the top games' icon tiles in our colours)
+local railGrid = Instance.new("UIGridLayout")
+railGrid.SortOrder = Enum.SortOrder.LayoutOrder
+railGrid.FillDirection = Enum.FillDirection.Horizontal
+railGrid.CellPadding = UDim2.fromOffset(8, 8)
+railGrid.Parent = rail
 Hud.Rail = rail
+local RAIL_TILE = 70 -- a tile's side (a phone's row of tiles: 54 by 52, see layoutRail)
 
 -- ---------- compact screens ----------
 local compactChanged = Instance.new("BindableEvent")
@@ -169,20 +175,20 @@ HudMetrics.keepReadable(windowGui)
 
 -- On a phone the menu runs along under the profile as icons alone: the thumbstick has the screen's lower left
 local function layoutRail(isCompact)
-    rail:FindFirstChildOfClass("UIListLayout").FillDirection = if isCompact then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical
+    -- 54 at a phone's scale (0.8) is 43 pixels: the least a thumb hits reliably (UI audit 2026-11-11: 35 by 33)
+    railGrid.CellSize = if isCompact then UDim2.fromOffset(54, 52) else UDim2.fromOffset(RAIL_TILE, RAIL_TILE)
+    railGrid.FillDirectionMaxCells = if isCompact then 0 else 2
     for _, button in rail:GetChildren() do
         if button:IsA("TextButton") then
-            -- 54 at a phone's scale (0.8) is 43 pixels: the least a thumb hits reliably (UI audit 2026-11-11: 35 by 33)
-            button.Size = UDim2.fromOffset(if isCompact then 54 else 150, if isCompact then 52 else 42)
             local word = button:FindFirstChild("Word")
             if word then
                 word.Visible = not isCompact
             end
-            local icon = button:FindFirstChild("Icon") -- alone on a phone's square button, it sits in its middle
+            local icon = button:FindFirstChild("Icon") -- over its word; alone on a phone's tile, in its middle
             if icon then
-                icon.AnchorPoint = if isCompact then Vector2.new(0.5, 0.5) else Vector2.new(0, 0.5)
-                icon.Position = if isCompact then UDim2.fromScale(0.5, 0.5) else UDim2.new(0, 6, 0.5, 0)
-                icon.Size = UDim2.fromOffset(if isCompact then 36 else 32, if isCompact then 36 else 32)
+                icon.AnchorPoint = Vector2.new(0.5, 0.5)
+                icon.Position = if isCompact then UDim2.fromScale(0.5, 0.5) else UDim2.new(0.5, 0, 0, 27)
+                icon.Size = UDim2.fromOffset(if isCompact then 36 else 42, if isCompact then 36 else 42)
             end
         end
     end
@@ -263,18 +269,22 @@ local function addBadge(button)
     end
 end
 
--- A menu button on the rail: its icon beside its word, with an optional badge (a count, or a dot).
+-- A menu tile on the rail: its icon over its word, with an optional badge (a count, or a dot).
 -- Returns the button and a function that sets the badge text (nil hides it).
 function Hud.railButton(name, image, word, order)
-    local button = UiKit.button({ Name = name, Text = "", Size = UDim2.fromOffset(150, 42), LayoutOrder = order, Tone = "Quiet", Parent = Hud.Rail })
-    local icon = UiKit.icon(image, 32)
-    icon.AnchorPoint = Vector2.new(0, 0.5)
-    icon.Position = UDim2.new(0, 6, 0.5, 0)
+    local button = UiKit.button({ Name = name, Text = "", Size = UDim2.fromOffset(RAIL_TILE, RAIL_TILE), LayoutOrder = order, Tone = "Tile", Parent = Hud.Rail })
+    button:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
+    button:SetAttribute("EdgeThickness", 2)
+    local icon = UiKit.icon(image, 42)
+    icon.BackgroundTransparency = 1 -- the tile is the frame: the picture stands on it bare
+    icon:FindFirstChildOfClass("UIStroke"):Destroy()
     icon.Parent = button
-    UiKit.label({
-        Name = "Word", Font = "Strong", Text = word, TextSize = 15, TextColor3 = UiTheme.Colors.Text,
-        AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 46, 0.5, 0), Size = UDim2.new(1, -50, 0, 18), Parent = button,
+    local label = UiKit.label({
+        Name = "Word", Font = "Heavy", Text = string.upper(word), TextSize = 11, TextColor3 = UiTheme.Colors.Text,
+        TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4),
+        Size = UDim2.new(1, -4, 0, 13), Parent = button,
     })
+    UiKit.outline(label, 1.5)
     layoutRail(compact == true)
     return button, addBadge(button)
 end
@@ -475,7 +485,7 @@ function Hud.window(props)
         end
         opened = false
         if linked then
-            linked:SetAttribute("Tone", "Quiet")
+            linked:SetAttribute("Tone", linked:GetAttribute("RestTone") or "Quiet")
         end
         if openWindowFrame == frame then
             openWindowFrame = nil
@@ -545,7 +555,9 @@ function Hud.window(props)
     end
     function win.link(button)
         linked = button
-        button:SetAttribute("Tone", if opened then "Accent" else "Quiet")
+        -- the tone it goes back to when the window closes: its own (a rail tile's is Tile)
+        button:SetAttribute("RestTone", button:GetAttribute("RestTone") or button:GetAttribute("Tone") or "Quiet")
+        button:SetAttribute("Tone", if opened then "Accent" else button:GetAttribute("RestTone"))
     end
     closeButton.Activated:Connect(win.close)
     table.insert(windows, win)

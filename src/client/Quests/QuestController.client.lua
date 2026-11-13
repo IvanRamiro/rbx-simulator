@@ -118,7 +118,7 @@ local function questAllowed()
     end
     -- lit while its panel is on the screen, as a window's button is while the window is open: a window steps the panel
     -- aside (Hud.window), and two lit buttons would say two things are open
-    questButton:SetAttribute("Tone", if chosen and Hud.Quest.Visible then "Accent" else "Quiet")
+    questButton:SetAttribute("Tone", if chosen and Hud.Quest.Visible then "Accent" else "Tile")
     return chosen == true
 end
 Hud.Quest:GetPropertyChangedSignal("Visible"):Connect(questAllowed)

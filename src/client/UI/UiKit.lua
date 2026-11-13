@@ -254,6 +254,8 @@ local BUTTON_TONES = {
     Quiet = { back = C.Raised, edge = C.EdgeDim, text = C.Text },
     Danger = { back = C.DangerDeep, edge = C.Danger, text = C.Text },
     Active = { back = Color3.fromRGB(14, 112, 118), edge = Color3.fromRGB(120, 255, 236), text = Color3.new(1, 1, 1), glow = Color3.fromRGB(70, 240, 220) }, -- something running, right now
+    Buy = { back = C.Buy, edge = C.BuyBright, text = Color3.new(1, 1, 1), glow = C.Buy }, -- a price in Robux
+    Tile = { back = C.Raised, edge = C.Edge, text = C.Text }, -- a rail tile: quiet, framed in gold
 }
 
 -- props.Tone picks the colours; button:SetAttribute("Tone", name) changes them later
@@ -326,7 +328,7 @@ function UiKit.button(props)
         edge.Color = tone.edge
         edge.Transparency = if button.Active then 0.05 else 0.6
         if not edge:GetAttribute("Breathes") then -- a breathing edge (UiFx.attention) is its tween's: writing here fought it
-            edge.Thickness = if lit then 2 else 1
+            edge.Thickness = (button:GetAttribute("EdgeThickness") or 1) + (if lit then 1 else 0) -- a bold tile asks for a thicker edge
         end
     end
     button:SetAttribute("Tone", toneName)
@@ -510,6 +512,18 @@ function UiKit.card(props)
     end
     apply(card, copy)
     return card
+end
+
+-- A dark outline round a text object's words (the bold look: white or gold words, outlined, read over anything).
+function UiKit.outline(textObject, thickness)
+    local edge = Instance.new("UIStroke")
+    edge.Name = "Outline"
+    edge.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+    edge.Color = C.Outline
+    edge.Thickness = thickness or 2
+    edge.LineJoinMode = Enum.LineJoinMode.Round
+    edge.Parent = textObject
+    return edge
 end
 
 function UiKit.tag(text, color)
