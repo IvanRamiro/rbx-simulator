@@ -88,7 +88,15 @@ player:GetAttributeChangedSignal("SettingStatusMinimized"):Connect(fitStatus)
 fitStatus()
 
 -- the Qi, first of the currencies
-local _, setQi = Hud.chip("QiCounter", UiTheme.Icons.Qi, 0, { Format = NumberFormat.compact, Color = C.Sky })
+local qiChip, setQi = Hud.chip("QiCounter", UiTheme.Icons.Qi, 0, { Format = NumberFormat.compact, Color = C.Sky })
+-- beside it while cultivating, how fast Qi is coming in (measured here, over the last few seconds of cultivating: the top games
+-- show income per second beside the money, the owner's reference 2026-11-13)
+local qiRate = UiKit.label({
+    Name = "Rate", Font = "Heavy", TextSize = 14, TextColor3 = C.Highlight, Text = "", AutomaticSize = Enum.AutomaticSize.X,
+    Size = UDim2.fromOffset(0, 20), LayoutOrder = 3, Visible = false, Parent = qiChip:FindFirstChild("Row"),
+})
+UiKit.outline(qiRate, 1.5)
+local RATE_WINDOW = 3 -- seconds of gains averaged
 
 -- ---------- the dock: the breakthrough (when it's ready), the station's bonus, Cultivate ----------
 local rankUpButton = UiKit.button({
@@ -229,9 +237,49 @@ local leaderstats = player:WaitForChild("leaderstats")
 local qiValue = leaderstats:WaitForChild("Qi")
 local rankValue = leaderstats:WaitForChild("Rank")
 
-local function updateQiLabel()
-    setQi(qiValue.Value)
+local rateSamples = {} -- { time, gain } of each rise in Qi while cultivating, newest last
+local lastQi = qiValue.Value
+
+local function showRate()
+    local now = os.clock()
+    while rateSamples[1] and now - rateSamples[1][1] > RATE_WINDOW do
+        table.remove(rateSamples, 1)
+    end
+    -- the gains after the first, over the time from the first to now: right from the second tick, and falling once they stop
+    local count = #rateSamples
+    local gained = 0
+    for i = 2, count do
+        gained += rateSamples[i][2]
+    end
+    local span = if count >= 2 then now - rateSamples[1][1] else 0
+    local cultivating = player:GetAttribute("IsCultivating") == true
+    qiRate.Visible = cultivating and span > 0 and gained > 0
+    if qiRate.Visible then
+        qiRate.Text = "+" .. NumberFormat.compact(math.floor(gained / span + 0.5)) .. "/s"
+    end
 end
+
+local function updateQiLabel()
+    local gain = qiValue.Value - lastQi
+    lastQi = qiValue.Value
+    if gain > 0 and player:GetAttribute("IsCultivating") == true then
+        table.insert(rateSamples, { os.clock(), gain })
+    end
+    setQi(qiValue.Value)
+    showRate()
+end
+player:GetAttributeChangedSignal("IsCultivating"):Connect(function()
+    rateSamples = {}
+    showRate()
+end)
+task.spawn(function() -- the rate falls away when the gains stop
+    while true do
+        task.wait(1)
+        if qiRate.Visible or #rateSamples > 0 then
+            showRate()
+        end
+    end
+end)
 
 local function updateRankDisplay()
     local rank = Ranks.getRank(rankValue.Value)

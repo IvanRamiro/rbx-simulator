@@ -256,6 +256,7 @@ local BUTTON_TONES = {
     Active = { back = Color3.fromRGB(14, 112, 118), edge = Color3.fromRGB(120, 255, 236), text = Color3.new(1, 1, 1), glow = Color3.fromRGB(70, 240, 220) }, -- something running, right now
     Buy = { back = C.Buy, edge = C.BuyBright, text = Color3.new(1, 1, 1), glow = C.Buy }, -- a price in Robux
     Tile = { back = C.Raised, edge = C.Edge, text = C.Text }, -- a rail tile: quiet, framed in gold
+    Go = { back = C.Buy, edge = C.BuyBright, text = Color3.new(1, 1, 1), glow = C.Buy }, -- a positive action (Equip): the price green
 }
 
 -- props.Tone picks the colours; button:SetAttribute("Tone", name) changes them later
@@ -492,14 +493,17 @@ function UiKit.card(props)
     corner(card)
     local edge = stroke(card, C.EdgeDim, 0.35)
     if UserInputService.MouseEnabled then -- the row under the pointer lights up
-        local rest = card.BackgroundTransparency
+        local restEdge, restEdgeTransparency -- (read on first entering, after any UiKit.boldCard: its own edge comes back)
+        local rest
         card.MouseEnter:Connect(function()
-            TweenService:Create(card, EASE, { BackgroundTransparency = rest - 0.2 }):Play()
-            TweenService:Create(edge, EASE, { Color = C.Edge, Transparency = 0.05 }):Play()
+            rest = rest or card.BackgroundTransparency
+            restEdge, restEdgeTransparency = restEdge or edge.Color, restEdgeTransparency or edge.Transparency -- once: never mid-tween
+            TweenService:Create(card, EASE, { BackgroundTransparency = math.max(0, rest - 0.2) }):Play()
+            TweenService:Create(edge, EASE, { Color = if edge:GetAttribute("Keep") then edge.Color else C.Edge, Transparency = 0.05 }):Play()
         end)
         card.MouseLeave:Connect(function()
-            TweenService:Create(card, EASE, { BackgroundTransparency = rest }):Play()
-            TweenService:Create(edge, EASE, { Color = C.EdgeDim, Transparency = 0.35 }):Play()
+            TweenService:Create(card, EASE, { BackgroundTransparency = rest or card.BackgroundTransparency }):Play()
+            TweenService:Create(edge, EASE, { Color = restEdge or C.EdgeDim, Transparency = restEdgeTransparency or 0.35 }):Play()
         end)
     end
     if stripeColor then
@@ -524,6 +528,34 @@ function UiKit.outline(textObject, thickness)
     edge.LineJoinMode = Enum.LineJoinMode.Round
     edge.Parent = textObject
     return edge
+end
+
+-- The bold look for a card made by UiKit.card: nearly solid, rounder, a thicker edge (in a colour: a pet's rarity). Its
+-- hover still lights the edge.
+function UiKit.boldCard(card, edgeColor)
+    card.BackgroundTransparency = 0.1
+    card:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
+    local edge = card:FindFirstChildOfClass("UIStroke")
+    edge.Thickness = 2
+    if edgeColor then
+        edge.Color = edgeColor
+        edge.Transparency = 0.2
+        edge:SetAttribute("Keep", true)
+    end
+    local stripe = card:FindFirstChild("Stripe")
+    if stripe then
+        stripe:Destroy() -- the coloured edge says it now
+    end
+    return card
+end
+
+-- Words in the heavy face with a dark outline (the bold look).
+function UiKit.boldLabel(props)
+    local copy = table.clone(props)
+    copy.Font = copy.Font or "Heavy"
+    local label = UiKit.label(copy)
+    UiKit.outline(label, if (copy.TextSize or 16) >= 18 then 2 else 1.5)
+    return label
 end
 
 function UiKit.tag(text, color)

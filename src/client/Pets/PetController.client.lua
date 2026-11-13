@@ -31,21 +31,21 @@ local onWindowClosed -- set below, with the pets it redraws
 local window = Hud.window({
     Name = "PetsWindow", Title = "PETS", OnClose = function()
         onWindowClosed()
-    end, Size = Vector2.new(372, 400), AnchorPoint = Vector2.new(0, 0),
+    end, Size = Vector2.new(400, 420), AnchorPoint = Vector2.new(0, 0),
     Position = UDim2.fromOffset(UiTheme.Margin + 270 + 16, UiTheme.Margin), -- beside the left column (the profile is 270 wide)
 })
 local body = window.Body
 
-local equippedLabel = UiKit.label({
-    Name = "Equipped", Font = "Strong", TextSize = 12, TextColor3 = C.Muted, Text = "",
-    Size = UDim2.new(0.5, 0, 0, 16), Parent = body,
+local equippedLabel = UiKit.boldLabel({ -- (bold, the owner 2026-11-13)
+    Name = "Equipped", TextSize = 14, Text = "",
+    Size = UDim2.new(0.5, 0, 0, 20), Parent = body,
 })
-local bonusLabel = UiKit.label({
-    Name = "Bonus", Font = "Strong", TextSize = 12, TextColor3 = C.Muted, Text = "", AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.5, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Right,
+local bonusLabel = UiKit.boldLabel({
+    Name = "Bonus", TextSize = 14, TextColor3 = C.Highlight, Text = "", AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.5, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Right,
     Parent = body,
 })
-local petList = UiKit.scroll({ Name = "PetList", Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 1, -24), Parent = body })
+local petList = UiKit.scroll({ Name = "PetList", Position = UDim2.fromOffset(0, 28), Size = UDim2.new(1, 0, 1, -28), Parent = body })
 
 local hatchMessage = Toast.new("HatchMessage", Color3.new(1, 1, 1), 3.5)
 
@@ -96,16 +96,16 @@ local function createPetCard(pet, layoutOrder, equippedCount)
     local rarityColor = GameConfig.PetRarityColors[definition.Rarity] or C.Text
 
     local level = PetRules.level(pet)
-    local card = UiKit.card({ Name = "PetCard", LayoutOrder = layoutOrder, Size = UDim2.new(1, 0, 0, 90), Stripe = rarityColor, Parent = petList })
+    local card = UiKit.boldCard(UiKit.card({ Name = "PetCard", LayoutOrder = layoutOrder, Size = UDim2.new(1, 0, 0, 96), Parent = petList }), rarityColor)
     card:SetAttribute("InstanceId", pet.InstanceId)
     local picture = takePortrait(pet.PetId)
     picture.Name = "Portrait"
     picture:SetAttribute("PetId", pet.PetId)
-    picture.Position = UDim2.fromOffset(10, 9)
+    picture.Position = UDim2.fromOffset(10, 12)
     picture.Parent = card
-    UiKit.label({
-        Name = "PetName", Font = "Title", TextSize = 15, Text = definition.DisplayName, TextTruncate = Enum.TextTruncate.AtEnd,
-        Position = UDim2.fromOffset(78, 7), Size = UDim2.new(1, -112, 0, 18), Parent = card,
+    UiKit.boldLabel({
+        Name = "PetName", TextSize = 16, Text = definition.DisplayName, TextTruncate = Enum.TextTruncate.AtEnd,
+        Position = UDim2.fromOffset(78, 7), Size = UDim2.new(1, -118, 0, 20), Parent = card,
     })
     -- the lock: gold while it's on, faint while it's off
     local lock = UiKit.button({
@@ -141,8 +141,8 @@ local function createPetCard(pet, layoutOrder, equippedCount)
         levelTag.LayoutOrder = 0
         levelTag.Parent = tags
     end
-    UiKit.label({
-        Font = "Strong", TextSize = 11, TextColor3 = C.AccentBright, Text = "+" .. PetRules.qiBonus(pet.PetId, level) .. "% Qi",
+    UiKit.boldLabel({
+        TextSize = 13, TextColor3 = C.Highlight, Text = "+" .. PetRules.qiBonus(pet.PetId, level) .. "% Qi",
         AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 16), LayoutOrder = 1, Parent = tags,
     })
 
@@ -152,8 +152,8 @@ local function createPetCard(pet, layoutOrder, equippedCount)
     local function action(text, tone, slot, onClick)
         local share = -(86 + (buttons - 1) * 4) / buttons
         local b = UiKit.button({
-            Font = "Strong", TextSize = 11, Text = text, Tone = tone, Active = onClick ~= nil,
-            Position = UDim2.new(slot / buttons, 78 + slot * (share + 4), 0, 49), Size = UDim2.new(1 / buttons, share, 0, 34), -- (22 was too small to tap: UI audit 2026-11-11)
+            Font = "Heavy", TextSize = 13, Text = text, Tone = tone, Active = onClick ~= nil,
+            Position = UDim2.new(slot / buttons, 78 + slot * (share + 4), 0, 52), Size = UDim2.new(1 / buttons, share, 0, 36), -- (22 was too small to tap: UI audit 2026-11-11)
             Parent = card,
         })
         if onClick then
@@ -166,7 +166,7 @@ local function createPetCard(pet, layoutOrder, equippedCount)
             RemoteEvents.UnequipPetEvent:FireServer(pet.InstanceId)
         end)
     elseif equippedCount < PassRules.maxEquipped(Players.LocalPlayer) then
-        action("EQUIP", "Accent", 0, function()
+        action("EQUIP", "Go", 0, function()
             RemoteEvents.EquipPetEvent:FireServer(pet.InstanceId)
         end)
     else

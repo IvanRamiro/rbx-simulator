@@ -71,12 +71,12 @@ side.BackgroundTransparency = 1
 side.Size = UDim2.new(0, NAV_WIDTH, 1, 0)
 side.Parent = body
 
-local countLabel = UiKit.label({
-    Name = "Count", Font = "Strong", TextSize = 12, TextColor3 = C.Muted, Text = "", Size = UDim2.new(1, 0, 0, 16), Parent = side,
+local countLabel = UiKit.boldLabel({ -- (bold, the owner 2026-11-13)
+    Name = "Count", TextSize = 13, Text = "", Size = UDim2.new(1, 0, 0, 16), Parent = side,
 })
 local bar = UiKit.bar({ Name = "Progress", Position = UDim2.fromOffset(0, 19), Size = UDim2.new(1, -6, 0, 8), Parent = side })
-local bonusLabel = UiKit.label({
-    Name = "Bonus", Font = "Strong", TextSize = 11, TextColor3 = C.AccentBright, Text = "", Position = UDim2.fromOffset(0, 31),
+local bonusLabel = UiKit.boldLabel({
+    Name = "Bonus", TextSize = 12, TextColor3 = C.Highlight, Text = "", Position = UDim2.fromOffset(0, 31),
     Size = UDim2.new(1, 0, 0, 14), Parent = side,
 })
 local nav = UiKit.scroll({ Name = "Pages", Position = UDim2.fromOffset(0, 50), Size = UDim2.new(1, 0, 1, -50), Parent = side })
@@ -125,8 +125,8 @@ local function navRow(order, image, name, detail, detailColor, selected, onClick
     icon.AnchorPoint = Vector2.new(0, 0.5)
     icon.Position = UDim2.new(0, 5, 0.5, 0)
     icon.Parent = row
-    UiKit.label({
-        Font = "Strong", TextSize = 12, Text = name, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(40, 4),
+    UiKit.boldLabel({
+        TextSize = 12, Text = name, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(40, 4),
         Size = UDim2.new(1, -44, 0, 16), Parent = row,
     })
     UiKit.label({
@@ -175,7 +175,7 @@ local function claimButton(parent, reward, position, anchor)
     local earned = CodexRules.isEarned(reward, found)
     local text = if claimed[reward.Id] then "CLAIMED" elseif earned then "CLAIM" else "LOCKED"
     local button = UiKit.button({
-        Name = "Claim", Font = "Strong", TextSize = 12, Text = text, Tone = if earned and not claimed[reward.Id] then "Primary" else "Quiet",
+        Name = "Claim", Font = "Heavy", TextSize = 13, Text = text, Tone = if earned and not claimed[reward.Id] then "Primary" else "Quiet",
         Active = earned and not claimed[reward.Id], AnchorPoint = anchor, Position = position, Size = UDim2.fromOffset(84, 30), Parent = parent,
     })
     if earned and not claimed[reward.Id] then
@@ -198,8 +198,8 @@ end
 
 -- ---------- the rewards page ----------
 local function renderRewards()
-    UiKit.label({
-        Font = "Title", TextSize = 16, Text = "Collection Rewards", Size = UDim2.new(1, 0, 0, 20), Parent = content,
+    UiKit.boldLabel({
+        TextSize = 18, Text = "COLLECTION REWARDS", Size = UDim2.new(1, 0, 0, 20), Parent = content,
     })
     UiKit.label({
         TextSize = 12, TextColor3 = C.Muted, Text = "Every beast you discover stays in the Codex, even after you sell or fuse it.",
@@ -208,16 +208,15 @@ local function renderRewards()
     local list = UiKit.scroll({ Name = "Rewards", Position = UDim2.fromOffset(0, 42), Size = UDim2.new(1, 0, 1, -42), Parent = content })
     local function row(order, reward, title)
         local have, goal = CodexRules.progress(reward, found)
-        local card = UiKit.card({
-            Name = "Reward", LayoutOrder = order, Size = UDim2.new(1, 0, 0, 58),
-            Stripe = if claimed[reward.Id] then C.EdgeDim elseif have >= goal then C.Highlight else C.Accent, Parent = list,
-        })
-        UiKit.label({
-            Font = "Strong", TextSize = 13, Text = title, Position = UDim2.fromOffset(12, 6), Size = UDim2.new(1, -112, 0, 16),
+        local card = UiKit.boldCard(UiKit.card({
+            Name = "Reward", LayoutOrder = order, Size = UDim2.new(1, 0, 0, 60), Parent = list,
+        }), if claimed[reward.Id] then C.EdgeDim elseif have >= goal then C.Highlight else C.Edge)
+        UiKit.boldLabel({
+            TextSize = 14, Text = title, Position = UDim2.fromOffset(12, 6), Size = UDim2.new(1, -112, 0, 16),
             TextTruncate = Enum.TextTruncate.AtEnd, Parent = card,
         })
-        UiKit.label({
-            Font = "Strong", TextSize = 11, Text = rewardText(reward), TextColor3 = C.AccentBright, Position = UDim2.fromOffset(12, 23),
+        UiKit.boldLabel({
+            TextSize = 12, Text = rewardText(reward), TextColor3 = C.Highlight, Position = UDim2.fromOffset(12, 23),
             Size = UDim2.new(1, -112, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = card,
         })
         local track = UiKit.bar({ Position = UDim2.fromOffset(12, 42), Size = UDim2.new(1, -160, 0, 7), Parent = card })
@@ -259,13 +258,13 @@ local function beastCard(parent, petId, order)
     local info = GameConfig.Pets[petId]
     local known = found[petId] == true
     local color = GameConfig.PetRarityColors[info.Rarity] or C.Text
-    local card = UiKit.card({ Name = "Beast", LayoutOrder = order, Stripe = if known then color else nil, Parent = parent })
+    local card = UiKit.boldCard(UiKit.card({ Name = "Beast", LayoutOrder = order, Parent = parent }), if known then color else nil)
     local picture = if known then Portraits.pet(petId, 76) else Portraits.silhouette(petId, 76)
     picture.AnchorPoint = Vector2.new(0.5, 0)
     picture.Position = UDim2.new(0.5, 1, 0, 6)
     picture.Parent = card
-    UiKit.label({
-        Font = "Strong", TextSize = 11, Text = if known then info.DisplayName else "???", TextXAlignment = Enum.TextXAlignment.Center,
+    UiKit.boldLabel({
+        TextSize = 12, Text = if known then info.DisplayName else "???", TextXAlignment = Enum.TextXAlignment.Center,
         TextWrapped = true, Position = UDim2.fromOffset(5, 84), Size = UDim2.new(1, -8, 0, 28), Parent = card,
     })
     local tag = UiKit.tag(info.Rarity, color)
@@ -318,8 +317,8 @@ local function renderEgg(egg)
     local have, goal = CodexRules.progress(reward, found)
     local icon = UiKit.icon(UiTheme.EggIcons[egg.Id], 46)
     icon.Parent = content
-    UiKit.label({
-        Font = "Title", TextSize = 16, Text = egg.DisplayName, Position = UDim2.fromOffset(54, 0), Size = UDim2.new(1, -150, 0, 20),
+    UiKit.boldLabel({
+        TextSize = 18, Text = string.upper(egg.DisplayName), Position = UDim2.fromOffset(54, 0), Size = UDim2.new(1, -150, 0, 20),
         TextTruncate = Enum.TextTruncate.AtEnd, Parent = content,
     })
     UiKit.label({
@@ -327,8 +326,8 @@ local function renderEgg(egg)
         Text = (if egg.Guardian then "Guarded by the " .. egg.Guardian.DisplayName .. "  ·  " else "") .. "Needs " .. (if rank then rank.Name else "?"),
         Parent = content,
     })
-    UiKit.label({
-        Font = "Strong", TextSize = 11, TextColor3 = C.AccentBright, Position = UDim2.fromOffset(54, 35), Size = UDim2.new(1, -150, 0, 14),
+    UiKit.boldLabel({
+        TextSize = 12, TextColor3 = C.Highlight, Position = UDim2.fromOffset(54, 35), Size = UDim2.new(1, -150, 0, 14),
         Text = have .. " / " .. goal .. " found  ·  Full page: " .. rewardText(reward), TextTruncate = Enum.TextTruncate.AtEnd, Parent = content,
     })
     claimButton(content, reward, UDim2.new(1, -8, 0, 8), Vector2.new(1, 0))
@@ -345,7 +344,7 @@ local function renderEgg(egg)
 end
 
 local function renderLost()
-    UiKit.label({ Font = "Title", TextSize = 16, Text = "Lost Lineages", Size = UDim2.new(1, 0, 0, 20), Parent = content })
+    UiKit.boldLabel({ TextSize = 18, Text = "LOST LINEAGES", Size = UDim2.new(1, 0, 0, 20), Parent = content })
     UiKit.label({
         TextSize = 12, TextColor3 = C.Muted, Text = "Beasts no egg holds any more. They don't count toward the Codex's goals.",
         Position = UDim2.fromOffset(0, 21), Size = UDim2.new(1, 0, 0, 16), Parent = content,

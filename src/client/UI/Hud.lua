@@ -196,17 +196,18 @@ end
 Hud.CompactChanged:Connect(layoutRail)
 
 -- The three counters share one slim strip, side by side
-local strip = UiKit.panel({
-    Name = "Counters", AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 30), Brackets = false, Parent = Hud.Currency,
+local strip = UiKit.panel({ -- (bold, the owner 2026-11-13: bigger icons and numbers, outlined, as the top games show their money)
+    Name = "Counters", AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 42), Brackets = false, Parent = Hud.Currency,
 })
+strip:FindFirstChildOfClass("UIStroke").Thickness = 2
 local stripRow = Instance.new("Frame")
 stripRow.Name = "Row"
 stripRow.BackgroundTransparency = 1
 stripRow.AutomaticSize = Enum.AutomaticSize.X
 stripRow.Size = UDim2.fromScale(0, 1)
 stripRow.Parent = strip
-UiKit.padding(stripRow, 8, 0)
-UiKit.list(stripRow, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), VerticalAlignment = Enum.VerticalAlignment.Center })
+UiKit.padding(stripRow, 12, 0)
+UiKit.list(stripRow, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 14), VerticalAlignment = Enum.VerticalAlignment.Center })
 
 -- A resource chip: its icon and a value. Returns the chip and a function that sets its number: it rolls
 -- there, and what changed floats off under the chip. opts: Format (number to text), FloatFormat, Color.
@@ -229,7 +230,7 @@ function Hud.chip(name, image, order, opts)
     local icon = Instance.new("Frame") -- the picture alone, no box: it stays as small as the strip
     icon.Name = "Icon"
     icon.BackgroundTransparency = 1
-    icon.Size = UDim2.fromOffset(20, 20)
+    icon.Size = UDim2.fromOffset(30, 30)
     icon.Parent = row
     local picture = Instance.new("ImageLabel")
     picture.Name = "Image"
@@ -238,9 +239,10 @@ function Hud.chip(name, image, order, opts)
     picture.Size = UDim2.fromScale(1, 1)
     picture.Parent = icon
     local value = UiKit.label({
-        Name = "Value", Font = "Strong", TextSize = 14, AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, 20), LayoutOrder = 2, Parent = row,
+        Name = "Value", Font = "Heavy", TextSize = 21, AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.fromOffset(0, 26), LayoutOrder = 2, Parent = row,
     })
+    UiKit.outline(value, 2)
     return chip, UiFx.counter(value, opts.Format, {
         Color = opts.Color, FloatIn = chip, Icon = icon:FindFirstChild("Image"), FloatFormat = opts.FloatFormat,
     })
