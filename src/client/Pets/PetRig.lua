@@ -6537,20 +6537,11 @@ PetRig.Profiles.WorldrootColossus = {
         Sun = Color3.fromRGB(210, 255, 200), Ivory = Color3.fromRGB(240, 255, 235) },
     Animate = animateBrute,
 }
--- The Exclusive Egg's own beasts (the owner, 2026-11-13), built in Studio.
+-- The Exclusive Egg's own beasts (the owner, 2026-11-13).
 --
--- The Eclipse Dreadwing, "Devourer of Stars" (Mythical): a raven-dragon that hovers by its owner on slow, heavy wingbeats (animateWinged), with
--- a small black eclipse floating between its wings that turns and bobs on its own. The special, Devour the Stars (Blasts.DevourStars):
--- wings wide, head thrown up, the eclipse rises and swells as motes of starlight spiral into it.
-local function animateEclipseDreadwing(rig, s, moving, fly, nova)
-    animateWinged(rig, s, moving, fly, nova)
-    local m, u, t = rig.motors, rig.unit, s.time
-    if m.Eclipse then
-        local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
-        local rise = smoothstep(0.05, 0.3, progress) * (1 - smoothstep(0.75, 0.95, progress))
-        pose(m.Eclipse, CFrame.new(0, (0.07 * math.sin(t * 1.4) + 0.7 * rise) * u, 0) * CFrame.Angles(0, t * 0.9, 0.2 * math.sin(t * 0.6)))
-    end
-end
+-- The Eclipse Dreadwing, "Devourer of Stars" (Mythical): a four-legged raven-drake griffin (modelled in Blender, 2026-11-13) that hovers by
+-- its owner on slow, heavy wingbeats (animateWinged; its legs are part of the Body). Its eclipse is no part of the model: it appears only in
+-- the special, Devour the Stars (Blasts.DevourStars): wings wide, head thrown up, a black eclipse opens above its back and swallows starlight.
 
 -- Crysalith, "The Eternal Frost" (Divine): a great crystal stag-beast that walks after its owner with slow, stately strides, head high; it
 -- looks about now and then, its antlers sway a little behind the head's turn and the frozen light in them breathes (Effects.Pulse). Flying,
@@ -6609,13 +6600,11 @@ PetRig.Profiles.ThousandYearDreamEater = {
 }
 
 PetRig.Profiles.EclipseDreadwing = {
-    Joints = { Body = "Root", Head = "Body", WingL = "Body", WingR = "Body", Tail = "Body", Eclipse = "Body" },
-    Effects = { Pulse = "Eclipse", Burst = "Body", Sparks = { "Head_Eye" }, Blast = "DevourStars", NovaLight = 2 },
-    SeeThroughGlow = { ["9a5cff"] = 0.5 }, -- the eclipse's corona: the black sun shows through it
-    GlowColors = { ["9a5cff"] = Color3.fromRGB(100, 60, 255) }, -- (Neon turned 9a5cff pink in Play: bluer, as the swords' DefaultGlow found)
+    Joints = { Body = "Root", Head = "Body", WingL = "Body", WingR = "Body", Tail = "Body" },
+    Effects = { Pulse = "Body", Burst = "Body", Sparks = { "Head_Eye" }, Blast = "DevourStars", NovaLight = 2 },
     Colors = { Gold = Color3.fromRGB(190, 150, 255), Amber = Color3.fromRGB(40, 20, 70), Orange = Color3.fromRGB(150, 90, 255),
         Sun = Color3.fromRGB(240, 230, 255), Ivory = Color3.fromRGB(250, 245, 255) },
-    Animate = animateEclipseDreadwing,
+    Animate = animateWinged,
 }
 PetRig.Profiles.Crysalith = {
     Sole = 2.313, -- template units from the middle of its box down to its hooves (Studio, 2026-11-13)
@@ -10197,31 +10186,49 @@ function Blasts.SwallowedDream(rig, fx)
     end)
 end
 
--- Devour the Stars (the Eclipse Dreadwing): motes of starlight spiral in from all round to the eclipse between its wings, which swells and
--- swallows them, then lets out one dark violet ring.
+-- Devour the Stars (the Eclipse Dreadwing): a black eclipse opens above its back, between the raised wings, ringed by a violet corona;
+-- motes of starlight spiral in from all round and it swallows them, swells, then collapses into one dark violet ring. (burst's folder
+-- clears it all by 2 s.)
 function Blasts.DevourStars(rig, fx)
     local colors, u, neon = rig.profile.Colors, rig.unit, fx.neon
-    local eclipse = rig.parts.Eclipse or rig.parts.Body or rig.rootPart
+    local body = rig.parts.Body or rig.rootPart
+    local at = body.Position + Vector3.new(0, 1.3 * u, 0)
+    local sun = neon(Vector3.one * 0.05 * u, CFrame.new(at), Color3.new(0, 0, 0))
+    sun.Shape = Enum.PartType.Ball
+    sun.Material = Enum.Material.SmoothPlastic
+    local corona = neon(Vector3.one * 0.06 * u, CFrame.new(at), colors.Orange)
+    corona.Shape = Enum.PartType.Ball
+    corona.Transparency = 0.55
+    local grow = TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+    TweenService:Create(sun, grow, { Size = Vector3.one * 0.55 * u }):Play()
+    TweenService:Create(corona, grow, { Size = Vector3.one * 0.75 * u }):Play()
     for i = 1, 16 do
         local a = i / 16 * math.pi * 2
-        local from = eclipse.Position + Vector3.new(math.cos(a) * 3.2, math.sin(a * 3) * 1 + 0.6, math.sin(a) * 3.2) * u
+        local from = at + Vector3.new(math.cos(a) * 3.2, math.sin(a * 3) * 1 - 0.4, math.sin(a) * 3.2) * u
         local star = neon(Vector3.one * 0.12 * u, CFrame.new(from), if i % 3 == 0 then colors.Sun else colors.Gold)
         star.Shape = Enum.PartType.Ball
-        task.delay(0.03 * i, function()
+        task.delay(0.2 + 0.03 * i, function()
             TweenService:Create(star, TweenInfo.new(0.75, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                CFrame = CFrame.new(eclipse.Position), Size = Vector3.one * 0.03 * u, Transparency = 0.5,
+                CFrame = CFrame.new(at), Size = Vector3.one * 0.03 * u, Transparency = 0.5,
             }):Play()
         end)
     end
-    task.delay(1.2, function()
-        local at = eclipse.Position
+    task.delay(1.0, function() -- fed, it swells
+        local swell = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        TweenService:Create(sun, swell, { Size = Vector3.one * 0.8 * u }):Play()
+        TweenService:Create(corona, swell, { Size = Vector3.one * 1.1 * u, Transparency = 0.35 }):Play()
+    end)
+    task.delay(1.25, function() -- and collapses into the ring
+        local shut = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        TweenService:Create(sun, shut, { Size = Vector3.one * 0.02 * u }):Play()
+        TweenService:Create(corona, shut, { Size = Vector3.one * 0.02 * u, Transparency = 1 }):Play()
         local ring = neon(Vector3.new(0.05 * u, 0.6 * u, 0.6 * u), CFrame.new(at) * CFrame.Angles(0, 0, math.rad(90)), colors.Orange)
         ring.Shape = Enum.PartType.Cylinder
         ring.Transparency = 0.3
         local hole = Instance.new("SpecialMesh")
         hole.MeshType = Enum.MeshType.Cylinder
         hole.Parent = ring
-        TweenService:Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        TweenService:Create(ring, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             Size = Vector3.new(0.02 * u, 5 * u, 5 * u), Transparency = 1,
         }):Play()
     end)

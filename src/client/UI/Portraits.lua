@@ -39,14 +39,15 @@ end
 -- A SurfaceAppearance renders black in a ViewportFrame (it has no environment to light it), so a
 -- portrait copy shows each such piece by its colour map alone: the same artwork, without the PBR
 -- shading. A game script can't read a SurfaceAppearance's maps, so they come from shared/WeaponMaps
--- and shared/PetMaps.
+-- and shared/PetMaps (one map for the whole pet, or a table of them by piece name).
 local function flatten(model, colorMap)
     for _, appearance in model:GetDescendants() do
         if appearance:IsA("SurfaceAppearance") then
             local part = appearance.Parent
             appearance:Destroy()
-            if colorMap and part:IsA("MeshPart") then
-                part.TextureID = colorMap
+            local map = if type(colorMap) == "table" then colorMap[part.Name] else colorMap
+            if map and part:IsA("MeshPart") then
+                part.TextureID = map
             end
         end
     end

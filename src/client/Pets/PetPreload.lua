@@ -39,8 +39,13 @@ local function work()
                 if imported then
                     table.insert(list, imported)
                 end
-                if PetMaps[petId] then
-                    table.insert(list, PetMaps[petId])
+                local map = PetMaps[petId]
+                if type(map) == "table" then -- one map per piece (shared/PetMaps)
+                    for _, id in map do
+                        table.insert(list, id)
+                    end
+                elseif map then
+                    table.insert(list, map)
                 end
                 if #list > 0 then
                     pcall(function()

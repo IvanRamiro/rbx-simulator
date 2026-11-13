@@ -2,7 +2,7 @@
 -- Read from the place's SurfaceAppearances (2026-11-03), because a game script can't read them:
 -- the client's pet portraits (UI/Portraits) need it, since a SurfaceAppearance renders black in a
 -- ViewportFrame. A pet missing here has no SurfaceAppearance (palette-textured or procedural).
--- Re-read after re-importing a pet's maps.
+-- Re-read after re-importing a pet's maps. A pet whose pieces each have their own map gets a table of them by piece name.
 return {
     AbyssAnomalocaris = "rbxassetid://72650000114111",
     AquaWisp = "rbxassetid://134367609264611",
@@ -21,6 +21,13 @@ return {
     DreamMoth = "rbxassetid://116224404517599",
     EchoBat = "rbxassetid://102294631497654",
     EclipseCat = "rbxassetid://85885755382252",
+    EclipseDreadwing = { -- one map per piece, by its name in the built pet (2026-11-13)
+        Body = "rbxassetid://108407105154275",
+        Head = "rbxassetid://107033724179931",
+        Tail = "rbxassetid://100126497430916",
+        WingL = "rbxassetid://127201168932272",
+        WingR = "rbxassetid://82755077584349",
+    },
     EmberWyrm = "rbxassetid://119439182813124",
     FrostfangSerpent = "rbxassetid://120358055125100",
     GalaxyManta = "rbxassetid://93932467864746",
