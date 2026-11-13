@@ -205,8 +205,8 @@ function PetInventory.fuse(player, targetId, confirmSecret)
         return false, PetRules.refusal(reason)
     end
     local definition = GameConfig.Pets[target.PetId]
-    if definition.Rarity == "Secret" and confirmSecret ~= true then
-        return false, "A Secret pet needs your confirmation to fuse."
+    if (definition.Rarity == "Secret" or definition.Rarity == "Divine") and confirmSecret ~= true then
+        return false, "A " .. definition.Rarity .. " pet needs your confirmation to fuse."
     end
     for index, pet in data.ownedPets do
         if pet.InstanceId == material.InstanceId then

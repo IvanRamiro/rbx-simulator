@@ -38,6 +38,9 @@ for eggId, egg in GameConfig.Eggs do
     })
 end
 local function unlockOrder(egg)
+    if GameConfig.Eggs[egg.Id] and GameConfig.Eggs[egg.Id].Exclusive then
+        return math.huge -- the Exclusive Egg's page comes last
+    end
     local rank = Ranks.getRankById(egg.RequiredRank)
     return rank and Ranks.getIndex(rank.Name) or math.huge
 end

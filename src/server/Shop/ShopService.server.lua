@@ -208,7 +208,7 @@ function actions.SellPet(player, instanceId, extra)
         return false, "Unequip that pet before selling it."
     end
     local definition = GameConfig.Pets[pet.PetId]
-    if definition.Rarity == "Secret" and not (typeof(extra) == "table" and extra.ConfirmSecret == true) then
+    if (definition.Rarity == "Secret" or definition.Rarity == "Divine") and not (typeof(extra) == "table" and extra.ConfirmSecret == true) then
         return false, "A Secret pet needs your confirmation to sell."
     end
     PetInventory.take(player, instanceId)
@@ -252,7 +252,7 @@ end
 
 function actions.BuyEgg(player, eggId)
     local egg = typeof(eggId) == "string" and GameConfig.Eggs[eggId]
-    if not egg then
+    if not egg or egg.Exclusive then -- (an Exclusive egg is bought with Robux in the Shop: ProductService)
         return false, "That egg isn't for sale."
     end
     if not nearShop(player, "Marketplace") then

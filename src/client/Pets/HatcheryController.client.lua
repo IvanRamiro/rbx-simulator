@@ -30,7 +30,7 @@ local LEAVE_MARGIN = 4 -- studs past the prompt's range the window closes: insid
 local REVEAL_TIME = 2.8 -- seconds the window stays aside after the egg breaks: the hatch cinematic's reveal card and its fade (HatchCeremony)
 local BREAK_MARGIN = 0.15 -- seconds after the egg breaks that Hatch wakes, so a press never reaches a server still busy
 local NO_ANSWER = GameConfig.HatchingAltar.Stage + 3 -- seconds Hatch waits for an answer that never came
-local RARITY_ORDER = { Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }
+local RARITY_ORDER = { Divine = 8, Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }
 local CARD_HEIGHT, ROW_HEIGHT = 70, 40
 
 local altarPart = nil

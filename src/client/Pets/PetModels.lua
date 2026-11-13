@@ -34,6 +34,8 @@ PetModels.Pets = {
     LunarHopper = { Scale = 1.0, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted-rabbit design removed (MESH_LOOKS was tuned with this scale)
     VoltFox = { Scale = 1.05, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old yellow block-fox design removed (MESH_LOOKS was tuned with this scale)
     GoldenKirin = { Scale = 1.15, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old design removed (MESH_LOOKS was tuned with this scale)
+    EclipseDreadwing = { Scale = 1.2, Parts = {} }, -- built in Studio (2026-11-13) for the Exclusive Egg: only its imported model (PetMeshes.ExclusiveEgg)
+    Crysalith = { Scale = 1.3, Parts = {} }, -- built in Studio (2026-11-13) for the Exclusive Egg: only its imported model (PetMeshes.ExclusiveEgg)
     NineTailMoonfox = { Scale = 1.2, Parts = {} }, -- built in Studio (2026-11-12), remade premium 2026-11-13 for the Exclusive Egg: only its imported model (PetMeshes.ExclusiveEgg)
     OriginSerpent = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old block serpent removed (MESH_LOOKS was tuned with this scale)
     AstralWhale = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted block whale removed (MESH_LOOKS was tuned with this scale)
@@ -48,7 +50,7 @@ PetModels.Pets = {
 
 -- every other pet: its imported model at its rarity's scale (every pet has its own model since 2026-11-12: the placeholder
 -- builder, PetArchetypes, is gone)
-local SCALE_BY_RARITY = { Common = 0.9, Uncommon = 0.95, Rare = 1, Epic = 1.05, Legendary = 1.15, Mythical = 1.2, Secret = 1.25 }
+local SCALE_BY_RARITY = { Common = 0.9, Uncommon = 0.95, Rare = 1, Epic = 1.05, Legendary = 1.15, Mythical = 1.2, Secret = 1.25, Divine = 1.3 }
 for petId, pet in GameConfig.Pets do
     if not PetModels.Pets[petId] then
         PetModels.Pets[petId] = { Scale = SCALE_BY_RARITY[pet.Rarity] or 1, Parts = {} }
@@ -169,6 +171,8 @@ local MESH_LOOKS = {
     NebulaOwl = { Glow = Color3.fromRGB(176, 122, 255), Length = 4.0 },
     CosmicJellyfish = { Glow = Color3.fromRGB(245, 120, 180), Length = 3.3 },
     StarfallFox = { Glow = Color3.fromRGB(150, 160, 255), Length = 3.6 },
+    EclipseDreadwing = { Glow = Color3.fromRGB(120, 90, 255), Length = 2.5 }, -- wingtip to wingtip (its widest)
+    Crysalith = { Glow = Color3.fromRGB(120, 230, 255), Length = 2.8 }, -- antler crown to hooves (its tallest)
     NineTailMoonfox = { Glow = Color3.fromRGB(150, 215, 255), Length = 2.6 }, -- crown of its tails to its paws (its tallest): about 6.2 studs, a grown moon vixen with her nine tails fanned behind her
     LanternWarden = { Glow = Color3.fromRGB(255, 176, 70), Length = 3.2 },
     DreamMoth = { Glow = Color3.fromRGB(230, 170, 255), Length = 3.2 },

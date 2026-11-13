@@ -338,7 +338,9 @@ end
 -- The eggs on sale, cheapest first. A purchase can't be undone either, so it asks once more too.
 local marketEggs = {}
 for eggId, egg in GameConfig.Eggs do
-    table.insert(marketEggs, { id = eggId, egg = egg, price = Shop.marketEggPrice(eggId) })
+    if not egg.Exclusive then -- (bought with Robux in the Shop)
+        table.insert(marketEggs, { id = eggId, egg = egg, price = Shop.marketEggPrice(eggId) })
+    end
 end
 table.sort(marketEggs, function(a, b)
     return a.price < b.price or (a.price == b.price and a.egg.DisplayName < b.egg.DisplayName)
@@ -408,13 +410,13 @@ local function renderMarket(contents)
 end
 
 local function sellPet(pet, info)
-    if info.Rarity ~= "Secret" then
+    if info.Rarity ~= "Secret" and info.Rarity ~= "Divine" then
         ask("SellPet", pet.InstanceId)
         return
     end
     -- a Secret pet is the last thing anyone should lose to a quick tap: the server won't take one without this
     ConfirmDialog.show({
-        Title = "SELL A SECRET PET", Picture = Portraits.pet(pet.PetId, 72), ConfirmText = "SELL FOREVER",
+        Title = "SELL A " .. string.upper(info.Rarity) .. " PET", Picture = Portraits.pet(pet.PetId, 72), ConfirmText = "SELL FOREVER",
         Text = "This " .. info.DisplayName .. " is one of the rarest beasts in the world. Sell it for "
             .. NumberFormat.compact(Shop.petValue(pet.PetId, PetRules.level(pet))) .. " Spirit Stones? It can't be undone.",
         OnConfirm = function()

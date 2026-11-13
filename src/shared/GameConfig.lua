@@ -117,7 +117,7 @@ local GameConfig = {
     -- (by the egg: Shop.eggStones) and a relic's first attunement (Shop.relicStones).
     SpiritStones = {
         -- a pet's worth: its rarity's value times RealmFactor per realm of its egg's required rank
-        PetValue = { Common = 6, Uncommon = 12, Rare = 25, Epic = 50, Legendary = 110, Mythical = 250, Secret = 600 },
+        PetValue = { Common = 6, Uncommon = 12, Rare = 25, Epic = 50, Legendary = 110, Mythical = 250, Secret = 600, Divine = 1500 },
         RealmFactor = 2.6, -- as weapon prices climb
         WeaponRefund = 0.4, -- the share of its price a weapon sells back for
         -- the rewards' ladder (Shop.rankValue): a rank's value is the price of a weapon of its realm,
@@ -481,7 +481,11 @@ local GameConfig = {
         VoltFox = { DisplayName = "Volt Fox", Rarity = "Epic", Theme = "Lightning", QiBonus = 50 },
         GoldenKirin = { DisplayName = "Golden Kirin", Rarity = "Legendary", Theme = "Nature", QiBonus = 60 },
         AstralWhale = { DisplayName = "Astral Whale", Rarity = "Mythical", Theme = "Cosmic", QiBonus = 100 },
-        NineTailMoonfox = { DisplayName = "Nine-Tail Moonfox", Rarity = "Secret", Theme = "Moon", QiBonus = 180 }, -- the Exclusive Egg's Secret (the owner, 2026-11-13)
+        NineTailMoonfox = { DisplayName = "Nine-Tail Moonfox", Rarity = "Secret", Theme = "Moon", QiBonus = 180, ValueRealm = 5 }, -- the Exclusive Egg's Secret (the owner, 2026-11-13)
+        -- the Exclusive Egg's own beasts (the owner, 2026-11-13). ValueRealm: they sell as beasts of the Ascendant Realm (Shop.petValue), not of
+        -- the first realm their egg (open to every rank) would say
+        EclipseDreadwing = { DisplayName = "Eclipse Dreadwing", Rarity = "Mythical", Theme = "Void and eclipse", QiBonus = 120, ValueRealm = 5 },
+        Crysalith = { DisplayName = "Crysalith", Rarity = "Divine", Theme = "Frost and crystal", QiBonus = 300, ValueRealm = 5 },
         OriginSerpent = { DisplayName = "Origin Serpent", Rarity = "Secret", Theme = "Primordial", QiBonus = 150 },
 
         MossGolem = { DisplayName = "Moss Golem", Rarity = "Common", Theme = "Earth", QiBonus = 10 },
@@ -561,6 +565,7 @@ local GameConfig = {
         Legendary = Color3.fromRGB(255, 200, 70),
         Mythical = Color3.fromRGB(255, 110, 160),
         Secret = Color3.fromRGB(255, 255, 255),
+        Divine = Color3.fromRGB(110, 240, 255), -- above Secret (the owner, 2026-11-13: the Exclusive Egg's top prize)
     },
 
     -- The quests: a player's guided path, one at a time, each with a reward (QuestService
@@ -662,7 +667,7 @@ local GameConfig = {
         MaxLevel = 5,
         QiPerLevel = 0.1,
         SpareRarities = { Common = true, Uncommon = true, Rare = true, Epic = true },
-        AutoLock = { Mythical = true, Secret = true },
+        AutoLock = { Mythical = true, Secret = true, Divine = true },
     },
 
     -- The Spirit Beast Codex's milestones (shared/CodexRules): discover Count beasts (no Count: all of them) for a lasting
@@ -671,7 +676,7 @@ local GameConfig = {
     -- whose book holds every beast from the start, those added later included (the owner, November 8, 2026).
     Codex = {
         CreatorUserIds = { 4993575280 },
-        PageShare = { Legendary = 0.25, Mythical = 0.5, Secret = 1 },
+        PageShare = { Legendary = 0.25, Mythical = 0.5, Secret = 1, Divine = 1 },
         Milestones = {
             { Count = 5, QiPercent = 2, WeaponShare = 0.25 },
             { Count = 10, QiPercent = 3, WeaponShare = 0.5 },
@@ -889,6 +894,18 @@ local GameConfig = {
                 { PetId = "TheNamelessOne", HatchChance = 0.1 },
             },
         },
+        -- The Exclusive Egg (the owner, 2026-11-13): bought with Robux only (GameConfig.ExclusiveEgg, ProductService), never stolen,
+        -- sold at the Marketplace or the Merchant; open to every rank. No luck: its odds are the ones shown when it's bought.
+        ExclusiveEgg = {
+            DisplayName = "Exclusive Egg",
+            RequiredRank = "QiInitiate",
+            Exclusive = true,
+            Pool = {
+                { PetId = "EclipseDreadwing", HatchChance = 80 },
+                { PetId = "NineTailMoonfox", HatchChance = 17 },
+                { PetId = "Crysalith", HatchChance = 3 },
+            },
+        },
         PrimordialAbyssEgg = {
             DisplayName = "Primordial Abyss Egg",
             RequiredRank = "PrimordialAwakening",
@@ -935,9 +952,11 @@ local GameConfig = {
     LuckFloor = 10,
     -- The exclusive egg (the owner, November 10, 2026): shown in the Store, locked, until its beast is made. It will be sold for
     -- Robux per hatch, showing its odds, and not offered where Roblox restricts paid random items (PolicyService).
+    -- Sold (the owner, 2026-11-13): 149 Robux an egg, a developer product (ProductId, made on Roblox); the egg goes to the player's eggs
+    -- and is hatched at the Hatching Altar. Its contents: GameConfig.Eggs.ExclusiveEgg.
     ExclusiveEgg = {
-        Name = "Exclusive Egg", Icon = "rbxassetid://80787462087085",
-        Text = "A beast found in no other egg. Coming soon.",
+        Name = "Exclusive Egg", Icon = "rbxassetid://80787462087085", EggId = "ExclusiveEgg", ProductId = 3730790355, Price = 149,
+        Text = "Three beasts found in no other egg: the Eclipse Dreadwing, the Nine-Tail Moonfox and Crysalith.",
     },
 
     -- The Wandering Merchant (the owner, 2026-11-12, verbatim: "Implement wandering merchant for every 1 hour and the wandering

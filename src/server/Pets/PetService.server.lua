@@ -48,9 +48,9 @@ local function handleRequest(remoteEvent, action)
 end
 
 -- A pet from the egg's pool, by its HatchChance (percents that add up to 100, PetInventory checks) with the player's luck
--- (the Luck pass: PassRules.luckyPool), and that chance.
+-- (the Luck pass: PassRules.luckyPool), and that chance. An Exclusive egg takes no luck: its odds are the ones shown when it was bought.
 local function rollEggPet(egg, player)
-    local pool = PassRules.luckyPool(egg.Pool, PassRules.luck(player))
+    local pool = if egg.Exclusive then egg.Pool else PassRules.luckyPool(egg.Pool, PassRules.luck(player))
     local roll = random:NextNumber() * 100
     for _, entry in pool do
         if roll < entry.HatchChance then

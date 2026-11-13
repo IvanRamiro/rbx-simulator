@@ -6537,6 +6537,55 @@ PetRig.Profiles.WorldrootColossus = {
         Sun = Color3.fromRGB(210, 255, 200), Ivory = Color3.fromRGB(240, 255, 235) },
     Animate = animateBrute,
 }
+-- The Exclusive Egg's own beasts (the owner, 2026-11-13), built in Studio.
+--
+-- The Eclipse Dreadwing, "Devourer of Stars" (Mythical): a raven-dragon that hovers by its owner on slow, heavy wingbeats (animateWinged), with
+-- a small black eclipse floating between its wings that turns and bobs on its own. The special, Devour the Stars (Blasts.DevourStars):
+-- wings wide, head thrown up, the eclipse rises and swells as motes of starlight spiral into it.
+local function animateEclipseDreadwing(rig, s, moving, fly, nova)
+    animateWinged(rig, s, moving, fly, nova)
+    local m, u, t = rig.motors, rig.unit, s.time
+    if m.Eclipse then
+        local progress = if rig.nova then (t - rig.nova.start) / PetRig.NOVA_TIME else 0
+        local rise = smoothstep(0.05, 0.3, progress) * (1 - smoothstep(0.75, 0.95, progress))
+        pose(m.Eclipse, CFrame.new(0, (0.07 * math.sin(t * 1.4) + 0.7 * rise) * u, 0) * CFrame.Angles(0, t * 0.9, 0.2 * math.sin(t * 0.6)))
+    end
+end
+
+-- Crysalith, "The Eternal Frost" (Divine): a great crystal stag-beast that walks after its owner with slow, stately strides, head high; it
+-- looks about now and then, its antlers sway a little behind the head's turn and the frozen light in them breathes (Effects.Pulse). Flying,
+-- its legs fold. The special, Eternal Frost (Blasts.EternalFrost): it lifts its head and antlers to the sky, a ring of frost spreads over the
+-- ground and ice shards rise round it.
+local function animateCrysalith(rig, s, moving, fly, nova)
+    local m, u, t, dt = rig.motors, rig.unit, s.time, rig.deltaTime
+    local drop = dropToGround(rig, s, t, u, fly, rig.profile.Sole)
+    s.stride = (s.stride or 0) + dt * (1.5 + 6.5 * moving)
+    local stride = s.stride
+    local breathe = math.sin(t * 1.2)
+    local lift = math.sin(math.min(nova * 1.4, 1) * math.pi / 2) -- the special: 0 to 1 and back
+    pose(m.Body, CFrame.new(0, -drop + (0.02 * breathe + 0.04 * math.abs(math.sin(stride)) * moving + 0.05 * math.sin(t * 2) * fly) * u, 0)
+        * CFrame.Angles(0.015 * breathe - 0.06 * fly - 0.08 * lift, 0, 0.02 * math.sin(stride) * moving))
+    s.nextGlance = s.nextGlance or 0
+    if t >= s.nextGlance then
+        s.nextGlance = t + 3 + math.random() * 4
+        s.glance = (math.random() - 0.5) * 0.7
+    end
+    local calm = (1 - 0.7 * moving) * (1 - lift)
+    s.yaw = (s.yaw or 0) + ((s.glance or 0) * calm - (s.yaw or 0)) * math.min(1, dt * 2)
+    s.yawLag = (s.yawLag or 0) + (s.yaw - (s.yawLag or 0)) * math.min(1, dt * 1.5) -- the antlers follow the head a beat late
+    pose(m.Head, CFrame.Angles(0.03 * math.sin(t * 0.9) + 0.04 * math.sin(stride * 2) * moving - 0.08 * fly + 0.45 * lift, s.yaw, 0))
+    if m.Antlers then
+        pose(m.Antlers, CFrame.Angles(0.02 * math.sin(t * 0.9 + 0.6), (s.yawLag - s.yaw) * 0.6, 0.02 * math.sin(t * 0.7)))
+    end
+    for name, lead in { LegFL = 0, LegBR = 0, LegFR = math.pi, LegBL = math.pi } do
+        local front = string.sub(name, 4, 4) == "F"
+        pose(m[name], CFrame.Angles(0.42 * math.sin(stride + lead) * moving + (if front then -0.8 else 0.7) * fly, 0, 0))
+    end
+    if m.Tail then
+        pose(m.Tail, CFrame.Angles(0.1 * math.sin(t * 1.7) + 0.2 * moving, 0.15 * math.sin(t * 1.1), 0))
+    end
+end
+
 PetRig.Profiles.PrismaticPhoenix = {
     Joints = { Body = "Root", Head = "Body", WingL = "Body", WingR = "Body", Tail = "Body" },
     Effects = { Pulse = "Body", Burst = "Body", Blast = "PrismBloom", NovaLight = 2.5 },
@@ -6557,6 +6606,32 @@ PetRig.Profiles.ThousandYearDreamEater = {
     Colors = { Gold = Color3.fromRGB(150, 175, 255), Amber = Color3.fromRGB(40, 30, 110), Orange = Color3.fromRGB(255, 130, 230),
         Sun = Color3.fromRGB(235, 235, 255), Ivory = Color3.fromRGB(250, 245, 255) },
     Animate = animateDreamEater,
+}
+
+PetRig.Profiles.EclipseDreadwing = {
+    Joints = { Body = "Root", Head = "Body", WingL = "Body", WingR = "Body", Tail = "Body", Eclipse = "Body" },
+    Effects = { Pulse = "Eclipse", Burst = "Body", Sparks = { "Head_Eye" }, Blast = "DevourStars", NovaLight = 2 },
+    SeeThroughGlow = { ["9a5cff"] = 0.5 }, -- the eclipse's corona: the black sun shows through it
+    GlowColors = { ["9a5cff"] = Color3.fromRGB(100, 60, 255) }, -- (Neon turned 9a5cff pink in Play: bluer, as the swords' DefaultGlow found)
+    Colors = { Gold = Color3.fromRGB(190, 150, 255), Amber = Color3.fromRGB(40, 20, 70), Orange = Color3.fromRGB(150, 90, 255),
+        Sun = Color3.fromRGB(240, 230, 255), Ivory = Color3.fromRGB(250, 245, 255) },
+    Animate = animateEclipseDreadwing,
+}
+PetRig.Profiles.Crysalith = {
+    Sole = 2.313, -- template units from the middle of its box down to its hooves (Studio, 2026-11-13)
+    Joints = {
+        Body = "Root", Head = "Body", Antlers = "Head",
+        LegFL = "Body", LegFR = "Body", LegBL = "Body", LegBR = "Body", Tail = "Body",
+    },
+    Effects = {
+        Pulse = "Antlers", Light = "Antlers", Motes = "Body", Burst = "Body",
+        Sparks = { "Antlers_TipL", "Antlers_TipR" }, Blast = "EternalFrost", NovaLight = 3,
+    },
+    LightScale = 0.5,
+    SeeThroughGlow = { ["5fe3ff"] = 0.7 }, -- the frozen light over its antlers
+    Colors = { Gold = Color3.fromRGB(150, 235, 255), Amber = Color3.fromRGB(40, 90, 140), Orange = Color3.fromRGB(90, 200, 255),
+        Sun = Color3.fromRGB(235, 252, 255), Ivory = Color3.fromRGB(250, 255, 255) },
+    Animate = animateCrysalith,
 }
 
 PetRig.Profiles.NineTailMoonfox = {
@@ -10120,6 +10195,66 @@ function Blasts.SwallowedDream(rig, fx)
         flash.Shape = Enum.PartType.Ball
         TweenService:Create(flash, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * 1.4 * u, Transparency = 1 }):Play()
     end)
+end
+
+-- Devour the Stars (the Eclipse Dreadwing): motes of starlight spiral in from all round to the eclipse between its wings, which swells and
+-- swallows them, then lets out one dark violet ring.
+function Blasts.DevourStars(rig, fx)
+    local colors, u, neon = rig.profile.Colors, rig.unit, fx.neon
+    local eclipse = rig.parts.Eclipse or rig.parts.Body or rig.rootPart
+    for i = 1, 16 do
+        local a = i / 16 * math.pi * 2
+        local from = eclipse.Position + Vector3.new(math.cos(a) * 3.2, math.sin(a * 3) * 1 + 0.6, math.sin(a) * 3.2) * u
+        local star = neon(Vector3.one * 0.12 * u, CFrame.new(from), if i % 3 == 0 then colors.Sun else colors.Gold)
+        star.Shape = Enum.PartType.Ball
+        task.delay(0.03 * i, function()
+            TweenService:Create(star, TweenInfo.new(0.75, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                CFrame = CFrame.new(eclipse.Position), Size = Vector3.one * 0.03 * u, Transparency = 0.5,
+            }):Play()
+        end)
+    end
+    task.delay(1.2, function()
+        local at = eclipse.Position
+        local ring = neon(Vector3.new(0.05 * u, 0.6 * u, 0.6 * u), CFrame.new(at) * CFrame.Angles(0, 0, math.rad(90)), colors.Orange)
+        ring.Shape = Enum.PartType.Cylinder
+        ring.Transparency = 0.3
+        local hole = Instance.new("SpecialMesh")
+        hole.MeshType = Enum.MeshType.Cylinder
+        hole.Parent = ring
+        TweenService:Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = Vector3.new(0.02 * u, 5 * u, 5 * u), Transparency = 1,
+        }):Play()
+    end)
+end
+
+-- Eternal Frost (Crysalith): with its head and antlers raised, a ring of frost spreads over the ground round it and six shards of ice rise,
+-- glint, and melt back into the air.
+function Blasts.EternalFrost(rig, fx)
+    local colors, u, neon = rig.profile.Colors, rig.unit, fx.neon
+    local body = rig.parts.Body or rig.rootPart
+    local ground = body.Position - Vector3.new(0, (rig.profile.Sole or 2) * u * 0.95, 0)
+    local frost = neon(Vector3.new(0.04 * u, 0.8 * u, 0.8 * u), CFrame.new(ground) * CFrame.Angles(0, 0, math.rad(90)), colors.Sun)
+    frost.Shape = Enum.PartType.Cylinder
+    frost.Transparency = 0.25
+    TweenService:Create(frost, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = Vector3.new(0.02 * u, 6 * u, 6 * u), Transparency = 1,
+    }):Play()
+    for i = 1, 6 do
+        local a = i / 6 * math.pi * 2 + 0.3
+        local at = ground + Vector3.new(math.cos(a) * 1.8, 0, math.sin(a) * 1.8) * u
+        task.delay(0.08 * i, function()
+            local shard = neon(Vector3.new(0.18, 0.05, 0.18) * u, CFrame.new(at) * CFrame.Angles(0, a, math.rad(8)), colors.Gold)
+            shard.Transparency = 0.2
+            TweenService:Create(shard, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = Vector3.new(0.22, 1.1, 0.22) * u, CFrame = CFrame.new(at + Vector3.new(0, 0.55 * u, 0)) * CFrame.Angles(0, a, math.rad(8)),
+            }):Play()
+            task.delay(0.7, function()
+                TweenService:Create(shard, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                    Transparency = 1, Size = Vector3.new(0.05, 1.4, 0.05) * u,
+                }):Play()
+            end)
+        end)
+    end
 end
 
 -- Full Moon (the Nine-Tail Moonfox): its tails fan wide (animateNineTailMoonfox) and a light leaves every tail tip; the nine meet above

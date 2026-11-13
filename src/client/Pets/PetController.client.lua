@@ -22,7 +22,7 @@ local HatchCeremony = require(script.Parent:WaitForChild("HatchCeremony"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local C = UiTheme.Colors
-local RARITY_ORDER = { Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }
+local RARITY_ORDER = { Divine = 8, Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }
 
 local toggleButton, setPetBadge = Hud.railButton("PetsButton", UiTheme.Icons.Pets, "Pets", 1)
 
@@ -178,9 +178,9 @@ local function createPetCard(pet, layoutOrder, equippedCount)
         local fuse
         local armedUntil = 0
         fuse = action("FUSE", "Accent", 1, function()
-            if definition.Rarity == "Secret" then
+            if definition.Rarity == "Secret" or definition.Rarity == "Divine" then
                 ConfirmDialog.show({
-                    Title = "FUSE A SECRET PET", Picture = Portraits.pet(pet.PetId, 72), ConfirmText = "FUSE IT",
+                    Title = "FUSE A " .. string.upper(definition.Rarity) .. " PET", Picture = Portraits.pet(pet.PetId, 72), ConfirmText = "FUSE IT",
                     Text = "This spends another " .. definition.DisplayName .. " to raise this one to Level " .. reaches .. ". It can't be undone.",
                     OnConfirm = function()
                         RemoteEvents.FusePetEvent:FireServer(pet.InstanceId, true)

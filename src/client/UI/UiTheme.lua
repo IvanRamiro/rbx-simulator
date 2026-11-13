@@ -83,6 +83,7 @@ UiTheme.EggIcons = {
     ForbiddenOriginEgg = "rbxassetid://124252731616068",
     VoidRiftEgg = "rbxassetid://83814889914054",
     PrimordialAbyssEgg = "rbxassetid://99719486622834",
+    ExclusiveEgg = "rbxassetid://80787462087085", -- (for now its Shop picture, assets/ui/store/ExclusiveEgg.png, until its 3D egg's icon)
 }
 
 return UiTheme

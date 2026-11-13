@@ -21,9 +21,10 @@ local Settings = require(script.Parent:WaitForChild("Settings"))
 local Rewards = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("Rewards"))
 local TitleBook = require(script.Parent.Parent:WaitForChild("Titles"):WaitForChild("TitleBook"))
 local MerchantLedger = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("MerchantLedger"))
+local Receipts = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Receipts"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 16
+local SCHEMA_VERSION = 17
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -83,7 +84,8 @@ end
 -- version 14 added Titles, which start with none earned (TitleService gives a returning player the ones they qualify for);
 -- version 15 added Merchant (the Wandering Merchant's deals bought this visit: MerchantLedger), which starts with none;
 -- version 16 added Codex.Earned (the realm each unclaimed Codex reward was earned in), which starts empty: a reward earned
--- before it pays at the claim's realm, as it always did (the bump stops older servers from dropping it).
+-- before it pays at the claim's realm, as it always did (the bump stops older servers from dropping it);
+-- version 17 added Receipts (the Robux purchases given: Receipts), which starts with none.
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -169,6 +171,7 @@ local function sanitizeProgress(raw)
         Codex = Codex.sanitize(nil),
         Titles = TitleBook.sanitize(nil),
         Merchant = MerchantLedger.sanitize(nil),
+        Receipts = Receipts.sanitize(nil),
     }
 
     if typeof(raw) ~= "table" then
@@ -250,6 +253,7 @@ local function sanitizeProgress(raw)
     progress.Codex = Codex.sanitize(raw.Codex)
     progress.Titles = TitleBook.sanitize(raw.Titles)
     progress.Merchant = MerchantLedger.sanitize(raw.Merchant)
+    progress.Receipts = Receipts.sanitize(raw.Receipts)
 
     return progress
 end
@@ -288,6 +292,8 @@ local function captureProgress(player)
     local titles = TitleBook.exportData(player) or (loaded and loaded.Titles) or TitleBook.sanitize(nil)
     -- (the merchant's ledger likewise: kept as loaded until MerchantService sets it up)
     local merchant = MerchantLedger.exportData(player) or (loaded and loaded.Merchant) or MerchantLedger.sanitize(nil)
+    -- (and the Robux purchases given: kept as loaded until ExclusiveEggService sets them up)
+    local receipts = Receipts.exportData(player) or (loaded and loaded.Receipts) or Receipts.sanitize(nil)
     if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings and rewards and codex) then
         -- nothing is saved until every part is set up: say once which part is missing, or a session could go unsaved unseen
         local profile = profiles[player]
@@ -326,6 +332,7 @@ local function captureProgress(player)
         Codex = codex,
         Titles = titles,
         Merchant = merchant,
+        Receipts = receipts,
     }
 end
 
@@ -584,6 +591,32 @@ function PlayerData.save(player)
     end
 end
 
+-- Writes the player's progress now, waiting out a write in flight and the store's cooldown, and says whether it reached the
+-- store: a Robux purchase is confirmed to Roblox only once the save that holds it is written (ExclusiveEggService).
+function PlayerData.saveConfirmed(player)
+    local profile = profiles[player]
+    if not profile or profile.status ~= "Loaded" then
+        return false
+    end
+    local deadline = os.clock() + 20
+    while profile.canSave and not profile.isReleasing and (profile.isSaving or os.clock() - profile.lastSaveTime < WRITE_COOLDOWN)
+        and os.clock() < deadline do
+        task.wait(0.25)
+    end
+    if not profile.canSave or profile.isReleasing or profile.isSaving then
+        return false
+    end
+    local progress = captureProgress(player)
+    if not progress then
+        return false
+    end
+    profile.isSaving = true
+    local ok = writeRecord(profile, progress, false)
+    profile.lastSaveTime = os.clock()
+    profile.isSaving = false
+    return ok
+end
+
 function PlayerData.saveSoon(player)
     local profile = profiles[player]
     if not profile or profile.quickSaveScheduled then
@@ -618,6 +651,7 @@ function PlayerData.release(player)
     Rewards.removePlayer(player)
     TitleBook.removePlayer(player)
     MerchantLedger.removePlayer(player)
+    Receipts.removePlayer(player)
 
     if not profile then
         return

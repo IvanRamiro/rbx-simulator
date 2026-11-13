@@ -57,6 +57,7 @@ local TIERS = {
     Legendary = { Sparks = 44, Rays = 18, Ring = true, Flash = true, Shake = 0.35, Banner = "LEGENDARY!" },
     Mythical = { Sparks = 50, Rays = 22, Ring = true, Flash = true, Shake = 0.45, Banner = "MYTHICAL!" },
     Secret = { Sparks = 56, Rays = 26, Ring = true, Flash = true, Shake = 0.55, Banner = "SECRET!", Dark = true },
+    Divine = { Sparks = 64, Rays = 30, Ring = true, Flash = true, Shake = 0.6, Banner = "DIVINE!", Dark = true },
 }
 
 local active = nil -- the playing cinematic: { finish = function(instant) }

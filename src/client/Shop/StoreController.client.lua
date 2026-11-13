@@ -122,6 +122,9 @@ local function buildOdds(pass)
     oddsBuilt = true
     local eggs = {}
     for id, egg in GameConfig.Eggs do
+        if egg.Exclusive then
+            continue -- (takes no luck: its odds are on its own card)
+        end
         local rank = Ranks.getRankById(egg.RequiredRank)
         table.insert(eggs, { id = id, egg = egg, order = rank and Ranks.getIndex(rank.Name) or 0 })
     end
@@ -264,9 +267,11 @@ for row = 0, math.ceil(#PassRules.List / 2) - 1 do
     end
 end
 
--- the Exclusive Egg: locked, until its beast is made
--- one big card: the egg large on the left, its name and promise beside it (filled in when its beast is made)
-local eggCard = UiKit.card({ Name = "ExclusiveEgg", Size = UDim2.new(1, 0, 0, 300), LayoutOrder = 1, Parent = eggPage })
+-- the Exclusive Egg (the owner, 2026-11-13): bought with Robux, one egg each time (ProductService gives it), hatched at the Hatching
+-- Altar. Its three beasts and their chances are on the card, beside the price, before anyone buys; where paid random items are
+-- restricted (PolicyService) it can't be bought. Before its product exists (ProductId 0) it stays locked.
+local EGG_POOL = GameConfig.Eggs[EGG.EggId or ""]
+local eggCard = UiKit.card({ Name = "ExclusiveEgg", Size = UDim2.new(1, 0, 0, 330), LayoutOrder = 1, Parent = eggPage })
 eggCard.BackgroundTransparency = 0.1
 eggCard:FindFirstChildOfClass("UIStroke").Thickness = 2
 eggCard:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
@@ -276,30 +281,105 @@ eggPicture.BackgroundTransparency = 1
 eggPicture.Image = EGG.Icon
 eggPicture.AnchorPoint = Vector2.new(0, 0.5)
 eggPicture.Position = UDim2.new(0, 16, 0.5, 0)
-eggPicture.Size = UDim2.fromOffset(220, 220)
+eggPicture.Size = UDim2.fromOffset(210, 210)
 eggPicture.Parent = eggCard
-local EGG_TEXT_X = 252
-bold({ Name = "EggName", Text = string.upper(EGG.Name), TextSize = 26, Position = UDim2.fromOffset(EGG_TEXT_X, 40),
+local EGG_TEXT_X = 240
+bold({ Name = "EggName", Text = string.upper(EGG.Name), TextSize = 26, Position = UDim2.fromOffset(EGG_TEXT_X, 24),
     Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 32), Parent = eggCard })
-bold({ Name = "Headline", Text = "COMING SOON!", TextSize = 20, TextColor3 = C.Highlight, Position = UDim2.fromOffset(EGG_TEXT_X, 78),
+local eggHeadline = bold({ Name = "Headline", Text = "COMING SOON!", TextSize = 20, TextColor3 = C.Highlight, Position = UDim2.fromOffset(EGG_TEXT_X, 60),
     Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 24), Parent = eggCard })
-UiKit.label({ Name = "What", Font = "Strong", TextSize = 14, Text = EGG.Text, TextColor3 = C.Muted, TextWrapped = true,
-    TextYAlignment = Enum.TextYAlignment.Top, Position = UDim2.fromOffset(EGG_TEXT_X, 110), Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 60),
+-- its beasts, rarest last, each with its chance
+local oddsRows = Instance.new("Frame")
+oddsRows.Name = "Odds"
+oddsRows.BackgroundTransparency = 1
+oddsRows.Position = UDim2.fromOffset(EGG_TEXT_X, 94)
+oddsRows.Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 96)
+oddsRows.Parent = eggCard
+UiKit.list(oddsRows, { FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 4) })
+for order, entry in if EGG_POOL then EGG_POOL.Pool else {} do
+    local pet = GameConfig.Pets[entry.PetId]
+    local row = Instance.new("Frame")
+    row.Name = entry.PetId
+    row.BackgroundTransparency = 1
+    row.Size = UDim2.new(1, 0, 0, 26)
+    row.LayoutOrder = order
+    row.Parent = oddsRows
+    local tag = UiKit.tag(pet.Rarity, GameConfig.PetRarityColors[pet.Rarity])
+    tag.AnchorPoint = Vector2.new(0, 0.5)
+    tag.Position = UDim2.fromScale(0, 0.5)
+    tag.Parent = row
+    bold({ Name = "PetName", Text = pet.DisplayName, TextSize = 16, Position = UDim2.fromOffset(88, 0), Size = UDim2.new(1, -150, 1, 0),
+        TextTruncate = Enum.TextTruncate.AtEnd, Parent = row })
+    bold({ Name = "Chance", Text = entry.HatchChance .. "%", TextSize = 16, TextColor3 = GameConfig.PetRarityColors[pet.Rarity],
+        TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0),
+        Size = UDim2.new(0, 60, 1, 0), Parent = row })
+end
+UiKit.label({ Name = "What", Font = "Strong", TextSize = 12, Text = "Hatch it at the Hatching Altar. Luck doesn't change these chances.",
+    TextColor3 = C.Muted, TextWrapped = true, Position = UDim2.fromOffset(EGG_TEXT_X, 196), Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 30),
     Parent = eggCard })
-local soon = UiKit.button({ Name = "Soon", Font = "Heavy", TextSize = 16, Text = "", Tone = "Quiet",
-    AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, EGG_TEXT_X, 1, -24), Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 46), Parent = eggCard })
-soon:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
-soon.Active = false
-bold({ Name = "Word", Text = "LOCKED", TextSize = 18, TextColor3 = C.Muted, TextXAlignment = Enum.TextXAlignment.Center,
-    Size = UDim2.fromScale(1, 1), Parent = soon })
+local eggBuy = UiKit.button({ Name = "Buy", Font = "Heavy", TextSize = 16, Text = "", Tone = "Quiet",
+    AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, EGG_TEXT_X, 1, -20), Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 48), Parent = eggCard })
+eggBuy:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
+eggBuy:SetAttribute("EdgeThickness", 2)
+eggBuy.Active = false
+local eggPrice = bold({ Name = "Price", Text = "LOCKED", TextSize = 18, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center,
+    Size = UDim2.fromScale(1, 1), ZIndex = eggBuy.ZIndex + 1, Parent = eggBuy })
 local padlock = Instance.new("ImageLabel")
 padlock.Name = "Lock"
 padlock.BackgroundTransparency = 1
 padlock.Image = UiTheme.Icons.Lock
 padlock.AnchorPoint = Vector2.new(1, 1)
-padlock.Position = UDim2.new(0, 228, 1, -40)
+padlock.Position = UDim2.new(0, 222, 1, -48)
 padlock.Size = UDim2.fromOffset(52, 52)
 padlock.Parent = eggCard
+local eggLivePrice = nil -- the product's price on Roblox, once asked
+
+local function eggOnSale()
+    return (EGG.ProductId or 0) > 0 and EGG_POOL ~= nil
+end
+
+local function renderEgg()
+    local onSale = eggOnSale()
+    local tone, text
+    if not onSale then
+        tone, text = "Quiet", "LOCKED"
+    elseif luckRestricted then
+        tone, text = "Quiet", "NOT AVAILABLE HERE"
+    else
+        tone, text = "Buy", ROBUX .. " " .. tostring(eggLivePrice or EGG.Price)
+    end
+    eggBuy.Active = tone == "Buy"
+    eggBuy:SetAttribute("Tone", tone)
+    eggPrice.Text = text
+    eggPrice.TextSize = if tone == "Buy" then 22 else 16
+    eggPrice.TextColor3 = if tone == "Buy" then Color3.new(1, 1, 1) else C.Muted
+    eggHeadline.Text = if onSale then "3 EXCLUSIVE BEASTS!" else "COMING SOON!"
+    padlock.Visible = not onSale
+end
+
+eggBuy.Activated:Connect(function()
+    if not eggBuy.Active then
+        return
+    end
+    if (player:GetAttribute("Egg_" .. EGG.EggId) or 0) >= 99 then
+        Sfx.play("Error")
+        message:show("You're holding as many Exclusive Eggs as you can. Hatch some at the Hatching Altar first.", "Warning")
+        return
+    end
+    Sfx.play("Click")
+    MarketplaceService:PromptProductPurchase(player, EGG.ProductId)
+end)
+
+-- an egg arrived (ProductService): say where it hatches
+local heldEggs = player:GetAttribute("Egg_" .. (EGG.EggId or "")) or 0
+player:GetAttributeChangedSignal("Egg_" .. (EGG.EggId or "")):Connect(function()
+    local now = player:GetAttribute("Egg_" .. EGG.EggId) or 0
+    if now > heldEggs then
+        Sfx.play("RareReveal")
+        message:show("An Exclusive Egg is yours! Hatch it at the Hatching Altar. Thank you for supporting the game!", "Reward")
+    end
+    heldEggs = now
+end)
 
 function render()
     for _, entry in cards do
@@ -325,10 +405,20 @@ function render()
         entry.was.Visible = cut == true
         entry.was.Text = if cut then "<s>" .. ROBUX .. " " .. pass.WasPrice .. "</s>" else ""
     end
+    renderEgg()
 end
 
 -- each pass's live price, once (a price changed on Roblox shows here without a new release)
 local function fetchPrices()
+    if eggOnSale() and not eggLivePrice then
+        task.spawn(function()
+            local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, EGG.ProductId, Enum.InfoType.Product)
+            if ok and info and typeof(info.PriceInRobux) == "number" then
+                eggLivePrice = info.PriceInRobux
+                render()
+            end
+        end)
+    end
     for _, pass in PassRules.List do
         local id = pass.GamePassId or 0
         if id > 0 and not prices[id] then

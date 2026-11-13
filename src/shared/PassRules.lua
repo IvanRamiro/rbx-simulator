@@ -24,7 +24,7 @@ for _, pass in PassRules.List do
 end
 PassRules.MostEquipped = GameConfig.MaxEquippedPets + extraSlots
 
-PassRules.RarityOrder = { Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5, Mythical = 6, Secret = 7 }
+PassRules.RarityOrder = { Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5, Mythical = 6, Secret = 7, Divine = 8 }
 
 function PassRules.owns(player, id)
     return player ~= nil and player:GetAttribute("Pass_" .. id) == true
