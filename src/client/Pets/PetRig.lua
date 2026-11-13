@@ -5370,13 +5370,16 @@ end
 
 local animateNineTailMoonfox -- animateNineTailMoonfox's section below (its own locals stay in its block)
 do
-    -- The Nine-Tail Moonfox (jointed, built in Studio 2026-11-12; remade grown, the owner: "a mature version of it, and our own styles"): a
-    -- grown moon vixen with nine long silken tails fanned up behind her. She trots
-    -- after its owner, looks about with a little tilt of its head, and its tails sway one after another, a wave running across the fan; when its
-    -- owner flies its legs tuck and the tails stream out behind it. The special, Full Moon (Blasts.FullMoon): the tails fan wide and lift, its
-    -- head rises, and a light leaves every tail tip to meet above it as a full moon.
+    -- The Nine-Tail Moonfox (jointed, built in Studio 2026-11-12; remade grown, the owner: "a mature version of it, and our own styles";
+    -- remade premium 2026-11-13 for the Exclusive Egg, the owner: "redo the nine tail moonfox to a premium version but made through ROBLOX
+    -- STUDIO"): a grown moon vixen in a silver star-silk collar, nine long silken tails fanned up behind her, and a small full moon (the
+    -- Orb) floating over her back. She trots after her owner and looks about with a little tilt of her head; each tail sways on its own
+    -- beat, a wave running across the fan; the moon bobs and circles slowly over her back. When her owner flies her legs tuck and the
+    -- tails stream out behind. The special, Full Moon (Blasts.FullMoon): the tails fan wide and lift, her head rises, the moon climbs
+    -- high over her head, and a light leaves every tail tip to meet it.
     local LEGS = { LegFL = 0, LegBR = 0, LegFR = math.pi, LegBL = math.pi } -- a trot: diagonal pairs together
     local TAILS = 9
+    local TAIL_BEAT = { 1.00, 1.13, 0.94, 1.07, 1.0, 0.91, 1.11, 0.97, 1.05 } -- each tail its own pace: nine, never one fan
 
     function animateNineTailMoonfox(rig, s, moving, fly, nova)
         local m, u, t, dt = rig.motors, rig.unit, s.time, rig.deltaTime
@@ -5408,13 +5411,24 @@ do
             pose(m[name], CFrame.Angles(swing + tuck, 0, 0))
         end
 
-        -- the tails: a wave across the fan (each a beat behind the one before), streaming back as it runs or flies, fanned wide in the special
+        -- the tails: a wave across the fan (each a beat behind the one before, each at its own pace), streaming back as it runs or
+        -- flies, fanned wide in the special
         for i = 1, TAILS do
             local side = (i - 1) / (TAILS - 1) * 2 - 1 -- -1 (its right) .. 1 (its left)
-            local wave = math.sin(t * (1.6 + 2.5 * moving) - i * 0.55)
-            local lift = -0.12 + 0.06 * math.sin(t * 1.3 - i * 0.4) + 0.3 * moving + 0.55 * fly - 0.15 * fan -- (rests raised a little: the fan dragged low behind it)
-            local roll = 0.12 * wave - side * (0.4 * fan - 0.12 * fly)
-            pose(m["Tail" .. i], CFrame.Angles(lift, 0.08 * wave, roll))
+            local beat = TAIL_BEAT[i]
+            local wave = math.sin(t * (1.6 + 2.5 * moving) * beat - i * 0.55)
+            local drift = math.sin(t * 0.7 * beat + i * 1.3) -- a slow sway of its own under the wave
+            local lift = -0.12 + 0.06 * math.sin(t * 1.3 * beat - i * 0.4) + 0.3 * moving + 0.55 * fly - 0.15 * fan
+            local roll = 0.12 * wave + 0.04 * drift - side * (0.4 * fan - 0.12 * fly)
+            pose(m["Tail" .. i], CFrame.Angles(lift, 0.08 * wave + 0.05 * drift, roll))
+        end
+
+        -- the moon over her back: it bobs and circles slowly; it lags behind when she runs; in the special it climbs high over her head
+        if m.Orb then
+            local circle = t * 0.8
+            local climb = 1.4 * fan
+            pose(m.Orb, CFrame.new((0.12 * math.cos(circle)) * u, (0.1 * math.sin(t * 1.9) + climb) * u,
+                (0.12 * math.sin(circle) + 0.25 * moving - 0.6 * fan) * u))
         end
     end
 end
@@ -6546,17 +6560,18 @@ PetRig.Profiles.ThousandYearDreamEater = {
 }
 
 PetRig.Profiles.NineTailMoonfox = {
-    Sole = 2.334, -- template units from the middle of its box (the pet's root) down to its paws: it stands on the ground
+    Sole = 2.325, -- template units from the middle of its box (the pet's root) down to its paws: it stands on the ground (premium remake 2026-11-13)
     Joints = {
         Body = "Root",
         Head = "Body",
         LegFL = "Body", LegFR = "Body", LegBL = "Body", LegBR = "Body",
         Tail1 = "Body", Tail2 = "Body", Tail3 = "Body", Tail4 = "Body", Tail5 = "Body",
         Tail6 = "Body", Tail7 = "Body", Tail8 = "Body", Tail9 = "Body",
+        Orb = "Body", -- the small full moon over her back (its glow, Orb_Glow_5aafff, rides with it)
     },
     Effects = {
         Motes = "Tail5",
-        Light = "Head",
+        Light = "Orb", -- the moon lights her
         Burst = "Body",
         Sparks = { "Head_Crescent" },
         Trail = { "Tail1_Tip", "Tail5_Tip", "Tail9_Tip" },
@@ -6566,6 +6581,7 @@ PetRig.Profiles.NineTailMoonfox = {
         NovaLight = 2.5,
     },
     LightScale = 0.6,
+    SeeThroughGlow = { ["5aafff"] = 0.62 }, -- the moon's halo: the silver moon shows through it
     -- moonlight in the slots the shared effects read (Gold: light and motes, Sun/Orange: sparks and the burst)
     Colors = {
         Gold = Color3.fromRGB(150, 215, 255),

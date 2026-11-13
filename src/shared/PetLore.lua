@@ -25,7 +25,7 @@ return {
         Lore = "It swims the gap between stars and sings too low for mortals to hear. Cultivators who sleep near one wake with stronger Qi.",
         Special = { Name = "Song Between Stars", Text = "Rolls belly-up and sings on the golden strings of its throat, and rings of sound ripple out until every star around it chimes." },
     },
-    NineTailMoonfox = { Lore = "A lineage of the moon that no egg carries any more. Those who own one keep a piece of a closed chapter." },
+    NineTailMoonfox = { Lore = "She carries a small full moon over her back. Where her nine tails pass, the night grows still enough to hear Qi move." },
     OriginSerpent = {
         Lore = "The first coil of the first spirit vein. The world's oldest Qi still flows along the path it carved.",
         Special = { Name = "The First Vein", Text = "Rises in its coils as light races up its veins, then roars, and a double helix of the world's first Qi erupts into the sky." },

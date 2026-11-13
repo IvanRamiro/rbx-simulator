@@ -34,7 +34,7 @@ PetModels.Pets = {
     LunarHopper = { Scale = 1.0, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted-rabbit design removed (MESH_LOOKS was tuned with this scale)
     VoltFox = { Scale = 1.05, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old yellow block-fox design removed (MESH_LOOKS was tuned with this scale)
     GoldenKirin = { Scale = 1.15, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old design removed (MESH_LOOKS was tuned with this scale)
-    NineTailMoonfox = { Scale = 1.2, Parts = {} }, -- recreated (2026-11-12) in Studio, then remade grown the same day: only its imported model (PetMeshes.LostLineages); its old procedural design removed
+    NineTailMoonfox = { Scale = 1.2, Parts = {} }, -- built in Studio (2026-11-12), remade premium 2026-11-13 for the Exclusive Egg: only its imported model (PetMeshes.ExclusiveEgg)
     OriginSerpent = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old block serpent removed (MESH_LOOKS was tuned with this scale)
     AstralWhale = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted block whale removed (MESH_LOOKS was tuned with this scale)
     MossGolem = { Scale = 0.9, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)

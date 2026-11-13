@@ -481,7 +481,7 @@ local GameConfig = {
         VoltFox = { DisplayName = "Volt Fox", Rarity = "Epic", Theme = "Lightning", QiBonus = 50 },
         GoldenKirin = { DisplayName = "Golden Kirin", Rarity = "Legendary", Theme = "Nature", QiBonus = 60 },
         AstralWhale = { DisplayName = "Astral Whale", Rarity = "Mythical", Theme = "Cosmic", QiBonus = 100 },
-        NineTailMoonfox = { DisplayName = "Nine-Tail Moonfox", Rarity = "Mythical", Theme = "Moon", QiBonus = 100 },
+        NineTailMoonfox = { DisplayName = "Nine-Tail Moonfox", Rarity = "Secret", Theme = "Moon", QiBonus = 180 }, -- the Exclusive Egg's Secret (the owner, 2026-11-13)
         OriginSerpent = { DisplayName = "Origin Serpent", Rarity = "Secret", Theme = "Primordial", QiBonus = 150 },
 
         MossGolem = { DisplayName = "Moss Golem", Rarity = "Common", Theme = "Earth", QiBonus = 10 },
