@@ -1,9 +1,9 @@
--- Spawning, fall safety, bridge access and lighting for the floating islands. Each player holds one
--- of Yggdrasil's spawn slots while in the server (its ring lit, their name on its stone) and spawns
--- there; with every slot taken they spawn at Yggdrasil's "IslandSpawn". Every other island has a
--- "Checkpoint" part; a player who falls far below the island they last stood on returns to its
--- checkpoint (on Yggdrasil, to their slot). A player below a bridge's RankId (FloatingIslands.Bridges)
--- who is past its Qi barrier, or on the island it leads to, is put back in front of the barrier.
+-- Spawning, fall safety, bridge access and lighting for the floating islands. Everyone spawns at
+-- Yggdrasil's "IslandSpawn". Every other island has a "Checkpoint" part; a player who falls far below
+-- the island they last stood on returns to its checkpoint. A player below a bridge's RankId
+-- (FloatingIslands.Bridges) who is past its Qi barrier, or on the island it leads to, is put back in
+-- front of the barrier. (Yggdrasil's named spawn slots went with the hub's rebuild of 2026-11-12;
+-- their code was removed 2026-11-13.)
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -29,66 +29,11 @@ local function applyLighting(settings)
     atmosphere.Parent = Lighting
 end
 
--- ---------- spawn slots ----------
+-- ---------- spawning ----------
 local startIsland = islandsFolder:WaitForChild(WorldConfig.StartIsland)
 assert(startIsland:FindFirstChild("IslandSpawn"), "Workspace." .. WorldConfig.FolderName .. "." .. WorldConfig.StartIsland .. " has no IslandSpawn")
-local slotRules = WorldConfig.SpawnSlots
-local slots = {}
--- (the slots are optional: without them everyone spawns at the IslandSpawn. The hub's rebuild of 2026-11-12 removed them;
--- waiting for the folder here stalled the whole script and nobody spawned anywhere)
-local slotFolder = startIsland:FindFirstChild(slotRules.FolderName)
-for _, slot in if slotFolder then slotFolder:GetChildren() else {} do
-    table.insert(slots, slot)
-end
-table.sort(slots, function(a, b)
-    return a:GetAttribute("Slot") < b:GetAttribute("Slot")
-end)
-local slotOf = {}
-
-local function paintSlot(slot, player)
-    local labels = slot.Plaque:FindFirstChildOfClass("SurfaceGui")
-    slot.Ring.Color = if player then slotRules.TakenColor else slotRules.VacantColor
-    labels.Title.Text = if player then player.DisplayName else slotRules.VacantTitle
-    labels.Subtitle.Text = if player then "@" .. player.Name else slotRules.VacantSubtitle
-    labels.Subtitle.TextColor3 = slot.Ring.Color
-end
-
-local function holderOf(slot)
-    for player, held in slotOf do
-        if held == slot then
-            return player
-        end
-    end
-    return nil
-end
-
-local function claimSlot(player)
-    for _, slot in slots do
-        if not holderOf(slot) then
-            slotOf[player] = slot
-            paintSlot(slot, player)
-            return slot
-        end
-    end
-    return nil
-end
-
-local function releaseSlot(player)
-    local slot = slotOf[player]
-    slotOf[player] = nil
-    if slot then
-        paintSlot(slot, nil)
-    end
-end
-
-for _, slot in slots do
-    paintSlot(slot, nil)
-end
 
 local function checkpointOf(player, islandName)
-    if islandName == WorldConfig.StartIsland and slotOf[player] then
-        return slotOf[player].Spawn
-    end
     local island = islandsFolder:FindFirstChild(islandName)
     return island and (island:FindFirstChild("Checkpoint") or island:FindFirstChild("IslandSpawn"))
 end
@@ -124,8 +69,7 @@ end
 local function setupPlayer(player)
     setIsland(player, WorldConfig.StartIsland)
     -- RespawnLocation needs the SpawnLocation itself, never a plain checkpoint part
-    local slot = claimSlot(player)
-    player.RespawnLocation = if slot then slot.Spawn else startIsland.IslandSpawn
+    player.RespawnLocation = startIsland.IslandSpawn
 end
 
 applyLighting(WorldConfig.Lighting)
@@ -199,7 +143,6 @@ Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(function(player)
     lastIsland[player] = nil
     lastBurn[player] = nil
-    releaseSlot(player)
 end)
 for _, player in Players:GetPlayers() do
     setupPlayer(player)

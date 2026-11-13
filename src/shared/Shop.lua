@@ -104,7 +104,8 @@ function Shop.petValue(petId, level)
         return 0
     end
     local rules = GameConfig.SpiritStones
-    return math.floor((rules.PetValue[pet.Rarity] or 0) * rules.RealmFactor ^ ((petRealm[petId] or 1) - 1)) * (level or 1)
+    -- (a pet's ValueRealm, when set, replaces its egg's realm)
+    return math.floor((rules.PetValue[pet.Rarity] or 0) * rules.RealmFactor ^ ((pet.ValueRealm or petRealm[petId] or 1) - 1)) * (level or 1)
 end
 
 function Shop.roundNice(n)

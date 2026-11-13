@@ -5,8 +5,11 @@
 -- SwordFlight.UnlockRank, a living character, no cultivation and no carried egg, at most once per
 -- TOGGLE_COOLDOWN; it sets the "IsFlying" attribute. WorldService barriers still apply while flying.
 --
--- The server lands any flight that outlasts a full stamina bar spent at the hover cost (the
--- cheapest), whatever the client says.
+-- The server keeps its own count of each rider's stamina, generous to them: a flight drains it at
+-- the hover cost (the cheapest), the ground refill is the fastest, and dashes aren't counted, so it
+-- never sits below an honest client's. It lands a flight once that count runs out, and refuses a
+-- take-off it can't pay for, whatever the client says (before 2026-11-13 each flight got a full bar,
+-- so landing and taking off again gave endless flight).
 --
 -- The sword (ServerStorage.Weapons.FlyingSword, stored by WorldBuild.OutfitBuilder.storeSword) is
 -- welded under the rider's feet in Workspace.FlyingSwords, outside the character. Its glow parts
@@ -20,8 +23,10 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 
 local config = GameConfig.SwordFlight
+local regen = GameConfig.Qinggong.Stamina
 local TOGGLE_COOLDOWN = 0.5
 local DURATION_MARGIN = 2 -- seconds of grace for latency
+local TAKEOFF_SLACK = 10 -- stamina a take-off may be short by: the server hears of a landing late, so its refill starts late
 
 local swordsFolder = workspace:FindFirstChild("FlyingSwords") or Instance.new("Folder")
 swordsFolder.Name = "FlyingSwords"
@@ -29,6 +34,25 @@ swordsFolder.Parent = workspace
 
 local flights = {}
 local lastToggle = {}
+local staminas = {} -- [player] = { stamina, at, flying, refillFrom }: made full at the first take-off and after each respawn
+
+-- the server's count of a player's stamina, brought up to `now`
+local function staminaAt(player, now)
+    local maxStamina = player:GetAttribute("QinggongMaxStamina") or 0
+    local state = staminas[player]
+    if not state then
+        state = { stamina = maxStamina, at = now, flying = false, refillFrom = now }
+        staminas[player] = state
+    end
+    if state.flying then
+        state.stamina -= config.HoverCost * (now - state.at)
+    else
+        state.stamina += regen.RegenGround * math.max(0, now - math.max(state.at, state.refillFrom))
+    end
+    state.stamina = math.min(state.stamina, maxStamina)
+    state.at = now
+    return state
+end
 
 local function glowFor(player)
     local rank = Ranks.getRank(Ranks.getPlayerRankName(player))
@@ -110,6 +134,13 @@ local function land(player)
     if flight and flight.sword then
         flight.sword:Destroy()
     end
+    if flight and staminas[player] then
+        local now = os.clock()
+        local state = staminaAt(player, now)
+        state.flying = false
+        state.stamina = math.max(state.stamina, 0)
+        state.refillFrom = now + regen.RegenDelay
+    end
     if player.Parent then
         player:SetAttribute("IsFlying", nil)
     end
@@ -130,10 +161,14 @@ local function takeOff(player)
     if flights[player] or not canFly(player) then
         return
     end
+    local state = staminaAt(player, os.clock())
+    if state.stamina < config.MinStamina - TAKEOFF_SLACK then
+        return
+    end
     local character = player.Character
     local sword = mountSword(player, character)
-    local maxStamina = player:GetAttribute("QinggongMaxStamina") or 0
-    flights[player] = { sword = sword, started = os.clock(), limit = maxStamina / config.HoverCost + DURATION_MARGIN }
+    state.flying = true
+    flights[player] = { sword = sword }
     player:SetAttribute("IsFlying", true)
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     humanoid.Died:Once(function()
@@ -162,6 +197,7 @@ end)
 local function onPlayerAdded(player)
     player.CharacterAdded:Connect(function()
         land(player)
+        staminas[player] = nil -- a new body starts with a full bar, as the client's does
     end)
     -- cultivating lands you (QiService also stops cultivation when a flight starts)
     player:GetAttributeChangedSignal("IsCultivating"):Connect(function()
@@ -183,14 +219,16 @@ end
 Players.PlayerRemoving:Connect(function(player)
     land(player)
     lastToggle[player] = nil
+    staminas[player] = nil
 end)
 
--- lands flights past the server's limit, after a rank loss, or once an egg is picked up
+-- lands flights whose stamina has run out (after DURATION_MARGIN seconds' grace at the hover cost), after a rank
+-- loss, or once an egg is picked up
 while true do
     task.wait(1)
     local now = os.clock()
-    for player, flight in flights do
-        if now - flight.started > flight.limit or not canFly(player) then
+    for player in flights do
+        if staminaAt(player, now).stamina < -config.HoverCost * DURATION_MARGIN or not canFly(player) then
             land(player)
         end
     end

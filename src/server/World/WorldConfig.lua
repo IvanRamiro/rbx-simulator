@@ -14,16 +14,6 @@ local WorldConfig = {
         BeginnerIsle = { Centre = Vector3.new(-480, 200, 24), Radius = 140, Turns = 2.13292 }, -- the owner, 2026-11-04
     },
 
-    -- Yggdrasil's spawn slots (FloatingIslands.Yggdrasil.SpawnSlots): each player in the server
-    -- holds one, its ring lit and their name cut into its stone
-    SpawnSlots = {
-        FolderName = "SpawnSlots",
-        TakenColor = Color3.fromRGB(255, 180, 50),
-        VacantColor = Color3.fromRGB(70, 96, 100),
-        VacantTitle = "Unclaimed",
-        VacantSubtitle = "A spawn slot",
-    },
-
     -- the Ascension Stele (FloatingIslands.Yggdrasil.Leaderboard): the most Qi across every server
     Leaderboard = {
         FolderName = "Leaderboard",
