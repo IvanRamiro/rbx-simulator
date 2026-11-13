@@ -36,7 +36,7 @@ PetModels.Pets = {
     GoldenKirin = { Scale = 1.15, Parts = {} }, -- recreated (2026-11-09): only its imported model; its old design removed (MESH_LOOKS was tuned with this scale)
     EclipseDreadwing = { Scale = 1.2, Parts = {} }, -- modelled in Blender (2026-11-13) for the Exclusive Egg: only its imported model (PetMeshes.ExclusiveEgg)
     Crysalith = { Scale = 1.3, Parts = {} }, -- built in Studio (2026-11-13) for the Exclusive Egg: only its imported model (PetMeshes.ExclusiveEgg)
-    NineTailMoonfox = { Scale = 1.2, Parts = {} }, -- built in Studio (2026-11-12), remade premium 2026-11-13 for the Exclusive Egg: only its imported model (PetMeshes.ExclusiveEgg)
+    NineTailMoonfox = { Scale = 1.2, Parts = {} }, -- remade 2026-11-13 for the Exclusive Egg (skinned, from Blender): only its imported model (PetMeshes.ExclusiveEgg)
     OriginSerpent = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old block serpent removed (MESH_LOOKS was tuned with this scale)
     AstralWhale = { Scale = 1.25, Parts = {} }, -- recreated (2026-11-10): only its imported model; its old faceted block whale removed (MESH_LOOKS was tuned with this scale)
     MossGolem = { Scale = 0.9, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
@@ -173,7 +173,7 @@ local MESH_LOOKS = {
     StarfallFox = { Glow = Color3.fromRGB(150, 160, 255), Length = 3.6 },
     EclipseDreadwing = { Glow = Color3.fromRGB(120, 90, 255), Length = 6.2 }, -- beak to tail tip (its longest; its raised wings are 0.87 of it): a monstrous drake, a little over the Thunderclaw Drake (owner: "monstrous and massive")
     Crysalith = { Glow = Color3.fromRGB(120, 230, 255), Length = 2.8 }, -- antler crown to hooves (its tallest)
-    NineTailMoonfox = { Glow = Color3.fromRGB(150, 215, 255), Length = 2.6 }, -- crown of its tails to its paws (its tallest): about 6.2 studs, a grown moon vixen with her nine tails fanned behind her
+    NineTailMoonfox = { Glow = Color3.fromRGB(150, 215, 255), Length = 4.0 }, -- nose to the back of her tails (her longest; her tail crown is 0.84 of it): a grown moon vixen, her nine tails fanned behind her
     LanternWarden = { Glow = Color3.fromRGB(255, 176, 70), Length = 3.2 },
     DreamMoth = { Glow = Color3.fromRGB(230, 170, 255), Length = 3.2 },
     PrismArmadillo = { Glow = Color3.fromRGB(190, 150, 255), Length = 4.0 },

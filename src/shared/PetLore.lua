@@ -27,7 +27,7 @@ return {
     },
     EclipseDreadwing = { Lore = "It carries a black sun between its wings and feeds it the stars, one by one. Somewhere a night sky is a little emptier." },
     Crysalith = { Lore = "Older than winter itself. Each branch of its antlers is a century of frost; where it lies down, the ground keeps its shape forever." },
-    NineTailMoonfox = { Lore = "She carries a small full moon over her back. Where her nine tails pass, the night grows still enough to hear Qi move." },
+    NineTailMoonfox = { Lore = "When she lifts her head a full moon gathers from the tips of her nine tails. Where they pass, the night grows still enough to hear Qi move." },
     OriginSerpent = {
         Lore = "The first coil of the first spirit vein. The world's oldest Qi still flows along the path it carved.",
         Special = { Name = "The First Vein", Text = "Rises in its coils as light races up its veins, then roars, and a double helix of the world's first Qi erupts into the sky." },
