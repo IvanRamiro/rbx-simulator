@@ -6481,7 +6481,8 @@ PetRig.Profiles.WorldrootColossus = {
 -- its owner on slow, heavy wingbeats (animateWinged; its legs are part of the Body). Its eclipse is no part of the model: it appears only in
 -- the special, Devour the Stars (Blasts.DevourStars): wings wide, head thrown up, a black eclipse opens above its back and swallows starlight.
 
--- Crysalith, "The Eternal Frost" (Secret): a great crystal stag-beast that walks after its owner with slow, stately strides, head high; it
+-- Crysalith, "The Eternal Frost" (Secret; hand-modelled in Blender 2026-11-16): a heavy frost-draconic guardian with crystal antlers, slate
+-- armour and crystal growths, that walks after its owner with slow, stately strides, head high; it
 -- looks about now and then, its antlers sway a little behind the head's turn and the frozen light in them breathes (Effects.Pulse). Flying,
 -- its legs fold. The special, Eternal Frost (Blasts.EternalFrost): it lifts its head and antlers to the sky, a ring of frost spreads over the
 -- ground and ice shards rise round it.
@@ -6545,7 +6546,7 @@ PetRig.Profiles.EclipseDreadwing = {
     Animate = animateWinged,
 }
 PetRig.Profiles.Crysalith = {
-    Sole = 2.313, -- template units from the middle of its box down to its hooves (Studio, 2026-11-13)
+    Sole = 1.375, -- template units from the middle of its box down to its hooves (the Blender model's box is 2.75 tall, hooves at its foot)
     Joints = {
         Body = "Root", Head = "Body", Antlers = "Head",
         LegFL = "Body", LegFR = "Body", LegBL = "Body", LegBR = "Body", Tail = "Body",
