@@ -142,7 +142,10 @@ def corner_r(k, theta):
 
 
 # ---------- the roots that hold the island ----------
-GRIP_BEARINGS = (0, 45, 110, 152, 236, -116, -30)   # clear of the bridgeheads, the spring, the plots and the great root
+# Clear of the bridges' aprons (40 wide at bearings 177, -131, -100, -76.5, -55), the great root's cove (55-90) and the Merchants'
+# Terrace's shops: the hub's redesign (2026-11-15) moved root 0 from bearing 0 to 14 (the terrace's south shoulder), root 4 from
+# -124 to -121 (off the Jade Grove apron) and root 6 from -30 to -18 (between the Market and Buy & Sell, on the terrace's rim).
+GRIP_BEARINGS = (14, 45, 110, 152, -121, -113, -18)
 TAPROOT = [(0, -86, 0), (6, -100, -4), (-4, -110, 5), (2, -118, 1)]
 
 
@@ -152,7 +155,9 @@ def grip_points(bearing):
     def at(r, y, swing=0.0):
         a = th + swing
         return (math.cos(a) * r, y, math.sin(a) * r)
-    pts = [at(R - 62, -9), at(R - 44, -4), at(R - 26, -2), at(R - 10, -1.5), at(R + 2, -2), at(R + 7, -14), at(R + 4, -32, 0.01)]
+    # under the meadow until past the Ring Road (its outer edge 236; the rim is at least 248 there), breaking the surface about 9
+    # studs in from the edge, over the lip and down the cliff (the roots crossed the meadow from R - 62 before the redesign)
+    pts = [at(R - 30, -24), at(R - 18, -18.5), at(R - 9, -12.5), at(R - 3, -6.2), at(R + 2, -3.2), at(R + 6.5, -12), at(R + 4, -32, 0.01)]
     for k in range(1, len(SLABS)):
         _, _, _, bottom = SLABS[k]
         pts.append(at(corner_r(k, th) + 7, bottom - 3, 0.02 * k))
@@ -266,6 +271,58 @@ def build():
     objs += [build_taproot(under, mat, bands), build_path_root(under, mat, bands)] + build_cradle_roots(under, mat, bands)
     objs += ygg_tree.build(tree, mat, bands)
     return objs, img, clearance_report(objs)
+
+
+# ---------- Roblox-ready (the hub's redesign, 2026-11-15: every re-exported piece passes the asset QA's roblox profile) ----------
+CHANGED_BY_REDESIGN = ["YG_Slab%d" % k for k in range(len(SLABS))] + ["YG_GripRoot%d" % k for k in range(len(GRIP_BEARINGS))]
+
+
+def roblox_ready(objs):
+    """Folds every face's UVs into 0-1 (the atlas tiles: a whole-number shift changes nothing; a face across a tile edge is moved
+    to fit), gives faces sampled at one point (the slabs' hidden tops, the roots' tips) a small map of their own inside their
+    strip, and winds the closed slabs outward."""
+    import bmesh
+    for o in objs:
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        uv = bm.loops.layers.uv.active
+        if o.name.startswith("YG_Slab"):
+            bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        for f in bm.faces:
+            us = [l[uv].uv.x for l in f.loops]
+            vs = [l[uv].uv.y for l in f.loops]
+            area = sum(us[i] * vs[(i + 1) % len(us)] - us[(i + 1) % len(us)] * vs[i] for i in range(len(us)))
+            if abs(area) < 1e-9:
+                n = f.normal
+                ax = max(range(3), key=lambda i: abs(n[i]))
+                a, b = [i for i in range(3) if i != ax]
+                pa = [l.vert.co[a] for l in f.loops]
+                pb = [l.vert.co[b] for l in f.loops]
+                span = max(max(pa) - min(pa), max(pb) - min(pb), 1e-6)
+                vc = min(max(sum(vs) / len(vs), 0.006), 0.994)
+                for l, x, y in zip(f.loops, pa, pb):
+                    l[uv].uv = (0.5 + (x - min(pa)) / span * 0.01, vc - 0.005 + (y - min(pb)) / span * 0.01)
+                continue
+            for axis, vals in ((0, us), (1, vs)):
+                off = math.floor(min(vals) + 1e-6)
+                if max(vals) - off > 1.0:
+                    off = max(vals) - 1.0
+                for l in f.loops:
+                    c = l[uv].uv
+                    c[axis] = min(max(c[axis] - off, 0.0), 1.0)
+        bm.to_mesh(o.data)
+        bm.free()
+
+
+def export_underside(objs, path=None):
+    """assets/world/Yggdrasil/Yggdrasil_Underside.fbx: only the pieces the redesign changed (the strata on the new rim and the
+    re-routed grip roots), Roblox-ready, at the island's centre (anchor YG_Anchor), with no texture: in Studio they take the
+    Yggdrasil atlas the underside already has (TextureID), so nothing is uploaded."""
+    pieces = [o for o in objs if o.name in CHANGED_BY_REDESIGN]
+    roblox_ready(pieces)
+    path = path or W.REPO + "/assets/world/Yggdrasil/Yggdrasil_Underside.fbx"
+    W.export_batch(pieces, path, image=None, anchor_name="YG_Anchor")
+    return path, pieces
 
 
 def export(objs, img):

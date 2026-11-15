@@ -1,5 +1,5 @@
 -- The beast pens (the owner, 2026-11-15: "Just 1 pen per player, but the size for pen is upgradable like the steal an egg"). Six Beast
--- Pastures stand on the hub's meadow (Workspace.FloatingIslands.Yggdrasil.BeastPastures, built by ServerStorage.WorldBuild.
+-- Pastures stand on a ring round the World Tree (Workspace.FloatingIslands.Yggdrasil.BeastPastures, built by ServerStorage.WorldBuild.
 -- PastureBuilder); each player in the server is given a free one when their pets load, and it is freed when they leave. Their one pen
 -- stands there at its level (shared/PenLayout): which pets are in it and its level are saved (PetInventory, PlayerData's Pen and
 -- PenLevel) and follow the player to whichever pasture they hold.
@@ -13,8 +13,8 @@
 --   Level        number   the holder's pen level (0 while nobody holds it)
 --   Pets         string   the pen's beasts, comma-separated "PetId:Size:Level"
 --   Upgraded     number   the server time of the last upgrade (clients celebrate it once)
--- The server does no work per frame. A player's PastureIndex and PastureArea attributes say which pasture is theirs (and PenSpawn,
--- once a spot has a Spawn: Placements/Pastures.lua).
+-- The server does no work per frame. A player's PastureIndex and PastureArea attributes say which pasture is theirs, and PenSpawn
+-- (a world CFrame on their pen's spawn pad, facing the pen: Placements/Pastures.lua Spawn) where they spawn (WorldService).
 --
 -- PenEvent (client -> server), each checked here and in PetInventory, throttled:
 --   ("Add", instanceId)       puts one of their pets in the pen: theirs, not equipped, not in it already, the pen not full
@@ -129,10 +129,11 @@ local function assign(player)
             pasture.config:SetAttribute("OwnerName", player.DisplayName)
             player:SetAttribute("PastureIndex", index)
             player:SetAttribute("PastureArea", pasture.config:GetAttribute("Area"))
-            -- the hook for the planned re-layout (unused now: no spot has a Spawn yet): where this player should spawn, before their pen;
-            -- WorldService would read PenSpawn (a world position) when it places their character
+            -- where this player spawns: on their pen's spawn pad, facing the pen (the hub's redesign, 2026-11-15). WorldService reads
+            -- PenSpawn (a world CFrame) to make the pasture's SpawnLocation theirs and to bring them back there after a fall
             local spawn = pasture.spot.Spawn
-            player:SetAttribute("PenSpawn", if typeof(spawn) == "Vector3" then pasture.config:GetAttribute("Frame") * spawn else nil)
+            player:SetAttribute("PenSpawn", if typeof(spawn) == "Vector3"
+                then pasture.config:GetAttribute("Frame") * CFrame.new(spawn) * CFrame.Angles(0, math.pi, 0) else nil)
             show(player)
             return
         end

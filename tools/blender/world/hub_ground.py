@@ -1,18 +1,27 @@
-"""The celestial hub's ground (the owner, 2026-11-12: everything but the World Tree rebuilt, "NO CHINESE"; style approved): where
-everything stands, the terrain under it, its marble paving, and the placements WorldBuilder reads.
+"""The hub's ground after the redesign (the owner, 2026-11-15: "PROCEED WITH THAT LAYOUT"; plan renders/hub_redesign/LAYOUT_PLAN.md):
+where everything stands, the terrain under it, its marble paving, the lamps and the placements WorldBuilder reads.
 
-Layout, island-local studs (x east, z south; bearings from +x toward +z):
-- a marble ring plaza round the tree's mound (r 80-104);
-- five sites in a crescent round the south half, each on a round marble plaza facing the tree: the Hatching Sanctum (bearing 20),
-  Buy & Sell (62), the Spawn (90), the Marketplace (118), the Blacksmith (148); a promenade arc joins them;
-- an avenue out from the ring to each site and to each of the five bridges (bridgehead plazas where they land), and a path from the
-  spawn to the great root;
-- crystal lamps where each avenue reaches its building or bridge (one pair each).
+Layout, island-local studs (x east, z south; a bearing runs from +x toward +z, north is -90):
+- the Tree Ring round the World Tree's mound (r 80-104), as before;
+- six beast pens on a ring (r 168, bearings 60, 120, 180, -120, -60, 0), each with its owner's spawn pad on a short spur from the
+  Tree Ring, 10 studs before the pen's board (src/worldbuild/Placements/Pastures.lua);
+- the Ring Road (r 216-236) joining every avenue, bridge and the shops; six avenues out between the pens (south to the Arrival
+  Plaza, north to the Hatching Sanctum, north-east the Market Avenue into the Market Square, south-west to the Qi Spring,
+  north-west and south-east to the Ring Road);
+- the Leaderboard at the head of the south avenue against the tree, the Hidden (Wandering) Merchant's dais opposite it;
+- the Merchants' Terrace: new ground out of the north-east rim (ygg_island.terrace_reach), the Market Square and the three shops
+  (hub_district.py), clear of the Origin Abyss bridge;
+- an apron the deck's width from the Ring Road to each bridge's gate, unchanged lines (Placements/Bridges.lua);
+- the root stair from the Ring Road to the great root's head (unchanged, at the south rim).
+
+Lamps stand only where they mark something: a pair where an avenue reaches its place and a pair at each bridge's apron (18).
 
     import hub_ground as G
-    G.export_terrain(); G.write_placements(); G.export()      # src/worldbuild/..., assets/world/Yggdrasil/Yggdrasil_Celestial.fbx
+    G.export_terrain(); G.write_placements(spots); G.write_pastures()   # src/worldbuild/Terrain, Placements/Yggdrasil.lua, Pastures.lua
+    objs = G.paving(coll, bands)                                       # the paving meshes (hub_district_stages.export)
 """
 import math
+import os
 import random
 
 import worldlib as W
@@ -20,90 +29,102 @@ import ygg_island as Y
 import hub_celestial as H
 
 TAU = 2 * math.pi
+LIFT = 0.25                    # the paving's top over the levelled ground
+
 RING = (80.0, 104.0)
 LAPIS = (90.5, 93.5)
-SITES = {   # name: (bearing, radius from the island's centre, plaza radius, inner radius left unpaved under the building)
-    "Hatching": (20.0, 152.0, 34.0, 18.5),
-    "BuySell": (62.0, 152.0, 28.0, 0.0),
-    "Spawn": (90.0, 140.0, 26.0, 0.0),
-    "Marketplace": (118.0, 152.0, 26.0, 17.5),
-    "Blacksmith": (148.0, 150.0, 26.0, 0.0),
-    "QiSpring": (-10.0, 172.0, 24.0, 0.0),   # east of the tree, between the Origin bridge and the Sanctum (hub_celestial.qi_spring)
-}
-MERCHANT = (-88.5, 168.0)      # the Wandering Merchant's camp (bearing, radius): on the lawn between the Ember and Moonlit bridges'
-                               # avenues, where everyone coming home from an island walks by (MerchantService)
-CHANNEL_HALF = 1.5
-MONUMENT = (104.0, 119.0, 9.0)  # the Ascension Board (hub_celestial.leaderboard): bearing, radius, its paved round's radius; beside
-                                # the spawn plaza (left of an arriving player), facing the spawn; no avenue of its own
-# the hub's people (tools/blender/npcs/hub_npcs.py): each keeper's spot in its building's frame (x, floor y, z, turn off facing
-# the tree); the Guide's on the spawn plaza in island coordinates, facing whoever just arrived
-NPC_SPOTS = {
-    "Forgemaster": ("Blacksmith", (2.3, H.BS_FLOOR, -0.4), -0.25),      # beside the anvil, the hearth behind him
-    "Curator": ("Marketplace", (4.8, 0.9, 3.0), 0.45),                 # by the great crystal egg, turned toward whoever comes in
-    "Appraiser": ("BuySell", (2.4, 0.5, 7.2), 0.0),                    # behind the counter, before the vault door
-}
-GUIDE_SPOT = (7.0, 132.0)
-HRP_OVER_FEET = 3.192             # the spring's overflow channel, out to the island's edge
-BRIDGEHEAD_R = 24.0
-AVENUE_HALF, BRIDGE_HALF, PATH_HALF = 6.0, 7.0, 4.0
-LIFT = 0.25                    # the paving's top over the levelled ground
+RING_ROAD = (216.0, 236.0)
+ROAD_LAPIS = (225.2, 226.8)
+PEN_R, PEN_BEARINGS, SPAWN_Z = 168.0, (60.0, 120.0, 180.0, -120.0, -60.0, 0.0), -48.0
+PEN_AREAS = ("south-east ring", "south-west ring", "west ring", "north-west ring", "north-east ring", "east ring")
+PEN_PLOT = (62.0, 84.0)        # the level-9 pen with its paving ring (54 x 76) and 4 studs round it
+PEN_FOOTPRINT = (54.0, 76.0)   # (Pastures.lua Footprint: what PastureBuilder checks)
+SPUR_TO = PEN_R - 37.0         # the pen's paving ring's front edge
+LEADERBOARD = (0.0, 118.0)     # faces south (+Z), down the south avenue to the Arrival Plaza
+MERCHANT = (0.0, -120.0)       # faces north (-Z), up the north avenue to the bridges
+SANCTUM = (0.0, -178.0)        # the Hatching Sanctum (GameConfig.HatchingAltar), its front (+Z) toward the tree
+SPRING = (-147.2, 85.0)        # the Qi Spring, facing the tree
+ARRIVAL = (0.0, 176.0, 24.0)   # the Arrival Plaza: the hub's main spawn (IslandSpawn)
+GUIDE_SPOT = (10.0, 162.0)
+ROOT_HEAD = (0.0, 241.0)
+SQUARE = Y.MARKET_SQUARE
+AVENUES = [   # (name, bearing, half width, from r, to r): each runs from the Tree Ring's edge to the Ring Road's
+    ("South", 90.0, 10.0, RING[1], RING_ROAD[0]),
+    ("North", -90.0, 10.0, RING[1], RING_ROAD[0]),
+    ("Market", -30.0, 10.0, RING[1], RING_ROAD[0]),
+    ("SouthWest", 150.0, 8.0, RING[1], RING_ROAD[0]),
+    ("NorthWest", -150.0, 8.0, RING[1], RING_ROAD[0]),
+    ("SouthEast", 30.0, 8.0, RING[1], RING_ROAD[0]),
+]
+SPUR_HALF = 6.0
+APRON_HALF = 20.0
+FORECOURT_HALF = 7.0
+# the model footprints the terrain is levelled under and kept bare (grass grows up through meshes): centre x, z, radius
+MODEL_DISCS = [(LEADERBOARD[0], LEADERBOARD[1], 13.2), (MERCHANT[0], MERCHANT[1], 15.2), (SANCTUM[0], SANCTUM[1], 23.8),
+               (SPRING[0], SPRING[1], 14.8), (SQUARE[0], SQUARE[1], 4.4)]
+HRP_OVER_FEET = 3.192
 
 
 def polar(b, r):
     return (math.cos(math.radians(b)) * r, math.sin(math.radians(b)) * r)
 
 
-def site_centre(name):
-    b, r, _, _ = SITES[name]
-    return polar(b, r)
-
-
 def face_yaw(fx, fz):
+    """The yaw that turns a piece's local +Z toward (fx, fz) (Roblox CFrame.Angles(0, yaw, 0))."""
     return math.atan2(fx, fz)
 
 
-def bridgeheads():
+def pens():
+    """(index, bearing, centre (x, z), yaw turning the spot's -Z toward the tree, spawn (x, z))."""
+    out = []
+    for i, b in enumerate(PEN_BEARINGS):
+        cx, cz = polar(b, PEN_R)
+        sx, sz = polar(b, PEN_R + SPAWN_Z)
+        out.append((i + 1, b, (cx, cz), math.radians(90.0 - b), (sx, sz)))
+    return out
+
+
+def shops():
+    """name -> (centre x, z, width, depth, yaw turning its front (+Z) toward the Market Square)."""
     out = {}
-    for name, (x, z) in Y.EXITS.items():
-        r = math.hypot(x, z)
-        out[name] = (x * (r - 10) / r, z * (r - 10) / r)
+    for name, (x, z, w, d) in Y.DISTRICT.items():
+        out[name] = (x, z, w, d, face_yaw(SQUARE[0] - x, SQUARE[1] - z))
     return out
 
 
+def bridges():
+    """route -> (exit x, z, bearing)."""
+    return {name: (x, z, math.degrees(math.atan2(z, x))) for name, (x, z) in Y.EXITS.items()}
+
+
+# ---------- what is paved ----------
 def discs():
-    """(x, z, radius, inner radius) of every paved round: the sites and the bridgeheads."""
+    """(x, z, radius, inner radius) of every paved round."""
+    return [(ARRIVAL[0], ARRIVAL[1], ARRIVAL[2], 0.0), (SQUARE[0], SQUARE[1], SQUARE[2], 4.15), (SPRING[0], SPRING[1], 24.0, 14.55)]
+
+
+def segments():
+    """(a, b, half width, kind) of every straight paved run."""
     out = []
-    for name, (b, r, pr, inner) in SITES.items():
-        x, z = polar(b, r)
-        out.append((x, z, pr, inner))
-    for x, z in bridgeheads().values():
-        out.append((x, z, BRIDGEHEAD_R, 0.0))
-    mx, mz = polar(MONUMENT[0], MONUMENT[1])
-    out.append((mx, mz, MONUMENT[2], 0.0))
+    for name, b, half, r0, r1 in AVENUES:
+        r1 = math.sqrt(r1 * r1 - half * half) - 0.05     # (its corners stop at the Ring Road's inner edge, not over its kerb)
+        out.append((polar(b, r0), polar(b, r1), half, "avenue"))
+    for _, b, _, _, (sx, sz) in pens():
+        out.append((polar(b, RING[1]), polar(b, SPUR_TO + 0.5), SPUR_HALF, "path"))
+    out.append(((0.0, RING_ROAD[1]), ROOT_HEAD, SPUR_HALF, "path"))
+    a_ = polar(-30.0, RING_ROAD[1])
+    dx_, dz_ = SQUARE[0] - a_[0], SQUARE[1] - a_[1]
+    out.append((a_, (SQUARE[0] - dx_ / math.hypot(dx_, dz_) * 0.5, SQUARE[1] - dz_ / math.hypot(dx_, dz_) * 0.5), 10.0, "avenue"))
+    for name, (x, z, b) in bridges().items():
+        out.append((polar(b, RING_ROAD[1]), polar(b, math.hypot(x, z) + 0.5), APRON_HALF, "apron"))
+    for name, (x, z, w, d, yaw) in shops().items():
+        fx, fz = SQUARE[0] - x, SQUARE[1] - z
+        L = math.hypot(fx, fz)
+        ux, uz = fx / L, fz / L
+        door = (x + ux * (d / 2 - 0.3), z + uz * (d / 2 - 0.3))
+        edge = (SQUARE[0] - ux * (SQUARE[2] - 1.0), SQUARE[1] - uz * (SQUARE[2] - 1.0))
+        out.append((edge, door, FORECOURT_HALF, "path"))
     return out
-
-
-def roads():
-    """(line, half width, kind) of every avenue and path."""
-    out = []
-    for name, (b, r, pr, _) in SITES.items():
-        out.append(([polar(b, RING[1] - 1.0), polar(b, r - pr + 1.0)], AVENUE_HALF, "avenue"))
-    for (x, z) in bridgeheads().values():
-        b = math.degrees(math.atan2(z, x))
-        r = math.hypot(x, z)
-        out.append(([polar(b, RING[1] - 1.0), polar(b, r - BRIDGEHEAD_R + 1.0)], BRIDGE_HALF, "avenue"))
-    sx, sz = site_centre("Spawn")
-    out.append(([(sx, sz + SITES["Spawn"][2] - 1.0), (0.0, Y.ROOT_EXIT[1] - 8.0)], PATH_HALF, "path"))
-    arc = [polar(20 + (148 - 20) * i / 32, 152.0) for i in range(33)]
-    out.append((arc, PATH_HALF, "path"))
-    return out
-
-
-def channel_line():
-    """The spring's overflow channel: from its basin's spout (local -Z, away from the tree) straight out to 1 stud short of the rim."""
-    b, r, _, _ = SITES["QiSpring"]
-    rim = Y.rim(math.radians(b))
-    return [polar(b, r + H.QS_CURB_R - 0.2), polar(b, rim - 1.0)]
 
 
 def _seg(px, pz, a, b):
@@ -112,52 +133,59 @@ def _seg(px, pz, a, b):
     return math.hypot(px - a[0] - vx * t, pz - a[1] - vz * t)
 
 
-def in_disc(x, z, pad=0.0):
-    return any(math.hypot(x - cx, z - cz) < r + pad for cx, cz, r, _ in discs())
+def _rect(px, pz, cx, cz, w, d, yaw):
+    """Signed distance outside a rectangle (w along local x, d along local z) turned by yaw."""
+    dx, dz = px - cx, pz - cz
+    lx = dx * math.cos(yaw) - dz * math.sin(yaw)
+    lz = dx * math.sin(yaw) + dz * math.cos(yaw)
+    qx, qz = abs(lx) - w / 2, abs(lz) - d / 2
+    return math.hypot(max(qx, 0), max(qz, 0)) + min(max(qx, qz), 0)
 
 
 def paved_distance(x, z):
-    """How far (x, z) lies outside the paving (negative on it)."""
-    best = abs(math.hypot(x, z) - (RING[0] + RING[1]) / 2) - (RING[1] - RING[0]) / 2
-    for cx, cz, r, _ in discs():
-        best = min(best, math.hypot(x - cx, z - cz) - r)
-    for line, half, _ in roads():
-        for a, b in zip(line, line[1:]):
-            best = min(best, _seg(x, z, a, b) - half)
-    (ax, az), (bx, bz) = channel_line()
-    best = min(best, _seg(x, z, (ax, az), (bx, bz)) - CHANNEL_HALF - 0.6)
+    """How far (x, z) lies outside the paving and the models' footprints (negative on them)."""
+    r = math.hypot(x, z)
+    best = abs(r - (RING[0] + RING[1]) / 2) - (RING[1] - RING[0]) / 2
+    best = min(best, abs(r - (RING_ROAD[0] + RING_ROAD[1]) / 2) - (RING_ROAD[1] - RING_ROAD[0]) / 2)
+    for cx, cz, R, _ in discs():
+        best = min(best, math.hypot(x - cx, z - cz) - R)
+    for cx, cz, R in MODEL_DISCS:
+        best = min(best, math.hypot(x - cx, z - cz) - R)
+    for a, b, half, _ in segments():
+        best = min(best, _seg(x, z, a, b) - half)
+    for _, _, _, _, (sx, sz) in pens():
+        best = min(best, math.hypot(x - sx, z - sz) - 6.2)
+    for name, (cx, cz, w, d, yaw) in shops().items():
+        best = min(best, _rect(x, z, cx, cz, w + 1.0, d + 1.0, yaw))
+    return best
+
+
+def pen_distance(x, z):
+    best = 1e9
+    for _, b, (cx, cz), yaw, _ in pens():
+        best = min(best, _rect(x, z, cx, cz, PEN_PLOT[0], PEN_PLOT[1], -yaw))
     return best
 
 
 # ---------- the terrain ----------
 def height(x, z):
-    from worldlib import fbm, smoothstep, gauss
+    from worldlib import fbm, smoothstep
     r = math.hypot(x, z)
     R = Y.rim(math.atan2(z, x))
     if r > R:
         return None, None
-    h = 0.9 * fbm(x / 70 + 2, z / 70 - 6, seed=81, octaves=4) + 0.35 * fbm(x / 21, z / 21, seed=83, octaves=3)
-    rocky = False
-    for kx, kz, kr, kh in Y.KNOLLS:
-        dome = gauss(x - kx, z - kz, kr * 0.5)
-        h += kh * dome + 1.6 * dome * fbm(x / 8, z / 8, seed=85, octaves=3)
-        rocky = rocky or dome > 0.5 and fbm(x / 11 + 5, z / 11, seed=87, octaves=3) > -0.05 + 0.4 * (1 - dome)
+    # a gentle lawn: soft swells away from the paving and the pens, level under and round them
+    h = 0.55 * fbm(x / 60 + 2, z / 60 - 6, seed=81, octaves=4) + 0.2 * fbm(x / 19, z / 19, seed=83, octaves=3)
+    d = paved_distance(x, z)
+    level = min(smoothstep(0.0, 10.0, d), smoothstep(0.0, 8.0, pen_distance(x, z)))
+    h *= level
     # the World Tree's root mound, as it was (its roots are shaped to it)
     w = 1 - smoothstep(Y.MOUND[0], Y.MOUND[1], r)
     h = h * (1 - w) + Y.MOUND[2] * w ** 0.8
-    # level under and round the paving, and bare earth under it (terrain grass grows up through a mesh)
-    d = paved_distance(x, z)
-    w = 1 - smoothstep(0.0, 9.0, d)
-    h = h * (1 - w)
-    h -= 3.2 * (1 - smoothstep(R - 1, R - 11, r)) ** 1.6
-    mx, mz = polar(*MERCHANT)
-    camp = math.hypot((x - mx) / 7.5, (z - mz - 1.5) / 6.0) + 0.12 * fbm(x / 3, z / 3, seed=91, octaves=2)
-    if camp < 1.0:
-        mat = "Ground"        # the Wandering Merchant's camp: worn bare (terrain grass grew up through his rug, seen in Play)
-    elif d < 0.6:
-        mat = "Cobblestone"   # pale stone under the marble: brown earth bled out round every edge (terrain blends over a 4-stud cell)
-    elif rocky:
-        mat = "Rock"
+    # the rim rounds off to the cliff (never under the paving: it stays dead level)
+    h -= 3.2 * (1 - smoothstep(R - 1, R - 11, r)) ** 1.6 * smoothstep(0.0, 3.0, d)
+    if d < 0.6:
+        mat = "Cobblestone"   # pale stone under the marble and under every model (grass grows up through a mesh)
     else:
         mat = "Grass"
     return h, mat
@@ -169,271 +197,365 @@ def ground(x, z):
 
 def export_terrain(path=None):
     path = path or W.REPO + "/src/worldbuild/Terrain/Yggdrasil.lua"
-    return W.export_heightfield(Y.NAME, Y.CENTRE, 4, 276, height, Y.MATERIALS, path, priority=[("Cobblestone", 4), ("Ground", 2)], turns=Y.TURNS)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    return W.export_heightfield(Y.NAME, Y.CENTRE, 4, 396, height, Y.MATERIALS, path, priority=[("Cobblestone", 4), ("Ground", 2)], turns=Y.TURNS)
 
 
 # ---------- the paving ----------
+# Every flagstone is a shallow prism (its top and its four sides down into the grout bed), so each one touches what is under it.
+STONE_DEPTH = 0.14
+
+
 def _o(mb, pts, want, band, shade=0.85):
     H.W_oriented(mb, pts, want, band, shade)
 
 
-def courses(mb, rnd, bands, centre, r0, r1, lapis=None, kerb=True, inner_kerb=False):
-    """Concentric courses of marble flagstones from r0 out to r1 round centre on the ground, dark grout under them, an optional
-    lapis band (r, r) edged in gold, and a gold kerb with its outer face."""
+def stone(mb, band, top, shade, depth=STONE_DEPTH):
+    """A flagstone: top is its 4 top corners (Roblox points); its sides go down `depth`."""
+    _o(mb, top, (0, 1, 0), band, shade)
+    cx = sum(p[0] for p in top) / 4
+    cz = sum(p[2] for p in top) / 4
+    for k in range(4):
+        a, b = top[k], top[(k + 1) % 4]
+        n = ((a[0] + b[0]) / 2 - cx, 0, (a[2] + b[2]) / 2 - cz)
+        _o(mb, [a, b, (b[0], b[1] - depth, b[2]), (a[0], a[1] - depth, a[2])], n, band, shade * 0.75)
+
+
+def _y(x, z, dy=0.0):
+    return ground(x, z) + LIFT + dy
+
+
+def ring_courses(mb, glow, rnd, bands, centre, r0, r1, lapis=None, rune_every=None, kerb_out=True, kerb_in=False, b0=0.0, b1=360.0, gap=None,
+                 grout=-0.06):
+    """Concentric courses of marble flagstones round centre from r0 to r1 (between bearings b0 and b1), a grout bed under them, an
+    optional lapis band edged in gold with rune glyphs, gold kerbs. gap(x, z) -> True skips a stone (another paving owns it)."""
     cx, cz = centre
+    a0, a1 = math.radians(b0), math.radians(b1)
 
     def at(a, r, dy=0.0):
         x, z = cx + math.cos(a) * r, cz + math.sin(a) * r
-        return (x, ground(x, z) + LIFT + dy, z)
-    seg = max(24, int(TAU * r1 / 4))
-    for k in range(seg):    # the grout
-        a0, a1 = TAU * k / seg, TAU * (k + 1) / seg
-        _o(mb, [at(a0, r1, -0.03), at(a1, r1, -0.03), at(a1, max(r0, 0.01), -0.03), at(a0, max(r0, 0.01), -0.03)], (0, 1, 0), bands[H.SHADE], 0.35)
-    r = r0 if r0 > 0 else 2.6
-    if r0 <= 0:   # a round middle stone
-        for k in range(12):
-            a0, a1 = TAU * k / 12, TAU * (k + 1) / 12
-            _o(mb, [at(0, 0, 0.0), at(a0, 2.5, 0.0), at(a1, 2.5, 0.0)], (0, 1, 0), bands[H.MARBLE], 0.9)
+        return (x, _y(x, z, dy), z)
+    seg = max(12, int((a1 - a0) * r1 / 4.5))
+    for k in range(seg):   # the grout bed, in pieces no longer than about 4.5 studs
+        g0, g1 = a0 + (a1 - a0) * k / seg, a0 + (a1 - a0) * (k + 1) / seg
+        steps = max(1, int((r1 - max(r0, 0.0)) / 4.5))
+        for j in range(steps):
+            ra = max(r0, 0.01) + (r1 - max(r0, 0.01)) * j / steps
+            rb = max(r0, 0.01) + (r1 - max(r0, 0.01)) * (j + 1) / steps
+            q = [at(g0, rb, grout), at(g1, rb, grout), at(g1, ra, grout), at(g0, ra, grout)]
+            if gap and gap(q):
+                continue
+            _o(mb, q, (0, 1, 0), bands[H.SHADE], 0.35)
+    r = r0 + (0.7 if kerb_in else 0.0)
     k = 0
-    while r < r1 - 0.8:
-        w = 2.4
-        if lapis and r < lapis[1] and r + w > lapis[0]:
-            r = lapis[1]
+    while r < r1 - (0.8 if kerb_out else 0.1):
+        w = 3.0
+        if lapis and r < lapis[1] + 0.3 and r + w > lapis[0] - 0.3:
+            r = lapis[1] + 0.3
             continue
-        top = min(r + w, r1 - 0.7)
-        n = max(10, int(TAU * r / 3.2))
-        ph = rnd.uniform(0, TAU)
+        top = min(r + w, r1 - (0.75 if kerb_out else 0.1))
+        if lapis and r < lapis[0] - 0.3 < top:
+            top = lapis[0] - 0.3
+        n = max(6, int((a1 - a0) * (r + top) / 2 / 4.4))
+        ph = rnd.uniform(0, 1.0)
         for i in range(n):
-            a0, a1 = ph + TAU * i / n + 0.05 / max(r, 1), ph + TAU * (i + 1) / n - 0.05 / max(r, 1)
+            t0, t1 = (i + ph * (k % 2)) / n, (i + 1 + ph * (k % 2)) / n
+            if t1 > 1.0:
+                continue
+            g0, g1 = a0 + (a1 - a0) * t0 + 0.05 / max(r, 1), a0 + (a1 - a0) * t1 - 0.05 / max(r, 1)
+            q = [at(g0, top - 0.06), at(g1, top - 0.06), at(g1, r + 0.06), at(g0, r + 0.06)]
+            if gap and gap(q):
+                continue
             band = bands[H.MARBLE] if (i + k) % 5 else bands[H.MARBLE2]
-            steps = max(1, int((a1 - a0) * r / 4))
-            for s in range(steps):
-                b0, b1 = a0 + (a1 - a0) * s / steps, a0 + (a1 - a0) * (s + 1) / steps
-                _o(mb, [at(b0, top - 0.06), at(b1, top - 0.06), at(b1, r + 0.06), at(b0, r + 0.06)], (0, 1, 0), band, 0.6 + 0.35 * ((i * 7 + k * 3) % 5) / 4)
+            stone(mb, band, q, 0.6 + 0.35 * ((i * 7 + k * 3) % 5) / 4)
         r = top
         k += 1
     if lapis:
-        for k2 in range(seg):
-            a0, a1 = TAU * k2 / seg, TAU * (k2 + 1) / seg
-            for (ra, rb, band, dy, sh) in ((lapis[0], lapis[1], H.LAPIS, 0.0, 0.75), (lapis[0] - 0.3, lapis[0], H.GOLD, 0.01, 0.95), (lapis[1], lapis[1] + 0.3, H.GOLD, 0.01, 0.95)):
-                _o(mb, [at(a0, rb, dy), at(a1, rb, dy), at(a1, ra, dy), at(a0, ra, dy)], (0, 1, 0), bands[band], sh)
-    if kerb:
-        for k2 in range(seg):
-            a0, a1 = TAU * k2 / seg, TAU * (k2 + 1) / seg
-            mid = (a0 + a1) / 2
-            _o(mb, [at(a0, r1, 0.12), at(a1, r1, 0.12), at(a1, r1 - 0.7, 0.12), at(a0, r1 - 0.7, 0.12)], (0, 1, 0), bands[H.GOLD], 0.9)
-            o0, o1 = at(a0, r1, 0.12), at(a1, r1, 0.12)
-            _o(mb, [o0, o1, (o1[0], o1[1] - 1.0, o1[2]), (o0[0], o0[1] - 1.0, o0[2])], (math.cos(mid), 0, math.sin(mid)), bands[H.SHADE], 0.6)
-    if inner_kerb and r0 > 0:
-        for k2 in range(seg):
-            a0, a1 = TAU * k2 / seg, TAU * (k2 + 1) / seg
-            mid = (a0 + a1) / 2
-            _o(mb, [at(a0, r0 + 0.6, 0.12), at(a1, r0 + 0.6, 0.12), at(a1, r0, 0.12), at(a0, r0, 0.12)], (0, 1, 0), bands[H.GOLD], 0.9)
-            i0, i1 = at(a0, r0, 0.12), at(a1, r0, 0.12)
-            _o(mb, [i0, i1, (i1[0], i1[1] - 1.0, i1[2]), (i0[0], i0[1] - 1.0, i0[2])], (-math.cos(mid), 0, -math.sin(mid)), bands[H.SHADE], 0.6)
-
-
-def avenue(mb, glow, bands, line, half, kind):
-    """Marble slabs either side of a lapis channel (an avenue) or irregular slabs (a path), gold-edged, laid on the ground; rows
-    on a plaza are left to it. glow: the channel's rune glyphs every 6 studs."""
-    pts = []
-    for a, b in zip(line, line[1:]):
-        L = math.hypot(b[0] - a[0], b[1] - a[1])
-        n = max(1, round(L / 3.0))
-        for i in range(n + (1 if b is line[-1] else 0)):
-            pts.append((a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n))
-    rnd = random.Random(int(abs(line[0][0] * 7 + line[0][1] * 3)))
-
-    def at(x, z, nx, nz, s, dy=0.0):
-        px, pz = x + nx * s, z + nz * s
-        return (px, ground(px, pz) + LIFT + dy, pz)
-    run = 0.0
-    for i, (p, q) in enumerate(zip(pts, pts[1:])):
-        dx, dz = q[0] - p[0], q[1] - p[1]
-        L = max(math.hypot(dx, dz), 1e-6)
-        nx, nz = -dz / L, dx / L
-        mx, mz = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
-        run += L
-        if in_disc(mx, mz, -0.5) or abs(math.hypot(mx, mz) - (RING[0] + RING[1]) / 2) < (RING[1] - RING[0]) / 2 - 0.5:
+        segl = max(12, int((a1 - a0) * lapis[1] / 4.4))
+        for k2 in range(segl):
+            g0, g1 = a0 + (a1 - a0) * k2 / segl, a0 + (a1 - a0) * (k2 + 1) / segl
+            if gap and gap([at(g0, lapis[1] + 0.3), at(g1, lapis[1] + 0.3), at(g1, lapis[0] - 0.3), at(g0, lapis[0] - 0.3)]):
+                continue
+            stone(mb, bands[H.LAPIS], [at(g0, lapis[1] - 0.03, -0.02), at(g1, lapis[1] - 0.03, -0.02), at(g1, lapis[0] + 0.03, -0.02),
+                                       at(g0, lapis[0] + 0.03, -0.02)], 0.75)
+            for (ra, rb) in ((lapis[0] - 0.3, lapis[0]), (lapis[1], lapis[1] + 0.3)):
+                stone(mb, bands[H.GOLD], [at(g0, rb, 0.01), at(g1, rb, 0.01), at(g1, ra, 0.01), at(g0, ra, 0.01)], 0.95, depth=0.17)
+            if rune_every and k2 % rune_every == 0:
+                rune(glow, bands, at((g0 + g1) / 2, (lapis[0] + lapis[1]) / 2, -0.02), (g0 + g1) / 2, k2)
+    for flag, rr, sign in ((kerb_out, r1, 1), (kerb_in, r0, -1)):
+        if not flag or rr <= 0:
             continue
-        P0, P1 = (p[0], p[1], nx, nz), (q[0], q[1], nx, nz)
-        def quad(s0, s1, band, dy=0.0, sh=0.85):
-            _o(mb, [at(*P0, s0, dy), at(*P1, s0, dy), at(*P1, s1, dy), at(*P0, s1, dy)], (0, 1, 0), bands[band], sh)
-        quad(-half, half, H.SHADE, -0.03, 0.35)                       # grout
+        segk = max(12, int((a1 - a0) * rr / 4.4))
+        for k2 in range(segk):
+            g0, g1 = a0 + (a1 - a0) * k2 / segk, a0 + (a1 - a0) * (k2 + 1) / segk
+            ra, rb = (rr - 0.7, rr) if sign > 0 else (rr, rr + 0.7)
+            if gap and gap([at(g0, rb), at(g1, rb), at(g1, ra), at(g0, ra)]):
+                continue
+            stone(mb, bands[H.GOLD], [at(g0, rb, 0.12), at(g1, rb, 0.12), at(g1, ra, 0.12), at(g0, ra, 0.12)], 0.9, depth=1.1)
+
+
+def rune(glow, bands, p, a, k):
+    """A rune glyph set in the lapis: a diamond, or two bars."""
+    x, y, z = p
+    ca, sa = math.cos(a), math.sin(a)       # (a: the bearing along the band; the glyph lies across it)
+    tx, tz = -sa, ca
+    if k % 2 == 0:
+        top = [(x + ca * 0.55, y + 0.05, z + sa * 0.55), (x + tx * 0.85, y + 0.05, z + tz * 0.85), (x - ca * 0.55, y + 0.05, z - sa * 0.55),
+               (x - tx * 0.85, y + 0.05, z - tz * 0.85)]
+        stone(glow, bands[H.GLOW], top, 1.0, depth=0.12)
+    else:
+        for o in (-0.3, 0.3):
+            bxp, bzp = x + tx * o, z + tz * o
+            top = [(bxp + ca * 0.5 + tx * 0.1, y + 0.05, bzp + sa * 0.5 + tz * 0.1), (bxp + ca * 0.5 - tx * 0.1, y + 0.05, bzp + sa * 0.5 - tz * 0.1),
+                   (bxp - ca * 0.5 - tx * 0.1, y + 0.05, bzp - sa * 0.5 - tz * 0.1), (bxp - ca * 0.5 + tx * 0.1, y + 0.05, bzp - sa * 0.5 + tz * 0.1)]
+            stone(glow, bands[H.GLOW], top, 1.0, depth=0.12)
+
+
+def _outside_intervals(a, ux, uz, L, circles):
+    """The parts [t0, t1] of the line a + u t (0 <= t <= L) outside every circle (cx, cz, R)."""
+    cuts = [(0.0, L)]
+    for cx, cz, R in circles:
+        fx, fz = a[0] - cx, a[1] - cz
+        bq = fx * ux + fz * uz
+        cq = fx * fx + fz * fz - R * R
+        disc = bq * bq - cq
+        if disc <= 0:
+            continue
+        t1, t2 = -bq - math.sqrt(disc), -bq + math.sqrt(disc)
+        nxt = []
+        for s0, s1 in cuts:
+            if t2 <= s0 or t1 >= s1:
+                nxt.append((s0, s1))
+                continue
+            if t1 > s0:
+                nxt.append((s0, t1))
+            if t2 < s1:
+                nxt.append((t2, s1))
+        cuts = nxt
+    return [(s0, s1) for s0, s1 in cuts if s1 - s0 > 0.3]
+
+
+def strip(mb, glow, bands, a, b, half, kind, circles=(), rnd=None, grout=-0.08):
+    """A straight paved run from a to b, half wide: rows of slabs either side of a lapis channel with runes (an avenue), plain
+    slabs (a path), or broad slabs (a bridge's apron); gold kerbs along both edges."""
+    rnd = rnd or random.Random(int(abs(a[0] * 7 + a[1] * 3 + b[0])))
+    L = math.hypot(b[0] - a[0], b[1] - a[1])
+    ux, uz = (b[0] - a[0]) / L, (b[1] - a[1]) / L
+    nx, nz = -uz, ux
+
+    def at(t, s, dy=0.0):
+        x, z = a[0] + ux * t + nx * s, a[1] + uz * t + nz * s
+        return (x, _y(x, z, dy), z)
+    if kind == "avenue":
+        lanes = [(-half + 0.75, -1.0), (1.0, half - 0.75)]
+    else:
+        lanes = [(-half + 0.75, half - 0.75)]
+    pieces = []
+    for s0, s1 in _outside_intervals(a, ux, uz, L, circles):
+        n = max(1, round((s1 - s0) / 4.2))
+        pieces += [(s0 + (s1 - s0) * j / n, s0 + (s1 - s0) * (j + 1) / n) for j in range(n)]
+    for i, (t0, t1) in enumerate(pieces):
+        # the grout bed, the slabs, the channel, the kerbs
+        for s0 in [-half + j * 4.5 for j in range(int(math.ceil(2 * half / 4.5)))]:
+            s1 = min(s0 + 4.5, half)
+            _o(mb, [at(t0, s0, grout), at(t1, s0, grout), at(t1, s1, grout), at(t0, s1, grout)], (0, 1, 0), bands[H.SHADE], 0.35)
+        for l0, l1 in lanes:
+            width = l1 - l0
+            cols = max(1, round(width / (4.2 if kind == "apron" else 3.2)))
+            off = rnd.uniform(-0.6, 0.6) if i % 2 else 0.0
+            edges = [l0] + [l0 + width * (c + 0.5 + off / width) / cols for c in range(cols - 1)] + [l1]
+            for c, (e0, e1) in enumerate(zip(edges, edges[1:])):
+                band = bands[H.MARBLE] if (i + c) % 4 else bands[H.MARBLE2]
+                stone(mb, band, [at(t0 + 0.06, e0 + 0.06), at(t1 - 0.06, e0 + 0.06), at(t1 - 0.06, e1 - 0.06), at(t0 + 0.06, e1 - 0.06)],
+                      rnd.uniform(0.62, 0.95))
         if kind == "avenue":
-            for side in (-1, 1):
-                quad(side * 0.9, side * (half / 2), H.MARBLE if i % 4 else H.MARBLE2, 0.0, rnd.uniform(0.65, 0.95))
-                quad(side * (half / 2 + 0.1), side * (half - 0.75), H.MARBLE, 0.0, rnd.uniform(0.65, 0.95))
-            quad(-0.8, 0.8, H.LAPIS, -0.01, 0.7)
+            stone(mb, bands[H.LAPIS], [at(t0, -0.95, -0.02), at(t1, -0.95, -0.02), at(t1, 0.95, -0.02), at(t0, 0.95, -0.02)], 0.72)  # (between the slabs, not touching)
             if i % 2 == 0:
-                cx_, cz_ = mx, mz
-                y = ground(cx_, cz_) + LIFT + 0.01
-                _o(glow, [(cx_ + dx / L * 0.9, y, cz_ + dz / L * 0.9), (cx_ + nx * 0.45, y, cz_ + nz * 0.45), (cx_ - dx / L * 0.9, y, cz_ - dz / L * 0.9),
-                          (cx_ - nx * 0.45, y, cz_ - nz * 0.45)], (0, 1, 0), bands[H.GLOW], 1.0)
-        else:
-            cuts = sorted(rnd.uniform(-half * 0.5, half * 0.5) for _ in range(rnd.choice((1, 2))))
-            edges = [-(half - 0.7)] + cuts + [half - 0.7]
-            for s0, s1 in zip(edges, edges[1:]):
-                quad(s0 + 0.06, s1 - 0.06, H.MARBLE, 0.0, rnd.uniform(0.6, 0.92))
-        for side in (-1, 1):   # the gold edge and its face
-            quad(side * (half - 0.7), side * half, H.GOLD, 0.1, 0.9)
-            o0, o1 = at(*P0, side * half, 0.1), at(*P1, side * half, 0.1)
-            _o(mb, [o0, o1, (o1[0], o1[1] - 1.0, o1[2]), (o0[0], o0[1] - 1.0, o0[2])], (nx * side, 0, nz * side), bands[H.SHADE], 0.6)
+                rune(glow, bands, at((t0 + t1) / 2, 0.0, -0.02), math.atan2(uz, ux) + math.pi / 2, i // 2)
+        for sgn in (-1, 1):
+            e0, e1 = (half - 0.7, half) if sgn > 0 else (-half, -half + 0.7)
+            stone(mb, bands[H.GOLD], [at(t0, e0, 0.12), at(t1, e0, 0.12), at(t1, e1, 0.12), at(t0, e1, 0.12)], 0.9, depth=1.1)
 
 
-def runes(glow, bands, centre, r, count):
-    """Rune glyphs set in a lapis band: a diamond, then two bars."""
-    cx, cz = centre
-    for k in range(count):
-        a = TAU * k / count
-        ca, sa = math.cos(a), math.sin(a)
-        tx, tz = -sa, ca
-        x, z = cx + ca * r, cz + sa * r
-        y = ground(x, z) + LIFT + 0.02
-        if k % 3 == 0:
-            pts = [(x + ca * 0.9, y, z + sa * 0.9), (x + tx * 0.6, y, z + tz * 0.6), (x - ca * 0.9, y, z - sa * 0.9), (x - tx * 0.6, y, z - tz * 0.6)]
-        else:
-            pts = [(x + tx * 0.18 + ca * 0.8, y, z + tz * 0.18 + sa * 0.8), (x - tx * 0.18 + ca * 0.8, y, z - tz * 0.18 + sa * 0.8),
-                   (x - tx * 0.18 - ca * 0.8, y, z - tz * 0.18 - sa * 0.8), (x + tx * 0.18 - ca * 0.8, y, z + tz * 0.18 - sa * 0.8)]
-        _o(glow, pts, (0, 1, 0), bands[H.GLOW], 1.0)
+def _on_ring(x, z, ring, pad=0.0):
+    r = math.hypot(x, z)
+    return ring[0] - pad < r < ring[1] + pad
+
+
+def _in_any_disc(x, z, pad=0.0):
+    for cx, cz, R, _ in discs():
+        if math.hypot(x - cx, z - cz) < R + pad:
+            return True
+    for cx, cz, R in MODEL_DISCS:
+        if math.hypot(x - cx, z - cz) < R + pad:
+            return True
+    for _, _, _, _, (sx, sz) in pens():
+        if math.hypot(x - sx, z - sz) < 6.2 + pad:
+            return True
+    return False
 
 
 def paving(coll, mat, bands):
-    """HB_RingPlaza, HB_Plazas, HB_Avenues (each under Roblox's 20,000 triangles a mesh) and HB_PavingRunes (glow)."""
+    """HB_RingPlaza, HB_RingRoadNE/SE/SW/NW (each under Roblox's 20,000 triangles a mesh), HB_Plazas, HB_Avenues and HB_PavingRunes
+    (the glow), in island coordinates. Returns the raw objects (hub_district.finish splits them by material)."""
     rnd = random.Random(2026)
     glow = W.MeshBuilder()
+    out = []
     mb = W.MeshBuilder()
-    courses(mb, rnd, bands, (0.0, 0.0), RING[0], RING[1], lapis=LAPIS, inner_kerb=True)
-    runes(glow, bands, (0.0, 0.0), (LAPIS[0] + LAPIS[1]) / 2, 72)
-    ring_obj = mb.object("HB_RingPlaza", coll, mat)
+    # the Tree Ring: where the avenues and spurs meet it, it stays whole (they stop at its edge)
+    ring_courses(mb, glow, rnd, bands, (0.0, 0.0), RING[0], RING[1], lapis=LAPIS, rune_every=2, kerb_in=True)
+    out.append(mb.object("HB_RingPlaza", coll, mat))
+    # the Ring Road, in four quarters; the Market Square owns where it crosses
+    def sq(pts):
+        return any(math.hypot(p[0] - SQUARE[0], p[2] - SQUARE[1]) < SQUARE[2] + 0.05 for p in pts)
+    for name, b0, b1 in (("HB_RingRoadNE", -90.0, 0.0), ("HB_RingRoadSE", 0.0, 90.0), ("HB_RingRoadSW", 90.0, 180.0), ("HB_RingRoadNW", 180.0, 270.0)):
+        mb = W.MeshBuilder()
+        ring_courses(mb, glow, rnd, bands, (0.0, 0.0), RING_ROAD[0], RING_ROAD[1], lapis=ROAD_LAPIS, rune_every=6, kerb_in=True,
+                     b0=b0, b1=b1, gap=sq)
+        out.append(mb.object(name, coll, mat))
+    # the plazas: the Arrival Plaza, the Market Square (round its centrepiece), the Qi Spring's court (round its plinth)
     mb = W.MeshBuilder()
-    for cx, cz, r, inner in discs():
-        lap = (r - 5.5, r - 3.5) if r >= 24 else None
-        courses(mb, rnd, bands, (cx, cz), inner, r, lapis=lap)
-        if lap:
-            runes(glow, bands, (cx, cz), (lap[0] + lap[1]) / 2, int(TAU * r / 4.5))
-    plazas = mb.object("HB_Plazas", coll, mat)
+    for cx, cz, R, inner in discs():
+        lap = (R - 5.0, R - 3.4) if R >= 24 else None
+        ring_courses(mb, glow, rnd, bands, (cx, cz), inner, R, lapis=lap, rune_every=3, kerb_in=inner > 0, grout=-0.07)
+    out.append(mb.object("HB_Plazas", coll, mat))
+    # the avenues, the spurs, the root stair, the aprons and the forecourts: each stops where a ring, a plaza or a model owns the ground
     mb = W.MeshBuilder()
-    for line, half, kind in roads():
-        avenue(mb, glow, bands, line, half, kind)
-    avenues = mb.object("HB_Avenues", coll, mat)
-    return [ring_obj, plazas, avenues, glow.object("HB_PavingRunes", coll, mat)]
+
+    circles = [(cx, cz, R) for cx, cz, R, _ in discs()] + list(MODEL_DISCS) + [(sx, sz, 6.2) for _, _, _, _, (sx, sz) in pens()]
+    for a, b, half, kind in segments():
+        if kind == "apron":
+            continue
+        strip(mb, glow, bands, a, b, half, kind, circles=circles, grout=-0.08)
+    out.append(mb.object("HB_Avenues", coll, mat))
+    mb = W.MeshBuilder()
+    for a, b, half, kind in segments():
+        if kind == "apron":
+            strip(mb, glow, bands, a, b, half, kind, circles=circles, grout=-0.09)
+    out.append(mb.object("HB_Aprons", coll, mat))
+    out.append(glow.object("HB_PavingRunes", coll, mat))
+    return out
+
+
+PAVING = ("HB_RingPlaza", "HB_RingRoadNE", "HB_RingRoadSE", "HB_RingRoadSW", "HB_RingRoadNW", "HB_Plazas", "HB_Avenues", "HB_Aprons", "HB_PavingRunes")
+
+
+# ---------- the parapet along the Ring Road over the great root's cove ----------
+PARAPET = (56.0, 86.0, RING_ROAD[1] + 0.9)    # from bearing, to bearing, radius
+
+
+def parapet(coll, mat, bands):
+    """HB_RingParapet: a marble balustrade along the Ring Road's outer edge where the rim comes close (the root's cove): posts every
+    3 studs, a rail, gold caps on the posts that end it."""
+    mb = W.MeshBuilder()
+    b0, b1, r = PARAPET
+    n = int(math.radians(b1 - b0) * r / 4.5)
+    for k in range(n + 1):
+        a = math.radians(b0 + (b1 - b0) * k / n)
+        x, z = math.cos(a) * r, math.sin(a) * r
+        y = _y(x, z)
+        mb.box((x, y + 1.0, z), (0.7, 2.4, 0.7), bands[H.MARBLE], yaw=-a, u=0.5, top_shade=0.95, side_shade=0.75)
+    pts = []
+    for k in range(n * 3 + 1):
+        a = math.radians(b0 + (b1 - b0) * k / (n * 3))
+        x, z = math.cos(a) * r, math.sin(a) * r
+        pts.append((x, _y(x, z) + 2.35, z))
+    for p, q in zip(pts, pts[1:]):
+        L = math.hypot(q[0] - p[0], q[2] - p[2])
+        mb.box(((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2), (0.55, 0.32, L + 0.02), bands[H.MARBLE],
+               yaw=math.atan2(q[0] - p[0], q[2] - p[2]), u=0.5, top_shade=0.95, side_shade=0.75)
+    for a in (math.radians(b0), math.radians(b1)):
+        x, z = math.cos(a) * r, math.sin(a) * r
+        y = _y(x, z)
+        mb.box((x, y + 1.2, z), (1.3, 3.0, 1.3), bands[H.MARBLE], yaw=-a, u=0.5, top_shade=0.95, side_shade=0.75)
+        mb.box((x, y + 2.78, z), (1.5, 0.2, 1.5), bands[H.GOLD], yaw=-a, u=0.5, top_shade=1.0, side_shade=0.85)
+    return mb.object("HB_RingParapet", coll, mat)
 
 
 # ---------- the lamps ----------
-def lamp_light(coll, mat, bands):
-    o = H.crystal_lamp_glow(coll, mat, bands)
-    o.name = o.data.name = "HB_CrystalLampLight"
-    return o
-
-
 def lamp_layout():
-    """(x, z, yaw) of every lamp: one pair per avenue, flanking it where it reaches its building or bridge (a gateway, not a
-    fence). 73 lamps along the avenues, round the ring and round every plaza were far too many (the owner, 2026-11-12)."""
+    """(x, z, yaw) of every lamp: a pair where an avenue reaches its place, and a pair at each bridge's apron."""
     spots = []
-    for line, half, kind in roads():
-        if kind != "avenue":
-            continue
-        (ax, az), (bx, bz) = line[0], line[-1]
-        L = math.hypot(bx - ax, bz - az)
-        dx, dz = (bx - ax) / L, (bz - az) / L
-        d = L - 5.0
+
+    def pair(b, r, half):
         for side in (-1, 1):
-            x, z = ax + dx * d - dz * side * (half + 2.2), az + dz * d + dx * side * (half + 2.2)
-            if paved_distance(x, z) >= 0.8 and math.hypot(x, z) <= 236:
-                spots.append((x, z, face_yaw(-x, -z)))
+            cx, cz = polar(b, r)
+            nx, nz = -math.sin(math.radians(b)), math.cos(math.radians(b))
+            x, z = cx + nx * side * (half + 2.2), cz + nz * side * (half + 2.2)
+            spots.append((x, z, face_yaw(-x, -z)))
+    pair(-90.0, SANCTUM[1] * -1 - 23.8 - 4.0, 10.0)          # the north avenue reaching the Sanctum
+    pair(90.0, ARRIVAL[1] - ARRIVAL[2] - 4.0, 10.0)           # the south avenue reaching the Arrival Plaza
+    pair(150.0, math.hypot(*SPRING) - 24.0 - 4.0, 8.0)        # the south-west avenue reaching the Qi Spring's court
+    pair(-30.0, RING_ROAD[0] - 5.0, 10.0)                     # the Market Avenue, where it crosses to the square
+    for name, (x, z, b) in bridges().items():
+        pair(b, RING_ROAD[1] + 3.5, APRON_HALF)               # each bridge's apron, on the verge past the Ring Road
     return spots
 
 
-def spring_channel(coll, mat, bands):
-    """HB_SpringChannel, in island coordinates: a marble channel with gold-capped walls carrying the spring's overflow to the edge,
-    its bed stepping down with the ground (never up), the water in it see-through. Returns (object, the lip where it pours off)."""
-    (ax, az), (bx, bz) = channel_line()
-    L = math.hypot(bx - ax, bz - az)
-    dx, dz = (bx - ax) / L, (bz - az) / L
-    px, pz = -dz, dx
-    n = max(2, int(L / 2.0))
-    mb = W.MeshBuilder()
-    bed = None
-    pts = []
-    for i in range(n + 1):
-        x, z = ax + dx * L * i / n, az + dz * L * i / n
-        g = ground(x, z) + LIFT
-        bed = g if bed is None else min(bed, g)
-        pts.append((x, bed, z))
-    w_in, w_out, wall_h = CHANNEL_HALF - 0.45, CHANNEL_HALF, 0.75
-    for (x0, y0, z0), (x1, y1, z1) in zip(pts, pts[1:]):
-        # the bed (under the water) and the two walls with their gold caps
-        q = lambda x, y, z, s_: (x + px * s_, y, z + pz * s_)
-        H.W_oriented(mb, [q(x0, y0, z0, -w_in), q(x0, y0, z0, w_in), q(x1, y1, z1, w_in), q(x1, y1, z1, -w_in)], (0, 1, 0), bands[H.LAPIS], 0.7)
-        for side in (-1, 1):
-            a_, b_ = side * w_in, side * w_out
-            top0, top1 = y0 + wall_h, y1 + wall_h
-            H.W_oriented(mb, [q(x0, top0, z0, a_), q(x0, top0, z0, b_), q(x1, top1, z1, b_), q(x1, top1, z1, a_)], (0, 1, 0), bands[H.GOLD], 1.0)
-            H.W_oriented(mb, [q(x0, y0, z0, a_), q(x1, y1, z1, a_), q(x1, top1, z1, a_), q(x0, top0, z0, a_)], (-px * side, 0, -pz * side), bands[H.MARBLE], 0.8)
-            H.W_oriented(mb, [q(x0, y0 - 0.6, z0, b_), q(x1, y1 - 0.6, z1, b_), q(x1, top1, z1, b_), q(x0, top0, z0, b_)], (px * side, 0, pz * side), bands[H.MARBLE], 0.85)
-    # the end: a marble lip the water spills over
-    x, y, z = pts[-1]
-    H.W_oriented(mb, [(x + px * -w_out, y - 0.6, z + pz * -w_out), (x + px * w_out, y - 0.6, z + pz * w_out), (x + px * w_out, y + wall_h, z + pz * w_out),
-                      (x + px * -w_out, y + wall_h, z + pz * -w_out)], (dx, 0, dz), bands[H.MARBLE], 0.8)
-    water = W.MeshBuilder()
-    for (x0, y0, z0), (x1, y1, z1) in zip(pts, pts[1:]):
-        q = lambda x, y, z, s_: (x + px * s_, y + 0.35, z + pz * s_)
-        H.W_oriented(water, [q(x0, y0, z0, -w_in), q(x0, y0, z0, w_in), q(x1, y1, z1, w_in), q(x1, y1, z1, -w_in)], (0, 1, 0), bands[H.CRYSTAL], 0.9)
-    lip = (x + dx * 0.2, y + 0.35, z + dz * 0.2)
-    return [mb.object("HB_SpringChannel", coll, mat), water.object("HB_SpringChannelWater", coll, mat)], lip
+# ---------- placements (staged for phase 3) ----------
+def _lua_v3(x, y, z):
+    return "Vector3.new(%.2f, %.2f, %.2f)" % (x, y, z)
 
 
-# ---------- placements ----------
-def site_frame(name):
-    x, z = site_centre(name)
-    return x, z, face_yaw(-x, -z)
-
-
-def write_placements(path=W.REPO + "/src/worldbuild/Placements/Yggdrasil.lua"):
+def write_placements(spots, path=None):
+    """src/worldbuild/Placements/Yggdrasil.lua. `spots`: hub_district.build()'s second result (each asset's signs, faces and spots)."""
     import re
-    old = open(path).read()
+    import hub_district as D
+    path = path or W.REPO + "/src/worldbuild/Placements/Yggdrasil.lua"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    old = open(W.REPO + "/src/worldbuild/Placements/Yggdrasil.lua").read()
     keep = {}
     for name in ("SI_RootShelf", "SI_CradleFloor"):
         m = re.search(r"        %s = \{\n(.*?)\n        \}," % name, old, re.S)
         keep[name] = m.group(1)
     relic = re.search(r"    Relics = \{.*?\},", old).group(0)
-    L = ["-- Generated by tools/blender/world/hub_ground.py (the celestial hub, 2026-11-12). Do not edit by hand.",
-         "-- Island-local Roblox studs. Kit entries place each piece's authored origin. HB_* are the hub's (Yggdrasil_Celestial.fbx);",
-         "-- SI_RootShelf / SI_CradleFloor are the great root's, kept from the hub before.", "return {", "    Kit = {"]
     kit = {}
 
     def add(name, x, y, z, yaw=0.0):
         kit.setdefault(name, []).append((x, y, z, yaw))
-    for name in ("HB_RingPlaza", "HB_Plazas", "HB_Avenues", "HB_PavingRunes", "HB_SpringChannel", "HB_SpringChannelWater"):
+    for name in PAVING + ("HB_RingParapet",):
         add(name, 0.0, 0.0, 0.0)
     for k, (x, z, yaw) in enumerate(lamp_layout()):
-        add("HB_CrystalLamp", x, ground(x, z) + LIFT, z, yaw)
-        add("HB_CrystalLampLight" if k % 2 == 0 else "HB_CrystalLampGlow", x, ground(x, z) + LIFT, z, yaw)
+        add("HB_CrystalLamp", x, _y(x, z), z, yaw)
+        add("HB_CrystalLampLight" if k % 2 == 0 else "HB_CrystalLampGlow", x, _y(x, z), z, yaw)
+    for _, b, _, _, (sx, sz) in pens():
+        yaw = face_yaw(math.cos(math.radians(b)), math.sin(math.radians(b)))     # facing its pen
+        add("HB_SpawnPad", sx, ground(sx, sz), sz, yaw)
+        add("HB_SpawnPadGlow", sx, ground(sx, sz), sz, yaw)
+    add("HB_SquareCompass", SQUARE[0], ground(SQUARE[0], SQUARE[1]), SQUARE[1])
+    add("HB_SquareCompassGlow", SQUARE[0], ground(SQUARE[0], SQUARE[1]), SQUARE[1])
+    add("HB_SanctumPlinth", SANCTUM[0], LIFT, SANCTUM[1])
+    sp_yaw = face_yaw(-SPRING[0], -SPRING[1])
+    add("HB_SpringPlinth", SPRING[0], LIFT, SPRING[1], sp_yaw)
+    add("HB_MerchantDais", MERCHANT[0], ground(*MERCHANT), MERCHANT[1], math.pi)
+    add("HB_MerchantDaisGlow", MERCHANT[0], ground(*MERCHANT), MERCHANT[1], math.pi)
+    L = ["-- Generated by tools/blender/world/hub_ground.py (the hub's redesign, 2026-11-15). Do not edit by hand.",
+         "-- Island-local Roblox studs. Kit entries place each piece's authored origin. HB_* are the hub's (Yggdrasil_Celestial.fbx and",
+         "-- Yggdrasil_District.fbx); SI_RootShelf / SI_CradleFloor are the great root's, kept from the hub before.", "return {", "    Kit = {"]
     for name in sorted(kit):
         L.append("        %s = {" % name)
         for x, y, z, yaw in kit[name]:
-            L.append("            { Position = Vector3.new(%.2f, %.2f, %.2f), Yaw = %.4f }," % (x, y, z, yaw))
+            L.append("            { Position = %s, Yaw = %.4f }," % (_lua_v3(x, y, z), yaw))
         L.append("        },")
     for name, body in keep.items():
         L += ["        %s = {" % name, body, "        },"]
     L.append("    },")
-    L.append("    -- the shops' sites: centre, size (width, depth) and the yaw that turns local +Z toward the tree")
+    L.append("    -- the shops' sites (the Merchants' Terrace): centre, size (width, depth) and the yaw that turns local +Z toward the Market Square")
     L.append("    Plots = {")
-    for name, size in (("Blacksmith", (24, 33)), ("BuySell", (36, 36)), ("Marketplace", (38, 38))):
-        x, z, yaw = site_frame(name)
-        L.append("        %s = { Centre = Vector3.new(%.2f, %.2f, %.2f), Size = Vector2.new(%g, %g), Yaw = %.4f }," % (name, x, LIFT, z, size[0], size[1], yaw))
+    for name, (x, z, w, d, yaw) in shops().items():
+        L.append("        %s = { Centre = %s, Size = Vector2.new(%g, %g), Yaw = %.4f }," % (name, _lua_v3(x, ground(x, z), z), w, d, yaw))
     L.append("    },")
-    L.append("    -- each shop's name board, where its prompt stands and its effects, in its site's frame (hub_celestial.py)")
+    L.append("    -- each shop's name board, where its prompt stands and its effects, in its site's frame (hub_district.py)")
     L.append("    Shops = {")
-    shops = {
-        "Blacksmith": (H.BS_SIGN, H.BS_PROMPT, [("Forge", H.BS_CORE), ("Smoke", H.BS_SMOKE)]),
-        "BuySell": (H.BV_SIGN, H.BV_PROMPT, [("Stones", (-H.BV_PAN_X, H.BV_PAN_Y + 1.0, H.BV_C[1] + H.BV_R + 1.55))]),
-        "Marketplace": (H.MK_SIGN, H.MK_PROMPT, [("Coins", (0.0, H.MK_EGG_Y, 0.0))]),
+    shop_spots = {
+        "Blacksmith": (spots["Blacksmith"]["Sign"], D.BS_SIGN_SIZE, D.BS_PROMPT,
+                       [("Forge", D.BS_HEARTH), ("Smoke", (D.BS_TOWER[0], D.BS_TOWER[3] + 7.5, D.BS_TOWER[1]))]),
+        "BuySell": (spots["BuySell"]["Sign"], D.BV_SIGN_SIZE, D.BV_PROMPT, [("Stones", (D.BV_DRUM[0] - D.BV_SCALE[0], D.BV_SCALE[2] + 1.0, D.BV_DRUM[1]))]),
+        "Marketplace": (spots["Market"]["Sign"], D.MK_SIGN_SIZE, D.MK_PROMPT, [("Coins", D.MK_FX)]),
     }
-    for name, ((sc, ss), prompt, fx) in shops.items():
+    for name, (sc, ss, prompt, fx) in shop_spots.items():
         L.append("        %s = {" % name)
-        L.append("            Sign = { Centre = Vector3.new(%g, %g, %.2f), Size = Vector2.new(%g, %g) }," % (sc[0], sc[1], sc[2] + 0.03, ss[0], ss[1]))
+        L.append("            Sign = { Centre = Vector3.new(%g, %g, %g), Size = Vector2.new(%g, %g) }," % (sc[0], sc[1], sc[2], ss[0], ss[1]))
         L.append("            Prompt = Vector3.new(%g, %g, %g)," % prompt)
         L.append("            Fx = {")
         for kind, p in fx:
@@ -441,30 +563,31 @@ def write_placements(path=W.REPO + "/src/worldbuild/Placements/Yggdrasil.lua"):
         L.append("            },")
         L.append("        },")
     L.append("    },")
-    sx, sz = site_centre("Spawn")
-    L.append("    Spawn = Vector3.new(%.2f, %.2f, %.2f)," % (sx, LIFT + 1.98, sz))
-    qx, qz, qyaw = site_frame("QiSpring")
-    lip = SPRING_LIP or spring_channel_lip()
-    L.append("    -- the Qi Spring (hub_celestial.qi_spring): its frame, and where its channel pours off the island (WorldBuilder.buildQiSpring)")
+    L.append("    -- the hub's own spawn: the Arrival Plaza (for a player without a pen yet); each player's own spawn is before their pen")
+    L.append("    Spawn = %s," % _lua_v3(ARRIVAL[0], _y(ARRIVAL[0], ARRIVAL[1]) + 1.98, ARRIVAL[1]))
+    L.append("    -- the six pen spawn pads (HB_SpawnPad), in pen order: where each holder spawns, facing their pen (Pastures.lua Spawn)")
+    L.append("    PenSpawns = {")
+    for i, b, _, _, (sx, sz) in pens():
+        L.append("        { Position = %s, Yaw = %.4f }," % (_lua_v3(sx, ground(sx, sz) + D.SP_TOP, sz), face_yaw(math.cos(math.radians(b)), math.sin(math.radians(b)))))
+    L.append("    },")
     L.append("    -- the hub's people (hub_npcs.py): each one's HumanoidRootPart and the yaw that turns its face (-Z) where it looks")
     L.append("    Npcs = {")
-    for npc, (site, (lx, ly, lz), turn) in NPC_SPOTS.items():
-        x, z, yaw = site_frame(site)
+    sh = shops()
+    for npc, (site, (lx, ly, lz)) in (("Forgemaster", ("Blacksmith", D.BS_SMITH)), ("Curator", ("Marketplace", D.MK_CURATOR)),
+                                     ("Appraiser", ("BuySell", D.BV_APPRAISER))):
+        x, z, _, _, yaw = sh[site]
         wx = x + lx * math.cos(yaw) + lz * math.sin(yaw)
         wz = z - lx * math.sin(yaw) + lz * math.cos(yaw)
-        L.append("        %s = { Position = Vector3.new(%.2f, %.2f, %.2f), Yaw = %.4f }," % (npc, wx, LIFT + ly + HRP_OVER_FEET, wz, yaw + math.pi + turn))
+        L.append("        %s = { Position = %s, Yaw = %.4f }," % (npc, _lua_v3(wx, ground(x, z) + ly + HRP_OVER_FEET, wz), yaw + math.pi))
     gx, gz = GUIDE_SPOT
-    sx, sz = site_centre("Spawn")
-    L.append("        Guide = { Position = Vector3.new(%.2f, %.2f, %.2f), Yaw = %.4f }," % (gx, ground(gx, gz) + LIFT + HRP_OVER_FEET, gz, face_yaw(sx - gx, sz - gz) + math.pi))
+    L.append("        Guide = { Position = %s, Yaw = %.4f }," % (_lua_v3(gx, _y(gx, gz) + HRP_OVER_FEET, gz), face_yaw(ARRIVAL[0] - gx, ARRIVAL[1] - gz) + math.pi))
     L.append("    },")
-    lx, lz = polar(MONUMENT[0], MONUMENT[1])
-    sx, sz = site_centre("Spawn")
-    L.append("    -- the Ascension Board (WorldBuilder.buildLeaderboard), facing the spawn")
-    L.append("    Leaderboard = { Centre = Vector3.new(%.2f, %.2f, %.2f), Yaw = %.4f }," % (lx, LIFT, lz, face_yaw(sx - lx, sz - lz)))
-    mx, mz = polar(*MERCHANT)
-    L.append("    -- the Wandering Merchant's camp (MerchantService: there for 10 minutes at the top of every hour), facing the tree")
-    L.append("    Merchant = { Centre = Vector3.new(%.2f, %.2f, %.2f), Yaw = %.4f }," % (mx, ground(mx, mz), mz, face_yaw(-mx, -mz)))
-    L.append("    QiSpring = { Centre = Vector3.new(%.2f, %.2f, %.2f), Yaw = %.4f, SpillEnd = Vector3.new(%.2f, %.2f, %.2f) }," % (qx, LIFT, qz, qyaw, lip[0], lip[1], lip[2]))
+    L.append("    -- the Ascension Board (WorldBuilder.buildLeaderboard): at the head of the south avenue, facing the Arrival Plaza")
+    L.append("    Leaderboard = { Centre = %s, Yaw = %.4f }," % (_lua_v3(LEADERBOARD[0], ground(*LEADERBOARD), LEADERBOARD[1]), face_yaw(0.0, 1.0)))
+    L.append("    -- the Wandering Merchant's camp (MerchantService), on his dais (HB_MerchantDais, top %.2f over the ground), facing the bridges" % D.MD_TOP)
+    L.append("    Merchant = { Centre = %s, Yaw = %.4f }," % (_lua_v3(MERCHANT[0], ground(*MERCHANT) + D.MD_TOP, MERCHANT[1]), face_yaw(0.0, -1.0)))
+    L.append("    -- the Qi Spring (hub_celestial.qi_spring) on its new plinth, facing the tree; no channel or waterfall since the redesign")
+    L.append("    QiSpring = { Centre = %s, Yaw = %.4f }," % (_lua_v3(SPRING[0], LIFT, SPRING[1]), sp_yaw))
     L.append("    " + relic.strip())
     L += ["}", ""]
     with open(path, "w") as f:
@@ -472,39 +595,29 @@ def write_placements(path=W.REPO + "/src/worldbuild/Placements/Yggdrasil.lua"):
     return path
 
 
-SPRING_LIP = None
-
-
-def spring_channel_lip():
-    import bpy
-    coll = W.collection("Hub_ChannelProbe")
-    objs, lip = spring_channel(coll, None, W.atlas_image("Hub_CelestialAtlas", 512, H.HUB_STRIPS)[1])
-    for o in objs:
-        bpy.data.objects.remove(o, do_unlink=True)
-    return lip
-
-
-# ---------- the export ----------
-def build():
-    img, bands = W.atlas_image("Hub_CelestialAtlas", 512, H.HUB_STRIPS)
-    mat = W.textured_material("Hub_CelestialMat", img)
-    coll = W.collection("Hub_CelestialExport")
-    W.clear_collection(coll)
-    H.MARBLE_BAND, H.GOLD_BAND = bands[H.MARBLE], bands[H.GOLD]
-    global SPRING_LIP
-    objs = [fn(coll, mat, bands) for fn in H.BUILDINGS] + [lamp_light(coll, mat, bands)]
-    objs += paving(coll, mat, bands)
-    channel, SPRING_LIP = spring_channel(coll, mat, bands)
-    objs += channel
-    import hub_finish
-    return hub_finish.finish(objs, bands, coll), img
-
-
-def export():
-    """assets/world/Yggdrasil/Yggdrasil_Celestial.fbx (+ its atlas PNG): every HB_ piece. Paving in island coordinates, everything else
-    at the origin. WB.storeKit("Yggdrasil", <import>, "HB_Anchor")."""
-    objs, img = build()
-    path = W.REPO + "/assets/world/Yggdrasil/Yggdrasil_Celestial.fbx"
-    # (no texture: since the finish pass each mesh is one material, coloured in the game: WorldBuilder.MaterialLooks)
-    W.export_batch(objs, path, image=None, anchor_name="HB_Anchor")
-    return path, objs
+def write_pastures(path=None):
+    """src/worldbuild/Placements/Pastures.lua: the pens on their ring, each with its spawn before it."""
+    path = path or W.REPO + "/src/worldbuild/Placements/Pastures.lua"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    header = [
+        "-- Generated by tools/blender/world/hub_ground.py (write_pastures; the hub's redesign, 2026-11-15). Do not edit by hand.",
+        "-- The six beast pen spots on Yggdrasil: the ONE table of where pens stand, read by the builder (PastureBuilder: the paving ring, the",
+        "-- gate, the board, the spawn) and by the server (PenService: each spot's area name and order; it gives players spots in this order).",
+        "-- The pen's look and growth (shared/PenLayout, client/Pets/PenFence) are drawn in a spot's own frame.",
+        "--   Area       what players are told (\"Your Beast Pasture: the south-east ring\")",
+        "--   Centre     the spot's centre, island-local studs (the hub's ground is Y 0 here: the builder sets it on the terrain under it)",
+        "--   Yaw        turns the spot's -Z (the pen's gate) toward the World Tree",
+        "--   Footprint  the most ground the spot may use (X, Z studs): the largest pen level and its paving ring must fit (PastureBuilder checks)",
+        "--   Spawn      where its holder spawns, spot-local, facing the pen: the pad 10 studs before the board's line (PastureBuilder puts a",
+        "--              SpawnLocation there; PenService sets the holder's PenSpawn; WorldService spawns and returns them there)",
+        "-- Six pens on a ring round the World Tree (r %g), clockwise from the south-east; players are given them in this order, so a small" % PEN_R,
+        "-- server fills the two beside the Arrival Plaza first.",
+    ]
+    L = header + ["return {"]
+    for (i, b, (cx, cz), yaw, _), area in zip(pens(), PEN_AREAS):
+        L.append('    { Area = "%s", Centre = Vector3.new(%.2f, 0, %.2f), Yaw = %.4f, Footprint = Vector2.new(%g, %g), Spawn = Vector3.new(0, 0, %g) },'
+                 % (area, cx, cz, yaw, PEN_FOOTPRINT[0], PEN_FOOTPRINT[1], SPAWN_Z))
+    L += ["}", ""]
+    with open(path, "w") as f:
+        f.write("\n".join(L))
+    return path

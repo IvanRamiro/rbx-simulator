@@ -18,10 +18,10 @@ local bonus = GameConfig.TrainingStation.QiBonusPercent
 local PAGES = {
     "Welcome to Yggdrasil, %s! I'm Seren. The World Tree keeps every cultivator who comes home to it. Let me show you around.",
     "Press E, or the Cultivate button, to meditate and gather Qi. The more Qi you gather, the higher your rank, and the brighter your aura.",
-    "East of the tree is the Qi Spring. Cultivate inside its ring of runes and you gather " .. bonus .. "% more Qi.",
+    "You woke beside your own pen: put beasts in it to watch them roam. Down the south-west avenue is the Qi Spring: cultivate inside its runes for " .. bonus .. "% more Qi.",
     "The bridges lead to the outer islands. Weaken a guardian, take an egg from its stands and carry it home across the bridge.",
-    "Hatch your eggs at the Hatching Sanctum. Brann at the Blacksmith forges weapons, Lyra at the Marketplace sells eggs, and Corvin at Buy & Sell trades your spares for Spirit Stones.",
-    "And keep an eye on the north lawn: every hour, for ten minutes, the Wandering Merchant camps there with rare deals. Good luck, cultivator!",
+    "Hatch your eggs at the Hatching Sanctum, up the north avenue. Across the tree to the north-east is the Market Square: Brann at the Blacksmith forges weapons, Lyra at the Marketplace sells eggs, and Corvin at Buy & Sell trades your spares for Spirit Stones.",
+    "And keep an eye on the dais beside the World Tree, on its north side: every hour, for ten minutes, the Wandering Merchant sets out his wares there. Good luck, cultivator!",
 }
 
 local window = Hud.window({

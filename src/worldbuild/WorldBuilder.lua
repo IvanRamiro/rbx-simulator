@@ -294,6 +294,15 @@ WorldBuilder.Collision = {
     -- the stele's roof and the shops' open halls would close a hull over the space under them
     -- the celestial hub: you walk into the Sanctum, the Market's arcade, the forge and round the vault (longest names first: a
     -- prefix matches every piece that starts with it)
+    -- (the hub's redesign, 2026-11-15) a hull would fill the arc in front of the parapet and the Merchant's screen
+    { Prefix = "HB_RingParapet", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "HB_MerchantDaisGlow", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_MerchantDais", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "HB_SquareCompassGlow", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_SquareCompass", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "HB_SpawnPad", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HB_SanctumPlinth", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "HB_SpringPlinth", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "HB_HatchSanctum", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "HB_HatchGlass", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "HB_MarketCanopy", Fidelity = Enum.CollisionFidelity.Box },
@@ -453,6 +462,18 @@ do
     WorldBuilder.Appearance.HB_BridgeGateGlow = { Material = Enum.Material.Neon, CanCollide = false, CastShadow = false } -- (coloured per route)
     WorldBuilder.Appearance.HB_LeaderboardGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(226, 240, 255), CanCollide = false, CastShadow = false }
     WorldBuilder.Appearance.HB_SpringGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(90, 220, 255), CanCollide = false, CastShadow = false }
+    -- the hub's redesign (2026-11-15, tools/blender/world/hub_district.py and hub_ground.py): the Ring Road, the bridges' aprons and the
+    -- parapet over the great root's cove; the spawn pads, the Merchant's dais, the Market Square's centrepiece and the new plinths
+    for _, name in { "HB_RingRoadNE", "HB_RingRoadSE", "HB_RingRoadSW", "HB_RingRoadNW", "HB_Aprons" } do
+        WorldBuilder.Appearance[name] = { CanCollide = false, CastShadow = false }
+        WorldBuilder.Appearance[name .. "__Gold"] = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(226, 176, 70) }
+    end
+    for _, name in { "HB_SpawnPadGlow", "HB_SquareCompassGlow", "HB_MerchantDaisGlow" } do
+        WorldBuilder.Appearance[name] = { Material = Enum.Material.Neon, Color = CRYSTAL, CanCollide = false, CastShadow = false }
+    end
+    for _, name in { "HB_SpawnPad", "HB_SanctumPlinth", "HB_SpringPlinth" } do
+        WorldBuilder.Appearance[name] = { CastShadow = false }
+    end
 end
 
 WorldBuilder.Appearance.EP_ArenaGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 78, 14), CanCollide = false, CastShadow = false }
@@ -659,7 +680,8 @@ WorldBuilder.MaterialLooks = {
     Marble = { Material = Enum.Material.Marble, Color = Color3.fromRGB(238, 236, 232) },
     Shade = { Material = Enum.Material.Marble, Color = Color3.fromRGB(176, 176, 180) }, -- grout lines, undersides
     Lapis = { Material = Enum.Material.Marble, Color = Color3.fromRGB(40, 62, 138) },
-    Gold = { Material = Enum.Material.Metal, Color = Color3.fromRGB(242, 194, 82) }, -- (226, 178, 64 read olive in shade)
+    Gold = { Material = Enum.Material.Metal, Color = Color3.fromRGB(255, 172, 48) }, -- warm, so Metal's sky reflection reads gold, not olive
+                                                                                     -- (242, 194, 82 went olive on the vault's dome, seen in Studio 2026-11-15)
     GoldFlat = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(226, 176, 70) }, -- gold faces looking straight up: Metal mirrored the sky on them, green-olive
     Steel = { Material = Enum.Material.Metal, Color = Color3.fromRGB(170, 176, 186) },
     Slate = { Material = Enum.Material.Slate, Color = Color3.fromRGB(64, 66, 76) },
@@ -1686,11 +1708,11 @@ end
 -- ("Board"), whose SurfaceGui holds a heading and rows "Row1".."Row<BoardRows>", each with Place, Cultivator, Rank and Qi labels.
 -- LeaderboardService writes the names; the builder leaves the rows empty.
 WorldBuilder.BoardRows = 10
-WorldBuilder.Board = {
+WorldBuilder.Board = {   -- (the hub's redesign, 2026-11-15: tools/blender/world/hub_district.py leaderboard, its LB_ spots)
     Pieces = { "HB_Leaderboard", "HB_LeaderboardGlow" },
-    Title = { Centre = Vector3.new(0, 12.15, 0.65), Size = Vector2.new(8.2, 1.3) },   -- (hub_celestial.LB_TITLE, just off its face)
-    Face = { Centre = Vector3.new(0, 6.6, 0.6), Size = Vector2.new(10.4, 8.6) },     -- (hub_celestial.LB_BOARD)
-    Star = Vector3.new(0, 15.8, 0),
+    Title = { Centre = Vector3.new(0, 15.35, 1.09), Size = Vector2.new(11, 1.35) },  -- (LB_TITLE, just off its lapis face)
+    Face = { Centre = Vector3.new(0, 8.6, 1.09), Size = Vector2.new(20, 10.4) },     -- (LB_FACE)
+    Star = Vector3.new(0, 21.3, 0),
 }
 local BOARD_INK = { Color3.fromRGB(255, 210, 95), Color3.fromRGB(225, 232, 245), Color3.fromRGB(235, 160, 95) } -- the top three
 local BOARD_TEXT = Color3.fromRGB(236, 230, 214)
@@ -1756,7 +1778,7 @@ WorldBuilder.Plots = {
     BuySell = { Title = "Buy & Sell", Built = "Gilded Vault" },
 }
 -- ---------- the shops (Yggdrasil) ----------
--- Each shop's building (tools/blender/world/hub_celestial.py): its plot, the kit pieces it is made of
+-- Each shop's building (tools/blender/world/hub_district.py since the hub's redesign, 2026-11-15): its plot, the kit pieces it is made of
 -- and what its prompt says. ShopService opens the shop named by the prompt's "Shop" attribute.
 WorldBuilder.Shops = {
     Blacksmith = { Plot = "Blacksmith", Pieces = { "HB_Blacksmith", "HB_BlacksmithCore", "HB_BlacksmithCrystal" }, Action = "Browse" },
@@ -2038,7 +2060,10 @@ function WorldBuilder.buildQiSpring(island)
     label.Text = stationRules.DisplayName .. "\nCultivate here: +" .. stationRules.QiBonusPercent .. "% Qi"
     label.Parent = sign
 
-    WorldBuilder.buildWaterfall(station, islandPoint(island, spot.SpillEnd), frame.Position, WorldBuilder.Falls.Water)
+    -- (since the hub's redesign, 2026-11-15, the spring has no channel to the edge: no SpillEnd, no waterfall)
+    if spot.SpillEnd then
+        WorldBuilder.buildWaterfall(station, islandPoint(island, spot.SpillEnd), frame.Position, WorldBuilder.Falls.Water)
+    end
     station.Parent = model
     WorldBuilder.applyCollision(station)
     return station

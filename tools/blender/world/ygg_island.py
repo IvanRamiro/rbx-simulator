@@ -106,13 +106,65 @@ def rim(theta):
         want = math.hypot(x, z) + reach - r
         if want > 0:
             r += want * math.exp(-(((d - math.degrees(math.atan2(z, x)) + 180) % 360 - 180) / width) ** 2)
-    # the spring's cove: the rim passes just inside the spill's end
-    spill_r = math.hypot(*SPILL)
-    cove = r - (spill_r - 0.8)
-    if cove > 0:
-        arc = math.radians((d - math.degrees(math.atan2(SPILL[1], SPILL[0])) + 180) % 360 - 180) * spill_r
-        r -= cove * math.exp(-(arc / 8.7) ** 2)
-    return r
+    # (the old spring's cove went with the hub's redesign, 2026-11-15: the Qi Spring stands inside the Ring Road now, with no channel)
+    # the Ring Road (r 216-236) keeps a grass verge to the edge: the rim never comes in closer than RIM_MIN, except over the great
+    # root's cove (its shelves hang under the rim there; a parapet runs along the road instead)
+    cove = math.exp(-(((d - 72.0 + 180) % 360 - 180) / 14.0) ** 4)
+    r = max(r, RIM_MIN * (1 - cove) + r * cove)
+    # the Merchants' Terrace: the shops' district on new ground out of the north-east rim
+    return max(r, terrace_reach(d))
+
+
+# ---------- the Merchants' Terrace (the hub's redesign, 2026-11-15: "Far side, like the reference") ----------
+# The new ground covers the Market Square's outer half and each shop's footprint plus TERRACE_MARGIN, along each bearing the
+# farthest any of those discs reaches, smoothed over +-4 degrees, and keeps clear of the Origin Abyss bridge's deck: no new ground
+# within TERRACE_CLEAR degrees east of that bridge's line (32 studs at the old rim), faded in over 3 more degrees. The same outline
+# as the approved phase-1 blockout and the plan (renders/hub_redesign/LAYOUT_PLAN.md).
+RIM_MIN = 248.0
+MARKET_SQUARE = (226.5, -110.5, 28.0)                    # centre x, z, radius
+DISTRICT = {   # name: (centre x, z, width along the front, depth): each faces the square
+    "Blacksmith": (235.3, -194.0, 40.0, 44.0),
+    "Marketplace": (304.4, -141.9, 48.0, 40.0),
+    "BuySell": (288.9, -54.3, 40.0, 40.0),
+}
+TERRACE_MARGIN, TERRACE_SQUARE_DISC = 18.0, 50.0
+TERRACE_CLEAR = 7.4
+TERRACE_KEEP = "OriginRoute"
+
+
+def _terrace_discs():
+    out = [(MARKET_SQUARE[0], MARKET_SQUARE[1], TERRACE_SQUARE_DISC)]
+    for x, z, w, dp in DISTRICT.values():
+        out.append((x, z, math.hypot(w, dp) / 2 + TERRACE_MARGIN))
+    return out
+
+
+TERRACE_DISCS = _terrace_discs()
+
+
+def _disc_reach(d):
+    a = math.radians(d)
+    ux, uz = math.cos(a), math.sin(a)
+    far = 0.0
+    for cx, cz, R in TERRACE_DISCS:
+        along = ux * cx + uz * cz
+        across2 = cx * cx + cz * cz - along * along
+        if across2 < R * R:
+            far = max(far, along + math.sqrt(R * R - across2))
+    return far
+
+
+def terrace_reach(d):
+    """How far the Merchants' Terrace reaches along bearing d (degrees), 0 where it doesn't."""
+    keep = math.degrees(math.atan2(EXITS[TERRACE_KEEP][1], EXITS[TERRACE_KEEP][0]))
+    rel = (d - keep + 180) % 360 - 180
+    if rel < TERRACE_CLEAR or rel > 120:
+        return 0.0
+    # rounded shoulders: a disc's reach counts at neighbouring bearings less the square of how far off it is, so the new rim
+    # curves back to the old one over several degrees instead of stepping
+    far = max(_disc_reach(d + k * 0.5) - 0.35 * (k * 0.5) ** 2 for k in range(-24, 25))
+    from worldlib import smoothstep
+    return far * smoothstep(TERRACE_CLEAR, TERRACE_CLEAR + 3.0, rel) if far > 0 else 0.0
 
 
 # ---------- paths ----------

@@ -1,6 +1,8 @@
--- Spawning, fall safety, bridge access and lighting for the floating islands. Everyone spawns at
--- Yggdrasil's "IslandSpawn". Every other island has a "Checkpoint" part; a player who falls far below
--- the island they last stood on returns to its checkpoint. A player below a bridge's RankId
+-- Spawning, fall safety, bridge access and lighting for the floating islands. Each player spawns on their own pen's spawn pad
+-- in the hub, facing the pen (the hub's redesign, 2026-11-15: PenService's PenSpawn attribute, the pasture's "Spawn"
+-- SpawnLocation); a player without a pen (a seventh, or before their pen is given) spawns at Yggdrasil's "IslandSpawn" on the
+-- Arrival Plaza. Every other island has a "Checkpoint" part; a player who falls far below the island they last stood on returns
+-- to its checkpoint (on the hub: to their own pad). A player below a bridge's RankId
 -- (FloatingIslands.Bridges) who is past its Qi barrier, or on the island it leads to, is put back in
 -- front of the barrier. (Yggdrasil's named spawn slots went with the hub's rebuild of 2026-11-12;
 -- their code was removed 2026-11-13.)
@@ -38,25 +40,52 @@ local function checkpointOf(player, islandName)
     return island and (island:FindFirstChild("Checkpoint") or island:FindFirstChild("IslandSpawn"))
 end
 
--- The built island whose footprint covers this position, if any.
+-- The pasture "Spawn" (a SpawnLocation on the player's pen's pad) if they hold a pen, else nil.
+local function penSpawnOf(player)
+    local index = player:GetAttribute("PastureIndex")
+    local pastures = typeof(index) == "number" and index > 0 and startIsland:FindFirstChild("BeastPastures")
+    local pasture = pastures and pastures:FindFirstChild("Pasture" .. index)
+    local point = pasture and pasture:FindFirstChild("Spawn")
+    return if point and point:IsA("SpawnLocation") then point else nil
+end
+
+-- The built island whose footprint covers this position, if any (Reach: how far an island's ground runs from its centre, where its
+-- Radius alone would fall short; otherwise 1.3 Radius).
+-- Where two reaches overlap (the hub's and the Beginner Isle's, by the Lion Gate), the island the point is relatively nearest wins.
 local function islandAt(position)
+    local best, bestRatio = nil, math.huge
     for name, island in WorldConfig.Islands do
         local offset = Vector2.new(position.X - island.Centre.X, position.Z - island.Centre.Z)
-        if offset.Magnitude <= island.Radius * 1.3 and islandsFolder:FindFirstChild(name) then
-            return name
+        local ratio = offset.Magnitude / (island.Reach or island.Radius * 1.3)
+        if ratio <= 1 and ratio < bestRatio and islandsFolder:FindFirstChild(name) then
+            best, bestRatio = name, ratio
         end
     end
-    return nil
+    return best
+end
+
+-- Stands a character where a CFrame on the ground says, facing as it does (the root part 3 studs over the feet).
+local function standAt(player, character, at)
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then
+        return
+    end
+    rootPart.AssemblyLinearVelocity = Vector3.zero
+    local to = at + Vector3.new(0, 3.2, 0)
+    MovementGuard.reset(player, to.Position)
+    character:PivotTo(to)
 end
 
 local function returnToCheckpoint(player, character, islandName)
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    -- on the hub, a player with a pen goes back to their own pad
+    local pen = player:GetAttribute("PenSpawn")
+    if islandName == WorldConfig.StartIsland and typeof(pen) == "CFrame" then
+        standAt(player, character, pen + Vector3.new(0, 0.45, 0))
+        return
+    end
     local checkpoint = checkpointOf(player, islandName) or checkpointOf(player, WorldConfig.StartIsland)
-    if rootPart and checkpoint then
-        rootPart.AssemblyLinearVelocity = Vector3.zero
-        local to = checkpoint.CFrame + Vector3.new(0, 4, 0)
-        MovementGuard.reset(player, to.Position)
-        character:PivotTo(to)
+    if checkpoint then
+        standAt(player, character, checkpoint.CFrame + Vector3.new(0, 0.8, 0))
     end
 end
 
@@ -66,10 +95,34 @@ local function setIsland(player, name)
     player:SetAttribute("Island", name)
 end
 
+-- When a player's pen is given (or taken), their respawn follows it; a character that has only just arrived at the Arrival Plaza
+-- (their first, before PenService knew their pen) is moved to the pad at once.
+local spawnedAt = {}
+local function followPen(player)
+    player.RespawnLocation = penSpawnOf(player) or startIsland.IslandSpawn
+    local pen = player:GetAttribute("PenSpawn")
+    local character = player.Character
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    if typeof(pen) == "CFrame" and rootPart and os.clock() - (spawnedAt[player] or 0) < 15
+        and (rootPart.Position - startIsland.IslandSpawn.Position).Magnitude < 30 then
+        standAt(player, character, pen + Vector3.new(0, 0.45, 0))
+    end
+end
+
 local function setupPlayer(player)
     setIsland(player, WorldConfig.StartIsland)
     -- RespawnLocation needs the SpawnLocation itself, never a plain checkpoint part
     player.RespawnLocation = startIsland.IslandSpawn
+    player:GetAttributeChangedSignal("PenSpawn"):Connect(function()
+        followPen(player)
+    end)
+    player.CharacterAdded:Connect(function()
+        spawnedAt[player] = os.clock()
+    end)
+    if player.Character then
+        spawnedAt[player] = os.clock()
+    end
+    followPen(player)
 end
 
 applyLighting(WorldConfig.Lighting)
@@ -143,6 +196,7 @@ Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(function(player)
     lastIsland[player] = nil
     lastBurn[player] = nil
+    spawnedAt[player] = nil
 end)
 for _, player in Players:GetPlayers() do
     setupPlayer(player)

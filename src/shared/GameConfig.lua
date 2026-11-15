@@ -161,7 +161,7 @@ local GameConfig = {
     -- hatched. Centre is island-local (on the ground), Yaw turns its front (local +Z) toward the
     -- World Tree and the bridges. Stage: seconds an egg rests in the cradle before it breaks (one
     -- egg at a time per player: the client's Hatch button waits as long).
-    HatchingAltar = { Island = "Yggdrasil", Centre = Vector3.new(142.83, 0.25, 51.99), Yaw = -1.92, Stage = 3.8 }, -- the Hatching Sanctum, east of the World Tree, facing it (the hub rebuilt 2026-11-12: hub_ground.SITES). Stage: seconds to the crack, the length of the hatch cinematic
+    HatchingAltar = { Island = "Yggdrasil", Centre = Vector3.new(0, 0.25, -178), Yaw = 0, Stage = 3.8 }, -- the Hatching Sanctum, on the north avenue between the Merchant and the Ring Road, facing the tree (the hub's redesign, 2026-11-15: hub_ground.SANCTUM). Stage: seconds to the crack, the length of the hatch cinematic
     -- the size of a stand's egg (and a carried one): studs per unit of its Blender model
     EggStudsPerUnit = 1.3,
     EggGlowTag = "GlowingEgg",
@@ -593,11 +593,11 @@ local GameConfig = {
             Way = { "the Stone Lion", -480, 24 },
             Text = "Weaken a guardian until it falters, then take an egg from its stands. It will chase you!" },
         { Id = "Hatch", Kind = "Hatch", Reward = 80, Title = "Hatch It",
-            Way = { "the Hatching Sanctum", 128, 47 },
+            Way = { "the Hatching Sanctum", 0, -178 },
             Text = "Carry the egg home across the bridge to Yggdrasil, then hatch it at the Hatching Sanctum." },
         -- the path on, island by island. Append only: a save holds its step number
         { Id = "Weapon", Kind = "BuyWeapon", Reward = 40, Title = "A Weapon of Your Own",
-            Way = { "the Blacksmith", -118, 74 },
+            Way = { "the Blacksmith", 233, -172 },
             Text = "Visit the Blacksmith on Yggdrasil and buy a spear or a better sword." },
         { Id = "Root", Kind = "Relic", Goal = "IslandRoot", Reward = 40, Title = "The Root of the Island",
             Way = { "the great root", 1, 238, Then = { "the relic", 88.5, 127, 153.3 } }, -- Then: where the world marker points once the player has reached the Way (QuestController)
@@ -617,7 +617,7 @@ local GameConfig = {
             Way = { "the Ember Xuanwu", -128, -693 },
             Text = "Steal an egg from the Ember Xuanwu and carry it home. Jump its quake rings." },
         { Id = "Forge", Kind = "Forge", Reward = 100, Title = "Forge a Weapon",
-            Way = { "the Blacksmith", -118, 74 },
+            Way = { "the Blacksmith", 233, -172 },
             Text = "Secured eggs and relics unlock elements. Forge and name a weapon at the Blacksmith." },
         { Id = "Flight", Kind = "Rank", Goal = "FoundationInitiate", Reward = 150, Title = "Sword Flight",
             Text = "Break through to Foundation Initiate: you can ride your sword through the air." },

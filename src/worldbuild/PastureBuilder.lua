@@ -28,6 +28,7 @@ local CRYSTAL = Color3.fromRGB(96, 214, 255)    -- the hub's crystal blue, on Ne
 local BOARD = Color3.fromRGB(24, 25, 68)        -- the interface's navy, for the name board's face
 
 local groundAt -- (below: the terrain's height at a point)
+local spawnPad -- (below: a pasture's holder's spawn)
 
 local function part(name, size, cframe, parent, look)
     local p = Instance.new("Part")
@@ -97,6 +98,8 @@ local function prompt(holder, name, action, object)
 end
 
 -- the gate (its posts at the gap's two ends, on the front fence's line) and the owner's board before it
+local BOARD_SIDE = 9.5 -- studs left of the gate (its centre) the owner's board stands
+
 local function buildGateAndBoard(pasture, frame, area)
     local gate = frame * CFrame.new(0, 0, PenLayout.Front)
     gate = gate.Rotation + Vector3.new(gate.X, groundAt(gate.Position), gate.Z)
@@ -113,13 +116,16 @@ local function buildGateAndBoard(pasture, frame, area)
     penHolder.CanQuery = false
     prompt(penHolder, "PenPrompt", "Your pen", "Beast pen")
 
-    local board = frame * CFrame.new(0, 0, PenLayout.Board)
+    -- (the hub's redesign, 2026-11-15: the holder spawns 10 studs before the gate, the default camera right behind them, so the board
+    -- stands to the left of the gate, where neither their body nor their name tag hides it; raised over their head it sat right
+    -- behind the name tag)
+    local board = frame * CFrame.new(-BOARD_SIDE, 0, PenLayout.Board) * CFrame.Angles(0, math.rad(-12), 0)   -- (turned toward the spawn)
     board = board.Rotation + Vector3.new(board.X, groundAt(board.Position), board.Z)
     for _, side in { -1, 1 } do
-        part("BoardLeg", Vector3.new(0.9, 6.4, 0.9), board * CFrame.new(side * 5.2, 1.2, 0), pasture, MARBLE_LOOK)
+        part("BoardLeg", Vector3.new(0.9, 7.4, 0.9), board * CFrame.new(side * 5.2, 1.7, 0), pasture, MARBLE_LOOK)
     end
-    part("BoardFrame", Vector3.new(11, 3.2, 0.5), board * CFrame.new(0, 4.6, 0), pasture, GOLD_LOOK)
-    local face = part("Board", Vector3.new(10.4, 2.7, 0.6), board * CFrame.new(0, 4.6, 0), pasture,
+    part("BoardFrame", Vector3.new(11, 3.2, 0.5), board * CFrame.new(0, 5.4, 0), pasture, GOLD_LOOK)
+    local face = part("Board", Vector3.new(10.4, 2.7, 0.6), board * CFrame.new(0, 5.4, 0), pasture,
         { Material = Enum.Material.SmoothPlastic, Color = BOARD, CastShadow = false })
     surfaceText(face, 40)
     face:FindFirstChild("Area", true).Text = string.upper(area)
@@ -210,6 +216,32 @@ function PastureBuilder.frameOf(site)
     return CFrame.new(centre) * CFrame.Angles(0, site.Yaw, 0)
 end
 
+-- Its holder's spawn (the hub's redesign, 2026-11-15): an invisible SpawnLocation on the spawn pad (the kit's HB_SpawnPad, top 0.45 over
+-- the ground), turned to face the pen, so the character arrives looking at its pen. WorldService makes it the holder's RespawnLocation.
+-- Every player always has a RespawnLocation of their own, so the game never picks one of these for anyone else.
+local PAD_TOP = 0.45
+function spawnPad(pasture, frame, spawn)
+    local at = frame * CFrame.new(spawn) * CFrame.Angles(0, math.pi, 0)   -- (the spot's +Z, away from the tree, is toward its pen)
+    local ground = groundAt(at.Position)
+    local point = Instance.new("SpawnLocation")
+    point.Name = "Spawn"
+    point.Size = Vector3.new(6, 1, 6)
+    point.CFrame = CFrame.new(at.X, ground + PAD_TOP - 0.5, at.Z) * at.Rotation
+    point.Transparency = 1
+    point.Anchored = true
+    point.CanCollide = false
+    point.CanQuery = false
+    point.CanTouch = false
+    point.Neutral = true
+    point.AllowTeamChangeOnTouch = false
+    point.Duration = 0
+    for _, child in point:GetChildren() do
+        child:Destroy() -- the default decal
+    end
+    point.Parent = pasture
+    return point
+end
+
 function PastureBuilder.build()
     local hub = workspace:WaitForChild("FloatingIslands"):WaitForChild("Yggdrasil")
     local old = hub:FindFirstChild("BeastPastures")
@@ -227,6 +259,9 @@ function PastureBuilder.build()
         pasture:SetAttribute("Area", site.Area)
         layGround(frame, GROUND_RING)
         buildGateAndBoard(pasture, frame, site.Area)
+        if site.Spawn then
+            spawnPad(pasture, frame, site.Spawn)
+        end
         pasture.Parent = folder
         task.wait()
     end
