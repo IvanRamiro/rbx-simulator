@@ -33,6 +33,7 @@ local EVENT_NAMES = {
     "PerfEvent",
     "MerchantEvent",
     "PenEvent",
+    "SpinEvent",
 }
 
 local RemoteEvents = {}

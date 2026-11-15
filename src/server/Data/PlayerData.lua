@@ -26,9 +26,10 @@ local Rewards = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChil
 local TitleBook = require(script.Parent.Parent:WaitForChild("Titles"):WaitForChild("TitleBook"))
 local MerchantLedger = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("MerchantLedger"))
 local Receipts = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Receipts"))
+local SpinLedger = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("SpinLedger"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 19
+local SCHEMA_VERSION = 20
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -94,6 +95,7 @@ end
 -- MIGRATIONS[17] below (a missing Worth is worked out from its level and size by PetRules.worth);
 -- version 19 added the beast pen (PenService): PenLevel, which starts at 1, and Pen, the pets in it in order, which starts empty.
 -- (A test build's Pens, six pens of one pet each, never released, is read into Pen in order by sanitizeProgress.)
+-- version 20 added Spin (the Spin Wheel's day: SpinLedger), MIGRATIONS[19] below.
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -149,6 +151,12 @@ MIGRATIONS[17] = function(progress)
     return progress
 end
 
+-- Version 20 added the Spin Wheel (SpinLedger): an older save has spun nothing, so it starts with today's spins all left.
+MIGRATIONS[19] = function(progress)
+    progress.Spin = nil
+    return progress
+end
+
 -- Playtesting in Studio: with ServerStorage's StudioTestSave attribute set, saves go to a separate store of that name, so
 -- each new name starts a new player and a real save can't be touched (set to true, a store called "StudioTestSave").
 -- Ignored outside Studio.
@@ -194,6 +202,7 @@ local function sanitizeProgress(raw)
         Titles = TitleBook.sanitize(nil),
         Merchant = MerchantLedger.sanitize(nil),
         Receipts = Receipts.sanitize(nil),
+        Spin = SpinLedger.sanitize(nil),
     }
 
     if typeof(raw) ~= "table" then
@@ -293,6 +302,7 @@ local function sanitizeProgress(raw)
     progress.Titles = TitleBook.sanitize(raw.Titles)
     progress.Merchant = MerchantLedger.sanitize(raw.Merchant)
     progress.Receipts = Receipts.sanitize(raw.Receipts)
+    progress.Spin = SpinLedger.sanitize(raw.Spin)
 
     return progress
 end
@@ -333,6 +343,8 @@ local function captureProgress(player)
     local merchant = MerchantLedger.exportData(player) or (loaded and loaded.Merchant) or MerchantLedger.sanitize(nil)
     -- (and the Robux purchases given: kept as loaded until ExclusiveEggService sets them up)
     local receipts = Receipts.exportData(player) or (loaded and loaded.Receipts) or Receipts.sanitize(nil)
+    -- (and the Spin Wheel's day: kept as loaded until SpinService sets it up)
+    local spin = SpinLedger.exportData(player) or (loaded and loaded.Spin) or SpinLedger.sanitize(nil)
     if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings and rewards and codex) then
         -- nothing is saved until every part is set up: say once which part is missing, or a session could go unsaved unseen
         local profile = profiles[player]
@@ -374,6 +386,7 @@ local function captureProgress(player)
         Titles = titles,
         Merchant = merchant,
         Receipts = receipts,
+        Spin = spin,
     }
 end
 
@@ -693,6 +706,7 @@ function PlayerData.release(player)
     TitleBook.removePlayer(player)
     MerchantLedger.removePlayer(player)
     Receipts.removePlayer(player)
+    SpinLedger.removePlayer(player)
 
     if not profile then
         return

@@ -266,6 +266,22 @@ local catalog = {
         Duck = { 0.4, 3 }, Moment = 2.5, With = { { "RevealHarp", 0.05 }, { "RewardDing", 0.75 }, { "PremiumDust", 0.9 } } }, -- 407 x 0.55 = 224
     PremiumDust = { Id = "9114369623", Volume = 1.1, Start = 0.2, Length = 2, Fade = 0.6, Group = "Interface" },
 
+    -- ---------- the Spin Wheel (SpinController; the wheel's own sounds come from it, heard by anyone near) ----------
+    -- the push: an air rush as it starts (the takeoff's rush, 0.6); a tick each time a peg passes the pointer (the hatch reel's
+    -- card, sounded at the pointer, Max 3 so a fast run is a rattle, not a pile-up); a soft glowing thud as it stops
+    WheelStart = { Id = "9116416120", Volume = 0.6, Start = 1.5, Length = 1, Fade = 0.3, Near = 15, Reach = 90 },
+    WheelTick = { Id = "9119717971", Volume = 1.5, Pitch = { 0.96, 1.04 }, Near = 12, Reach = 70, Gap = 0.03, Max = 3, Length = 0.12, Fade = 0.05 },
+    WheelStop = { Id = "9116385087", Volume = 0.45, Pitch = 1.15, Near = 15, Reach = 90 },
+    -- what the spinner won, flat, by its size: a small one is RewardClaim; a big one (the large stones, the long Qi, an egg) the
+    -- glowing thud under the short rising harp and the ding; the jackpot the big-moment family with the angelic vocal
+    SpinWinBig = { Id = "9116385087", Volume = 0.6, Group = "Interface", Duck = { 0.5, 2.5 }, Moment = 2,
+        With = { { "RevealHarp", 0.05 }, { "RewardDing", 0.7 }, { "RewardTail", 0.8 } } },
+    SpinJackpot = { Id = "9116384485", Volume = 0.65, Start = 0.1, Length = 2.6, Fade = 0.6, Group = "Interface", Key = true,
+        Duck = { 0.25, 4.5 }, Moment = 3.5, With = { { "RevealHarp", 0.05 }, { "RevealChoir", 0 }, { "RewardDing", 0.8 }, { "PremiumDust", 0.9 } } },
+    -- the jackpot as anyone near the wheel hears it
+    SpinJackpotWorld = { Id = "9116384485", Volume = 0.4, Start = 0.1, Length = 2, Fade = 0.6, Near = 15, Reach = 160,
+        With = { { "SecureWorldHarp", 0.08 }, { "SecureWorldTail", 0.9 } } },
+
     -- ---------- the Wandering Merchant (everyone: the whole server hears his announcement) ----------
     MerchantArrive = { Id = "9114134470", Volume = 0.75, Group = "Interface", Length = 2.6, Fade = 0.5 },  -- a shop door's chime, 206 x 0.75
     MerchantLeave = { Id = "9114134274", Volume = 0.6, Pitch = 0.94, Group = "Interface", Length = 2.8, Fade = 0.6 }, -- 179 x 0.6

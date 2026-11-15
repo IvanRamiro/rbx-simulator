@@ -44,6 +44,7 @@ LEADERBOARD = (0.0, 118.0)     # faces south (+Z), down the south avenue to the 
 MERCHANT = (0.0, -120.0)       # faces north (-Z), up the north avenue to the bridges
 SANCTUM = (0.0, -178.0)        # the Hatching Sanctum (GameConfig.HatchingAltar), its front (+Z) toward the tree
 SPRING = (-147.2, 85.0)        # the Qi Spring, facing the tree
+SPIN_WHEEL = (253.7, -14.6)    # the Spin Wheel (SpinWheelBuilder), where the owner stood (2026-11-16), outside the Ring Road east, facing the tree
 ARRIVAL = (0.0, 176.0, 24.0)   # the Arrival Plaza: the hub's main spawn (IslandSpawn)
 GUIDE_SPOT = (10.0, 162.0)
 ROOT_HEAD = (0.0, 241.0)
@@ -588,6 +589,8 @@ def write_placements(spots, path=None):
     L.append("    Merchant = { Centre = %s, Yaw = %.4f }," % (_lua_v3(MERCHANT[0], ground(*MERCHANT) + D.MD_TOP, MERCHANT[1]), face_yaw(0.0, -1.0)))
     L.append("    -- the Qi Spring (hub_celestial.qi_spring) on its new plinth, facing the tree; no channel or waterfall since the redesign")
     L.append("    QiSpring = { Centre = %s, Yaw = %.4f }," % (_lua_v3(SPRING[0], LIFT, SPRING[1]), sp_yaw))
+    L.append("    -- the Spin Wheel (SpinWheelBuilder): its plinth's middle on the ground, outside the Ring Road east, facing the tree")
+    L.append("    SpinWheel = { Centre = %s, Yaw = %.4f }," % (_lua_v3(SPIN_WHEEL[0], ground(*SPIN_WHEEL), SPIN_WHEEL[1]), face_yaw(-SPIN_WHEEL[0], -SPIN_WHEEL[1])))
     L.append("    " + relic.strip())
     L += ["}", ""]
     with open(path, "w") as f:

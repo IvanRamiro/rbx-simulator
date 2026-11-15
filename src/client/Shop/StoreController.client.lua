@@ -447,11 +447,13 @@ eggBuy.Activated:Connect(function()
     MarketplaceService:PromptProductPurchase(player, EGG.ProductId)
 end)
 
--- an egg arrived (ProductService): say where it hatches
+-- an egg arrived (ProductService): say where it hatches. One won on the Spin Wheel (SpinService marks it "FreeEggAt", the server's
+-- time, just before) has its own message and sound (SpinController): no thanks for a purchase there.
 local heldEggs = player:GetAttribute("Egg_" .. (EGG.EggId or "")) or 0
 player:GetAttributeChangedSignal("Egg_" .. (EGG.EggId or "")):Connect(function()
     local now = player:GetAttribute("Egg_" .. EGG.EggId) or 0
-    if now > heldEggs then
+    local free = workspace:GetServerTimeNow() - (player:GetAttribute("FreeEggAt") or -math.huge) < 10
+    if now > heldEggs and not free then
         Sfx.play("PremiumPurchase")
         message:show("An Exclusive Egg is yours! Hatch it at the Hatching Altar. Thank you for supporting the game!", "Reward")
     end

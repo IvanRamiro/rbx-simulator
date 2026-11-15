@@ -186,5 +186,7 @@ return {
     Merchant = { Centre = Vector3.new(0.00, 0.70, -120.00), Yaw = 3.1416 },
     -- the Qi Spring (hub_celestial.qi_spring) on its new plinth, facing the tree; no channel or waterfall since the redesign
     QiSpring = { Centre = Vector3.new(-147.20, 0.25, 85.00), Yaw = 2.0945 },
+    -- the Spin Wheel (SpinWheelBuilder): its plinth's middle on the ground, outside the Ring Road east, facing the tree
+    SpinWheel = { Centre = Vector3.new(253.70, -0.12, -14.60), Yaw = -1.5133 },
     Relics = { IslandRoot = Vector3.new(88.50, -82.00, 153.29) },
 }
