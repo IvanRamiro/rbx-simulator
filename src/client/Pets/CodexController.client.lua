@@ -301,7 +301,7 @@ local function beastCard(parent, petId, order)
     press.ZIndex = 4
     press.Parent = card
     press.Activated:Connect(function()
-        Sfx.play("Open")
+        Sfx.play("Tab")
         detailPet = petId
         render()
     end)
@@ -522,7 +522,7 @@ end)
 
 RemoteEvents.CodexEvent.OnClientEvent:Connect(function(action, data)
     if action == "Claimed" and typeof(data) == "table" then
-        Sfx.play("RareReveal")
+        Sfx.play("RewardClaim")
         UiFx.flash(window.Frame, C.Highlight)
         local text = "Claimed " .. NumberFormat.compact(data.Stones) .. " Spirit Stones"
         if data.QiPercent > 0 then

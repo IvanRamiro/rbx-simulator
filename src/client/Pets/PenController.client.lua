@@ -301,7 +301,7 @@ local function celebrate(entry)
             Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 4), NumberSequenceKeypoint.new(1, 16) }),
             Transparency = NumberSequence.new(0.3, 1), Color = ColorSequence.new(core, gold), Brightness = 2 }, 1)
     end
-    Sfx.play("RareReveal", holder)
+    Sfx.play("PenUpgrade", holder)
 end
 
 local function refresh(config)

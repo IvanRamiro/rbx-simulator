@@ -162,14 +162,14 @@ RemoteEvents.RewardEvent.OnClientEvent:Connect(function(kind, a, b, c)
     if kind == "Offline" and typeof(a) == "number" and typeof(b) == "number" then
         local hours = b / 3600
         local away = if hours >= 1 then string.format("%.1f hours", hours) else math.floor(b / 60) .. " minutes"
-        Sfx.play("Attune")
+        Sfx.play("RewardClaim")
         message:show("Your Qi kept flowing for " .. away .. " while you were away: +" .. NumberFormat.compact(a) .. " Qi.", "Reward")
     elseif kind == "Daily" and typeof(a) == "number" then
-        Sfx.play("Attune")
+        Sfx.play("RewardClaim")
         local qi = if typeof(b) == "number" and b > 0 then "  +" .. NumberFormat.compact(b) .. " Qi" else ""
         message:show("Day " .. tostring(c) .. " claimed: +" .. NumberFormat.compact(a) .. " Spirit Stones" .. qi, "Reward")
     elseif (kind == "Code" or kind == "Group") and typeof(b) == "string" then
-        Sfx.play(if a then "Attune" else "Error")
+        Sfx.play(if a then "RewardClaim" else "Error")
         message:show(b, if a then "Reward" else "Error")
         if kind == "Code" and a then
             codeBox.Text = ""

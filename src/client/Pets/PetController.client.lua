@@ -401,7 +401,7 @@ RemoteEvents.PetActionResultEvent.OnClientEvent:Connect(function(ok, text, fused
     end
     local definition = fused and GameConfig.Pets[fused.PetId]
     local color = definition and GameConfig.PetRarityColors[definition.Rarity] or Color3.new(1, 1, 1)
-    Sfx.play("RareReveal")
+    Sfx.play("PetFuse")
     hatchMessage:show(tostring(text), "Success", color)
     for _, card in petList:GetChildren() do
         if card:IsA("GuiObject") and fused and card:GetAttribute("InstanceId") == fused.InstanceId then

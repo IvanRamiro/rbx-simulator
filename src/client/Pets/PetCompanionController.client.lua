@@ -121,6 +121,9 @@ local function syncPets(player, entry)
     if key == entry.key and rootPart == entry.rootPart then
         return
     end
+    -- a pet equipped or put away is heard at its owner's side; a whole set built at once (joining, a new character) is not
+    local audible = rootPart ~= nil and rootPart == entry.rootPart and not entry.culled
+        and not (player == Players.LocalPlayer and player:GetAttribute("InHatchCinematic") == true)
     if rootPart ~= entry.rootPart then
         clearPets(entry)
     end
@@ -135,7 +138,11 @@ local function syncPets(player, entry)
     entry.pets = {}
     if key ~= "" then
         for _, petKey in string.split(key, ",") do
-            local pet = spare[petKey] and table.remove(spare[petKey]) or buildPet(petKey, rootPart, entry.culled)
+            local kept = spare[petKey] and table.remove(spare[petKey])
+            local pet = kept or buildPet(petKey, rootPart, entry.culled)
+            if pet and not kept and audible then
+                PetRig.Sfx.play("PetSummon", rootPart)
+            end
             if pet then
                 if pet.rig then
                     pet.rig.owner = player -- (a special can show its owner: the Obsidian Guardian's)
@@ -153,6 +160,9 @@ local function syncPets(player, entry)
     end
     for _, pets in spare do
         for _, pet in pets do
+            if audible and pet.rootPart and pet.rootPart:IsDescendantOf(workspace) then
+                PetRig.Sfx.play("PetDismiss", pet.rootPart.Position)
+            end
             destroyPet(pet)
         end
     end

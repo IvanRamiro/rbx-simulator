@@ -220,6 +220,7 @@ RemoteEvents.PenEvent.OnServerEvent:Connect(function(player, action, argument)
         end
         ok, reason = PetInventory.setInPen(player, argument, action == "Add")
         if ok then
+            kind = action -- (the client's sound: a beast let in or out)
             local pet = PetInventory.get(player, argument)
             local definition = pet and GameConfig.Pets[pet.PetId]
             local name = if definition then definition.DisplayName else "Your pet"

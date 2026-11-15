@@ -79,20 +79,29 @@ task.spawn(function()
     end
 end)
 
--- this player's cultivation: a low hum while they sit in meditation
+-- this player's cultivation: a soft swell as they sit, a low hum while they meditate, the shimmer falling away as they rise
 local stopHum = nil
-local function cultivating()
+local function cultivating(changed)
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    local now = player:GetAttribute("IsCultivating") == true
     if stopHum then
         stopHum()
         stopHum = nil
+        if changed and not now and root then
+            Sfx.play("CultivateStop", root)
+        end
     end
-    if player:GetAttribute("IsCultivating") == true and root then
+    if now and root then
         stopHum = Sfx.loop("CultivateLoop", root)
+        if changed then
+            Sfx.play("CultivateStart", root)
+        end
     end
 end
-player:GetAttributeChangedSignal("IsCultivating"):Connect(cultivating)
-cultivating()
+player:GetAttributeChangedSignal("IsCultivating"):Connect(function()
+    cultivating(true)
+end)
+cultivating(false)
 
 -- sword flight, for every player: the blade rings as it takes them up, and the wind rushes while
 -- they fly (on their body, so it fades with distance and goes with a respawn)
@@ -128,13 +137,19 @@ for _, other in Players:GetPlayers() do
 end
 
 -- every button the HUD makes, now or later, clicks when pressed; the touch controls (Strike, Dash,
--- Sword: TouchActions' ScreenGui) are actions with sounds of their own
+-- Sword: TouchActions' ScreenGui) are actions with sounds of their own. The click waits for the button's own handlers:
+-- a button that sounds for itself (a window opening, a tab, a refusal) isn't clicked over.
 local playerGui = player:WaitForChild("PlayerGui")
+local function click()
+    if not Sfx.interfaceSince(0.05) then
+        Sfx.play("Click")
+    end
+end
 local function hook(button)
     local gui = button:FindFirstAncestorOfClass("ScreenGui")
     if button:IsA("GuiButton") and not (gui and gui.Name == "TouchActions") then
         button.Activated:Connect(function()
-            Sfx.play("Click")
+            task.defer(click)
         end)
     end
 end

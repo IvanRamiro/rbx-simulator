@@ -307,7 +307,7 @@ RemoteEvents.QuestEvent.OnClientEvent:Connect(function(kind, step, stones)
     if kind ~= "Complete" or typeof(step) ~= "number" or not QUESTS[step] then
         return
     end
-    Sfx.play("Attune")
+    Sfx.play("QuestComplete")
     local paid = if typeof(stones) == "number" and stones > 0 then "  +" .. NumberFormat.compact(stones) .. " Spirit Stones" else ""
     if step == #QUESTS then
         message:show("Quest complete: " .. QUESTS[step].Title .. "." .. paid .. "\nThe path is yours now, cultivator.", "Reward")

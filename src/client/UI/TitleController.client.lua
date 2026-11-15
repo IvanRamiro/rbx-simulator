@@ -341,7 +341,7 @@ RemoteEvents.TitleEvent.OnClientEvent:Connect(function(kind, data)
             setBadge(tostring(unseen), "Highlight")
         end
         notice:show(if data == 1 then "New title: open Titles to wear it." else data .. " new titles: open Titles to wear them.", "Reward")
-        Sfx.play("Attune")
+        Sfx.play("Notify")
     elseif kind == "Earned" then
         local entry = TitleRules.ById[data]
         if entry then
@@ -350,7 +350,7 @@ RemoteEvents.TitleEvent.OnClientEvent:Connect(function(kind, data)
                 setBadge(tostring(unseen), "Highlight")
             end
             notice:show("New title: " .. entry.Text, "Reward", entry.Color)
-            Sfx.play("Attune")
+            Sfx.play("Notify")
         end
     end
 end)

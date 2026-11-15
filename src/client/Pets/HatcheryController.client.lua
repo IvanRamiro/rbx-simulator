@@ -23,6 +23,7 @@ local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Portraits = require(UI:WaitForChild("Portraits"))
 local CodexState = require(script.Parent:WaitForChild("CodexState"))
 local HatchCeremony = require(script.Parent:WaitForChild("HatchCeremony"))
+local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
@@ -344,4 +345,20 @@ RunService.Heartbeat:Connect(function()
     if not root or not altarPart or (root.Position - altarPart.Position).Magnitude > leaveDistance then
         window.close()
     end
+end)
+
+-- another player's hatch, heard by anyone near the Sanctum: their egg breaks in the cradle (PetService stages it, with who hatches
+-- it, its rarity and when it breaks), quieter than the hatcher's own; a grand one carries further
+local GRAND = { Legendary = true, Mythical = true, Secret = true, Divine = true }
+workspace.DescendantAdded:Connect(function(egg)
+    if egg.Name ~= "HatchingEgg" or not egg:IsA("Model") or egg:GetAttribute("HatcherId") == player.UserId then
+        return
+    end
+    local breakAt = egg:GetAttribute("BreakAt")
+    if typeof(breakAt) ~= "number" then
+        return
+    end
+    local at = egg:GetPivot().Position
+    local sound = if GRAND[egg:GetAttribute("Rarity")] then "HatchNearbyGrand" else "HatchNearby"
+    Sfx.after(math.max(0, breakAt - workspace:GetServerTimeNow()), sound, at)
 end)

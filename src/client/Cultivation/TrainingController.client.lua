@@ -15,6 +15,7 @@ local UiFx = require(UI:WaitForChild("UiFx"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local HudMetrics = require(UI:WaitForChild("HudMetrics"))
+local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
@@ -298,6 +299,7 @@ local function updateQiLabel()
     lastQi = qiValue.Value
     if gain > 0 and player:GetAttribute("IsCultivating") == true then
         table.insert(rateSamples, { os.clock(), gain })
+        Sfx.play("QiTick") -- (a twinkle now and then, not every tick: its Gap)
     end
     setQi(qiValue.Value)
     showRate()
@@ -315,6 +317,8 @@ task.spawn(function() -- the rate falls away when the gains stop
     end
 end)
 
+local wasReady = nil -- (nil until the first update: joining with a breakthrough ready says nothing)
+local rankChangedAt = -math.huge
 local function updateRankDisplay()
     local rank = Ranks.getRank(rankValue.Value)
     powerTag.Text = if rank and rank.QiMultiplier > 1 then "Qi ×" .. rank.QiMultiplier else ""
@@ -344,6 +348,10 @@ local function updateRankDisplay()
     local newRealm = rank ~= nil and nextRank.Realm ~= rank.Realm
     local recovering = math.ceil((player:GetAttribute("TribulationRetryAt") or 0) - workspace:GetServerTimeNow())
     rankUpButton.Visible = canRankUp and player:GetAttribute("InTribulation") ~= true
+    if rankUpButton.Visible and wasReady == false and os.clock() - rankChangedAt > 4 then
+        Sfx.play("BreakthroughReady") -- the moment it can be done (not on joining, nor straight after a breakthrough's own sound)
+    end
+    wasReady = rankUpButton.Visible
     if newRealm and recovering > 0 then
         rankUpButton.Text = "RECOVERING FROM THE TRIBULATION: " .. recovering .. " s"
         rankUpButton:SetAttribute("Tone", "Quiet")
@@ -372,7 +380,10 @@ qiValue.Changed:Connect(function()
     updateQiLabel()
     updateRankDisplay()
 end)
-rankValue.Changed:Connect(updateRankDisplay)
+rankValue.Changed:Connect(function()
+    rankChangedAt = os.clock()
+    updateRankDisplay()
+end)
 player:GetAttributeChangedSignal("InTribulation"):Connect(updateRankDisplay)
 -- the countdown after a fall, each second until it's over
 task.spawn(function()

@@ -271,8 +271,15 @@ local function updateLine()
         lineText.Text = (if Hud.isCompact() then "Merchant" else "Wandering Merchant") .. "  ·  leaves in " .. clock(secondsLeft())
     end
 end
+local merchantWasOpen = workspace:GetAttribute("MerchantOpen") == true
 workspace:GetAttributeChangedSignal("MerchantOpen"):Connect(function()
     updateLine()
+    -- his arrival and his leaving: a shop door's chime for everyone (with the announcement), a lower one as he goes
+    local open = workspace:GetAttribute("MerchantOpen") == true
+    if open ~= merchantWasOpen then
+        merchantWasOpen = open
+        Sfx.play(if open then "MerchantArrive" else "MerchantLeave")
+    end
     if not isHere() then
         window.close()
     end

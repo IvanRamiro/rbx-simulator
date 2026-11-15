@@ -54,6 +54,10 @@ local TEXTURES = {           -- (GuardianFx's and the character aura's)
     Spark = "rbxassetid://112814194154292",
 }
 -- each rarity's burst: rays and sparks out of the egg, a shockwave, the screen flash, the camera shake, the banner
+-- the reveal's sound by rarity (SoundCatalog): the grander the beast, the more of the reward stinger's family it gets
+local REVEAL_SOUNDS = { Rare = "HatchRevealRare", Epic = "HatchRevealRare", Legendary = "HatchRevealLegendary",
+    Mythical = "HatchRevealLegendary", Secret = "HatchRevealDivine", Divine = "HatchRevealDivine" }
+local SWELL_PEAK = 2.17 -- seconds into HatchSwell its burst lands: it starts that long before the crack
 local TIERS = {
     Common = { Sparks = 18, Rays = 0 },
     Uncommon = { Sparks = 24, Rays = 0 },
@@ -262,6 +266,14 @@ local function play(result)
     local roll = breakIn - 0.05
     local connections, done = {}, false
     local landed, revealed = false, false
+    -- the build-up: the music steps back for the cinematic, and a shimmering swell rises to burst on the crack
+    Sfx.duck(0.6, roll + 1.2)
+    local swell, swellAt = nil, nil
+    task.delay(math.max(0, roll - SWELL_PEAK), function()
+        if not (done or landed) then
+            swell, swellAt = Sfx.play("HatchSwell"), os.clock()
+        end
+    end)
     local playerGui = player:WaitForChild("PlayerGui")
 
     -- the HUD steps aside (and comes back as it was)
@@ -513,7 +525,7 @@ local function play(result)
             local now = os.clock()
             if now - lastTick > 0.055 then -- (each card that passes the marker ticks; at full speed they blur into a rattle)
                 lastTick = now
-                Sfx.play("Click", nil, 0.9 + 0.5 * math.clamp((now - started) / roll, 0, 1))
+                Sfx.play("ReelTick", nil, 0.9 + 0.5 * math.clamp((now - started) / roll, 0, 1))
             end
         end
     end
@@ -564,8 +576,11 @@ local function play(result)
             if done then
                 return
             end
+            if swell and os.clock() - swellAt < SWELL_PEAK - 0.15 then
+                Sfx.fadeOut(swell, 0.15) -- skipped ahead: a swell that hasn't burst yet would burst late
+            end
             Sfx.play("EggCrack", at)
-            Sfx.play(if tier.Flash then "RareReveal" else "HatchReveal")
+            Sfx.play(REVEAL_SOUNDS[rarity] or "HatchReveal")
             burst(at, rarity, cut)
             if model then
                 for _, part in model:GetDescendants() do
@@ -779,10 +794,7 @@ local function play(result)
                 local ringEdge = UiKit.stroke(ring, gold, 0, if giant then 6 else 4)
                 tween(ring, if giant then 0.7 else 0.5, { Size = UDim2.fromOffset(if giant then 560 else 380, if giant then 560 else 380) })
                 tween(ringEdge, if giant then 0.7 else 0.5, { Transparency = 1, Thickness = 1 })
-                Sfx.play(if giant then "NovaBoom" else "RareReveal", nil, if giant then 0.9 else 1.15)
-                if giant then
-                    Sfx.play("RareReveal", nil, 0.85)
-                end
+                Sfx.play(if giant then "SizeGiant" else "SizeLarge")
                 -- in the world: gold light round the egg, and the camera kicks
                 local at = if model and model.PrimaryPart then model:GetPivot().Position else focus
                 if at then

@@ -71,9 +71,12 @@ local list = UiKit.scroll({ Name = "List", Parent = body }) -- render() places i
 
 local message = Toast.new("ShopMessage", Color3.new(1, 1, 1), 3)
 
+local lastAsked = nil -- what the next Result answers: its sound (a purchase, a sale, a forging)
 local function ask(action, id, extra)
+    lastAsked = action
     RemoteEvents.ShopEvent:FireServer(action, id, extra)
 end
+local RESULT_SOUNDS = { Forge = "Forge", SellPet = "Sell", SellSpares = "Sell", SellWeapon = "Sell", Equip = "WeaponEquip" }
 
 -- a button; disabled (onClick nil) it still says why
 local function button(parent, text, tone, size, position, onClick)
@@ -550,7 +553,7 @@ RemoteEvents.ShopEvent.OnClientEvent:Connect(function(kind, ...)
         render()
     elseif kind == "Result" then
         local ok, text, contents = ...
-        Sfx.play(if ok then "Purchase" else "Error")
+        Sfx.play(if ok then RESULT_SOUNDS[lastAsked] or "Purchase" else "Error")
         message:show(text, if ok then "Success" else "Error")
         if contents then
             current.contents = contents

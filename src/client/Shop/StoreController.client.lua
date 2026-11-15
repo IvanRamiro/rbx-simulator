@@ -83,7 +83,7 @@ local function tab(name, text, pageFrame, order)
     local button = UiKit.tab({ Name = name .. "Tab", Text = text, Size = UDim2.new(1 / 3, -share, 0, TAB), LayoutOrder = order, Parent = tabBar })
     tabs[name] = { button = button, page = pageFrame }
     button.Activated:Connect(function()
-        Sfx.play("Click")
+        Sfx.play("Tab")
         showTab(name)
     end)
 end
@@ -465,7 +465,7 @@ local heldEggs = player:GetAttribute("Egg_" .. (EGG.EggId or "")) or 0
 player:GetAttributeChangedSignal("Egg_" .. (EGG.EggId or "")):Connect(function()
     local now = player:GetAttribute("Egg_" .. EGG.EggId) or 0
     if now > heldEggs then
-        Sfx.play("RareReveal")
+        Sfx.play("PremiumPurchase")
         message:show("An Exclusive Egg is yours! Hatch it at the Hatching Altar. Thank you for supporting the game!", "Reward")
     end
     heldEggs = now
@@ -534,7 +534,7 @@ for _, pass in PassRules.List do
     player:GetAttributeChangedSignal("Pass_" .. pass.Id):Connect(function()
         render()
         if PassRules.owns(player, pass.Id) and player:GetAttribute("PassesChecked") then -- bought just now, not found on joining
-            Sfx.play("RareReveal")
+            Sfx.play("PremiumPurchase")
             message:show(pass.Name .. " is yours. Thank you for supporting the game!", "Reward")
         end
     end)

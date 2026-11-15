@@ -326,7 +326,8 @@ RemoteEvents.PenEvent.OnClientEvent:Connect(function(kind, ok, text, what)
         return
     end
     if ok then
-        Sfx.play(if what == "Upgraded" then "Purchase" else "Click")
+        -- an upgrade pays (the pen's growing has its own sound, heard by anyone near: PenController); a beast let in or out
+        Sfx.play(if what == "Upgraded" then "Purchase" elseif what == "Remove" then "PetDismiss" else "PenPlace")
         message:show(tostring(text), if what == "Upgraded" then "Reward" else "Success")
         if what == "Upgraded" and card then
             UiFx.pop(card, 1.04, 0.3)

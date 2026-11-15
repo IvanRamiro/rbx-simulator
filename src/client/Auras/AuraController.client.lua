@@ -144,7 +144,17 @@ local function playBreakthrough(player)
         end
     end)
     activeBreakthroughs[player] = effect
-    Sfx.play("Breakthrough", rootPart)
+    -- its sound grows with the kind of breakthrough, like the effect (a step, a realm's fifth level, a new realm); the
+    -- breaker's own music steps back under it
+    local size = AuraStyles.getBreakthrough(rankId)
+    local kind = if size == AuraStyles.Breakthroughs.NewRealm then "Realm" elseif size == AuraStyles.Breakthroughs.Milestone then "Milestone" else "Step"
+    Sfx.play("Breakthrough" .. kind, rootPart)
+    if player == Players.LocalPlayer then
+        Sfx.hold(size.Duration) -- (a quest step or title it completes is heard after it)
+        if kind ~= "Step" then
+            Sfx.duck(0.35, size.Duration + 0.6)
+        end
+    end
 
     if PRINT_BUILD_SUMMARY then
         printBreakthroughSummary(player, effect, rankId)

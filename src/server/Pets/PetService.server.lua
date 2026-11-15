@@ -84,7 +84,8 @@ local function altarParts()
     return altar, promptPart, prompt
 end
 
-local function stageEgg(altar, eggId)
+-- (its attributes let everyone else near hear it break: HatcheryController)
+local function stageEgg(altar, eggId, player, petId)
     local cradle = altar:FindFirstChild("Cradle")
     if not cradle then
         return nil
@@ -99,6 +100,10 @@ local function stageEgg(altar, eggId)
     model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent -- it rides in the remote: it must be there
     model:PivotTo(cradle.CFrame * CFrame.new(0, 1.8, 0))
     model.PrimaryPart.Anchored = true
+    local pet = GameConfig.Pets[petId]
+    model:SetAttribute("HatcherId", player.UserId)
+    model:SetAttribute("BreakAt", workspace:GetServerTimeNow() + HATCH_STAGE)
+    model:SetAttribute("Rarity", pet and pet.Rarity or "Common")
     model.Parent = altar
     task.delay(HATCH_STAGE + 0.4, function()
         model:Destroy()
@@ -173,7 +178,7 @@ local function onHatchRequest(player, eggId)
         ChancePercent = chance,
         Size = size,
         IsNew = isNew,
-        Staged = stageEgg(altar, eggId),
+        Staged = stageEgg(altar, eggId, player, petId),
         BreakAt = workspace:GetServerTimeNow() + HATCH_STAGE, -- server time: the client breaks it on time, however late this arrives
     })
 end

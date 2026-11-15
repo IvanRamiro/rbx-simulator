@@ -82,7 +82,11 @@ local VOICES = {
         Land = { Start = "PanguLand" },
     },
 }
-local EGG_SOUNDS = { Steal = "EggSteal", Drop = "EggDrop", Recover = "EggSteal", Secure = "EggSecure", Return = "EggReturn" }
+local EGG_SOUNDS = { Steal = "EggSteal", Drop = "EggDrop", Recover = "EggRecover", Secure = "EggSecureWorld", Return = "EggReturn" }
+-- each guardian's cry a beat after its egg is taken, from the guardian (SoundCatalog)
+local ALERTS = { StoneLion = "LionGrowl", MantisSage = "BladeRing", EmberXuanwu = "SerpentHiss", Tiangou = "TiangouAlert", Pangu = "PanguAlert" }
+local ALERT_DELAY = 0.25
+local securedAt = -math.huge -- when this player last secured an egg: their own stinger plays, not the world's
 
 local function voice(model, action, ...)
     local cue = (VOICES[model:GetAttribute("GuardianId")] or {})[action]
@@ -403,7 +407,7 @@ local function updateTakeIndicator()
     takePanel.Visible = not Toast.showing()
     if not wasAbleToTake then
         wasAbleToTake = true
-        Sfx.play("Attune")
+        Sfx.play("TakeReady")
         UiFx.flash(takePanel, WEAK_GOLD)
     end
 
@@ -717,6 +721,9 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
     end
     if action == "Secured" then
         local eggId, stones, element, qi = ...
+        -- the reward stinger, flat, with the gold flash and this toast (the "Secure" every client gets follows: skipped here)
+        securedAt = os.clock()
+        Sfx.play("EggSecure")
         local egg = GameConfig.Eggs[eggId]
         local reward = if typeof(stones) == "number" and stones > 0 then " +" .. stones .. " Spirit Stones." else ""
         if typeof(qi) == "number" and qi > 0 then
@@ -747,10 +754,19 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
             fx(model, ...)
         end
         voice(model, action, ...)
-    elseif EGG_SOUNDS[action] then
+    elseif EGG_SOUNDS[action] and not (action == "Secure" and os.clock() - securedAt < 1.5) then
         local egg = eggsFolder:FindFirstChild(model.Name .. "_Egg")
         local at = if typeof((...)) == "Vector3" then (...) else egg and egg.PrimaryPart
         Sfx.play(EGG_SOUNDS[action], at or model.PrimaryPart)
+        if action == "Steal" then
+            local alert = ALERTS[model:GetAttribute("GuardianId")]
+            if alert and model.PrimaryPart then
+                Sfx.after(ALERT_DELAY, alert, model.PrimaryPart)
+            end
+            if player:GetAttribute("CarryingGuardian") == model:GetAttribute("GuardianId") then
+                Sfx.play("StealSting") -- the thief alone: it has seen you
+            end
+        end
     end
     if action == "Awaken" then
         if isNear(model, BAR_DISTANCE) then

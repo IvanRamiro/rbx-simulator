@@ -417,6 +417,7 @@ local function stepAside()
     Hud.Dock.Visible = not open
 end
 local WINDOW_MARGIN = 24
+local switching = false -- a window opening closes the one before it: that close is silent (the opening has its own sound)
 local SLIDE = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local PAD = UiTheme.Pad.Window
 
@@ -501,6 +502,9 @@ function Hud.window(props)
             return
         end
         opened = false
+        if not switching then
+            Sfx.play("Close")
+        end
         if linked then
             linked:SetAttribute("Tone", linked:GetAttribute("RestTone") or "Quiet")
         end
@@ -529,11 +533,13 @@ function Hud.window(props)
         end
     end
     function win.open()
+        switching = true
         for _, other in windows do
             if other ~= win then
                 other.close()
             end
         end
+        switching = false
         if not opened then
             opened = true
             if linked then
