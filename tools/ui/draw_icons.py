@@ -261,4 +261,37 @@ for cx in (190, 834):
     a.line([(cx, 210), (cx, 470)], 16, "FFE27A", "D88A1C")
     a.poly([(cx, 450), (cx + 44, 600), (cx - 44, 600)], "FFE27A", "C8740C")
 a.save("Titles")
-print("drew 16 icons in", OUT)
+
+# The notification marks (the owner, 2026-11-16: "replace the icon for notice, danger, and warning"; they were a plain
+# "i", "!" and a drawn cross). No letters: shapes everyone reads the same way.
+# Notice: a sky-blue bell, a gold knob and clapper
+a = Art()
+bell = bez((512, 170), (330, 170), (270, 330), (262, 520)) + bez((262, 520), (255, 650), (215, 720), (150, 780))[1:] \
+    + [(874, 780)] + bez((874, 780), (809, 720), (769, 650), (762, 520))[1:] + bez((762, 520), (754, 330), (694, 170), (512, 170))[1:]
+a.poly(bell, "BFEAFF", "2E86E8")
+a.poly(bez((420, 230), (340, 280), (318, 380), (316, 520)) + [(372, 520)] + bez((372, 520), (376, 400), (395, 300), (450, 250))[1:],
+       "FFFFFF", "D8F2FF")
+a.line([(150, 790), (874, 790)], 70, "8CD2FF", "1E6CC8")
+a.ellipse(512, 120, 62, 62, "FFE27A", "D88A1C")
+a.ellipse(512, 880, 92, 92, "FFE27A", "D88A1C")
+a.save("Notice")
+
+# Warning: an amber triangle with rounded corners and a dark exclamation mark
+a = Art()
+corners = [(512, 120), (900, 840), (124, 840)]
+a.line(corners + [corners[0]], 110, "FFD45A", "F28A10")
+a.poly(corners, "FFD45A", "F28A10")
+a.poly([(462, 360), (562, 360), (540, 640), (484, 640)], "2A1608", "1A0E04")
+a.ellipse(512, 735, 56, 56, "2A1608", "1A0E04")
+a.save("Warning")
+
+# Danger: a red octagon ringed in white, a white cross
+a = Art()
+def octagon(r):
+    return [(512 + r * math.cos(math.radians(22.5 + 45 * i)), 512 + r * math.sin(math.radians(22.5 + 45 * i))) for i in range(8)]
+a.poly(octagon(430), "FFFFFF", "D8DCE8")
+a.poly(octagon(370), "FF6A6A", "C8102E")
+a.line([(360, 360), (664, 664)], 104, "FFFFFF", "F2E6E8")
+a.line([(664, 360), (360, 664)], 104, "FFFFFF", "F2E6E8")
+a.save("Danger")
+print("drew 19 icons in", OUT)

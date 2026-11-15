@@ -89,6 +89,10 @@ UiTheme.Icons = {
     Lock = "rbxassetid://125417292249654", -- a gold padlock
     Titles = "rbxassetid://75199333846945", -- an honour banner with a star medallion
     Store = "rbxassetid://89947110374361", -- a crimson gift box tied in gold (tools/ui/draw_store_icons.py)
+    -- the notification marks (the owner approved them, 2026-11-16; tools/ui/draw_icons.py)
+    Notice = "rbxassetid://82818045434583", -- a sky-blue bell
+    Warning = "rbxassetid://94801548798567", -- an amber triangle with an exclamation mark
+    Danger = "rbxassetid://103246139881087", -- a red octagon with a white cross
 }
 
 -- Each egg's own picture, rendered from its 3D model (tools/blender/eggs/egg_icons.py, assets/ui/egg_icons)

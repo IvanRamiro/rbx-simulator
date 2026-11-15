@@ -114,37 +114,28 @@ local function mark(name)
     frame.Parent = seal
     return frame
 end
-local function letter(name, text)
-    local frame = mark(name)
-    local glyph = Instance.new("TextLabel")
-    glyph.BackgroundTransparency = 1
-    glyph.Size = UDim2.fromScale(1, 1)
-    glyph.FontFace = UiTheme.Fonts.Number
-    glyph.TextSize = 22
-    glyph.TextColor3 = SEAL_INK
-    glyph.Text = text
-    glyph.Parent = frame
-    return frame
-end
 local marks = {}
 marks.Success = mark("Check") -- a tick: a short stroke down, a long stroke up
 stroke(marks.Success, 4, 10, 12, 20, -45)
 stroke(marks.Success, 4, 17, 20, 17, 45)
-marks.Error = mark("Cross")
-stroke(marks.Error, 4, 19, 17, 17, 45)
-stroke(marks.Error, 4, 19, 17, 17, -45)
-marks.Warning = letter("Bang", "!")
-marks.Info = letter("Note", "i")
-marks.Reward = mark("Gift") -- the gold ingot, on a dark disc ringed in gold
-do
-    local image = Instance.new("ImageLabel")
-    image.BackgroundTransparency = 1
-    image.AnchorPoint = Vector2.new(0.5, 0.5)
-    image.Position = UDim2.fromScale(0.5, 0.5)
-    image.Size = UDim2.fromScale(0.78, 0.78)
-    image.Image = UiTheme.Icons.Rewards
-    image.Parent = marks.Reward
+-- the pictured marks, full-colour on a dark disc ringed in their kind's colour: the reward's gold ingot, and the notice
+-- bell, the warning triangle and the danger octagon (the owner, 2026-11-16: they were a plain "i", "!" and a drawn cross)
+local function pictured(name, image)
+    local frame = mark(name)
+    local picture = Instance.new("ImageLabel")
+    picture.BackgroundTransparency = 1
+    picture.AnchorPoint = Vector2.new(0.5, 0.5)
+    picture.Position = UDim2.fromScale(0.5, 0.5)
+    picture.Size = UDim2.fromScale(0.78, 0.78)
+    picture.Image = image
+    picture.Parent = frame
+    return frame
 end
+marks.Error = pictured("Danger", UiTheme.Icons.Danger)
+marks.Warning = pictured("Warning", UiTheme.Icons.Warning)
+marks.Info = pictured("Notice", UiTheme.Icons.Notice)
+marks.Reward = pictured("Gift", UiTheme.Icons.Rewards)
+local PICTURED = { Reward = true, Error = true, Warning = true, Info = true }
 local sealEdge = UiKit.stroke(seal, C.Highlight, 0, 1.5)
 
 local inner = Instance.new("Frame")
@@ -220,8 +211,10 @@ function present(entry)
     for name, frame in marks do
         frame.Visible = name == entry.kind
     end
-    seal.BackgroundColor3 = if entry.kind == "Reward" then C.Well else kind.Color
-    sealEdge.Transparency = if entry.kind == "Reward" then 0 else 1
+    local pictured = PICTURED[entry.kind] == true
+    seal.BackgroundColor3 = if pictured then C.Well else kind.Color
+    sealEdge.Transparency = if pictured then 0 else 1
+    sealEdge.Color = if entry.kind == "Reward" then C.Highlight else kind.Color
     edge.Color = kind.Color:Lerp(C.Edge, 0.35)
     word.Text = kind.Word
     word.TextColor3 = kind.Color
