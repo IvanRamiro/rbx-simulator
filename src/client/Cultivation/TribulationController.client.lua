@@ -291,22 +291,42 @@ local function strike(owner, data)
 end
 
 -- ---------- one's own panel ----------
+-- Its three lines are one block centred down the panel (they sat 8 from its top and 18 from its foot), and the lives, diamonds at
+-- its right, centre on the panel's middle line and end at the content's right edge.
+local PANEL = Vector2.new(340, 78)
+local LINES = { { 18, 15 }, { 16, 12 }, { 14, 11 } } -- each line's height and text size: the heading, the realm, the bolts left
+local LINE_GAP = 2
+local PIP, PIP_STEP = 15, 26
 local function makePanel(data)
-    local frame = UiKit.panel({ Name = "TribulationPanel", Size = UDim2.fromOffset(340, 78), LayoutOrder = -10, Parent = Hud.Banner })
-    local inner = UiKit.content(frame, 12, 8)
-    UiKit.label({ Name = "Heading", Font = "Header", TextSize = 15, TextColor3 = C.Highlight, Text = "HEAVENLY TRIBULATION",
-        Size = UDim2.new(1, -90, 0, 18), Parent = inner })
-    UiKit.label({ Name = "Realm", Font = "Strong", TextSize = 12, TextColor3 = C.Text, Text = "Into the " .. (realmNames[data.Realm] or "next realm"),
-        Position = UDim2.fromOffset(0, 20), Size = UDim2.new(1, -90, 0, 16), Parent = inner })
-    local left = UiKit.label({ Name = "Left", TextSize = 11, TextColor3 = C.Muted, Position = UDim2.fromOffset(0, 38), Size = UDim2.new(1, -90, 0, 14),
-        Text = "Keep out of the rings of light", Parent = inner })
+    local frame = UiKit.panel({ Name = "TribulationPanel", Size = UDim2.fromOffset(PANEL.X, PANEL.Y), LayoutOrder = -10, Parent = Hud.Banner })
+    local block = -LINE_GAP
+    for _, line in LINES do
+        block += line[1] + LINE_GAP
+    end
+    local inner = UiKit.content(frame, UiTheme.Pad.Card, (PANEL.Y - block) / 2)
+    local pipsWidth = data.Lives * PIP_STEP
+    local function line(index, props)
+        local y = 0
+        for k = 1, index - 1 do
+            y += LINES[k][1] + LINE_GAP
+        end
+        props.Position = UDim2.fromOffset(0, y)
+        props.Size = UDim2.new(1, -pipsWidth, 0, LINES[index][1])
+        props.TextSize = LINES[index][2]
+        props.Parent = inner
+        return UiKit.label(props)
+    end
+    line(1, { Name = "Heading", Font = "Header", TextColor3 = C.Highlight, Text = "HEAVENLY TRIBULATION" })
+    line(2, { Name = "Realm", Font = "Strong", TextColor3 = C.Text, Text = "Into the " .. (realmNames[data.Realm] or "next realm") })
+    local left = line(3, { Name = "Left", TextColor3 = C.Muted, Text = "Keep out of the rings of light" })
     local pips = {}
+    local reach = PIP * math.sqrt(2) / 2 -- half a diamond's width, turned 45 degrees
     for k = 1, data.Lives do
         local pip = Instance.new("Frame")
         pip.Name = "Life" .. k
-        pip.AnchorPoint = Vector2.new(1, 0.5)
-        pip.Position = UDim2.new(1, -6 - (data.Lives - k) * 26, 0, 22)
-        pip.Size = UDim2.fromOffset(15, 15)
+        pip.AnchorPoint = Vector2.new(0.5, 0.5)
+        pip.Position = UDim2.new(1, -reach - (data.Lives - k) * PIP_STEP, 0.5, 0)
+        pip.Size = UDim2.fromOffset(PIP, PIP)
         pip.Rotation = 45
         pip.BackgroundColor3 = C.Highlight
         pip.BorderSizePixel = 0

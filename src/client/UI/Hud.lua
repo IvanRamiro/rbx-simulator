@@ -108,8 +108,11 @@ local openWindowFrame = nil -- set by Hud.window: the frame of the window that i
 local function placeNotice()
     local banner = Hud.Banner
     local scale = HudMetrics.scale()
-    local foot = if banner.AbsoluteSize.Y > 1 then banner.AbsolutePosition.Y + banner.AbsoluteSize.Y + 6 * scale else M
     local notice = Hud.Notice
+    -- what it holds may keep a margin round itself for its glow (its "Bleed", in its own units): the region rises by that much,
+    -- so the notification's visible edge, not its margin, is what sits on the line (the profile's and the QUEST panel's top)
+    local bleed = (notice:GetAttribute("Bleed") or 0) * scale
+    local foot = (if banner.AbsoluteSize.Y > 1 then banner.AbsolutePosition.Y + banner.AbsoluteSize.Y + 6 * scale else M) - bleed
     local frame = openWindowFrame
     if frame and frame.Visible and notice.AbsoluteSize.Y > 1 and foot + notice.AbsoluteSize.Y > frame.AbsolutePosition.Y then
         local bottom = frame.AbsolutePosition.Y + frame.AbsoluteSize.Y - 12 * scale -- over the window's lowest part
@@ -123,11 +126,14 @@ end
 Hud.Banner:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeNotice)
 Hud.Banner:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeNotice)
 Hud.Notice:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeNotice)
+Hud.Notice:GetAttributeChangedSignal("Bleed"):Connect(placeNotice)
 Hud.Quest = region("Quest", Vector2.new(1, 0), UDim2.new(1, -M, 0, M), Enum.FillDirection.Vertical,
     Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Top, 6)
-Hud.Currency = region("Currency", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 8), Enum.FillDirection.Horizontal,
+-- The row beside Roblox's own buttons: the counters and the round buttons share one middle line (placeTopRow, under the
+-- compact screens' code), whatever their own heights.
+Hud.Currency = region("Currency", Vector2.new(0.5, 0.5), UDim2.new(0.5, 0, 0, 0), Enum.FillDirection.Horizontal,
     Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center, 8, topGui)
-Hud.TopRight = region("TopRight", Vector2.new(1, 0), UDim2.new(1, -M, 0, 6), Enum.FillDirection.Horizontal,
+Hud.TopRight = region("TopRight", Vector2.new(1, 0.5), UDim2.new(1, -M, 0, 0), Enum.FillDirection.Horizontal,
     Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center, 8, topGui)
 
 -- The menu down the left, under the profile
@@ -162,33 +168,56 @@ function Hud.isCompact()
     checkCompact()
     return compact == true
 end
--- how wide the dock's bars are: narrower on a phone, where they sit over the player's character
-function Hud.DockWidth()
-    return if Hud.isCompact() then 190 else 240
-end
 HudMetrics.Changed:Connect(checkCompact)
 checkCompact()
+
+-- the top row's line: the round buttons (Hud.topButton) hang TOP_ROW_TOP under the screen's top edge, and the counters centre
+-- on their middle (the counters' strip and a round button are different heights: on a phone, their tops at the same offset
+-- left two middles 4 px apart)
+local TOP_ROW_TOP = 6
+local TOP_BUTTON = { [true] = 56, [false] = 46 } -- a round button's side; 56 on a phone is 45 pixels at its 0.8 scale
+local function placeTopRow()
+    local middle = TOP_ROW_TOP + TOP_BUTTON[compact == true] * HudMetrics.scale() / 2
+    Hud.Currency.Position = UDim2.new(0.5, 0, 0, middle)
+    Hud.TopRight.Position = UDim2.new(1, -M, 0, middle)
+end
+HudMetrics.Changed:Connect(placeTopRow)
+Hud.CompactChanged:Connect(placeTopRow)
+placeTopRow()
 
 HudMetrics.keepReadable(gui)
 HudMetrics.keepReadable(topGui)
 HudMetrics.keepReadable(windowGui, HudMetrics.windowScale) -- (a window is drawn at its own scale: Hud.window)
 
--- On a phone the menu runs along under the profile as icons alone: the thumbstick has the screen's lower left
+-- On a phone the menu runs along under the profile as icons alone: the thumbstick has the screen's lower left. A tile made
+-- with KeepWord (the Shop) keeps its word there, in gold, and its icon moves up over it, as on the desktop's tiles.
+local PHONE_TILE = 56 -- 56 at a phone's scale (0.8) is 45 pixels: a thumb's 44 (UI overhaul 2026-11-15; the audit of 2026-11-11 found 35)
+local WORD_HEIGHT, WORD_INSET, ICON_TOP = 13, 4, 6 -- a tile's word: its height and its inset from the foot; the icon's from the top
 local function layoutRail(isCompact)
-    -- 56 at a phone's scale (0.8) is 45 pixels: a thumb's 44 (UI overhaul 2026-11-15; the audit of 2026-11-11 found 35)
-    railGrid.CellSize = if isCompact then UDim2.fromOffset(56, 56) else UDim2.fromOffset(RAIL_TILE, RAIL_TILE)
+    local tile = if isCompact then PHONE_TILE else RAIL_TILE
+    railGrid.CellSize = UDim2.fromOffset(tile, tile)
     railGrid.FillDirectionMaxCells = if isCompact then 0 else 2
     for _, button in rail:GetChildren() do
         if button:IsA("TextButton") then
+            local keepWord = button:GetAttribute("KeepWord") == true
+            local worded = not isCompact or keepWord
             local word = button:FindFirstChild("Word")
             if word then
-                word.Visible = not isCompact
+                word.Visible = worded
+                word.TextColor3 = if isCompact and keepWord then UiTheme.Colors.Highlight else UiTheme.Colors.Text
             end
-            local icon = button:FindFirstChild("Icon") -- over its word; alone on a phone's tile, in its middle
+            local icon = button:FindFirstChild("Icon")
             if icon then
                 icon.AnchorPoint = Vector2.new(0.5, 0.5)
-                icon.Position = if isCompact then UDim2.fromScale(0.5, 0.5) else UDim2.new(0.5, 0, 0, 27)
-                icon.Size = UDim2.fromOffset(if isCompact then 38 else 42, if isCompact then 38 else 42)
+                if worded then -- over its word, in the room the word leaves (a phone's smaller tile: a closer top, 3 over the word)
+                    local top = if isCompact then 4 else ICON_TOP
+                    local side = if isCompact then tile - top - WORD_HEIGHT - WORD_INSET - 3 else 42
+                    icon.Size = UDim2.fromOffset(side, side)
+                    icon.Position = UDim2.new(0.5, 0, 0, top + side / 2)
+                else -- alone on a phone's tile, in its middle
+                    icon.Size = UDim2.fromOffset(38, 38)
+                    icon.Position = UDim2.fromScale(0.5, 0.5)
+                end
             end
         end
     end
@@ -248,11 +277,15 @@ function Hud.chip(name, image, order, opts)
     })
 end
 
+-- one place for every badge (the rail's tiles, the round buttons): over the top right corner, the same overhang everywhere
+-- (the Rewards button had its own, and its badge sat lower and further in than the tiles'). 4 across leaves half a tile gap
+-- to the next tile; 4 up keeps a top-row badge on the screen.
+local BADGE_OUT = Vector2.new(4, 4)
 local function addBadge(button)
     local badge = UiKit.label({
         Name = "Badge", Font = "Strong", TextSize = 11, TextColor3 = UiTheme.Colors.Panel,
         BackgroundTransparency = 0, BackgroundColor3 = UiTheme.Colors.Accent,
-        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 6, 0, -4), Size = UDim2.fromOffset(0, 18),
+        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, BADGE_OUT.X, 0, -BADGE_OUT.Y), Size = UDim2.fromOffset(0, 18),
         AutomaticSize = Enum.AutomaticSize.X, TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
         ZIndex = 5, Parent = button,
     })
@@ -274,9 +307,11 @@ local function addBadge(button)
 end
 
 -- A menu tile on the rail: its icon over its word, with an optional badge (a count, or a dot).
+-- opts.KeepWord: the word stays on a phone's tile too (the Shop's, so players can always find it).
 -- Returns the button and a function that sets the badge text (nil hides it).
-function Hud.railButton(name, image, word, order)
+function Hud.railButton(name, image, word, order, opts)
     local button = UiKit.button({ Name = name, Text = "", Size = UDim2.fromOffset(RAIL_TILE, RAIL_TILE), LayoutOrder = order, Tone = "Tile", Parent = Hud.Rail })
+    button:SetAttribute("KeepWord", opts ~= nil and opts.KeepWord == true)
     button:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, UiTheme.Radius.Card)
     button:SetAttribute("EdgeThickness", UiTheme.Stroke.Button)
     local icon = UiKit.icon(image, 42)
@@ -285,8 +320,8 @@ function Hud.railButton(name, image, word, order)
     icon.Parent = button
     local label = UiKit.label({
         Name = "Word", Font = "Heavy", Text = string.upper(word), TextSize = 11, TextColor3 = UiTheme.Colors.Text,
-        TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4),
-        Size = UDim2.new(1, -4, 0, 13), Parent = button,
+        TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -WORD_INSET),
+        Size = UDim2.new(1, -4, 0, WORD_HEIGHT), ZIndex = 4, Parent = button,
     })
     UiKit.outline(label, 1.5)
     layoutRail(compact == true)
@@ -296,9 +331,10 @@ end
 -- A small round button in the top row, with the same badge.
 function Hud.topButton(name, image, order)
     local button = UiKit.button({ Name = name, Text = "", Size = UDim2.fromOffset(42, 42), LayoutOrder = order, Tone = "Quiet", Parent = Hud.TopRight })
-    -- bigger on a phone, where 42 at the phone's scale is too small for a thumb: 56 there is 45 pixels
+    -- bigger on a phone, where 42 at the phone's scale is too small for a thumb: 56 there is 45 pixels (TOP_BUTTON)
     local function sizeFor(isCompact)
-        button.Size = UDim2.fromOffset(if isCompact then 56 else 46, if isCompact then 56 else 46)
+        local side = TOP_BUTTON[isCompact == true]
+        button.Size = UDim2.fromOffset(side, side)
     end
     Hud.CompactChanged:Connect(sizeFor)
     sizeFor(compact == true)
@@ -312,9 +348,7 @@ function Hud.topButton(name, image, order)
     icon.Position = UDim2.fromScale(0.5, 0.5)
     icon.Size = UDim2.fromScale(0.72, 0.72)
     icon.Parent = button
-    local setBadge = addBadge(button)
-    button.Badge.Position = UDim2.new(1, 4, 0, 0) -- (the top row is at the screen's top edge: a badge above it was cut off)
-    return button, setBadge
+    return button, addBadge(button)
 end
 
 -- ---------- a controller's selection ----------
@@ -592,11 +626,15 @@ end
 -- lotus in the circle on its left, the air leaps and stamina bar above the Cultivate button. Hud builds the
 -- frame; QinggongController fills Top and Bar, TrainingController puts its button in Action.
 -- Two sizes, and it follows the screen: the screen's size may not be known yet when this first runs.
+-- Height is the plate's: the dock's frame is exactly the plate (the emblem, shorter, centres on it), so the gap over it is
+-- the Dock's own gap, like the gaps between the pills over it (the frame was 3 taller than the plate at each end: the gap
+-- over the plate read 3 wider than the one between the pills).
 local DOCK_SIZES = {
     -- (a phone: its button 56 tall, 45 pixels at the phone's scale; it was 38, 30 pixels)
-    [true] = { Width = 330, Height = 108, Emblem = 88, Button = 56, TextSize = 12, Top = 5, Bar = 26, BarHeight = 9, Bottom = -6 },
-    [false] = { Width = 380, Height = 108, Emblem = 100, Button = 48, TextSize = 13, Top = 7, Bar = 28, BarHeight = 13, Bottom = -8 },
+    [true] = { Width = 330, Height = 102, Emblem = 88, Button = 56, TextSize = 12, Top = 5, Bar = 26, BarHeight = 9, Bottom = -6 },
+    [false] = { Width = 380, Height = 102, Emblem = 100, Button = 48, TextSize = 13, Top = 7, Bar = 28, BarHeight = 13, Bottom = -8 },
 }
+local CONTENT_RIGHT = 10 -- the plate's rows (title, stamina bar, Cultivate) all end this far from its right edge
 
 local dock = Instance.new("Frame")
 dock.Name = "CultivationDock"
@@ -671,32 +709,184 @@ Hud.CultivationDock = { Top = top, Bar = barSlot, Action = action, Emblem = embl
 -- stacked over the dock (the breakthrough, DRAW / SHEATHE) centre on this same line, so the column reads as one; centred on
 -- the whole dock they sat over the emblem's side, and the three rows had three different middles (owner's screenshot,
 -- 2026-11-15).
-local function actionSpan(size)
+-- The plate's rows share this one span too (contentSpan): their left and right ends line up.
+local function contentSpan(size)
     local plateLeft = math.floor(size.Emblem * 0.45)
     local contentLeft = size.Emblem - plateLeft + 8
-    local width = size.Width - plateLeft - contentLeft - 10
+    return plateLeft, contentLeft, size.Width - plateLeft - contentLeft - CONTENT_RIGHT
+end
+local function actionSpan(size)
+    local plateLeft, contentLeft, width = contentSpan(size)
     return plateLeft + contentLeft + width / 2, width
 end
 function Hud.CultivationDock.actionSpan(size)
     return actionSpan(size or Hud.CultivationDock.Size)
 end
 
+
+-- ---------- the pills over the dock ----------
+-- The buttons and labels stacked over the plate (the breakthrough, the station's bonus, DRAW / SHEATHE) are laid out here,
+-- all on the Cultivate button's centre line (actionSpan) and at its height, so the column keeps one middle and one size
+-- whoever adds to it. Each in its own row, bottom up in their order; but where that column would rise into the menu's row (a
+-- phone's short screen: the breakthrough lay over the Settings tile), the buttons share one row instead, their group still
+-- on that line (an OwnRow piece keeps its own row).
+--   Hud.CultivationDock.addPill(object, order, opts)
+--     opts.Width(actionWidth, height)  its natural width (its words and margins), in the HUD's units
+--     opts.MatchAction                 alone in its row, at least as wide as Cultivate
+--     opts.Height                      a fixed height (a label); a button takes the dock's button height and a pill's shape
+--     opts.OwnRow                      never shares a row
+--   Hud.CultivationDock.layoutPills()  lays them out again (a controller's words changed size)
+local PILL_GAP = 8 -- the Dock region's own gap
+local pills = {}
+local pillHolder = Instance.new("Frame")
+pillHolder.Name = "Pills"
+pillHolder.BackgroundTransparency = 1
+pillHolder.LayoutOrder = 20
+pillHolder.Visible = false
+pillHolder.Parent = Hud.Dock
+
+-- whether a column of `height` (the HUD's units) over the plate would reach into the menu's row, on the screen as it is
+local function columnMeetsRail(size, height, width)
+    local rail, room = Hud.Rail, Hud.Dock.Parent
+    if not (Hud.Status.Visible and rail.AbsoluteSize.Y > 1 and room:IsA("GuiBase2d")) then
+        return false
+    end
+    local scale = HudMetrics.scale()
+    -- where the column will stand once the Dock is at rest (it may still be arriving): the Dock hangs M over the screen's foot
+    local foot = room.AbsolutePosition.Y + room.AbsoluteSize.Y - M
+    local top = foot - (size.Height + PILL_GAP + height) * scale
+    local dockLeft = room.AbsolutePosition.X + room.AbsoluteSize.X / 2 - size.Width * scale / 2
+    local centre = actionSpan(size)
+    local left, right = dockLeft + (centre - width / 2) * scale, dockLeft + (centre + width / 2) * scale
+    -- the menu's place at rest: the Status region's offset from its home is the arrival still under way
+    local shift = Hud.Status.AbsolutePosition.X - (room.AbsolutePosition.X + M)
+    local railLeft = rail.AbsolutePosition.X - shift
+    local railRight, railBottom = railLeft + rail.AbsoluteSize.X, rail.AbsolutePosition.Y + rail.AbsoluteSize.Y
+    return top < railBottom + PILL_GAP * scale and left < railRight and right > railLeft
+end
+
+local function layoutPills()
+    local size = Hud.CultivationDock.Size
+    if not size then
+        return
+    end
+    local centre, actionWidth = actionSpan(size)
+    local shown = {}
+    for _, pill in pills do
+        if pill.object.Visible then
+            pill.h = pill.opts.Height or size.Button
+            pill.natural = pill.opts.Width(actionWidth, pill.h)
+            table.insert(shown, pill)
+        end
+    end
+    table.sort(shown, function(a, b)
+        return a.order < b.order
+    end)
+    pillHolder.Visible = #shown > 0
+    if #shown == 0 then
+        return
+    end
+    local function widthIn(pill, alone)
+        return if alone and pill.opts.MatchAction then math.max(pill.natural, actionWidth) else pill.natural
+    end
+    local function measure(rows)
+        local height, widest = -PILL_GAP, 0
+        for _, row in rows do
+            local rowHeight, rowWidth = 0, -PILL_GAP
+            for _, pill in row do
+                rowHeight = math.max(rowHeight, pill.h)
+                rowWidth += widthIn(pill, #row == 1) + PILL_GAP
+            end
+            height += rowHeight + PILL_GAP
+            widest = math.max(widest, rowWidth)
+        end
+        return height, widest
+    end
+    local rows = {}
+    for _, pill in shown do
+        table.insert(rows, { pill })
+    end
+    local height, widest = measure(rows)
+    if #rows > 1 and columnMeetsRail(size, height, widest) then
+        local shared, together = {}, {}
+        for _, pill in shown do
+            if pill.opts.OwnRow then
+                table.insert(shared, { pill })
+            elseif #together == 0 then
+                table.insert(together, pill)
+                table.insert(shared, together)
+            else
+                table.insert(together, pill)
+            end
+        end
+        rows = shared
+        height = measure(rows)
+    end
+    local y = 0
+    for _, row in rows do
+        local rowHeight, rowWidth = 0, -PILL_GAP
+        for _, pill in row do
+            rowHeight = math.max(rowHeight, pill.h)
+            rowWidth += widthIn(pill, #row == 1) + PILL_GAP
+        end
+        local x = centre - rowWidth / 2
+        for _, pill in row do
+            local width = widthIn(pill, #row == 1)
+            local object = pill.object
+            object.AnchorPoint = Vector2.new(0.5, 0.5)
+            object.Position = UDim2.fromOffset(x + width / 2, y + rowHeight / 2)
+            object.Size = UDim2.fromOffset(width, pill.h)
+            if not pill.opts.Height then
+                UiKit.pillShape(object, pill.h)
+            end
+            x += width + PILL_GAP
+        end
+        y += rowHeight + PILL_GAP
+    end
+    pillHolder.Size = UDim2.fromOffset(size.Width, height)
+end
+
+function Hud.CultivationDock.addPill(object, order, opts)
+    local pill = { object = object, order = order, opts = opts }
+    table.insert(pills, pill)
+    object.Parent = pillHolder
+    local function again()
+        task.defer(layoutPills)
+    end
+    object:GetPropertyChangedSignal("Visible"):Connect(again)
+    if object:IsA("TextButton") or object:IsA("TextLabel") then
+        object:GetPropertyChangedSignal("TextBounds"):Connect(again)
+    end
+    layoutPills()
+end
+Hud.CultivationDock.layoutPills = layoutPills
+HudMetrics.Changed:Connect(function()
+    task.defer(layoutPills)
+end)
+Hud.Rail:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+    task.defer(layoutPills)
+end)
+Hud.Status:GetPropertyChangedSignal("Visible"):Connect(function()
+    task.defer(layoutPills)
+end)
+
 local function layoutDock(compact)
     local size = DOCK_SIZES[compact]
-    local plateLeft = math.floor(size.Emblem * 0.45)
-    local contentLeft = size.Emblem - plateLeft + 8
+    local plateLeft, contentLeft, contentWidth = contentSpan(size)
     dock.Size = UDim2.fromOffset(size.Width, size.Height)
-    plate.Position = UDim2.fromOffset(plateLeft, 3)
-    plate.Size = UDim2.new(1, -plateLeft, 1, -6)
+    plate.Position = UDim2.fromOffset(plateLeft, 0)
+    plate.Size = UDim2.new(1, -plateLeft, 1, 0)
     emblem.Size = UDim2.fromOffset(size.Emblem, size.Emblem)
+    -- the title row, the stamina bar's slot (its end diamond included: QinggongController keeps it inside) and Cultivate: one span
     top.Position = UDim2.fromOffset(contentLeft, size.Top)
-    top.Size = UDim2.new(1, -contentLeft - 14, 0, 18)
+    top.Size = UDim2.fromOffset(contentWidth, 18)
     barSlot.Position = UDim2.fromOffset(contentLeft, size.Bar)
-    barSlot.Size = UDim2.new(1, -contentLeft - 22, 0, size.BarHeight)
+    barSlot.Size = UDim2.fromOffset(contentWidth, size.BarHeight)
     action.Position = UDim2.new(0, contentLeft, 1, size.Bottom)
-    action.Size = UDim2.new(1, -contentLeft - 10, 0, size.Button)
+    action.Size = UDim2.fromOffset(contentWidth, size.Button)
     Hud.CultivationDock.Size = size
     dockResized:Fire(size, compact)
+    layoutPills()
 end
 Hud.CompactChanged:Connect(layoutDock)
 layoutDock(Hud.isCompact())
@@ -713,5 +903,10 @@ arrive(Hud.Currency, UDim2.fromOffset(0, -70), 0.58)
 arrive(Hud.TopRight, UDim2.fromOffset(0, -70), 0.62)
 arrive(Hud.Quest, UDim2.fromOffset(340, 0), 0.66)
 arrive(Hud.Dock, UDim2.fromOffset(0, 260), 0.72)
+-- once they have arrived: the screen's size may have changed while they moved (each tween ends where it was sent)
+task.delay(1.4, function()
+    placeTopRow()
+    layoutPills()
+end)
 
 return Hud

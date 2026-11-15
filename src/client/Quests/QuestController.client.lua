@@ -25,15 +25,23 @@ local QUESTS = GameConfig.Quests
 local CONFIRM_SECONDS = 3
 
 -- ---------- the tracker ----------
-local panel = UiKit.panel({ Name = "QuestTracker", AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.fromOffset(270, 0), Visible = false, Parent = Hud.Quest })
+local panel = UiKit.panel({ Name = "QuestTracker", Size = UDim2.fromOffset(270, 0), Visible = false, Parent = Hud.Quest })
 local inner = Instance.new("Frame")
 inner.Name = "Inner"
 inner.BackgroundTransparency = 1
 inner.AutomaticSize = Enum.AutomaticSize.Y
 inner.Size = UDim2.new(1, 0, 0, 0)
 inner.Parent = panel
-UiKit.padding(inner, UiTheme.Space.M + 2, UiTheme.Space.M - 2)
+UiKit.padding(inner, UiTheme.Pad.Card, UiTheme.Pad.Card) -- one inset all round, as the profile's (it was 14 across, 10 down)
 UiKit.list(inner, { Padding = UDim.new(0, 6) })
+-- as tall as what it holds: sized from that, not by the panel's own AutomaticSize, which also counted its corner ornaments'
+-- overhang (its foot sat 3 lower than its top padding)
+local function fitHeight()
+    local drawn = panel.AbsoluteSize.X
+    local ratio = if drawn > 0 then panel.Size.X.Offset / drawn else 1
+    panel.Size = UDim2.fromOffset(panel.Size.X.Offset, math.ceil(inner.AbsoluteSize.Y * ratio))
+end
+inner:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitHeight)
 
 -- its header: the fold mark, QUEST in heavy gold, and how far along the quests are
 local header = Instance.new("Frame")
@@ -101,8 +109,9 @@ fold.Position = UDim2.fromScale(0, 0.5)
 fold.Size = UDim2.new(1, 0, 1, 20)
 fold.ZIndex = 3
 fold.Parent = header
+-- its mark starts on the panel's left edge, like the title and the text under it (centred in its box, the narrow "-" stood 5 in)
 local foldMark = UiKit.boldLabel({
-    Name = "FoldMark", TextSize = 16, TextColor3 = C.AccentBright, AnchorPoint = Vector2.new(0, 0.5), TextXAlignment = Enum.TextXAlignment.Center,
+    Name = "FoldMark", TextSize = 16, TextColor3 = C.AccentBright, AnchorPoint = Vector2.new(0, 0.5), TextXAlignment = Enum.TextXAlignment.Left,
     Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromOffset(16, 18), Parent = header,
 })
 
@@ -166,7 +175,8 @@ local function applyFold()
     title.Size = if folded then UDim2.new(1, 0, 0, 18) else UDim2.new(1, 0, 0, 0)
     foldMark.Text = if folded then "+" else "-"
     local compact = Hud.isCompact()
-    panel.Size = UDim2.fromOffset(if compact then PHONE_WIDTH else FULL_WIDTH, 0)
+    panel.Size = UDim2.fromOffset(if compact then PHONE_WIDTH else FULL_WIDTH, panel.Size.Y.Offset)
+    fitHeight()
     -- a thumb's 44 pixels on a phone, at its 0.8 scale
     footerRef.Size = UDim2.new(1, 0, 0, if compact then 56 else UiTheme.Height.ButtonSmall)
     fold.Size = UDim2.new(1, 0, 1, if compact then 34 else 20)

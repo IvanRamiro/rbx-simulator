@@ -54,7 +54,13 @@ local function sizeDockText(size)
 end
 dock.Resized:Connect(sizeDockText)
 sizeDockText(dock.Size)
-local staminaBack = UiKit.bar({ Name = "Stamina", Fill = STAMINA_COLOR, Size = UDim2.fromScale(1, 1), Parent = dock.Bar })
+-- the slot (Hud) spans the plate's rows like Cultivate; the track stops short of its right end by the diamond's reach, so the
+-- diamond's far point, not the track, ends where the title row and Cultivate end
+local TIP = 11 -- the diamond's side
+local TIP_OVER = 3 -- how far its middle stands past the track's end
+local TIP_REACH = TIP * math.sqrt(2) / 2 -- half its width, turned 45 degrees
+local TRACK_SHORT = math.ceil(TIP_REACH + TIP_OVER)
+local staminaBack = UiKit.bar({ Name = "Stamina", Fill = STAMINA_COLOR, Size = UDim2.new(1, -TRACK_SHORT, 1, 0), Parent = dock.Bar })
 staminaBack:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
 local staminaFill = staminaBack:FindFirstChild("Fill")
 staminaFill:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
@@ -62,8 +68,8 @@ staminaFill.Size = UDim2.fromScale(1, 1)
 local tip = Instance.new("Frame") -- the bar's end: outside the track, which clips what's inside it
 tip.Name = "Tip"
 tip.AnchorPoint = Vector2.new(0.5, 0.5)
-tip.Position = UDim2.new(1, 3, 0.5, 0)
-tip.Size = UDim2.fromOffset(11, 11)
+tip.Position = UDim2.new(1, TIP_OVER - TRACK_SHORT, 0.5, 0)
+tip.Size = UDim2.fromOffset(TIP, TIP)
 tip.Rotation = 45
 tip.BackgroundColor3 = UiTheme.Colors.Highlight
 tip.BorderSizePixel = 0
@@ -105,7 +111,7 @@ end
 local staminaText = UiKit.label({ -- on the bar's frame, not its track, which would clip it on a small screen
     Name = "StaminaText", Font = "Strong", TextSize = 10, TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.25,
     TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, 0.5),
-    Size = UDim2.new(1, 0, 0, 16), ZIndex = 4, Parent = dock.Bar, -- taller than the bar, which on a phone is 8 pixels
+    Size = UDim2.new(1, -TRACK_SHORT, 0, 16), ZIndex = 4, Parent = dock.Bar, -- (over the track) taller than the bar, which on a phone is 8 pixels
 })
 
 local barHome = dock.Bar.Position

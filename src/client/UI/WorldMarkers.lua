@@ -13,6 +13,7 @@ local Workspace = game:GetService("Workspace")
 
 local Hud = require(script.Parent:WaitForChild("Hud"))
 local HudMetrics = require(script.Parent:WaitForChild("HudMetrics"))
+local UiKit = require(script.Parent:WaitForChild("UiKit"))
 local UiTheme = require(script.Parent:WaitForChild("UiTheme"))
 
 local WorldMarkers = {}
@@ -36,27 +37,26 @@ function WorldMarkers.new(color, edge)
     frame.Parent = markerLayer
     local scale = Instance.new("UIScale")
     scale.Parent = frame
-    local label = Instance.new("TextLabel")
-    label.Name = "Label"
-    label.BackgroundTransparency = 1
-    label.Size = UDim2.new(1, 0, 0, 26)
-    label.FontFace = UiTheme.Fonts.Number
-    label.TextSize = 20
-    label.TextColor3 = color
-    label.TextStrokeTransparency = 0.25
-    label.Parent = frame
+    -- the HUD's bold words (heavy, outlined), as wide as they are: a long name ("YGGDRASIL  304 studs") ran past a fixed
+    -- frame, and the arrow placed by the words' width stood off the frame's
+    local label = UiKit.label({
+        Name = "Label", Font = "Heavy", TextSize = 20, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center,
+        AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.fromOffset(0, 26), Parent = frame,
+    })
+    UiKit.outline(label, 2)
     local arrow = Instance.new("TextLabel")
     arrow.Name = "Arrow"
     arrow.BackgroundTransparency = 1
     arrow.AnchorPoint = Vector2.new(0.5, 0.5)
     arrow.Position = UDim2.new(0.5, 0, 0, 40)
     arrow.Size = UDim2.fromOffset(30, 30)
-    arrow.FontFace = UiTheme.Fonts.Number
+    arrow.FontFace = UiTheme.Fonts.Heavy
     arrow.TextSize = 26
     arrow.Text = "v"
     arrow.TextColor3 = color
-    arrow.TextStrokeTransparency = 0.25
     arrow.Parent = frame
+    UiKit.outline(arrow, 2)
     local marker = { frame = frame, label = label, arrow = arrow, scale = scale, edge = edge, world = nil }
     markers[marker] = true
     return marker
@@ -156,7 +156,7 @@ local function placeMarkers()
         local direction = toward.Unit
         marker.arrow.Rotation = math.deg(math.atan2(-direction.X, direction.Y))
         -- just outside the words, on the place's side, so it never covers them
-        local halfWords = marker.label.TextBounds.X / 2 + 16
+        local halfWords = marker.label.TextBounds.X / 2 / scale + 16 -- (in the marker's own units: TextBounds is on the screen, after its scale)
         marker.arrow.Position = UDim2.new(0.5, direction.X * halfWords, 0, 13 + direction.Y * 26)
     end
 end

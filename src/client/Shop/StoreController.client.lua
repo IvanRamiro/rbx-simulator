@@ -30,21 +30,8 @@ local TABS_HEIGHT = TAB + UiTheme.Space.M -- the tabs, and the gap under them
 local GAP = UiTheme.Space.S
 local EGG = GameConfig.ExclusiveEgg
 
-local toggleButton = Hud.railButton("StoreButton", UiTheme.Icons.Store, "Shop", 0)
 -- on a phone the rail is a row of bare icons: the Shop keeps its name under its gift box, so players can always find it
-local caption = UiKit.label({
-    Name = "Caption", Font = "Heavy", TextSize = 10, Text = "SHOP", TextColor3 = C.Highlight, TextXAlignment = Enum.TextXAlignment.Center,
-    AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -1), Size = UDim2.new(1, 0, 0, 14), ZIndex = 4, Parent = toggleButton,
-})
-local captionEdge = Instance.new("UIStroke")
-captionEdge.Color = Color3.fromRGB(14, 12, 34)
-captionEdge.Thickness = 1.5
-captionEdge.Parent = caption
-local function showCaption()
-    caption.Visible = Hud.isCompact()
-end
-Hud.CompactChanged:Connect(showCaption)
-showCaption()
+local toggleButton = Hud.railButton("StoreButton", UiTheme.Icons.Store, "Shop", 0, { KeepWord = true })
 local window = Hud.window({
     Name = "StoreWindow", Title = "SHOP", Size = Vector2.new(660, 500),
     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),

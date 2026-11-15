@@ -19,6 +19,7 @@ local Hud = require(UI:WaitForChild("Hud"))
 local Toast = require(UI:WaitForChild("Toast"))
 local TouchActions = require(UI:WaitForChild("TouchActions"))
 local UiKit = require(UI:WaitForChild("UiKit"))
+local UiTheme = require(UI:WaitForChild("UiTheme"))
 
 local player = Players.LocalPlayer
 local readyAt = 0
@@ -70,47 +71,23 @@ local function toggleDrawn()
     end
 end
 
--- the pill sits over the middle of the dock's plate, not of the whole dock (whose left end is the lotus emblem), in a
--- strip as wide as the dock, so the Dock's list keeps it just above
-local drawStrip = Instance.new("Frame")
-drawStrip.Name = "DrawStrip"
-drawStrip.BackgroundTransparency = 1
-drawStrip.LayoutOrder = 26
-drawStrip.Visible = false
-drawStrip.Parent = Hud.Dock
--- a pill like the dock's buttons, a thumb's size: 44, and 56 on a phone (45 pixels at its 0.8 scale)
-local function drawHeight(compact)
-    return if compact then 56 else 44
-end
+-- a pill over the dock (Hud.CultivationDock.addPill): on the Cultivate button's centre line and at its height, with the same
+-- key's hint as Cultivate's; as wide as its words and the hint's room need, and never narrower than DRAW_MIN
+local DRAW_MIN = 160
 local drawButton = UiKit.button({
-    Name = "DrawButton", Tone = "Tile", Font = "Heavy", TextSize = 15, Text = "DRAW",
-    AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(160, 44), Parent = drawStrip,
+    Name = "DrawButton", Tone = "Tile", Font = "Heavy", TextSize = 15, Text = "DRAW", Visible = false,
 })
-local function placeDrawButton(size, compact)
-    if not size then
-        return
-    end
-    local height = drawHeight(if compact == nil then Hud.isCompact() else compact)
-    drawButton.Size = UDim2.fromOffset(if height > 44 then 170 else 160, height)
-    drawButton:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, height // 2)
-    drawButton:SetAttribute("RoundLight", height // 2)
-    local layer = drawButton:FindFirstChild("LightLayer")
-    if layer then
-        layer:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, height // 2)
-    end
-    drawStrip.Size = UDim2.fromOffset(size.Width, height)
-    drawButton.Position = UDim2.fromOffset((Hud.CultivationDock.actionSpan(size)), 0) -- on the Cultivate button's centre line
-end
-Hud.CultivationDock.Resized:Connect(placeDrawButton)
-placeDrawButton(Hud.CultivationDock.Size)
-local drawKey = UiKit.keycap("1") -- the same keycap, size and inset as Cultivate's
-drawKey.AnchorPoint = Vector2.new(1, 0.5)
-drawKey.Position = UDim2.new(1, -16, 0.5, 0)
-drawKey.Parent = drawButton
+UiKit.keycapOn(drawButton, "1")
+Hud.CultivationDock.addPill(drawButton, 26, {
+    Width = function()
+        local margin = math.max(UiKit.keyRoom(drawButton), UiTheme.Space.L)
+        return math.max(DRAW_MIN, UiKit.wordsWidth(drawButton) + margin * 2)
+    end,
+})
 drawButton.Activated:Connect(toggleDrawn)
 
 local function refreshDrawButton()
-    drawStrip.Visible = canToggle()
+    drawButton.Visible = canToggle()
     drawButton.Text = if player:GetAttribute("WeaponDrawn") == true then "SHEATHE" else "DRAW"
 end
 for _, name in { "WeaponId", "WeaponDrawn", "IsCultivating", "CarryingEgg" } do

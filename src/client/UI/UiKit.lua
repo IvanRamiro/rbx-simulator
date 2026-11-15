@@ -9,6 +9,10 @@
 --                               "Highlight" (a breakthrough, with a halo), "Quiet", "Danger"; on hover
 --                               it lifts and light crosses it, pressed it sinks with a ripple
 --   keycap(key)                 a keyboard key's hint (hidden on touch screens)
+--   keycapOn(button, key)       that hint inside a button's right end; keyRoom(button) is what its words must leave free
+--   fitWords(text, size, room)  words at `size`, or smaller if they would not fit across `room`
+--   pillShape(button, height)   a button rounded into a pill, its halo and light following
+--   wordsWidth(text)            a text object's words' width in its own units
 --   bar(props)                  a progress bar; setBar(bar, fraction) eases it
 --   list(parent, props)         a UIListLayout
 --   scroll(props)               a scrolling list (a thin glowing bar; its children laid out down it)
@@ -520,16 +524,80 @@ function UiKit.touchButton(button, text)
     UiKit.padding(button, 8, 8)
 end
 
+local KEYCAP_SIZE = Vector2.new(24, 22)
+local KEYCAP_INSET = UiTheme.Space.L -- from the button's right end, on every button that carries one
+
 function UiKit.keycap(key)
     local cap = UiKit.label({
         Name = "Keycap", Font = "Strong", Text = key, TextSize = 13, TextColor3 = C.AccentBright,
         TextXAlignment = Enum.TextXAlignment.Center, BackgroundTransparency = 0.3,
-        BackgroundColor3 = C.Well, Size = UDim2.fromOffset(24, 22),
+        BackgroundColor3 = C.Well, Size = UDim2.fromOffset(KEYCAP_SIZE.X, KEYCAP_SIZE.Y),
     })
     corner(cap, 2)
     stroke(cap, C.Accent, 0.35)
     cap.Visible = not UserInputService.TouchEnabled or UserInputService.KeyboardEnabled
     return cap
+end
+
+-- A key's hint inside a button, at its right end: the same size and inset on every button that has one (Cultivate, DRAW).
+-- The button's words stay centred on the whole button, so they must leave this much free at each end, or they run into the
+-- key: UiKit.keyRoom(button) gives it (0 where the hint is hidden, on a touch screen).
+function UiKit.keycapOn(button, key)
+    local cap = UiKit.keycap(key)
+    cap.AnchorPoint = Vector2.new(1, 0.5)
+    cap.Position = UDim2.new(1, -KEYCAP_INSET, 0.5, 0)
+    cap.Parent = button
+    return cap
+end
+function UiKit.keyRoom(button)
+    local cap = button:FindFirstChild("Keycap")
+    return if cap and cap.Visible then KEYCAP_INSET + KEYCAP_SIZE.X + UiTheme.Space.S else 0
+end
+
+-- How wide a text object's words are, in its own units: TextBounds is measured on the screen, after every UIScale on it and
+-- above it (the HUD's scale, a button's hover), so it is divided by them all.
+function UiKit.wordsWidth(textObject)
+    local scale = 1
+    local x = textObject
+    while x and not x:IsA("LayerCollector") do
+        local uiScale = x:FindFirstChildOfClass("UIScale")
+        if uiScale then
+            scale *= uiScale.Scale
+        end
+        x = x.Parent
+    end
+    return textObject.TextBounds.X / math.max(scale, 0.01)
+end
+
+-- Sets a button's words to `wanted` points, or smaller if that is what it takes for them to fit across `room` (its own units):
+-- the words shrink rather than run under a key's hint or off the button's ends.
+function UiKit.fitWords(textObject, wanted, room)
+    textObject.TextSize = wanted
+    local width = UiKit.wordsWidth(textObject)
+    if width > room and width > 0 then
+        textObject.TextSize = math.max(1, math.floor(wanted * room / width))
+    end
+end
+
+-- Rounds a button into a pill of the given height: its corners, its halo, its light layer and its line of gloss keep to the
+-- curves. Every pill on the HUD (Cultivate, the breakthrough, DRAW) is shaped here, so they match.
+function UiKit.pillShape(button, height)
+    local half = height // 2
+    button:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, half)
+    local halo = button:FindFirstChild("Halo")
+    if halo then
+        halo:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, half + 3)
+    end
+    button:SetAttribute("RoundLight", half)
+    local layer = button:FindFirstChild("LightLayer")
+    if layer then
+        layer:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, half)
+    end
+    local gloss = button:FindFirstChild("Gloss")
+    if gloss then
+        gloss.Position = UDim2.fromOffset(half, 2)
+        gloss.Size = UDim2.new(1, -half * 2, 0, 1)
+    end
 end
 
 -- props.Fill: the fill colour (default the accent). UiKit.setBar(bar, t) eases the fill there.

@@ -36,6 +36,8 @@ local OUT = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 local HOLD = 1.6      -- seconds a notification is up before the next may take its place
 local QUEUE_MAX = 4   -- the most waiting: past that the oldest waiting is dropped
 local SEAL = 34
+local INSET = UiTheme.Pad.Card -- the seal's from the window's left, the words' from its right
+local BLEED = 3 -- the margin the fading group keeps round the window, so its glow isn't cut off
 local HudMetrics = require(script.Parent:WaitForChild("HudMetrics"))
 local MIN_WIDTH = 200 -- a tablet leaves about 215 between the side panels
 local SIDE_GAP = 10 -- px kept from the profile and the QUEST panel
@@ -61,13 +63,14 @@ local group = Instance.new("CanvasGroup")
 group.Name = "Notification"
 group.BackgroundTransparency = 1
 group.AutomaticSize = Enum.AutomaticSize.Y
-group.Size = UDim2.fromOffset(width() + 6, 0)
+group.Size = UDim2.fromOffset(width() + BLEED * 2, 0)
 group.LayoutOrder = 1
 group.Visible = false
 group.Parent = Hud.Notice
-UiKit.padding(group, 3, 3)
+UiKit.padding(group, BLEED, BLEED)
+Hud.Notice:SetAttribute("Bleed", BLEED) -- (Hud lifts the notice by it: the window's edge, not the margin, sits on the HUD's top line)
 local function resize()
-    group.Size = UDim2.fromOffset(width() + 6, 0)
+    group.Size = UDim2.fromOffset(width() + BLEED * 2, 0)
 end
 Hud.CompactChanged:Connect(resize)
 HudMetrics.Changed:Connect(function()
@@ -84,7 +87,7 @@ pop.Parent = window
 local seal = Instance.new("Frame")
 seal.Name = "Seal"
 seal.AnchorPoint = Vector2.new(0, 0.5)
-seal.Position = UDim2.new(0, 12, 0.5, 0)
+seal.Position = UDim2.new(0, INSET, 0.5, 0)
 seal.Size = UDim2.fromOffset(SEAL, SEAL)
 seal.BorderSizePixel = 0
 seal.Parent = window
@@ -151,8 +154,8 @@ inner.AutomaticSize = Enum.AutomaticSize.Y
 inner.Size = UDim2.new(1, 0, 0, 0)
 inner.Parent = window
 local innerPad = Instance.new("UIPadding")
-innerPad.PaddingLeft = UDim.new(0, 12 + SEAL + 12)
-innerPad.PaddingRight = UDim.new(0, 14)
+innerPad.PaddingLeft = UDim.new(0, INSET + SEAL + INSET)
+innerPad.PaddingRight = UDim.new(0, INSET)
 innerPad.PaddingTop = UDim.new(0, 9)
 innerPad.PaddingBottom = UDim.new(0, 10)
 innerPad.Parent = inner
@@ -166,7 +169,7 @@ local label = UiKit.label({
 })
 local count = UiKit.label({
     Name = "Count", Font = "Number", TextSize = 15, TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, -14, 0, 7), Size = UDim2.fromOffset(40, 16), Visible = false, Parent = window,
+    Position = UDim2.new(1, -INSET, 0, 7), Size = UDim2.fromOffset(40, 16), Visible = false, Parent = window,
 })
 
 -- ---------- one at a time ----------
@@ -226,7 +229,7 @@ function present(entry)
     label.TextColor3 = entry.color or C.Text
     count.Visible = false
     count.TextColor3 = kind.Color
-    innerPad.PaddingRight = UDim.new(0, 14)
+    innerPad.PaddingRight = UDim.new(0, INSET)
     UiFx.typeIn(label, 0.22)
     if not group.Visible then
         group.GroupTransparency = 1

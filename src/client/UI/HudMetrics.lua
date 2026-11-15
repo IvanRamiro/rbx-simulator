@@ -60,14 +60,17 @@ end
 
 local authored = setmetatable({}, { __mode = "k" }) -- [label] = the TextSize its script asked for
 local scaleOfLabel = setmetatable({}, { __mode = "k" }) -- [label] = the function giving the scale it is drawn at
-local applying = false
+local applied = setmetatable({}, { __mode = "k" }) -- [label] = the TextSize this set last
+-- (A flag raised while setting it doesn't tell this change from a script's: property signals are deferred, so the handler ran
+-- after the flag was down and took the floor for the script's own size. After a small screen, a desktop's words stayed at
+-- the small screen's floor: the rail's 11 stayed 13.)
 
 local function fitText(label)
     local wanted = authored[label]
     if wanted and not label.TextScaled then
-        applying = true
-        label.TextSize = math.max(wanted, floorFor((scaleOfLabel[label] or HudMetrics.scale)()))
-        applying = false
+        local size = math.max(wanted, floorFor((scaleOfLabel[label] or HudMetrics.scale)()))
+        applied[label] = size
+        label.TextSize = size
     end
 end
 
@@ -79,7 +82,7 @@ local function track(item, scaleOf)
     scaleOfLabel[item] = scaleOf
     fitText(item)
     item:GetPropertyChangedSignal("TextSize"):Connect(function()
-        if not applying then -- its script chose a new size
+        if item.TextSize ~= applied[item] then -- its script chose a new size (not the one this set)
             authored[item] = item.TextSize
             fitText(item)
         end

@@ -156,27 +156,46 @@ barLayer.IgnoreGuiInset = true -- so the bar's place is the viewport's own pixel
 barLayer.DisplayOrder = -1     -- under the HUD's panels
 barLayer.Enabled = false
 barLayer.Parent = player:WaitForChild("PlayerGui")
-local bar = UiKit.panel({ Name = "GuardianBar", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(barWidth(), 72), Parent = barLayer })
+-- Its pieces from one set of measures: the shield icon centred down the bar, PAD in from its left as the health track ends PAD
+-- from its right, and the name row over the track as one block centred down the bar (the block sat 2 px over the icon's middle,
+-- and the icon 14 in against the track's 16)
+local BAR_HEIGHT, PAD, ICON = 72, UiTheme.Space.L, 34
+local NAME_HEIGHT, ROW_GAP, TRACK_HEIGHT = 20, 5, 24
+local BLOCK_TOP = (BAR_HEIGHT - (NAME_HEIGHT + ROW_GAP + TRACK_HEIGHT)) // 2
+local TEXT_LEFT = PAD + ICON + UiTheme.Space.S
+local bar = UiKit.panel({ Name = "GuardianBar", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(barWidth(), BAR_HEIGHT), Parent = barLayer })
 local barScale = Instance.new("UIScale")
 barScale.Parent = bar
 local barHeights = {} -- [model] = studs from its PrimaryPart up to over its body, measured once
-local barIcon = UiKit.icon(UiTheme.Icons.Guardian, 34, "Danger")
-barIcon.Position = UDim2.fromOffset(14, 19)
+local barIcon = UiKit.icon(UiTheme.Icons.Guardian, ICON, "Danger")
+barIcon.AnchorPoint = Vector2.new(0, 0.5)
+barIcon.Position = UDim2.new(0, PAD, 0.5, 0)
 barIcon.Parent = bar
 
+-- the name and the state share one middle line (the name's row); the state is as wide as its word, and the name has all the
+-- room it leaves (a fixed 60 / 40 split cut "Awakened Stone Lion" short on a phone's narrower bar, with room to spare)
 local nameLabel = UiKit.label({
-    Font = "Title", TextSize = 16, TextColor3 = NAME_COLOR, Position = UDim2.fromOffset(58, 9),
-    Size = UDim2.new(0.6, -58, 0, 20), TextTruncate = Enum.TextTruncate.AtEnd, Parent = bar,
+    Name = "GuardianName", Font = "Title", TextSize = 16, TextColor3 = NAME_COLOR, AnchorPoint = Vector2.new(0, 0.5),
+    Position = UDim2.fromOffset(TEXT_LEFT, BLOCK_TOP + NAME_HEIGHT / 2),
+    Size = UDim2.new(0.6, -TEXT_LEFT, 0, NAME_HEIGHT), TextTruncate = Enum.TextTruncate.AtEnd, Parent = bar,
 })
 
 local stateLabel = UiKit.label({
-    Font = "Strong", TextSize = 13, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 12),
-    Size = UDim2.new(0.45, 0, 0, 16), TextXAlignment = Enum.TextXAlignment.Right, Parent = bar,
+    Name = "GuardianState", Font = "Strong", TextSize = 13, AnchorPoint = Vector2.new(1, 0.5),
+    Position = UDim2.new(1, -PAD, 0, BLOCK_TOP + NAME_HEIGHT / 2), AutomaticSize = Enum.AutomaticSize.X,
+    Size = UDim2.fromOffset(0, NAME_HEIGHT), TextXAlignment = Enum.TextXAlignment.Right, Parent = bar,
 })
+local function fitName()
+    local state = if stateLabel.Text ~= "" then UiKit.wordsWidth(stateLabel) + UiTheme.Space.S else 0
+    nameLabel.Size = UDim2.new(1, -(TEXT_LEFT + PAD + state), 0, NAME_HEIGHT)
+end
+stateLabel:GetPropertyChangedSignal("TextBounds"):Connect(fitName)
+fitName()
 
 local barTrack = Instance.new("Frame")
-barTrack.Position = UDim2.fromOffset(58, 34)
-barTrack.Size = UDim2.new(1, -74, 0, 24)
+barTrack.Name = "Track"
+barTrack.Position = UDim2.fromOffset(TEXT_LEFT, BLOCK_TOP + NAME_HEIGHT + ROW_GAP)
+barTrack.Size = UDim2.new(1, -(TEXT_LEFT + PAD), 0, TRACK_HEIGHT)
 barTrack.BackgroundColor3 = UiTheme.Colors.Well
 barTrack.ClipsDescendants = true
 barTrack.Parent = bar
@@ -209,6 +228,7 @@ weakMark.ZIndex = 3
 weakMark.Parent = barTrack
 
 local healthText = Instance.new("TextLabel")
+healthText.Name = "Health"
 healthText.BackgroundTransparency = 1
 healthText.Size = UDim2.fromScale(1, 1)
 healthText.FontFace = UiTheme.Fonts.Strong
@@ -229,7 +249,7 @@ local function formatNumber(n)
 end
 
 HudMetrics.Changed:Connect(function()
-    bar.Size = UDim2.fromOffset(barWidth(), 72)
+    bar.Size = UDim2.fromOffset(barWidth(), BAR_HEIGHT)
     takeSize()
 end)
 
@@ -325,13 +345,13 @@ local function markStand(stand)
     mark.AnchorPoint = Vector2.new(0.5, 1)
     mark.Size = UDim2.fromOffset(84, 58)
     mark.Visible = false
-    local word = UiKit.label({
-        Name = "Word", Font = "Title", Text = "TAKE", TextSize = 22, TextColor3 = WEAK_GOLD, TextStrokeTransparency = 0.2,
+    local word = UiKit.label({ -- (the heavy face of every mark over the world: WorldMarkers)
+        Name = "Word", Font = "Heavy", Text = "TAKE", TextSize = 22, TextColor3 = WEAK_GOLD, TextStrokeTransparency = 0.2,
         TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 26), Parent = mark,
     })
     word.ZIndex = 1
     UiKit.label({
-        Name = "Chevron", Font = "Strong", Text = "v", TextSize = 28, TextColor3 = WEAK_GOLD, TextStrokeTransparency = 0.2,
+        Name = "Chevron", Font = "Heavy", Text = "v", TextSize = 28, TextColor3 = WEAK_GOLD, TextStrokeTransparency = 0.2,
         TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 26), Parent = mark,
     })
     mark.Parent = takeLayer
@@ -480,7 +500,7 @@ local function updateBar(dt)
         local rightLimit = view.X - BAR_GAP * scale
         local barX = if leftLimit + half <= rightLimit - half then math.clamp(point.X, leftLimit + half, rightLimit - half) else view.X / 2
         -- the bar hangs from the point: its bottom sits there, so the point must be a bar's height under the HUD above it
-        local margin = hudBottomOver(barX - half, barX + half) + BAR_GAP * scale + 72 * scale
+        local margin = hudBottomOver(barX - half, barX + half) + BAR_GAP * scale + BAR_HEIGHT * scale
         -- eased: a notification coming or going moves the HUD's foot, and the bar glides to it instead of jumping
         shownMargin = if shownMargin then shownMargin + (margin - shownMargin) * (1 - math.exp(-dt * 12)) else margin
         margin = shownMargin
