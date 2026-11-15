@@ -65,7 +65,7 @@ return {
     SandPhantom = "rbxassetid://79708404639959",
     Shadowcoil = "rbxassetid://88845337375470",
     SolarButterfly = "rbxassetid://109230484841814",
-    SpiritCrane = "rbxassetid://117737637798913",
+    SpiritCrane = "rbxassetid://107576244139738",
     StarfallFox = "rbxassetid://100336403205239",
     StormBumblebee = "rbxassetid://128219816290847",
     StormhornKirin = "rbxassetid://96870617770871",
