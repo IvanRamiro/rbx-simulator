@@ -10298,7 +10298,7 @@ function PetRig.update(rig, deltaTime, state)
     if s.time >= s.nextVoice then
         s.nextVoice = s.time + every[1] + math.random() * (every[2] - every[1])
         local voice = PetRig.PetSounds.voice(rig.petId)
-        if voice and not rig.nova and rig.rootPart:IsDescendantOf(workspace) then
+        if voice and not rig.nova and not rig.quiet and rig.rootPart:IsDescendantOf(workspace) then -- (rig.quiet: a pen's beast far off)
             PetRig.Sfx.play(voice, rig.rootPart)
         end
     end

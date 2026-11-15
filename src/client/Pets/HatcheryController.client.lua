@@ -22,6 +22,7 @@ local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Portraits = require(UI:WaitForChild("Portraits"))
 local CodexState = require(script.Parent:WaitForChild("CodexState"))
+local HatchCeremony = require(script.Parent:WaitForChild("HatchCeremony"))
 
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
@@ -293,7 +294,7 @@ RemoteEvents.EggHatchResultEvent.OnClientEvent:Connect(function(result)
             local part, reach = altarPart, leaveDistance -- closing forgets the altar
             window.close()
             local this = press
-            task.delay(untilBroken + REVEAL_TIME, function()
+            task.delay(untilBroken + REVEAL_TIME + HatchCeremony.extraHold(result), function() -- (a Large or Giant reveal stays longer)
                 if this ~= press or window.isOpen() or #heldEggs() == 0 then
                     return
                 end

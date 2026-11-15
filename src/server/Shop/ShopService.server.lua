@@ -212,7 +212,7 @@ function actions.SellPet(player, instanceId, extra)
         return false, "A Secret pet needs your confirmation to sell."
     end
     PetInventory.take(player, instanceId)
-    local value = Shop.petValue(pet.PetId, PetRules.level(pet))
+    local value = Shop.petValue(pet.PetId, PetRules.worth(pet))
     Wallet.add(player, value, "SellPet", pet.PetId)
     PetInventory.publish(player)
     return true, "Sold the " .. definition.DisplayName .. " for " .. value .. " Spirit Stones."
@@ -230,7 +230,7 @@ function actions.SellSpares(player)
     local total = 0
     for _, pet in spares do
         PetInventory.take(player, pet.InstanceId)
-        total += Shop.petValue(pet.PetId, PetRules.level(pet))
+        total += Shop.petValue(pet.PetId, PetRules.worth(pet))
     end
     Wallet.add(player, total, "SellPet", "Spares")
     PetInventory.publish(player)

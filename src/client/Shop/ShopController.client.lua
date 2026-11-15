@@ -448,7 +448,7 @@ local function sellPet(pet, info)
     ConfirmDialog.show({
         Title = "SELL A " .. string.upper(info.Rarity) .. " PET", Picture = Portraits.pet(pet.PetId, 72), ConfirmText = "SELL FOREVER",
         Text = "This " .. info.DisplayName .. " is one of the rarest beasts in the world. Sell it for "
-            .. NumberFormat.compact(Shop.petValue(pet.PetId, PetRules.level(pet))) .. " Spirit Stones? It can't be undone.",
+            .. NumberFormat.compact(Shop.petValue(pet.PetId, PetRules.worth(pet))) .. " Spirit Stones? It can't be undone.",
         OnConfirm = function()
             ask("SellPet", pet.InstanceId, { ConfirmSecret = true })
         end,
@@ -472,7 +472,7 @@ local function renderBuySell(contents)
     if #spares > 0 then
         local total = 0
         for _, pet in spares do
-            total += Shop.petValue(pet.PetId, PetRules.level(pet))
+            total += Shop.petValue(pet.PetId, PetRules.worth(pet))
         end
         sellRow(nextOrder(), UiKit.icon(UiTheme.Icons.Stones, 44), "Sell all spares", #spares .. (if #spares == 1 then " duplicate" else " duplicates"),
             C.AccentBright, total, function()
@@ -484,8 +484,9 @@ local function renderBuySell(contents)
         if info then
             local level = PetRules.level(pet)
             sellRow(nextOrder(), Portraits.pet(pet.PetId, 44), info.DisplayName,
-                info.Rarity .. (if level > 1 then "  ·  Level " .. level else ""),
-                GameConfig.PetRarityColors[info.Rarity] or C.Text, Shop.petValue(pet.PetId, level),
+                info.Rarity .. (if PetRules.size(pet) ~= "Normal" then "  ·  " .. PetRules.size(pet) else "")
+                    .. (if level > 1 then "  ·  Level " .. level else ""),
+                GameConfig.PetRarityColors[info.Rarity] or C.Text, Shop.petValue(pet.PetId, PetRules.worth(pet)),
                 if pet.Locked or pet.Equipped then nil else function()
                     sellPet(pet, info)
                 end, if pet.Locked then "Locked" else "Equipped")

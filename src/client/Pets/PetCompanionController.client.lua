@@ -65,9 +65,10 @@ local function getRankNumber(player)
     return Ranks.getIndex(Ranks.getPlayerRankName(player))
 end
 
--- `hidden`: its owner is culled (far away), so it waits out of the world like their other pets.
-local function buildPet(petId, rootPart, hidden)
-    local model, petRoot = PetModels.build(petId)
+-- `hidden`: its owner is culled (far away), so it waits out of the world like their other pets. `key` is "PetId:Size".
+local function buildPet(key, rootPart, hidden)
+    local petId, size = string.match(key, "^([^:]+):?(.*)$")
+    local model, petRoot = PetModels.build(petId, size)
     if not model then
         return nil
     end
@@ -80,17 +81,19 @@ local function buildPet(petId, rootPart, hidden)
         rootPart = petRoot,
         cframe = rootPart.CFrame,
         petId = petId,
+        key = key,
+        scale = model:GetAttribute("SizeScale") or 1, -- its hatch size: where it walks and how high it rides scale with it
         rig = PetModels.getRig(model),
         speed = 0,
     }
 end
 
--- Keeps a player's pets matching their EquippedPetIds: pets still equipped stay where they are,
+-- Keeps a player's pets matching their EquippedPets ("PetId:Size", ...): pets still equipped stay where they are,
 -- new ones appear at the player's side, unequipped ones go. A new character starts them all again.
 local function syncPets(player, entry)
     local character = player.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    local equipped = player:GetAttribute("EquippedPetIds")
+    local equipped = player:GetAttribute("EquippedPets")
     equipped = if typeof(equipped) == "string" and rootPart then equipped else ""
     if equipped == entry.equipped and entry.settled and rootPart == entry.rootPart then
         return
@@ -100,10 +103,11 @@ local function syncPets(player, entry)
     -- a pet joins once its meshes have arrived, so it appears whole (PetPreload)
     local shown = {}
     entry.settled = true
-    for _, petId in string.split(equipped, ",") do
-        if petId ~= "" then
+    for _, key in string.split(equipped, ",") do
+        local petId = string.match(key, "^[^:]+")
+        if petId then
             if PetPreload.isReady(petId) then
-                table.insert(shown, petId)
+                table.insert(shown, key)
             else
                 PetPreload.want(petId)
                 entry.settled = false
@@ -123,13 +127,13 @@ local function syncPets(player, entry)
 
     local spare = {}
     for _, pet in entry.pets do
-        spare[pet.petId] = spare[pet.petId] or {}
-        table.insert(spare[pet.petId], pet)
+        spare[pet.key] = spare[pet.key] or {}
+        table.insert(spare[pet.key], pet)
     end
     entry.pets = {}
     if key ~= "" then
-        for _, petId in string.split(key, ",") do
-            local pet = spare[petId] and table.remove(spare[petId]) or buildPet(petId, rootPart, entry.culled)
+        for _, petKey in string.split(key, ",") do
+            local pet = spare[petKey] and table.remove(spare[petKey]) or buildPet(petKey, rootPart, entry.culled)
             if pet then
                 if pet.rig then
                     pet.rig.owner = player -- (a special can show its owner: the Obsidian Guardian's)
@@ -171,19 +175,46 @@ local function levelFacing(rootPart)
     return CFrame.lookAt(position, position + flatLook.Unit)
 end
 
-local function getTargetCFrame(player, rootPart, index, count, now)
-    local bob = math.sin(now * BOB_SPEED + index * 1.7) * BOB_HEIGHT
+-- the height of the owner's root above their feet (a pet's place above the ground scales with its size from there)
+local function hipOf(player)
+    local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    local rootPart = humanoid and humanoid.RootPart
+    return if rootPart then humanoid.HipHeight + rootPart.Size.Y / 2 else 3
+end
+
+-- Each pet's place beside its owner, with its size (pets[i].scale): a pet rides at its size times the height a Normal one rides above
+-- the ground (so a Giant's feet still reach it and a Small's do too), and walks its size times as far out (never nearer than a Normal
+-- one). A pet farther out on the same side keeps clear of a big one nearer in.
+local function followOffsets(pets, hip)
+    local offsets = {}
+    for index, pet in pets do
+        local slot = FOLLOW_SLOTS[index] or FOLLOW_SLOTS[#FOLLOW_SLOTS]
+        local f = pet.scale or 1
+        local out = math.max(f, 1)
+        local x = slot.X * out
+        -- slots 3 and 4 walk outside 1 and 2, on the same side: past where that one walks, by their own share of the gap
+        local inner = (index == 3 or index == 4) and offsets[index - 2]
+        if inner then
+            x = inner.x + (slot.X - FOLLOW_SLOTS[index - 2].X) * out
+        end
+        offsets[index] = { x = x, z = slot.Y * out, y = (hip + FOLLOW_HEIGHT) * f - hip, scale = f }
+    end
+    return offsets
+end
+
+local function getTargetCFrame(player, rootPart, index, count, now, offset, hip)
+    local f = offset.scale
+    local bob = math.sin(now * BOB_SPEED + index * 1.7) * BOB_HEIGHT * f
 
     if player:GetAttribute("IsCultivating") == true then
         local angle = now * ORBIT_SPEED + (index - 1) / count * 2 * math.pi
-        local center = rootPart.Position + Vector3.new(0, ORBIT_HEIGHT + bob, 0)
-        local position = center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * ORBIT_RADIUS
+        local center = rootPart.Position + Vector3.new(0, (hip + ORBIT_HEIGHT) * f - hip + bob, 0)
+        local position = center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * ORBIT_RADIUS * math.max(f, 1)
         local heading = Vector3.new(-math.sin(angle), 0, math.cos(angle))
         return CFrame.lookAt(position, position + heading)
     end
 
-    local slot = FOLLOW_SLOTS[index] or FOLLOW_SLOTS[#FOLLOW_SLOTS]
-    return levelFacing(rootPart) * CFrame.new(slot.X, FOLLOW_HEIGHT + bob, slot.Y)
+    return levelFacing(rootPart) * CFrame.new(offset.x, offset.y + bob, offset.z)
 end
 
 local function updateCompanions(deltaTime)
@@ -198,6 +229,8 @@ local function updateCompanions(deltaTime)
         local rootPart = entry.rootPart
         local far = rootPart ~= nil and eye ~= nil and player ~= Players.LocalPlayer
             and (rootPart.Position - eye).Magnitude > CULL_DISTANCE
+        -- the player's own pets step out of the hatch cinematic's shot (a Giant beside them filled it: HatchCeremony sets this)
+        far = far or (player == Players.LocalPlayer and player:GetAttribute("InHatchCinematic") == true)
         if far ~= (entry.culled == true) then
             setCulled(entry, far)
         end
@@ -211,10 +244,12 @@ local function updateCompanions(deltaTime)
             continue
         end
 
+        local hip = hipOf(player)
+        local offsets = followOffsets(entry.pets, hip)
         for index, pet in entry.pets do
-            local target = getTargetCFrame(player, rootPart, index, #entry.pets, now)
+            local target = getTargetCFrame(player, rootPart, index, #entry.pets, now, offsets[index], hip)
             local previous = pet.cframe.Position
-            if (pet.cframe.Position - target.Position).Magnitude > SNAP_DISTANCE then
+            if (pet.cframe.Position - target.Position).Magnitude > SNAP_DISTANCE * math.max(pet.scale, 1) then
                 pet.cframe = target
             else
                 pet.cframe = pet.cframe:Lerp(target, blend)

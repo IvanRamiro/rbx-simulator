@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local PetRig = require(script.Parent:WaitForChild("PetRig"))
 
 local meshFolder = ReplicatedStorage:WaitForChild("PetMeshes", 10)
@@ -211,12 +212,14 @@ local function weldTo(rootPart, part)
     weld.Parent = part
 end
 
-local function addImported(model, rootPart, template, design, petId)
+local function addImported(model, rootPart, template, design, petId, factor)
     local look = MESH_LOOKS[petId] or {}
     local turn = template:GetAttribute("Turn") or CFrame.identity
     local boxCFrame, boxSize = template:GetBoundingBox()
     local longest = math.max(boxSize.X, boxSize.Y, boxSize.Z)
-    local k = design.Scale * PetModels.SIZE
+    -- (the size factor goes into k, so the rig's unit and metres, and with them its pose offsets, sole, glows, points, effects and
+    -- special, all scale together and keep the pet's proportions)
+    local k = design.Scale * PetModels.SIZE * factor
     local scale = (look.Length or longest) * k / longest
 
     if PetRig.isRigged(petId, template) then
@@ -264,14 +267,21 @@ end
 
 local warnedMissing = {} -- [petId] = true once its missing model has been reported
 
-function PetModels.build(petId)
+-- The pet's model and its root. size: its hatch size ("Small", "Normal", "Large", "Giant"; nil: Normal), scaling the whole rig by
+-- PetRules.Sizes' Scale. The model carries its size and that factor as the attributes PetSize and SizeScale.
+function PetModels.build(petId, size, displayScale)
     local design = PetModels.Pets[petId]
     if not design then
         return nil
     end
+    size = PetRules.size(size)
+    -- displayScale: an extra factor a display may apply on top (a pen caps a huge pet to fit it); nil is 1
+    local factor = PetRules.sizeInfo(size).Scale * (displayScale or 1)
 
     local model = Instance.new("Model")
     model.Name = petId
+    model:SetAttribute("PetSize", size)
+    model:SetAttribute("SizeScale", factor)
 
     local rootPart = Instance.new("Part")
     rootPart.Name = "Root"
@@ -287,7 +297,7 @@ function PetModels.build(petId)
 
     local imported = meshes() and meshFolder:FindFirstChild(petId, true)
     if imported and imported:IsA("Model") then
-        addImported(model, rootPart, imported, design, petId)
+        addImported(model, rootPart, imported, design, petId, factor)
         return model, rootPart
     end
 
@@ -297,17 +307,17 @@ function PetModels.build(petId)
         warn("PetModels: no imported model for " .. petId .. " in ReplicatedStorage.PetMeshes" .. (if meshFolder then "" else " (the folder is missing)"))
     end
 
-    local scale = design.Scale * PetModels.SIZE
+    local scale = design.Scale * PetModels.SIZE * factor
     for _, spec in design.Parts do
         local offset = spec.At - spec.At.Position + spec.At.Position * scale
-        local size = spec.Size * scale
+        local partSize = spec.Size * scale
 
         if spec.Shape == "Prism" then
-            for _, piece in prismPieces(size, spec.Axis or "Z") do
+            for _, piece in prismPieces(partSize, spec.Axis or "Z") do
                 createPart(model, rootPart, piece.Shape, piece.Size, offset * piece.Offset, spec, piece.Tone)
             end
         else
-            createPart(model, rootPart, spec.Shape, size, offset, spec)
+            createPart(model, rootPart, spec.Shape, partSize, offset, spec)
         end
     end
 

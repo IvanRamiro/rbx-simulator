@@ -19,6 +19,7 @@ local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Portraits = require(UI:WaitForChild("Portraits"))
 local PetPreload = require(script.Parent:WaitForChild("PetPreload"))
 local HatchCeremony = require(script.Parent:WaitForChild("HatchCeremony"))
+local PenPicker = require(script.Parent:WaitForChild("PenPicker"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local C = UiTheme.Colors
@@ -35,12 +36,19 @@ local window = Hud.window({
 })
 local body = window.Body
 
--- the top: how many are out of how many slots, and what they add, as two pills
-local SUMMARY = 30
-local equippedPill, equippedLabel = UiKit.pill(UiTheme.Icons.Pets, "", { Name = "Equipped", Size = UDim2.fromOffset(0, SUMMARY), Parent = body })
+-- the top: how many are out of how many slots, and what they add, as two pills; between them, PEN (the beast pen: PenPicker)
+local SUMMARY = UiTheme.Height.ButtonSmall
+local PILL = 30
+local equippedPill, equippedLabel = UiKit.pill(UiTheme.Icons.Pets, "", { Name = "Equipped", Position = UDim2.fromOffset(0, (SUMMARY - PILL) / 2),
+    Size = UDim2.fromOffset(0, PILL), Parent = body })
 local bonusPill, bonusLabel = UiKit.pill(UiTheme.Icons.Qi, "", {
-    Name = "Bonus", AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.fromOffset(0, SUMMARY), Parent = body,
+    Name = "Bonus", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, (SUMMARY - PILL) / 2), Size = UDim2.fromOffset(0, PILL), Parent = body,
 })
+local pensButton = UiKit.button({ Name = "Pens", Text = "PEN", TextSize = 14, Tone = "Accent", AnchorPoint = Vector2.new(0.5, 0),
+    Position = UDim2.fromScale(0.5, 0), Size = UDim2.fromOffset(110, SUMMARY), Parent = body })
+pensButton.Activated:Connect(function()
+    PenPicker.open()
+end)
 bonusLabel.TextColor3 = C.Highlight
 local _, _ = equippedPill, bonusPill
 local LIST_TOP = SUMMARY + UiTheme.Space.M
@@ -104,7 +112,26 @@ local function createPetCard(pet, layoutOrder, equippedCount)
     local rarityColor = GameConfig.PetRarityColors[definition.Rarity] or C.Text
 
     local level = PetRules.level(pet)
+    local size = PetRules.size(pet)
+    local sizeInfo = PetRules.sizeInfo(size)
+    local big = sizeInfo.Order > PetRules.Sizes.Normal.Order
     local card = UiKit.boldCard(UiKit.card({ Name = "PetCard", LayoutOrder = layoutOrder, Parent = petList }), rarityColor)
+    if big then
+        -- a Large or Giant pet: a faint gold light rising from the card's foot, and its portrait's well ringed in gold
+        local glow = Instance.new("Frame")
+        glow.Name = "SizeGlow"
+        glow.BorderSizePixel = 0
+        glow.BackgroundColor3 = sizeInfo.Color
+        glow.Size = UDim2.fromScale(1, 1)
+        glow.Parent = card -- (first in: the card's contents draw over it)
+        UiKit.corner(glow, UiTheme.Radius.Card)
+        local fade = Instance.new("UIGradient")
+        fade.Rotation = -90
+        local strength = if size == "Giant" then 0.72 else 0.84 -- (transparency at the foot)
+        fade.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, strength), NumberSequenceKeypoint.new(0.55, 0.97),
+            NumberSequenceKeypoint.new(1, 1) })
+        fade.Parent = glow
+    end
     card:SetAttribute("InstanceId", pet.InstanceId)
     local PAD = UiTheme.Pad.Card
     -- the portrait on a dark well, its rarity's colour round it
@@ -117,7 +144,7 @@ local function createPetCard(pet, layoutOrder, equippedCount)
     well.Size = UDim2.fromOffset(PORTRAIT, PORTRAIT)
     well.Parent = card
     UiKit.corner(well, UiTheme.Radius.Chip + 2)
-    UiKit.stroke(well, rarityColor, 0.55, 1)
+    UiKit.stroke(well, if big then sizeInfo.Color else rarityColor, if big then 0.15 else 0.55, if size == "Giant" then 2 else 1)
     local picture = takePortrait(pet.PetId)
     picture.Name = "Portrait"
     picture:SetAttribute("PetId", pet.PetId)
@@ -167,13 +194,23 @@ local function createPetCard(pet, layoutOrder, equippedCount)
         new.Parent = tags
     end
     UiKit.tag(definition.Rarity, rarityColor).Parent = tags
+    if size ~= "Normal" then -- (Normal is the usual: no pill)
+        local sizeTag = UiKit.tag(size, sizeInfo.Color)
+        sizeTag.Name = "SizeTag"
+        sizeTag.LayoutOrder = 1
+        sizeTag.Parent = tags
+    end
     if level > 1 then
         local levelTag = UiKit.tag("Lv " .. level, C.AccentBright)
-        levelTag.LayoutOrder = 0
+        levelTag.LayoutOrder = 2
         levelTag.Parent = tags
     end
+
     UiKit.boldLabel({
-        Name = "Qi", TextSize = 15, TextColor3 = C.Highlight, Text = "+" .. PetRules.qiBonus(pet.PetId, level) .. "% Qi",
+        Name = "Qi", TextSize = 15, TextColor3 = C.Highlight, RichText = true,
+        -- (and, for one roaming in a pen, which: equipping it takes it out)
+        Text = "+" .. PetRules.qiBonus(pet.PetId, level, size) .. "% Qi"
+            .. (if pet.InPen then '  <font color="#' .. C.Sky:ToHex() .. '">IN PEN</font>' else ""),
         Size = UDim2.new(1, 0, 0, 18), LayoutOrder = 3, Parent = info,
     })
 
@@ -245,6 +282,7 @@ local function renderInventory(snapshot)
         return
     end
     lastSnapshot = snapshot
+    PenPicker.setSnapshot(snapshot)
     local arrived = false
     for _, pet in snapshot.Pets do
         if known and not known[pet.InstanceId] then
@@ -264,7 +302,7 @@ local function renderInventory(snapshot)
         local definition = GameConfig.Pets[pet.PetId]
         if pet.Equipped and definition then
             equippedCount += 1
-            bonusPercent += PetRules.qiBonus(pet.PetId, PetRules.level(pet))
+            bonusPercent += PetRules.qiBonus(pet.PetId, PetRules.level(pet), pet.Size)
         end
     end
     bonusPercent += snapshot.CodexQiPercent or 0

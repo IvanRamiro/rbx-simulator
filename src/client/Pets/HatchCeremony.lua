@@ -7,9 +7,13 @@
 --   3. as it slows, the marker and the egg glow the winner's rarity colour: the rarity first, the beast second;
 --   4. it lands as the egg cracks (at the server's BreakAt), in a burst that grows with rarity: a flash and sparks; from Rare a
 --      shockwave and rays of light; from Legendary a screen flash, a camera shake and a banner; for a Secret, a beat of darkness first;
---   5. a reveal card: the beast turning, its name, rarity, chance, and NEW or Duplicate.
+--   5. a reveal card: the beast turning, its name, rarity, chance, its size, and NEW or Duplicate. Its hatch size (PetRules.Sizes,
+--      rolled by the server) shows there: Small and Normal quietly, as a tag; Large with a gold stamp and the beast swelling a
+--      little; Giant with a held beat (the beast trembles, the rays quicken), then the beast grows to full size, a gold GIANT! stamp
+--      slams onto the card, a shockwave of gold light runs out round the egg and the camera kicks. The card stays longer for them.
 -- A tap skips to the next beat. The player's Reduced Effects setting drops the shake, the flashes and most particles.
---   HatchCeremony.play(result)   result: the server's EggHatchResultEvent (EggId, PetId, ChancePercent, IsNew, Staged, BreakAt)
+--   HatchCeremony.play(result)   result: the server's EggHatchResultEvent (EggId, PetId, ChancePercent, Size, IsNew, Staged, BreakAt)
+--   HatchCeremony.extraHold(result)  seconds the reveal stays past the usual for this result's size (the altar window waits it out)
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,6 +23,7 @@ local Workspace = game:GetService("Workspace")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
+local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local Client = script.Parent.Parent
 local UI = Client:WaitForChild("UI")
 local Portraits = require(UI:WaitForChild("Portraits"))
@@ -151,6 +156,58 @@ local function burst(at, rarity, cut)
     end
 end
 
+-- the gold light of a big hatch round the egg: a flash, a shockwave across the ground and a few long rays (Neon-bright gold, no
+-- sparkle: the stamp and the beast carry it). `power`: 1 for Giant, less for Large.
+local function sizeBurst(at, color, power, cut)
+    local holder = Instance.new("Part")
+    holder.Anchored, holder.CanCollide, holder.CanQuery, holder.CanTouch, holder.CastShadow = true, false, false, false, false
+    holder.Transparency = 1
+    holder.Size = Vector3.new(0.4, 0.4, 0.4)
+    holder.CFrame = CFrame.new(at)
+    holder.Parent = Workspace
+    task.delay(3, function()
+        holder:Destroy()
+    end)
+    local core = color:Lerp(Color3.new(1, 1, 1), 0.4)
+    emitter(holder, {
+        Texture = TEXTURES.Glow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.6),
+        Size = seq({ { 0, 4 }, { 1, 9 + 9 * power } }), Transparency = seq({ { 0, 0.15 }, { 1, 1 } }),
+        Color = ColorSequence.new(core, color), Brightness = 2.4,
+    }):Emit(1)
+    local ground = holder:Clone()
+    ground.CFrame = CFrame.new(at - Vector3.new(0, RISE + 0.4, 0))
+    ground.Parent = Workspace
+    task.delay(2.5, function()
+        ground:Destroy()
+    end)
+    local ring = emitter(ground, {
+        Texture = TEXTURES.Ring, Speed = NumberRange.new(0.01), EmissionDirection = Enum.NormalId.Top,
+        Orientation = Enum.ParticleOrientation.VelocityPerpendicular, Lifetime = NumberRange.new(0.9),
+        Size = seq({ { 0, 1.5 }, { 1, 14 + 16 * power } }), Transparency = seq({ { 0, 0 }, { 0.55, 0.35 }, { 1, 1 } }),
+        Color = ColorSequence.new(core, color), Brightness = 2.6,
+    })
+    ring:Emit(1)
+    if power >= 1 then -- a second, slower ring behind the first
+        task.delay(0.16, function()
+            if ring.Parent then
+                ring.Lifetime = NumberRange.new(1.2)
+                ring:Emit(1)
+            end
+        end)
+    end
+    emitter(holder, {
+        Texture = TEXTURES.Streak, Speed = NumberRange.new(22, 30), SpreadAngle = Vector2.new(180, 25),
+        EmissionDirection = Enum.NormalId.Top, Orientation = Enum.ParticleOrientation.VelocityParallel,
+        Lifetime = NumberRange.new(0.35, 0.55), Drag = 4,
+        Size = seq({ { 0, 3.6 }, { 1, 0.6 } }), Transparency = seq({ { 0, 0.05 }, { 1, 1 } }),
+        Color = ColorSequence.new(core, color), Brightness = 2.8,
+    }):Emit(math.floor((6 + 10 * power) * cut))
+end
+
+function HatchCeremony.extraHold(result)
+    return if typeof(result) == "table" then PetRules.sizeInfo(result.Size).RevealHold else 0
+end
+
 -- ---------- the reel ----------
 -- The cards, drawn from the egg's pool at its real odds (the player's own, with the Luck pass), the winner placed at WINNER.
 local function reelItems(egg, winner)
@@ -189,6 +246,8 @@ local function play(result)
     end
     local rarity = definition.Rarity
     local color = rarityColor(rarity)
+    local size = PetRules.size(result.Size)
+    local sizeInfo = PetRules.sizeInfo(size)
     local tier = TIERS[rarity] or TIERS.Common
     local calm = reduced()
     local cut = if calm then 0.4 else 1
@@ -198,6 +257,7 @@ local function play(result)
     end
 
     local started = os.clock()
+    player:SetAttribute("InHatchCinematic", true) -- (their own pets step out of the shot: PetCompanionController)
     local breakIn = if typeof(result.BreakAt) == "number" then math.max(1.2, result.BreakAt - Workspace:GetServerTimeNow()) else 3.6
     local roll = breakIn - 0.05
     local connections, done = {}, false
@@ -360,6 +420,7 @@ local function play(result)
 
     local items = reelItems(egg, result.PetId)
     local portraits = {} -- [key] = { free portraits }
+    local nudge, nudgeAt = 0, 0 -- (the size reveal's camera kick: how hard, and when; it eases back over half a second)
     local function takePortrait(petId, silhouette)
         local key = petId .. (if silhouette then "#s" else "")
         local free = portraits[key]
@@ -609,6 +670,9 @@ local function play(result)
         portrait.ZIndex = 14
         portrait.Parent = card
         stopSpin = Portraits.spin(portrait)
+        if size == "Small" then -- a little one: it settles a touch smaller than the usual
+            tween(portrait, 0.4, { Size = UDim2.fromOffset(168, 168) })
+        end
         UiKit.label({ Name = "PetName", Font = "Title", TextSize = 24, Text = definition.DisplayName, TextColor3 = C.Text,
             TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 222),
             Size = UDim2.new(1, -20, 0, 28), TextScaled = true, ZIndex = 15, Parent = card })
@@ -628,8 +692,11 @@ local function play(result)
             t.Parent = tags
         end
         tag(rarity, color, 1)
-        tag(string.format("%.3g%% chance", tonumber(result.ChancePercent) or 0), C.AccentBright, 2)
-        tag("+" .. tostring(definition.QiBonus) .. "% Qi", C.Sky, 3)
+        tag(string.format("%.3g%% chance", tonumber(result.ChancePercent) or 0), C.AccentBright, 3)
+        tag("+" .. tostring(PetRules.qiBonus(result.PetId, 1, size)) .. "% Qi", C.Sky, 4)
+        if size == "Small" then
+            tag(size, sizeInfo.Color, 2)
+        end
         UiKit.label({ Name = "Verdict", Font = "Strong", TextSize = 14, TextXAlignment = Enum.TextXAlignment.Center,
             Text = if result.IsNew then "NEW! Added to your Codex" else "Duplicate: fuse it or sell it",
             TextColor3 = if result.IsNew then C.Highlight else C.Muted, AnchorPoint = Vector2.new(0.5, 0),
@@ -648,7 +715,96 @@ local function play(result)
             applyHudScale(banner)
             tween(grow, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)
         end
-        task.delay(REVEAL_HOLD, function()
+        -- ---------- the size reveal (Large, Giant) ----------
+        if size == "Large" or size == "Giant" then
+            local giant = size == "Giant"
+            local gold = sizeInfo.Color
+            local wait = if giant then 0.75 else 0.3 -- the held beat before it shows how big it is
+            local trembling = giant
+            if giant then
+                Sfx.play("EggRumble", nil, 1.15)
+                local shake = RunService.RenderStepped:Connect(function(dt)
+                    if trembling then
+                        local k = 2.5
+                        portrait.Position = UDim2.new(0.5, (math.random() - 0.5) * k, 0, 118 + (math.random() - 0.5) * k)
+                        rays.Rotation += dt * 90 -- the rays quicken
+                    end
+                end)
+                table.insert(connections, shake)
+            end
+            task.delay(wait, function()
+                if done then
+                    return
+                end
+                trembling = false
+                portrait.Position = UDim2.new(0.5, 0, 0, 118)
+                -- the beast grows to its full size, past the card's middle
+                local grown = if giant then 262 else 214
+                portrait.Size = UDim2.fromOffset(190, 190)
+                tween(portrait, if giant then 0.55 else 0.4, { Size = UDim2.fromOffset(grown, grown) }, Enum.EasingStyle.Back)
+                -- the rays and the card's edge turn gold
+                for _, ray in rays:GetChildren() do
+                    if ray:IsA("Frame") then
+                        tween(ray, 0.35, { BackgroundColor3 = gold:Lerp(color, if giant then 0.15 else 0.5) })
+                    end
+                end
+                local cardEdge = card:FindFirstChildOfClass("UIStroke")
+                if cardEdge then
+                    tween(cardEdge, 0.3, { Color = gold, Thickness = if giant then 4 else 3 })
+                end
+                -- the stamp, slammed onto the card's top corner
+                local stamp = UiKit.label({ Name = "SizeStamp", Font = "Title", TextSize = if giant then 40 else 28,
+                    Text = if giant then "GIANT!" else "LARGE", TextColor3 = gold, TextXAlignment = Enum.TextXAlignment.Center,
+                    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, if giant then -6 else 2),
+                    Size = UDim2.fromOffset(260, 50), Rotation = -6, ZIndex = 31, Parent = card })
+                local stampEdge = Instance.new("UIStroke")
+                stampEdge.Color = Color3.fromRGB(40, 22, 4)
+                stampEdge.Thickness = if giant then 4 else 3
+                stampEdge.Parent = stamp
+                local slam = Instance.new("UIScale")
+                slam.Scale = if giant then 2.6 else 1.8
+                slam.Parent = stamp
+                tween(slam, if giant then 0.32 else 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+                tag(size, gold, 2)
+                -- a ring of gold light running out from the beast across the card
+                local ring = Instance.new("Frame")
+                ring.Name = "SizeRing"
+                ring.BackgroundTransparency = 1
+                ring.AnchorPoint = Vector2.new(0.5, 0.5)
+                ring.Position = UDim2.new(0.5, 0, 0, 118)
+                ring.Size = UDim2.fromOffset(120, 120)
+                ring.ZIndex = 13
+                ring.Parent = card
+                UiKit.corner(ring, 999)
+                local ringEdge = UiKit.stroke(ring, gold, 0, if giant then 6 else 4)
+                tween(ring, if giant then 0.7 else 0.5, { Size = UDim2.fromOffset(if giant then 560 else 380, if giant then 560 else 380) })
+                tween(ringEdge, if giant then 0.7 else 0.5, { Transparency = 1, Thickness = 1 })
+                Sfx.play(if giant then "NovaBoom" else "RareReveal", nil, if giant then 0.9 else 1.15)
+                if giant then
+                    Sfx.play("RareReveal", nil, 0.85)
+                end
+                -- in the world: gold light round the egg, and the camera kicks
+                local at = if model and model.PrimaryPart then model:GetPivot().Position else focus
+                if at then
+                    sizeBurst(at, gold, if giant then 1 else 0.45, cut)
+                end
+                if not calm then
+                    nudge, nudgeAt = if giant then 1 else 0.4, os.clock()
+                    if giant then
+                        shakeUntil, shakeSize = os.clock() + 0.4, 0.3
+                        local flash = Instance.new("Frame")
+                        flash.BorderSizePixel = 0
+                        flash.BackgroundColor3 = gold:Lerp(Color3.new(1, 1, 1), 0.55)
+                        flash.BackgroundTransparency = 0.35
+                        flash.Size = UDim2.fromScale(1, 1)
+                        flash.ZIndex = 11 -- (under the card: the card stays readable through it)
+                        flash.Parent = gui
+                        tween(flash, 0.5, { BackgroundTransparency = 1 })
+                    end
+                end
+            end)
+        end
+        task.delay(REVEAL_HOLD + sizeInfo.RevealHold, function()
             finish(false)
         end)
     end
@@ -703,6 +859,7 @@ local function play(result)
             for _, hud in hidden do
                 hud.Enabled = true
             end
+            player:SetAttribute("InHatchCinematic", nil)
             gui:Destroy()
             grade:Destroy()
             for _, list in portraits do
@@ -764,6 +921,10 @@ local function play(result)
             local intro = math.clamp(t / INTRO, 0, 1)
             intro = 1 - (1 - intro) ^ 3
             local shot = saved.CFrame:Lerp(shotAt(math.clamp(t / (roll + 2), 0, 1)), intro)
+            local kick = nudge * math.exp(-(os.clock() - nudgeAt) * 6)
+            if kick > 0.001 then -- the size reveal's kick: pushed in toward the egg, easing back
+                shot *= CFrame.new(0, 0, -1.6 * kick)
+            end
             local now = os.clock()
             if now < shakeUntil then
                 local k = (shakeUntil - now) / 0.5 * shakeSize

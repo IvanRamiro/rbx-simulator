@@ -975,8 +975,9 @@ local GameConfig = {
     -- number (shared/Merchant.lua), so every server shows the same ones; each player can buy each deal once a visit. All in
     -- Spirit Stones (MerchantService):
     --   Egg  Count eggs at Discount off the Marketplace's price (Shop.marketEggPrice), for the egg's RequiredRank. At most
-    --        MaxEggDiscount: with the Luck pass an egg's pet sells on average for at most 0.8 of the discounted price at today's
-    --        deals (measured 2026-11-12; at 40% off it would come close to even): re-check whenever pet values, pools, luck or
+    --        MaxEggDiscount: with the Luck pass an egg's pet sells on average for at most 0.966 of the discounted price at today's
+    --        deals (the Void Rift Egg, the worst; measured 2026-11-15 with hatch sizes' sell values, PetRules.Sizes; it was 0.949
+    --        before sizes, after the 2026-11-12 Void Rift pool change; at 40% off it would pass even): re-check whenever pet values, pools, luck or
     --        discounts change.
     --   Pet  one beast, chosen, no luck involved: Rare, Epic or Legendary only, for PetMarkup times what it sells for
     --        (Shop.petValue, at level 1: at least MinPetMarkup, so buying one to sell it always loses stones), for the rank

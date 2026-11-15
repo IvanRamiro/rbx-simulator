@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CodexRules = require(ReplicatedStorage:WaitForChild("CodexRules"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
+local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Codex = require(script.Parent:WaitForChild("Codex"))
@@ -147,8 +148,10 @@ local function onHatchRequest(player, eggId)
         return
     end
     local petId, chance = rollEggPet(egg, player)
+    -- its size, rolled apart from the beast at PetRules.Sizes' chances (no luck: the Luck pass changes which beast, not its size)
+    local size = PetRules.rollSize(random)
     local isNew = not Codex.isFound(player, petId)
-    if not PetInventory.grantPet(player, petId) then
+    if not PetInventory.grantPet(player, petId, size) then
         EggInventory.grant(player, eggId)
         return
     end
@@ -159,10 +162,14 @@ local function onHatchRequest(player, eggId)
     PetInventory.publish(player)
     PlayerData.saveSoon(player)
     Analytics.event(player, "EggHatched", 1, eggId, petId)
+    if size ~= "Normal" then
+        Analytics.event(player, "PetSizeHatched", 1, size, petId)
+    end
     RemoteEvents.EggHatchResultEvent:FireClient(player, {
         EggId = eggId,
         PetId = petId,
         ChancePercent = chance,
+        Size = size,
         IsNew = isNew,
         Staged = stageEgg(altar, eggId),
         BreakAt = workspace:GetServerTimeNow() + HATCH_STAGE, -- server time: the client breaks it on time, however late this arrives

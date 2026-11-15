@@ -256,6 +256,30 @@ Hatching can give a pet the player already has, so a spare always has a use (`sh
 - **Equipped pets** can't be sold or fused away either.
 - **Secret pets** take one more step: a dialog naming what is being given up, its button waiting 3 seconds. The server refuses to sell or fuse one without that confirmation.
 
+### Hatch sizes (November 15, 2026)
+
+Every hatch rolls a size on the server, apart from the beast (the Luck pass doesn't touch it), for every egg including the Exclusive Egg (`shared/PetRules.Sizes`, the one place both sides read):
+
+| Size | Model | Chance | Qi bonus | Sell value |
+|---|---|---|---|---|
+| Small | 0.75x | 25% | x0.9 | x0.8 |
+| Normal | 1x | 57% | x1 | x1 |
+| Large | 1.35x | 14% | x1.15 | x1.2 |
+| Giant | 1.8x | 4% | x1.4 | x2 |
+
+- The whole rig scales (joints, bones, glows, effects, its walk and its special); beside its owner a big pet rides and walks proportionally higher and farther out. Bought (Wandering Merchant), given and starter pets are Normal.
+- Sell values were lowered from the brief's 1.5 and 3 so buying the Merchant's discounted eggs never pays (measured: at most 0.966 of the price). A pet's **Worth** is its copies' size values added up as they fuse (`Shop.petValue`: base x Worth), so fusing never makes or loses Spirit Stones; a fusion keeps the larger size. "Sell all spares" never takes a Large or Giant copy.
+- The hatch reveal shows the size: a quiet tag for Small, a gold LARGE stamp, and for a Giant a held beat, the beast growing past the card, a gold GIANT! stamp, a shockwave of gold light round the egg and a camera kick. The hatcher's own pets step out of the shot.
+
+### Beast pens (November 15, 2026)
+
+The owner: "Just 1 pen per player, but the size for pen is upgradable like the steal an egg". Each player in a server holds one of six Beast Pastures on Yggdrasil's meadow (`src/worldbuild/Placements/Pastures.lua`, the one table of spots; built by `PastureBuilder`), and keeps one pen there, saved as `PenLevel` and `Pen`:
+
+- **Levels 1-9:** 2 to 10 beasts, 18x22 to 42x62 studs (`shared/PenLayout`). Each level costs one weapon of a realm (`Shop.penPrice`): 60, 160, 400, 1,050, 2,700, 18,500, 125,000, 850,000 Spirit Stones. The fence grows out of the ground with a ring of gold light when it rises.
+- **The beasts** roam on every client (the server does nothing per frame): idle, turn, walk with their own gait, kept apart and inside the fence, each with its name, rarity and size over it; a beast too wide to turn is shown smaller. A pet in the pen can't be equipped at once (equipping takes it out); selling it takes it out; fusing never spends one.
+- **The window** (the gate's prompt, the board's UPGRADE PEN prompt, or PETS then PEN): the upgrade with its price and a green UPGRADE, the beasts in the pen, and the rest to add. A player is told where their pasture is on joining.
+- The pens earn nothing for now (the owner's call).
+
 ### Spirit Beast Codex
 
 A book of every beast (the Codex button on the HUD's rail; `client/Pets/CodexController`, `server/Pets/Codex`, `shared/CodexRules`, `shared/PetLore`, saved as `Codex`), so collecting stays worth it after a stronger companion. An entry stays for good: selling or fusing the pet leaves it in the book. Every pet owned before the Codex existed is entered when the player loads.
@@ -741,6 +765,15 @@ Six floating islands built from original Blender work: terrain tops, sculpted un
 - **Hazards:** parts tagged `LavaHazard` (Ember Peak's lava) also return a player to their island's checkpoint on touch.
 
 ### Yggdrasil (built; its own meshes await import)
+
+**Planned layout, not built (owner, 2026-11-15: "We might be redesigning and reorganizing the main hub layout soon, but this is not an immediate task"; "For now, do not modify the current hub").** Reference: `assets/concepts/HubLayoutReference_2026-11-15.png`. Use it **only for positions, spacing and organisation**. Copy nothing of its architecture, decorations, terrain, colours or style: the owner said "I do NOT want you to copy the image's architecture, decorations, terrain, colors, or visual style". Build original structures in the hub's own identity (celestial crystal city, not Chinese).
+- The Yggdrasil tree at the centre.
+- Six pet pens in a ring round the tree, one per player slot.
+- Each player's spawn point in front of their own pen.
+- The Market, Blacksmith and Buy & Sell grouped together on one side of the hub.
+- The Leaderboard near the centre, beside the tree.
+- The Hidden (Wandering) Merchant's spot beside the tree, on the opposite side from the Leaderboard.
+When this is built, the pens built in November 2026 (one upgradable pen per player, placed for now on six open meadow spots) move to the ring, and each spawn slot is tied to its pen.
 
 **Paved, November 5, 2026 (the owner: the same upgrade as the outer islands; `island_upgrades.py`):** the paths are roads now, flagstones in a dark kerb that follow the ground (`YG_Roads`), with paved rounds at the bridges (`YG_Bridgeheads`), a band round each plot (`YG_PlotEdges`) and a ring round the Qi Compass (`YG_CompassRing`). None of them collide. The old Egg Garden and lion lair are gone from the terrain, the land round the Hatching Altar is level, the Spawn Walk's east end stops at a grove, and the trees, rocks and flowers are thinned and kept off the roads. Terrain grass grows up through a mesh laid on it, so everything under paving is Ground or Cobblestone. Walked in Play along the roads to the shops, the altar, the bridges and the Spring; the scan reaches 11,029 of 11,650 floor cells, the rest being inside the great roots and past the bridges' barriers.
 

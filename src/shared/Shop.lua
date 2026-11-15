@@ -7,16 +7,24 @@
 --   Shop.weaponRefund(id, element)  what a weapon sells back for (a forged one returns part of its forging too)
 --   Shop.forgePrice(id)       what forging a weapon with an element costs (GameConfig.Forge)
 --   Shop.element(name)        an element's GameConfig.Forge entry, or nil
---   Shop.petValue(petId, level)  what a pet sells for: a fused pet is worth every copy it took in
+--   Shop.petValue(petId, worth)  what a pet sells for: worth is PetRules.worth(pet), its copies' size Values added up (nil: one
+--                             Normal copy), so a fused pet is worth every copy it took in, at its size
 --   Shop.petEggRank(petId)    the rank of the earliest egg that hatches it (what a player needs to hatch it), or nil
 --   Shop.rankValue(rankId)    the rewards' ladder: a weapon's price at its realm's first rank, between
 --   Shop.eggStones(eggId)     what securing this egg pays
 --   Shop.marketEggPrice(eggId)  what the Marketplace asks for this egg
 --   Shop.relicStones(relic)   what a relic's first attunement pays
+--   Shop.penPrice(level)      what raising a beast pen to `level` costs (nil for level 1 or past the last)
 --   Shop.roundNice(n)         two significant figures (a price worth reading)
+--
+-- Beast pen levels (shared/PenLayout, PenService; the owner, 2026-11-15: one pen per player, its size upgradable "like the steal an
+-- egg"): each level costs one weapon of a realm (GameConfig.WeaponTiers' Price), so each is a goal at its point of the climb, cheap
+-- at the start and steep at the end. As built (stones): level 2 = 60 (Qi Awakening), 3 = 160 (Qi Foundation), 4 = 400 (Spirit Core),
+-- 5 = 1,050 (Spirit Soul), 6 = 2,700 (Ascendant), 7 = 18,500 (Divine), 8 = 125,000 (Void), 9 = 850,000 (Primordial).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local PenLayout = require(ReplicatedStorage:WaitForChild("PenLayout"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 
 local Shop = {}
@@ -98,14 +106,22 @@ function Shop.petEggRank(petId)
     return entry and entry.Id
 end
 
-function Shop.petValue(petId, level)
+function Shop.petValue(petId, worth)
     local pet = GameConfig.Pets[petId]
     if not pet then
         return 0
     end
     local rules = GameConfig.SpiritStones
     -- (a pet's ValueRealm, when set, replaces its egg's realm)
-    return math.floor((rules.PetValue[pet.Rarity] or 0) * rules.RealmFactor ^ ((pet.ValueRealm or petRealm[petId] or 1) - 1)) * (level or 1)
+    local base = math.floor((rules.PetValue[pet.Rarity] or 0) * rules.RealmFactor ^ ((pet.ValueRealm or petRealm[petId] or 1) - 1))
+    -- (a Normal pet's worth is its level: base * level, as before sizes)
+    return math.floor(base * (worth or 1) + 1e-6)
+end
+
+function Shop.penPrice(level)
+    local entry = typeof(level) == "number" and level >= 2 and PenLayout.Levels[level]
+    local tier = entry and GameConfig.WeaponTiers[entry.Realm]
+    return if tier then tier.Price else nil
 end
 
 function Shop.roundNice(n)

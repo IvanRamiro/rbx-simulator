@@ -15,6 +15,7 @@ local WeaponInventory = require(script.Parent.Parent:WaitForChild("Shop"):WaitFo
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
 local Codex = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("Codex"))
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
+local PenLayout = require(ReplicatedStorage:WaitForChild("PenLayout"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local Quests = require(script.Parent.Parent:WaitForChild("Quests"):WaitForChild("Quests"))
 local Settings = require(script.Parent:WaitForChild("Settings"))
@@ -24,7 +25,7 @@ local MerchantLedger = require(script.Parent.Parent:WaitForChild("Shop"):WaitFor
 local Receipts = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Receipts"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 17
+local SCHEMA_VERSION = 19
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -85,7 +86,11 @@ end
 -- version 15 added Merchant (the Wandering Merchant's deals bought this visit: MerchantLedger), which starts with none;
 -- version 16 added Codex.Earned (the realm each unclaimed Codex reward was earned in), which starts empty: a reward earned
 -- before it pays at the claim's realm, as it always did (the bump stops older servers from dropping it);
--- version 17 added Receipts (the Robux purchases given: Receipts), which starts with none.
+-- version 17 added Receipts (the Robux purchases given: Receipts), which starts with none;
+-- version 18 added a pet's Size (rolled at hatching: PetRules.Sizes) and Worth (its copies' size Values, for its sell value),
+-- MIGRATIONS[17] below (a missing Worth is worked out from its level and size by PetRules.worth);
+-- version 19 added the beast pen (PenService): PenLevel, which starts at 1, and Pen, the pets in it in order, which starts empty.
+-- (A test build's Pens, six pens of one pet each, never released, is read into Pen in order by sanitizeProgress.)
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -129,6 +134,18 @@ MIGRATIONS[12] = function(progress)
     return progress
 end
 
+-- Version 18 gave pets a Size: every pet hatched before it is Normal (sanitizeProgress also turns anything unknown into Normal).
+MIGRATIONS[17] = function(progress)
+    if typeof(progress.Pets) == "table" then
+        for _, pet in progress.Pets do
+            if typeof(pet) == "table" and pet.Size == nil then
+                pet.Size = "Normal"
+            end
+        end
+    end
+    return progress
+end
+
 -- Playtesting in Studio: with ServerStorage's StudioTestSave attribute set, saves go to a separate store of that name, so
 -- each new name starts a new player and a real save can't be touched (set to true, a store called "StudioTestSave").
 -- Ignored outside Studio.
@@ -158,6 +175,8 @@ local function sanitizeProgress(raw)
         RankId = startingRank.Id,
         Pets = {},
         EquippedPetIds = {},
+        PenLevel = 1,
+        Pen = {},
         Relics = {},
         OutfitId = nil,
         Eggs = {},
@@ -211,6 +230,8 @@ local function sanitizeProgress(raw)
                 ownedIds[pet.InstanceId] = true
                 table.insert(progress.Pets, {
                     InstanceId = pet.InstanceId, PetId = pet.PetId, Level = PetRules.level(pet), Locked = pet.Locked == true,
+                    Size = PetRules.size(pet),
+                    Worth = PetRules.worth(pet),
                 })
             end
         end
@@ -225,6 +246,21 @@ local function sanitizeProgress(raw)
             if typeof(instanceId) == "string" and ownedIds[instanceId] and not table.find(progress.EquippedPetIds, instanceId) then
                 table.insert(progress.EquippedPetIds, instanceId)
             end
+        end
+    end
+
+    -- the beast pen: its level (1 to PenLayout.Max), and up to its capacity of owned pets that aren't equipped, each once
+    local penLevel = tonumber(raw.PenLevel)
+    progress.PenLevel = if penLevel and penLevel == penLevel then math.clamp(math.floor(penLevel), 1, PenLayout.Max) else 1
+    local penIds = if typeof(raw.Pen) == "table" then raw.Pen elseif typeof(raw.Pens) == "table" then raw.Pens else {}
+    for index = 1, math.min(#penIds, PenLayout.MostSlots) do
+        local instanceId = penIds[index]
+        if #progress.Pen >= PenLayout.capacity(progress.PenLevel) then
+            break
+        end
+        if typeof(instanceId) == "string" and ownedIds[instanceId] and not table.find(progress.EquippedPetIds, instanceId)
+            and not table.find(progress.Pen, instanceId) then
+            table.insert(progress.Pen, instanceId)
         end
     end
 
@@ -319,6 +355,8 @@ local function captureProgress(player)
         RankId = rank.Id,
         Pets = pets.Pets,
         EquippedPetIds = pets.EquippedPetIds,
+        PenLevel = pets.PenLevel,
+        Pen = pets.Pen,
         Relics = relics,
         OutfitId = player:GetAttribute("OutfitId"),
         Eggs = eggs,
