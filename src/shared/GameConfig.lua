@@ -483,11 +483,11 @@ local GameConfig = {
         VoltFox = { DisplayName = "Volt Fox", Rarity = "Epic", Theme = "Lightning", QiBonus = 50 },
         GoldenKirin = { DisplayName = "Golden Kirin", Rarity = "Legendary", Theme = "Nature", QiBonus = 60 },
         AstralWhale = { DisplayName = "Astral Whale", Rarity = "Mythical", Theme = "Cosmic", QiBonus = 100 },
-        NineTailMoonfox = { DisplayName = "Nine-Tail Moonfox", Rarity = "Secret", Theme = "Moon", QiBonus = 180, ValueRealm = 5 }, -- the Exclusive Egg's Secret (the owner, 2026-11-13)
+        NineTailMoonfox = { DisplayName = "Nine-Tail Moonfox", Rarity = "Mythical", Theme = "Moon", QiBonus = 120, ValueRealm = 5 }, -- the Exclusive Egg's Mythical (the owner, 2026-11-15; Secret until then)
         -- the Exclusive Egg's own beasts (the owner, 2026-11-13). ValueRealm: they sell as beasts of the Ascendant Realm (Shop.petValue), not of
         -- the first realm their egg (open to every rank) would say
-        EclipseDreadwing = { DisplayName = "Eclipse Dreadwing", Rarity = "Mythical", Theme = "Void and eclipse", QiBonus = 120, ValueRealm = 5 },
-        Crysalith = { DisplayName = "Crysalith", Rarity = "Divine", Theme = "Frost and crystal", QiBonus = 300, ValueRealm = 5 },
+        EclipseDreadwing = { DisplayName = "Eclipse Dreadwing", Rarity = "Divine", Theme = "Void and eclipse", QiBonus = 300, ValueRealm = 5 }, -- the Exclusive Egg's Divine (the owner, 2026-11-15; Mythical until then)
+        Crysalith = { DisplayName = "Crysalith", Rarity = "Secret", Theme = "Frost and crystal", QiBonus = 180, ValueRealm = 5 }, -- the Exclusive Egg's Secret (the owner, 2026-11-15; Divine until then)
         OriginSerpent = { DisplayName = "Origin Serpent", Rarity = "Secret", Theme = "Primordial", QiBonus = 150 },
 
         MossGolem = { DisplayName = "Moss Golem", Rarity = "Common", Theme = "Earth", QiBonus = 10 },
@@ -902,10 +902,10 @@ local GameConfig = {
             DisplayName = "Exclusive Egg",
             RequiredRank = "QiInitiate",
             Exclusive = true,
-            Pool = {
-                { PetId = "EclipseDreadwing", HatchChance = 80 },
-                { PetId = "NineTailMoonfox", HatchChance = 17 },
-                { PetId = "Crysalith", HatchChance = 3 },
+            Pool = { -- odds follow rarity (the owner, 2026-11-15): Mythical 80, Secret 17, Divine 3
+                { PetId = "NineTailMoonfox", HatchChance = 80 },
+                { PetId = "Crysalith", HatchChance = 17 },
+                { PetId = "EclipseDreadwing", HatchChance = 3 },
             },
         },
         PrimordialAbyssEgg = {
@@ -967,7 +967,7 @@ local GameConfig = {
     -- and is hatched at the Hatching Altar. Its contents: GameConfig.Eggs.ExclusiveEgg.
     ExclusiveEgg = {
         Name = "Exclusive Egg", Icon = "rbxassetid://80787462087085", EggId = "ExclusiveEgg", ProductId = 3730790355, Price = 149,
-        Text = "Three beasts found in no other egg: the Eclipse Dreadwing, the Nine-Tail Moonfox and Crysalith.",
+        Text = "Three beasts found in no other egg: the Nine-Tail Moonfox, Crysalith and the Eclipse Dreadwing.",
     },
 
     -- The Wandering Merchant (the owner, 2026-11-12, verbatim: "Implement wandering merchant for every 1 hour and the wandering

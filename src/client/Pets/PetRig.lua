@@ -6477,11 +6477,11 @@ PetRig.Profiles.WorldrootColossus = {
 }
 -- The Exclusive Egg's own beasts (the owner, 2026-11-13).
 --
--- The Eclipse Dreadwing, "Devourer of Stars" (Mythical): a four-legged raven-drake griffin (modelled in Blender, 2026-11-13) that hovers by
+-- The Eclipse Dreadwing, "Devourer of Stars" (Divine): a four-legged raven-drake griffin (modelled in Blender, 2026-11-13) that hovers by
 -- its owner on slow, heavy wingbeats (animateWinged; its legs are part of the Body). Its eclipse is no part of the model: it appears only in
 -- the special, Devour the Stars (Blasts.DevourStars): wings wide, head thrown up, a black eclipse opens above its back and swallows starlight.
 
--- Crysalith, "The Eternal Frost" (Divine): a great crystal stag-beast that walks after its owner with slow, stately strides, head high; it
+-- Crysalith, "The Eternal Frost" (Secret): a great crystal stag-beast that walks after its owner with slow, stately strides, head high; it
 -- looks about now and then, its antlers sway a little behind the head's turn and the frozen light in them breathes (Effects.Pulse). Flying,
 -- its legs fold. The special, Eternal Frost (Blasts.EternalFrost): it lifts its head and antlers to the sky, a ring of frost spreads over the
 -- ground and ice shards rise round it.
@@ -16066,7 +16066,7 @@ do
 end
 
 
--- The Nine-Tail Moonfox (skinned, Secret, the Exclusive Egg; built in Blender from the owner's concept sheet 2026-11-13, nine fluffy
+-- The Nine-Tail Moonfox (skinned, Mythical, the Exclusive Egg; built in Blender from the owner's concept sheet 2026-11-13, nine fluffy
 -- crescent tails approved by the owner): she trots after her owner, diagonal pairs together, each paw planted flat (the leg turns were solved
 -- in Blender so the paws stay on the ground); her trunk bounces lightly twice a stride and rolls with it. She breathes, glances about (often
 -- back at you), and now and then flicks one ear. Her tails sway on one beat with a wave running across the fan; trotting, they stream back

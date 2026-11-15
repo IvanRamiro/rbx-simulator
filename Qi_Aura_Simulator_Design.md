@@ -517,13 +517,13 @@ The owner chose it from the suggestions ("do the 3"): the pets were silent. Each
 
 **Exclusive Egg (the Shop, for Robux: section 9)**
 
-| Pet | Rarity | Theme | Qi bonus |
-|---|---|---|---|
-| Eclipse Dreadwing ★ | Mythical | Void and eclipse | +120% |
-| Nine-Tail Moonfox ★ | Secret | Moon | +180% |
-| Crysalith | Divine | Frost and crystal | +300% |
+| Pet | Rarity | Theme | Qi bonus | Hatch chance |
+|---|---|---|---|---|
+| Nine-Tail Moonfox ★ | Mythical | Moon | +120% | 80% |
+| Crysalith | Secret | Frost and crystal | +180% | 17% |
+| Eclipse Dreadwing ★ | Divine | Void and eclipse | +300% | 3% |
 
-The Nine-Tail Moonfox was a retired Mythical before it came back as this egg's Secret (November 13, 2026).
+Rarities rearranged by the owner on November 15, 2026 ("the mythic is ninetail moonfox, while the crysalith is secret and the divine is the dreadwing"), with the odds and Qi bonuses following the rarity. Until then the Dreadwing was the Mythical (80%), the Moonfox the Secret (17%) and Crysalith the Divine (3%).
 
 ---
 
