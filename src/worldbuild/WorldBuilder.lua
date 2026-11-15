@@ -2148,7 +2148,7 @@ WorldBuilder.Relics = {
     JadeSeed = { Color = Color3.fromRGB(150, 255, 60) },
     WhisperingSpring = { Color = Color3.fromRGB(40, 220, 210) },
     CalderaCrown = { Color = Color3.fromRGB(255, 70, 20) },
-    EmberHeart = { Color = Color3.fromRGB(255, 150, 30) },
+    EmberHeart = { Color = Color3.fromRGB(255, 150, 30), Lift = 1.6 }, -- (it rose out of the forge hearth, sunk in its coals)
     AshenSigil = { Color = Color3.fromRGB(255, 200, 120) },
     MoonMirror = { Color = Color3.fromRGB(150, 175, 255) },
     StarWell = { Color = Color3.fromRGB(255, 225, 120) },
@@ -2235,6 +2235,46 @@ function WorldBuilder.buildRelics(island)
     return count
 end
 
+-- Replaces ServerStorage.RelicMeshes with the relics of an import of SpiritRelics.fbx (tools/blender/relics/spirit_relics.py): one
+-- template per relic, its pieces placed round its anchor (Relic_<Id>_Anchor, the point the relic floats at). Pieces keep their names:
+-- Relic_<Id>_Body (painted), Relic_<Id>_Core (its glowing heart: the part that dims when found) and Relic_<Id>_Glow_<hex>.
+function WorldBuilder.storeRelics(model)
+    local folder = ServerStorage:FindFirstChild("RelicMeshes")
+    if folder then
+        folder:Destroy()
+    end
+    folder = Instance.new("Folder")
+    folder.Name = "RelicMeshes"
+    local stored = {}
+    for _, relic in GameConfig.Relics do
+        local prefix = "Relic_" .. relic.Id .. "_"
+        local anchor = model:FindFirstChild(prefix .. "Anchor", true)
+        if anchor then
+            local template = Instance.new("Model")
+            template.Name = relic.Id
+            local offset = CFrame.new(-anchor.Position)
+            for _, part in model:GetDescendants() do
+                if part:IsA("BasePart") and part ~= anchor and string.sub(part.Name, 1, #prefix) == prefix then
+                    local piece = part:Clone()
+                    for _, child in piece:GetChildren() do
+                        if not child:IsA("SurfaceAppearance") then
+                            child:Destroy()
+                        end
+                    end
+                    piece.CFrame = offset * part.CFrame
+                    piece.Anchored = true
+                    piece.Parent = template
+                end
+            end
+            template.Parent = folder
+            table.insert(stored, relic.Id)
+        end
+    end
+    folder.Parent = ServerStorage
+    model:Destroy()
+    return stored
+end
+
 function WorldBuilder.buildRelic(island, relicId, localPosition)
     local relicConfig
     for _, relic in GameConfig.Relics do
@@ -2251,16 +2291,46 @@ function WorldBuilder.buildRelic(island, relicId, localPosition)
     end
     local model = Instance.new("Model")
     model.Name = "Relic_" .. relicId
-    local crystal = Instance.new("Part")
-    crystal.Name = "RelicCrystal"
-    crystal.Size = Vector3.new(1.6, 1.6, 1.6)
-    crystal.CFrame = CFrame.new(islandPoint(island, localPosition)) * CFrame.Angles(0, math.rad(45), math.rad(45))
-    crystal.Material = Enum.Material.Neon
-    crystal.Color = look.Color
-    crystal.Anchored = true
-    crystal.CanCollide = false
-    crystal.CanTouch = false
-    crystal.Parent = model
+    local point = islandPoint(island, localPosition) + Vector3.new(0, look.Lift or 0, 0) -- (Lift: studs the modelled relic floats higher than the old cube)
+    local meshes = ServerStorage:FindFirstChild("RelicMeshes")
+    local template = meshes and meshes:FindFirstChild(relicId)
+    local crystal
+    if template then
+        -- the modelled relic, floating at the point (its anchor), turned to face where players come from (look.Yaw, degrees)
+        local frame = CFrame.new(point) * CFrame.Angles(0, math.rad(look.Yaw or 0), 0)
+        for _, piece in template:GetChildren() do
+            local part = piece:Clone()
+            part.CFrame = frame * piece.CFrame
+            part.Anchored = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            local hex = string.match(part.Name, "_Glow_(%x%x%x%x%x%x)$")
+            if part.Name == "Relic_" .. relicId .. "_Core" then
+                part.Name = "RelicCrystal" -- (RelicController and DiscoveryService find the relic's heart by this name)
+                part.Material = Enum.Material.Neon
+                part.Color = look.Color
+                crystal = part
+            elseif hex then
+                part.Material = Enum.Material.Neon
+                part.Color = Color3.fromHex(hex)
+                part:SetAttribute("RelicGlow", true)
+            end
+            part.Parent = model
+        end
+    end
+    if not crystal then -- no model stored for it: the old glowing cube
+        crystal = Instance.new("Part")
+        crystal.Name = "RelicCrystal"
+        crystal.Size = Vector3.new(1.6, 1.6, 1.6)
+        crystal.CFrame = CFrame.new(point) * CFrame.Angles(0, math.rad(45), math.rad(45))
+        crystal.Material = Enum.Material.Neon
+        crystal.Color = look.Color
+        crystal.Anchored = true
+        crystal.CanCollide = false
+        crystal.CanTouch = false
+        crystal.Parent = model
+    end
     addLight(crystal, look.Color, 16, 1.5)
     addSparkles(crystal, look.Color, 6).Name = "RelicSparkles"
 
@@ -2273,7 +2343,9 @@ function WorldBuilder.buildRelic(island, relicId, localPosition)
     prompt.RequiresLineOfSight = false
     prompt.Parent = crystal
 
+    model.PrimaryPart = crystal
     model:SetAttribute("RelicId", relicId)
+    model:SetAttribute("RelicPoint", point)
     model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
     CollectionService:AddTag(model, GameConfig.RelicTag)
     model.Parent = folder

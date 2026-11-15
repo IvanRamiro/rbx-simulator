@@ -4,7 +4,8 @@
 --
 --   PassRules.List / PassRules.ById    the passes, in the Store's order
 --   PassRules.owns(player, id)         whether they own it
---   PassRules.qiMultiplier(player)     every pass's Qi multiplier, multiplied together (1 with none)
+--   PassRules.qiTier(player)           the highest Qi boost tier they own (2, 4, 8, 16; 1 with none): tiers never stack
+--   PassRules.qiMultiplier(player)     their Qi boost tier times every other pass's Qi multiplier (VIP's +10%); 1 with none
 --   PassRules.luck(player)             how many times likelier their rare hatches are (1 with no luck)
 --   PassRules.maxEquipped(player)      how many beasts they can equip; PassRules.MostEquipped: the most anyone can
 --   PassRules.dailyStones(player, n)   a daily reward's Spirit Stones with their passes' bonus
@@ -40,8 +41,18 @@ local function product(player, field, default)
     return value
 end
 
+function PassRules.qiTier(player)
+    local tier = 1
+    for _, pass in PassRules.List do
+        if pass.QiTier and PassRules.owns(player, pass.Id) then
+            tier = math.max(tier, pass.QiTier)
+        end
+    end
+    return tier
+end
+
 function PassRules.qiMultiplier(player)
-    return product(player, "QiMultiplier", 1)
+    return PassRules.qiTier(player) * product(player, "QiMultiplier", 1)
 end
 
 function PassRules.luck(player)

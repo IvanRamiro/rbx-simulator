@@ -1,6 +1,7 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
@@ -15,6 +16,10 @@ local player = Players.LocalPlayer
 local RELIC_COLOR = Color3.fromRGB(170, 235, 255)
 local MESSAGE_SECONDS = 4
 local FOUND_TRANSPARENCY = 0.7
+local GLOW_FOUND_TRANSPARENCY = 0.6 -- a found relic's small glows dim too (the modelled relics' Glow pieces)
+local DRIFT_RANGE = 160 -- studs from the camera within which a relic slowly turns and bobs
+local TURN_SPEED = 0.35 -- radians a second
+local BOB = 0.25 -- studs up and down
 
 local relicsById = {}
 for _, relic in GameConfig.Relics do
@@ -51,6 +56,12 @@ local function updateRelic(model, found, rankName)
 
     local isFound = found[relic.Id] == true
     crystal.Transparency = if isFound then FOUND_TRANSPARENCY else 0
+    for _, piece in model:GetChildren() do
+        if piece:IsA("BasePart") and piece:GetAttribute("RelicGlow") then
+            piece.Transparency = if isFound then GLOW_FOUND_TRANSPARENCY else 0
+        end
+    end
+    model:SetAttribute("Found", isFound)
 
     local light = crystal:FindFirstChildOfClass("PointLight")
     if light then
@@ -117,4 +128,31 @@ RemoteEvents.RelicResultEvent.OnClientEvent:Connect(function(result)
         Sfx.play("Attune")
         message:show("Attuned to " .. relic.DisplayName .. "! +" .. tostring(result.QiReward) .. " Qi" .. stones .. element, "Reward")
     end
+end)
+
+-- An unfound relic slowly turns and bobs where it floats (only on this screen: the server's relic stays still, and its prompt's reach is
+-- measured from there). A found one rests.
+local rest = {}
+RunService.Heartbeat:Connect(function()
+    local camera = workspace.CurrentCamera
+    if not camera then
+        return
+    end
+    local t = os.clock()
+    for _, model in CollectionService:GetTagged(GameConfig.RelicTag) do
+        local point = model:GetAttribute("RelicPoint")
+        if typeof(point) ~= "Vector3" or not model.PrimaryPart then
+            continue
+        end
+        rest[model] = rest[model] or model:GetPivot()
+        if model:GetAttribute("Found") or (camera.CFrame.Position - point).Magnitude > DRIFT_RANGE then
+            continue
+        end
+        local phase = point.X * 0.37 + point.Z * 0.21 -- each relic on its own beat
+        local turn = CFrame.new(point) * CFrame.Angles(0, t * TURN_SPEED + phase, 0) * CFrame.new(-point)
+        model:PivotTo(CFrame.new(0, BOB * math.sin(t * 1.3 + phase), 0) * turn * rest[model])
+    end
+end)
+CollectionService:GetInstanceRemovedSignal(GameConfig.RelicTag):Connect(function(model)
+    rest[model] = nil
 end)

@@ -2,8 +2,10 @@
 -- with its picture, what it does, and its live Robux price, and the Exclusive Egg, locked until its beast is made. A pass not on
 -- sale yet (no GamePassId) says "Coming soon"; one the player owns says so. Buying is Roblox's own prompt; the server counts
 -- the purchase (server/Shop/GamePassService) and sets the "Pass_<Id>" attribute, and this window and every other follow it.
--- Its look is "Cultivation Bold" (the owner, 2026-11-13: the top Roblox shops' patterns in our colours): two tabs (GAME PASSES,
--- EXCLUSIVE EGG), cards with heavy outlined words, and each price on a big green Robux button, the old price struck above it.
+-- Its look is "Cultivation Bold" (the owner, 2026-11-13: the top Roblox shops' patterns in our colours): three tabs (QI BOOSTS, GAME
+-- PASSES, EXCLUSIVE EGG), cards with heavy outlined words, and each price on a big green Robux button, the old price struck above it.
+-- QI BOOSTS (the owner, 2026-11-15) sells the Qi multiplier tiers (passes with a QiTier): only the highest one owned counts, so a
+-- tier under one already owned says INCLUDED and can't be bought.
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local PolicyService = game:GetService("PolicyService")
@@ -60,7 +62,9 @@ local function page(name)
         Parent = window.Body })
     return frame
 end
+local qiPage = page("QiPage")
 local list = page("List")
+list.Visible = false
 local eggPage = page("EggPage")
 eggPage.Visible = false
 local tabs = {}
@@ -75,7 +79,8 @@ local function showTab(name)
     end
 end
 local function tab(name, text, pageFrame, order)
-    local button = UiKit.tab({ Name = name .. "Tab", Text = text, Size = UDim2.fromOffset(180, TAB), LayoutOrder = order, Parent = tabBar })
+    local share = UiTheme.Space.S * 2 / 3 -- three tabs share the bar's width (fixed widths ran past a phone's window)
+    local button = UiKit.tab({ Name = name .. "Tab", Text = text, Size = UDim2.new(1 / 3, -share, 0, TAB), LayoutOrder = order, Parent = tabBar })
     tabs[name] = { button = button, page = pageFrame }
     button.Activated:Connect(function()
         Sfx.play("Click")
@@ -203,6 +208,11 @@ local function passCard(pass, parent, slot)
     picture.Position = UDim2.fromOffset(8, 8)
     picture.Size = UDim2.fromOffset(84, 84)
     picture.Parent = card
+    if pass.QiTier then -- the tier, big over its picture, so the four cards read at a glance
+        bold({ Name = "Tier", Text = pass.QiTier .. "x", TextSize = 30, TextColor3 = C.Highlight, TextXAlignment = Enum.TextXAlignment.Center,
+            AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 4), Size = UDim2.new(1, 0, 0, 34), ZIndex = picture.ZIndex + 1,
+            Parent = picture })
+    end
     bold({
         Name = "PassName", Text = string.upper(pass.Name), TextSize = 17, TextTruncate = Enum.TextTruncate.AtEnd,
         Position = UDim2.fromOffset(100, 10), Size = UDim2.new(1, -108, 0, 22), Parent = card,
@@ -236,6 +246,9 @@ local function passCard(pass, parent, slot)
             message:show(pass.Name .. " isn't available in your region: luck boosts follow Roblox's rules on paid random items.", "Warning")
         elseif button.Active and (pass.GamePassId or 0) > 0 and not PassRules.owns(player, pass.Id) then
             Sfx.play("Click")
+            if pass.QiTier and pass.QiTier < PassRules.qiTier(player) then
+                return -- (INCLUDED: a higher tier already counts)
+            end
             MarketplaceService:PromptGamePassPurchase(player, pass.GamePassId)
         end
     end)
@@ -251,20 +264,49 @@ local function passCard(pass, parent, slot)
     cards[pass.Id] = { pass = pass, button = button, price = price, was = was }
 end
 
-for row = 0, math.ceil(#PassRules.List / 2) - 1 do
-    local frame = Instance.new("Frame")
-    frame.Name = "Row" .. row + 1
-    frame.BackgroundTransparency = 1
-    frame.Size = UDim2.new(1, 0, 0, CARD_HEIGHT)
-    frame.LayoutOrder = 2 + row
-    frame.Parent = list
-    for slot = 0, 1 do
-        local pass = PassRules.List[row * 2 + slot + 1]
-        if pass then
-            passCard(pass, frame, slot)
+-- cards two to a row
+local function cardRows(passes, parent, firstOrder)
+    for row = 0, math.ceil(#passes / 2) - 1 do
+        local frame = Instance.new("Frame")
+        frame.Name = "Row" .. row + 1
+        frame.BackgroundTransparency = 1
+        frame.Size = UDim2.new(1, 0, 0, CARD_HEIGHT)
+        frame.LayoutOrder = firstOrder + row
+        frame.Parent = parent
+        for slot = 0, 1 do
+            local pass = passes[row * 2 + slot + 1]
+            if pass then
+                passCard(pass, frame, slot)
+            end
         end
     end
 end
+local qiTiers, otherPasses = {}, {}
+for _, pass in PassRules.List do
+    table.insert(if pass.QiTier then qiTiers else otherPasses, pass)
+end
+table.sort(qiTiers, function(a, b)
+    return a.QiTier < b.QiTier
+end)
+cardRows(otherPasses, list, 2)
+
+-- QI BOOSTS: what the player's Qi is multiplied by now, the rule, then the tiers
+local qiHeader = UiKit.card({ Name = "Current", Size = UDim2.new(1, 0, 0, 64), LayoutOrder = 1, Parent = qiPage })
+qiHeader.BackgroundTransparency = 0.1
+qiHeader:FindFirstChildOfClass("UIStroke").Thickness = 2
+local qiIcon = Instance.new("ImageLabel")
+qiIcon.Name = "Icon"
+qiIcon.BackgroundTransparency = 1
+qiIcon.Image = UiTheme.Icons.Qi
+qiIcon.AnchorPoint = Vector2.new(0, 0.5)
+qiIcon.Position = UDim2.new(0, 12, 0.5, 0)
+qiIcon.Size = UDim2.fromOffset(40, 40)
+qiIcon.Parent = qiHeader
+local qiNow = bold({ Name = "Now", Text = "", TextSize = 18, Position = UDim2.fromOffset(62, 8), Size = UDim2.new(1, -74, 0, 24), Parent = qiHeader })
+UiKit.label({ Name = "Rule", Font = "Strong", TextSize = 12, TextColor3 = C.Muted, TextWrapped = true,
+    Text = "Only your highest Qi boost counts, on everything that gives Qi. VIP's +10% adds on top.",
+    Position = UDim2.fromOffset(62, 32), Size = UDim2.new(1, -74, 0, 28), Parent = qiHeader })
+cardRows(qiTiers, qiPage, 2)
 
 -- the Exclusive Egg (the owner, 2026-11-13): bought with Robux, one egg each time (ProductService gives it), hatched at the Hatching
 -- Altar. Its three beasts and their chances are on the card, beside the price, before anyone buys; where paid random items are
@@ -430,14 +472,21 @@ player:GetAttributeChangedSignal("Egg_" .. (EGG.EggId or "")):Connect(function()
 end)
 
 function render()
+    local tier = PassRules.qiTier(player)
+    local multiplier = PassRules.qiMultiplier(player)
+    qiNow.Text = if tier > 1 then string.format("YOUR QI BOOST: %dx  (QI x%s)", tier, string.format("%.3g", multiplier))
+        else "NO QI BOOST YET" .. (if multiplier > 1 then string.format("  (QI x%.3g)", multiplier) else "")
     for _, entry in cards do
         local pass, button = entry.pass, entry.button
         local onSale = (pass.GamePassId or 0) > 0
         local owned = PassRules.owns(player, pass.Id)
+        local included = pass.QiTier ~= nil and not owned and pass.QiTier < tier -- a higher tier already covers it
         local livePrice = prices[pass.GamePassId] or pass.Price
         local tone, text
         if owned then
             tone, text = "Active", "OWNED"
+        elseif included then
+            tone, text = "Quiet", "INCLUDED"
         elseif pass.Luck and luckRestricted then
             tone, text = "Quiet", "NOT AVAILABLE HERE"
         elseif not onSale then
@@ -445,7 +494,7 @@ function render()
         else
             tone, text = "Buy", ROBUX .. " " .. tostring(livePrice)
         end
-        button.Active = onSale and not owned
+        button.Active = onSale and not owned and not included
         button:SetAttribute("Tone", tone)
         entry.price.Text = text
         entry.price.TextSize = if tone == "Buy" then 22 else 15
@@ -490,9 +539,10 @@ for _, pass in PassRules.List do
         end
     end)
 end
-tab("Passes", "GAME PASSES", list, 1)
-tab("Egg", "EXCLUSIVE EGG", eggPage, 2)
-showTab("Passes")
+tab("Qi", "QI BOOSTS", qiPage, 1)
+tab("Passes", "GAME PASSES", list, 2)
+tab("Egg", "EXCLUSIVE EGG", eggPage, 3)
+showTab("Qi")
 render()
 
 window.link(toggleButton)

@@ -940,12 +940,21 @@ local GameConfig = {
     GamePasses = {
         { Id = "Luck", Name = "Lucky Cultivator", GamePassId = 2082626429, Price = 99, Headline = "2x LUCK!", WasPrice = 149, Icon = "rbxassetid://129170449479441",
             Text = "2x luck: each egg's rarer beasts hatch twice as often (see ODDS).", Luck = 2 }, -- (shortened: the longer text was cut off in its card, UI audit 2026-11-11)
-        { Id = "QiSurge", Name = "Qi Surge", GamePassId = 2083202424, Price = 149, Headline = "2x QI!", WasPrice = 199, Icon = "rbxassetid://71034417049645",
-            Text = "2x Qi from cultivating, while you're away and from every Qi reward.", QiMultiplier = 2 },
         { Id = "PetSlots", Name = "+3 Pet Slots", GamePassId = 2081480484, Price = 199, Headline = "+3 BEASTS!", WasPrice = 249, Icon = "rbxassetid://90769324952400",
             Text = "Equip 6 beasts at once instead of 3.", ExtraSlots = 3 },
         { Id = "VIP", Name = "VIP", GamePassId = 2083352447, Price = 249, Headline = "VIP PERKS!", WasPrice = 299, Icon = "rbxassetid://97387314672491",
             Text = "The VIP title and chat tag, +10% Qi and +50% daily Spirit Stones.", QiMultiplier = 1.1, DailyStones = 1.5, Title = "VIP" },
+        -- The Qi boosts (the owner, 2026-11-15: "2x 3 + 4x 6 + 8x 12 etc... like the multiplier in steal an eggs"): tiers, not
+        -- stacking. Only the highest QiTier a player owns counts (PassRules.qiMultiplier); VIP's QiMultiplier still multiplies on top.
+        -- The 2x tier is the old Qi Surge pass (Id kept, so its owners keep it), renamed and repriced on Roblox the same day.
+        { Id = "QiSurge", Name = "Qi Boost", GamePassId = 2083202424, Price = 3, Headline = "2x QI!", Icon = "rbxassetid://71034417049645",
+            Text = "Double Qi from cultivating, while you're away and from every Qi reward.", QiTier = 2 },
+        { Id = "Qi4x", Name = "Greater Qi Boost", GamePassId = 2088004027, Price = 6, Headline = "4x QI!", Icon = "rbxassetid://71034417049645",
+            Text = "Four times the Qi from cultivating, while you're away and from every Qi reward.", QiTier = 4 },
+        { Id = "Qi8x", Name = "Grand Qi Boost", GamePassId = 2088975892, Price = 12, Headline = "8x QI!", Icon = "rbxassetid://71034417049645",
+            Text = "Eight times the Qi from cultivating, while you're away and from every Qi reward.", QiTier = 8 },
+        { Id = "Qi16x", Name = "Supreme Qi Boost", GamePassId = 2087998028, Price = 24, Headline = "16x QI!", Icon = "rbxassetid://71034417049645",
+            Text = "Sixteen times the Qi from cultivating, while you're away and from every Qi reward.", QiTier = 16 },
     },
     -- Lucky hatches (the Luck pass): every Rare-or-rarer beast that is also rarer than an egg's commonest is that many times likelier,
     -- taken from the others, which always keep at least this many percent between them (PassRules.luckyPool).
