@@ -34,6 +34,8 @@ local BREAK_MARGIN = 0.15 -- seconds after the egg breaks that Hatch wakes, so a
 local NO_ANSWER = GameConfig.HatchingAltar.Stage + 3 -- seconds Hatch waits for an answer that never came
 local RARITY_ORDER = { Divine = 8, Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }
 local CARD_HEIGHT, ROW_HEIGHT = 112, 42
+local ODDS_ROWS_SHOWN = 5 -- the most odds rows an egg card shows at once: more scroll inside the card (the owner, 2026-11-16)
+local LUCK_TAG = 26 -- the Luck pass's "your odds" tag over the rows
 local BUTTONS = 104 -- the egg card's right column
 local TEXT_RIGHT = BUTTONS + 12 + 8
 
@@ -184,7 +186,12 @@ function render()
     for index, entry in eggs do
         local open = rankName ~= "" and Ranks.isAtLeast(rankName, entry.egg.RequiredRank)
         local showing = openEgg == entry.id
-        local height = CARD_HEIGHT + (if showing then #entry.egg.Pool * ROW_HEIGHT + 8 else 0)
+        -- the odds' own height: every row (and the luck tag), but never more than ODDS_ROWS_SHOWN rows: the rest scroll. The card
+        -- is sized for exactly that, so the odds never spill over the next card (they did: the luck tag wasn't counted)
+        local luck = PassRules.luck(Players.LocalPlayer)
+        local oddsContent = #entry.egg.Pool * ROW_HEIGHT + (if luck > 1 then LUCK_TAG else 0) + 6 -- (+ the scroll's own padding)
+        local oddsHeight = math.min(oddsContent, ODDS_ROWS_SHOWN * ROW_HEIGHT)
+        local height = CARD_HEIGHT + (if showing then oddsHeight + 12 else 0)
         local card = UiKit.boldCard(UiKit.card({ Name = "EggCard", LayoutOrder = index, Size = UDim2.new(1, 0, 0, height), Parent = list }),
             if open then C.Edge else C.EdgeDim)
         local icon = UiKit.icon(UiTheme.EggIcons[entry.id] or UiTheme.Icons.Hatch, 56, if open then "Accent" else "Danger")
@@ -232,14 +239,12 @@ function render()
             render()
         end)
         if showing then
-            local rows = Instance.new("Frame")
-            rows.Name = "Odds"
-            rows.BackgroundTransparency = 1
-            rows.Position = UDim2.fromOffset(12, CARD_HEIGHT)
-            local luck = PassRules.luck(Players.LocalPlayer)
-            rows.Size = UDim2.new(1, -22, 0, #entry.egg.Pool * ROW_HEIGHT + (if luck > 1 then 22 else 0))
-            rows.Parent = card
-            UiKit.list(rows, { Padding = UDim.new(0, 4) })
+            local rows = UiKit.scroll({
+                Name = "Odds", Position = UDim2.fromOffset(12, CARD_HEIGHT), Size = UDim2.new(1, -22, 0, oddsHeight), Parent = card,
+            })
+            rows.ScrollingEnabled = oddsContent > oddsHeight
+            rows.ScrollBarThickness = if oddsContent > oddsHeight then 4 else 0
+            rows:FindFirstChildOfClass("UIListLayout").Padding = UDim.new(0, 4)
             if luck > 1 then -- the Luck pass: these are their own odds, and say so
                 local lucky = UiKit.tag(luck .. "x luck: your odds", C.Highlight)
                 lucky.LayoutOrder = 0
