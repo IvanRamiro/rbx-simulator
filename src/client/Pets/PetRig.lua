@@ -16226,7 +16226,7 @@ end
 do
     -- The Moonfang Tiger (skinned): a grown Bengal tiger of the Ancient Grove, after the owner's reference photo (2026-11-12), heavy in the shoulder
     -- and low in the belly: deep orange, black stripes slanting back down its flanks and curving round its haunches, white muzzle, chin, ruffs and belly,
-    -- the king's mark (王) in ink on its brow, amber eyes under scowling lids. Two long fangs of clear moonstone that keep the moonlight they catch: they
+    -- a tiger's brow mark (three level bars crossed by an upright) in ink, amber eyes under scowling lids. Two long fangs of clear moonstone that keep the moonlight they catch: they
     -- glow, brighter in a dark realm. It stands square and watchful; it looks about, often at you, and blinks slowly; now and then it lashes its tail,
     -- scans the far distance with its ears pricked, bares its fangs with its ears laid back, or sinks into a stalk, belly low, its tail tip twitching.
     -- Still a long while, it lies down, head up, then lays its head on its paws and dozes. It walks with a heavy prowl (hind, fore, hind, fore, each

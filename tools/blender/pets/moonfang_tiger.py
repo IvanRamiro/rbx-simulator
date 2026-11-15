@@ -3,7 +3,7 @@
 A new creature, in a design language of its own: a tiger out of a moonlit ink painting. A young tiger, chunky and bold: a big broad head, a deep chest,
 thick legs and big paws, short white cheek ruffs. Its coat is moonlit silver, as rice paper is under the moon, washed darker along its back as a painter
 washes in thinned ink, rice-white beneath and on its muzzle; its stripes are bold strokes of black ink laid on with a dry brush, tapering at both ends,
-the bristles' streaks showing through; on its brow the tiger's 王 in ink; the backs of its ears ink-black, each with a white spot. A painter's seal in
+the bristles' streaks showing through; on its brow the tiger's mark in ink (three level bars crossed by an upright); the backs of its ears ink-black, each with a white spot. A painter's seal in
 vermilion on its haunch. Its tail is ringed in ink and ends in a calligraphy brush: a soft bulb of pale hairs drawn to a point dipped in ink. Moon-gold
 eyes. Two long fangs of moonstone hang over its lower lip, glowing with the moonlight they keep.
 
@@ -544,13 +544,13 @@ arc_len_tail = float(np.sum([(TAIL[i + 1] - TAIL[i]).length for i in range(len(T
 
 
 def face_marks(P, Nn):
-    """The tiger's face in ink: the king's mark (王) on its brow; strokes across its cheek ruffs; lines from the outer corners of its eyes; rows of
+    """The tiger's face in ink: the brow mark (three level bars crossed by an upright); strokes across its cheek ruffs; lines from the outer corners of its eyes; rows of
     whisker spots; its eyes rimmed."""
     x, y, z = P[:, 0], P[:, 1], P[:, 2]
     n = len(P)
     front = smooth(0.1, 0.5, -Nn[:, 1] + 0.3 * Nn[:, 2])
     out = np.zeros(n)
-    # 王: three level strokes and one upright through them, on its brow
+    # the brow mark: three level strokes and one upright through them
     z0, h = 0.614, 0.036
     brow = (y < -0.33) * front
     for k, (zz, half) in enumerate(((z0, 0.024), (z0 - h / 2, 0.018), (z0 - h, 0.026))):
