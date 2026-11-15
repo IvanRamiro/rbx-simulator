@@ -11,3 +11,8 @@ __pycache__/
 
 # Review renders (pet previews, egg review sheets, contact sheets): local only
 renders/
+
+# macOS folder metadata
+.DS_Store
+# Concept sheets and references: local only
+assets/concepts/
