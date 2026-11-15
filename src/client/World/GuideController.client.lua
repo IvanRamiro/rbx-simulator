@@ -25,22 +25,41 @@ local PAGES = {
 }
 
 local window = Hud.window({
-    Name = "GuideWindow", Title = "SEREN, GUIDE", Size = Vector2.new(460, 230), AnchorPoint = Vector2.new(0.5, 0.5),
+    Name = "GuideWindow", Title = "SEREN, GUIDE", Size = Vector2.new(500, 276), AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.fromScale(0.5, 0.5),
 })
 local body = window.Body
 
+-- what she says, on a card; under it the page's dots and NEXT
+local FOOT = UiTheme.Height.Button
+local speech = UiKit.card({ Name = "Speech", Size = UDim2.new(1, 0, 1, -(FOOT + UiTheme.Space.M)), Parent = body })
 local text = UiKit.label({
-    Name = "Line", TextSize = 16, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top, Position = UDim2.fromOffset(0, 6),
-    Size = UDim2.new(1, 0, 1, -66), Parent = body,
+    Name = "Line", Font = "Strong", TextSize = 16, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top,
+    Position = UDim2.fromOffset(UiTheme.Pad.Card + 2, UiTheme.Pad.Card), Size = UDim2.new(1, -(UiTheme.Pad.Card + 2) * 2, 1, -UiTheme.Pad.Card * 2),
+    Parent = speech,
 })
-local pageLabel = UiKit.label({
-    Name = "Page", Font = "Strong", TextSize = 12, TextColor3 = C.AccentBright, AnchorPoint = Vector2.new(0, 1),
-    Position = UDim2.new(0, 0, 1, -14), Size = UDim2.new(0.4, 0, 0, 18), Parent = body,
-})
+local pageLabel = Instance.new("Frame") -- a dot for each page, the one showing in gold
+pageLabel.Name = "Page"
+pageLabel.BackgroundTransparency = 1
+pageLabel.AnchorPoint = Vector2.new(0, 0.5)
+pageLabel.Position = UDim2.new(0, 4, 1, -FOOT / 2)
+pageLabel.Size = UDim2.new(0.5, 0, 0, 12)
+pageLabel.Parent = body
+UiKit.list(pageLabel, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), VerticalAlignment = Enum.VerticalAlignment.Center })
+local dots = {}
+for index = 1, #PAGES do
+    local dot = Instance.new("Frame")
+    dot.Name = "Dot" .. index
+    dot.BorderSizePixel = 0
+    dot.Size = UDim2.fromOffset(10, 10)
+    dot.LayoutOrder = index
+    dot.Parent = pageLabel
+    UiKit.corner(dot, 5)
+    dots[index] = dot
+end
 local nextButton = UiKit.button({
-    Name = "Next", Font = "Strong", TextSize = 14, Text = "NEXT", Tone = "Accent", AnchorPoint = Vector2.new(1, 1),
-    Position = UDim2.new(1, 0, 1, -4), Size = UDim2.fromOffset(150, 44), Parent = body,
+    Name = "Next", Text = "NEXT", Tone = "Go", AnchorPoint = Vector2.new(1, 1),
+    Position = UDim2.fromScale(1, 1), Size = UDim2.fromOffset(160, FOOT), Parent = body,
 })
 
 local page = 1
@@ -48,7 +67,10 @@ local page = 1
 local function show()
     -- (only the first page carries a name: formatting every page broke on page 3's "% more Qi", release audit 2026-11-12)
     text.Text = if page == 1 then string.format(PAGES[1], player.DisplayName) else PAGES[page]
-    pageLabel.Text = page .. " / " .. #PAGES
+    for index, dot in dots do
+        dot.BackgroundColor3 = if index == page then C.Highlight else C.EdgeDim
+        dot.Size = if index == page then UDim2.fromOffset(22, 10) else UDim2.fromOffset(10, 10)
+    end
     nextButton.Text = if page < #PAGES then "NEXT" else "THANK YOU"
 end
 

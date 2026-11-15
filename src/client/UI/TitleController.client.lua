@@ -22,7 +22,7 @@ local C = UiTheme.Colors
 
 local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
 local PLATE_DISTANCE = if Quality.Low then 55 else 90 -- studs past which a nameplate isn't drawn (nearer on a phone)
-local ROW = 62 -- room for a two-line How at the readable text floor (UI audit 2026-11-11: six were cut off)
+local ROW = 68 -- room for a two-line How at the readable text floor (UI audit 2026-11-11: six were cut off)
 
 -- ---------- a title, drawn ----------
 -- Every title in its own lettering (TitleRules' Font) and colour, and now and then a sheen sweeps across it: a slanted band
@@ -213,7 +213,7 @@ Players.PlayerRemoving:Connect(removePlate)
 -- ---------- the Titles window ----------
 local toggleButton, setBadge = Hud.railButton("TitlesButton", UiTheme.Icons.Titles, "Titles", 5)
 local window = Hud.window({
-    Name = "TitlesWindow", Title = "TITLES", Size = Vector2.new(400, 470), AnchorPoint = Vector2.new(0.5, 0.5),
+    Name = "TitlesWindow", Title = "TITLES", Size = Vector2.new(460, 520), AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.fromScale(0.5, 0.5),
 })
 local body = window.Body
@@ -221,18 +221,22 @@ local book = { Earned = {}, Worn = "Auto", Showing = nil }
 local earnedSet = {}
 local unseen = 0
 
--- the top: what they show now, and Auto and Hide
-UiKit.label({ Name = "ShowingWord", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = "SHOWING",
-    Size = UDim2.new(1, -150, 0, 14), Parent = body })
-local showing = UiKit.label({ Name = "Showing", Font = "Title", TextSize = 20, Position = UDim2.fromOffset(0, 15),
-    Size = UDim2.new(1, -150, 0, 24), TextTruncate = Enum.TextTruncate.AtEnd, Parent = body })
-local autoButton = UiKit.button({ Name = "Auto", Font = "Strong", Text = "AUTO", TextSize = 12, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, -74, 0, 2), Size = UDim2.fromOffset(66, 36), Parent = body })
-local hideButton = UiKit.button({ Name = "Hide", Font = "Strong", Text = "HIDE", TextSize = 12, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, 0, 0, 2), Size = UDim2.fromOffset(66, 36), Parent = body })
-local count = UiKit.label({ Name = "Count", TextSize = 11, TextColor3 = C.Muted, Position = UDim2.fromOffset(0, 42),
-    Size = UDim2.new(1, 0, 0, 14), Parent = body })
-local list = UiKit.scroll({ Name = "List", Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 1, -62), Parent = body })
+-- the top: a card with what they show now and how many they've earned, and Auto and Hide as two tabs
+local TOP = 76
+local topCard = UiKit.boldCard(UiKit.card({ Name = "ShowingCard", Size = UDim2.new(1, 0, 0, TOP), Parent = body }), C.Edge)
+local SWITCHES = 2 * 76 + UiTheme.Space.S
+UiKit.label({ Name = "ShowingWord", Font = "Heavy", TextSize = 11, TextColor3 = C.Muted, Text = "SHOWING",
+    Position = UDim2.fromOffset(12, 10), Size = UDim2.new(1, -(24 + SWITCHES), 0, 14), Parent = topCard })
+local showing = UiKit.label({ Name = "Showing", Font = "Title", TextSize = 20, Position = UDim2.fromOffset(12, 25),
+    Size = UDim2.new(1, -(24 + SWITCHES), 0, 26), TextTruncate = Enum.TextTruncate.AtEnd, Parent = topCard })
+local count = UiKit.label({ Name = "Count", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Position = UDim2.fromOffset(12, 52),
+    Size = UDim2.new(1, -(24 + SWITCHES), 0, 14), Parent = topCard })
+local autoButton = UiKit.tab({ Name = "Auto", Text = "AUTO", TextSize = 13, AnchorPoint = Vector2.new(1, 0.5),
+    Position = UDim2.new(1, -(12 + 76 + UiTheme.Space.S), 0.5, 0), Size = UDim2.fromOffset(76, UiTheme.Height.Tab), Parent = topCard })
+local hideButton = UiKit.tab({ Name = "Hide", Text = "HIDE", TextSize = 13, AnchorPoint = Vector2.new(1, 0.5),
+    Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(76, UiTheme.Height.Tab), Parent = topCard })
+local LIST_TOP = TOP + UiTheme.Space.M
+local list = UiKit.scroll({ Name = "List", Position = UDim2.fromOffset(0, LIST_TOP), Size = UDim2.new(1, 0, 1, -LIST_TOP), Parent = body })
 
 local rows = {} -- [id] = { button, title, how, card }
 local render
@@ -255,23 +259,25 @@ for _, group in TitleRules.Groups do
     local header = Instance.new("Frame")
     header.Name = group.Id .. "Header"
     header.BackgroundTransparency = 1
-    header.Size = UDim2.new(1, 0, 0, 22)
+    header.Size = UDim2.new(1, 0, 0, 24)
     header.LayoutOrder = order
     header.Parent = list
-    UiKit.header(header, group.Name, { TextSize = 12 })
+    UiKit.header(header, group.Name, { Size = UDim2.fromScale(1, 1) })
     for _, entry in TitleRules.List do
         if entry.Group ~= group.Id then
             continue
         end
         order += 1
         local card = UiKit.card({ Name = entry.Id, Size = UDim2.new(1, 0, 0, ROW), LayoutOrder = order, Stripe = entry.Color, Parent = list })
-        local title = UiKit.label({ Name = "Text", Font = "Title", TextSize = 18, Text = entry.Text, Position = UDim2.fromOffset(12, 5),
-            Size = UDim2.new(1, -112, 0, 22), TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
+        local BUTTON = 100
+        local textRight = BUTTON + 12 + 12
+        local title = UiKit.label({ Name = "Text", Font = "Title", TextSize = 18, Text = entry.Text, Position = UDim2.fromOffset(18, 9),
+            Size = UDim2.new(1, -(18 + textRight), 0, 22), TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
         title.FontFace = fontOf(entry)
-        local how = UiKit.label({ Name = "How", TextSize = 11, TextColor3 = C.Muted, Text = entry.How, TextWrapped = true,
-            TextYAlignment = Enum.TextYAlignment.Top, Position = UDim2.fromOffset(12, 28), Size = UDim2.new(1, -112, 0, 30), Parent = card })
-        local button = UiKit.button({ Name = "Wear", Font = "Strong", TextSize = 11, AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(86, 38), Parent = card })
+        local how = UiKit.label({ Name = "How", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = entry.How, TextWrapped = true,
+            TextYAlignment = Enum.TextYAlignment.Top, Position = UDim2.fromOffset(18, 33), Size = UDim2.new(1, -(18 + textRight), 0, 30), Parent = card })
+        local button = UiKit.button({ Name = "Wear", TextSize = 13, AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(BUTTON, UiTheme.Height.Button), Parent = card })
         button.Activated:Connect(function()
             if earnedSet[entry.Id] and book.Worn ~= entry.Id then
                 wear(entry.Id)
@@ -294,9 +300,9 @@ render = function()
         else
             plainTitle(row.title, C.Muted, entry)
         end
-        row.card.BackgroundTransparency = if has then 0.35 else 0.6
+        row.card.BackgroundTransparency = if has then 0.15 else 0.5
         row.button.Text = if wearing then "WEARING" elseif has then "WEAR" else "LOCKED"
-        row.button:SetAttribute("Tone", if wearing then "Accent" else "Quiet")
+        row.button:SetAttribute("Tone", if wearing then "Active" elseif has then "Go" else "Quiet")
         row.button.AutoButtonColor = false
         row.button.Active = has and not wearing
         row.button.TextTransparency = if has then 0 else 0.45
@@ -314,8 +320,8 @@ render = function()
         showing.FontFace = UiTheme.Fonts.Title
         showing.Text = "No title"
     end
-    autoButton:SetAttribute("Tone", if book.Worn == "Auto" then "Accent" else "Quiet")
-    hideButton:SetAttribute("Tone", if book.Worn == "None" then "Accent" else "Quiet")
+    UiKit.selectTab(autoButton, book.Worn == "Auto")
+    UiKit.selectTab(hideButton, book.Worn == "None")
 end
 
 player:GetAttributeChangedSignal("Title"):Connect(render)

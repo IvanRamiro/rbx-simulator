@@ -15,15 +15,17 @@ local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
 local STEP = 0.1
-local ROW = 58
 
 local toggleButton = Hud.railButton("SettingsButton", UiTheme.Icons.Settings, "Settings", 6)
 local isDeveloper = table.find(GameConfig.Titles.DeveloperUserIds, player.UserId) ~= nil
 local window = Hud.window({
-    Name = "SettingsWindow", Title = "SETTINGS", Size = Vector2.new(340, if isDeveloper then 300 else 250), AnchorPoint = Vector2.new(0.5, 0.5),
+    Name = "SettingsWindow", Title = "SETTINGS", Size = Vector2.new(420, if isDeveloper then 460 else 376), AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.fromScale(0.5, 0.5),
 })
-local body = window.Body
+-- the rows, one card each, in a list that scrolls on a short screen
+local body = UiKit.scroll({ Name = "Rows", Size = UDim2.fromScale(1, 1), Parent = window.Body })
+local PAD = UiTheme.Pad.Card
+local BUTTON = UiTheme.Height.Button
 
 local function read(key)
     local value = player:GetAttribute("Setting" .. key)
@@ -33,20 +35,56 @@ local function read(key)
     return value
 end
 
--- a volume row: its name and percent, a bar, and - and + buttons (easy to hit on a phone)
+local function rowCard(name, height, order)
+    return UiKit.card({ Name = name, Size = UDim2.new(1, 0, 0, height), LayoutOrder = order, Parent = body })
+end
+
+local function rowName(card, text)
+    return UiKit.boldLabel({ Name = "Label", TextSize = 14, Text = text, Position = UDim2.fromOffset(PAD, PAD),
+        Size = UDim2.new(1, -PAD * 2, 0, 18), Parent = card })
+end
+
+-- a volume row: its name and percent, a bar, and - and + buttons a thumb's size
 local volumeRows = {}
 local function volumeRow(key, word, order)
-    local y = (order - 1) * ROW
-    UiKit.label({ Name = key .. "Label", Font = "Strong", TextSize = 13, TextColor3 = C.Text, Text = word,
-        Position = UDim2.fromOffset(0, y), Size = UDim2.new(0.6, 0, 0, 18), Parent = body })
-    local percent = UiKit.label({ Name = key .. "Percent", Font = "Strong", TextSize = 12, TextColor3 = C.Muted,
-        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, y), Size = UDim2.new(0.4, 0, 0, 18),
-        TextXAlignment = Enum.TextXAlignment.Right, Parent = body })
-    local less = UiKit.button({ Name = key .. "Less", Font = "Strong", Text = "-", TextSize = 18, Tone = "Quiet",
-        Position = UDim2.fromOffset(0, y + 20), Size = UDim2.fromOffset(40, 36), Parent = body })
-    local more = UiKit.button({ Name = key .. "More", Font = "Strong", Text = "+", TextSize = 18, Tone = "Quiet",
-        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, y + 20), Size = UDim2.fromOffset(40, 36), Parent = body })
-    local bar = UiKit.bar({ Name = key .. "Bar", Position = UDim2.fromOffset(48, y + 33), Size = UDim2.new(1, -96, 0, 10), Parent = body })
+    local card = rowCard(key .. "Row", PAD + 18 + UiTheme.Space.S + BUTTON + PAD, order)
+    rowName(card, word)
+    local percent = UiKit.boldLabel({ Name = key .. "Percent", TextSize = 14, TextColor3 = C.Highlight,
+        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -PAD, 0, PAD), Size = UDim2.fromOffset(60, 18),
+        TextXAlignment = Enum.TextXAlignment.Right, Parent = card })
+    local y = PAD + 18 + UiTheme.Space.S
+    local less = UiKit.button({ Name = key .. "Less", Text = "-", TextSize = 20, Tone = "Quiet",
+        Position = UDim2.fromOffset(PAD, y), Size = UDim2.fromOffset(BUTTON, BUTTON), Parent = card })
+    local more = UiKit.button({ Name = key .. "More", Text = "+", TextSize = 20, Tone = "Quiet",
+        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -PAD, 0, y), Size = UDim2.fromOffset(BUTTON, BUTTON), Parent = card })
+    -- the - and + drawn as bars, so they read at the same weight as everything else (a "-" glyph is a speck)
+    for button, bars in { [less] = { 0 }, [more] = { 0, 90 } } do
+        button.Text = ""
+        for _, turn in bars do
+            local bar = Instance.new("Frame")
+            bar.Name = "Mark"
+            bar.BorderSizePixel = 0
+            bar.BackgroundColor3 = C.Text
+            bar.AnchorPoint = Vector2.new(0.5, 0.5)
+            bar.Position = UDim2.fromScale(0.5, 0.5)
+            bar.Size = UDim2.fromOffset(16, 3)
+            bar.Rotation = turn
+            bar.Parent = button
+            UiKit.corner(bar, 2)
+        end
+        button:GetPropertyChangedSignal("Active"):Connect(function()
+            for _, mark in button:GetChildren() do
+                if mark.Name == "Mark" then
+                    mark.BackgroundTransparency = if button.Active then 0 else 0.6
+                end
+            end
+        end)
+    end
+    local inset = PAD + BUTTON + UiTheme.Space.M
+    local bar = UiKit.bar({ Name = key .. "Bar", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, inset, 0, y + BUTTON / 2),
+        Size = UDim2.new(1, -inset * 2, 0, 12), Parent = card })
+    bar:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
+    bar.Fill:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
     local function render(value)
         percent.Text = math.round(value * 100) .. "%"
         UiKit.setBar(bar, value)
@@ -76,15 +114,21 @@ for key, render in volumeRows do
     render(read(key))
 end
 
+-- an on/off row: its name, what it does, and its switch at the right
+local SWITCH = 92
+local function switchRow(name, word, help, order)
+    local card = rowCard(name .. "Row", PAD + 18 + 4 + 30 + PAD, order)
+    local label = rowName(card, word)
+    label.Size = UDim2.new(1, -(PAD * 2 + SWITCH + UiTheme.Space.S), 0, 18)
+    UiKit.label({ Name = name .. "Help", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, TextWrapped = true,
+        TextYAlignment = Enum.TextYAlignment.Top, Text = help, Position = UDim2.fromOffset(PAD, PAD + 22),
+        Size = UDim2.new(1, -(PAD * 2 + SWITCH + UiTheme.Space.S), 0, 30), Parent = card })
+    return UiKit.button({ Name = name, TextSize = 14, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -PAD, 0.5, 0),
+        Size = UDim2.fromOffset(SWITCH, BUTTON), Parent = card })
+end
+
 -- reduced effects, on or off
-local y = 2 * ROW
-UiKit.label({ Name = "ReducedLabel", Font = "Strong", TextSize = 13, TextColor3 = C.Text, Text = "REDUCED EFFECTS",
-    Position = UDim2.fromOffset(0, y + 4), Size = UDim2.new(1, -70, 0, 18), Parent = body })
-local reduced = UiKit.button({ Name = "Reduced", Font = "Strong", TextSize = 12, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, 0, 0, y), Size = UDim2.fromOffset(68, 36), Parent = body })
-UiKit.label({ Name = "ReducedHelp", TextSize = 12, TextColor3 = C.Muted, TextWrapped = true,
-    Text = "Hides other players' auras, and turns off screen flashes and camera shake.",
-    Position = UDim2.fromOffset(0, y + 34), Size = UDim2.new(1, 0, 0, 34), Parent = body })
+local reduced = switchRow("Reduced", "REDUCED EFFECTS", "Hides other players' auras, and turns off screen flashes and camera shake.", 3)
 local function renderReduced()
     local on = read("ReducedEffects")
     reduced.Text = if on then "ON" else "OFF"
@@ -101,11 +145,7 @@ renderReduced()
 -- for developers: the performance readout (client/Performance/PerfProbe), to read a device's frame rate and memory live;
 -- not saved
 if isDeveloper then
-    local devY = y + 76
-    UiKit.label({ Name = "PerfLabel", Font = "Strong", TextSize = 13, TextColor3 = C.Text, Text = "PERFORMANCE READOUT",
-        Position = UDim2.fromOffset(0, devY + 4), Size = UDim2.new(1, -70, 0, 18), Parent = body })
-    local perf = UiKit.button({ Name = "PerfReadout", Font = "Strong", TextSize = 12, AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, 0, 0, devY), Size = UDim2.fromOffset(68, 36), Parent = body })
+    local perf = switchRow("PerfReadout", "PERFORMANCE READOUT", "Frame rate and memory at the top left. Developers only; not saved.", 4)
     local function renderPerf()
         local on = player:GetAttribute("PerfReadout") == true
         perf.Text = if on then "ON" else "OFF"

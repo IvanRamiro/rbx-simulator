@@ -47,19 +47,25 @@ local render
 
 local window = Hud.window({
     -- centred, and short enough to clear the dock below (and fit a phone: HudScale shrinks it)
-    Name = "ShopWindow", Title = "SHOP", Size = Vector2.new(580, 420), AnchorPoint = Vector2.new(0.5, 0.5),
+    Name = "ShopWindow", Title = "SHOP", Size = Vector2.new(620, 500), AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.fromScale(0.5, 0.5), OnClose = function()
         current.shop = nil
     end,
 })
 local body = window.Body
 
--- the player's stones, at the top right of the body
-local balance = UiKit.label({
-    Name = "Balance", Font = "Strong", TextSize = 13, TextColor3 = C.AccentBright, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, 0, 0, 4), Size = UDim2.fromOffset(200, 18), TextXAlignment = Enum.TextXAlignment.Right, Parent = body,
+-- the player's stones, at the top right of the body: a pill with the stone's picture
+local TAB = UiTheme.Height.Tab
+local _, balance = UiKit.pill(UiTheme.Icons.Stones, "", {
+    Name = "Balance", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0, TAB / 2), Parent = body,
 })
-local TABS_HEIGHT, FORGE_HEIGHT = 32, 106
+local GAP = UiTheme.Space.M
+-- a line at the top left, beside the balance, saying what this counter is for (not the Blacksmith's: its tabs are there)
+local topNote = UiKit.label({
+    Name = "Note", Font = "Strong", TextSize = 12, TextColor3 = C.Muted, AnchorPoint = Vector2.new(0, 0.5),
+    Position = UDim2.new(0, 2, 0, TAB / 2), Size = UDim2.new(1, -150, 0, 30), TextWrapped = true, Parent = body,
+})
+local TABS_HEIGHT, FORGE_HEIGHT = TAB + GAP, 40 + GAP + UiTheme.Height.Field + 6 + 30
 
 local list = UiKit.scroll({ Name = "List", Parent = body }) -- render() places it under what the shop shows above it
 
@@ -72,7 +78,7 @@ end
 -- a button; disabled (onClick nil) it still says why
 local function button(parent, text, tone, size, position, onClick)
     local b = UiKit.button({
-        Font = "Strong", TextSize = 12, Text = text, Tone = tone, Active = onClick ~= nil, Size = size, Position = position,
+        TextSize = 13, Text = text, Tone = tone, Active = onClick ~= nil, Size = size, Position = position,
         Parent = parent,
     })
     if onClick then
@@ -85,16 +91,13 @@ end
 local tabs = Instance.new("Frame")
 tabs.Name = "Tabs"
 tabs.BackgroundTransparency = 1
-tabs.Size = UDim2.new(1, -210, 0, 30)
+tabs.Size = UDim2.new(1, -210, 0, TAB)
 tabs.Visible = false
 tabs.Parent = body
-UiKit.list(tabs, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6) })
+UiKit.list(tabs, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, UiTheme.Space.S) })
 local tabButtons = {}
 for index, name in { "Weapons", "Forge" } do
-    local tab = UiKit.button({
-        Name = name, Font = "Strong", TextSize = 12, Text = string.upper(name), Tone = "Quiet", LayoutOrder = index,
-        Size = UDim2.fromOffset(110, 30), Parent = tabs,
-    })
+    local tab = UiKit.tab({ Name = name, Text = string.upper(name), LayoutOrder = index, Size = UDim2.fromOffset(130, TAB), Parent = tabs })
     tab.Activated:Connect(function()
         current.tab = name
         render()
@@ -112,10 +115,11 @@ forgePanel.Parent = body
 local elementRow = Instance.new("Frame")
 elementRow.Name = "Elements"
 elementRow.BackgroundTransparency = 1
-elementRow.Size = UDim2.new(1, 0, 0, 30)
+elementRow.Size = UDim2.new(1, 0, 0, 40)
 elementRow.Parent = forgePanel
+UiKit.list(elementRow, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, UiTheme.Space.S) })
 local nameBox = UiKit.textbox({
-    Name = "WeaponName", Position = UDim2.fromOffset(0, 40), Size = UDim2.new(0.6, 0, 0, 30), Text = "",
+    Name = "WeaponName", Position = UDim2.fromOffset(0, 40 + GAP), Size = UDim2.new(1, 0, 0, UiTheme.Height.Field), Text = "",
     PlaceholderText = ("Name your weapon (%d to %d letters)"):format(GameConfig.Forge.NameLength.Min, GameConfig.Forge.NameLength.Max),
     Parent = forgePanel,
 })
@@ -126,17 +130,45 @@ nameBox:GetPropertyChangedSignal("Text"):Connect(function()
     end
 end)
 local forgeHint = UiKit.label({
-    Name = "Hint", TextSize = 12, TextColor3 = C.Muted, TextWrapped = true, Position = UDim2.fromOffset(0, 76),
-    Size = UDim2.new(1, 0, 0, 28), Parent = forgePanel,
+    Name = "Hint", Font = "Strong", TextSize = 12, TextColor3 = C.Muted, TextWrapped = true,
+    Position = UDim2.fromOffset(0, 40 + GAP + UiTheme.Height.Field + 6), Size = UDim2.new(1, 0, 0, 30), Parent = forgePanel,
 })
 
+local priceTag -- (below)
 local function card(order, height, stripe)
     return UiKit.card({ LayoutOrder = order, Size = UDim2.new(1, 0, 0, height), Stripe = stripe, Parent = list })
 end
 
 local function heading(order, text)
-    local _, word = UiKit.header(list, string.upper(text), { TextSize = 11, Color = C.Muted, LayoutOrder = order })
+    local _, word = UiKit.header(list, text, { LayoutOrder = order })
     return word
+end
+
+-- one row's measures, shared by every list here
+local ROW = 68
+local ROW_BUTTON = UiTheme.Height.Button
+
+-- a price, right-aligned in the column before a row's button: the stone's picture and the number, heavy
+function priceTag(row, value, dim)
+    local tag = Instance.new("Frame")
+    tag.Name = "Price"
+    tag.BackgroundTransparency = 1
+    tag.AnchorPoint = Vector2.new(1, 0.5)
+    tag.Position = UDim2.new(0.72, -UiTheme.Space.M, 0.5, 0)
+    tag.Size = UDim2.new(0.26, 0, 0, 22)
+    tag.Parent = row
+    UiKit.list(tag, { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right,
+        VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 4) })
+    local stone = Instance.new("ImageLabel")
+    stone.BackgroundTransparency = 1
+    stone.Image = UiTheme.Icons.Stones
+    stone.ImageTransparency = if dim then 0.5 else 0
+    stone.Size = UDim2.fromOffset(18, 18)
+    stone.Parent = tag
+    UiKit.boldLabel({
+        TextSize = 15, Text = NumberFormat.compact(value), TextColor3 = if dim then C.Muted else C.AccentBright,
+        AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 20), LayoutOrder = 2, Parent = tag,
+    })
 end
 
 -- the weapon's owned instance (the equipped one first), or nil
@@ -157,29 +189,32 @@ end
 local function weaponCard(parent, x, weapon, contents, realmIndex)
     local mine = owned(contents, weapon.Id)
     local element = mine and Shop.element(mine.Element)
-    local box = UiKit.card({
-        Position = UDim2.new(x, if x == 0 then 0 else 4, 0, 24), Size = UDim2.new(0.5, -4, 1, -30),
-        Stripe = element and element.Color, Parent = parent,
-    })
+    local box = UiKit.boldCard(UiKit.card({
+        Position = UDim2.new(x, if x == 0 then 0 else UiTheme.Space.S / 2, 0, 30), Size = UDim2.new(0.5, -UiTheme.Space.S / 2, 1, -(30 + 8)),
+        Parent = parent,
+    }), element and element.Color)
+    box.BackgroundColor3 = C.Panel
     -- the weapon itself, so the player sees the design before buying
-    local picture = Portraits.weapon(weapon.Id, element and element.Color, 70)
-    picture.Position = UDim2.fromOffset(8, 7)
+    local picture = Portraits.weapon(weapon.Id, element and element.Color, 64)
+    picture.Position = UDim2.fromOffset(10, 10)
     picture.Parent = box
-    UiKit.label({
-        Font = "Title", TextSize = 14, Text = if mine and mine.Name then mine.Name else weapon.Name,
-        TextColor3 = if element then element.Color else C.Text, TextTruncate = Enum.TextTruncate.AtEnd,
-        Position = UDim2.fromOffset(86, 6), Size = UDim2.new(1, -94, 0, 18), Parent = box,
+    local name = UiKit.boldLabel({
+        TextSize = 14, Text = if mine and mine.Name then mine.Name else weapon.Name,
+        TextColor3 = if element then element.Color:Lerp(Color3.new(1, 1, 1), 0.2) else C.Text, TextTruncate = Enum.TextTruncate.AtEnd,
+        Position = UDim2.fromOffset(84, 10), Size = UDim2.new(1, -94, 0, 18), Parent = box,
     })
+    local _ = name
     local kind = GameConfig.WeaponKinds[weapon.Kind]
     UiKit.label({
-        TextSize = 11, TextColor3 = C.Muted, Text = string.format("%s  ·  %d dmg  ·  %d reach", weapon.Kind, math.floor(weapon.Damage + 0.5), kind.Range),
-        Position = UDim2.fromOffset(86, 25), Size = UDim2.new(1, -94, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = box,
+        Font = "Strong", TextSize = 11, TextColor3 = C.Muted,
+        Text = string.format("%s  ·  %d dmg  ·  %d reach", weapon.Kind, math.floor(weapon.Damage + 0.5), kind.Range),
+        Position = UDim2.fromOffset(84, 30), Size = UDim2.new(1, -94, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = box,
     })
-    local size, position = UDim2.new(1, -94, 0, 32), UDim2.new(0, 86, 1, -38) -- (26 was small for a thumb: UI audit 2026-11-11)
+    local size, position = UDim2.new(1, -94, 0, UiTheme.Height.ButtonSmall), UDim2.new(0, 84, 1, -(UiTheme.Height.ButtonSmall + 10))
     if mine and mine.InstanceId == contents.Weapons.Equipped then
         button(box, "WIELDING", "Active", size, position, nil) -- a state, not an action: not the gold of something to press
     elseif mine then
-        button(box, "WIELD", "Accent", size, position, function()
+        button(box, "WIELD", "Go", size, position, function()
             ask("Equip", mine.InstanceId)
         end)
     elseif weapon.Tier > realmIndex then
@@ -187,7 +222,7 @@ local function weaponCard(parent, x, weapon, contents, realmIndex)
     elseif contents.Stones < weapon.Price then
         button(box, NumberFormat.compact(weapon.Price) .. " STONES", "Quiet", size, position, nil)
     else
-        button(box, "BUY  ·  " .. NumberFormat.compact(weapon.Price) .. " STONES", "Accent", size, position, function()
+        button(box, "BUY  " .. NumberFormat.compact(weapon.Price), "Buy", size, position, function()
             ask("Buy", weapon.Id)
         end)
     end
@@ -202,18 +237,20 @@ local function renderForge(contents)
         current.element = nil
     end
     for _, child in elementRow:GetChildren() do
-        child:Destroy()
+        if child:IsA("GuiObject") then
+            child:Destroy()
+        end
     end
     local order = GameConfig.Forge.Order
     for index, name in order do
         local info = GameConfig.Forge.Elements[name]
         local chosen = current.element == name
         local chip = UiKit.button({
-            Font = "Strong", TextSize = 12, Text = string.upper(info.DisplayName), Tone = if chosen then "Highlight" else "Quiet",
-            Position = UDim2.new((index - 1) / #order, 0, 0, 0), Size = UDim2.new(1 / #order, -6, 1, 0), Parent = elementRow,
+            TextSize = 12, Text = string.upper(info.DisplayName), Tone = if chosen then "Highlight" else "Tile",
+            LayoutOrder = index, Size = UDim2.new(1 / #order, -UiTheme.Space.S * (#order - 1) / #order, 1, 0), Parent = elementRow,
         })
-        -- each element in its own colour; a locked one dim
-        chip.TextColor3 = if unlocked[name] then info.Color:Lerp(Color3.new(1, 1, 1), 0.35) else C.Muted
+        -- each element in its own colour (dark on the gold of the chosen one); a locked one dim
+        chip.TextColor3 = if chosen then Color3.fromRGB(48, 28, 6) elseif unlocked[name] then info.Color:Lerp(Color3.new(1, 1, 1), 0.35) else C.Muted
         chip.Activated:Connect(function()
             if unlocked[name] then
                 current.element = name
@@ -233,26 +270,26 @@ local function renderForge(contents)
         local info = Shop.weapon(weapon.WeaponId)
         if info then
             local element = Shop.element(weapon.Element)
-            local r = card(index, 56, element and element.Color)
-            local picture = Portraits.weapon(info.Id, element and element.Color, 44)
-            picture.Position = UDim2.fromOffset(10, 6)
+            local r = card(index, ROW, element and element.Color)
+            local picture = Portraits.weapon(info.Id, element and element.Color, 48)
+            picture.Position = UDim2.fromOffset(14, 8)
             picture.Parent = r
-            UiKit.label({
-                Font = "Title", TextSize = 14, Text = weapon.Name or info.Name, TextColor3 = if element then element.Color else C.Text,
-                TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(62, 9), Size = UDim2.new(0.58, -62, 0, 18), Parent = r,
+            UiKit.boldLabel({
+                TextSize = 14, Text = weapon.Name or info.Name, TextColor3 = if element then element.Color:Lerp(Color3.new(1, 1, 1), 0.2) else C.Text,
+                TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(72, 12), Size = UDim2.new(0.58, -72, 0, 18), Parent = r,
             })
             UiKit.label({
-                TextSize = 11, TextColor3 = C.Muted, Text = info.Name .. (if element then "  ·  " .. element.DisplayName else "  ·  unforged"),
-                Position = UDim2.fromOffset(62, 29), Size = UDim2.new(0.58, -62, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = r,
+                Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = info.Name .. (if element then "  ·  " .. element.DisplayName else "  ·  unforged"),
+                Position = UDim2.fromOffset(72, 33), Size = UDim2.new(0.58, -72, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = r,
             })
             local price = Shop.forgePrice(info.Id)
-            local size, position = UDim2.new(0.4, -8, 0, 30), UDim2.new(0.6, 0, 0, 13)
+            local size, position = UDim2.new(0.4, -12, 0, ROW_BUTTON), UDim2.new(0.6, 0, 0.5, -ROW_BUTTON / 2)
             if not chosen then
                 button(r, "CHOOSE AN ELEMENT", "Quiet", size, position, nil)
             elseif contents.Stones < price then
                 button(r, NumberFormat.compact(price) .. " STONES", "Quiet", size, position, nil)
             else
-                button(r, (if element then "RE-FORGE  ·  " else "FORGE  ·  ") .. NumberFormat.compact(price), "Highlight", size, position,
+                button(r, (if element then "RE-FORGE  " else "FORGE  ") .. NumberFormat.compact(price), "Buy", size, position,
                     function()
                         ask("Forge", weapon.InstanceId, { Element = current.element, Name = nameBox.Text })
                     end)
@@ -264,7 +301,7 @@ end
 local function renderBlacksmith(contents)
     window.setTitle("BLACKSMITH")
     for name, tab in tabButtons do
-        tab:SetAttribute("Tone", if current.tab == name then "Accent" else "Quiet")
+        UiKit.selectTab(tab, current.tab == name)
     end
     if current.tab == "Forge" then
         renderForge(contents)
@@ -272,22 +309,22 @@ local function renderBlacksmith(contents)
     end
     local realmIndex = Shop.playerRealmIndex(player)
     local unarmed = contents.Weapons.Equipped == nil
-    local palm = card(0, 42)
-    UiKit.label({
-        Font = "Title", TextSize = 14, Text = "Qi Palm", Position = UDim2.fromOffset(12, 5), Size = UDim2.new(0.6, 0, 0, 18), Parent = palm,
+    local palm = card(0, ROW)
+    UiKit.boldLabel({
+        TextSize = 14, Text = "Qi Palm", Position = UDim2.fromOffset(14, 12), Size = UDim2.new(0.6, 0, 0, 18), Parent = palm,
     })
     UiKit.label({
-        TextSize = 11, TextColor3 = C.Muted, Text = "Fight bare-handed", Position = UDim2.fromOffset(12, 22), Size = UDim2.new(0.6, 0, 0, 14), Parent = palm,
+        Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = "Fight bare-handed", Position = UDim2.fromOffset(14, 33),
+        Size = UDim2.new(0.6, 0, 0, 14), Parent = palm,
     })
-    button(palm, if unarmed then "USING" else "USE", if unarmed then "Highlight" else "Accent", UDim2.fromOffset(110, 32),
-        UDim2.new(1, -120, 0, 5), if unarmed then nil else function()
+    button(palm, if unarmed then "USING" else "USE", if unarmed then "Active" else "Go", UDim2.fromOffset(120, ROW_BUTTON),
+        UDim2.new(1, -132, 0.5, -ROW_BUTTON / 2), if unarmed then nil else function()
             ask("Equip", nil)
         end)
     for tier, info in GameConfig.WeaponTiers do
-        local r = card(tier, 120)
-        UiKit.label({
-            Font = "Strong", TextSize = 12, Text = string.upper(info.Realm), TextColor3 = if tier <= realmIndex then C.Highlight else C.Muted,
-            Position = UDim2.fromOffset(10, 5), Size = UDim2.new(1, -20, 0, 16), Parent = r,
+        local r = card(tier, 148)
+        UiKit.header(r, info.Realm, {
+            Color = if tier <= realmIndex then C.Highlight else C.Muted, Position = UDim2.fromOffset(12, 6), Size = UDim2.new(1, -24, 0, 22),
         })
         local inner = Instance.new("Frame")
         inner.BackgroundTransparency = 1
@@ -302,25 +339,22 @@ end
 -- A sale can't be undone, so its button asks once more: "SURE?" for CONFIRM_SECONDS.
 local CONFIRM_SECONDS = 3
 local function sellRow(order, picture, name, detail, detailColor, value, onSell, why)
-    local r = card(order, 56, detailColor)
-    picture.Position = UDim2.fromOffset(10, 6)
+    local r = card(order, ROW, detailColor)
+    picture.Position = UDim2.fromOffset(14, 8)
     picture.Parent = r
-    UiKit.label({
-        Font = "Title", TextSize = 14, Text = name, TextTruncate = Enum.TextTruncate.AtEnd,
-        Position = UDim2.fromOffset(62, 9), Size = UDim2.new(0.44, -62, 0, 18), Parent = r,
+    UiKit.boldLabel({
+        TextSize = 14, Text = name, TextTruncate = Enum.TextTruncate.AtEnd,
+        Position = UDim2.fromOffset(72, 12), Size = UDim2.new(0.44, -72, 0, 18), Parent = r,
     })
     UiKit.label({
-        Font = "Strong", TextSize = 11, Text = detail, TextColor3 = detailColor, Position = UDim2.fromOffset(62, 29),
-        Size = UDim2.new(0.44, -62, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = r,
+        Font = "Strong", TextSize = 11, Text = detail, TextColor3 = detailColor, Position = UDim2.fromOffset(72, 33),
+        Size = UDim2.new(0.44, -72, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = r,
     })
-    UiKit.label({
-        Font = "Strong", TextSize = 13, Text = NumberFormat.compact(value) .. " Stones", TextColor3 = C.AccentBright,
-        Position = UDim2.new(0.44, 0, 0, 19), Size = UDim2.new(0.24, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Right, Parent = r,
-    })
+    priceTag(r, value)
     local sell
     local armedUntil = 0
-    sell = button(r, if onSell then "SELL" else string.upper(why), if onSell then "Danger" else "Quiet", UDim2.new(0.28, -10, 0, 30),
-        UDim2.new(0.72, 0, 0, 13), onSell and function()
+    sell = button(r, if onSell then "SELL" else string.upper(why), if onSell then "Danger" else "Quiet", UDim2.new(0.28, -12, 0, ROW_BUTTON),
+        UDim2.new(0.72, 0, 0.5, -ROW_BUTTON / 2), onSell and function()
             if os.clock() < armedUntil then
                 onSell()
                 return
@@ -358,40 +392,36 @@ end
 
 local function renderMarket(contents)
     window.setTitle("MARKETPLACE")
+    topNote.Text = "Spirit eggs. Hatch them at the Hatching Sanctum."
     local rankName = Ranks.getPlayerRankName(player)
-    heading(0, "Spirit eggs: hatch them at the Hatching Sanctum")
     for index, entry in marketEggs do
         local open = rankName ~= "" and Ranks.isAtLeast(rankName, entry.egg.RequiredRank)
         local affordable = contents.Stones >= entry.price
-        local r = card(index, 62)
-        local icon = UiKit.icon(UiTheme.EggIcons[entry.id] or UiTheme.Icons.Hatch, 44, if open then "Accent" else "Danger")
-        icon.Position = UDim2.fromOffset(10, 9)
+        local r = card(index, 72)
+        local icon = UiKit.icon(UiTheme.EggIcons[entry.id] or UiTheme.Icons.Hatch, 52, if open then "Accent" else "Danger")
+        icon.Position = UDim2.fromOffset(12, 10)
         icon.Parent = r
-        UiKit.label({
-            Font = "Title", TextSize = 14, Text = entry.egg.DisplayName, Position = UDim2.fromOffset(62, 7),
-            Size = UDim2.new(0.46, -62, 0, 18), TextTruncate = Enum.TextTruncate.AtEnd, Parent = r,
+        UiKit.boldLabel({
+            TextSize = 14, Text = entry.egg.DisplayName, Position = UDim2.fromOffset(76, 9),
+            Size = UDim2.new(0.46, -76, 0, 18), TextTruncate = Enum.TextTruncate.AtEnd, Parent = r,
         })
         local rarest = rarestOf(entry.egg)
         local held = contents.Eggs and contents.Eggs[entry.id] or 0
         UiKit.label({
-            TextSize = 11, RichText = true, TextColor3 = C.Muted, Position = UDim2.fromOffset(62, 26), Size = UDim2.new(0.46, -62, 0, 14),
+            Font = "Strong", TextSize = 11, RichText = true, TextColor3 = C.Muted, Position = UDim2.fromOffset(76, 30), Size = UDim2.new(0.46, -76, 0, 14),
             TextTruncate = Enum.TextTruncate.AtEnd, Parent = r,
             Text = "Up to: " .. string.format('<font color="#%s">%s</font>',
                 (rarest and GameConfig.PetRarityColors[rarest.Rarity] or C.Text):ToHex(), rarest and rarest.DisplayName or "?"),
         })
         UiKit.label({
-            TextSize = 11, TextColor3 = C.Muted, Position = UDim2.fromOffset(62, 41), Size = UDim2.new(0.46, -62, 0, 14),
+            Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Position = UDim2.fromOffset(76, 46), Size = UDim2.new(0.46, -76, 0, 14),
             Text = if open then "You hold " .. held else "Needs " .. Ranks.getRankById(entry.egg.RequiredRank).Name, Parent = r,
         })
-        UiKit.label({
-            Font = "Strong", TextSize = 13, Text = NumberFormat.compact(entry.price) .. " Stones",
-            TextColor3 = if affordable then C.AccentBright else C.Muted, Position = UDim2.new(0.46, 0, 0, 22), Size = UDim2.new(0.24, 0, 0, 18),
-            TextXAlignment = Enum.TextXAlignment.Right, Parent = r,
-        })
+        priceTag(r, entry.price, not affordable)
         local why = if not open then "LOCKED" elseif not affordable then "TOO DEAR" else nil
         local buy
         local armedUntil = 0
-        buy = button(r, why or "BUY", if why then "Quiet" else "Accent", UDim2.new(0.26, -10, 0, 34), UDim2.new(0.74, 0, 0, 14),
+        buy = button(r, why or "BUY", if why then "Quiet" else "Buy", UDim2.new(0.28, -12, 0, ROW_BUTTON), UDim2.new(0.72, 0, 0.5, -ROW_BUTTON / 2),
             if why then nil else function()
                 if os.clock() < armedUntil then
                     armedUntil = 0
@@ -427,6 +457,7 @@ end
 
 local function renderBuySell(contents)
     window.setTitle("BUY & SELL")
+    topNote.Text = "Sell spare beasts and weapons for Spirit Stones."
     local order = 0
     local function nextOrder()
         order += 1
@@ -478,17 +509,22 @@ end
 
 function render()
     for _, child in list:GetChildren() do
-        if child:IsA("GuiObject") then
+        if child:IsA("GuiObject") and child ~= forgePanel then
             child:Destroy()
         end
     end
     local contents = current.contents
-    balance.Text = NumberFormat.compact(contents.Stones) .. " Spirit Stones"
+    balance.Text = NumberFormat.compact(contents.Stones)
     local blacksmith = current.shop == "Blacksmith"
     local forging = blacksmith and current.tab == "Forge"
     tabs.Visible = blacksmith
+    topNote.Visible = not blacksmith
     forgePanel.Visible = forging
-    local top = if forging then TABS_HEIGHT + FORGE_HEIGHT + 4 elseif blacksmith then TABS_HEIGHT else 26
+    -- on a short window (a phone) the forge's controls scroll with its weapons, or the list under them had one row's room
+    local short = body.AbsoluteSize.Y / Hud.windowScale() < 330
+    forgePanel.Parent = if forging and short then list else body
+    forgePanel.LayoutOrder = -100
+    local top = if forging and not short then TABS_HEIGHT + FORGE_HEIGHT + GAP elseif blacksmith then TABS_HEIGHT else TAB / 2 + 15 + GAP
     list.Position = UDim2.fromOffset(0, top)
     list.Size = UDim2.new(1, 0, 1, -top)
     if blacksmith then

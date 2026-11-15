@@ -112,8 +112,8 @@ function UiKit.panel(props)
     local brackets = copy.Brackets ~= false
     copy.Brackets = nil
     apply(frame, copy)
-    corner(frame)
-    stroke(frame, C.Edge, 0.1)
+    corner(frame, UiTheme.Radius.Panel)
+    stroke(frame, C.Edge, 0.1, UiTheme.Stroke.Window)
     -- the glow: a soft wide rim just inside the edge
     local rim = Instance.new("Frame")
     rim.Name = "Glow"
@@ -122,7 +122,7 @@ function UiKit.panel(props)
     rim.Position = UDim2.fromScale(0.5, 0.5)
     rim.Size = UDim2.new(1, -4, 1, -4)
     rim.Parent = frame
-    corner(rim)
+    corner(rim, UiTheme.Radius.Panel - 2)
     stroke(rim, C.Edge, 0.9, 4)
     local glass = Instance.new("UIGradient") -- deeper at the bottom, as light through glass
     glass.Rotation = 90
@@ -177,47 +177,164 @@ function UiKit.label(props)
     return label
 end
 
--- A header across its parent: a fading line, TEXT, a fading line. props: Color,
--- TextSize, and any Frame properties (Position, Size, LayoutOrder ...).
+-- A section's heading across its parent: its NAME in heavy gold capitals on the left, a gold line running from it to the
+-- right edge (one heading style everywhere: a shop's sections, the titles' groups). props: Color, TextSize, and any
+-- Frame properties (Position, Size, LayoutOrder ...).
 function UiKit.header(parent, text, props)
     local copy = table.clone(props or {})
-    local color = copy.Color or C.AccentBright
-    local size = copy.TextSize or 14
+    local color = copy.Color or C.Edge
+    local size = copy.TextSize or UiTheme.Text.Heading
     copy.Color, copy.TextSize = nil, nil
     local row = Instance.new("Frame")
     row.Name = "Header"
     row.BackgroundTransparency = 1
-    row.Size = UDim2.new(1, 0, 0, size + 8)
+    row.Size = UDim2.new(1, 0, 0, size + 10)
     apply(row, copy)
     row.Parent = parent
     local word = UiKit.label({
-        Name = "Text", Font = "Header", Text = text, TextSize = size, TextColor3 = color,
-        AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.new(0, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, Parent = row,
+        Name = "Text", Font = "Heavy", Text = string.upper(text), TextSize = size, TextColor3 = color,
+        AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, 0.5), AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.new(0, 0, 1, 0), Parent = row,
     })
-    -- a line each side of the word, fading out toward the edges; they follow the word's width
-    local lines = {}
-    for side = 0, 1 do
-        local line = Instance.new("Frame")
-        line.BorderSizePixel = 0
-        line.BackgroundColor3 = C.Edge
-        line.AnchorPoint = Vector2.new(side, 0.5)
-        line.Position = UDim2.fromScale(side, 0.5)
-        line.Parent = row
-        local fade = Instance.new("UIGradient")
-        fade.Transparency = if side == 0 then NumberSequence.new(1, 0.2) else NumberSequence.new(0.2, 1)
-        fade.Parent = line
-        lines[side] = line
-    end
+    UiKit.outline(word, 1)
+    -- the line from the word to the edge, fading out; it follows the word's width
+    local line = Instance.new("Frame")
+    line.Name = "Rule"
+    line.BorderSizePixel = 0
+    line.BackgroundColor3 = C.Edge
+    line.AnchorPoint = Vector2.new(1, 0.5)
+    line.Position = UDim2.fromScale(1, 0.5)
+    line.Parent = row
+    local fade = Instance.new("UIGradient")
+    fade.Transparency = NumberSequence.new(0.35, 1)
+    fade.Parent = line
     local function fit()
-        local gap = word.AbsoluteSize.X / 2 + 10
-        for _, line in lines do
-            line.Size = UDim2.new(0.5, -gap, 0, 1)
-        end
+        line.Size = UDim2.new(1, -(word.TextBounds.X + UiTheme.Space.S), 0, 1)
     end
-    word:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+    word:GetPropertyChangedSignal("TextBounds"):Connect(fit)
     fit()
     return row, word
+end
+
+-- ---------- a window's frame: one title band and one close button for every window and dialog ----------
+-- The title band across a window's top: its name in Merriweather, outlined, centred over a gold rule; the close button at
+-- its right. Returns the title label and the close button. Its height is UiTheme.Height.TitleBar.
+function UiKit.titleBar(frame, text)
+    local band = Instance.new("Frame")
+    band.Name = "TitleBar"
+    band.BackgroundColor3 = C.Well
+    band.BackgroundTransparency = 0.45
+    band.BorderSizePixel = 0
+    band.Size = UDim2.new(1, 0, 0, UiTheme.Height.TitleBar)
+    band.ZIndex = frame.ZIndex
+    band.Parent = frame
+    corner(band, UiTheme.Radius.Window)
+    -- squares off the band's lower corners, so only the window's own top corners are round
+    local foot = Instance.new("Frame")
+    foot.Name = "Foot"
+    foot.BackgroundColor3 = C.Well
+    foot.BackgroundTransparency = 0.45
+    foot.BorderSizePixel = 0
+    foot.AnchorPoint = Vector2.new(0, 1)
+    foot.Position = UDim2.fromScale(0, 1)
+    foot.Size = UDim2.new(1, 0, 0, UiTheme.Radius.Window)
+    foot.ZIndex = frame.ZIndex
+    foot.Parent = band
+    local rule = Instance.new("Frame")
+    rule.Name = "Rule"
+    rule.BorderSizePixel = 0
+    rule.BackgroundColor3 = C.Edge
+    rule.AnchorPoint = Vector2.new(0.5, 1)
+    rule.Position = UDim2.fromScale(0.5, 1)
+    rule.Size = UDim2.new(1, -UiTheme.Space.L * 2, 0, 1)
+    rule.ZIndex = frame.ZIndex + 1
+    rule.Parent = band
+    local fade = Instance.new("UIGradient")
+    fade.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.1), NumberSequenceKeypoint.new(1, 1),
+    })
+    fade.Parent = rule
+    local closeSize = UiTheme.Height.Close
+    local title = UiKit.label({
+        Name = "Title", Font = "Header", Text = text, TextSize = UiTheme.Text.WindowTitle, TextColor3 = C.AccentBright,
+        TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.AtEnd,
+        AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+        -- room for the close button on both sides, so the title stays centred on the window
+        Size = UDim2.new(1, -(closeSize + UiTheme.Space.M * 2) * 2, 0, UiTheme.Text.WindowTitle + 6),
+        ZIndex = frame.ZIndex + 1, Parent = band,
+    })
+    UiKit.outline(title, 2)
+    local close = UiKit.closeButton(closeSize)
+    close.AnchorPoint = Vector2.new(1, 0.5)
+    close.Position = UDim2.new(1, -UiTheme.Space.M + 2, 0.5, 0)
+    close.ZIndex = frame.ZIndex + 2
+    close.Parent = band
+    return title, close, band
+end
+
+-- The close button: a red square with a drawn cross (no glyph: every font draws an X differently)
+function UiKit.closeButton(size)
+    local button = UiKit.button({ Name = "Close", Text = "", Tone = "Danger", Size = UDim2.fromOffset(size, size) })
+    for _, turn in { 45, -45 } do
+        local bar = Instance.new("Frame")
+        bar.Name = "Cross"
+        bar.BorderSizePixel = 0
+        bar.BackgroundColor3 = C.Text
+        bar.AnchorPoint = Vector2.new(0.5, 0.5)
+        bar.Position = UDim2.fromScale(0.5, 0.5)
+        bar.Size = UDim2.new(0.46, 0, 0, 3)
+        bar.Rotation = turn
+        bar.ZIndex = button.ZIndex + 1
+        bar.Parent = button
+        corner(bar, 2)
+    end
+    return button
+end
+
+-- A tab: a framed tile, gold while it is the one showing. UiKit.selectTab(button, on) switches it.
+function UiKit.tab(props)
+    local copy = table.clone(props or {})
+    copy.Font = copy.Font or "Heavy"
+    copy.TextSize = copy.TextSize or 14
+    copy.Tone = "Tile"
+    local button = UiKit.button(copy)
+    button:SetAttribute("EdgeThickness", UiTheme.Stroke.Button)
+    return button
+end
+function UiKit.selectTab(button, on)
+    button:SetAttribute("Tone", if on then "Highlight" else "Tile")
+end
+
+-- A small value pill: an icon and a number or a word, on a dark well with a fine gold edge (a balance, a timer, a count).
+-- Returns the pill and its label.
+function UiKit.pill(image, text, props)
+    local pill = Instance.new("Frame")
+    pill.Name = "Pill"
+    pill.BackgroundColor3 = C.Well
+    pill.BackgroundTransparency = 0.25
+    pill.BorderSizePixel = 0
+    pill.AutomaticSize = Enum.AutomaticSize.X
+    pill.Size = UDim2.fromOffset(0, 30)
+    corner(pill, 15)
+    stroke(pill, C.EdgeDim, 0.2, 1.5)
+    local pad = UiKit.padding(pill, 12, 0)
+    pad.PaddingLeft = UDim.new(0, if image then 6 else 12)
+    UiKit.list(pill, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), VerticalAlignment = Enum.VerticalAlignment.Center })
+    if image then
+        local picture = Instance.new("ImageLabel")
+        picture.Name = "Icon"
+        picture.BackgroundTransparency = 1
+        picture.Image = image
+        picture.Size = UDim2.fromOffset(22, 22)
+        picture.Parent = pill
+    end
+    local label = UiKit.label({
+        Name = "Value", Font = "Heavy", TextSize = 14, Text = text or "", AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.fromOffset(0, 20), LayoutOrder = 2, Parent = pill,
+    })
+    UiKit.outline(label, 1.5)
+    apply(pill, props)
+    return pill, label
 end
 
 local TONES = {
@@ -233,7 +350,7 @@ function UiKit.icon(image, size, tone)
     box.BackgroundColor3 = colors[1]
     box.BackgroundTransparency = 0.3
     box.BorderSizePixel = 0
-    corner(box, 2)
+    corner(box, UiTheme.Radius.Chip)
     stroke(box, colors[2], 0.1, 1)
     local picture = Instance.new("ImageLabel")
     picture.Name = "Image"
@@ -252,11 +369,11 @@ local BUTTON_TONES = {
     Accent = { back = Color3.fromRGB(58, 50, 122), edge = C.Accent, text = C.Text },
     Highlight = { back = C.Highlight, edge = Color3.new(1, 1, 1), text = Color3.fromRGB(48, 28, 6), glow = C.Highlight },
     Quiet = { back = C.Raised, edge = C.EdgeDim, text = C.Text },
-    Danger = { back = C.DangerDeep, edge = C.Danger, text = C.Text },
-    Active = { back = Color3.fromRGB(14, 112, 118), edge = Color3.fromRGB(120, 255, 236), text = Color3.new(1, 1, 1), glow = Color3.fromRGB(70, 240, 220) }, -- something running, right now
-    Buy = { back = C.Buy, edge = C.BuyBright, text = Color3.new(1, 1, 1), glow = C.Buy }, -- a price in Robux
-    Tile = { back = C.Raised, edge = C.Edge, text = C.Text }, -- a rail tile: quiet, framed in gold
-    Go = { back = C.Buy, edge = C.BuyBright, text = Color3.new(1, 1, 1), glow = C.Buy }, -- a positive action (Equip): the price green
+    Danger = { back = C.DangerDeep, edge = C.Danger, text = C.Text, outlined = true },
+    Active = { back = Color3.fromRGB(14, 112, 118), edge = Color3.fromRGB(120, 255, 236), text = Color3.new(1, 1, 1), glow = Color3.fromRGB(70, 240, 220), outlined = true }, -- something running, right now
+    Buy = { back = C.Buy, edge = C.BuyBright, text = Color3.new(1, 1, 1), glow = C.Buy, outlined = true }, -- a price (Robux or Spirit Stones)
+    Tile = { back = C.Raised, edge = C.Edge, text = C.Text }, -- a rail tile or a tab: quiet, framed in gold
+    Go = { back = C.Buy, edge = C.BuyBright, text = Color3.new(1, 1, 1), glow = C.Buy, outlined = true }, -- a positive action (Equip, Hatch, Claim): green
 }
 
 -- props.Tone picks the colours; button:SetAttribute("Tone", name) changes them later
@@ -267,14 +384,15 @@ function UiKit.button(props)
     local button = Instance.new("TextButton")
     button.AutoButtonColor = false
     button.BorderSizePixel = 0
-    button.FontFace = UiTheme.Fonts.Title
-    button.TextSize = 16
+    button.FontFace = UiTheme.Fonts.Heavy -- every button's words in the heavy face (Cultivation Bold)
+    button.TextSize = UiTheme.Text.Button
+    button.TextStrokeColor3 = C.Outline
     if copy.Font then
         button.FontFace = UiTheme.Fonts[copy.Font]
         copy.Font = nil
     end
-    corner(button)
-    local edge = stroke(button, C.Edge, 0.15)
+    corner(button, UiTheme.Radius.Button)
+    local edge = stroke(button, C.Edge, 0.15, UiTheme.Stroke.Button)
     local glass = Instance.new("UIGradient")
     glass.Rotation = 90
     glass.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(226, 214, 200))
@@ -321,6 +439,8 @@ function UiKit.button(props)
         button.BackgroundColor3 = if lit then tone.back:Lerp(tone.edge, 0.25) else tone.back
         button.BackgroundTransparency = if disabled then 0.55 elseif tone.glow then 0 else 0.08
         button.TextColor3 = if disabled then C.Muted else tone.text
+        -- white words on a bright fill carry a dark edge, as the bold look's outlined words do
+        button.TextStrokeTransparency = if tone.outlined and not disabled then 0.45 else 1
         halo.Visible = tone.glow ~= nil and button.Active and button.AutomaticSize == Enum.AutomaticSize.None
         gloss.Visible = tone.glow ~= nil and not disabled
         if tone.glow then
@@ -329,7 +449,7 @@ function UiKit.button(props)
         edge.Color = tone.edge
         edge.Transparency = if button.Active then 0.05 else 0.6
         if not edge:GetAttribute("Breathes") then -- a breathing edge (UiFx.attention) is its tween's: writing here fought it
-            edge.Thickness = (button:GetAttribute("EdgeThickness") or 1) + (if lit then 1 else 0) -- a bold tile asks for a thicker edge
+            edge.Thickness = (button:GetAttribute("EdgeThickness") or UiTheme.Stroke.Button) + (if lit then 1 else 0)
         end
     end
     button:SetAttribute("Tone", toneName)
@@ -382,16 +502,22 @@ end
 
 -- A round on-screen button for touch players (Strike, Dash ...), in the interface's colours.
 function UiKit.touchButton(button, text)
-    button.BackgroundColor3 = C.AccentDeep
-    button.BackgroundTransparency = 0.2
+    button.BackgroundColor3 = C.Panel
+    button.BackgroundTransparency = 0.12
     button.BorderSizePixel = 0
-    button.FontFace = UiTheme.Fonts.Title
+    button.FontFace = UiTheme.Fonts.Heavy -- the bold look: heavy words, a dark edge, a gold ring
     button.TextScaled = true
     button.TextColor3 = C.Text
-    button.Text = text
+    button.TextStrokeColor3 = C.Outline
+    button.TextStrokeTransparency = 0.3
+    button.Text = string.upper(text)
     corner(button, 999)
-    stroke(button, C.Accent, 0.1, 2)
-    UiKit.padding(button, 7, 7)
+    stroke(button, C.Edge, 0.05, 2.5)
+    local size = Instance.new("UITextSizeConstraint")
+    size.MaxTextSize = 15
+    size.MinTextSize = 10
+    size.Parent = button
+    UiKit.padding(button, 8, 8)
 end
 
 function UiKit.keycap(key)
@@ -467,7 +593,7 @@ function UiKit.scroll(props)
     local scroll = Instance.new("ScrollingFrame")
     scroll.BackgroundTransparency = 1
     scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 3
+    scroll.ScrollBarThickness = 4
     scroll.ScrollBarImageColor3 = C.Edge
     scroll.ScrollBarImageTransparency = 0.3
     scroll.CanvasSize = UDim2.new()
@@ -475,10 +601,10 @@ function UiKit.scroll(props)
     scroll.ScrollingDirection = Enum.ScrollingDirection.Y
     apply(scroll, props)
     local pad = Instance.new("UIPadding") -- room for the bar, and for each card's edge
-    pad.PaddingRight = UDim.new(0, 8)
-    pad.PaddingTop, pad.PaddingBottom, pad.PaddingLeft = UDim.new(0, 2), UDim.new(0, 2), UDim.new(0, 2)
+    pad.PaddingRight = UDim.new(0, 10)
+    pad.PaddingTop, pad.PaddingBottom, pad.PaddingLeft = UDim.new(0, 2), UDim.new(0, 4), UDim.new(0, 2)
     pad.Parent = scroll
-    UiKit.list(scroll, { Padding = UDim.new(0, 6) })
+    UiKit.list(scroll, { Padding = UDim.new(0, UiTheme.Space.S) })
     return scroll
 end
 
@@ -488,31 +614,40 @@ function UiKit.card(props)
     copy.Stripe = nil
     local card = Instance.new("Frame")
     card.BackgroundColor3 = C.Raised
-    card.BackgroundTransparency = 0.35
+    card.BackgroundTransparency = 0.15
     card.BorderSizePixel = 0
-    corner(card)
-    local edge = stroke(card, C.EdgeDim, 0.35)
+    corner(card, UiTheme.Radius.Card)
+    local edge = stroke(card, C.EdgeDim, 0.3, UiTheme.Stroke.Card)
     if UserInputService.MouseEnabled then -- the row under the pointer lights up
-        local restEdge, restEdgeTransparency -- (read on first entering, after any UiKit.boldCard: its own edge comes back)
+        local restEdge, restEdgeTransparency -- (read on entering, so a card redrawn since keeps its new edge)
         local rest
+        local leftAt = -1
         card.MouseEnter:Connect(function()
-            rest = rest or card.BackgroundTransparency
-            restEdge, restEdgeTransparency = restEdge or edge.Color, restEdgeTransparency or edge.Transparency -- once: never mid-tween
+            if os.clock() - leftAt > EASE.Time + 0.02 then -- never read mid-tween: the last leave has settled
+                rest = card.BackgroundTransparency
+                restEdge, restEdgeTransparency = edge.Color, edge.Transparency
+            end
             TweenService:Create(card, EASE, { BackgroundTransparency = math.max(0, rest - 0.2) }):Play()
             TweenService:Create(edge, EASE, { Color = if edge:GetAttribute("Keep") then edge.Color else C.Edge, Transparency = 0.05 }):Play()
         end)
         card.MouseLeave:Connect(function()
+            leftAt = os.clock()
             TweenService:Create(card, EASE, { BackgroundTransparency = rest or card.BackgroundTransparency }):Play()
-            TweenService:Create(edge, EASE, { Color = restEdge or C.EdgeDim, Transparency = restEdgeTransparency or 0.35 }):Play()
+            TweenService:Create(edge, EASE, { Color = restEdge or C.EdgeDim, Transparency = restEdgeTransparency or 0.3 }):Play()
         end)
     end
-    if stripeColor then
+    if stripeColor then -- a colour that means something (a rarity, an element): the card's edge, and a pill down its left
+        edge.Color = stripeColor
+        edge.Transparency = 0.35
+        edge:SetAttribute("Keep", true)
         local stripe = Instance.new("Frame")
         stripe.Name = "Stripe"
         stripe.BorderSizePixel = 0
         stripe.BackgroundColor3 = stripeColor
-        stripe.Size = UDim2.new(0, 3, 1, 0)
+        stripe.Position = UDim2.fromOffset(0, UiTheme.Space.M)
+        stripe.Size = UDim2.new(0, 4, 1, -UiTheme.Space.M * 2)
         stripe.Parent = card
+        corner(stripe, 2)
     end
     apply(card, copy)
     return card
@@ -534,9 +669,9 @@ end
 -- hover still lights the edge.
 function UiKit.boldCard(card, edgeColor)
     card.BackgroundTransparency = 0.1
-    card:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
+    card:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, UiTheme.Radius.Card)
     local edge = card:FindFirstChildOfClass("UIStroke")
-    edge.Thickness = 2
+    edge.Thickness = UiTheme.Stroke.Card
     if edgeColor then
         edge.Color = edgeColor
         edge.Transparency = 0.2
@@ -561,13 +696,13 @@ end
 function UiKit.tag(text, color)
     color = color or C.Accent
     local tag = UiKit.label({
-        Name = "Tag", Font = "Strong", Text = string.upper(text), TextSize = 10, TextColor3 = color,
-        BackgroundColor3 = color, BackgroundTransparency = 0.85, AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.fromOffset(0, 16), TextXAlignment = Enum.TextXAlignment.Center,
+        Name = "Tag", Font = "Heavy", Text = string.upper(text), TextSize = 10, TextColor3 = color,
+        BackgroundColor3 = color, BackgroundTransparency = 0.82, AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.fromOffset(0, 18), TextXAlignment = Enum.TextXAlignment.Center,
     })
-    corner(tag, 2)
-    stroke(tag, color, 0.4)
-    UiKit.padding(tag, 6, 0)
+    corner(tag, UiTheme.Radius.Chip)
+    stroke(tag, color, 0.35)
+    UiKit.padding(tag, 6, 0).PaddingRight = UDim.new(0, 7) -- (a pixel spare: a width of half pixels read as not fitting)
     return tag
 end
 
@@ -582,15 +717,16 @@ function UiKit.textbox(props)
     box.TextColor3 = C.Text
     box.PlaceholderColor3 = C.Muted
     box.TextXAlignment = Enum.TextXAlignment.Left
-    corner(box)
-    local edge = stroke(box, C.EdgeDim, 0.2)
+    box.Size = UDim2.new(1, 0, 0, UiTheme.Height.Field)
+    corner(box, UiTheme.Radius.Button)
+    local edge = stroke(box, C.EdgeDim, 0.2, 1.5)
     box.Focused:Connect(function()
         edge.Color = C.Edge
     end)
     box.FocusLost:Connect(function()
         edge.Color = C.EdgeDim
     end)
-    UiKit.padding(box, 10, 0)
+    UiKit.padding(box, 12, 0)
     apply(box, props)
     return box
 end
@@ -607,11 +743,11 @@ function UiKit.empty(parent, text)
     box.Parent = parent
     UiKit.padding(box, 18, 26)
     UiKit.list(box, { Padding = UDim.new(0, 8), HorizontalAlignment = Enum.HorizontalAlignment.Center })
-    UiKit.label({
-        Name = "Headline", Font = "Title", Text = headline, TextSize = 16, TextColor3 = C.AccentBright, TextWrapped = true,
+    UiKit.outline(UiKit.label({
+        Name = "Headline", Font = "Heavy", Text = headline, TextSize = 18, TextColor3 = C.AccentBright, TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Center, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0),
         LayoutOrder = 1, Parent = box,
-    })
+    }), 1.5)
     if hint ~= "" then
         local rule = Instance.new("Frame")
         rule.Name = "Rule"

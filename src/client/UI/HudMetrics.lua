@@ -4,7 +4,10 @@
 --   HudMetrics.viewport()   the screen's size
 --   HudMetrics.scale()      the scale for a piece: never below 0.8, growing on big screens so the HUD keeps its share of them
 --   HudMetrics.Changed      fires when the screen's size changes
---   HudMetrics.keepReadable(gui)  no text under gui is ever drawn smaller than MIN_DRAWN_TEXT, however the scale shrinks it
+--   HudMetrics.windowScale() a window's scale: the HUD's, but never under 1 on a phone (a window is what the player is looking
+--                            at: its words stay readable and its buttons a thumb's size)
+--   HudMetrics.keepReadable(gui, scaleOf)  no text under gui is ever drawn smaller than MIN_DRAWN_TEXT, however the scale
+--                            (scaleOf(), the HUD's by default) shrinks it
 -- In Studio, the player's HudTestViewport attribute (a Vector2) stands in for the screen, to check a layout at another size.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -45,28 +48,35 @@ function HudMetrics.scale()
     return math.clamp(scale, MIN_SCALE, MAX_SCALE)
 end
 
+function HudMetrics.windowScale()
+    local scale = HudMetrics.scale()
+    return if HudMetrics.class() == "Phone" then math.max(1, scale) else scale
+end
+
 -- ---------- readable text ----------
 local function floorFor(scale)
     return math.ceil(MIN_DRAWN_TEXT / scale)
 end
 
 local authored = setmetatable({}, { __mode = "k" }) -- [label] = the TextSize its script asked for
+local scaleOfLabel = setmetatable({}, { __mode = "k" }) -- [label] = the function giving the scale it is drawn at
 local applying = false
 
 local function fitText(label)
     local wanted = authored[label]
     if wanted and not label.TextScaled then
         applying = true
-        label.TextSize = math.max(wanted, floorFor(HudMetrics.scale()))
+        label.TextSize = math.max(wanted, floorFor((scaleOfLabel[label] or HudMetrics.scale)()))
         applying = false
     end
 end
 
-local function track(item)
+local function track(item, scaleOf)
     if not (item:IsA("TextLabel") or item:IsA("TextButton") or item:IsA("TextBox")) or authored[item] then
         return
     end
     authored[item] = item.TextSize
+    scaleOfLabel[item] = scaleOf
     fitText(item)
     item:GetPropertyChangedSignal("TextSize"):Connect(function()
         if not applying then -- its script chose a new size
@@ -76,11 +86,13 @@ local function track(item)
     end)
 end
 
-function HudMetrics.keepReadable(gui)
+function HudMetrics.keepReadable(gui, scaleOf)
     for _, item in gui:GetDescendants() do
-        track(item)
+        track(item, scaleOf)
     end
-    gui.DescendantAdded:Connect(track)
+    gui.DescendantAdded:Connect(function(item)
+        track(item, scaleOf)
+    end)
 end
 
 -- ---------- following the screen ----------

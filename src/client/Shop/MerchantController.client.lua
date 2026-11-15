@@ -27,7 +27,8 @@ local MerchantEvent = RemoteEvents.MerchantEvent
 -- as the shops (ShopController): his prompt opens within 12 studs and he sells within 45, so walking 30 away closes it first
 local WALK_AWAY = 30
 local CONFIRM_SECONDS = 3
-local CARD_HEIGHT = 70
+local CARD_HEIGHT = 76
+local BUTTON = UiTheme.Height.Button
 
 local message = Toast.new("MerchantMessage", C.Highlight, 5)
 
@@ -72,12 +73,13 @@ end
 
 -- ---------- the HUD line ----------
 local line = UiKit.panel({
-    Name = "MerchantLine", Brackets = false, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 26),
+    Name = "MerchantLine", Brackets = false, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 30),
     LayoutOrder = 20, Visible = false, Parent = Hud.Banner,
 })
-UiKit.padding(line, 10, 0)
-local lineText = UiKit.label({
-    Name = "Text", Font = "Strong", TextSize = 13, TextColor3 = C.AccentBright, AutomaticSize = Enum.AutomaticSize.X,
+line:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 15)
+UiKit.padding(line, 14, 0)
+local lineText = UiKit.boldLabel({
+    Name = "Text", TextSize = 13, TextColor3 = C.AccentBright, AutomaticSize = Enum.AutomaticSize.X,
     Size = UDim2.fromScale(0, 1), Parent = line,
 })
 
@@ -87,22 +89,19 @@ local render
 
 local window = Hud.window({
     -- short enough to clear the dock below and fit a phone in landscape (HudScale shrinks it, its list scrolls)
-    Name = "MerchantWindow", Title = "WANDERING MERCHANT", Size = Vector2.new(560, 380), AnchorPoint = Vector2.new(0.5, 0.5),
+    Name = "MerchantWindow", Title = "WANDERING MERCHANT", Size = Vector2.new(600, 460), AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.fromScale(0.5, 0.5), OnClose = function()
         current.state = nil
     end,
 })
 local body = window.Body
 
-local countdown = UiKit.label({
-    Name = "Countdown", Font = "Strong", TextSize = 13, TextColor3 = C.Highlight, Position = UDim2.fromOffset(0, 4),
-    Size = UDim2.new(0.5, 0, 0, 18), Parent = body,
-})
-local balance = UiKit.label({
-    Name = "Balance", Font = "Strong", TextSize = 13, TextColor3 = C.AccentBright, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, 0, 0, 4), Size = UDim2.new(0.5, 0, 0, 18), TextXAlignment = Enum.TextXAlignment.Right, Parent = body,
-})
-local list = UiKit.scroll({ Name = "List", Position = UDim2.fromOffset(0, 28), Size = UDim2.new(1, 0, 1, -28), Parent = body })
+-- the top: how long he stays, and the player's stones, as two pills
+local _, countdown = UiKit.pill(nil, "", { Name = "Countdown", Parent = body })
+countdown.TextColor3 = C.Highlight
+local _, balance = UiKit.pill(UiTheme.Icons.Stones, "", { Name = "Balance", AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Parent = body })
+local LIST_TOP = 30 + UiTheme.Space.M
+local list = UiKit.scroll({ Name = "List", Position = UDim2.fromOffset(0, LIST_TOP), Size = UDim2.new(1, 0, 1, -LIST_TOP), Parent = body })
 
 local function stones()
     local attribute = player:GetAttribute("SpiritStones")
@@ -142,38 +141,53 @@ end
 
 local function dealCard(order, deal)
     local rarityColor = deal.Rarity and GameConfig.PetRarityColors[deal.Rarity]
-    local card = UiKit.card({ LayoutOrder = order, Size = UDim2.new(1, 0, 0, CARD_HEIGHT), Stripe = rarityColor or C.Accent, Parent = list })
+    local card = UiKit.boldCard(UiKit.card({ LayoutOrder = order, Size = UDim2.new(1, 0, 0, CARD_HEIGHT), Parent = list }), rarityColor or C.Edge)
     local art = picture(deal)
-    art.Position = UDim2.fromOffset(10, 9)
+    art.Position = UDim2.fromOffset(12, 12)
     art.Parent = card
-    UiKit.label({
-        Font = "Title", TextSize = 14, Text = if deal.Kind == "Egg" and deal.Count > 1 then deal.Name .. "  x" .. deal.Count else deal.Name,
+    UiKit.boldLabel({
+        TextSize = 14, Text = if deal.Kind == "Egg" and deal.Count > 1 then deal.Name .. "  x" .. deal.Count else deal.Name,
         TextColor3 = rarityColor or C.Text, TextTruncate = Enum.TextTruncate.AtEnd,
-        Position = UDim2.fromOffset(72, 7), Size = UDim2.new(0.5, -72, 0, 18), Parent = card,
+        Position = UDim2.fromOffset(76, 10), Size = UDim2.new(0.5, -76, 0, 18), Parent = card,
     })
     UiKit.label({
-        TextSize = 11, RichText = true, TextColor3 = C.Muted, Text = detailOf(deal), TextTruncate = Enum.TextTruncate.AtEnd,
-        Position = UDim2.fromOffset(72, 27), Size = UDim2.new(0.5, -72, 0, 14), Parent = card,
+        Font = "Strong", TextSize = 11, RichText = true, TextColor3 = C.Muted, Text = detailOf(deal), TextTruncate = Enum.TextTruncate.AtEnd,
+        Position = UDim2.fromOffset(76, 31), Size = UDim2.new(0.5, -76, 0, 14), Parent = card,
     })
     UiKit.label({
-        TextSize = 11, TextColor3 = if deal.Locked then C.Danger else C.Muted, TextTruncate = Enum.TextTruncate.AtEnd,
+        Font = "Strong", TextSize = 11, TextColor3 = if deal.Locked then C.Danger else C.Muted, TextTruncate = Enum.TextTruncate.AtEnd,
         Text = if deal.Bought then "Bought this visit"
             elseif deal.Locked then deal.Locked
             elseif deal.FullPrice then "Marketplace: " .. NumberFormat.compact(deal.FullPrice) .. " Stones"
             else "Sold to you directly, no hatching",
-        Position = UDim2.fromOffset(72, 44), Size = UDim2.new(0.5, -72, 0, 14), Parent = card,
+        Position = UDim2.fromOffset(76, 47), Size = UDim2.new(0.5, -76, 0, 14), Parent = card,
     })
     local affordable = stones() >= deal.Price
-    UiKit.label({
-        Font = "Strong", TextSize = 13, Text = NumberFormat.compact(deal.Price) .. " Stones",
-        TextColor3 = if affordable and not deal.Bought then C.AccentBright else C.Muted,
-        Position = UDim2.new(0.5, 0, 0, 26), Size = UDim2.new(0.2, -6, 0, 18), TextXAlignment = Enum.TextXAlignment.Right, Parent = card,
+    -- the price, right-aligned before the button: the stone's picture and the number (as in every shop)
+    local tag = Instance.new("Frame")
+    tag.Name = "Price"
+    tag.BackgroundTransparency = 1
+    tag.AnchorPoint = Vector2.new(1, 0.5)
+    tag.Position = UDim2.new(0.7, -UiTheme.Space.M, 0.5, 0)
+    tag.Size = UDim2.new(0.2, 0, 0, 22)
+    tag.Parent = card
+    UiKit.list(tag, { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right,
+        VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 4) })
+    local dim = not affordable or deal.Bought
+    local stone = Instance.new("ImageLabel")
+    stone.BackgroundTransparency = 1
+    stone.Image = UiTheme.Icons.Stones
+    stone.ImageTransparency = if dim then 0.5 else 0
+    stone.Size = UDim2.fromOffset(18, 18)
+    stone.Parent = tag
+    UiKit.boldLabel({
+        TextSize = 15, Text = NumberFormat.compact(deal.Price), TextColor3 = if dim then C.Muted else C.AccentBright,
+        AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 20), LayoutOrder = 2, Parent = tag,
     })
     local why = if deal.Bought then "SOLD OUT" elseif deal.Locked then "LOCKED" elseif not affordable then "TOO DEAR" else nil
     local buy = UiKit.button({
-        Font = "Strong", TextSize = 13, Text = why or "BUY", Tone = if why then "Quiet" else "Accent", Active = why == nil,
-        -- tall enough for a thumb on a phone (the shops' buttons: 34 and up)
-        Size = UDim2.new(0.3, -10, 0, 40), Position = UDim2.new(0.7, 0, 0.5, -20), Parent = card,
+        TextSize = 14, Text = why or "BUY", Tone = if why then "Quiet" else "Buy", Active = why == nil,
+        Size = UDim2.new(0.3, -12, 0, BUTTON), Position = UDim2.new(0.7, 0, 0.5, -BUTTON / 2), Parent = card,
     })
     if why then
         return
@@ -196,8 +210,8 @@ local function dealCard(order, deal)
 end
 
 local function updateCountdown()
-    countdown.Text = "Leaves in " .. clock(secondsLeft())
-    balance.Text = NumberFormat.compact(stones()) .. " Spirit Stones"
+    countdown.Text = "LEAVES IN " .. clock(secondsLeft())
+    balance.Text = NumberFormat.compact(stones())
 end
 
 function render()

@@ -32,24 +32,46 @@ inner.BackgroundTransparency = 1
 inner.AutomaticSize = Enum.AutomaticSize.Y
 inner.Size = UDim2.new(1, 0, 0, 0)
 inner.Parent = panel
-UiKit.padding(inner, 14, 10)
-UiKit.list(inner, { Padding = UDim.new(0, 5) })
+UiKit.padding(inner, UiTheme.Space.M + 2, UiTheme.Space.M - 2)
+UiKit.list(inner, { Padding = UDim.new(0, 6) })
 
-local header = UiKit.header(inner, "QUEST", { TextSize = 13, LayoutOrder = 1 })
-local count = UiKit.label({
-    Name = "Count", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, AnchorPoint = Vector2.new(1, 0.5),
-    Position = UDim2.fromScale(1, 0.5), Size = UDim2.fromOffset(40, 14), TextXAlignment = Enum.TextXAlignment.Right,
+-- its header: the fold mark, QUEST in heavy gold, and how far along the quests are
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.BackgroundTransparency = 1
+header.Size = UDim2.new(1, 0, 0, 22)
+header.LayoutOrder = 1
+header.Parent = inner
+local questWord = UiKit.boldLabel({
+    Name = "Word", TextSize = 13, Text = "QUEST", TextColor3 = C.Edge, Position = UDim2.fromOffset(22, 0),
+    Size = UDim2.new(1, -70, 1, 0), Parent = header,
+})
+local _ = questWord
+local count = UiKit.boldLabel({
+    Name = "Count", TextSize = 11, TextColor3 = C.Muted, AnchorPoint = Vector2.new(1, 0.5),
+    Position = UDim2.fromScale(1, 0.5), Size = UDim2.fromOffset(48, 14), TextXAlignment = Enum.TextXAlignment.Right,
     Parent = header,
 })
+local rule = Instance.new("Frame") -- a gold rule under the header
+rule.Name = "Rule"
+rule.BorderSizePixel = 0
+rule.BackgroundColor3 = C.Edge
+rule.AnchorPoint = Vector2.new(0, 1)
+rule.Position = UDim2.new(0, 0, 1, 2)
+rule.Size = UDim2.new(1, 0, 0, 1)
+rule.Parent = header
+local ruleFade = Instance.new("UIGradient")
+ruleFade.Transparency = NumberSequence.new(0.3, 1)
+ruleFade.Parent = rule
 local title = UiKit.label({
     Name = "Title", Font = "Title", TextSize = 15, TextColor3 = C.Highlight, AutomaticSize = Enum.AutomaticSize.Y,
     Size = UDim2.new(1, 0, 0, 0), TextWrapped = true, LayoutOrder = 2, Parent = inner,
 })
 local body = UiKit.label({
-    Name = "Text", TextSize = 12, TextColor3 = C.Text, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0),
+    Name = "Text", Font = "Strong", TextSize = 12, TextColor3 = C.Text, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, 0, 0, 0),
     TextWrapped = true, LayoutOrder = 3, Parent = inner,
 })
-local bar = UiKit.bar({ Name = "Progress", Size = UDim2.new(1, 0, 0, 5), LayoutOrder = 4, Parent = inner })
+local bar = UiKit.bar({ Name = "Progress", Size = UDim2.new(1, 0, 0, 6), LayoutOrder = 4, Parent = inner })
 
 -- the way to where a quest happens (its Way in GameConfig.Quests): an arrow that turns with the camera, what it points at, how far
 local way = Instance.new("Frame")
@@ -72,21 +94,22 @@ local fold = Instance.new("TextButton") -- the whole header
 fold.Name = "Fold"
 fold.Text = ""
 fold.BackgroundTransparency = 1
--- taller than the header it lies over (invisible): the header is a thin line, too thin to hit with a thumb (UI audit 2026-11-11)
+-- taller than the header it lies over (invisible): the header is a thin line, too thin to hit with a thumb (UI audit 2026-11-11);
+-- on a phone 56 tall, 45 pixels at its scale
 fold.AnchorPoint = Vector2.new(0, 0.5)
 fold.Position = UDim2.fromScale(0, 0.5)
-fold.Size = UDim2.new(1, 0, 1, 16)
+fold.Size = UDim2.new(1, 0, 1, 20)
 fold.ZIndex = 3
 fold.Parent = header
-local foldMark = UiKit.label({
-    Name = "FoldMark", Font = "Strong", TextSize = 15, TextColor3 = C.Muted, AnchorPoint = Vector2.new(0, 0.5),
-    Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromOffset(18, 18), Parent = header,
+local foldMark = UiKit.boldLabel({
+    Name = "FoldMark", TextSize = 16, TextColor3 = C.AccentBright, AnchorPoint = Vector2.new(0, 0.5), TextXAlignment = Enum.TextXAlignment.Center,
+    Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromOffset(16, 18), Parent = header,
 })
 
 local footer = Instance.new("Frame")
 footer.Name = "Footer"
 footer.BackgroundTransparency = 1
-footer.Size = UDim2.new(1, 0, 0, 30)
+footer.Size = UDim2.new(1, 0, 0, UiTheme.Height.ButtonSmall)
 footer.LayoutOrder = 5
 footer.Parent = inner
 local rewardIcon = Instance.new("ImageLabel")
@@ -97,14 +120,14 @@ rewardIcon.AnchorPoint = Vector2.new(0, 0.5)
 rewardIcon.Position = UDim2.fromScale(0, 0.5)
 rewardIcon.Size = UDim2.fromOffset(18, 18)
 rewardIcon.Parent = footer
-local reward = UiKit.label({
-    Name = "Reward", Font = "Strong", TextSize = 12, TextColor3 = C.AccentBright, Position = UDim2.fromOffset(23, 0),
-    Size = UDim2.new(1, -93, 1, 0), Parent = footer,
+local reward = UiKit.boldLabel({
+    Name = "Reward", TextSize = 12, TextColor3 = C.AccentBright, Position = UDim2.fromOffset(24, 0),
+    Size = UDim2.new(1, -(24 + 80), 1, 0), TextTruncate = Enum.TextTruncate.AtEnd, Parent = footer,
 })
-local SKIP = "Skip" -- its label at rest (it asks "SURE?" when pressed once)
+local SKIP = "SKIP" -- its label at rest (it asks "SURE?" when pressed once)
 local skip = UiKit.button({
-    Name = "Skip", Font = "Strong", TextSize = 11, Text = SKIP, Tone = "Quiet", AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.fromScale(1, 0), Size = UDim2.fromOffset(66, 30), Parent = footer,
+    Name = "Skip", TextSize = 12, Text = SKIP, Tone = "Quiet", AnchorPoint = Vector2.new(1, 0.5),
+    Position = UDim2.fromScale(1, 0.5), Size = UDim2.new(0, 72, 1, 0), Parent = footer,
 })
 
 local message = Toast.new("QuestMessage", C.Highlight, 4)
@@ -123,7 +146,7 @@ local function questAllowed()
 end
 Hud.Quest:GetPropertyChangedSignal("Visible"):Connect(questAllowed)
 
-local PHONE_WIDTH, FULL_WIDTH = 224, 270
+local PHONE_WIDTH, FULL_WIDTH = 236, 280
 local chosenFold = nil -- what the player chose: until then a phone starts folded
 local peekUntil = 0    -- a new quest shows in full until this moment
 local footerRef = footer
@@ -142,7 +165,11 @@ local function applyFold()
     title.AutomaticSize = if folded then Enum.AutomaticSize.None else Enum.AutomaticSize.Y
     title.Size = if folded then UDim2.new(1, 0, 0, 18) else UDim2.new(1, 0, 0, 0)
     foldMark.Text = if folded then "+" else "-"
-    panel.Size = UDim2.fromOffset(if Hud.isCompact() then PHONE_WIDTH else FULL_WIDTH, 0)
+    local compact = Hud.isCompact()
+    panel.Size = UDim2.fromOffset(if compact then PHONE_WIDTH else FULL_WIDTH, 0)
+    -- a thumb's 44 pixels on a phone, at its 0.8 scale
+    footerRef.Size = UDim2.new(1, 0, 0, if compact then 56 else UiTheme.Height.ButtonSmall)
+    fold.Size = UDim2.new(1, 0, 1, if compact then 34 else 20)
 end
 
 fold.Activated:Connect(function()

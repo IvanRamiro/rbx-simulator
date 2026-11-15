@@ -12,6 +12,7 @@ local Hud = require(UI:WaitForChild("Hud"))
 local UiFx = require(UI:WaitForChild("UiFx"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
+local HudMetrics = require(UI:WaitForChild("HudMetrics"))
 
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
@@ -51,12 +52,12 @@ details.BackgroundTransparency = 1
 details.Position = UDim2.fromOffset(84, 6)
 details.Size = UDim2.new(1, -94, 1, -12)
 details.Parent = statusFrame
-UiKit.label({
-    Name = "NameLabel", Font = "Strong", TextSize = 13, Text = player.DisplayName, TextTruncate = Enum.TextTruncate.AtEnd,
+UiKit.boldLabel({
+    Name = "NameLabel", TextSize = 13, Text = player.DisplayName, TextTruncate = Enum.TextTruncate.AtEnd,
     Size = UDim2.new(1, -66, 0, 16), Parent = details,
 })
-local powerTag = UiKit.label({
-    Name = "Power", Font = "Strong", TextSize = 12, TextColor3 = C.Highlight, AnchorPoint = Vector2.new(1, 0),
+local powerTag = UiKit.boldLabel({
+    Name = "Power", TextSize = 12, TextColor3 = C.Highlight, AnchorPoint = Vector2.new(1, 0),
     Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(64, 16), TextXAlignment = Enum.TextXAlignment.Right, Text = "", Parent = details,
 })
 local rankLabel = UiKit.label({
@@ -69,9 +70,12 @@ local realmLabel = UiKit.label({
 })
 local progressBar = UiKit.bar({ Name = "Progress", Position = UDim2.new(0, 0, 1, -18), Size = UDim2.new(1, 0, 0, 18), Parent = details })
 local nextRankLabel = UiKit.label({
-    Name = "NextRankLabel", Font = "Strong", TextSize = 11, Size = UDim2.fromScale(1, 1), Text = "", ZIndex = 3,
-    TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.AtEnd, TextStrokeTransparency = 0.5, Parent = progressBar,
+    Name = "NextRankLabel", Font = "Heavy", TextSize = 11, Size = UDim2.fromScale(1, 1), Text = "", ZIndex = 3,
+    TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.AtEnd, Parent = progressBar,
 })
+UiKit.outline(nextRankLabel, 1.5)
+progressBar:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 9)
+progressBar.Fill:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 9)
 
 local function fitStatus()
     local minimized = player:GetAttribute("SettingStatusMinimized") == true
@@ -99,27 +103,55 @@ UiKit.outline(qiRate, 1.5)
 local RATE_WINDOW = 3 -- seconds of gains averaged
 
 -- ---------- the dock: the breakthrough (when it's ready), the station's bonus, Cultivate ----------
+local function rankUpHeight() -- a thumb's size: 56 on a phone is 45 pixels at its 0.8 scale
+    return if Hud.isCompact() then 56 else 48
+end
+local RANK_UP_HEIGHT = rankUpHeight()
 local rankUpButton = UiKit.button({
-    Name = "RankUpButton", Tone = "Highlight", Font = "Title", TextSize = 17, Text = "BREAK THROUGH",
-    Size = UDim2.fromOffset(Hud.DockWidth(), 40), LayoutOrder = 20, Visible = false,
+    Name = "RankUpButton", Tone = "Highlight", Font = "Heavy", TextSize = 17, Text = "BREAK THROUGH",
+    Size = UDim2.fromOffset(Hud.DockWidth(), RANK_UP_HEIGHT), LayoutOrder = 20, Visible = false,
     Parent = Hud.Dock,
 })
+-- a pill like Cultivate's, its halo and light keeping to its curves
+rankUpButton:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, RANK_UP_HEIGHT // 2)
+rankUpButton.Halo:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, RANK_UP_HEIGHT // 2 + 3)
+rankUpButton:SetAttribute("RoundLight", RANK_UP_HEIGHT // 2)
+rankUpButton.Gloss.Position = UDim2.fromOffset(RANK_UP_HEIGHT // 2, 2)
+rankUpButton.Gloss.Size = UDim2.new(1, -RANK_UP_HEIGHT, 0, 1)
 -- as wide as its words need: sized by hand, because its light and halo need a button that isn't sized by its contents
-rankUpButton:GetPropertyChangedSignal("TextBounds"):Connect(function()
-    rankUpButton.Size = UDim2.fromOffset(math.max(Hud.DockWidth(), rankUpButton.TextBounds.X + 32), 40)
+-- (TextBounds is measured on the screen, after the Dock's scale: back in the button's own units, or on a phone's 0.8 the
+-- button came out a fifth too narrow for its words)
+local function fitRankUp()
+    local scale = HudMetrics.scale()
+    local height = rankUpHeight()
+    rankUpButton.Size = UDim2.fromOffset(math.max(Hud.DockWidth(), rankUpButton.TextBounds.X / scale + 40), height)
+    rankUpButton:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, height // 2)
+    rankUpButton.Halo:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, height // 2 + 3)
+    rankUpButton:SetAttribute("RoundLight", height // 2)
+    local layer = rankUpButton:FindFirstChild("LightLayer")
+    if layer then
+        layer:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, height // 2)
+    end
+    rankUpButton.Gloss.Position = UDim2.fromOffset(height // 2, 2)
+    rankUpButton.Gloss.Size = UDim2.new(1, -height, 0, 1)
+end
+rankUpButton:GetPropertyChangedSignal("TextBounds"):Connect(fitRankUp)
+HudMetrics.Changed:Connect(function()
+    task.defer(fitRankUp)
 end)
 -- a breakthrough waiting to be taken breathes, so it is seen
 UiFx.attention(rankUpButton)
 
 local stationLabel = UiKit.label({
-    Name = "StationLabel", Font = "Strong", TextSize = 13, TextColor3 = C.AccentBright,
+    Name = "StationLabel", Font = "Heavy", TextSize = 13, TextColor3 = C.AccentBright,
     BackgroundTransparency = 0.15, BackgroundColor3 = C.AccentDeep, AutomaticSize = Enum.AutomaticSize.X,
-    Size = UDim2.fromOffset(0, 24), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 25, Visible = false,
+    Size = UDim2.fromOffset(0, 28), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 25, Visible = false,
     Text = GameConfig.TrainingStation.DisplayName .. "  +" .. GameConfig.TrainingStation.QiBonusPercent .. "% Qi",
     Parent = Hud.Dock,
 })
-UiKit.corner(stationLabel)
-UiKit.padding(stationLabel, 10, 0)
+UiKit.corner(stationLabel, 14)
+UiKit.padding(stationLabel, 14, 0)
+UiKit.stroke(stationLabel, C.Edge, 0.3, 1.5)
 
 local cultivateButton = UiKit.button({
     Name = "CultivateButton", Tone = "Primary", Font = "Title", Text = "CULTIVATE",

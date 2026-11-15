@@ -31,7 +31,9 @@ local REVEAL_TIME = 2.8 -- seconds the window stays aside after the egg breaks: 
 local BREAK_MARGIN = 0.15 -- seconds after the egg breaks that Hatch wakes, so a press never reaches a server still busy
 local NO_ANSWER = GameConfig.HatchingAltar.Stage + 3 -- seconds Hatch waits for an answer that never came
 local RARITY_ORDER = { Divine = 8, Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }
-local CARD_HEIGHT, ROW_HEIGHT = 70, 40
+local CARD_HEIGHT, ROW_HEIGHT = 112, 42
+local BUTTONS = 104 -- the egg card's right column
+local TEXT_RIGHT = BUTTONS + 12 + 8
 
 local altarPart = nil
 local leaveDistance = 0
@@ -40,13 +42,14 @@ local press = 0 -- the latest press: a timer from an older one does nothing
 
 -- at the screen's right edge, so the cradle (mid-screen behind the player) stays in sight
 local window = Hud.window({
-    Name = "HatcheryWindow", Title = "HATCHING SANCTUM", Size = Vector2.new(380, 420), Side = true, AnchorPoint = Vector2.new(1, 0.5),
+    Name = "HatcheryWindow", Title = "HATCHING SANCTUM", Size = Vector2.new(420, 500), Side = true, AnchorPoint = Vector2.new(1, 0.5),
     Position = UDim2.new(1, -UiTheme.Margin, 0.5, 0), OnClose = function()
         altarPart = nil
     end,
 })
-local hint = UiKit.label({ Name = "Hint", TextSize = 12, TextColor3 = C.Muted, Size = UDim2.new(1, 0, 0, 16), Parent = window.Body })
-local list = UiKit.scroll({ Name = "Eggs", Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 1, -24), Parent = window.Body })
+local hint = UiKit.label({ Name = "Hint", Font = "Strong", TextSize = 12, TextColor3 = C.Muted, TextWrapped = true,
+    Size = UDim2.new(1, 0, 0, 18), Parent = window.Body })
+local list = UiKit.scroll({ Name = "Eggs", Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, 0, 1, -26), Parent = window.Body })
 
 -- The eggs this player holds, in the order of GameConfig.Eggs' rank requirements.
 local function heldEggs()
@@ -98,16 +101,17 @@ local function oddsRow(parent, entry, order)
     row.LayoutOrder = order
     row.Size = UDim2.new(1, 0, 0, ROW_HEIGHT - 4)
     row.Parent = parent
-    local picture = if known then Portraits.pet(entry.PetId, 36) else Portraits.silhouette(entry.PetId, 36)
+    local picture = if known then Portraits.pet(entry.PetId, 38) else Portraits.silhouette(entry.PetId, 38)
     picture.Parent = row
-    UiKit.label({
-        Name = "PetName", Font = "Strong", TextSize = 12, Text = if known then pet.DisplayName else "???", TextTruncate = Enum.TextTruncate.AtEnd,
-        TextColor3 = if known then C.Text else C.Muted, Position = UDim2.fromOffset(44, 1), Size = UDim2.new(1, -112, 0, 16), Parent = row,
+    local nameLabel = UiKit.label({
+        Name = "PetName", Font = "Heavy", TextSize = 13, Text = if known then pet.DisplayName else "???", TextTruncate = Enum.TextTruncate.AtEnd,
+        TextColor3 = if known then C.Text else C.Muted, Position = UDim2.fromOffset(48, 0), Size = UDim2.new(1, -120, 0, 18), Parent = row,
     })
+    UiKit.outline(nameLabel, 1)
     local tags = Instance.new("Frame")
     tags.BackgroundTransparency = 1
-    tags.Position = UDim2.fromOffset(44, 19)
-    tags.Size = UDim2.new(1, -112, 0, 16)
+    tags.Position = UDim2.fromOffset(48, 20)
+    tags.Size = UDim2.new(1, -120, 0, 18)
     tags.Parent = row
     UiKit.list(tags, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), VerticalAlignment = Enum.VerticalAlignment.Center })
     UiKit.tag(pet.Rarity, color).Parent = tags
@@ -128,9 +132,9 @@ local function oddsRow(parent, entry, order)
         new.LayoutOrder = 1
         new.Parent = tags
     end
-    UiKit.label({
-        Name = "Chance", Font = "Title", TextSize = 15, Text = percentText(entry.HatchChance), TextColor3 = color, AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.fromOffset(66, 20), TextXAlignment = Enum.TextXAlignment.Right, Parent = row,
+    UiKit.boldLabel({
+        Name = "Chance", TextSize = 16, Text = percentText(entry.HatchChance), TextColor3 = color, AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.fromOffset(70, 20), TextXAlignment = Enum.TextXAlignment.Right, Parent = row,
     })
 end
 
@@ -179,18 +183,19 @@ function render()
         local open = rankName ~= "" and Ranks.isAtLeast(rankName, entry.egg.RequiredRank)
         local showing = openEgg == entry.id
         local height = CARD_HEIGHT + (if showing then #entry.egg.Pool * ROW_HEIGHT + 8 else 0)
-        local card = UiKit.card({ Name = "EggCard", LayoutOrder = index, Size = UDim2.new(1, 0, 0, height), Parent = list })
-        local icon = UiKit.icon(UiTheme.EggIcons[entry.id] or UiTheme.Icons.Hatch, 44, if open then "Accent" else "Danger")
-        icon.Position = UDim2.fromOffset(12, 13)
+        local card = UiKit.boldCard(UiKit.card({ Name = "EggCard", LayoutOrder = index, Size = UDim2.new(1, 0, 0, height), Parent = list }),
+            if open then C.Edge else C.EdgeDim)
+        local icon = UiKit.icon(UiTheme.EggIcons[entry.id] or UiTheme.Icons.Hatch, 56, if open then "Accent" else "Danger")
+        icon.Position = UDim2.fromOffset(12, 12)
         icon.Parent = card
-        UiKit.label({
-            Name = "EggName", Font = "Title", TextSize = 15, Text = entry.egg.DisplayName, TextTruncate = Enum.TextTruncate.AtEnd,
-            Position = UDim2.fromOffset(66, 9), Size = UDim2.new(1, -170, 0, 18), Parent = card,
+        UiKit.boldLabel({
+            Name = "EggName", TextSize = UiTheme.Text.CardTitle, Text = entry.egg.DisplayName, TextTruncate = Enum.TextTruncate.AtEnd,
+            Position = UDim2.fromOffset(80, 12), Size = UDim2.new(1, -(80 + TEXT_RIGHT), 0, 20), Parent = card,
         })
         local tags = Instance.new("Frame")
         tags.BackgroundTransparency = 1
-        tags.Position = UDim2.fromOffset(66, 30)
-        tags.Size = UDim2.new(1, -170, 0, 16)
+        tags.Position = UDim2.fromOffset(80, 36)
+        tags.Size = UDim2.new(1, -(80 + TEXT_RIGHT), 0, 18)
         tags.Parent = card
         UiKit.list(tags, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), VerticalAlignment = Enum.VerticalAlignment.Center })
         UiKit.tag("x" .. entry.count, C.Accent).Parent = tags
@@ -202,21 +207,23 @@ function render()
         local best, bestId = bestOf(entry.egg)
         if best then
             UiKit.label({
-                Name = "Best", TextSize = 11, TextColor3 = C.Muted, Position = UDim2.fromOffset(66, 49),
-                Size = UDim2.new(1, -170, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, RichText = true,
+                Name = "Best", Font = "Strong", TextSize = 12, TextColor3 = C.Muted, Position = UDim2.fromOffset(80, 58),
+                Size = UDim2.new(1, -(80 + TEXT_RIGHT), 0, 16), TextTruncate = Enum.TextTruncate.AtEnd, RichText = true,
                 Text = "Up to: " .. string.format('<font color="#%s">%s</font>', (GameConfig.PetRarityColors[best.Rarity] or C.Text):ToHex(),
                     if CodexState.found[bestId] then best.DisplayName else "???"), -- an undiscovered beast keeps its name
                 Parent = card,
             })
         end
+        -- the right column: HATCH (green, the action) over the odds toggle
         local button = UiKit.button({
-            Name = "Hatch", Font = "Strong", TextSize = 13, Tone = "Accent", Text = if open then "HATCH" else "LOCKED",
-            Active = open and not resting, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 8),
-            Size = UDim2.fromOffset(90, 30), Parent = card,
+            Name = "Hatch", TextSize = 15, Tone = "Go", Text = if open then "HATCH" else "LOCKED", Active = open and not resting,
+            AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 12), Size = UDim2.fromOffset(BUTTONS, UiTheme.Height.Button),
+            Parent = card,
         })
         local chances = UiKit.button({
-            Name = "Chances", Font = "Strong", TextSize = 11, Tone = "Quiet", Text = if showing then "HIDE ODDS" else "SEE ODDS",
-            AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 42), Size = UDim2.fromOffset(90, 22), Parent = card,
+            Name = "Chances", TextSize = 12, Tone = "Quiet", Text = if showing then "HIDE ODDS" else "SEE ODDS",
+            AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 12 + UiTheme.Height.Button + UiTheme.Space.XS),
+            Size = UDim2.fromOffset(BUTTONS, UiTheme.Height.ButtonSmall), Parent = card,
         })
         chances.Activated:Connect(function()
             openEgg = if showing then false else entry.id
@@ -226,7 +233,7 @@ function render()
             local rows = Instance.new("Frame")
             rows.Name = "Odds"
             rows.BackgroundTransparency = 1
-            rows.Position = UDim2.fromOffset(12, CARD_HEIGHT + 2)
+            rows.Position = UDim2.fromOffset(12, CARD_HEIGHT)
             local luck = PassRules.luck(Players.LocalPlayer)
             rows.Size = UDim2.new(1, -22, 0, #entry.egg.Pool * ROW_HEIGHT + (if luck > 1 then 22 else 0))
             rows.Parent = card

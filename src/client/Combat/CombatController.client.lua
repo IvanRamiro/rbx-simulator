@@ -78,23 +78,35 @@ drawStrip.BackgroundTransparency = 1
 drawStrip.LayoutOrder = 26
 drawStrip.Visible = false
 drawStrip.Parent = Hud.Dock
+-- a pill like the dock's buttons, a thumb's size: 44, and 56 on a phone (45 pixels at its 0.8 scale)
+local function drawHeight(compact)
+    return if compact then 56 else 44
+end
 local drawButton = UiKit.button({
-    Name = "DrawButton", Tone = "Quiet", Font = "Strong", TextSize = 13, Text = "DRAW",
-    AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(150, 38), Parent = drawStrip,
+    Name = "DrawButton", Tone = "Tile", TextSize = 14, Text = "DRAW",
+    AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(160, 44), Parent = drawStrip,
 })
-local function placeDrawButton(size)
+local function placeDrawButton(size, compact)
     if not size then
         return
     end
+    local height = drawHeight(if compact == nil then Hud.isCompact() else compact)
+    drawButton.Size = UDim2.fromOffset(if height > 44 then 170 else 160, height)
+    drawButton:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, height // 2)
+    drawButton:SetAttribute("RoundLight", height // 2)
+    local layer = drawButton:FindFirstChild("LightLayer")
+    if layer then
+        layer:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, height // 2)
+    end
     local plateLeft = math.floor(size.Emblem * 0.45) -- as Hud lays out the dock's plate
-    drawStrip.Size = UDim2.fromOffset(size.Width, 38)
+    drawStrip.Size = UDim2.fromOffset(size.Width, height)
     drawButton.Position = UDim2.fromOffset(plateLeft + (size.Width - plateLeft) / 2, 0)
 end
 Hud.CultivationDock.Resized:Connect(placeDrawButton)
 placeDrawButton(Hud.CultivationDock.Size)
 local drawKey = UiKit.keycap("1")
 drawKey.AnchorPoint = Vector2.new(1, 0.5)
-drawKey.Position = UDim2.new(1, -5, 0.5, 0)
+drawKey.Position = UDim2.new(1, -12, 0.5, 0)
 drawKey.Size = UDim2.fromOffset(20, 20)
 drawKey.Parent = drawButton
 drawButton.Activated:Connect(toggleDrawn)

@@ -171,12 +171,12 @@ checkCompact()
 
 HudMetrics.keepReadable(gui)
 HudMetrics.keepReadable(topGui)
-HudMetrics.keepReadable(windowGui)
+HudMetrics.keepReadable(windowGui, HudMetrics.windowScale) -- (a window is drawn at its own scale: Hud.window)
 
 -- On a phone the menu runs along under the profile as icons alone: the thumbstick has the screen's lower left
 local function layoutRail(isCompact)
-    -- 54 at a phone's scale (0.8) is 43 pixels: the least a thumb hits reliably (UI audit 2026-11-11: 35 by 33)
-    railGrid.CellSize = if isCompact then UDim2.fromOffset(54, 52) else UDim2.fromOffset(RAIL_TILE, RAIL_TILE)
+    -- 56 at a phone's scale (0.8) is 45 pixels: a thumb's 44 (UI overhaul 2026-11-15; the audit of 2026-11-11 found 35)
+    railGrid.CellSize = if isCompact then UDim2.fromOffset(56, 56) else UDim2.fromOffset(RAIL_TILE, RAIL_TILE)
     railGrid.FillDirectionMaxCells = if isCompact then 0 else 2
     for _, button in rail:GetChildren() do
         if button:IsA("TextButton") then
@@ -188,7 +188,7 @@ local function layoutRail(isCompact)
             if icon then
                 icon.AnchorPoint = Vector2.new(0.5, 0.5)
                 icon.Position = if isCompact then UDim2.fromScale(0.5, 0.5) else UDim2.new(0.5, 0, 0, 27)
-                icon.Size = UDim2.fromOffset(if isCompact then 36 else 42, if isCompact then 36 else 42)
+                icon.Size = UDim2.fromOffset(if isCompact then 38 else 42, if isCompact then 38 else 42)
             end
         end
     end
@@ -252,12 +252,14 @@ local function addBadge(button)
     local badge = UiKit.label({
         Name = "Badge", Font = "Strong", TextSize = 11, TextColor3 = UiTheme.Colors.Panel,
         BackgroundTransparency = 0, BackgroundColor3 = UiTheme.Colors.Accent,
-        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 6, 0, -3), Size = UDim2.fromOffset(0, 18),
+        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 6, 0, -4), Size = UDim2.fromOffset(0, 18),
         AutomaticSize = Enum.AutomaticSize.X, TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
         ZIndex = 5, Parent = button,
     })
+    badge.FontFace = UiTheme.Fonts.Heavy
     UiKit.corner(badge, 9)
     UiKit.padding(badge, 6, 0)
+    UiKit.stroke(badge, UiTheme.Colors.Outline, 0.2, 1.5)
     local scale = Instance.new("UIScale")
     scale.Parent = badge
     return function(text, tone)
@@ -275,8 +277,8 @@ end
 -- Returns the button and a function that sets the badge text (nil hides it).
 function Hud.railButton(name, image, word, order)
     local button = UiKit.button({ Name = name, Text = "", Size = UDim2.fromOffset(RAIL_TILE, RAIL_TILE), LayoutOrder = order, Tone = "Tile", Parent = Hud.Rail })
-    button:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
-    button:SetAttribute("EdgeThickness", 2)
+    button:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, UiTheme.Radius.Card)
+    button:SetAttribute("EdgeThickness", UiTheme.Stroke.Button)
     local icon = UiKit.icon(image, 42)
     icon.BackgroundTransparency = 1 -- the tile is the frame: the picture stands on it bare
     icon:FindFirstChildOfClass("UIStroke"):Destroy()
@@ -294,21 +296,25 @@ end
 -- A small round button in the top row, with the same badge.
 function Hud.topButton(name, image, order)
     local button = UiKit.button({ Name = name, Text = "", Size = UDim2.fromOffset(42, 42), LayoutOrder = order, Tone = "Quiet", Parent = Hud.TopRight })
-    -- bigger on a phone, where 42 at the phone's scale is too small for a thumb (UI audit 2026-11-11: 33 by 33)
+    -- bigger on a phone, where 42 at the phone's scale is too small for a thumb: 56 there is 45 pixels
     local function sizeFor(isCompact)
-        button.Size = UDim2.fromOffset(if isCompact then 52 else 42, if isCompact then 52 else 42)
+        button.Size = UDim2.fromOffset(if isCompact then 56 else 46, if isCompact then 56 else 46)
     end
     Hud.CompactChanged:Connect(sizeFor)
     sizeFor(compact == true)
     button:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
     button:SetAttribute("NoSheen", true) -- a band of light would show this round button's square corners
+    button:SetAttribute("EdgeThickness", UiTheme.Stroke.Button)
     local icon = UiKit.icon(image, 32)
     icon.BackgroundTransparency = 1
     icon:FindFirstChildOfClass("UIStroke"):Destroy()
     icon.AnchorPoint = Vector2.new(0.5, 0.5)
     icon.Position = UDim2.fromScale(0.5, 0.5)
+    icon.Size = UDim2.fromScale(0.72, 0.72)
     icon.Parent = button
-    return button, addBadge(button)
+    local setBadge = addBadge(button)
+    button.Badge.Position = UDim2.new(1, 4, 0, 0) -- (the top row is at the screen's top edge: a badge above it was cut off)
+    return button, setBadge
 end
 
 -- ---------- a controller's selection ----------
@@ -412,7 +418,15 @@ local function stepAside()
 end
 local WINDOW_MARGIN = 24
 local SLIDE = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local PAD = UiTheme.Pad.Window
 
+-- A window's own scale: the HUD's, but never under 1 on a phone. The HUD shrinks there to leave the playfield clear; a window
+-- is what the player is looking at, so its words stay readable and its buttons stay a thumb's size (44 px).
+local windowScale = HudMetrics.windowScale
+Hud.windowScale = windowScale
+
+-- Every window shares one frame: a title band (its name centred, the close button at its right, a gold rule under it), and
+-- its Body, padded the same on every side.
 function Hud.window(props)
     local frame = UiKit.panel({
         Name = props.Name, Size = UDim2.fromOffset(props.Size.X, props.Size.Y), AnchorPoint = props.AnchorPoint,
@@ -420,11 +434,15 @@ function Hud.window(props)
     })
     frame.BackgroundTransparency = 0 -- near solid, all the way down: the HUD under a window mustn't read through it
     frame:FindFirstChildOfClass("UIGradient").Transparency = NumberSequence.new(0)
+    frame:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, UiTheme.Radius.Window)
+    frame.Glow:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, UiTheme.Radius.Window - 2)
     frame.Active = true -- clicks on it stay on it: they mustn't swing the player's weapon behind it
-    applyHudScale(frame)
-    -- on a small screen it stays at the HUD's scale, so its text stays readable, and gets shorter: its lists scroll
+    local hudScale = Instance.new("UIScale")
+    hudScale.Scale = windowScale()
+    hudScale.Parent = frame
+    -- on a small screen it keeps its scale, so its text stays readable, and gets shorter: its lists scroll
     local function fitToScreen()
-        local view, scale = HudMetrics.viewport(), HudMetrics.scale()
+        local view, scale = HudMetrics.viewport(), windowScale()
         local room = (view.Y - GuiService:GetGuiInset().Y - WINDOW_MARGIN) / scale
         local across = (view.X - WINDOW_MARGIN) / scale
         frame.Size = UDim2.fromOffset(math.min(props.Size.X, across), math.min(props.Size.Y, room))
@@ -438,7 +456,7 @@ function Hud.window(props)
         if props.Side then
             return
         end
-        local view, scale = HudMetrics.viewport(), HudMetrics.scale()
+        local view, scale = HudMetrics.viewport(), windowScale()
         local width = frame.Size.X.Offset * scale
         local centre = view.X / 2
         if not Hud.isCompact() then
@@ -456,27 +474,24 @@ function Hud.window(props)
     end
     HudMetrics.Changed:Connect(place)
     place()
-    local inner = UiKit.content(frame, 14, 10)
-    local _, title = UiKit.header(inner, props.Title, { TextSize = 16 })
-    local closeButton = UiKit.button({
-        Name = "Close", Tone = "Danger", Font = "Strong", Text = "X", TextSize = 14, AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, 4, 0, -4), Size = if UserInputService.TouchEnabled then UDim2.fromOffset(46, 46) else UDim2.fromOffset(32, 32),
-        Parent = inner,
-    })
+    local title, closeButton = UiKit.titleBar(frame, props.Title)
+    local top = UiTheme.Height.TitleBar + UiTheme.Space.M
     local body = Instance.new("Frame")
     body.Name = "Body"
     body.BackgroundTransparency = 1
-    body.Position = UDim2.fromOffset(0, 34)
-    body.Size = UDim2.new(1, 0, 1, -34)
-    body.Parent = inner
+    body.Position = UDim2.fromOffset(PAD, top)
+    body.Size = UDim2.new(1, -PAD * 2, 1, -(top + PAD))
+    body.Parent = frame
 
     local win = { Frame = frame, Body = body }
     local opened = false
     local linked = nil -- the menu button that opens it
     local shown = 0 -- which opening or closing is the latest: a quick reopen cancels a closing
-    local hudScale = frame:FindFirstChildOfClass("UIScale")
-    -- its rest scale is the screen's (HudScale), read each time: the screen may change while it is open
-    local restScale = HudMetrics.scale
+    -- its rest scale is the screen's, read each time: the screen may change while it is open
+    local restScale = windowScale
+    HudMetrics.Changed:Connect(function()
+        hudScale.Scale = restScale()
+    end)
     UiFx.edgeLight(frame)
     function win.isOpen()
         return opened
@@ -572,7 +587,8 @@ end
 -- frame; QinggongController fills Top and Bar, TrainingController puts its button in Action.
 -- Two sizes, and it follows the screen: the screen's size may not be known yet when this first runs.
 local DOCK_SIZES = {
-    [true] = { Width = 310, Height = 90, Emblem = 80, Button = 38, TextSize = 12, Top = 4, Bar = 24, BarHeight = 10, Bottom = -6 },
+    -- (a phone: its button 56 tall, 45 pixels at the phone's scale; it was 38, 30 pixels)
+    [true] = { Width = 330, Height = 108, Emblem = 88, Button = 56, TextSize = 12, Top = 5, Bar = 26, BarHeight = 9, Bottom = -6 },
     [false] = { Width = 380, Height = 108, Emblem = 100, Button = 48, TextSize = 13, Top = 7, Bar = 28, BarHeight = 13, Bottom = -8 },
 }
 

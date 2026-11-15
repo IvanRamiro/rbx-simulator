@@ -39,7 +39,33 @@ UiTheme.Fonts = {
 }
 
 UiTheme.PanelTransparency = 0.14 -- nearly solid, so gold trim has something to sit on
-UiTheme.Corner = 6
+UiTheme.Corner = 10 -- buttons, cards, fields
+
+-- ---------- one set of measures for every surface (the UI overhaul, 2026-11-15) ----------
+-- Every window, card and button reads its sizes from here, so the whole interface keeps one rhythm.
+UiTheme.Space = { XS = 4, S = 8, M = 12, L = 16, XL = 24 } -- gaps and padding
+UiTheme.Radius = { Window = 14, Panel = 12, Card = 10, Button = 10, Chip = 6 }
+UiTheme.Stroke = { Window = 2, Card = 2, Button = 2, Fine = 1 }
+UiTheme.Height = {
+    TitleBar = 52, -- a window's title band
+    Close = 44,    -- its close button
+    Tab = 44,
+    Button = 44,   -- an action in a card or a window: 44 is a thumb's size
+    ButtonLarge = 52, -- a window's main action (a price, a claim)
+    ButtonSmall = 44, -- a secondary action beside a main one (BACK, ODDS): narrower, never shorter than a thumb
+    Field = 44,    -- a text box
+}
+UiTheme.Text = { -- px per role
+    WindowTitle = 22, -- Merriweather
+    Heading = 12,     -- a section's name: Heavy capitals
+    CardTitle = 16,   -- a card's name: Heavy, outlined
+    Body = 13,
+    Caption = 11,
+    Button = 15,      -- Heavy
+    ButtonLarge = 18,
+    Price = 20,
+}
+UiTheme.Pad = { Window = 16, Card = 12 } -- inside a window's body, inside a card
 UiTheme.Ornaments = {
     Corner = "rbxassetid://102166566602424",
     EmblemRing = "rbxassetid://80453677548549",

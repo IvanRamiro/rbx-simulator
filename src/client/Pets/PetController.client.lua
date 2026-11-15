@@ -31,21 +31,28 @@ local onWindowClosed -- set below, with the pets it redraws
 local window = Hud.window({
     Name = "PetsWindow", Title = "PETS", OnClose = function()
         onWindowClosed()
-    end, Size = Vector2.new(400, 420), AnchorPoint = Vector2.new(0, 0),
-    Position = UDim2.fromOffset(UiTheme.Margin + 270 + 16, UiTheme.Margin), -- beside the left column (the profile is 270 wide)
+    end, Size = Vector2.new(600, 500), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 })
 local body = window.Body
 
-local equippedLabel = UiKit.boldLabel({ -- (bold, the owner 2026-11-13)
-    Name = "Equipped", TextSize = 14, Text = "",
-    Size = UDim2.new(0.5, 0, 0, 20), Parent = body,
+-- the top: how many are out of how many slots, and what they add, as two pills
+local SUMMARY = 30
+local equippedPill, equippedLabel = UiKit.pill(UiTheme.Icons.Pets, "", { Name = "Equipped", Size = UDim2.fromOffset(0, SUMMARY), Parent = body })
+local bonusPill, bonusLabel = UiKit.pill(UiTheme.Icons.Qi, "", {
+    Name = "Bonus", AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.fromOffset(0, SUMMARY), Parent = body,
 })
-local bonusLabel = UiKit.boldLabel({
-    Name = "Bonus", TextSize = 14, TextColor3 = C.Highlight, Text = "", AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.5, 0, 0, 20), TextXAlignment = Enum.TextXAlignment.Right,
-    Parent = body,
-})
-local petList = UiKit.scroll({ Name = "PetList", Position = UDim2.fromOffset(0, 28), Size = UDim2.new(1, 0, 1, -28), Parent = body })
+bonusLabel.TextColor3 = C.Highlight
+local _, _ = equippedPill, bonusPill
+local LIST_TOP = SUMMARY + UiTheme.Space.M
+local petList = UiKit.scroll({ Name = "PetList", Position = UDim2.fromOffset(0, LIST_TOP), Size = UDim2.new(1, 0, 1, -LIST_TOP), Parent = body })
+-- two cards to a row (square-cornered tiles of the bold look, the owner's "Cultivation Bold")
+petList:FindFirstChildOfClass("UIListLayout"):Destroy()
+local CARD_HEIGHT = 148
+local petGrid = Instance.new("UIGridLayout")
+petGrid.CellSize = UDim2.new(0.5, -UiTheme.Space.S / 2, 0, CARD_HEIGHT)
+petGrid.CellPadding = UDim2.fromOffset(UiTheme.Space.S, UiTheme.Space.S)
+petGrid.SortOrder = Enum.SortOrder.LayoutOrder
+petGrid.Parent = petList
 
 local hatchMessage = Toast.new("HatchMessage", Color3.new(1, 1, 1), 3.5)
 
@@ -66,6 +73,7 @@ local fresh = {}  -- [InstanceId] = true: new since the player last looked
 
 -- ---------- a pet's card ----------
 local CONFIRM_SECONDS = 3
+local PORTRAIT = 72
 local lastSnapshot = nil
 
 -- Portraits kept from the last drawing, by pet: a redraw moves them to the new cards instead of building a ViewportFrame
@@ -85,7 +93,7 @@ end
 local function takePortrait(petId)
     local spare = portraitPool[petId]
     local frame = spare and table.remove(spare)
-    return frame or Portraits.pet(petId, 58)
+    return frame or Portraits.pet(petId, PORTRAIT)
 end
 
 local function createPetCard(pet, layoutOrder, equippedCount)
@@ -96,29 +104,52 @@ local function createPetCard(pet, layoutOrder, equippedCount)
     local rarityColor = GameConfig.PetRarityColors[definition.Rarity] or C.Text
 
     local level = PetRules.level(pet)
-    local card = UiKit.boldCard(UiKit.card({ Name = "PetCard", LayoutOrder = layoutOrder, Size = UDim2.new(1, 0, 0, 96), Parent = petList }), rarityColor)
+    local card = UiKit.boldCard(UiKit.card({ Name = "PetCard", LayoutOrder = layoutOrder, Parent = petList }), rarityColor)
     card:SetAttribute("InstanceId", pet.InstanceId)
+    local PAD = UiTheme.Pad.Card
+    -- the portrait on a dark well, its rarity's colour round it
+    local well = Instance.new("Frame")
+    well.Name = "Well"
+    well.BackgroundColor3 = C.Well
+    well.BackgroundTransparency = 0.3
+    well.BorderSizePixel = 0
+    well.Position = UDim2.fromOffset(PAD, PAD)
+    well.Size = UDim2.fromOffset(PORTRAIT, PORTRAIT)
+    well.Parent = card
+    UiKit.corner(well, UiTheme.Radius.Chip + 2)
+    UiKit.stroke(well, rarityColor, 0.55, 1)
     local picture = takePortrait(pet.PetId)
     picture.Name = "Portrait"
     picture:SetAttribute("PetId", pet.PetId)
-    picture.Position = UDim2.fromOffset(10, 12)
+    picture.Position = UDim2.fromOffset(PAD, PAD)
     picture.Parent = card
+    local textLeft = PAD + PORTRAIT + UiTheme.Space.M
+    local BUTTON = UiTheme.Height.Button
+    local LOCK = BUTTON -- a square at the end of the buttons' row
+    -- beside the portrait, top down: the name (a long one wraps to a second line), its tags, its Qi
+    local info = Instance.new("Frame")
+    info.Name = "Info"
+    info.BackgroundTransparency = 1
+    info.Position = UDim2.fromOffset(textLeft, PAD - 2)
+    info.Size = UDim2.new(1, -(textLeft + PAD), 0, PORTRAIT + 4)
+    info.Parent = card
+    UiKit.list(info, { Padding = UDim.new(0, 4) })
     UiKit.boldLabel({
-        Name = "PetName", TextSize = 16, Text = definition.DisplayName, TextTruncate = Enum.TextTruncate.AtEnd,
-        Position = UDim2.fromOffset(78, 7), Size = UDim2.new(1, -118, 0, 20), Parent = card,
+        Name = "PetName", TextSize = 15, Text = definition.DisplayName, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y,
+        Size = UDim2.new(1, 0, 0, 0), LayoutOrder = 1, Parent = info,
     })
     -- the lock: gold while it's on, faint while it's off
     local lock = UiKit.button({
-        Name = "Lock", Text = "", Tone = if pet.Locked then "Highlight" else "Quiet", AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -6, 0, 5), Size = UDim2.fromOffset(34, 34), Parent = card,
+        Name = "Lock", Text = "", Tone = if pet.Locked then "Highlight" else "Quiet", AnchorPoint = Vector2.new(1, 1),
+        Position = UDim2.new(1, -PAD, 1, -PAD + 2), Size = UDim2.fromOffset(LOCK, BUTTON), Parent = card,
     })
     local padlock = Instance.new("ImageLabel")
     padlock.BackgroundTransparency = 1
     padlock.Image = UiTheme.Icons.Lock
-    padlock.ImageTransparency = if pet.Locked then 0 else 0.6
+    padlock.ImageTransparency = if pet.Locked then 0 else 0.55
     padlock.AnchorPoint = Vector2.new(0.5, 0.5)
     padlock.Position = UDim2.fromScale(0.5, 0.5)
-    padlock.Size = UDim2.fromOffset(18, 18)
+    padlock.Size = UDim2.fromOffset(20, 20)
     padlock.Parent = lock
     lock.Activated:Connect(function()
         RemoteEvents.TogglePetLockEvent:FireServer(pet.InstanceId)
@@ -126,9 +157,9 @@ local function createPetCard(pet, layoutOrder, equippedCount)
     local tags = Instance.new("Frame")
     tags.Name = "Tags"
     tags.BackgroundTransparency = 1
-    tags.Position = UDim2.fromOffset(78, 27)
-    tags.Size = UDim2.new(1, -86, 0, 16)
-    tags.Parent = card
+    tags.Size = UDim2.new(1, 0, 0, 18)
+    tags.LayoutOrder = 2
+    tags.Parent = info
     UiKit.list(tags, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), VerticalAlignment = Enum.VerticalAlignment.Center })
     if fresh[pet.InstanceId] then
         local new = UiKit.tag("New", C.Highlight)
@@ -142,19 +173,20 @@ local function createPetCard(pet, layoutOrder, equippedCount)
         levelTag.Parent = tags
     end
     UiKit.boldLabel({
-        TextSize = 13, TextColor3 = C.Highlight, Text = "+" .. PetRules.qiBonus(pet.PetId, level) .. "% Qi",
-        AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 16), LayoutOrder = 1, Parent = tags,
+        Name = "Qi", TextSize = 15, TextColor3 = C.Highlight, Text = "+" .. PetRules.qiBonus(pet.PetId, level) .. "% Qi",
+        Size = UDim2.new(1, 0, 0, 18), LayoutOrder = 3, Parent = info,
     })
 
-    -- buttons side by side, from the portrait's edge to the card's (78 px in, 8 px short, 4 apart)
+    -- buttons side by side along the card's foot, under the portrait's level: one thumb's height (44)
     local material = PetRules.findMaterial(lastSnapshot.Pets, pet)
     local buttons = if material then 2 else 1 -- (SET AURA removed, the owner 2026-11-12: pets no longer colour the aura)
     local function action(text, tone, slot, onClick)
-        local share = -(86 + (buttons - 1) * 4) / buttons
+        local gap = UiTheme.Space.S
+        local share = -(PAD * 2 + LOCK + gap + (buttons - 1) * gap) / buttons
         local b = UiKit.button({
-            Font = "Heavy", TextSize = 13, Text = text, Tone = tone, Active = onClick ~= nil,
-            Position = UDim2.new(slot / buttons, 78 + slot * (share + 4), 0, 52), Size = UDim2.new(1 / buttons, share, 0, 36), -- (22 was too small to tap: UI audit 2026-11-11)
-            Parent = card,
+            Name = if slot == 0 then "Main" else "Fuse", TextSize = 14, Text = text, Tone = tone, Active = onClick ~= nil,
+            AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(slot / buttons, PAD + slot * (share + gap), 1, -PAD + 2),
+            Size = UDim2.new(1 / buttons, share, 0, BUTTON), Parent = card,
         })
         if onClick then
             b.Activated:Connect(onClick)
@@ -272,6 +304,8 @@ function drawList(snapshot, equippedCount)
         end
     end
 
+    -- an empty list's message spans the window; cards sit two to a row
+    petGrid.CellSize = if #snapshot.Pets == 0 then UDim2.new(1, 0, 0, 200) else UDim2.new(0.5, -UiTheme.Space.S / 2, 0, CARD_HEIGHT)
     if #snapshot.Pets == 0 then
         UiKit.empty(petList, "No pets yet.\nTake an egg from a guardian, carry it home, and hatch it at the Hatching Sanctum.")
         clearPool()

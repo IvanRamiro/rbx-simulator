@@ -41,7 +41,7 @@ local stopSpin = nil  -- stops the open entry's turntable
 local render -- below
 
 local window = Hud.window({
-    Name = "CodexWindow", Title = "SPIRIT BEAST CODEX", Size = Vector2.new(690, 450), AnchorPoint = Vector2.new(1, 0.5),
+    Name = "CodexWindow", Title = "SPIRIT BEAST CODEX", Size = Vector2.new(720, 500), AnchorPoint = Vector2.new(1, 0.5),
     Position = UDim2.new(1, -16, 0.5, 0), OnClose = function()
         if stopSpin then
             stopSpin()
@@ -74,18 +74,19 @@ side.Parent = body
 local countLabel = UiKit.boldLabel({ -- (bold, the owner 2026-11-13)
     Name = "Count", TextSize = 13, Text = "", Size = UDim2.new(1, 0, 0, 16), Parent = side,
 })
-local bar = UiKit.bar({ Name = "Progress", Position = UDim2.fromOffset(0, 19), Size = UDim2.new(1, -6, 0, 8), Parent = side })
+local bar = UiKit.bar({ Name = "Progress", Position = UDim2.fromOffset(0, 21), Size = UDim2.new(1, -10, 0, 8), Parent = side })
 local bonusLabel = UiKit.boldLabel({
-    Name = "Bonus", TextSize = 12, TextColor3 = C.Highlight, Text = "", Position = UDim2.fromOffset(0, 31),
-    Size = UDim2.new(1, 0, 0, 14), Parent = side,
+    Name = "Bonus", TextSize = 12, TextColor3 = C.Highlight, Text = "", Position = UDim2.fromOffset(0, 34),
+    Size = UDim2.new(1, 0, 0, 16), Parent = side,
 })
-local nav = UiKit.scroll({ Name = "Pages", Position = UDim2.fromOffset(0, 50), Size = UDim2.new(1, 0, 1, -50), Parent = side })
+local NAV_TOP = 58
+local nav = UiKit.scroll({ Name = "Pages", Position = UDim2.fromOffset(0, NAV_TOP), Size = UDim2.new(1, 0, 1, -NAV_TOP), Parent = side })
 
 local content = Instance.new("Frame")
 content.Name = "Content"
 content.BackgroundTransparency = 1
-content.Position = UDim2.fromOffset(NAV_WIDTH + 10, 0)
-content.Size = UDim2.new(1, -(NAV_WIDTH + 10), 1, 0)
+content.Position = UDim2.fromOffset(NAV_WIDTH + UiTheme.Space.M, 0)
+content.Size = UDim2.new(1, -(NAV_WIDTH + UiTheme.Space.M), 1, 0)
 content.Parent = body
 
 local function clear(frame)
@@ -119,19 +120,24 @@ end
 
 local function navRow(order, image, name, detail, detailColor, selected, onClick)
     local row = UiKit.button({
-        Name = "Page", Text = "", Tone = if selected then "Accent" else "Quiet", LayoutOrder = order, Size = UDim2.new(1, 0, 0, 40), Parent = nav,
+        Name = "Page", Text = "", Tone = if selected then "Highlight" else "Tile", LayoutOrder = order,
+        Size = UDim2.new(1, 0, 0, UiTheme.Height.Button + 2), Parent = nav,
     })
-    local icon = UiKit.icon(image, 30)
+    local icon = UiKit.icon(image, 32)
     icon.AnchorPoint = Vector2.new(0, 0.5)
-    icon.Position = UDim2.new(0, 5, 0.5, 0)
+    icon.Position = UDim2.new(0, 6, 0.5, 0)
     icon.Parent = row
-    UiKit.boldLabel({
-        TextSize = 12, Text = name, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(40, 4),
-        Size = UDim2.new(1, -44, 0, 16), Parent = row,
+    local words = if selected then Color3.fromRGB(48, 28, 6) else C.Text -- dark on the gold of the page showing
+    local nameLabel = UiKit.label({
+        Font = "Heavy", TextSize = 12, Text = name, TextColor3 = words, TextTruncate = Enum.TextTruncate.AtEnd,
+        Position = UDim2.fromOffset(44, 6), Size = UDim2.new(1, -50, 0, 16), Parent = row,
     })
+    if not selected then
+        UiKit.outline(nameLabel, 1)
+    end
     UiKit.label({
-        Font = "Strong", TextSize = 11, Text = detail, TextColor3 = detailColor or C.Muted, Position = UDim2.fromOffset(40, 21),
-        Size = UDim2.new(1, -44, 0, 14), Parent = row,
+        Font = "Strong", TextSize = 11, Text = detail, TextColor3 = if selected then words else detailColor or C.Muted,
+        Position = UDim2.fromOffset(44, 24), Size = UDim2.new(1, -50, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = row,
     })
     row.Activated:Connect(onClick)
     return row
@@ -175,8 +181,9 @@ local function claimButton(parent, reward, position, anchor)
     local earned = CodexRules.isEarned(reward, found)
     local text = if claimed[reward.Id] then "CLAIMED" elseif earned then "CLAIM" else "LOCKED"
     local button = UiKit.button({
-        Name = "Claim", Font = "Heavy", TextSize = 13, Text = text, Tone = if earned and not claimed[reward.Id] then "Primary" else "Quiet",
-        Active = earned and not claimed[reward.Id], AnchorPoint = anchor, Position = position, Size = UDim2.fromOffset(84, 30), Parent = parent,
+        Name = "Claim", TextSize = 14, Text = text, Tone = if earned and not claimed[reward.Id] then "Go" else "Quiet",
+        Active = earned and not claimed[reward.Id], AnchorPoint = anchor, Position = position,
+        Size = UDim2.fromOffset(96, UiTheme.Height.Button), Parent = parent,
     })
     if earned and not claimed[reward.Id] then
         button.Activated:Connect(function()
@@ -209,23 +216,26 @@ local function renderRewards()
     local function row(order, reward, title)
         local have, goal = CodexRules.progress(reward, found)
         local card = UiKit.boldCard(UiKit.card({
-            Name = "Reward", LayoutOrder = order, Size = UDim2.new(1, 0, 0, 60), Parent = list,
+            Name = "Reward", LayoutOrder = order, Size = UDim2.new(1, 0, 0, 68), Parent = list,
         }), if claimed[reward.Id] then C.EdgeDim elseif have >= goal then C.Highlight else C.Edge)
+        local RIGHT = 96 + 12 + 12 -- the claim button and the gaps round it
         UiKit.boldLabel({
-            TextSize = 14, Text = title, Position = UDim2.fromOffset(12, 6), Size = UDim2.new(1, -112, 0, 16),
+            TextSize = 14, Text = title, Position = UDim2.fromOffset(12, 8), Size = UDim2.new(1, -(12 + RIGHT), 0, 18),
             TextTruncate = Enum.TextTruncate.AtEnd, Parent = card,
         })
         UiKit.boldLabel({
-            TextSize = 12, Text = rewardText(reward), TextColor3 = C.Highlight, Position = UDim2.fromOffset(12, 23),
-            Size = UDim2.new(1, -112, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = card,
+            TextSize = 12, Text = rewardText(reward), TextColor3 = C.Highlight, Position = UDim2.fromOffset(12, 27),
+            Size = UDim2.new(1, -(12 + RIGHT), 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = card,
         })
-        local track = UiKit.bar({ Position = UDim2.fromOffset(12, 42), Size = UDim2.new(1, -160, 0, 7), Parent = card })
+        -- the bar, and its count right after it on the same line
+        local COUNT = 54
+        local track = UiKit.bar({ Position = UDim2.fromOffset(12, 49), Size = UDim2.new(1, -(12 + RIGHT + COUNT), 0, 8), Parent = card })
         UiKit.setBar(track, math.min(1, have / goal), true)
         UiKit.label({
-            Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = math.min(have, goal) .. " / " .. goal, AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -100, 0, 38), Size = UDim2.fromOffset(44, 14), TextXAlignment = Enum.TextXAlignment.Right, Parent = card,
+            Font = "Heavy", TextSize = 11, TextColor3 = C.Muted, Text = math.min(have, goal) .. " / " .. goal, AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -RIGHT, 0, 53), Size = UDim2.fromOffset(COUNT - 6, 14), TextXAlignment = Enum.TextXAlignment.Right, Parent = card,
         })
-        claimButton(card, reward, UDim2.new(1, -8, 0.5, 0), Vector2.new(1, 0.5))
+        claimButton(card, reward, UDim2.new(1, -12, 0.5, 0), Vector2.new(1, 0.5))
     end
     -- what can be taken comes first, what's been taken last
     local function rank(reward)
@@ -302,8 +312,8 @@ local function beastGrid(top, pets)
     local grid = UiKit.scroll({ Name = "Beasts", Position = UDim2.fromOffset(0, top), Size = UDim2.new(1, 0, 1, -top), Parent = content })
     grid:FindFirstChildOfClass("UIListLayout"):Destroy()
     local layout = Instance.new("UIGridLayout")
-    layout.CellSize = UDim2.fromOffset(110, 138)
-    layout.CellPadding = UDim2.fromOffset(6, 6)
+    layout.CellSize = UDim2.fromOffset(112, 140)
+    layout.CellPadding = UDim2.fromOffset(UiTheme.Space.S, UiTheme.Space.S)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Parent = grid
     for order, petId in pets do
@@ -330,7 +340,7 @@ local function renderEgg(egg)
         TextSize = 12, TextColor3 = C.Highlight, Position = UDim2.fromOffset(54, 35), Size = UDim2.new(1, -150, 0, 14),
         Text = have .. " / " .. goal .. " found  ·  Full page: " .. rewardText(reward), TextTruncate = Enum.TextTruncate.AtEnd, Parent = content,
     })
-    claimButton(content, reward, UDim2.new(1, -8, 0, 8), Vector2.new(1, 0))
+    claimButton(content, reward, UDim2.new(1, -10, 0, 4), Vector2.new(1, 0))
     -- commonest first: the way the egg gives them
     local pets = {}
     local pool = table.clone(egg.Pool)
@@ -340,7 +350,7 @@ local function renderEgg(egg)
     for _, entry in pool do
         table.insert(pets, entry.PetId)
     end
-    beastGrid(56, pets)
+    beastGrid(60, pets)
 end
 
 local function renderLost()
@@ -360,23 +370,27 @@ local function renderEntry(petId)
     local color = GameConfig.PetRarityColors[info.Rarity] or C.Text
 
     local back = UiKit.button({
-        Name = "Back", Font = "Strong", TextSize = 12, Text = "< BACK", Tone = "Quiet", Size = UDim2.fromOffset(70, 26), Parent = content,
+        Name = "Back", TextSize = 13, Text = "< BACK", Tone = "Quiet", Size = UDim2.fromOffset(96, UiTheme.Height.ButtonSmall), Parent = content,
     })
     back.Activated:Connect(function()
         detailPet = nil
         render()
     end)
 
-    local picture = if known then Portraits.pet(petId, 170) else Portraits.silhouette(petId, 170)
-    picture.Position = UDim2.fromOffset(0, 34)
+    -- the turntable as large as the page allows (170; smaller on a phone's short window, so its tags stay inside)
+    local top = UiTheme.Height.ButtonSmall + UiTheme.Space.S
+    local room = content.AbsoluteSize.Y / Hud.windowScale() - top - 26
+    local size = math.clamp(math.floor(room), 96, 170)
+    local picture = if known then Portraits.pet(petId, size) else Portraits.silhouette(petId, size)
+    picture.Position = UDim2.fromOffset(0, top)
     picture.Parent = content
     stopSpin = Portraits.spin(picture)
 
     local tags = Instance.new("Frame")
     tags.Name = "Tags"
     tags.BackgroundTransparency = 1
-    tags.Position = UDim2.fromOffset(0, 210)
-    tags.Size = UDim2.fromOffset(170, 16)
+    tags.Position = UDim2.fromOffset(0, top + size + 6)
+    tags.Size = UDim2.fromOffset(170, 18)
     tags.Parent = content
     UiKit.list(tags, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), VerticalAlignment = Enum.VerticalAlignment.Center })
     UiKit.tag(info.Rarity, color).Parent = tags
@@ -385,7 +399,7 @@ local function renderEntry(petId)
         UiKit.tag("Owned x" .. have.Count, C.AccentBright).Parent = tags
     end
 
-    local text = UiKit.scroll({ Name = "Entry", Position = UDim2.fromOffset(180, 0), Size = UDim2.new(1, -180, 1, 0), Parent = content })
+    local text = UiKit.scroll({ Name = "Entry", Position = UDim2.fromOffset(186, 0), Size = UDim2.new(1, -186, 1, 0), Parent = content })
     local order = 0
     local function line(props)
         order += 1
@@ -397,7 +411,9 @@ local function renderEntry(petId)
         return UiKit.label(props)
     end
     local function heading(words)
-        return line({ Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = string.upper(words) })
+        order += 1
+        local row = UiKit.header(text, words, { LayoutOrder = order })
+        return row
     end
 
     line({ Font = "Title", TextSize = 20, Text = if known then info.DisplayName else "???", TextColor3 = if known then color else C.Muted })
@@ -441,8 +457,8 @@ local function renderEntry(petId)
             line({ TextSize = 13, Text = lore.Special.Text })
             order += 1
             local watch = UiKit.button({
-                Name = "Watch", Font = "Strong", TextSize = 12, Text = "WATCH IT", Tone = "Accent", LayoutOrder = order,
-                Size = UDim2.fromOffset(110, 30), Parent = text,
+                Name = "Watch", TextSize = 14, Text = "WATCH IT", Tone = "Accent", LayoutOrder = order,
+                Size = UDim2.fromOffset(130, UiTheme.Height.Button), Parent = text,
             })
             watch.Activated:Connect(function()
                 window.close()

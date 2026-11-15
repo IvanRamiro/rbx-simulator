@@ -22,16 +22,17 @@ local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
 local ROBUX = utf8.char(0xE002) -- Roblox's Robux sign, in its own fonts
-local CARD_HEIGHT = 168
-local TABS_HEIGHT = 40
-local GAP = 8
+local CARD_HEIGHT = 172
+local TAB = UiTheme.Height.Tab
+local TABS_HEIGHT = TAB + UiTheme.Space.M -- the tabs, and the gap under them
+local GAP = UiTheme.Space.S
 local EGG = GameConfig.ExclusiveEgg
 
 local toggleButton = Hud.railButton("StoreButton", UiTheme.Icons.Store, "Shop", 0)
 -- on a phone the rail is a row of bare icons: the Shop keeps its name under its gift box, so players can always find it
 local caption = UiKit.label({
-    Name = "Caption", Font = "Strong", TextSize = 9, Text = "SHOP", TextColor3 = C.Highlight, TextXAlignment = Enum.TextXAlignment.Center,
-    AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 1), Size = UDim2.new(1, 0, 0, 11), ZIndex = 4, Parent = toggleButton,
+    Name = "Caption", Font = "Heavy", TextSize = 10, Text = "SHOP", TextColor3 = C.Highlight, TextXAlignment = Enum.TextXAlignment.Center,
+    AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -1), Size = UDim2.new(1, 0, 0, 14), ZIndex = 4, Parent = toggleButton,
 })
 local captionEdge = Instance.new("UIStroke")
 captionEdge.Color = Color3.fromRGB(14, 12, 34)
@@ -43,7 +44,7 @@ end
 Hud.CompactChanged:Connect(showCaption)
 showCaption()
 local window = Hud.window({
-    Name = "StoreWindow", Title = "SHOP", Size = Vector2.new(640, 470),
+    Name = "StoreWindow", Title = "SHOP", Size = Vector2.new(660, 500),
     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 })
 local message = Toast.new("StoreMessage", C.Highlight, 5)
@@ -51,9 +52,9 @@ local message = Toast.new("StoreMessage", C.Highlight, 5)
 local tabBar = Instance.new("Frame")
 tabBar.Name = "Tabs"
 tabBar.BackgroundTransparency = 1
-tabBar.Size = UDim2.new(1, 0, 0, TABS_HEIGHT - 6)
+tabBar.Size = UDim2.new(1, 0, 0, TAB)
 tabBar.Parent = window.Body
-UiKit.list(tabBar, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8) })
+UiKit.list(tabBar, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, UiTheme.Space.S) })
 local function page(name)
     local frame = UiKit.scroll({ Name = name, Position = UDim2.fromOffset(0, TABS_HEIGHT), Size = UDim2.new(1, 0, 1, -TABS_HEIGHT),
         Parent = window.Body })
@@ -69,14 +70,12 @@ local function showTab(name)
         oddsView.Visible = false
     end
     for tabName, tab in tabs do
-        tab.button:SetAttribute("Tone", if tabName == name then "Highlight" else "Tile")
+        UiKit.selectTab(tab.button, tabName == name)
         tab.page.Visible = tabName == name
     end
 end
 local function tab(name, text, pageFrame, order)
-    local button = UiKit.button({ Name = name .. "Tab", Font = "Heavy", TextSize = 14, Text = text, Tone = "Tile",
-        Size = UDim2.fromOffset(170, TABS_HEIGHT - 6), LayoutOrder = order, Parent = tabBar })
-    button:SetAttribute("EdgeThickness", 2)
+    local button = UiKit.tab({ Name = name .. "Tab", Text = text, Size = UDim2.fromOffset(180, TAB), LayoutOrder = order, Parent = tabBar })
     tabs[name] = { button = button, page = pageFrame }
     button.Activated:Connect(function()
         Sfx.play("Click")
@@ -107,11 +106,14 @@ odds.Position = UDim2.fromOffset(0, TABS_HEIGHT)
 odds.Size = UDim2.new(1, 0, 1, -TABS_HEIGHT)
 odds.Visible = false
 odds.Parent = window.Body
-local oddsBack = UiKit.button({ Name = "Back", Font = "Strong", TextSize = 12, Text = "< BACK", Tone = "Quiet",
-    Size = UDim2.fromOffset(84, 28), Parent = odds })
-local oddsTitle = UiKit.label({ Name = "Title", Font = "Strong", TextSize = 13, TextColor3 = C.AccentBright, Text = "",
-    Position = UDim2.fromOffset(96, 0), Size = UDim2.new(1, -96, 0, 28), TextTruncate = Enum.TextTruncate.AtEnd, Parent = odds })
-local oddsList = UiKit.scroll({ Name = "List", Position = UDim2.fromOffset(0, 36), Size = UDim2.new(1, 0, 1, -36), Parent = odds })
+local SMALL = UiTheme.Height.ButtonSmall
+local oddsBack = UiKit.button({ Name = "Back", TextSize = 13, Text = "< BACK", Tone = "Quiet",
+    Size = UDim2.fromOffset(96, SMALL), Parent = odds })
+local oddsTitle = UiKit.boldLabel({ Name = "Title", TextSize = 13, TextColor3 = C.AccentBright, Text = "",
+    Position = UDim2.fromOffset(96 + UiTheme.Space.M, 0), Size = UDim2.new(1, -(96 + UiTheme.Space.M), 0, SMALL),
+    TextTruncate = Enum.TextTruncate.AtEnd, Parent = odds })
+local oddsList = UiKit.scroll({ Name = "List", Position = UDim2.fromOffset(0, SMALL + UiTheme.Space.M),
+    Size = UDim2.new(1, 0, 1, -(SMALL + UiTheme.Space.M)), Parent = odds })
 local oddsBuilt = false
 
 local function buildOdds(pass)
@@ -150,18 +152,18 @@ local function buildOdds(pass)
         table.sort(rarities, function(a, b)
             return (PassRules.RarityOrder[a] or 0) < (PassRules.RarityOrder[b] or 0)
         end)
-        local card = UiKit.card({ Name = entry.id, Size = UDim2.new(1, 0, 0, 30 + 18 * #rarities), LayoutOrder = order, Parent = oddsList })
-        UiKit.label({ Font = "Title", TextSize = 14, Text = entry.egg.DisplayName, Position = UDim2.fromOffset(12, 6),
+        local card = UiKit.card({ Name = entry.id, Size = UDim2.new(1, 0, 0, 36 + 18 * #rarities), LayoutOrder = order, Parent = oddsList })
+        UiKit.boldLabel({ TextSize = 14, Text = entry.egg.DisplayName, Position = UDim2.fromOffset(12, 8),
             Size = UDim2.new(1, -24, 0, 18), Parent = card })
         for k, rarity in rarities do
             local row = byRarity[rarity]
             local boosted = row.lucky > row.base + 1e-6
             UiKit.label({ Font = "Strong", TextSize = 12, Text = rarity, TextColor3 = GameConfig.PetRarityColors[rarity] or C.Text,
-                Position = UDim2.fromOffset(20, 10 + 18 * k), Size = UDim2.new(0.45, -20, 0, 16), Parent = card })
+                Position = UDim2.fromOffset(20, 14 + 18 * k), Size = UDim2.new(0.45, -20, 0, 16), Parent = card })
             UiKit.label({ Font = "Strong", TextSize = 12,
                 Text = string.format("%.3g%%  >  %.3g%%", row.base, row.lucky),
                 TextColor3 = if boosted then C.Highlight else C.Muted, TextXAlignment = Enum.TextXAlignment.Right,
-                AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 10 + 18 * k), Size = UDim2.new(0.55, -14, 0, 16), Parent = card })
+                AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 14 + 18 * k), Size = UDim2.new(0.55, -14, 0, 16), Parent = card })
         end
     end
 end
@@ -217,14 +219,12 @@ local function passCard(pass, parent, slot)
     local was = bold({
         Name = "WasPrice", Text = "", RichText = true, TextSize = 14, TextColor3 = C.Danger,
         TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 1),
-        Position = UDim2.new(1, -12, 1, -56), Size = UDim2.new(1, -24, 0, 16), Visible = false, Parent = card,
+        Position = UDim2.new(1, -12, 1, -64), Size = UDim2.new(1, -24, 0, 16), Visible = false, Parent = card,
     })
     local button = UiKit.button({
-        Name = "Buy", Font = "Heavy", TextSize = 20, Text = "", AnchorPoint = Vector2.new(0, 1),
-        Position = UDim2.new(0, 10, 1, -10), Size = UDim2.new(1, if pass.Luck then -94 else -20, 0, 42), Parent = card,
+        Name = "Buy", TextSize = 20, Text = "", AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.new(0, 12, 1, -12), Size = UDim2.new(1, if pass.Luck then -112 else -24, 0, UiTheme.Height.ButtonLarge - 4), Parent = card,
     })
-    button:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
-    button:SetAttribute("EdgeThickness", 2)
     -- the words on their own label, so they can carry an outline (the button's own stroke is its border)
     local price = bold({
         Name = "Price", Text = "", TextSize = 20, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center,
@@ -241,9 +241,8 @@ local function passCard(pass, parent, slot)
     end)
     if pass.Luck then -- its effect, in numbers, before anyone buys it: beside its Buy button (in the top corner it covered the
         -- description's first line, seen in Play 2026-11-12)
-        local oddsButton = UiKit.button({ Name = "Odds", Font = "Heavy", TextSize = 13, Text = "ODDS", Tone = "Accent",
-            AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -10, 1, -10), Size = UDim2.fromOffset(76, 42), Parent = card })
-        oddsButton:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
+        local oddsButton = UiKit.button({ Name = "Odds", TextSize = 14, Text = "ODDS", Tone = "Accent",
+            AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -12, 1, -12), Size = UDim2.fromOffset(84, UiTheme.Height.ButtonLarge - 4), Parent = card })
         oddsButton.Activated:Connect(function()
             Sfx.play("Click")
             showOdds(pass)
@@ -284,7 +283,7 @@ eggPicture.Position = UDim2.new(0, 16, 0.5, 0)
 eggPicture.Size = UDim2.fromOffset(210, 210)
 eggPicture.Parent = eggCard
 local EGG_TEXT_X = 240
-bold({ Name = "EggName", Text = string.upper(EGG.Name), TextSize = 26, Position = UDim2.fromOffset(EGG_TEXT_X, 24),
+local eggName = bold({ Name = "EggName", Text = string.upper(EGG.Name), TextSize = 26, Position = UDim2.fromOffset(EGG_TEXT_X, 24),
     Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 32), Parent = eggCard })
 local eggHeadline = bold({ Name = "Headline", Text = "COMING SOON!", TextSize = 20, TextColor3 = C.Highlight, Position = UDim2.fromOffset(EGG_TEXT_X, 60),
     Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 24), Parent = eggCard })
@@ -314,13 +313,11 @@ for order, entry in if EGG_POOL then EGG_POOL.Pool else {} do
         TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0),
         Size = UDim2.new(0, 60, 1, 0), Parent = row })
 end
-UiKit.label({ Name = "What", Font = "Strong", TextSize = 12, Text = "Hatch it at the Hatching Altar. Luck doesn't change these chances.",
+local eggWhat = UiKit.label({ Name = "What", Font = "Strong", TextSize = 12, Text = "Hatch it at the Hatching Altar. Luck doesn't change these chances.",
     TextColor3 = C.Muted, TextWrapped = true, Position = UDim2.fromOffset(EGG_TEXT_X, 196), Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 30),
     Parent = eggCard })
-local eggBuy = UiKit.button({ Name = "Buy", Font = "Heavy", TextSize = 16, Text = "", Tone = "Quiet",
-    AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, EGG_TEXT_X, 1, -20), Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 48), Parent = eggCard })
-eggBuy:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
-eggBuy:SetAttribute("EdgeThickness", 2)
+local eggBuy = UiKit.button({ Name = "Buy", TextSize = 16, Text = "", Tone = "Quiet",
+    AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, EGG_TEXT_X, 1, -20), Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, UiTheme.Height.ButtonLarge), Parent = eggCard })
 eggBuy.Active = false
 local eggPrice = bold({ Name = "Price", Text = "LOCKED", TextSize = 18, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center,
     Size = UDim2.fromScale(1, 1), ZIndex = eggBuy.ZIndex + 1, Parent = eggBuy })
@@ -332,6 +329,57 @@ padlock.AnchorPoint = Vector2.new(1, 1)
 padlock.Position = UDim2.new(0, 222, 1, -48)
 padlock.Size = UDim2.fromOffset(52, 52)
 padlock.Parent = eggCard
+
+-- Two layouts. A tall window: the big picture left, everything else beside it. A phone's short window (its page is under 200
+-- high): the card fits the page whole, so the price is seen without scrolling: a smaller picture over the Buy button on the
+-- left, the name, headline and the three beasts' chances on the right.
+local function layoutEgg()
+    local scale = Hud.windowScale()
+    local short = eggPage.AbsoluteSize.Y > 0 and eggPage.AbsoluteSize.Y / scale < 260
+    if short then
+        local LEFT, PICTURE = 156, 104
+        local x = 12 + LEFT + 16
+        eggCard.Size = UDim2.new(1, 0, 0, math.max(168, eggPage.AbsoluteSize.Y / scale - 8))
+        eggPicture.AnchorPoint = Vector2.new(0.5, 0)
+        eggPicture.Position = UDim2.fromOffset(12 + LEFT / 2, 6)
+        eggPicture.Size = UDim2.fromOffset(PICTURE, PICTURE)
+        padlock.AnchorPoint = Vector2.new(1, 1)
+        padlock.Position = UDim2.fromOffset(12 + LEFT / 2 + PICTURE / 2, 6 + PICTURE)
+        padlock.Size = UDim2.fromOffset(36, 36)
+        eggName.TextSize = 20
+        eggName.Position = UDim2.fromOffset(x, 12)
+        eggName.Size = UDim2.new(1, -x - 16, 0, 24)
+        eggHeadline.TextSize = 16
+        eggHeadline.Position = UDim2.fromOffset(x, 38)
+        eggHeadline.Size = UDim2.new(1, -x - 16, 0, 20)
+        oddsRows.Position = UDim2.fromOffset(x, 66)
+        oddsRows.Size = UDim2.new(1, -x - 16, 0, 90)
+        eggWhat.Visible = false
+        eggBuy.Position = UDim2.new(0, 12, 1, -12)
+        eggBuy.Size = UDim2.fromOffset(LEFT, UiTheme.Height.Button)
+    else
+        eggCard.Size = UDim2.new(1, 0, 0, 330)
+        eggPicture.AnchorPoint = Vector2.new(0, 0.5)
+        eggPicture.Position = UDim2.new(0, 16, 0.5, 0)
+        eggPicture.Size = UDim2.fromOffset(210, 210)
+        padlock.AnchorPoint = Vector2.new(1, 1)
+        padlock.Position = UDim2.new(0, 222, 1, -48)
+        padlock.Size = UDim2.fromOffset(52, 52)
+        eggName.TextSize = 26
+        eggName.Position = UDim2.fromOffset(EGG_TEXT_X, 24)
+        eggName.Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 32)
+        eggHeadline.TextSize = 20
+        eggHeadline.Position = UDim2.fromOffset(EGG_TEXT_X, 60)
+        eggHeadline.Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 24)
+        oddsRows.Position = UDim2.fromOffset(EGG_TEXT_X, 94)
+        oddsRows.Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, 96)
+        eggWhat.Visible = true
+        eggBuy.Position = UDim2.new(0, EGG_TEXT_X, 1, -20)
+        eggBuy.Size = UDim2.new(1, -EGG_TEXT_X - 16, 0, UiTheme.Height.ButtonLarge)
+    end
+end
+eggPage:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutEgg)
+layoutEgg()
 local eggLivePrice = nil -- the product's price on Roblox, once asked
 
 local function eggOnSale()
