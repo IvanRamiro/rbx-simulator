@@ -317,8 +317,12 @@ def export_pedestal():
     return pedestal
 
 
-def export():
+def export(placements=True):
+    """The props without the egg pedestal (export_pedestal() exports that on its own, in MI_EggPedestal.fbx);
+    with `placements`, also rewrites Placements/MoonlitIsle.lua."""
     objs, img = build()
-    W.export_batch(objs, W.REPO + "/assets/world/MoonlitIsle/MoonlitIsle_Props.fbx", anchor_name="MI_PropsAnchor")
-    write_all()
-    return objs
+    props = [o for o in objs if o.name != "MI_EggPedestal"]
+    W.export_batch(props, W.REPO + "/assets/world/MoonlitIsle/MoonlitIsle_Props.fbx", anchor_name="MI_PropsAnchor")
+    if placements:
+        write_all()
+    return props
