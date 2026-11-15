@@ -1,3 +1,5 @@
+-- The game's tuning in one table: cultivation, Qinggong, combat, weapons, Spirit Stones, guardians and egg theft, relics,
+-- pets and eggs, the shop and passes. The design doc's tables are generated from it. Shared by server and client.
 local GameConfig = {
 
     StartingQi = 0,

@@ -18,18 +18,64 @@ import random
 import beginner_island as Y
 import start_props as P
 import worldlib as W
-import ygg_props as YP
-import ygg_shops as SH
 
 TAU = 2 * math.pi
-_FLOOR = SH.FLOOR
+FLOOR = 1.1          # the hall's floor, over the ground
+EGG_IDS = ["BeginnerQiEgg", "SpiritBreezeEgg", "ElementalCoreEgg"]   # the three stands, in Y.EGG_SPOTS order
+
+# ---------- the tiled roof and the name board ----------
+ROOF_HALF = 14.6     # the half-width the roof's ornaments were sized on
+
+
+def roof_y(x, t, eave, ridge, half, lift):
+    """The height of tiled_roof's tiles at x, a fraction t of the way from the ridge to the eave."""
+    return ridge - (ridge - eave) * t ** 0.8 + lift * (abs(x) / half) ** 4 * t ** 1.5
+
+
+def tiled_roof(mb, bands, eave, ridge, half, depth, z, lift=1.5, cols=24, rows=6):
+    """Two tiled slopes from a ridge along x (at height `ridge`, over z) down to the eaves `depth`
+    either side, each corner sweeping up by `lift`, with a lacquered soffit underneath, a thin edge
+    all round, a bronze ridge and upturned ridge ends."""
+    def point(i, j, side, drop=0.0):
+        x = -half + 2 * half * i / cols
+        t = j / rows
+        return (x, roof_y(x, t, eave, ridge, half, lift) - drop, z + side * depth * t)
+    for side in (1, -1):
+        for i in range(cols):
+            for j in range(rows):
+                top = [point(i, j, side), point(i + 1, j, side), point(i + 1, j + 1, side), point(i, j + 1, side)]
+                # tile channels running down the slope, lighter toward the ridge
+                shade = 0.55 + 0.14 * (i % 2) + 0.2 * (1 - j / rows)
+                P.oriented(mb, top, (0, 1, side * 0.6), bands[P.DARK], 0.5, [shade] * 4)
+                under = [point(i, j, side, 0.4), point(i + 1, j, side, 0.4), point(i + 1, j + 1, side, 0.4), point(i, j + 1, side, 0.4)]
+                P.oriented(mb, under, (0, -1, 0), bands[P.LACQUER], 0.5, [0.45] * 4)
+        for i in range(cols):   # the eave's edge
+            a, b = point(i, rows, side), point(i + 1, rows, side)
+            P.oriented(mb, [a, b, point(i + 1, rows, side, 0.4), point(i, rows, side, 0.4)], (0, 0, side), bands[P.LACQUER], 0.5, [0.7] * 4)
+        for i, sx in ((0, -1), (cols, 1)):   # the gable ends
+            for j in range(rows):
+                P.oriented(mb, [point(i, j, side), point(i, j + 1, side), point(i, j + 1, side, 0.4), point(i, j, side, 0.4)],
+                           (sx, 0, 0), bands[P.LACQUER], 0.5, [0.6] * 4)
+    k = half / ROOF_HALF   # the ornaments grow with the roof
+    mb.box((0, ridge + 0.15 * k, z), (2 * half - 1.0 * k, 0.4 * k, 0.6 * k), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
+    for sx in (-1, 1):   # the ridge's upturned ends
+        mb.box((sx * (half - 0.9 * k), ridge + 0.7 * k, z), (0.5 * k, 1.1 * k, 0.5 * k), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
+        mb.box((sx * (half - 0.6 * k), ridge + 1.2 * k, z), (0.9 * k, 0.35 * k, 0.5 * k), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
+
+
+def name_board(mb, bands, sign):
+    """A dark board in a bronze frame, its face toward +Z (the name is written on it in the game)."""
+    (x, y, z), (w, h) = sign
+    mb.box((x, y, z - 0.2), (w + 0.6, h + 0.6, 0.4), bands[P.BRONZE], u=0.5, top_shade=1.0, side_shade=0.8)
+    P.oriented(mb, [(x - w / 2, y - h / 2, z + 0.01), (x + w / 2, y - h / 2, z + 0.01), (x + w / 2, y + h / 2, z + 0.01),
+                    (x - w / 2, y + h / 2, z + 0.01)], (0, 0, 1), bands[P.DARK], 0.5, [0.3] * 4)
 
 
 def roof_at(mb, bands, dx, dz, *args, **kw):
-    """YP.tiled_roof moved to x = dx, z = dz: it builds round x = 0."""
+    """tiled_roof moved to x = dx, z = dz: it builds round x = 0."""
     temp = W.MeshBuilder()
     eave, ridge, half, depth = args
-    YP.tiled_roof(temp, bands, eave, ridge, half, depth, dz, **kw)
+    tiled_roof(temp, bands, eave, ridge, half, depth, dz, **kw)
     base = len(mb.verts)
     mb.verts.extend(W.Vector((v.x + dx, v.y, v.z)) for v in temp.verts)
     mb.faces.extend([[i + base for i in f] for f in temp.faces])
@@ -193,7 +239,7 @@ def hall(coll, mat, bands):
     brackets(mb, bands, -9.6, 9.6, H0 + 20.7, 3.9, 7)
     roof_at(mb, bands, 0, 0, H0 + 21.5, H0 + 26.5, 13.6, 7.0, lift=1.7, cols=20, rows=5)
     # the name board under the upper eave, and a pearl over all
-    SH.name_board(mb, bands, ((0, H0 + 18.4, 4.1), (8.0, 1.8)))
+    name_board(mb, bands, ((0, H0 + 18.4, 4.1), (8.0, 1.8)))
     mb.lathe([(0.0, H0 + 29.2, 1.0), (0.55, H0 + 28.8, 0.95), (0.72, H0 + 28.25, 0.85), (0.42, H0 + 27.8, 0.7), (0.34, H0 + 26.9, 0.6)], 10, bands[P.BRONZE], cap_top=False)
     # a censer at the foot of the steps
     censer(mb, bands, 0, 19.5, 0.0, 1.0)
@@ -444,7 +490,7 @@ def write_placements(path=W.REPO + "/src/worldbuild/Placements/BeginnerIsle.lua"
     lines.append("    -- Yggdrasil's lotus pedestals (the eggs' first stands), behind the lion")
     lines.append("    EggStandPieces = { Pedestal = \"SI_EggPedestal\", GlowRing = \"SI_EggGlowRing\" },")
     lines.append("    EggStands = {")
-    for eid, (x, z) in zip(YP.EGG_IDS, Y.EGG_SPOTS):
+    for eid, (x, z) in zip(EGG_IDS, Y.EGG_SPOTS):
         lines.append("        { EggId = \"%s\", Position = Vector3.new(%.2f, 0.00, %.2f), Yaw = %.4f, EggRest = %.2f }," % (eid, x, z, _yaw_to(x, z, 0, 0), P.PEDESTAL_TOP))
     lines.append("    },")
     cx, cz = Y.GATE[0] + (0 - Y.GATE[0]) * 0.12, Y.GATE[1] + (0 - Y.GATE[1]) * 0.12

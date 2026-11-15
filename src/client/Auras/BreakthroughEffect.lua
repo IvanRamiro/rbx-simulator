@@ -1,3 +1,5 @@
+-- The rank-up breakthrough: a flash, bursts, rings, streaks, a pillar and shockwaves round the character, sized by
+-- AuraStyles.Breakthroughs (a step, a milestone or a new realm). AuraController plays and stops it.
 local TweenService = game:GetService("TweenService")
 
 local AuraStyles = require(script.Parent:WaitForChild("AuraStyles"))

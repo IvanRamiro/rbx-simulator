@@ -1,6 +1,7 @@
+-- The breakthrough's looks: its colours (Elements), its sizes per kind of rank-up (Breakthroughs), the instance budget
+-- AuraController checks in Studio, and which kind a rank's breakthrough is (getBreakthrough).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 
 local AuraStyles = {}

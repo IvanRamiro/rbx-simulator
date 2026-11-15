@@ -1,3 +1,5 @@
+-- Builds a pet's model on the client: its imported mesh from ReplicatedStorage.PetMeshes at its rarity's scale and its hatch
+-- size, rigged by PetRig. getRig finds the rig of a model built here.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))

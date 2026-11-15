@@ -1,3 +1,5 @@
+-- Look-ups over GameConfig.Ranks (the realms and their sub-ranks): a rank by name or id, the next one, its Qinggong
+-- and Qi multiplier, a player's current rank (their "Rank" attribute), and whether one rank is at least another.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))

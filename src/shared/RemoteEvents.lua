@@ -1,3 +1,5 @@
+-- Every RemoteEvent the game uses, by name (EVENT_NAMES). The server creates them in ReplicatedStorage.Remotes;
+-- a client waits for each. Add a name here to add a remote.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 

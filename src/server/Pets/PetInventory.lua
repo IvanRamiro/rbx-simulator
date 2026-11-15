@@ -1,3 +1,6 @@
+-- Each player's pets on the server: their owned pets (InstanceId, PetId, Size, Level, Locked), which are equipped and which
+-- stand in their pen, and the Qi bonus they give. Loaded from and exported to PlayerData; published to the client as attributes
+-- and PetInventoryUpdatedEvent.
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

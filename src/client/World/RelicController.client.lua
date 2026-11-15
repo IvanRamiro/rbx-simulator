@@ -1,3 +1,4 @@
+-- How the Spirit Relics look on this screen: found or unfound, locked below their rank, an unfound one turning and bobbing.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

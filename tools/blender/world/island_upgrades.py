@@ -651,119 +651,6 @@ def paved_disc(mb, rnd, centre, r0, r1, rings, ground, stone, edge, kerb=1.4, li
         oriented(mb, [o0, o1, (o1[0], o1[1] - 0.9, o1[2]), (o0[0], o0[1] - 0.9, o0[2])], (math.cos(mid), 0, math.sin(mid)), edge, 0.5, [sh * 0.7] * 4)
 
 
-# ---------- Yggdrasil ----------
-def _hub_roads():
-    """(line, half width) of every road on the hub, the Root Court's ring first."""
-    import ygg_island as Y
-    return [(line, 8.0 if k == 0 else 7.0) for k, line in enumerate(Y.PATHS)]
-
-
-def _hub_plaza(x, z):
-    """On the hub's other paving: the Qi Compass, a bridgehead."""
-    import ygg_island as Y
-    if math.hypot(x - Y.COMPASS[0], z - Y.COMPASS[1]) < Y.COMPASS[2] + 4:
-        return True
-    return any(math.hypot(x - bx, z - bz) < Y.BRIDGEHEAD_R + 2 for bx, bz in hub_bridgehead_centres())
-
-
-def hub_bridgehead_centres():
-    import ygg_island as Y
-    out = []
-    for x, z in Y.EXITS.values():
-        r = math.hypot(x, z)
-        out.append((x * (r - 10) / r, z * (r - 10) / r))
-    return out
-
-
-def hub_roads(coll, mat, bands):
-    """The hub's paths as paved roads, instead of the blurred earth the 4-stud terrain gives: the Root Court's ring, the Spawn Walk,
-    the Market lane, the way to each bridge. Decoration on the ground, like the Lion Court."""
-    import ygg_island as Y
-    rnd = random.Random(631)
-    mb = W.MeshBuilder()
-    ground = lambda x, z: Y.height(x, z)[0] or 0.0
-    roads = _hub_roads()
-    for k, (line, half) in enumerate(roads):
-        others = [r for j, r in enumerate(roads) if j != k]
-        road(mb, rnd, line, half, ground, bands[P.PALE], bands[P.DARK], others=others, covered=_hub_plaza, lift=ROAD_LIFT + 0.012 * k)
-    return mb.object("YG_Roads", coll, mat)
-
-
-def hub_bridgeheads(coll, mat, bands):
-    """A crisp paved round where each bridge lands, in place of its jagged terrain edge."""
-    import ygg_island as Y
-    rnd = random.Random(632)
-    mb = W.MeshBuilder()
-    ground = lambda x, z: Y.height(x, z)[0] or 0.0
-    for centre in hub_bridgehead_centres():
-        paved_disc(mb, rnd, centre, 0.0, Y.BRIDGEHEAD_R + 3, (10, 18, 26), ground, bands[P.PALE], bands[P.DARK], lift=0.34)
-    return mb.object("YG_Bridgeheads", coll, mat)
-
-
-def hub_plot_edges(coll, mat, bands):
-    """A kerbed band round each building's plot, over the jagged edge of its terrain paving; what's inside is left to the building."""
-    import ygg_island as Y
-    rnd = random.Random(633)
-    mb = W.MeshBuilder()
-    ground = lambda x, z: Y.height(x, z)[0] or 0.0
-    roads = _hub_roads()
-    for plot in Y.PLOTS.values():
-        cx, cz, w, d, facing = plot
-        a = math.radians(facing)
-        fx, fz = math.cos(a), math.sin(a)      # out of its front
-        sx, sz = -fz, fx                       # along the front
-
-        layer = [0.0]   # each side a hair over the last, where they share a corner
-
-        def at(u, v, dy=0.0):
-            x, z = cx + sx * u + fx * v, cz + sz * u + fz * v
-            return (x, ground(x, z) + 0.26 + layer[0] + dy, z)
-
-        out, width = 2.5, 3.6
-        hu, hv = w / 2, d / 2
-        corners = [(-hu, -hv), (hu, -hv), (hu, hv), (-hu, hv)]
-        for i in range(4):
-            layer[0] = 0.012 * i
-            (u0, v0), (u1, v1) = corners[i], corners[(i + 1) % 4]
-            du, dv = (1 if u1 > u0 else -1 if u1 < u0 else 0), (1 if v1 > v0 else -1 if v1 < v0 else 0)
-            nu, nv = dv, -du                    # outward, going round this way
-            L = math.hypot(u1 - u0, v1 - v0) + 2 * out
-            n = max(1, round(L / 4.0))
-            su, sv = u0 - du * out, v0 - dv * out
-            for k in range(n):
-                t0, t1 = L * k / n + 0.05, L * (k + 1) / n - 0.05
-                a0 = (su + du * t0, sv + dv * t0)
-                a1 = (su + du * t1, sv + dv * t1)
-                # where a road runs over this edge, the road wins
-                mid = ((a0[0] + a1[0]) / 2 + nu * (out - 1.5), (a0[1] + a1[1]) / 2 + nv * (out - 1.5))
-                mx, mz = cx + sx * mid[0] + fx * mid[1], cz + sz * mid[0] + fz * mid[1]
-                if any(_line_distance(mx, mz, line) < half + 1.5 for line, half in roads):
-                    continue
-                inner = out - width
-                sh = rnd.uniform(0.55, 0.86)
-                oriented(mb, [at(a0[0] + nu * inner, a0[1] + nv * inner), at(a1[0] + nu * inner, a1[1] + nv * inner),
-                              at(a1[0] + nu * (out - 1.0), a1[1] + nv * (out - 1.0)), at(a0[0] + nu * (out - 1.0), a0[1] + nv * (out - 1.0))],
-                         (0, 1, 0), bands[P.PALE], rnd.uniform(0.1, 0.9), [sh] * 4)
-                sh = rnd.uniform(0.45, 0.7)
-                p0, p1 = at(a0[0] + nu * out, a0[1] + nv * out, 0.07), at(a1[0] + nu * out, a1[1] + nv * out, 0.07)
-                oriented(mb, [at(a0[0] + nu * (out - 1.0), a0[1] + nv * (out - 1.0), 0.07), at(a1[0] + nu * (out - 1.0), a1[1] + nv * (out - 1.0), 0.07), p1, p0],
-                         (0, 1, 0), bands[P.DARK], 0.5, [sh] * 4)
-                wx, wz = sx * nu + fx * nv, sz * nu + fz * nv
-                oriented(mb, [p0, p1, (p1[0], p1[1] - 0.9, p1[2]), (p0[0], p0[1] - 0.9, p0[2])], (wx, 0, wz), bands[P.DARK], 0.5, [sh * 0.7] * 4)
-    return mb.object("YG_PlotEdges", coll, mat)
-
-
-def hub_compass_ring(coll, mat, bands):
-    """A paved ring round the Qi Compass, over its terrain paving's jagged edge."""
-    import ygg_island as Y
-    rnd = random.Random(634)
-    mb = W.MeshBuilder()
-    ground = lambda x, z: Y.height(x, z)[0] or 0.0
-    cx, cz, r = Y.COMPASS
-    paved_disc(mb, rnd, (cx, cz), r - 1.0, r + 4.2, (20,), ground, bands[P.PALE], bands[P.DARK], lift=0.2)
-    return mb.object("YG_CompassRing", coll, mat)
-
-
 # ---------- the Beginner Isle: its layout stays; its edges go from blurred to crisp ----------
 def beginner_court(coll, mat, bands):
     import beginner_props as BP
@@ -862,7 +749,6 @@ ISLANDS = {
     "EmberPeak": ("EmberPeak_Atlas", EM.STRIPS, [ember_floor, ember_glow, ember_pylon, ember_pylon_fire]),
     "MoonlitIsle": ("MoonlitIsle_Atlas", MM.STRIPS, [moon_floor, moon_gate]),
     "OriginAbyss": ("OriginAbyss_Atlas", OM.STRIPS, [origin_floor, origin_glow, origin_colonnade]),
-    "Yggdrasil": ("StartingIsland_PropAtlas", P.STRIPS, [hub_roads, hub_bridgeheads, hub_plot_edges, hub_compass_ring]),
     "BeginnerIsle": ("StartingIsland_PropAtlas", P.STRIPS, [beginner_court, beginner_apron, beginner_roads, beginner_yard, beginner_pavilion_steps]),
 }
 

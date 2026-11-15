@@ -1,12 +1,13 @@
-# Blender backup copies
+# Blender backup copies and the temporary file it writes while saving
 *.blend1
+*.blend@
 # Texture folders Studio's 3D Importer extracts next to FBX files
 *.fbm/
 
-# Blender scratch file (pets are saved to tools/blender/pets/<EggId>/<PetId>.blend, islands to tools/blender/world/)
+# Blender scratch file (sources are saved by name: tools/blender/pets/<EggId>/<PetId>.blend, eggs/, relics/)
 Untitled.blend
 
-# Python bytecode from the Blender world scripts
+# Python bytecode from the tool scripts
 __pycache__/
 
 # Review renders (pet previews, egg review sheets, contact sheets): local only
@@ -16,3 +17,8 @@ renders/
 .DS_Store
 # Concept sheets and references: local only
 assets/concepts/
+
+# Studio's lock files beside an open place file, and Rojo's generated sourcemap
+*.rbxl.lock
+*.rbxlx.lock
+sourcemap.json

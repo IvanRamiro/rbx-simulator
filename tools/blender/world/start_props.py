@@ -2,8 +2,9 @@
 route waystones and the Qi Spring (rim stones, water, spillway, source rock, lotus stepping stones).
 
 Every piece is authored in Roblox studs around its own origin (ground centre) except the spring
-pieces, which are authored in the Starting Island's coordinates (start_island). Yggdrasil places
-them all (ygg_props.placements); the spring as one piece, moved onto its rim.
+pieces, which are authored in the Starting Island's coordinates (start_island). The Beginner Isle
+places its egg pedestals (beginner_props.placements); other islands borrow its
+shapes and atlas strips. (The hub that placed the rest was rebuilt as the celestial city, 2026-11-12.)
 """
 import bpy, bmesh, math, random
 import worldlib as W

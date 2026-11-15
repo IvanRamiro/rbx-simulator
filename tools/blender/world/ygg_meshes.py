@@ -7,8 +7,10 @@ under the island's centre. The underside's lowest point stays above world Y 75: 
 below (its highest part at Y 69.5).
 
     import ygg_meshes
-    objs, kit, img, report = ygg_meshes.build()    # in Blender: the tree, the underside, the kit
-    ygg_meshes.export(objs, kit, img)              # assets/world/Yggdrasil/*.fbx
+    objs, img, report = ygg_meshes.build()    # in Blender: the tree and the underside
+    ygg_meshes.export(objs, img)              # assets/world/Yggdrasil/Yggdrasil_Island.fbx
+
+(The hub's buildings, paving and lamps are the celestial city's: hub_celestial.py and hub_ground.py.)
 """
 import math
 
@@ -253,7 +255,6 @@ def clearance_report(objs):
 
 def build():
     import ygg_tree
-    import ygg_props
     img, bands = build_atlas()
     mat = W.textured_material("Yggdrasil_Mat", img)
     root = W.collection(Y.NAME)
@@ -264,13 +265,10 @@ def build():
     objs = build_crust(under, mat, bands) + build_grip_roots(under, mat, bands)
     objs += [build_taproot(under, mat, bands), build_path_root(under, mat, bands)] + build_cradle_roots(under, mat, bands)
     objs += ygg_tree.build(tree, mat, bands)
-    kit = ygg_props.build()
-    return objs, kit, img, clearance_report(objs)
+    return objs, img, clearance_report(objs)
 
 
-def export(objs, kit, img):
+def export(objs, img):
     folder = W.REPO + "/assets/world/Yggdrasil"
     W.export_batch(objs, folder + "/Yggdrasil_Island.fbx", image=img, anchor_name="YG_Anchor")
-    import ygg_props
-    W.export_batch(kit, folder + "/Yggdrasil_Kit.fbx", image=ygg_props.atlas_image(), anchor_name="YG_KitAnchor")
     return folder

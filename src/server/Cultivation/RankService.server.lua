@@ -1,3 +1,5 @@
+-- Rank-ups: RankUpEvent asks, the server checks the player has the Qi the next rank needs (Ranks) and sets it. Within a realm
+-- that is at once; into a new realm only by surviving its Heavenly Tribulation (Tribulation).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

@@ -1,3 +1,5 @@
+-- Every player's realm aura (RealmAura) while they meditate, and the breakthrough (BreakthroughEffect) when anyone ranks up
+-- near the camera. Reduced Effects and the phone tier (Quality) thin other players' effects.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

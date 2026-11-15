@@ -1,3 +1,6 @@
+-- Each player's save in the "PlayerProgress" DataStore: loading it (with a session lock another server's record gives up),
+-- sanitizing and migrating it (SCHEMA_VERSION, MIGRATIONS), handing each part to its module, and saving it back.
+-- In Studio, ServerStorage's StudioTestSave attribute points it at a test store instead.
 local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")

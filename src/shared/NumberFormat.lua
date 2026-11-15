@@ -1,3 +1,4 @@
+-- Short numbers for the UI: NumberFormat.compact(1530000) is "1.53M" (K, M, B, T).
 local NumberFormat = {}
 
 local SUFFIXES = {

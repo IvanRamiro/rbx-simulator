@@ -1,3 +1,5 @@
+-- The Status region of the HUD (portrait, name, rank, realm, progress), the Qi counter with its income while cultivating,
+-- and the cultivate toggle (GameConfig.CultivationKeybind, a gamepad's L1, or the button), with the Qi Spring's bonus line.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

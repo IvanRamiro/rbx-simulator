@@ -437,7 +437,7 @@ do
     end
     WorldBuilder.Appearance.HB_PavingRunes = { Material = Enum.Material.Neon, Color = RUNE, CanCollide = false, CastShadow = false }
     WorldBuilder.Appearance.HB_HatchRunes = { Material = Enum.Material.Neon, Color = RUNE, CanCollide = false, CastShadow = false }
-    for _, name in { "HB_HatchCrystal", "HB_MarketGlow", "HB_BlacksmithCrystal", "HB_BuySellStones", "HB_CrystalLampGlow", "HB_CrystalLampLight", "HB_ClusterGlow" } do
+    for _, name in { "HB_HatchCrystal", "HB_MarketGlow", "HB_BlacksmithCrystal", "HB_BuySellStones", "HB_CrystalLampGlow", "HB_CrystalLampLight" } do
         WorldBuilder.Appearance[name] = { Material = Enum.Material.Neon, Color = CRYSTAL, CanCollide = false, CastShadow = false }
     end
     -- the market's great egg: at full Neon it bloomed into a white blob that lost its egg shape (seen in Studio)
@@ -446,7 +446,6 @@ do
     WorldBuilder.Appearance.HB_HatchGlass = table.clone(glass)
     WorldBuilder.Appearance.HB_MarketCanopy = table.clone(glass)
     WorldBuilder.Appearance.HB_MarketCanopy.CanCollide = false
-    WorldBuilder.Appearance.HB_Cluster = { CanCollide = false } -- floating overhead
     -- the Qi Spring: water you wade in (it doesn't collide: you stand on the pool's floor), Qi glowing under it
     local water = { Material = Enum.Material.Glass, Color = Color3.fromRGB(120, 200, 235), Transparency = 0.3, CanCollide = false, CastShadow = false }
     WorldBuilder.Appearance.HB_SpringWater = table.clone(water)
@@ -503,7 +502,6 @@ WorldBuilder.Lights = {
     OA_ColossusEyes = { Range = 16, Brightness = 1.4 },
     EP_PylonFire = { Range = 26, Brightness = 1.6 },
     HB_CrystalLampLight = { Range = 16, Brightness = 0.8 },  -- (one lamp of each pair: hub_ground.write_placements)
-    HB_ClusterGlow = { Range = 14, Brightness = 0.7 },
     HB_MarketGlow = { Range = 16, Brightness = 0.8 },
 }
 
@@ -1279,15 +1277,14 @@ end
 
 -- ---------- route names ----------
 
--- Each route's destination, name and glow: read by buildBridges for the name on its gate. (The waystones
--- that once carried them, and buildWaystones, were removed 2026-11-13: nothing placed them any more.)
-WorldBuilder.Waystones = {
-    JadeRoute = { Island = "JadeGrove", Title = "Jade Grove", Color = Color3.fromRGB(40, 215, 110) },
-    EmberRoute = { Island = "EmberPeak", Title = "Ember Peak", Color = Color3.fromRGB(255, 105, 25) },
-    MoonlitRoute = { Island = "MoonlitIsle", Title = "Moonlit Isle", Color = Color3.fromRGB(120, 100, 255) },
-    BeginnerRoute = { Island = "BeginnerIsle", Title = "Beginner Isle", Subtitle = "The Stone Lion waits\nOpen to all", Color = Color3.fromRGB(255, 170, 60) },
-    OriginRoute = { Island = "OriginAbyss", Title = "Origin Abyss", Color = Color3.fromRGB(175, 45, 255) },
-    RootPath = { Title = "Root of the Island", Subtitle = "Climb down the great root", Color = Color3.fromRGB(255, 170, 40) },
+-- Each bridge's destination: buildBridges writes it on the bridge (Destination, Island). (The waystones
+-- that once carried these names, and buildWaystones, were removed 2026-11-13.)
+WorldBuilder.Routes = {
+    JadeRoute = { Island = "JadeGrove", Title = "Jade Grove" },
+    EmberRoute = { Island = "EmberPeak", Title = "Ember Peak" },
+    MoonlitRoute = { Island = "MoonlitIsle", Title = "Moonlit Isle" },
+    BeginnerRoute = { Island = "BeginnerIsle", Title = "Beginner Isle" },
+    OriginRoute = { Island = "OriginAbyss", Title = "Origin Abyss" },
 }
 
 -- An invisible anchored part that nothing touches: a panel to write on, or a marker.
@@ -1630,7 +1627,7 @@ function WorldBuilder.buildBridges(only)
             continue
         end
         local theme = WorldBuilder.BridgeThemes[bridge.Theme]
-        local info = WorldBuilder.Waystones[route]
+        local info = WorldBuilder.Routes[route]
         local width = data.DeckWidth
         local model = Instance.new("Model")
         model.Name = route
@@ -1751,12 +1748,12 @@ end
 
 -- ---------- plots (Yggdrasil) ----------
 
--- What will stand on each plot, named on its notice board. Built names the building that stands
--- there now (buildShops), and that plot is left unmarked.
+-- Each shop plot's name (buildShops writes it on the building's sign and its prompt) and the building
+-- that stands on it (Built).
 WorldBuilder.Plots = {
-    Blacksmith = { Title = "Blacksmith", Subtitle = "Swords and spears for every realm", Built = "Celestial Forge" },
-    Marketplace = { Title = "Marketplace", Subtitle = "Spirit eggs for Spirit Stones", Built = "Crystal Market" },
-    BuySell = { Title = "Buy & Sell", Subtitle = "Sell pets and weapons for Spirit Stones", Built = "Gilded Vault" },
+    Blacksmith = { Title = "Blacksmith", Built = "Celestial Forge" },
+    Marketplace = { Title = "Marketplace", Built = "Crystal Market" },
+    BuySell = { Title = "Buy & Sell", Built = "Gilded Vault" },
 }
 -- ---------- the shops (Yggdrasil) ----------
 -- Each shop's building (tools/blender/world/hub_celestial.py): its plot, the kit pieces it is made of

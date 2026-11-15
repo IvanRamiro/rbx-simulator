@@ -1,3 +1,4 @@
+-- Starts PlayerData for each player who joins, releases it when they leave or the server closes, and autosaves everyone.
 local Players = game:GetService("Players")
 
 local PlayerData = require(script.Parent:WaitForChild("PlayerData"))

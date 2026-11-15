@@ -200,9 +200,6 @@ BEAM_TOP = 18.6
 DOME_H = 9.5                                      # the dome's rise over the ring beam
 CRADLE_TOP = 4.4                                  # where the egg rests (the game's Cradle marker)
 FLOOR = DAIS[-1][1]
-# (size 5.2: the cluster stands as tall as the single crystals it replaced; at 8 it read bigger, the owner: "I didn't ask for bigger crystal")
-# (four floating clusters stood round the dais until the owner, 2026-11-12: "I think the floating crystals are not necessary you can remove it")
-SANCTUM_CLUSTERS = []
 
 
 def column(mb, x, z, y0, y1, r=0.72):
@@ -278,8 +275,6 @@ def sanctum(coll, mat, bands):
     mb.lathe([(2.3, CRADLE_TOP - 0.2, 1.0), (2.0, CRADLE_TOP - 0.9, 0.9), (1.2, FLOOR + 1.9, 0.8), (0.7, FLOOR + 1.3, 0.7)], 24, bands[GOLD], cap_top=False)
     ring(mb, 0.0, 2.25, CRADLE_TOP - 0.3, bands[LAPIS], seg=24, shade=0.7)                       # the lapis well the egg sits in
     ring(mb, 2.0, 2.3, CRADLE_TOP - 0.19, bands[GOLD], seg=24, shade=1.0)
-    for x, y, z, size in SANCTUM_CLUSTERS:
-        cluster_mount(mb, (x, y, z), size, bands[GOLD])
     for k in range(6):
         a = TAU * k / 6
         ca, sa = math.cos(a), math.sin(a)
@@ -311,9 +306,6 @@ def sanctum_crystal(coll, mat, bands):
     mb = W.MeshBuilder()
     apex = BEAM_TOP + DOME_H
     gem(mb, (0, apex + 2.1, 0), 1.1, 1.6, bands[GLOW], sides=6)                 # the lantern's crystal core
-    # four crystal clusters floating round the dais
-    for k, (x, y, z, size) in enumerate(SANCTUM_CLUSTERS):
-        crystal_cluster(mb, (x, y, z), size, bands[GLOW], turn=k * 1.3)       # white with a glow (the owner, 2026-11-12)
     for k in range(6):
         a = TAU * k / 6
         gem(mb, (math.cos(a) * 1.7, CRADLE_TOP + 3.05, math.sin(a) * 1.7), 0.32, 0.6, bands[GLOW], sides=5, twist=a)

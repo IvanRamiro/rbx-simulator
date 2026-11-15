@@ -1,3 +1,5 @@
+-- The pet remotes: equip, unequip, lock and fuse requests, hatching an egg at the Hatching Altar (the roll, staged on its
+-- cradle), and the Codex's reward claims. Everything is checked here; PetInventory holds the pets.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

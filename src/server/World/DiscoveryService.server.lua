@@ -1,3 +1,5 @@
+-- The Spirit Relics in the world (tagged GameConfig.RelicTag): their prompts, the reach and rank checks, the one-time Qi
+-- reward (Discoveries), and RelicResultEvent to the finder.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

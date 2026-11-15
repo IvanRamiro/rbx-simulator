@@ -1,3 +1,6 @@
+-- Rigs and animates every pet: PetRig.build (a jointed model) and buildSkinned (one skin on bones), each pet's profile
+-- (PetRig.Profiles: its bones, points, glow and special) and its animate function, played each frame by PetRig.update
+-- (idles, walking, flight, cultivating and its special, the Blasts).
 local Debris = game:GetService("Debris")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")

@@ -1,6 +1,6 @@
 """Starting Island nature: spirit pines with cloud-pad canopies, plum-blossom trees, mossy
-boulders and flower clumps, on the prop atlas from start_props. Yggdrasil places them
-(ygg_props.nature)."""
+boulders and flower clumps, on the prop atlas from start_props. The Beginner Isle places them
+(beginner_props.placements)."""
 import math, random
 import worldlib as W
 import start_props as P

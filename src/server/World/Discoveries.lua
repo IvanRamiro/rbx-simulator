@@ -1,3 +1,4 @@
+-- Which Spirit Relics each player has found (saved in PlayerData), with the relic definitions from GameConfig.Relics.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))

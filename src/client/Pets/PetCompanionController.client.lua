@@ -1,3 +1,5 @@
+-- The pets that follow each player: builds every equipped pet (their EquippedPets attribute) beside its owner, walks and
+-- poses them (PetRig), and thins other players' pets with distance and Reduced Effects.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

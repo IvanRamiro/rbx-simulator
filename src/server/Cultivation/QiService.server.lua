@@ -1,3 +1,6 @@
+-- Cultivating: CultivationEvent starts and stops it, and every CultivationInterval the server pays each cultivating player
+-- their Qi (the rank's multiplier, Qi passes, their pets' bonus and the Qi Spring's). Moving, or carrying an egg, stops it.
+-- It also sets whether they stand in the Qi Spring (the AtTrainingStation attribute).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

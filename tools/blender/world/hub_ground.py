@@ -7,7 +7,7 @@ Layout, island-local studs (x east, z south; bearings from +x toward +z):
   Buy & Sell (62), the Spawn (90), the Marketplace (118), the Blacksmith (148); a promenade arc joins them;
 - an avenue out from the ring to each site and to each of the five bridges (bridgehead plazas where they land), and a path from the
   spawn to the great root;
-- crystal lamps along every avenue and round the plazas, a few floating crystal clusters.
+- crystal lamps where each avenue reaches its building or bridge (one pair each).
 
     import hub_ground as G
     G.export_terrain(); G.write_placements(); G.export()      # src/worldbuild/..., assets/world/Yggdrasil/Yggdrasil_Celestial.fbx
@@ -320,22 +320,7 @@ def paving(coll, mat, bands):
     return [ring_obj, plazas, avenues, glow.object("HB_PavingRunes", coll, mat)]
 
 
-# ---------- the lamps and the floating clusters ----------
-CLUSTER_Y = 9.5
-
-
-def cluster_mount(coll, mat, bands):
-    mb = W.MeshBuilder()
-    H.cluster_mount(mb, (0.0, CLUSTER_Y, 0.0), 5.2, bands[H.GOLD])
-    return mb.object("HB_Cluster", coll, mat)
-
-
-def cluster_glow(coll, mat, bands):
-    mb = W.MeshBuilder()
-    H.crystal_cluster(mb, (0.0, CLUSTER_Y, 0.0), 5.2, bands[H.GLOW])
-    return mb.object("HB_ClusterGlow", coll, mat)
-
-
+# ---------- the lamps ----------
 def lamp_light(coll, mat, bands):
     o = H.crystal_lamp_glow(coll, mat, bands)
     o.name = o.data.name = "HB_CrystalLampLight"
@@ -399,11 +384,6 @@ def spring_channel(coll, mat, bands):
     return [mb.object("HB_SpringChannel", coll, mat), water.object("HB_SpringChannelWater", coll, mat)], lip
 
 
-def cluster_layout():
-    """The floating crystal clusters: either side of the spawn's avenue, and over the lawns in the gaps between the avenues."""
-    return []   # (removed, the owner 2026-11-12: "I think the floating crystals are not necessary you can remove it")
-
-
 # ---------- placements ----------
 def site_frame(name):
     x, z = site_centre(name)
@@ -430,9 +410,6 @@ def write_placements(path=W.REPO + "/src/worldbuild/Placements/Yggdrasil.lua"):
     for k, (x, z, yaw) in enumerate(lamp_layout()):
         add("HB_CrystalLamp", x, ground(x, z) + LIFT, z, yaw)
         add("HB_CrystalLampLight" if k % 2 == 0 else "HB_CrystalLampGlow", x, ground(x, z) + LIFT, z, yaw)
-    for k, (x, z) in enumerate(cluster_layout()):
-        add("HB_Cluster", x, ground(x, z), z, k * 1.1)
-        add("HB_ClusterGlow", x, ground(x, z), z, k * 1.1)
     for name in sorted(kit):
         L.append("        %s = {" % name)
         for x, y, z, yaw in kit[name]:
