@@ -163,7 +163,7 @@ RemoteEvents.RewardEvent.OnClientEvent:Connect(function(kind, a, b, c)
         local hours = b / 3600
         local away = if hours >= 1 then string.format("%.1f hours", hours) else math.floor(b / 60) .. " minutes"
         Sfx.play("RewardClaim")
-        message:show("Your Qi kept flowing for " .. away .. " while you were away: +" .. NumberFormat.compact(a) .. " Qi.", "Reward")
+        message:show("You kept gathering Qi for " .. away .. " while you were away: +" .. NumberFormat.compact(a) .. " Qi.", "Reward")
     elseif kind == "Daily" and typeof(a) == "number" then
         Sfx.play("RewardClaim")
         local qi = if typeof(b) == "number" and b > 0 then "  +" .. NumberFormat.compact(b) .. " Qi" else ""

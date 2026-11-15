@@ -215,9 +215,9 @@ local function weaponCard(parent, x, weapon, contents, realmIndex)
     })
     local size, position = UDim2.new(1, -94, 0, UiTheme.Height.ButtonSmall), UDim2.new(0, 84, 1, -(UiTheme.Height.ButtonSmall + 10))
     if mine and mine.InstanceId == contents.Weapons.Equipped then
-        button(box, "WIELDING", "Active", size, position, nil) -- a state, not an action: not the gold of something to press
+        button(box, "EQUIPPED", "Active", size, position, nil) -- a state, not an action: not the gold of something to press
     elseif mine then
-        button(box, "WIELD", "Go", size, position, function()
+        button(box, "EQUIP", "Go", size, position, function()
             ask("Equip", mine.InstanceId)
         end)
     elseif weapon.Tier > realmIndex then
@@ -265,9 +265,9 @@ local function renderForge(contents)
     end
     local chosen = current.element and GameConfig.Forge.Elements[current.element]
     forgeHint.Text = if chosen
-        then chosen.DisplayName .. ": its glow, trail and strike, and " .. math.floor(GameConfig.Forge.DamageBonus * 100 + 0.5) .. "% more damage."
+        then chosen.DisplayName .. ": a new glow, trail and hit effect, and " .. math.floor(GameConfig.Forge.DamageBonus * 100 + 0.5) .. "% more damage."
         elseif next(unlocked) then "Choose an element, name your weapon, then forge it."
-        else "Attune relics, or secure a guardian's egg, to unlock elements."
+        else "Collect relics, or bring a guardian's egg home, to unlock elements."
 
     for index, weapon in contents.Weapons.Weapons do
         local info = Shop.weapon(weapon.WeaponId)
@@ -282,7 +282,7 @@ local function renderForge(contents)
                 TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(72, 12), Size = UDim2.new(0.58, -72, 0, 18), Parent = r,
             })
             UiKit.label({
-                Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = info.Name .. (if element then "  ·  " .. element.DisplayName else "  ·  unforged"),
+                Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = info.Name .. (if element then "  ·  " .. element.DisplayName else "  ·  no element"),
                 Position = UDim2.fromOffset(72, 33), Size = UDim2.new(0.58, -72, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd, Parent = r,
             })
             local price = Shop.forgePrice(info.Id)
@@ -317,7 +317,7 @@ local function renderBlacksmith(contents)
         TextSize = 14, Text = "Qi Palm", Position = UDim2.fromOffset(14, 12), Size = UDim2.new(0.6, 0, 0, 18), Parent = palm,
     })
     UiKit.label({
-        Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = "Fight bare-handed", Position = UDim2.fromOffset(14, 33),
+        Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = "Fight with no weapon", Position = UDim2.fromOffset(14, 33),
         Size = UDim2.new(0.6, 0, 0, 14), Parent = palm,
     })
     button(palm, if unarmed then "USING" else "USE", if unarmed then "Active" else "Go", UDim2.fromOffset(120, ROW_BUTTON),
@@ -421,7 +421,7 @@ local function renderMarket(contents)
             Text = if open then "You hold " .. held else "Needs " .. Ranks.getRankById(entry.egg.RequiredRank).Name, Parent = r,
         })
         priceTag(r, entry.price, not affordable)
-        local why = if not open then "LOCKED" elseif not affordable then "TOO DEAR" else nil
+        local why = if not open then "LOCKED" elseif not affordable then "NOT ENOUGH" else nil
         local buy
         local armedUntil = 0
         buy = button(r, why or "BUY", if why then "Quiet" else "Buy", UDim2.new(0.28, -12, 0, ROW_BUTTON), UDim2.new(0.72, 0, 0.5, -ROW_BUTTON / 2),
@@ -460,7 +460,7 @@ end
 
 local function renderBuySell(contents)
     window.setTitle("BUY & SELL")
-    topNote.Text = "Sell spare beasts and weapons for Spirit Stones."
+    topNote.Text = "Sell your extra beasts and weapons for Spirit Stones."
     local order = 0
     local function nextOrder()
         order += 1
@@ -506,7 +506,7 @@ local function renderBuySell(contents)
                 if element then element.Color else C.Muted, Shop.weaponRefund(info.Id, weapon.Element),
                 if wielded then nil else function()
                     ask("SellWeapon", weapon.InstanceId)
-                end, "Wielding")
+                end, "Equipped")
         end
     end
 end

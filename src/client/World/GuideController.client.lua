@@ -16,12 +16,12 @@ local player = Players.LocalPlayer
 local bonus = GameConfig.TrainingStation.QiBonusPercent
 
 local PAGES = {
-    "Welcome to Yggdrasil, %s! I'm Seren. The World Tree keeps every cultivator who comes home to it. Let me show you around.",
-    "Press E, or the Cultivate button, to meditate and gather Qi. The more Qi you gather, the higher your rank, and the brighter your aura.",
-    "You woke beside your own pen: put beasts in it to watch them roam. Down the south-west avenue is the Qi Spring: cultivate inside its runes for " .. bonus .. "% more Qi.",
-    "The bridges lead to the outer islands. Weaken a guardian, take an egg from its stands and carry it home across the bridge.",
-    "Hatch your eggs at the Hatching Sanctum, up the north avenue. Across the tree to the north-east is the Market Square: Brann at the Blacksmith forges weapons, Lyra at the Marketplace sells eggs, and Corvin at Buy & Sell trades your spares for Spirit Stones.",
-    "And keep an eye on the dais beside the World Tree, on its north side: every hour, for ten minutes, the Wandering Merchant sets out his wares there. Good luck, cultivator!",
+    "Welcome to Yggdrasil, %s! I'm Seren. This island, around the great World Tree, is your home. Let me show you around.",
+    "Press E to cultivate and gather Qi. On a phone, tap the lotus button. The more Qi you gather, the higher your rank, and the brighter your aura.",
+    "You start next to your own pen. Put pets in it and watch them walk around. Down the south-west road is the Qi Spring: cultivate there for " .. bonus .. "% more Qi.",
+    "The bridges lead to the other islands. Hit a guardian until it is weak, take an egg from its stands and carry it home across the bridge.",
+    "Hatch your eggs at the Hatching Sanctum, up the north road. The shops are to the north-east: Brann at the Blacksmith makes weapons, Lyra at the Marketplace sells eggs, and Corvin at Buy & Sell buys your extra pets and weapons.",
+    "One more thing: every hour, for ten minutes, the Wandering Merchant visits the platform on the north side of the World Tree. He sells special deals. Good luck, cultivator!",
 }
 
 local window = Hud.window({

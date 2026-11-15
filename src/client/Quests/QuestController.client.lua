@@ -155,7 +155,6 @@ local function questAllowed()
 end
 Hud.Quest:GetPropertyChangedSignal("Visible"):Connect(questAllowed)
 
-local PHONE_WIDTH, FULL_WIDTH = 236, 280
 local chosenFold = nil -- what the player chose: until then a phone starts folded
 local peekUntil = 0    -- a new quest shows in full until this moment
 local footerRef = footer
@@ -175,7 +174,7 @@ local function applyFold()
     title.Size = if folded then UDim2.new(1, 0, 0, 18) else UDim2.new(1, 0, 0, 0)
     foldMark.Text = if folded then "+" else "-"
     local compact = Hud.isCompact()
-    panel.Size = UDim2.fromOffset(if compact then PHONE_WIDTH else FULL_WIDTH, panel.Size.Y.Offset)
+    panel.Size = UDim2.fromOffset(Hud.rightColumnWidth(), panel.Size.Y.Offset) -- (the air leaps under it share this width)
     fitHeight()
     -- a thumb's 44 pixels on a phone, at its 0.8 scale
     footerRef.Size = UDim2.new(1, 0, 0, if compact then 56 else UiTheme.Height.ButtonSmall)
@@ -320,7 +319,7 @@ RemoteEvents.QuestEvent.OnClientEvent:Connect(function(kind, step, stones)
     Sfx.play("QuestComplete")
     local paid = if typeof(stones) == "number" and stones > 0 then "  +" .. NumberFormat.compact(stones) .. " Spirit Stones" else ""
     if step == #QUESTS then
-        message:show("Quest complete: " .. QUESTS[step].Title .. "." .. paid .. "\nThe path is yours now, cultivator.", "Reward")
+        message:show("Quest complete: " .. QUESTS[step].Title .. "." .. paid .. "\nYou finished every quest. Well done!", "Reward")
     else
         message:show("Quest complete: " .. QUESTS[step].Title .. "." .. paid, "Reward")
     end

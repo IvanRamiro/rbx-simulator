@@ -4,8 +4,9 @@
 -- server relays every strike back for everyone's effects, where it landed, and what it did there
 -- (its damage, whether it was critical, the target struck).
 --
--- Drawing and sheathing (the owner, 2026-11-11): key 1, gamepad X or the DRAW / SHEATHE button over the Cultivation
--- dock asks the server (WeaponDrawEvent) to draw the weapon into the hand or put it back across the back.
+-- Equipping and putting away (the owner, 2026-11-11, and 2026-11-16: "replace it with the box for inventory weapon"): the weapon
+-- sits in slot 1 of the inventory bar (Hud.Inventory); pressing the slot, key 1 or gamepad X asks the server (WeaponDrawEvent)
+-- to draw it into the hand or put it back across the back. With no weapon the slot is empty and says where to buy one.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -18,8 +19,7 @@ local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
 local Toast = require(UI:WaitForChild("Toast"))
 local TouchActions = require(UI:WaitForChild("TouchActions"))
-local UiKit = require(UI:WaitForChild("UiKit"))
-local UiTheme = require(UI:WaitForChild("UiTheme"))
+local Portraits = require(UI:WaitForChild("Portraits"))
 
 local player = Players.LocalPlayer
 local readyAt = 0
@@ -50,7 +50,7 @@ local function strike()
     readyAt = now + cooldown
     if player:GetAttribute("IsFlying") == true and not airNoted then
         airNoted = true
-        message:show("Guardians can't be struck from the air: land first.", "Warning")
+        message:show("You can't hit guardians from the air. Land first.", "Warning")
     end
     CombatFx.play(player, kind)
     RemoteEvents.CombatEvent:FireServer()
@@ -71,29 +71,48 @@ local function toggleDrawn()
     end
 end
 
--- a pill over the dock (Hud.CultivationDock.addPill): on the Cultivate button's centre line and at its height, with the same
--- key's hint as Cultivate's; as wide as its words and the hint's room need, and never narrower than DRAW_MIN
-local DRAW_MIN = 160
-local drawButton = UiKit.button({
-    Name = "DrawButton", Tone = "Tile", Font = "Heavy", TextSize = 15, Text = "DRAW", Visible = false,
-})
-UiKit.keycapOn(drawButton, "1")
-Hud.CultivationDock.addPill(drawButton, 26, {
-    Width = function()
-        local margin = math.max(UiKit.keyRoom(drawButton), UiTheme.Space.L)
-        return math.max(DRAW_MIN, UiKit.wordsWidth(drawButton) + margin * 2)
-    end,
-})
-drawButton.Activated:Connect(toggleDrawn)
+-- slot 1 of the inventory bar: the weapon's picture (its forged element's glow too) and name, lit and marked EQUIPPED while in hand
+local slot = Hud.Inventory.addSlot(1, { Name = "WeaponSlot" })
+local shownWeapon = nil -- the weapon and element the slot's picture shows: it's rebuilt only when they change
+slot.Button.Activated:Connect(function()
+    if player:GetAttribute("WeaponId") == nil then
+        message:show("You have no weapon. Buy one at the Blacksmith on Yggdrasil.", "Info")
+    elseif player:GetAttribute("CarryingEgg") ~= nil then
+        message:show("Your hands are full: bring the egg home first.", "Warning")
+    elseif player:GetAttribute("IsCultivating") == true then
+        message:show("Stop cultivating first (press E).", "Info")
+    else
+        toggleDrawn()
+    end
+end)
 
-local function refreshDrawButton()
-    drawButton.Visible = canToggle()
-    drawButton.Text = if player:GetAttribute("WeaponDrawn") == true then "SHEATHE" else "DRAW"
+local function refreshSlot()
+    local weaponId = player:GetAttribute("WeaponId")
+    local weapon = Shop.weapon(weaponId)
+    if not weapon then
+        shownWeapon = nil
+        slot.setEmpty("NO\nWEAPON", "Buy one at the Blacksmith")
+        return
+    end
+    local elementName = player:GetAttribute("WeaponElement")
+    local key = weaponId .. "|" .. tostring(elementName)
+    if key ~= shownWeapon then
+        shownWeapon = key
+        local element = Shop.element(elementName)
+        local picture = Portraits.weapon(weaponId, element and element.Color, 56)
+        picture.BackgroundTransparency = 1
+        local edge = picture:FindFirstChildOfClass("UIStroke")
+        if edge then
+            edge:Destroy()
+        end
+        slot.setItem(weapon.Name, picture)
+    end
+    slot.setEquipped(player:GetAttribute("WeaponDrawn") == true)
 end
-for _, name in { "WeaponId", "WeaponDrawn", "IsCultivating", "CarryingEgg" } do
-    player:GetAttributeChangedSignal(name):Connect(refreshDrawButton)
+for _, name in { "WeaponId", "WeaponElement", "WeaponDrawn" } do
+    player:GetAttributeChangedSignal(name):Connect(refreshSlot)
 end
-refreshDrawButton()
+refreshSlot()
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then

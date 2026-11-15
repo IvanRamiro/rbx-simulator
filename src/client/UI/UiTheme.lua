@@ -68,8 +68,7 @@ UiTheme.Text = { -- px per role
 UiTheme.Pad = { Window = 16, Card = 12 } -- inside a window's body, inside a card
 UiTheme.Ornaments = {
     Corner = "rbxassetid://102166566602424",
-    EmblemRing = "rbxassetid://80453677548549",
-    LotusSit = "rbxassetid://107582762075601",
+    LotusSit = "rbxassetid://107582762075601", -- a cultivator in the lotus: the touch screens' meditate button (TouchActions)
 }
 UiTheme.Margin = 16 -- from the screen's edges
 

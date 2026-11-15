@@ -41,8 +41,8 @@ local GOLD = Color3.fromRGB(232, 200, 120) -- the in-world waypoint to the safe 
 local NAME_COLOR = Color3.fromRGB(236, 246, 255)
 local STATE_LOOK = {
     Guardian = { Text = "GUARDIAN", Color = Color3.fromRGB(120, 214, 255) },
-    Weakened = { Text = "WEAKENED · TAKE AN EGG", Color = Color3.fromRGB(255, 196, 70) },
-    Enraged = { Text = "ENRAGED", Color = Color3.fromRGB(255, 96, 50) },
+    Weakened = { Text = "WEAK · TAKE AN EGG", Color = Color3.fromRGB(255, 196, 70) },
+    Enraged = { Text = "ANGRY", Color = Color3.fromRGB(255, 96, 50) },
 }
 local FILL = { -- the HUD's blue while it guards; gold, pulsing, once weakened; red once enraged
     Calm = { Color3.fromRGB(120, 214, 255), Color3.fromRGB(26, 104, 196) },
@@ -687,7 +687,7 @@ local function updateCountdowns()
     for egg, entry in dropped do
         if entry.countdown then
             local left = math.max(0, math.ceil((egg:GetAttribute("DropUntil") or now) - now))
-            entry.countdown.Text = "RECOVER · " .. left .. "s"
+            entry.countdown.Text = "PICK UP · " .. left .. "s"
             local body = egg.PrimaryPart
             entry.marker.world = body and body.Position + Vector3.new(0, 3.5, 0)
         end
@@ -751,7 +751,7 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
         end
         local info = typeof(element) == "string" and GameConfig.Forge.Elements[element]
         local relic = if info then " Its relic unlocks " .. info.DisplayName .. " at the Blacksmith's forge." else ""
-        message:show((egg and egg.DisplayName or "The egg") .. " secured! Hatch it at the Hatching Sanctum." .. reward .. relic, "Reward")
+        message:show((egg and egg.DisplayName or "The egg") .. " is home safe! Hatch it at the Hatching Sanctum." .. reward .. relic, "Reward")
         return
     elseif action == "BagFull" then
         Sfx.play("Error")
@@ -790,7 +790,7 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
     end
     if action == "Awaken" then
         if isNear(model, BAR_DISTANCE) then
-            message:show((config.Called or "The " .. config.DisplayName) .. " awakens!", "Info")
+            message:show((config.Called or "The " .. config.DisplayName) .. " wakes up!", "Info")
         end
     elseif action == "Weaken" then
         if isNear(model, BAR_DISTANCE) then
@@ -806,7 +806,7 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
         GuardianFx.drop((...), style)
         local egg = eggsFolder:FindFirstChild(model.Name .. "_Egg")
         if egg and egg:GetAttribute("OwnerUserId") == player.UserId then
-            message:show("You dropped the egg! Recover it within " .. config.DropTime .. "s.", "Warning")
+            message:show("You dropped the egg! Pick it up within " .. config.DropTime .. "s.", "Warning")
         end
     elseif action == "Secure" then
         GuardianFx.secure((...))

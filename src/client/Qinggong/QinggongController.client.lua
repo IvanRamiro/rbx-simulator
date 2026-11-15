@@ -20,6 +20,7 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Hud = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
+local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
 local TouchActions = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("TouchActions"))
 local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKit"))
 local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiTheme"))
@@ -36,106 +37,110 @@ local NEW_PRESS_GAP = 0.18 -- jump requests closer than this are one held press
 local HARD_LANDING_SPEED = 25 -- a fall faster than this lands with an impact even without Qinggong
 local FULL_IMPACT_SPEED = 110 -- the fall speed of a full-strength landing
 
--- the top of the Cultivation dock (Hud): its title, the air leaps left or the state (gliding, sword
--- flight), and the stamina bar, ending in a diamond, with STAMINA and how much is left written on it. Its ticks mark what a dash costs,
--- so the dashes left can be counted; it turns red and pulses when there isn't enough for one, and shakes when a dash is refused for lack of it.
-local dock = Hud.CultivationDock
-local dockTitle = UiKit.label({
-    Name = "Title", Font = "Title", Text = "Cultivation", Size = UDim2.fromScale(0.45, 1), Parent = dock.Top,
+-- ---------- the air leaps (the HUD's right column, under the quest panel) ----------
+-- One slim panel in the quest panel's column (Hud.Quest: it follows the panel as it folds, and goes with it while a window is
+-- open), as wide as the panel (Hud.rightColumnWidth): AIR LEAPS, a gold diamond for each leap left and a dim one for each used,
+-- and the count. GLIDING or SWORD FLIGHT in the word's place while they last. Stamina (it fuels dashes and sword flight) shows
+-- only in flight (the owner, 2026-11-16): a bar under the leaps, red and pulsing when it runs low; it is hidden on the ground.
+local C = UiTheme.Colors
+local ROW, BAR_ROW, PAD = 32, 22, UiTheme.Pad.Card
+local leapPanel = UiKit.panel({ Name = "AirLeaps", Brackets = false, LayoutOrder = 10, Parent = Hud.Quest })
+local leapWord = UiKit.boldLabel({
+    Name = "Word", TextSize = 13, Text = "AIR LEAPS", TextColor3 = C.Edge, Position = UDim2.fromOffset(PAD, 0),
+    Size = UDim2.new(0.5, -PAD, 0, ROW), Parent = leapPanel,
 })
-local info = UiKit.label({
-    Name = "Info", Font = "Strong", TextColor3 = UiTheme.Colors.AccentBright, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.fromScale(1, 0), Size = UDim2.fromScale(0.55, 1), TextXAlignment = Enum.TextXAlignment.Right,
-    TextTruncate = Enum.TextTruncate.AtEnd, Parent = dock.Top,
+local leapCount = UiKit.boldLabel({
+    Name = "Count", TextSize = 15, Text = "", TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.new(1, -PAD, 0, 0), Size = UDim2.fromOffset(44, ROW), Parent = leapPanel,
 })
-local function sizeDockText(size)
-    dockTitle.TextSize = size.TextSize + 2
-    info.TextSize = size.TextSize
-end
-dock.Resized:Connect(sizeDockText)
-sizeDockText(dock.Size)
--- the slot (Hud) spans the plate's rows like Cultivate; the track stops short of its right end by the diamond's reach, so the
--- diamond's far point, not the track, ends where the title row and Cultivate end
-local TIP = 11 -- the diamond's side
-local TIP_OVER = 3 -- how far its middle stands past the track's end
-local TIP_REACH = TIP * math.sqrt(2) / 2 -- half its width, turned 45 degrees
-local TRACK_SHORT = math.ceil(TIP_REACH + TIP_OVER)
-local staminaBack = UiKit.bar({ Name = "Stamina", Fill = STAMINA_COLOR, Size = UDim2.new(1, -TRACK_SHORT, 1, 0), Parent = dock.Bar })
+local pips = Instance.new("Frame") -- the diamonds, right-aligned against the count
+pips.Name = "Pips"
+pips.BackgroundTransparency = 1
+pips.AnchorPoint = Vector2.new(1, 0)
+pips.Position = UDim2.new(1, -(PAD + 44 + 6), 0, 0)
+pips.Size = UDim2.new(0.5, -50, 0, ROW)
+pips.Parent = leapPanel
+UiKit.list(pips, {
+    FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right,
+    VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 7),
+})
+local staminaRow = Instance.new("Frame")
+staminaRow.Name = "StaminaRow"
+staminaRow.BackgroundTransparency = 1
+staminaRow.Position = UDim2.fromOffset(PAD, ROW - 2)
+staminaRow.Size = UDim2.new(1, -PAD * 2, 0, BAR_ROW - 6)
+staminaRow.Visible = false
+staminaRow.Parent = leapPanel
+local staminaBack = UiKit.bar({ Name = "Stamina", Fill = STAMINA_COLOR, Size = UDim2.fromScale(1, 1), Parent = staminaRow })
 staminaBack:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
 local staminaFill = staminaBack:FindFirstChild("Fill")
 staminaFill:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
 staminaFill.Size = UDim2.fromScale(1, 1)
-local tip = Instance.new("Frame") -- the bar's end: outside the track, which clips what's inside it
-tip.Name = "Tip"
-tip.AnchorPoint = Vector2.new(0.5, 0.5)
-tip.Position = UDim2.new(1, TIP_OVER - TRACK_SHORT, 0.5, 0)
-tip.Size = UDim2.fromOffset(TIP, TIP)
-tip.Rotation = 45
-tip.BackgroundColor3 = UiTheme.Colors.Highlight
-tip.BorderSizePixel = 0
-tip.ZIndex = 3
-tip.Parent = dock.Bar
-UiKit.stroke(tip, Color3.fromRGB(70, 44, 10), 0, 1)
-
-local ticks = Instance.new("Frame")
-ticks.Name = "Ticks"
-ticks.BackgroundTransparency = 1
-ticks.Size = UDim2.fromScale(1, 1)
-ticks.ZIndex = 3
-ticks.Parent = staminaBack
-local shownTicksFor = nil
-local function drawTicks(total)
-    if total == shownTicksFor then
-        return
-    end
-    shownTicksFor = total
-    ticks:ClearAllChildren()
-    local cost = qinggong.Dash.Cost
-    local count = if total > 0 then math.floor((total - 1) / cost) else 0
-    if count > 12 then -- too many to read: a tick for every other dash
-        cost *= 2
-        count = math.floor((total - 1) / cost)
-    end
-    for i = 1, count do
-        local tick = Instance.new("Frame")
-        tick.BorderSizePixel = 0
-        tick.BackgroundColor3 = Color3.fromRGB(16, 18, 44)
-        tick.BackgroundTransparency = 0.25
-        tick.AnchorPoint = Vector2.new(0.5, 0)
-        tick.Position = UDim2.fromScale(i * cost / total, 0)
-        tick.Size = UDim2.new(0, 2, 1, 0)
-        tick.Parent = ticks
-    end
-end
-
-local staminaText = UiKit.label({ -- on the bar's frame, not its track, which would clip it on a small screen
+local staminaText = UiKit.label({ -- on the row, not the track, which clips what's inside it
     Name = "StaminaText", Font = "Strong", TextSize = 10, TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.25,
-    TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, 0.5),
-    Size = UDim2.new(1, -TRACK_SHORT, 0, 16), ZIndex = 4, Parent = dock.Bar, -- (over the track) taller than the bar, which on a phone is 8 pixels
+    TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 4, Parent = staminaRow,
 })
 
-local barHome = dock.Bar.Position
-local refusedUntil = 0 -- the bar shows white until then (updateStaminaBar keeps it)
+local function fitLeapPanel()
+    local flying = staminaRow.Visible
+    leapPanel.Size = UDim2.fromOffset(Hud.rightColumnWidth(), if flying then ROW + BAR_ROW else ROW)
+end
+Hud.CompactChanged:Connect(fitLeapPanel)
+fitLeapPanel()
+
+local shownPips = -1 -- the leaps total the diamonds were made for
+local function drawPips(left, total)
+    if total ~= shownPips then
+        shownPips = total
+        pips:ClearAllChildren()
+        UiKit.list(pips, {
+            FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right,
+            VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 7),
+        })
+        for i = 1, math.min(total, 8) do
+            local cell = Instance.new("Frame") -- (a laid-out frame isn't drawn turned: the diamond turns inside it)
+            cell.Name = "Pip"
+            cell.BackgroundTransparency = 1
+            cell.Size = UDim2.fromOffset(16, 16)
+            cell.LayoutOrder = i
+            cell.Parent = pips
+            local diamond = Instance.new("Frame")
+            diamond.Name = "Diamond"
+            diamond.AnchorPoint = Vector2.new(0.5, 0.5)
+            diamond.Position = UDim2.fromScale(0.5, 0.5)
+            diamond.Size = UDim2.fromOffset(11, 11)
+            diamond.Rotation = 45
+            diamond.BorderSizePixel = 0
+            diamond.Parent = cell
+            UiKit.stroke(diamond, Color3.fromRGB(70, 44, 10), 0, 1.5)
+        end
+    end
+    for _, cell in pips:GetChildren() do
+        local diamond = cell:FindFirstChild("Diamond")
+        if diamond then
+            local lit = cell.LayoutOrder <= left
+            diamond.BackgroundColor3 = if lit then C.Highlight else C.Well
+            diamond:FindFirstChildOfClass("UIStroke").Color = if lit then Color3.fromRGB(70, 44, 10) else C.EdgeDim
+        end
+    end
+end
+
+local staminaMessage = Toast.new("StaminaMessage", Color3.new(1, 1, 1), 3)
+local outOfStaminaNoted = 0
+local stamina = 0
 local function refuseDash()
     Sfx.play("Error")
-    refusedUntil = os.clock() + 0.25
-    task.spawn(function()
-        for _, dx in { -4, 4, -3, 3, -1, 1, 0 } do
-            dock.Bar.Position = barHome + UDim2.fromOffset(dx, 0)
-            task.wait(0.035)
-        end
-    end)
+    if os.clock() - outOfStaminaNoted > 10 then -- (the bar is hidden on the ground: say it, now and then)
+        outOfStaminaNoted = os.clock()
+        staminaMessage:show("Out of stamina: wait a moment, then dash again.", "Warning")
+    end
 end
-dock.Resized:Connect(function()
-    barHome = dock.Bar.Position
-end)
 
 local leapsUsed = 0
 local lastJumpRequest = 0
 local lastLeapTime = 0
 local gliding = false
 
-local stamina = 0
 local staminaSpentAt = 0
 local dashUntil = 0
 local dashReadyAt = 0
@@ -153,19 +158,21 @@ local function maxLeaps()
 end
 
 local function updateHud()
-    if flight then
-        info.Text = "Sword flight"
-        info.TextColor3 = FLIGHT_COLOR
-        return
-    end
-    if gliding then
-        info.Text = "Gliding"
-        info.TextColor3 = GLIDE_COLOR
-        return
-    end
+    local flying = flight ~= nil
     local total = maxLeaps()
-    info.TextColor3 = if leapsUsed >= total and total > 0 then UiTheme.Colors.Muted else UiTheme.Colors.AccentBright
-    info.Text = math.max(0, total - leapsUsed) .. " / " .. total .. " Air Leaps"
+    local left = math.max(0, total - leapsUsed)
+    leapWord.Text = if flying then "SWORD FLIGHT" elseif gliding then "GLIDING" else "AIR LEAPS"
+    leapWord.TextColor3 = if flying then FLIGHT_COLOR elseif gliding then GLIDE_COLOR else UiTheme.Colors.Edge
+    pips.Visible = not flying
+    leapCount.Visible = not flying
+    drawPips(left, total)
+    leapCount.Text = left .. "/" .. total
+    leapCount.TextColor3 = if left == 0 and total > 0 then UiTheme.Colors.Muted else UiTheme.Colors.Text
+    leapPanel.Visible = total > 0 or flying
+    if staminaRow.Visible ~= flying then
+        staminaRow.Visible = flying
+        fitLeapPanel()
+    end
 end
 
 local function getCharacterParts()
@@ -197,12 +204,14 @@ local function spend(amount)
 end
 
 local function updateStaminaBar()
+    if not staminaRow.Visible then
+        return
+    end
     local total = maxStamina()
     local share = if total > 0 then math.clamp(stamina / total, 0, 1) else 0
     staminaFill.Size = UDim2.fromScale(share, 1)
-    drawTicks(total)
-    local low = stamina < qinggong.Dash.Cost
-    staminaFill.BackgroundColor3 = if os.clock() < refusedUntil then Color3.new(1, 1, 1) elseif low then STAMINA_LOW else STAMINA_COLOR
+    local low = share < 0.25
+    staminaFill.BackgroundColor3 = if low then STAMINA_LOW else STAMINA_COLOR
     staminaFill.BackgroundTransparency = if low then 0.25 + 0.25 * math.sin(os.clock() * 8) else 0
     staminaText.Text = "STAMINA  " .. math.floor(share * 100 + 0.5) .. "%"
 end

@@ -79,7 +79,7 @@ for index, entry in REALM_TITLES do
     local id = "Realm" .. index
     TitleRules.RealmTitleIds[entry.Realm] = id
     add({ Id = id, Group = "Realm", Text = entry.Text, Color = entry.Color, Shimmer = entry.Shimmer, RealmIndex = index,
-        How = if index == 1 then "Begin cultivating, in the Qi Awakening realm."
+        How = if index == 1 then "Start cultivating in the Qi Awakening realm."
             else "Reach the " .. entry.Realm .. (if string.find(entry.Realm, "Realm") then "." else " realm.") })
 end
 

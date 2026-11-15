@@ -10,6 +10,8 @@
 --   pop(guiObject, size)         its size jumps and settles (an icon that just gained something)
 --   counter(label, format, opts) a number that rolls to its new value and floats the difference off
 --   stagger(root)                the rows of its lists settle in one after another
+--   collapse(frame, seconds, color)  it folds flat into a line of light about its middle, and the line shrinks away (a card
+--                                    closing: the hatch reveal)
 -- Everything runs on TweenService or one shared Heartbeat that only runs while a number is rolling, so
 -- a resting interface costs nothing.
 local RunService = game:GetService("RunService")
@@ -322,6 +324,34 @@ end
 -- The rows of a window's lists settle in, one after another. They're laid out by a list, so only their
 -- scale can move; the scale is removed afterwards.
 local STAGGER_ROWS = 9
+
+-- A card closing: it folds flat about its middle (its contents clipped as it goes), the flat card becomes a line of light in
+-- `color`, and the line shrinks to its middle and fades. The frame is left hidden at its own size, place and colour.
+function UiFx.collapse(frame, seconds, color)
+    seconds = seconds or 0.32
+    local size, position, anchor = frame.Size, frame.Position, frame.AnchorPoint
+    local clips, back, backTransparency = frame.ClipsDescendants, frame.BackgroundColor3, frame.BackgroundTransparency
+    -- (a frame sized in offsets: it folds about its own middle wherever it was anchored)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = position + UDim2.fromOffset((0.5 - anchor.X) * size.X.Offset, (0.5 - anchor.Y) * size.Y.Offset)
+    frame.ClipsDescendants = true
+    local LINE = 4
+    local fold = seconds * 0.55
+    tween(frame, fold, { Size = UDim2.new(size.X.Scale, size.X.Offset, 0, LINE) }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+    task.delay(fold, function()
+        if not frame.Parent then
+            return
+        end
+        frame.BackgroundColor3 = color or C.Highlight
+        frame.BackgroundTransparency = 0
+        tween(frame, seconds - fold, { Size = UDim2.fromOffset(0, LINE), BackgroundTransparency = 0.6 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        task.delay(seconds - fold, function()
+            frame.Visible = false
+            frame.Size, frame.Position, frame.AnchorPoint = size, position, anchor
+            frame.ClipsDescendants, frame.BackgroundColor3, frame.BackgroundTransparency = clips, back, backTransparency
+        end)
+    end)
+end
 
 function UiFx.stagger(root)
     for _, scroll in root:GetDescendants() do

@@ -70,7 +70,7 @@ local function buildLabel(part, rank)
     text.FontFace = UiTheme.Fonts.Title
     text.TextScaled = true
     text.TextColor3 = UiTheme.Colors.Text
-    text.Text = "Sealed\nReach " .. rank.Name .. " to pass"
+    text.Text = "Locked\nReach " .. rank.Name .. " to pass"
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(10, 14, 28)
     stroke.Thickness = 2

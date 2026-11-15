@@ -1731,7 +1731,7 @@ function WorldBuilder.buildLeaderboard(island)
 
     local _, titleGui = textPanel("Title", WorldBuilder.Board.Title.Size, frame * CFrame.new(WorldBuilder.Board.Title.Centre), folder, 60)
     steleLabel("Text", titleGui, UDim2.fromScale(0.96, 0.86), UDim2.fromScale(0.02, 0.07), Enum.TextXAlignment.Center,
-        Color3.fromRGB(240, 222, 170)).Text = "Ascension Board"
+        Color3.fromRGB(240, 222, 170)).Text = "Leaderboard"
 
     local _, gui = textPanel("Board", WorldBuilder.Board.Face.Size, frame * CFrame.new(WorldBuilder.Board.Face.Centre), folder, 40)
     local heading = steleLabel("Heading", gui, UDim2.fromScale(0.9, 0.1), UDim2.fromScale(0.05, 0.02), Enum.TextXAlignment.Center, BOARD_INK[1])
@@ -1781,9 +1781,9 @@ WorldBuilder.Plots = {
 -- Each shop's building (tools/blender/world/hub_district.py since the hub's redesign, 2026-11-15): its plot, the kit pieces it is made of
 -- and what its prompt says. ShopService opens the shop named by the prompt's "Shop" attribute.
 WorldBuilder.Shops = {
-    Blacksmith = { Plot = "Blacksmith", Pieces = { "HB_Blacksmith", "HB_BlacksmithCore", "HB_BlacksmithCrystal" }, Action = "Browse" },
+    Blacksmith = { Plot = "Blacksmith", Pieces = { "HB_Blacksmith", "HB_BlacksmithCore", "HB_BlacksmithCrystal" }, Action = "Shop" },
     BuySell = { Plot = "BuySell", Pieces = { "HB_BuySell", "HB_BuySellStones" }, Action = "Trade" },
-    Marketplace = { Plot = "Marketplace", Pieces = { "HB_Market", "HB_MarketCanopy", "HB_MarketGlow" }, Action = "Browse" },
+    Marketplace = { Plot = "Marketplace", Pieces = { "HB_Market", "HB_MarketCanopy", "HB_MarketGlow" }, Action = "Shop" },
 }
 WorldBuilder.ForgeLight = Color3.fromRGB(255, 120, 40)
 WorldBuilder.LanternLight = Color3.fromRGB(255, 130, 70) -- warm: a red light tints the paving pink
@@ -2357,7 +2357,7 @@ function WorldBuilder.buildRelic(island, relicId, localPosition)
     addSparkles(crystal, look.Color, 6).Name = "RelicSparkles"
 
     local prompt = Instance.new("ProximityPrompt")
-    prompt.ActionText = "Attune"
+    prompt.ActionText = "Collect"
     prompt.ObjectText = relicConfig.DisplayName
     prompt.KeyboardKeyCode = Enum.KeyCode.F
     prompt.HoldDuration = 1

@@ -137,7 +137,7 @@ local function state(player)
         elseif deal.Kind == "Egg" and EggInventory.count(player, deal.ItemId) + deal.Count > EggInventory.MAX_PER_EGG then
             locked = "No room for " .. deal.Count .. " more"
         elseif deal.Kind == "Pet" and PetInventory.isFull(player) then
-            locked = "Your pets are full"
+            locked = "No room for more pets"
         end
         table.insert(deals, {
             Id = deal.Id, Kind = deal.Kind, ItemId = deal.ItemId, Name = deal.Name, Count = deal.Count, Price = deal.Price,
@@ -256,7 +256,7 @@ end)
 local function buy(player, dealId)
     local now = os.time()
     if not (isOpen(now) and current.visit) then
-        return false, "The Wandering Merchant has moved on. He returns at the top of the hour."
+        return false, "The Wandering Merchant has left. He comes back at the start of the next hour."
     end
     local visit = Merchant.visitIndex(now)
     local deal = Merchant.deal(dealId)
@@ -267,7 +267,7 @@ local function buy(player, dealId)
         return false, "Walk up to the Wandering Merchant to trade."
     end
     if MerchantLedger.hasBought(player, visit, deal.Id) then
-        return false, "You've bought that deal already. He brings new wares every visit."
+        return false, "You've bought that deal already. He brings new deals every visit."
     end
     if not Ranks.isAtLeast(Ranks.getPlayerRankName(player), deal.RequiredRank) then
         return false, "That deal needs " .. Ranks.getRankById(deal.RequiredRank).Name .. "."
@@ -276,7 +276,7 @@ local function buy(player, dealId)
         return false, "You can't hold " .. deal.Count .. " more of that egg."
     end
     if deal.Kind == "Pet" and PetInventory.isFull(player) then
-        return false, "Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets). Fuse or sell your spares."
+        return false, "Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets). Fuse or sell your extra pets."
     end
     if not Wallet.spend(player, deal.Price, "Merchant", deal.Id) then
         return false, "You need " .. NumberFormat.compact(deal.Price) .. " Spirit Stones."
@@ -299,7 +299,7 @@ local function buy(player, dealId)
     else
         if not PetInventory.grantPet(player, deal.ItemId) then
             Wallet.add(player, deal.Price, "MerchantRefund", deal.Id)
-            return false, "Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets). Fuse or sell your spares."
+            return false, "Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets). Fuse or sell your extra pets."
         end
         PetInventory.publish(player)
     end

@@ -504,8 +504,8 @@ function UiKit.button(props)
     return button
 end
 
--- A round on-screen button for touch players (Strike, Dash ...), in the interface's colours.
-function UiKit.touchButton(button, text)
+-- A round on-screen button for touch players (Strike, Dash ...), in the interface's colours: its word, or a picture (image)
+function UiKit.touchButton(button, text, image)
     button.BackgroundColor3 = C.Panel
     button.BackgroundTransparency = 0.12
     button.BorderSizePixel = 0
@@ -522,6 +522,17 @@ function UiKit.touchButton(button, text)
     size.MinTextSize = 10
     size.Parent = button
     UiKit.padding(button, 8, 8)
+    if image then
+        button.Text = ""
+        local picture = Instance.new("ImageLabel")
+        picture.Name = "Icon"
+        picture.BackgroundTransparency = 1
+        picture.Image = image
+        picture.AnchorPoint = Vector2.new(0.5, 0.5)
+        picture.Position = UDim2.fromScale(0.5, 0.5)
+        picture.Size = UDim2.fromScale(1, 1) -- (inside the padding)
+        picture.Parent = button
+    end
 end
 
 local KEYCAP_SIZE = Vector2.new(24, 22)

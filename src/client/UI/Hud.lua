@@ -4,9 +4,9 @@
 --   Rail      the menu down the left: Shop, Pets, Codex, Robes, Quests, Titles, Settings (on a phone, icons in a row under the profile)
 --   Currency  top centre, in the row beside Roblox's own buttons: Qi, Spirit Stones, Relics, sharing one slim strip
 --   TopRight  top right, in that row: small round buttons (Rewards)
---   Quest     right, under them: the current quest (QuestController)
+--   Quest     right, under them: the current quest (QuestController), the air leaps under it (QinggongController)
 --   Banner    top centre, under the currencies: the guardian's bar and messages (Toast)
---   Dock      bottom centre, bottom up: Cultivate, the breakthrough, the Qinggong strip
+--   Dock      bottom centre, bottom up: the inventory bar (the weapon's slot), what rises over it (the breakthrough ...)
 -- The touch actions stand beside Roblox's jump button, bottom right (TouchActions). Roblox's chat stays where Roblox
 -- puts it, at the top. Windows (the pets list, the altar, the shops): Hud.window, one open at a time.
 -- Each region scales with the screen (HudScale, HudMetrics), and text stays readable at any scale. Hud.isCompact() is true on a
@@ -403,7 +403,7 @@ end
 -- props: Name, Title, Size (Vector2), OnClose (function); Side = true keeps the AnchorPoint and Position given (the
 -- Hatching Altar's, which stands beside the altar it belongs to). Every other window opens in the same place: the middle
 -- of the room beside the left column (the profile and the menu), or of the screen on a phone.
--- While one is open the quest panel and the Cultivation dock step aside, so nothing shows through or round it, and the
+-- While one is open the quest panel and the inventory bar step aside, so nothing shows through or round it, and the
 -- menu button that opened it (win.link(button)) stays lit.
 -- Returns { Frame, Body, open(), close(), isOpen(), setTitle(text), link(button) }.
 local windows = {}
@@ -621,122 +621,124 @@ function Hud.window(props)
     return win
 end
 
--- ---------- the Cultivation dock ----------
--- The bottom of the screen's main piece (the owner's reference, 2026-11-04): one plate, a cultivator in the
--- lotus in the circle on its left, the air leaps and stamina bar above the Cultivate button. Hud builds the
--- frame; QinggongController fills Top and Bar, TrainingController puts its button in Action.
--- Two sizes, and it follows the screen: the screen's size may not be known yet when this first runs.
--- Height is the plate's: the dock's frame is exactly the plate (the emblem, shorter, centres on it), so the gap over it is
--- the Dock's own gap, like the gaps between the pills over it (the frame was 3 taller than the plate at each end: the gap
--- over the plate read 3 wider than the one between the pills).
-local DOCK_SIZES = {
-    -- (a phone: its button 56 tall, 45 pixels at the phone's scale; it was 38, 30 pixels)
-    [true] = { Width = 330, Height = 102, Emblem = 88, Button = 56, TextSize = 12, Top = 5, Bar = 26, BarHeight = 9, Bottom = -6 },
-    [false] = { Width = 380, Height = 102, Emblem = 100, Button = 48, TextSize = 13, Top = 7, Bar = 28, BarHeight = 13, Bottom = -8 },
-}
-local CONTENT_RIGHT = 10 -- the plate's rows (title, stamina bar, Cultivate) all end this far from its right edge
+-- ---------- the inventory bar ----------
+-- The bottom of the screen's main piece (the owner, 2026-11-16: "remove the cultivation bar and replace it with the box for
+-- inventory weapon"): a row of item slots at the bottom centre, as other Roblox games' hotbars. Each slot is a raised tile with its
+-- number's key in its top left corner and its item's name under it; the item in hand lights the slot (the Active tone) and a small
+-- EQUIPPED mark sits on its foot (on its top edge it covered the key). Slot 1 holds the weapon (CombatController); more slots can be added later, each with its own
+-- number key. Cultivating has no button here: E (or the touch screens' lotus button, TouchActions) starts and stops it.
+--   Hud.Inventory.addSlot(index, opts) -> slot     opts.OnPress (the slot pressed), opts.Name
+--     slot.Button, slot.Holder (where the item's picture goes), slot.setItem(name, picture), slot.setEquipped(on),
+--     slot.setEmpty(word, hint)   no item: a quiet slot with `word` in it and `hint` under it
+local SLOT = 64          -- a slot's side: 51 px at a phone's 0.8, a thumb's 44 and more
+local SLOT_GAP = 10
+local NAME_HEIGHT, NAME_GAP = 15, 9 -- the item's name under its slot (the gap: room for the EQUIPPED mark over the slot's foot)
+local inventory = Instance.new("Frame")
+inventory.Name = "Inventory"
+inventory.BackgroundTransparency = 1
+inventory.AutomaticSize = Enum.AutomaticSize.X
+inventory.Size = UDim2.fromOffset(0, SLOT + NAME_GAP + NAME_HEIGHT)
+inventory.LayoutOrder = 30
+inventory.Parent = Hud.Dock
+UiKit.list(inventory, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, SLOT_GAP), HorizontalAlignment = Enum.HorizontalAlignment.Center })
+Hud.Inventory = {}
 
-local dock = Instance.new("Frame")
-dock.Name = "CultivationDock"
-dock.BackgroundTransparency = 1
-dock.LayoutOrder = 30
-dock.Parent = Hud.Dock
-
-local plate = UiKit.panel({
-    Name = "Plate", Brackets = false, ZIndex = 2, Parent = dock,
-})
-plate.BackgroundTransparency = 0.04
-plate:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 12)
-plate.Glow:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 11)
-UiFx.edgeLight(plate, 9)
-
--- the emblem: a round well of silver (the owner), the figure in deep gold on it, the gold ring round it
-local emblem = Instance.new("Frame")
-emblem.Name = "Emblem"
-emblem.AnchorPoint = Vector2.new(0, 0.5)
-emblem.Position = UDim2.new(0, 0, 0.5, 0)
-emblem.BackgroundTransparency = 1
-emblem.ZIndex = 3
-emblem.Parent = dock
-local well = Instance.new("Frame")
-well.Name = "Well"
-well.AnchorPoint = Vector2.new(0.5, 0.5)
-well.Position = UDim2.fromScale(0.5, 0.5)
-well.Size = UDim2.fromScale(0.8, 0.8)
-well.BackgroundColor3 = Color3.fromRGB(236, 239, 245)
-well.BorderSizePixel = 0
-well.Parent = emblem
-UiKit.corner(well, 999)
-local wellDepth = Instance.new("UIGradient")
-wellDepth.Rotation = 90
-wellDepth.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(176, 180, 190))
-wellDepth.Parent = well
-local emblemIcon = Instance.new("ImageLabel")
-emblemIcon.Name = "Icon"
-emblemIcon.BackgroundTransparency = 1
-emblemIcon.Image = UiTheme.Ornaments.LotusSit -- a cultivator in the lotus (the owner)
-emblemIcon.ImageColor3 = Color3.fromRGB(240, 205, 110) -- the drawing is pale gold: this deepens it, to stand out on silver
-emblemIcon.AnchorPoint = Vector2.new(0.5, 0.5)
-emblemIcon.Position = UDim2.fromScale(0.5, 0.5)
-emblemIcon.Size = UDim2.fromScale(0.68, 0.68)
-emblemIcon.Parent = emblem
-Hud.CultivationEmblemWell = well
-local ring = Instance.new("ImageLabel")
-ring.Name = "Ring"
-ring.BackgroundTransparency = 1
-ring.Image = UiTheme.Ornaments.EmblemRing
-ring.Size = UDim2.fromScale(1, 1)
-ring.Parent = emblem
-
-local top = Instance.new("Frame")
-top.Name = "Top"
-top.BackgroundTransparency = 1
-top.Parent = plate
-local barSlot = Instance.new("Frame")
-barSlot.Name = "BarSlot"
-barSlot.BackgroundTransparency = 1
-barSlot.Parent = plate
-local action = Instance.new("Frame")
-action.Name = "Action"
-action.BackgroundTransparency = 1
-action.AnchorPoint = Vector2.new(0, 1)
-action.Parent = plate
-
-local dockResized = Instance.new("BindableEvent")
-Hud.CultivationDock = { Top = top, Bar = barSlot, Action = action, Emblem = emblemIcon, Ring = ring, Resized = dockResized.Event, Size = nil }
-
--- Where the Cultivate button sits across the dock: its centre's offset from the dock's left edge, and its width. The pills
--- stacked over the dock (the breakthrough, DRAW / SHEATHE) centre on this same line, so the column reads as one; centred on
--- the whole dock they sat over the emblem's side, and the three rows had three different middles (owner's screenshot,
--- 2026-11-15).
--- The plate's rows share this one span too (contentSpan): their left and right ends line up.
-local function contentSpan(size)
-    local plateLeft = math.floor(size.Emblem * 0.45)
-    local contentLeft = size.Emblem - plateLeft + 8
-    return plateLeft, contentLeft, size.Width - plateLeft - contentLeft - CONTENT_RIGHT
+function Hud.Inventory.addSlot(index, opts)
+    opts = opts or {}
+    local holder = Instance.new("Frame")
+    holder.Name = opts.Name or ("Slot" .. index)
+    holder.BackgroundTransparency = 1
+    holder.Size = UDim2.fromOffset(SLOT, SLOT + NAME_GAP + NAME_HEIGHT)
+    holder.LayoutOrder = index
+    holder.Parent = inventory
+    local button = UiKit.button({ Name = "Button", Text = "", Tone = "Tile", Size = UDim2.fromOffset(SLOT, SLOT), Parent = holder })
+    button:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, UiTheme.Radius.Card)
+    button:SetAttribute("EdgeThickness", UiTheme.Stroke.Button)
+    local picture = Instance.new("Frame") -- the item's picture (a ViewportFrame or an image), inset from the tile's edge
+    picture.Name = "Item"
+    picture.BackgroundTransparency = 1
+    picture.AnchorPoint = Vector2.new(0.5, 0.5)
+    picture.Position = UDim2.fromScale(0.5, 0.5)
+    picture.Size = UDim2.new(1, -4, 1, -4)
+    picture.ZIndex = 3
+    picture.Parent = button
+    local empty = UiKit.boldLabel({ -- what an empty slot says inside itself
+        Name = "Empty", TextSize = 11, TextColor3 = UiTheme.Colors.Muted, TextXAlignment = Enum.TextXAlignment.Center, TextWrapped = true,
+        Size = UDim2.fromScale(1, 1), ZIndex = 4, Visible = false, Parent = button,
+    })
+    -- its number's key, in its top left corner (keyboards only: UiKit.keycap hides itself on a touch screen)
+    local key = UiKit.keycap(tostring(index))
+    key.AnchorPoint = Vector2.new(0, 0)
+    key.Position = UDim2.fromOffset(-4, -4)
+    key.Size = UDim2.fromOffset(20, 20)
+    key.TextSize = 12
+    key.ZIndex = 6
+    key.Parent = button
+    local name = UiKit.boldLabel({ -- wider than the slot, centred under it: a hint for an empty slot is a few words
+        Name = "ItemName", TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 1),
+        Position = UDim2.fromScale(0.5, 1), Size = UDim2.new(1, 96, 0, NAME_HEIGHT), TextTruncate = Enum.TextTruncate.AtEnd, Parent = holder,
+    })
+    -- EQUIPPED, on the slot's foot while the item is in hand
+    local mark = UiKit.tag("Equipped", Color3.fromRGB(120, 255, 236))
+    mark.Name = "EquippedMark"
+    mark.AnchorPoint = Vector2.new(0.5, 0.5)
+    mark.Position = UDim2.fromScale(0.5, 1)
+    mark.BackgroundColor3 = Color3.fromRGB(14, 112, 118)
+    mark.BackgroundTransparency = 0
+    mark.TextColor3 = Color3.new(1, 1, 1)
+    mark.ZIndex = 7
+    mark.Visible = false
+    mark.Parent = button
+    local slot = { Button = button, Holder = picture }
+    function slot.setItem(text, item)
+        empty.Visible = false
+        picture:ClearAllChildren()
+        if item then
+            item.AnchorPoint = Vector2.new(0.5, 0.5)
+            item.Position = UDim2.fromScale(0.5, 0.5)
+            item.Size = UDim2.fromScale(1, 1)
+            item.ZIndex = 3
+            item.Parent = picture
+        end
+        name.Text = text or ""
+        name.TextColor3 = UiTheme.Colors.Text
+        button:SetAttribute("Tone", if mark.Visible then "Active" else "Tile")
+    end
+    function slot.setEmpty(word, hint)
+        picture:ClearAllChildren()
+        empty.Text = word or ""
+        empty.Visible = true
+        name.Text = hint or ""
+        name.TextColor3 = UiTheme.Colors.Highlight
+        mark.Visible = false
+        button:SetAttribute("Tone", "Quiet")
+    end
+    function slot.setEquipped(on)
+        mark.Visible = on
+        if not empty.Visible then
+            button:SetAttribute("Tone", if on then "Active" else "Tile")
+        end
+    end
+    if opts.OnPress then
+        button.Activated:Connect(opts.OnPress)
+    end
+    return slot
 end
-local function actionSpan(size)
-    local plateLeft, contentLeft, width = contentSpan(size)
-    return plateLeft + contentLeft + width / 2, width
-end
-function Hud.CultivationDock.actionSpan(size)
-    return actionSpan(size or Hud.CultivationDock.Size)
-end
 
-
--- ---------- the pills over the dock ----------
--- The buttons and labels stacked over the plate (the breakthrough, the station's bonus, DRAW / SHEATHE) are laid out here,
--- all on the Cultivate button's centre line (actionSpan) and at its height, so the column keeps one middle and one size
--- whoever adds to it. Each in its own row, bottom up in their order; but where that column would rise into the menu's row (a
--- phone's short screen: the breakthrough lay over the Settings tile), the buttons share one row instead, their group still
--- on that line (an OwnRow piece keeps its own row).
---   Hud.CultivationDock.addPill(object, order, opts)
---     opts.Width(actionWidth, height)  its natural width (its words and margins), in the HUD's units
---     opts.MatchAction                 alone in its row, at least as wide as Cultivate
---     opts.Height                      a fixed height (a label); a button takes the dock's button height and a pill's shape
---     opts.OwnRow                      never shares a row
---   Hud.CultivationDock.layoutPills()  lays them out again (a controller's words changed size)
+-- ---------- what rises over the inventory bar ----------
+-- The buttons and labels stacked over the bar (the breakthrough, the station's bonus, "cultivating") are laid out here, all on the
+-- bar's centre line (the screen's), so the column keeps one middle whoever adds to it, with one gap between rows. Each in its own
+-- row, bottom up in their order; but where that column would rise into the menu's row (a phone's short screen), the buttons share
+-- one row instead, their group still on that line (an OwnRow piece keeps its own row).
+--   Hud.Inventory.addPill(object, order, opts)
+--     opts.Width(height)   its natural width (its words and margins), in the HUD's units
+--     opts.MinWidth        never narrower than this
+--     opts.Height          a fixed height (a label); a button takes PILL_HEIGHT and a pill's shape
+--     opts.OwnRow          never shares a row
+--   Hud.Inventory.layoutPills()  lays them out again (a controller's words changed size)
 local PILL_GAP = 8 -- the Dock region's own gap
+local PILL_HEIGHT = { [true] = 56, [false] = 48 } -- a button pill: 56 on a phone is 45 pixels at its 0.8
+local PILL_ROOM = 420 -- the column's frame: as wide as its widest row may be
 local pills = {}
 local pillHolder = Instance.new("Frame")
 pillHolder.Name = "Pills"
@@ -745,8 +747,8 @@ pillHolder.LayoutOrder = 20
 pillHolder.Visible = false
 pillHolder.Parent = Hud.Dock
 
--- whether a column of `height` (the HUD's units) over the plate would reach into the menu's row, on the screen as it is
-local function columnMeetsRail(size, height, width)
+-- whether a column of `height` and `width` (the HUD's units) over the bar would reach into the menu's row, on the screen as it is
+local function columnMeetsRail(height, width)
     local rail, room = Hud.Rail, Hud.Dock.Parent
     if not (Hud.Status.Visible and rail.AbsoluteSize.Y > 1 and room:IsA("GuiBase2d")) then
         return false
@@ -754,10 +756,9 @@ local function columnMeetsRail(size, height, width)
     local scale = HudMetrics.scale()
     -- where the column will stand once the Dock is at rest (it may still be arriving): the Dock hangs M over the screen's foot
     local foot = room.AbsolutePosition.Y + room.AbsoluteSize.Y - M
-    local top = foot - (size.Height + PILL_GAP + height) * scale
-    local dockLeft = room.AbsolutePosition.X + room.AbsoluteSize.X / 2 - size.Width * scale / 2
-    local centre = actionSpan(size)
-    local left, right = dockLeft + (centre - width / 2) * scale, dockLeft + (centre + width / 2) * scale
+    local top = foot - (inventory.Size.Y.Offset + PILL_GAP + height) * scale
+    local centre = room.AbsolutePosition.X + room.AbsoluteSize.X / 2
+    local left, right = centre - width / 2 * scale, centre + width / 2 * scale
     -- the menu's place at rest: the Status region's offset from its home is the arrival still under way
     local shift = Hud.Status.AbsolutePosition.X - (room.AbsolutePosition.X + M)
     local railLeft = rail.AbsolutePosition.X - shift
@@ -766,16 +767,12 @@ local function columnMeetsRail(size, height, width)
 end
 
 local function layoutPills()
-    local size = Hud.CultivationDock.Size
-    if not size then
-        return
-    end
-    local centre, actionWidth = actionSpan(size)
+    local buttonHeight = PILL_HEIGHT[compact == true]
     local shown = {}
     for _, pill in pills do
         if pill.object.Visible then
-            pill.h = pill.opts.Height or size.Button
-            pill.natural = pill.opts.Width(actionWidth, pill.h)
+            pill.h = pill.opts.Height or buttonHeight
+            pill.w = math.max(pill.opts.MinWidth or 0, pill.opts.Width(pill.h))
             table.insert(shown, pill)
         end
     end
@@ -786,16 +783,13 @@ local function layoutPills()
     if #shown == 0 then
         return
     end
-    local function widthIn(pill, alone)
-        return if alone and pill.opts.MatchAction then math.max(pill.natural, actionWidth) else pill.natural
-    end
     local function measure(rows)
         local height, widest = -PILL_GAP, 0
         for _, row in rows do
             local rowHeight, rowWidth = 0, -PILL_GAP
             for _, pill in row do
                 rowHeight = math.max(rowHeight, pill.h)
-                rowWidth += widthIn(pill, #row == 1) + PILL_GAP
+                rowWidth += pill.w + PILL_GAP
             end
             height += rowHeight + PILL_GAP
             widest = math.max(widest, rowWidth)
@@ -807,7 +801,7 @@ local function layoutPills()
         table.insert(rows, { pill })
     end
     local height, widest = measure(rows)
-    if #rows > 1 and columnMeetsRail(size, height, widest) then
+    if #rows > 1 and columnMeetsRail(height, widest) then
         local shared, together = {}, {}
         for _, pill in shown do
             if pill.opts.OwnRow then
@@ -822,31 +816,31 @@ local function layoutPills()
         rows = shared
         height = measure(rows)
     end
+    local centre = PILL_ROOM / 2
     local y = 0
     for _, row in rows do
         local rowHeight, rowWidth = 0, -PILL_GAP
         for _, pill in row do
             rowHeight = math.max(rowHeight, pill.h)
-            rowWidth += widthIn(pill, #row == 1) + PILL_GAP
+            rowWidth += pill.w + PILL_GAP
         end
         local x = centre - rowWidth / 2
         for _, pill in row do
-            local width = widthIn(pill, #row == 1)
             local object = pill.object
             object.AnchorPoint = Vector2.new(0.5, 0.5)
-            object.Position = UDim2.fromOffset(x + width / 2, y + rowHeight / 2)
-            object.Size = UDim2.fromOffset(width, pill.h)
+            object.Position = UDim2.fromOffset(x + pill.w / 2, y + rowHeight / 2)
+            object.Size = UDim2.fromOffset(pill.w, pill.h)
             if not pill.opts.Height then
                 UiKit.pillShape(object, pill.h)
             end
-            x += width + PILL_GAP
+            x += pill.w + PILL_GAP
         end
         y += rowHeight + PILL_GAP
     end
-    pillHolder.Size = UDim2.fromOffset(size.Width, height)
+    pillHolder.Size = UDim2.fromOffset(PILL_ROOM, height)
 end
 
-function Hud.CultivationDock.addPill(object, order, opts)
+function Hud.Inventory.addPill(object, order, opts)
     local pill = { object = object, order = order, opts = opts }
     table.insert(pills, pill)
     object.Parent = pillHolder
@@ -859,8 +853,14 @@ function Hud.CultivationDock.addPill(object, order, opts)
     end
     layoutPills()
 end
-Hud.CultivationDock.layoutPills = layoutPills
+Hud.Inventory.layoutPills = layoutPills
+Hud.Inventory.pillHeight = function()
+    return PILL_HEIGHT[compact == true]
+end
 HudMetrics.Changed:Connect(function()
+    task.defer(layoutPills)
+end)
+Hud.CompactChanged:Connect(function()
     task.defer(layoutPills)
 end)
 Hud.Rail:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
@@ -870,26 +870,12 @@ Hud.Status:GetPropertyChangedSignal("Visible"):Connect(function()
     task.defer(layoutPills)
 end)
 
-local function layoutDock(compact)
-    local size = DOCK_SIZES[compact]
-    local plateLeft, contentLeft, contentWidth = contentSpan(size)
-    dock.Size = UDim2.fromOffset(size.Width, size.Height)
-    plate.Position = UDim2.fromOffset(plateLeft, 0)
-    plate.Size = UDim2.new(1, -plateLeft, 1, 0)
-    emblem.Size = UDim2.fromOffset(size.Emblem, size.Emblem)
-    -- the title row, the stamina bar's slot (its end diamond included: QinggongController keeps it inside) and Cultivate: one span
-    top.Position = UDim2.fromOffset(contentLeft, size.Top)
-    top.Size = UDim2.fromOffset(contentWidth, 18)
-    barSlot.Position = UDim2.fromOffset(contentLeft, size.Bar)
-    barSlot.Size = UDim2.fromOffset(contentWidth, size.BarHeight)
-    action.Position = UDim2.new(0, contentLeft, 1, size.Bottom)
-    action.Size = UDim2.fromOffset(contentWidth, size.Button)
-    Hud.CultivationDock.Size = size
-    dockResized:Fire(size, compact)
-    layoutPills()
+-- ---------- the right column's width ----------
+-- The quest panel and the air leaps under it (QinggongController) read as one column: one width, one right edge.
+local RIGHT_COLUMN = { [true] = 236, [false] = 280 }
+function Hud.rightColumnWidth()
+    return RIGHT_COLUMN[compact == true]
 end
-Hud.CompactChanged:Connect(layoutDock)
-layoutDock(Hud.isCompact())
 
 -- ---------- the first moment ----------
 -- The HUD arrives from the screen's edges, once, instead of being there already.

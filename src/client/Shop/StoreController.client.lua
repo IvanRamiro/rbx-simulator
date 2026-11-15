@@ -230,7 +230,7 @@ local function passCard(pass, parent, slot)
     button.Activated:Connect(function()
         if pass.Luck and luckRestricted and not PassRules.owns(player, pass.Id) then
             Sfx.play("Error")
-            message:show(pass.Name .. " isn't available in your region: luck boosts follow Roblox's rules on paid random items.", "Warning")
+            message:show(pass.Name .. " isn't sold where you live: Roblox has rules about paying for random items.", "Warning")
         elseif button.Active and (pass.GamePassId or 0) > 0 and not PassRules.owns(player, pass.Id) then
             Sfx.play("Click")
             if pass.QiTier and pass.QiTier < PassRules.qiTier(player) then
@@ -291,7 +291,7 @@ qiIcon.Size = UDim2.fromOffset(40, 40)
 qiIcon.Parent = qiHeader
 local qiNow = bold({ Name = "Now", Text = "", TextSize = 18, Position = UDim2.fromOffset(62, 8), Size = UDim2.new(1, -74, 0, 24), Parent = qiHeader })
 UiKit.label({ Name = "Rule", Font = "Strong", TextSize = 12, TextColor3 = C.Muted, TextWrapped = true,
-    Text = "Only your highest Qi boost counts, on everything that gives Qi. VIP's +10% adds on top.",
+    Text = "Only your biggest Qi boost counts, on everything that gives Qi. VIP's +10% adds on top.",
     Position = UDim2.fromOffset(62, 32), Size = UDim2.new(1, -74, 0, 28), Parent = qiHeader })
 cardRows(qiTiers, qiPage, 2)
 

@@ -170,7 +170,7 @@ local function renderNav()
             end)
     end
     if #lostBeasts() > 0 then
-        navRow(#CodexRules.Eggs + 1, UiTheme.Icons.Relics, "Lost Lineages", "No egg holds these", nil, page == LOST_PAGE, function()
+        navRow(#CodexRules.Eggs + 1, UiTheme.Icons.Relics, "Lost Beasts", "No egg has these", nil, page == LOST_PAGE, function()
             openPage(LOST_PAGE)
         end)
     end
@@ -354,7 +354,7 @@ local function renderEgg(egg)
 end
 
 local function renderLost()
-    UiKit.boldLabel({ TextSize = 18, Text = "LOST LINEAGES", Size = UDim2.new(1, 0, 0, 20), Parent = content })
+    UiKit.boldLabel({ TextSize = 18, Text = "LOST BEASTS", Size = UDim2.new(1, 0, 0, 20), Parent = content })
     UiKit.label({
         TextSize = 12, TextColor3 = C.Muted, Text = "Beasts no egg holds any more. They don't count toward the Codex's goals.",
         Position = UDim2.fromOffset(0, 21), Size = UDim2.new(1, 0, 0, 16), Parent = content,
@@ -476,7 +476,7 @@ local function renderEntry(petId)
                 end
             end)
         else
-            line({ TextSize = 13, TextColor3 = C.Muted, Text = "Unknown until discovered." })
+            line({ TextSize = 13, TextColor3 = C.Muted, Text = "Hatch it to find out." })
         end
     end
 end

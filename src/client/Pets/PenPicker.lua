@@ -51,7 +51,7 @@ function PenPicker.showPasture()
     local config = pastureConfig()
     local frame = config and config:GetAttribute("Frame")
     if typeof(frame) ~= "CFrame" then
-        message:show("Every pasture is taken in this server: your pen is kept, and appears when one frees.", "Info")
+        message:show("All the pens in this server are taken. Your pen is saved, and it will show up when one is free.", "Info")
         return
     end
     if not marker then
@@ -253,7 +253,7 @@ function render()
     end
     heading("IN YOUR PEN  (" .. count .. " / " .. capacity .. ")", nextOrder())
     if count == 0 then
-        UiKit.label({ Name = "Empty", Font = "Strong", TextSize = 13, Text = "Your pen is empty: add a beast below and it will roam there for everyone to see.",
+        UiKit.label({ Name = "Empty", Font = "Strong", TextSize = 13, Text = "Your pen is empty. Add a beast below and it will walk around there for everyone to see.",
             TextWrapped = true, TextColor3 = C.Muted, Size = UDim2.new(1, 0, 0, 36), LayoutOrder = nextOrder(), Parent = list })
     end
     for _, instanceId in penIds do

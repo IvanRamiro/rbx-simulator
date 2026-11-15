@@ -2,8 +2,7 @@
 too much"), original drawings on a cloud-scroll motif:
 
     Corner.png     a window's top-left corner: two tapering arms and a curl of cloud; turned for the others
-    EmblemRing.png the gold ring round the Cultivation dock's emblem
-    LotusSit.png   the emblem itself: a cultivator seated in the lotus
+    LotusSit.png   a cultivator seated in the lotus: the touch screens' meditate button
 
     python3 tools/ui/draw_frame.py    # needs numpy and Pillow; writes assets/ui/frame/
 """
@@ -83,34 +82,8 @@ def corner():
     return finish(hi, "Corner.png", 128)
 
 
-def emblem_ring():
-    """The gold ring round the Cultivation dock's emblem: a band, a fine inner line and eight small points."""
-    n = 256 * SS
-    hi = Image.new("L", (n, n), 0)
-    d = ImageDraw.Draw(hi)
-    c = n / 2
-
-    def circle(r, value):
-        d.ellipse((c - r * n, c - r * n, c + r * n, c + r * n), fill=value)
-
-    circle(0.445, 255)
-    circle(0.395, 0)
-    circle(0.372, 255)
-    circle(0.360, 0)
-    for k in range(8):
-        a = math.radians(k * 45 - 90)
-        size = 0.062 if k % 2 == 0 else 0.04
-        x, y = 0.5 + math.cos(a) * 0.452, 0.5 + math.sin(a) * 0.452
-        tangent = (-math.sin(a), math.cos(a))
-        radial = (math.cos(a), math.sin(a))
-        pts = [(x + radial[0] * size * 1.0, y + radial[1] * size * 1.0), (x + tangent[0] * size * 0.55, y + tangent[1] * size * 0.55),
-               (x - radial[0] * size * 0.8, y - radial[1] * size * 0.8), (x - tangent[0] * size * 0.55, y - tangent[1] * size * 0.55)]
-        d.polygon([(px * n, py * n) for px, py in pts], fill=255)
-    return finish(hi, "EmblemRing.png", 256)
-
-
 def lotus_sit():
-    """The Cultivation dock's emblem: a cultivator seated in the lotus, hands resting in the lap, in pale gold
+    """The meditate button's picture: a cultivator seated in the lotus, hands resting in the lap, in pale gold
     with a soft glow. The gaps between arm and body keep the pose readable at a small size."""
     n = 256 * SS
     hi = Image.new("L", (n, n), 0)
@@ -160,5 +133,5 @@ def lotus_sit():
 
 
 if __name__ == "__main__":
-    corner(), emblem_ring(), lotus_sit()
+    corner(), lotus_sit()
     print("written", os.path.abspath(OUT))

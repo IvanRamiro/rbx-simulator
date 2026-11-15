@@ -171,9 +171,9 @@ function render()
         end
     end
     local eggs = heldEggs()
-    hint.Text = if #eggs == 0 then "" elseif resting then "The egg rests in the cradle..." else "Lay an egg in the cradle to hatch it. The odds below are exact."
+    hint.Text = if #eggs == 0 then "" elseif resting then "Your egg is hatching..." else "Press HATCH to hatch an egg. The odds below are exact."
     if #eggs == 0 then
-        UiKit.empty(list, "No eggs yet.\nWeaken a guardian, take an egg from its stands, and carry it home.")
+        UiKit.empty(list, "No eggs yet.\nHit a guardian until it is weak, take an egg from its stands, and carry it home.")
         return
     end
     -- the first egg opens by itself, so the odds are seen without looking for them; false: the player closed it

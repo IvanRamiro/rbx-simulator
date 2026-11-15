@@ -115,7 +115,8 @@ function actions.Buy(player, weaponId)
         return false, "Visit the Blacksmith to buy weapons."
     end
     if weapon.Tier > Shop.playerRealmIndex(player) then
-        return false, weapon.Name .. " needs the " .. weapon.Realm .. "."
+        local realm = weapon.Realm .. (if string.find(weapon.Realm, "Realm") then "" else " realm")
+        return false, "Reach the " .. realm .. " to buy the " .. weapon.Name .. "."
     end
     if WeaponInventory.owns(player, weapon.Id) then
         return false, "You already own the " .. weapon.Name .. "."
@@ -140,14 +141,14 @@ function actions.Equip(player, instanceId)
         return false, "That isn't yours."
     end
     local record = instanceId and WeaponInventory.get(player, instanceId)
-    return true, if record then "Wielding " .. nameOf(record) .. "." else "Fighting with the Qi Palm."
+    return true, if record then "Equipped " .. nameOf(record) .. "." else "No weapon: you fight with the Qi Palm."
 end
 
 local forging = {} -- [player] = true while their name is being checked (it yields)
 
 function actions.Forge(player, instanceId, spec)
     if forging[player] then
-        return false, "The forge is already at work."
+        return false, "The forge is busy. Wait a moment."
     end
     if not nearShop(player, "Blacksmith") then
         return false, "Visit the Blacksmith's forge."
@@ -169,7 +170,7 @@ function actions.Forge(player, instanceId, spec)
         return false, "You need " .. price .. " Spirit Stones."
     end
     if os.clock() - (lastForge[player] or -FORGE_COOLDOWN) < FORGE_COOLDOWN then
-        return false, "The forge is still cooling. Try again in a moment."
+        return false, "The forge is busy. Try again in a moment."
     end
     lastForge[player] = os.clock()
     forging[player] = true
@@ -243,7 +244,7 @@ function actions.SellWeapon(player, instanceId)
     end
     local record = WeaponInventory.take(player, instanceId)
     if not record then
-        return false, "Put the weapon down before selling it."
+        return false, "Unequip that weapon before selling it."
     end
     local value = Shop.weaponRefund(record.WeaponId, record.Element)
     Wallet.add(player, value, "SellWeapon", record.WeaponId)

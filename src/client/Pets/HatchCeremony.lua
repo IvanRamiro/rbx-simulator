@@ -27,6 +27,7 @@ local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local Client = script.Parent.Parent
 local UI = Client:WaitForChild("UI")
 local Portraits = require(UI:WaitForChild("Portraits"))
+local UiFx = require(UI:WaitForChild("UiFx"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local applyHudScale = require(UI:WaitForChild("HudScale"))
@@ -713,7 +714,7 @@ local function play(result)
             tag(size, sizeInfo.Color, 2)
         end
         UiKit.label({ Name = "Verdict", Font = "Strong", TextSize = 14, TextXAlignment = Enum.TextXAlignment.Center,
-            Text = if result.IsNew then "NEW! Added to your Codex" else "Duplicate: fuse it or sell it",
+            Text = if result.IsNew then "NEW! Added to your Codex" else "You have this one: fuse it or sell it",
             TextColor3 = if result.IsNew then C.Highlight else C.Muted, AnchorPoint = Vector2.new(0.5, 0),
             Position = UDim2.new(0.5, 0, 0, 290), Size = UDim2.new(1, -20, 0, 20), ZIndex = 15, Parent = card })
         if tier.Banner then -- the grand rarities announce themselves
@@ -844,10 +845,15 @@ local function play(result)
             tween(bar, math.max(seconds, 0.01), { Size = UDim2.fromScale(1, 0) })
         end
         tween(grade, math.max(seconds, 0.01), { Saturation = 0, Brightness = 0, Contrast = 0 })
+        -- the reveal card folds away into a line of its rarity's light (the owner, 2026-11-16: "a collapse effect"); the rest goes
+        local revealCard = if seconds > 0 then gui:FindFirstChild("Reveal") else nil
         for _, child in gui:GetChildren() do
-            if child:IsA("GuiObject") and child.Name ~= "" and not table.find(bars, child) then
+            if child:IsA("GuiObject") and child.Name ~= "" and not table.find(bars, child) and child ~= revealCard then
                 child.Visible = false
             end
+        end
+        if revealCard then
+            UiFx.collapse(revealCard, math.min(0.34, seconds), color)
         end
         local cameraTween = if focus and seconds > 0
             then tween(camera, seconds, { CFrame = saved.CFrame, FieldOfView = saved.FieldOfView })

@@ -23,7 +23,7 @@ local SWAY_DISTANCE = if require(script.Parent.Parent:WaitForChild("Quality")).L
 local COLLECT_RETRY = 1 -- seconds between looks for a robe's pieces that haven't all arrived
 local UP = Vector3.new(0, 1, 0)
 
--- ---------- the Robes button (on the HUD's rail, under Pets; a gold "On" while worn) ----------
+-- ---------- the Robes button (on the HUD's rail, under Pets; a gold "ON" while worn) ----------
 local button, setRobesBadge = Hud.railButton("RobesButton", UiTheme.Icons.Robes, "Robes", 3)
 button.Visible = false
 
@@ -36,7 +36,7 @@ local function refreshButton()
     local outfits = owned()
     local wearing = player:GetAttribute("OutfitId")
     button.Visible = #outfits > 0
-    setRobesBadge(if wearing then "On" else nil, "Highlight")
+    setRobesBadge(if wearing then "ON" else nil, "Highlight")
 end
 
 button.Activated:Connect(function()
@@ -49,6 +49,12 @@ end)
 player:GetAttributeChangedSignal("OwnedOutfits"):Connect(refreshButton)
 player:GetAttributeChangedSignal("OutfitId"):Connect(refreshButton)
 refreshButton()
+-- at join the saved robe and the owned list can arrive in either order, and the rail may still be arriving: read them again
+-- once the HUD has settled, and after each respawn (the robe is put back on the new character), so ON is never left off
+task.delay(2, refreshButton)
+player.CharacterAdded:Connect(function()
+    task.delay(1, refreshButton)
+end)
 
 -- ---------- sway ----------
 -- the skirt's chains: their outward direction in the LowerTorso's space and the thigh that pushes them

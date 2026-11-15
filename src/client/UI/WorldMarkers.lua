@@ -127,7 +127,7 @@ local function placeMarkers()
                 end
             end
         end
-        -- and above the Cultivation dock: at the bottom of the screen, a marker went behind it (only "9m" showed)
+        -- and above the inventory bar and what rises over it: at the bottom of the screen, a marker went behind the old dock
         local dock = Hud.Dock
         local bottom = view.Y - margin
         if dock.Visible and dock.AbsoluteSize.Y > 1 then

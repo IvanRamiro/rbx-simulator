@@ -108,9 +108,9 @@ local GameConfig = {
             Void = { DisplayName = "Void", Color = Color3.fromRGB(110, 40, 255), Core = Color3.fromRGB(205, 165, 255),
                 Source = "Origin Abyss's relics" },
             Earth = { DisplayName = "Earth", Color = Color3.fromRGB(205, 130, 35), Core = Color3.fromRGB(255, 220, 150),
-                Source = "the Awakened Stone Lion: secure its egg" },
+                Source = "the Awakened Stone Lion's egg and bring it home" },
             Wind = { DisplayName = "Wind", Color = Color3.fromRGB(30, 230, 190), Core = Color3.fromRGB(200, 255, 240),
-                Source = "the Bamboo Mantis Sage: secure its egg" },
+                Source = "the Bamboo Mantis Sage's egg and bring it home" },
         },
     },
 
@@ -205,7 +205,7 @@ local GameConfig = {
             ChaseSpeed = 21,       -- below a beginner's run (22): dashes and its pounces decide it
             TurnSpeed = 140,       -- degrees per second
             Egg = { CarriedHeight = 2.6 }, -- its height, carried in the thief's arms
-            WeakenedHint = "falters: take an egg from the stands behind it and carry it home to Yggdrasil!",
+            WeakenedHint = "is weak! Take an egg from the stands behind it and carry it home to Yggdrasil!",
             Stagger = 0.8,         -- seconds a knocked-back player is off their feet (softer on the first two guardians: a beginner mustn't spend the fight walking back)
             KnockGrace = 4,        -- seconds after a knock in which its blows can't knock the same player again (default 0.6)
             WeakenedSlowdown = 1.7, -- attack cooldown multiplier while weakened
@@ -237,7 +237,7 @@ local GameConfig = {
             TurnSpeed = 160,
             TurnsToFace = true,    -- awake at its lair, it turns to face whoever it watches
             Egg = { CarriedHeight = 2.6 },
-            WeakenedHint = "lowers its blades: take an egg from the stands behind it and carry it home to Yggdrasil!",
+            WeakenedHint = "drops its blades! Take an egg from the stands behind it and carry it home to Yggdrasil!",
             Stagger = 0.8,
             KnockGrace = 3.5,
             WeakenedSlowdown = 1.7,
@@ -271,7 +271,7 @@ local GameConfig = {
             TurnSpeed = 75,        -- a ponderous turn: those who circle it meet its quake
             TurnsToFace = true,
             Egg = { CarriedHeight = 2.6 },
-            WeakenedHint = "sinks low: take an egg from the stands behind it and carry it home to Yggdrasil!",
+            WeakenedHint = "is worn out! Take an egg from the stands behind it and carry it home to Yggdrasil!",
             Stagger = 1.2,
             WeakenedSlowdown = 1.7,
             Attacks = {
@@ -306,7 +306,7 @@ local GameConfig = {
             TurnSpeed = 180,
             TurnsToFace = true,
             Egg = { CarriedHeight = 2.6 },
-            WeakenedHint = "staggers: take an egg from the stands behind it and carry it home to Yggdrasil!",
+            WeakenedHint = "is weak! Take an egg from the stands behind it and carry it home to Yggdrasil!",
             Stagger = 1.1,
             WeakenedSlowdown = 1.7,
             Attacks = {
@@ -340,7 +340,7 @@ local GameConfig = {
             TurnSpeed = 110,
             TurnsToFace = true,
             Egg = { CarriedHeight = 2.6 },
-            WeakenedHint = "sinks to one knee: take an egg from the stands behind him and carry it home to Yggdrasil!",
+            WeakenedHint = "falls to one knee! Take an egg from the stands behind him and carry it home to Yggdrasil!",
             Stagger = 1.2,
             WeakenedSlowdown = 1.6,
             Attacks = {
@@ -579,58 +579,58 @@ local GameConfig = {
     -- from before the quests skip them all (PlayerData migration 8), and a player can too.
     Quests = {
         { Id = "Cultivate", Kind = "Qi", Goal = 100, Reward = 20, Title = "Gather Qi",
-            Text = "Sit in meditation: press E, or tap CULTIVATE. Gather 100 Qi." },
-        { Id = "Companion", Kind = "Equip", Reward = 20, Title = "Your First Companion",
-            Text = "Open Pets and equip your Aqua Wisp. Equipped pets add to the Qi you gather." },
+            Text = "Press E to cultivate (on a phone, tap the lotus button). Gather 100 Qi." },
+        { Id = "Companion", Kind = "Equip", Reward = 20, Title = "Your First Pet",
+            Text = "Open Pets and equip your Aqua Wisp. Equipped pets help you gather more Qi." },
         { Id = "Breakthrough", Kind = "Rank", Goal = "QiGatherer", Reward = 40, Title = "Break Through",
             Text = "Gather 600 Qi, then press BREAK THROUGH to become a Qi Gatherer." },
         { Id = "Leap", Kind = "Leap", Reward = 20, Title = "Walk on Air",
-            Text = "Jump, then jump again in mid-air: an air leap. Hold jump while falling to glide." },
+            Text = "Jump, then jump again while in the air. Hold jump while falling to glide." },
         { Id = "Guardian", Kind = "GuardianHit", Reward = 30, Title = "The Stone Lion",
             Way = { "the Stone Lion", -480, 24 },
-            Text = "Cross the west bridge to the Beginner Isle, find the Awakened Stone Lion and strike it (click, or tap Strike)." },
+            Text = "Cross the west bridge to Beginner Isle. Find the Awakened Stone Lion and hit it (click, or tap Strike)." },
         { Id = "Egg", Kind = "TakeEgg", Reward = 60, Title = "Steal an Egg",
             Way = { "the Stone Lion", -480, 24 },
-            Text = "Weaken a guardian until it falters, then take an egg from its stands. It will chase you!" },
+            Text = "Hit a guardian until it is weak, then take an egg from its stands. It will chase you!" },
         { Id = "Hatch", Kind = "Hatch", Reward = 80, Title = "Hatch It",
             Way = { "the Hatching Sanctum", 0, -178 },
             Text = "Carry the egg home across the bridge to Yggdrasil, then hatch it at the Hatching Sanctum." },
         -- the path on, island by island. Append only: a save holds its step number
-        { Id = "Weapon", Kind = "BuyWeapon", Reward = 40, Title = "A Weapon of Your Own",
+        { Id = "Weapon", Kind = "BuyWeapon", Reward = 40, Title = "Get a Weapon",
             Way = { "the Blacksmith", 233, -172 },
             Text = "Visit the Blacksmith on Yggdrasil and buy a spear or a better sword." },
         { Id = "Root", Kind = "Relic", Goal = "IslandRoot", Reward = 40, Title = "The Root of the Island",
             Way = { "the great root", 1, 238, Then = { "the relic", 88.5, 127, 153.3 } }, -- Then: where the world marker points once the player has reached the Way (QuestController)
-            Text = "Climb down the great root of the World Tree and attune the relic at its foot." },
+            Text = "Climb down the great root of the World Tree and collect the relic at the bottom." },
         { Id = "JadeBridge", Kind = "Visit", Goal = "JadeGrove", Reward = 40, Title = "The Jade Bridge",
             Way = { "the Jade bridge", -160, -186 },
-            Text = "Follow the jade waystone across the bridge to Jade Grove." },
+            Text = "Follow the marker across the bridge to Jade Grove." },
         { Id = "Mantis", Kind = "Secure", Goal = "MantisSage", Reward = 200, Title = "The Bamboo Mantis Sage",
             Way = { "the Mantis Sage", -384, -448 },
-            Text = "Weaken the Sage, steal an egg and carry it home to Yggdrasil. A secured egg pays a burst of Qi." },
+            Text = "Beat the Sage until it is weak, steal an egg and carry it home. Each egg you bring home gives lots of Qi." },
         { Id = "Awakener", Kind = "Rank", Goal = "QiAwakener", Reward = 60, Title = "The Ember Gate",
-            Text = "Break through to Qi Awakener: the bridge to Ember Peak opens." },
+            Text = "Reach Qi Awakener to open the bridge to Ember Peak." },
         { Id = "EmberBridge", Kind = "Visit", Goal = "EmberPeak", Reward = 60, Title = "Into the Fire",
             Way = { "the Ember bridge", -44, -241 },
-            Text = "Cross the basalt bridge to Ember Peak. Keep off the lava." },
+            Text = "Cross the rock bridge to Ember Peak. Stay off the lava." },
         { Id = "Xuanwu", Kind = "Secure", Goal = "EmberXuanwu", Reward = 400, Title = "The Ember Xuanwu",
             Way = { "the Ember Xuanwu", -128, -693 },
-            Text = "Steal an egg from the Ember Xuanwu and carry it home. Jump its quake rings." },
+            Text = "Steal an egg from the Ember Xuanwu and carry it home. Jump over its shock rings." },
         { Id = "Forge", Kind = "Forge", Reward = 100, Title = "Forge a Weapon",
             Way = { "the Blacksmith", 233, -172 },
-            Text = "Secured eggs and relics unlock elements. Forge and name a weapon at the Blacksmith." },
+            Text = "Eggs you bring home and relics unlock elements. At the Blacksmith, give a weapon an element and a name." },
         { Id = "Flight", Kind = "Rank", Goal = "FoundationInitiate", Reward = 150, Title = "Sword Flight",
-            Text = "Break through to Foundation Initiate: you can ride your sword through the air." },
+            Text = "Reach Foundation Initiate to fly through the air on your sword." },
         { Id = "MoonGate", Kind = "Rank", Goal = "SoulAwakening", Reward = 800, Title = "The Moonlit Gate",
-            Text = "Cultivate, and secure eggs for bursts of Qi. At Soul Awakening the bridge to Moonlit Isle opens." },
+            Text = "Cultivate, and bring eggs home for lots of Qi. At Soul Awakening, the bridge to Moonlit Isle opens." },
         { Id = "MoonBridge", Kind = "Visit", Goal = "MoonlitIsle", Reward = 300, Title = "The Moonlit Isle",
             Way = { "the Moonlit bridge", 57, -238 },
-            Text = "Cross the moonstone bridge to Moonlit Isle." },
+            Text = "Cross the bridge to Moonlit Isle." },
         { Id = "Tiangou", Kind = "Secure", Goal = "Tiangou", Reward = 1500, Title = "Tiangou the Moon-Eater",
             Way = { "Tiangou", 192, -790 },
-            Text = "Steal an egg from Tiangou and carry it home. Its leaps are long and high." },
+            Text = "Steal an egg from Tiangou and carry it home. It jumps far and high." },
         { Id = "AbyssGate", Kind = "Rank", Goal = "DivineInitiate", Reward = 6000, Title = "The Gate of Descent",
-            Text = "Reach Divine Initiate: the bridge to Origin Abyss opens." },
+            Text = "Reach Divine Initiate to open the bridge to Origin Abyss." },
         { Id = "AbyssBridge", Kind = "Visit", Goal = "OriginAbyss", Reward = 2000, Title = "Origin Abyss",
             Way = { "the Abyss bridge", 140, -201 },
             Text = "Cross the cracked bridge into Origin Abyss." },
@@ -638,7 +638,7 @@ local GameConfig = {
             Way = { "Pangu", 596, -856 },
             Text = "Steal an egg from Pangu and carry it all the way home." },
         { Id = "Summit", Kind = "Rank", Goal = "EternalOrigin", Reward = 50000, Title = "Eternal Origin",
-            Text = "The last rank of all. Nothing lies above it." },
+            Text = "Reach the highest rank in the game." },
     },
 
     -- reasons to come back (server/Rewards/RewardService, shared/RewardRules). Daily: each streak day's
@@ -658,7 +658,7 @@ local GameConfig = {
     },
 
     -- each player's own view and sound (server/Data/Settings, client/UI/SettingsController)
-    Settings = { Music = 1, Sound = 1, ReducedEffects = false, StatusMinimized = false, ShowQuest = true },
+    Settings = { Music = 1, Sound = 1, ReducedEffects = false, StatusMinimized = false, ShowQuest = true, TutorialDone = false },
 
     MaxOwnedPets = 50,
 
@@ -941,7 +941,7 @@ local GameConfig = {
     -- struck through only while the live price is lower, so it never claims a saving that isn't real.
     GamePasses = {
         { Id = "Luck", Name = "Lucky Cultivator", GamePassId = 2082626429, Price = 99, Headline = "2x LUCK!", WasPrice = 149, Icon = "rbxassetid://129170449479441",
-            Text = "2x luck: each egg's rarer beasts hatch twice as often (see ODDS).", Luck = 2 }, -- (shortened: the longer text was cut off in its card, UI audit 2026-11-11)
+            Text = "2x luck: rare beasts hatch twice as often (see ODDS).", Luck = 2 }, -- (shortened: the longer text was cut off in its card, UI audit 2026-11-11)
         { Id = "PetSlots", Name = "+3 Pet Slots", GamePassId = 2081480484, Price = 199, Headline = "+3 BEASTS!", WasPrice = 249, Icon = "rbxassetid://90769324952400",
             Text = "Equip 6 beasts at once instead of 3.", ExtraSlots = 3 },
         { Id = "VIP", Name = "VIP", GamePassId = 2083352447, Price = 249, Headline = "VIP PERKS!", WasPrice = 299, Icon = "rbxassetid://97387314672491",

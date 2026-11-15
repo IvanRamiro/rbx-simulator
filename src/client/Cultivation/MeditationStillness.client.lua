@@ -63,8 +63,8 @@ local function nudge()
     hintedAt = os.clock()
     local key = GameConfig.CultivationKeybind.Name
     hint:show(if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-        then "You're meditating: tap CULTIVATE to stand up first."
-        else "You're meditating: press " .. key .. " (or click CULTIVATE) to stand up first.", "Info")
+        then "You're cultivating: tap the lotus button to stand up first."
+        else "You're cultivating: press " .. key .. " to stand up first.", "Info")
 end
 UserInputService.JumpRequest:Connect(nudge)
 -- walking: the move keys and the thumbstick still set MoveDirection while WalkSpeed holds the body still

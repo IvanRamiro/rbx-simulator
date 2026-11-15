@@ -281,7 +281,7 @@ function Guardian:setEggState(state)
     end
     if egg.prompt then
         egg.prompt.Enabled = state == "Dropped"
-        egg.prompt.ActionText = "Recover"
+        egg.prompt.ActionText = "Pick up"
     end
 end
 

@@ -224,7 +224,7 @@ RemoteEvents.PenEvent.OnServerEvent:Connect(function(player, action, argument)
             local pet = PetInventory.get(player, argument)
             local definition = pet and GameConfig.Pets[pet.PetId]
             local name = if definition then definition.DisplayName else "Your pet"
-            reason = if action == "Add" then name .. " is roaming in your pen." else name .. " left the pen."
+            reason = if action == "Add" then name .. " is now in your pen." else name .. " left the pen."
         else
             reason = REFUSALS[reason] or "That can't be done."
         end

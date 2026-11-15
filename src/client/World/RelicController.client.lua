@@ -77,7 +77,7 @@ local function updateRelic(model, found, rankName)
     if prompt then
         prompt.Enabled = not isFound
         prompt.ActionText = if Ranks.isAtLeast(rankName, relic.RequiredRank)
-            then "Attune (+" .. relic.QiReward .. " Qi)"
+            then "Collect (+" .. relic.QiReward .. " Qi)"
             else "Needs " .. Ranks.getRankById(relic.RequiredRank).Name
     end
 end
@@ -121,13 +121,13 @@ RemoteEvents.RelicResultEvent.OnClientEvent:Connect(function(result)
 
     if result.Reason == "Locked" then
         Sfx.play("Error")
-        message:show(relic.DisplayName .. " needs " .. tostring(result.RequiredRank) .. " to attune.", "Warning")
+        message:show("You need " .. tostring(result.RequiredRank) .. " to collect the " .. relic.DisplayName .. ".", "Warning")
     else
         local stones = if typeof(result.Stones) == "number" and result.Stones > 0 then ", +" .. result.Stones .. " Spirit Stones" else ""
         local info = typeof(result.Element) == "string" and GameConfig.Forge.Elements[result.Element]
         local element = if info then ". " .. info.DisplayName .. " unlocked at the Blacksmith's forge" else ""
         Sfx.play("Attune")
-        message:show("Attuned to " .. relic.DisplayName .. "! +" .. tostring(result.QiReward) .. " Qi" .. stones .. element, "Reward")
+        message:show("You collected the " .. relic.DisplayName .. "! +" .. tostring(result.QiReward) .. " Qi" .. stones .. element, "Reward")
     end
 end)
 

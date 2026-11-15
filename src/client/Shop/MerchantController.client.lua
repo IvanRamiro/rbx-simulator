@@ -159,7 +159,7 @@ local function dealCard(order, deal)
         Text = if deal.Bought then "Bought this visit"
             elseif deal.Locked then deal.Locked
             elseif deal.FullPrice then "Marketplace: " .. NumberFormat.compact(deal.FullPrice) .. " Stones"
-            else "Sold to you directly, no hatching",
+            else "Yours right away, no hatching needed",
         Position = UDim2.fromOffset(76, 47), Size = UDim2.new(0.5, -76, 0, 14), Parent = card,
     })
     local affordable = stones() >= deal.Price
@@ -184,7 +184,7 @@ local function dealCard(order, deal)
         TextSize = 15, Text = NumberFormat.compact(deal.Price), TextColor3 = if dim then C.Muted else C.AccentBright,
         AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 20), LayoutOrder = 2, Parent = tag,
     })
-    local why = if deal.Bought then "SOLD OUT" elseif deal.Locked then "LOCKED" elseif not affordable then "TOO DEAR" else nil
+    local why = if deal.Bought then "SOLD OUT" elseif deal.Locked then "LOCKED" elseif not affordable then "NOT ENOUGH" else nil
     local buy = UiKit.button({
         TextSize = 14, Text = why or "BUY", Tone = if why then "Quiet" else "Buy", Active = why == nil,
         Size = UDim2.new(0.3, -12, 0, BUTTON), Position = UDim2.new(0.7, 0, 0.5, -BUTTON / 2), Parent = card,
@@ -226,7 +226,7 @@ function render()
     end
     updateCountdown()
     if #state.Deals == 0 then
-        UiKit.empty(list, "Nothing for sale.\nHe brings new wares every visit.").LayoutOrder = 1
+        UiKit.empty(list, "Nothing for sale.\nHe brings new deals every visit.").LayoutOrder = 1
     end
     for index, deal in state.Deals do
         dealCard(index, deal)

@@ -316,9 +316,9 @@ local function makePanel(data)
         props.Parent = inner
         return UiKit.label(props)
     end
-    line(1, { Name = "Heading", Font = "Header", TextColor3 = C.Highlight, Text = "HEAVENLY TRIBULATION" })
+    line(1, { Name = "Heading", Font = "Header", TextColor3 = C.Highlight, Text = "LIGHTNING TRIAL" })
     line(2, { Name = "Realm", Font = "Strong", TextColor3 = C.Text, Text = "Into the " .. (realmNames[data.Realm] or "next realm") })
-    local left = line(3, { Name = "Left", TextColor3 = C.Muted, Text = "Keep out of the rings of light" })
+    local left = line(3, { Name = "Left", TextColor3 = C.Muted, Text = "Stay out of the rings of light" })
     local pips = {}
     local reach = PIP * math.sqrt(2) / 2 -- half a diamond's width, turned 45 degrees
     for k = 1, data.Lives do
@@ -337,7 +337,7 @@ local function makePanel(data)
     return {
         frame = frame,
         setLeft = function(n)
-            left.Text = if n > 0 then n .. " bolts to come: keep out of the rings" else "The last bolt falls"
+            left.Text = if n > 0 then n .. " bolts left: stay out of the rings" else "Last bolt!"
         end,
         setLives = function(n)
             for k, pip in pips do
@@ -364,7 +364,7 @@ RemoteEvents.TribulationEvent.OnClientEvent:Connect(function(kind, owner, data)
                 panel.frame:Destroy()
             end
             panel = makePanel(data)
-            notice:show("The heavens test you: survive the lightning.", "Warning")
+            notice:show("Lightning trial! Dodge the lightning to reach the next realm.", "Warning")
             if grade then
                 grade:Destroy() -- (one from a run that never ended: never two darkening the screen)
                 grade = nil
@@ -397,9 +397,9 @@ RemoteEvents.TribulationEvent.OnClientEvent:Connect(function(kind, owner, data)
                 Debris:AddItem(g, 1.6)
             end
             if data.Passed then
-                notice:show("Tribulation survived: the realm is yours.", "Success")
+                notice:show("You passed the trial! Welcome to your new realm.", "Success")
             elseif not data.Cancelled then
-                notice:show("The heavens struck you down: gather yourself and try again in a minute.", "Error")
+                notice:show("The lightning beat you. Rest, then try again in a minute.", "Error")
                 Sfx.play("Error")
             end
         end

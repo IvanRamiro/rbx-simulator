@@ -250,7 +250,7 @@ local function createPetCard(pet, layoutOrder, equippedCount)
             if definition.Rarity == "Secret" or definition.Rarity == "Divine" then
                 ConfirmDialog.show({
                     Title = "FUSE A " .. string.upper(definition.Rarity) .. " PET", Picture = Portraits.pet(pet.PetId, 72), ConfirmText = "FUSE IT",
-                    Text = "This spends another " .. definition.DisplayName .. " to raise this one to Level " .. reaches .. ". It can't be undone.",
+                    Text = "This uses up another " .. definition.DisplayName .. " to raise this one to Level " .. reaches .. ". You can't undo this.",
                     OnConfirm = function()
                         RemoteEvents.FusePetEvent:FireServer(pet.InstanceId, true)
                     end,
@@ -442,12 +442,12 @@ local function onHatchResult(result)
         showMessage(eggName .. " needs " .. tostring(result.RequiredRank) .. ": you can't carry it yet.", "Warning")
     elseif result.Reason == "Guarded" then
         local who = result.Called or ("the " .. tostring(result.Guardian))
-        local text = if result.Busy then "An egg is already being carried off. Wait for " .. who .. " to calm."
-            else "Weaken " .. who .. " first: its eggs can be taken once it falters."
+        local text = if result.Busy then "Someone is already carrying an egg away. Wait for " .. who .. " to calm down."
+            else "Hit " .. who .. " until it is weak. Then you can take its eggs."
         showMessage(text, "Warning")
     elseif result.Reason == "NoShare" then
         local who = result.Called or ("the " .. tostring(result.Guardian))
-        showMessage("You haven't earned this egg: strike " .. who .. " yourself before you take one.", "Warning")
+        showMessage("You haven't earned this egg yet. Hit " .. who .. " yourself before you take one.", "Warning")
     elseif result.Reason == "Retake" then
         showMessage("You just let an egg go back. You can take another in " .. tostring(result.Seconds) .. " s.", "Warning")
     elseif result.Reason == "NotAtAltar" then
@@ -457,7 +457,7 @@ local function onHatchResult(result)
     elseif result.Reason == "NoEgg" then
         showMessage("You don't have that egg any more.", "Error")
     elseif result.Reason == "InventoryFull" then
-        showMessage("Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets). Fuse or sell your spares.", "Warning")
+        showMessage("Your pet inventory is full (" .. GameConfig.MaxOwnedPets .. " pets). Fuse or sell your extra pets.", "Warning")
     else
         -- the hatch cinematic: the camera to the egg, the reel of its beasts, the crack and the reveal card (HatchCeremony)
         HatchCeremony.play(result)

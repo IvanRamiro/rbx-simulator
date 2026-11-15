@@ -320,9 +320,9 @@ return {
         Wood = Enum.Material.Wood,
     },
     Titles = {
-        Appraiser = "Corvin, Appraiser",
-        Curator = "Lyra, Egg Curator",
-        Forgemaster = "Brann, Forgemaster",
+        Appraiser = "Corvin, Trader",
+        Curator = "Lyra, Egg Seller",
+        Forgemaster = "Brann, Blacksmith",
         Guide = "Seren, Guide",
         Merchant = "Wandering Merchant",
     },

@@ -1,13 +1,16 @@
 -- The touch buttons round Roblox's jump button, kept down to what's useful right now, so the thumb never has to pick among
--- them: never more than two beside the jump button.
---   Near something to fight:  Strike and Dash
---   Otherwise:                Sword (once it can be ridden) and Dash
+-- them: never more than two big ones beside the jump button, and the small lotus (Meditate: the owner, 2026-11-16, "a small
+-- round meditate button" for touch screens; a keyboard presses E instead).
+--   Near something to fight:  Strike and Dash, and Meditate
+--   Otherwise:                Sword (once it can be ridden) and Dash, and Meditate
 --   Riding the sword:         Sword, to land
---   Cultivating:              nothing, the player is sitting down
--- Strike and Sword share the larger place beside the jump button, Dash has the one above it. Each stands on a ring round the
--- jump button, the same GAP clear of it, wherever Roblox puts that button for the screen (it is 70 px on a small screen and
--- 120 on a larger one: fixed places that suited the small one put Dash on top of the large one, a tablet's).
---   TouchActions.add(name, text, onPress)   name is "Strike", "Sword" or "Dash"; on a screen without touch it does nothing
+--   Cultivating:              Meditate alone, to stand up (the player is sitting down)
+-- Strike and Sword share the larger place beside the jump button, Dash has the one above it, Meditate the small one over the
+-- jump button's right shoulder. Each stands on a ring round the jump button, the same GAP clear of it, wherever Roblox puts that
+-- button for the screen (it is 70 px on a small screen and 120 on a larger one: fixed places that suited the small one put Dash
+-- on top of the large one, a tablet's).
+--   TouchActions.add(name, text, onPress, image)   name is "Strike", "Sword", "Dash" or "Meditate"; image (optional) shows in
+--                                                  place of words. On a screen without touch it does nothing and returns nil.
 -- In Studio, the player's HudTestTouch attribute shows them without a touch screen.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -27,6 +30,7 @@ local SLOTS = { -- Angle: degrees round the jump button's middle, 180 straight l
     Strike = { Angle = 180, Size = 62 },
     Sword = { Angle = 180, Size = 62 },
     Dash = { Angle = 125, Size = 54 },
+    Meditate = { Angle = 68, Size = 46 }, -- small: 46 px, a thumb's 44
 }
 
 local TouchActions = {}
@@ -92,13 +96,14 @@ local function refresh()
         Strike = fighting and not flying and not cultivating,
         Sword = (flying or (canRide and not fighting)) and not cultivating,
         Dash = not flying and not cultivating,
+        Meditate = not flying and player:GetAttribute("CarryingEgg") == nil,
     }
     for name, button in buttons do
         button.Visible = show[name] == true
     end
 end
 
-function TouchActions.add(name, text, onPress)
+function TouchActions.add(name, text, onPress, image)
     if not wanted() then
         return nil
     end
@@ -121,7 +126,7 @@ function TouchActions.add(name, text, onPress)
     button.Name = name
     button.AnchorPoint = Vector2.new(0.5, 0.5)
     button.Size = UDim2.fromOffset(slot.Size, slot.Size)
-    UiKit.touchButton(button, text)
+    UiKit.touchButton(button, text, image)
     button.Parent = gui
     button.Activated:Connect(onPress)
     buttons[name] = button

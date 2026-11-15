@@ -1,8 +1,8 @@
 -- The Status region of the HUD (portrait, name, rank, realm, progress), the Qi counter with its income while cultivating,
--- and the cultivate toggle (GameConfig.CultivationKeybind, a gamepad's L1, or the button), with the Qi Spring's bonus line.
+-- and the cultivate toggle (GameConfig.CultivationKeybind, a gamepad's L1, or the touch screens' lotus button), with the
+-- "cultivating" line, the Qi Spring's bonus line and the breakthrough over the inventory bar.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
@@ -14,6 +14,7 @@ local Hud = require(UI:WaitForChild("Hud"))
 local UiFx = require(UI:WaitForChild("UiFx"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
+local TouchActions = require(UI:WaitForChild("TouchActions"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
@@ -116,15 +117,14 @@ local qiRate = UiKit.label({
 UiKit.outline(qiRate, 1.5)
 local RATE_WINDOW = 3 -- seconds of gains averaged
 
--- ---------- the dock: the breakthrough (when it's ready), the station's bonus, Cultivate ----------
--- a pill over the dock (Hud.CultivationDock.addPill): on the Cultivate button's centre line and at its height, as wide as
--- Cultivate, wider only when its words need it (then it grows evenly about the same centre)
+-- ---------- over the inventory bar: the breakthrough (when it's ready), the station's bonus, "cultivating" ----------
+-- pills over the bar (Hud.Inventory.addPill): on its centre line, at the HUD's pill height, as wide as their words need
 local rankUpButton = UiKit.button({
     Name = "RankUpButton", Tone = "Highlight", Font = "Heavy", TextSize = 17, Text = "BREAK THROUGH", Visible = false,
 })
 local RANK_UP_MARGIN = 24 -- each side of its words
-Hud.CultivationDock.addPill(rankUpButton, 20, {
-    MatchAction = true,
+Hud.Inventory.addPill(rankUpButton, 20, {
+    MinWidth = 240,
     Width = function()
         return UiKit.wordsWidth(rankUpButton) + RANK_UP_MARGIN * 2
     end,
@@ -132,92 +132,44 @@ Hud.CultivationDock.addPill(rankUpButton, 20, {
 -- a breakthrough waiting to be taken breathes, so it is seen
 UiFx.attention(rankUpButton)
 
-local STATION_HEIGHT, STATION_MARGIN = 28, 14
-local stationLabel = UiKit.label({
-    Name = "StationLabel", Font = "Heavy", TextSize = 13, TextColor3 = C.AccentBright,
-    BackgroundTransparency = 0.15, BackgroundColor3 = C.AccentDeep, TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
-    Text = GameConfig.TrainingStation.DisplayName .. "  +" .. GameConfig.TrainingStation.QiBonusPercent .. "% Qi",
-})
-UiKit.corner(stationLabel, STATION_HEIGHT // 2)
-UiKit.stroke(stationLabel, C.Edge, 0.3, 1.5)
-Hud.CultivationDock.addPill(stationLabel, 25, {
-    Height = STATION_HEIGHT, OwnRow = true,
-    Width = function()
-        return UiKit.wordsWidth(stationLabel) + STATION_MARGIN * 2
-    end,
-})
-
-local cultivateButton = UiKit.button({
-    Name = "CultivateButton", Tone = "Primary", Font = "Heavy", Text = "CULTIVATE", -- (the dock's buttons share one face)
-    Size = UDim2.fromScale(1, 1), Parent = Hud.CultivationDock.Action,
-})
--- a pill, and light that keeps to its curves; the dock's size can change once the screen's is known
-local function shapeCultivateButton(size)
-    UiKit.pillShape(cultivateButton, size.Button)
+local LABEL_HEIGHT, LABEL_MARGIN = 28, 14
+local function slimLabel(name, color, back)
+    local label = UiKit.label({
+        Name = name, Font = "Heavy", TextSize = 13, TextColor3 = color, BackgroundTransparency = 0.15, BackgroundColor3 = back,
+        TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
+    })
+    UiKit.corner(label, LABEL_HEIGHT // 2)
+    UiKit.stroke(label, color, 0.3, 1.5)
+    return label
 end
-Hud.CultivationDock.Resized:Connect(shapeCultivateButton)
-shapeCultivateButton(Hud.CultivationDock.Size)
-UiKit.keycapOn(cultivateButton, keyName)
+local function addLabel(label, order)
+    Hud.Inventory.addPill(label, order, {
+        Height = LABEL_HEIGHT, OwnRow = true,
+        Width = function()
+            return UiKit.wordsWidth(label) + LABEL_MARGIN * 2
+        end,
+    })
+end
+local stationLabel = slimLabel("StationLabel", C.AccentBright, C.AccentDeep)
+stationLabel.Text = GameConfig.TrainingStation.DisplayName .. "  +" .. GameConfig.TrainingStation.QiBonusPercent .. "% Qi"
+addLabel(stationLabel, 25)
+
+-- while cultivating, a slim line says so and how to stop: the big Cultivate button is gone (the owner, 2026-11-16), so this and
+-- the Qi rate beside the Qi are what show it on the HUD (the aura and the lotus seat show it in the world)
+local ACTIVE = Color3.fromRGB(120, 255, 236)
+local cultivatingLabel = slimLabel("CultivatingLabel", ACTIVE, Color3.fromRGB(10, 70, 76))
+addLabel(cultivatingLabel, 30)
 
 local function isCultivating()
     return player:GetAttribute("IsCultivating") == true
 end
 
--- the game's one main action catches the eye now and then, while it isn't being done
-task.spawn(function()
-    while cultivateButton.Parent do
-        task.wait(5)
-        if not isCultivating() and cultivateButton.Visible then
-            UiFx.sweep(cultivateButton, Color3.new(1, 1, 1), 0.7)
-        end
+local function stopHint()
+    if UserInputService.KeyboardEnabled then
+        return "CULTIVATING  ·  PRESS " .. string.upper(keyName) .. " TO STOP"
     end
-end)
-
--- While cultivating there is no mistaking it: the button turns from gold to living jade and a band of light keeps crossing it, the
--- emblem's ring turns, its well glows the same colour and the figure brightens. Pressing it again stops, and it says so.
-local ACTIVE_GLOW = Color3.fromRGB(120, 255, 236)
-local dock = Hud.CultivationDock
-local well = Hud.CultivationEmblemWell
-local WELL_AT_REST, FIGURE_AT_REST = well.BackgroundColor3, dock.Emblem.ImageColor3
-local RING_TURN = 40 -- degrees a second
-local turning = nil
-local sweeping = 0 -- the active look's sweep loop: a new one stops any still waiting from before
-
--- its words, centred on the button, leave the key's hint its room at each end (they ran into the E on a phone, cultivating)
-local CULTIVATE_MARGIN = UiTheme.Space.M
-local function shapeCultivateText()
-    local size = dock.Size
-    local _, width = dock.actionSpan(size)
-    local room = width - 2 * math.max(UiKit.keyRoom(cultivateButton), CULTIVATE_MARGIN)
-    UiKit.fitWords(cultivateButton, if isCultivating() then size.TextSize + 3 else size.TextSize + 7, room)
+    return "CULTIVATING  ·  TAP THE LOTUS TO STOP"
 end
-
-local function updateCultivateButton()
-    local active = isCultivating()
-    cultivateButton:SetAttribute("Tone", if active then "Active" else "Primary")
-    cultivateButton.Text = if active then "CULTIVATING - STOP" else "CULTIVATE"
-    shapeCultivateText()
-    well.BackgroundColor3 = if active then ACTIVE_GLOW else WELL_AT_REST
-    dock.Emblem.ImageColor3 = if active then Color3.new(1, 1, 1) else FIGURE_AT_REST
-    if active and not turning then
-        turning = RunService.RenderStepped:Connect(function(dt)
-            dock.Ring.Rotation = (dock.Ring.Rotation + RING_TURN * dt) % 360
-        end)
-        sweeping += 1
-        local mine = sweeping
-        task.spawn(function()
-            while mine == sweeping and isCultivating() and cultivateButton.Parent do
-                UiFx.sweep(cultivateButton, Color3.new(1, 1, 1), 0.9)
-                task.wait(1.4)
-            end
-        end)
-    elseif not active and turning then
-        turning:Disconnect()
-        turning = nil
-        dock.Ring.Rotation = 0
-    end
-end
-dock.Resized:Connect(shapeCultivateText)
 
 local function requestToggleCultivation()
     local now = os.clock()
@@ -229,8 +181,6 @@ local function requestToggleCultivation()
     RemoteEvents.CultivationEvent:FireServer(not isCultivating())
 end
 
-cultivateButton.Activated:Connect(requestToggleCultivation)
-
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if gameProcessedEvent then
         return
@@ -241,8 +191,22 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     end
 end)
 
-player:GetAttributeChangedSignal("IsCultivating"):Connect(updateCultivateButton)
-updateCultivateButton()
+-- touch screens: a small round lotus button beside Strike and Dash (TouchActions; a keyboard never sees it), lit while cultivating
+local meditateButton = TouchActions.add("Meditate", "", requestToggleCultivation, UiTheme.Ornaments.LotusSit)
+local meditateRing = meditateButton and meditateButton:FindFirstChildOfClass("UIStroke")
+local MEDITATE_RING = meditateRing and meditateRing.Color
+
+local function updateCultivating()
+    local active = isCultivating()
+    cultivatingLabel.Text = stopHint()
+    cultivatingLabel.Visible = active
+    if meditateRing then
+        meditateRing.Color = if active then ACTIVE else MEDITATE_RING
+        meditateButton.BackgroundColor3 = if active then Color3.fromRGB(10, 70, 76) else C.Panel
+    end
+end
+player:GetAttributeChangedSignal("IsCultivating"):Connect(updateCultivating)
+updateCultivating()
 
 local function updateStationLabel()
     stationLabel.Visible = player:GetAttribute("AtTrainingStation") == true
@@ -336,10 +300,10 @@ local function updateRankDisplay()
     end
     wasReady = rankUpButton.Visible
     if newRealm and recovering > 0 then
-        rankUpButton.Text = "RECOVERING FROM THE TRIBULATION: " .. recovering .. " s"
+        rankUpButton.Text = "RESTING AFTER THE TRIAL: " .. recovering .. " s"
         rankUpButton:SetAttribute("Tone", "Quiet")
     else
-        rankUpButton.Text = if newRealm then "FACE THE TRIBULATION: " .. string.upper(target) else "BREAK THROUGH: " .. string.upper(target)
+        rankUpButton.Text = if newRealm then "TAKE THE TRIAL: " .. string.upper(target) else "BREAK THROUGH: " .. string.upper(target)
         rankUpButton:SetAttribute("Tone", "Highlight")
     end
 end
