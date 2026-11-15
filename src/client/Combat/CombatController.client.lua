@@ -83,7 +83,7 @@ local function drawHeight(compact)
     return if compact then 56 else 44
 end
 local drawButton = UiKit.button({
-    Name = "DrawButton", Tone = "Tile", TextSize = 14, Text = "DRAW",
+    Name = "DrawButton", Tone = "Tile", Font = "Heavy", TextSize = 15, Text = "DRAW",
     AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(160, 44), Parent = drawStrip,
 })
 local function placeDrawButton(size, compact)
@@ -98,16 +98,14 @@ local function placeDrawButton(size, compact)
     if layer then
         layer:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, height // 2)
     end
-    local plateLeft = math.floor(size.Emblem * 0.45) -- as Hud lays out the dock's plate
     drawStrip.Size = UDim2.fromOffset(size.Width, height)
-    drawButton.Position = UDim2.fromOffset(plateLeft + (size.Width - plateLeft) / 2, 0)
+    drawButton.Position = UDim2.fromOffset((Hud.CultivationDock.actionSpan(size)), 0) -- on the Cultivate button's centre line
 end
 Hud.CultivationDock.Resized:Connect(placeDrawButton)
 placeDrawButton(Hud.CultivationDock.Size)
-local drawKey = UiKit.keycap("1")
+local drawKey = UiKit.keycap("1") -- the same keycap, size and inset as Cultivate's
 drawKey.AnchorPoint = Vector2.new(1, 0.5)
-drawKey.Position = UDim2.new(1, -12, 0.5, 0)
-drawKey.Size = UDim2.fromOffset(20, 20)
+drawKey.Position = UDim2.new(1, -16, 0.5, 0)
 drawKey.Parent = drawButton
 drawButton.Activated:Connect(toggleDrawn)
 

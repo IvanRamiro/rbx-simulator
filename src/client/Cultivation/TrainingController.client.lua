@@ -110,11 +110,22 @@ local function rankUpHeight() -- a thumb's size: 56 on a phone is 45 pixels at i
     return if Hud.isCompact() then 56 else 48
 end
 local RANK_UP_HEIGHT = rankUpHeight()
+-- in a strip as wide as the dock, so the button can sit on the Cultivate button's centre line (Hud.CultivationDock.actionSpan)
+-- like the DRAW pill under it, not on the middle of the whole dock
+local rankUpStrip = Instance.new("Frame")
+rankUpStrip.Name = "RankUpStrip"
+rankUpStrip.BackgroundTransparency = 1
+rankUpStrip.LayoutOrder = 20
+rankUpStrip.Visible = false
+rankUpStrip.Parent = Hud.Dock
 local rankUpButton = UiKit.button({
     Name = "RankUpButton", Tone = "Highlight", Font = "Heavy", TextSize = 17, Text = "BREAK THROUGH",
-    Size = UDim2.fromOffset(Hud.DockWidth(), RANK_UP_HEIGHT), LayoutOrder = 20, Visible = false,
-    Parent = Hud.Dock,
+    AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(Hud.DockWidth(), RANK_UP_HEIGHT), Visible = false,
+    Parent = rankUpStrip,
 })
+rankUpButton:GetPropertyChangedSignal("Visible"):Connect(function()
+    rankUpStrip.Visible = rankUpButton.Visible
+end)
 -- a pill like Cultivate's, its halo and light keeping to its curves
 rankUpButton:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, RANK_UP_HEIGHT // 2)
 rankUpButton.Halo:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, RANK_UP_HEIGHT // 2 + 3)
@@ -127,7 +138,12 @@ rankUpButton.Gloss.Size = UDim2.new(1, -RANK_UP_HEIGHT, 0, 1)
 local function fitRankUp()
     local scale = HudMetrics.scale()
     local height = rankUpHeight()
-    rankUpButton.Size = UDim2.fromOffset(math.max(Hud.DockWidth(), rankUpButton.TextBounds.X / scale + 40), height)
+    local dockSize = Hud.CultivationDock.Size
+    local centre, actionWidth = Hud.CultivationDock.actionSpan(dockSize)
+    -- as wide as the Cultivate button, wider only when its words need it (then it grows evenly about the same centre)
+    rankUpButton.Size = UDim2.fromOffset(math.max(actionWidth, rankUpButton.TextBounds.X / scale + 48), height)
+    rankUpButton.Position = UDim2.fromOffset(centre, 0)
+    rankUpStrip.Size = UDim2.fromOffset(dockSize.Width, height)
     rankUpButton:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, height // 2)
     rankUpButton.Halo:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, height // 2 + 3)
     rankUpButton:SetAttribute("RoundLight", height // 2)
@@ -142,6 +158,10 @@ rankUpButton:GetPropertyChangedSignal("TextBounds"):Connect(fitRankUp)
 HudMetrics.Changed:Connect(function()
     task.defer(fitRankUp)
 end)
+Hud.CultivationDock.Resized:Connect(function()
+    task.defer(fitRankUp)
+end)
+fitRankUp()
 -- a breakthrough waiting to be taken breathes, so it is seen
 UiFx.attention(rankUpButton)
 
@@ -157,7 +177,7 @@ UiKit.padding(stationLabel, 14, 0)
 UiKit.stroke(stationLabel, C.Edge, 0.3, 1.5)
 
 local cultivateButton = UiKit.button({
-    Name = "CultivateButton", Tone = "Primary", Font = "Title", Text = "CULTIVATE",
+    Name = "CultivateButton", Tone = "Primary", Font = "Heavy", Text = "CULTIVATE", -- (the dock's buttons share one face)
     Size = UDim2.fromScale(1, 1), Parent = Hud.CultivationDock.Action,
 })
 -- a pill, and light that keeps to its curves; the dock's size can change once the screen's is known

@@ -667,6 +667,20 @@ action.Parent = plate
 local dockResized = Instance.new("BindableEvent")
 Hud.CultivationDock = { Top = top, Bar = barSlot, Action = action, Emblem = emblemIcon, Ring = ring, Resized = dockResized.Event, Size = nil }
 
+-- Where the Cultivate button sits across the dock: its centre's offset from the dock's left edge, and its width. The pills
+-- stacked over the dock (the breakthrough, DRAW / SHEATHE) centre on this same line, so the column reads as one; centred on
+-- the whole dock they sat over the emblem's side, and the three rows had three different middles (owner's screenshot,
+-- 2026-11-15).
+local function actionSpan(size)
+    local plateLeft = math.floor(size.Emblem * 0.45)
+    local contentLeft = size.Emblem - plateLeft + 8
+    local width = size.Width - plateLeft - contentLeft - 10
+    return plateLeft + contentLeft + width / 2, width
+end
+function Hud.CultivationDock.actionSpan(size)
+    return actionSpan(size or Hud.CultivationDock.Size)
+end
+
 local function layoutDock(compact)
     local size = DOCK_SIZES[compact]
     local plateLeft = math.floor(size.Emblem * 0.45)
