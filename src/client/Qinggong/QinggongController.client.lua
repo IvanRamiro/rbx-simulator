@@ -24,6 +24,7 @@ local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toas
 local TouchActions = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("TouchActions"))
 local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKit"))
 local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiTheme"))
+local HudMetrics = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudMetrics"))
 local QinggongFx = require(script.Parent:WaitForChild("QinggongFx"))
 
 local player = Players.LocalPlayer
@@ -44,22 +45,38 @@ local FULL_IMPACT_SPEED = 110 -- the fall speed of a full-strength landing
 -- only in flight (the owner, 2026-11-16): a bar under the leaps, red and pulsing when it runs low; it is hidden on the ground.
 local C = UiTheme.Colors
 local ROW, BAR_ROW, PAD = 32, 22, UiTheme.Pad.Card
+local WORD_WIDTH, COUNT_WIDTH, GAP = 96, 44, 8 -- the label's room, the count's room, and the gap either side of the diamonds
 local leapPanel = UiKit.panel({ Name = "AirLeaps", Brackets = false, LayoutOrder = 10, Parent = Hud.Quest })
 local leapWord = UiKit.boldLabel({
     Name = "Word", TextSize = 13, Text = "AIR LEAPS", TextColor3 = C.Edge, Position = UDim2.fromOffset(PAD, 0),
-    Size = UDim2.new(0.5, -PAD, 0, ROW), Parent = leapPanel,
+    Size = UDim2.fromOffset(WORD_WIDTH, ROW), Parent = leapPanel,
 })
 local leapCount = UiKit.boldLabel({
     Name = "Count", TextSize = 15, Text = "", TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, -PAD, 0, 0), Size = UDim2.fromOffset(44, ROW), Parent = leapPanel,
+    Position = UDim2.new(1, -PAD, 0, 0), Size = UDim2.fromOffset(COUNT_WIDTH, ROW), Parent = leapPanel,
 })
-local pips = Instance.new("Frame") -- the diamonds, right-aligned against the count
+-- the diamonds: all the room between the label and the count, right-aligned against the count; each diamond shrinks so any
+-- number of leaps fits (the top ranks have 11: at a fixed 16 each they ran left over AIR LEAPS, the owner's screenshot
+-- 2026-11-16)
+local pips = Instance.new("Frame")
 pips.Name = "Pips"
 pips.BackgroundTransparency = 1
 pips.AnchorPoint = Vector2.new(1, 0)
-pips.Position = UDim2.new(1, -(PAD + 44 + 6), 0, 0)
-pips.Size = UDim2.new(0.5, -50, 0, ROW)
+pips.Position = UDim2.new(1, -(PAD + COUNT_WIDTH + GAP), 0, 0)
+pips.Size = UDim2.fromOffset(0, ROW) -- (sized by layoutPips, from the label's real width)
+pips.ClipsDescendants = true -- (never past its room, whatever the count)
 pips.Parent = leapPanel
+-- the label's real width, back in the HUD's own units (TextBounds is on the screen, after the HUD's scale and any readable-text
+-- minimum: a fixed 96 let the bar run 7 px into AIR LEAPS on a desktop screen)
+local function wordWidth()
+    return math.max(WORD_WIDTH, math.ceil(leapWord.TextBounds.X / math.max(HudMetrics.scale(), 0.01)))
+end
+local function pipRoom()
+    return math.max(0, Hud.rightColumnWidth() - (PAD + wordWidth() + GAP + GAP + COUNT_WIDTH + PAD))
+end
+local function layoutPips()
+    pips.Size = UDim2.fromOffset(pipRoom(), ROW)
+end
 UiKit.list(pips, {
     FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right,
     VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 7),
@@ -89,31 +106,53 @@ Hud.CompactChanged:Connect(fitLeapPanel)
 fitLeapPanel()
 
 local shownPips = -1 -- the leaps total the diamonds were made for
+local MIN_PIP = 10 -- below this a diamond can't be read: many leaps show as a bar instead
+local pipBar -- the bar's fill, while the leaps are shown as a bar
 local function drawPips(left, total)
     if total ~= shownPips then
+        layoutPips()
         shownPips = total
+        pipBar = nil
         pips:ClearAllChildren()
-        UiKit.list(pips, {
-            FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right,
-            VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 7),
-        })
-        for i = 1, math.min(total, 8) do
-            local cell = Instance.new("Frame") -- (a laid-out frame isn't drawn turned: the diamond turns inside it)
-            cell.Name = "Pip"
-            cell.BackgroundTransparency = 1
-            cell.Size = UDim2.fromOffset(16, 16)
-            cell.LayoutOrder = i
-            cell.Parent = pips
-            local diamond = Instance.new("Frame")
-            diamond.Name = "Diamond"
-            diamond.AnchorPoint = Vector2.new(0.5, 0.5)
-            diamond.Position = UDim2.fromScale(0.5, 0.5)
-            diamond.Size = UDim2.fromOffset(11, 11)
-            diamond.Rotation = 45
-            diamond.BorderSizePixel = 0
-            diamond.Parent = cell
-            UiKit.stroke(diamond, Color3.fromRGB(70, 44, 10), 0, 1.5)
+        -- one cell per leap, as big as the room allows (16 at most), the gap a third of a cell
+        local count = math.max(total, 1)
+        local cellSize = math.min(16, math.floor(pipRoom() / (count + (count - 1) / 3)))
+        if cellSize < MIN_PIP then
+            -- too many to draw as diamonds (the top ranks have 11): a slim gold bar the leaps drain, the count beside it
+            local track = UiKit.bar({ Name = "LeapBar", Fill = C.Highlight, AnchorPoint = Vector2.new(1, 0.5),
+                Position = UDim2.fromScale(1, 0.5), Size = UDim2.new(1, 0, 0, 8), Parent = pips })
+            track:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
+            pipBar = track:FindFirstChild("Fill")
+            pipBar:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
+        else
+            local gap = math.max(2, math.floor(cellSize / 3 + 0.5))
+            UiKit.list(pips, {
+                FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right,
+                VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, gap),
+            })
+            for i = 1, total do
+                local cell = Instance.new("Frame") -- (a laid-out frame isn't drawn turned: the diamond turns inside it)
+                cell.Name = "Pip"
+                cell.BackgroundTransparency = 1
+                cell.Size = UDim2.fromOffset(cellSize, cellSize)
+                cell.LayoutOrder = i
+                cell.Parent = pips
+                local diamond = Instance.new("Frame")
+                diamond.Name = "Diamond"
+                diamond.AnchorPoint = Vector2.new(0.5, 0.5)
+                diamond.Position = UDim2.fromScale(0.5, 0.5)
+                local side = math.floor(cellSize * 0.7)
+                diamond.Size = UDim2.fromOffset(side, side)
+                diamond.Rotation = 45
+                diamond.BorderSizePixel = 0
+                diamond.Parent = cell
+                UiKit.stroke(diamond, Color3.fromRGB(70, 44, 10), 0, 1.5)
+            end
         end
+    end
+    if pipBar then
+        pipBar.Size = UDim2.fromScale(if total > 0 then left / total else 0, 1)
+        return
     end
     for _, cell in pips:GetChildren() do
         local diamond = cell:FindFirstChild("Diamond")
@@ -165,6 +204,8 @@ local function updateHud()
     leapWord.TextColor3 = if flying then FLIGHT_COLOR elseif gliding then GLIDE_COLOR else UiTheme.Colors.Edge
     pips.Visible = not flying
     leapCount.Visible = not flying
+    -- in flight the diamonds and count are hidden: SWORD FLIGHT takes the row; otherwise the label keeps to its room
+    leapWord.Size = if flying then UDim2.new(1, -PAD * 2, 0, ROW) else UDim2.fromOffset(WORD_WIDTH, ROW)
     drawPips(left, total)
     leapCount.Text = left .. "/" .. total
     leapCount.TextColor3 = if left == 0 and total > 0 then UiTheme.Colors.Muted else UiTheme.Colors.Text
@@ -174,6 +215,19 @@ local function updateHud()
         fitLeapPanel()
     end
 end
+
+-- the column's width (the screen's class) or the label's width (text size) changed: the diamonds are sized for it again
+local function relayoutPips()
+    layoutPips()
+    shownPips = -1
+    updateHud()
+end
+Hud.CompactChanged:Connect(relayoutPips)
+leapWord:GetPropertyChangedSignal("TextBounds"):Connect(function()
+    if leapWord.Text == "AIR LEAPS" then -- (SWORD FLIGHT has the row to itself, with the diamonds hidden)
+        relayoutPips()
+    end
+end)
 
 local function getCharacterParts()
     local character = player.Character
