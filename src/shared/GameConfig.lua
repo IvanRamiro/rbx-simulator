@@ -662,18 +662,20 @@ local GameConfig = {
     -- spins a UTC day (the daily reward's day: RewardRules.today), unused ones lost at the reset. The server rolls and pays
     -- (server/Rewards/SpinService, shared/SpinRules); every client turns the wheel to the segment it picked. Segments clockwise from
     -- the top, Weight out of their sum (100, so a weight is its percent):
-    --   1 Stones  Share x the player's rank value (Shop.rankValue: a weapon of their realm at its first rank, rising between realms)  26
+    --   1 Stones  Share x the player's rank value (Shop.rankValue: a weapon of their realm at its first rank, rising between realms)  26.8
     --   2 Qi      Minutes of cultivating (QiReward.grantMinutes: Qi passes and pets count)                                           22
     --   3 Stones  2x segment 1                                                                                                       16
     --   4 Qi      15 minutes                                                                                                         12
     --   5 Egg     one egg of the best Marketplace egg the player's rank can take                                                     10
     --   6 Stones  5x segment 1                                                                                                        8
     --   7 Spin    one more spin today                                                                                                 5
-    --   8 Egg     JACKPOT: one Exclusive Egg (the 149 Robux egg), to hatch at the altar                                               1
+    --   8 Egg     JACKPOT: one Exclusive Egg (the 149 Robux egg), to hatch at the altar                                             0.2
+    -- (The jackpot was 1 at first; the owner had it lowered the same day, "yes lower the chances for jackpot rate", so a free
+    -- Exclusive Egg doesn't take from its sales: 0.2, the 0.8 moved to segment 1.)
     -- Worth a day (worked out 2026-11-16 over all 60 ranks): 3 / (1 - 0.05) = 3.16 spins; stones 0.62 of a
     -- rank value (0.84 to 1.83 daily-reward claims as the player climbs through a realm, the daily claim averaging 44 x RealmFactor per
     -- realm); 0.32 eggs (at the Marketplace's price, all in 1.0 to 2.8 claims; at what its pet sells for, about 1 to 2.2); 9.2 minutes
-    -- of cultivating Qi (under two stolen eggs' bursts); and an Exclusive Egg about once a month (1 in 31.7 days). It helps without
+    -- of cultivating Qi (under two stolen eggs' bursts); and an Exclusive Egg about once in five months (1 in 158 days). It helps without
     -- replacing play: one active minute stealing eggs pays more stones.
     -- Free, so it is given where paid random items are restricted too (PolicyService restricts buying random items, and nothing here is bought).
     -- A full egg slot (EggInventory.MAX_PER_EGG) pays segment 6's stones instead.
@@ -683,14 +685,14 @@ local GameConfig = {
         Seconds = 6,          -- how long the wheel turns: the reward is paid when it stops
         Reach = 22,           -- studs from the wheel's prompt a spin may be asked from
         Segments = {
-            { Kind = "Stones", Share = 0.2, Weight = 26, Color = Color3.fromRGB(66, 120, 230) },
+            { Kind = "Stones", Share = 0.2, Weight = 26.8, Color = Color3.fromRGB(66, 120, 230) },
             { Kind = "Qi", Minutes = 5, Weight = 22, Color = Color3.fromRGB(40, 190, 200) },
             { Kind = "Stones", Share = 0.4, Weight = 16, Color = Color3.fromRGB(120, 76, 220) },
             { Kind = "Qi", Minutes = 15, Weight = 12, Color = Color3.fromRGB(46, 170, 96) },
             { Kind = "Egg", Weight = 10, Color = Color3.fromRGB(236, 132, 40) },
             { Kind = "Stones", Share = 1, Weight = 8, Color = Color3.fromRGB(214, 60, 120) },
             { Kind = "Spin", Weight = 5, Color = Color3.fromRGB(70, 180, 255) },
-            { Kind = "Jackpot", Weight = 1, Color = Color3.fromRGB(255, 196, 40) },
+            { Kind = "Jackpot", Weight = 0.2, Color = Color3.fromRGB(255, 196, 40) },
         },
     },
 

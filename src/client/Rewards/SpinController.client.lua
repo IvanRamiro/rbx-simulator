@@ -419,7 +419,8 @@ local function renderWindow()
         t.mark.Visible = image == nil
         t.words.Text = info.Short
         t.words.TextColor3 = if info.Kind == "Jackpot" then C.Highlight else C.Text
-        t.chance.Text = math.floor(info.Chance * 100 + 0.5) .. "% chance"
+        local percent = info.Chance * 100 -- (under 1%, one decimal: the jackpot's 0.2 would round to "0%")
+        t.chance.Text = (if percent < 1 then string.format("%.1f", percent) else tostring(math.floor(percent + 0.5))) .. "% chance"
     end
     local turning = wheel and (wheel.model:GetAttribute("TurningUntil") or 0) > workspace:GetServerTimeNow()
     local ready = left > 0 and not waiting and not turning and os.clock() >= myTurnUntil
