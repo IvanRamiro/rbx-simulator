@@ -630,6 +630,8 @@ WorldBuilder.Lights = {
     EP_PylonFire = { Range = 26, Brightness = 1.6 },
     HB_CrystalLampLight = { Range = 16, Brightness = 0.8 },  -- (one lamp of each pair: hub_ground.write_placements)
     BS_ShrineLantern = { Range = 14, Brightness = 0.9 },     -- the shrine's toro (on its glow, warm)
+    BS_ShrineHall = { Range = 18, Brightness = 0.45, Color = Color3.fromRGB(255, 196, 130) }, -- a soft warm glow in the hall (the toro
+                                                                                             -- stand 25 studs down the path)
     HB_MarketGlow = { Range = 16, Brightness = 0.8 },
 }
 
@@ -1191,7 +1193,7 @@ function WorldBuilder.placeKit(island)
             part.Name = name .. "_" .. index
             local light = WorldBuilder.Lights[name]
             if light then
-                addLight(part, part.Color, light.Range, light.Brightness)
+                addLight(part, light.Color or part.Color, light.Range, light.Brightness)
             end
             for _, preset in WorldBuilder.Emitters[name] or {} do
                 addEmitterPreset(part, preset)
