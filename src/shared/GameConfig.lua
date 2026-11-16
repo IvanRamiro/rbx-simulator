@@ -84,7 +84,7 @@ local GameConfig = {
         { Realm = "Primordial Realm", Damage = 64, Price = 850000, Sword = "Chaos Origin Sword", Spear = "Primeval Dragon Spear" },
         { Realm = "Eternal Transcendence", Damage = 69, Price = 2200000, Sword = "Eternity Sword", Spear = "Eternal Sun Spear" },
     },
-    StarterWeapon = "Sword1", -- every player's first weapon, given once: to a new player, or to a save from before weapons (PlayerData)
+    StarterWeapon = "Sword1", -- given only once, to a save from before weapons (PlayerData migration 6); new players start with the Qi Palm
     MaxOwnedWeapons = 30,
 
     -- The relic forge, at the Blacksmith: a relic unlocks its element for good (Relics.<n>.Element
@@ -601,7 +601,7 @@ local GameConfig = {
         -- the path on, island by island. Append only: a save holds its step number
         { Id = "Weapon", Kind = "BuyWeapon", Reward = 40, Title = "Get a Weapon",
             Way = { "the Blacksmith", 233, -172 },
-            Text = "Visit the Blacksmith on Yggdrasil and buy a spear or a better sword." },
+            Text = "Visit the Blacksmith on Yggdrasil and buy your first weapon: a sword or a spear." },
         { Id = "Root", Kind = "Relic", Goal = "IslandRoot", Reward = 40, Title = "The Root of the Island",
             Way = { "the great root", 1, 238, Then = { "the relic", 88.5, 127, 153.3 } }, -- Then: where the world marker points once the player has reached the Way (QuestController)
             Text = "Climb down the great root of the World Tree and collect the relic at the bottom." },

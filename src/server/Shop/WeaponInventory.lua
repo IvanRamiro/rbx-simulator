@@ -2,7 +2,8 @@
 -- Weapons = { { InstanceId, WeaponId, Element?, Name? } } (a forged weapon carries its element and
 -- the name its owner gave it, GameConfig.Forge) and EquippedWeapon (an InstanceId, or nil for the
 -- Qi Palm), and mirrored to the client as the player attributes "WeaponId" and "WeaponElement".
--- A player who owns no weapon is given GameConfig.StarterWeapon, equipped.
+-- A new player starts with no weapon: they fight with the Qi Palm until they buy one at the Blacksmith
+-- (the owner, 2026-11-16). Only a save from before weapons was ever given GameConfig.StarterWeapon (PlayerData migration 6).
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -63,14 +64,11 @@ local function add(data, weaponId)
     return weapon
 end
 
--- `progress` is nil for a new player, who is given the starter weapon. Only then: a player who
--- sold every weapon keeps the Qi Palm, or the starter could be sold again on every rejoin.
+-- `progress` is nil for a new player, who starts with the Qi Palm and no weapon; nobody is ever handed one
+-- here, so selling weapons and rejoining can't mint Spirit Stones.
 function WeaponInventory.setupPlayer(player, progress)
     local weapons, equipped = WeaponInventory.sanitize(progress and progress.Weapons, progress and progress.EquippedWeapon)
     local data = { weapons = weapons, equipped = equipped }
-    if progress == nil then
-        data.equipped = add(data, GameConfig.StarterWeapon).InstanceId
-    end
     held[player] = data
     mirror(player)
 end

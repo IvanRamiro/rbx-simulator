@@ -356,7 +356,7 @@ class Player:
         self.codex = set()
         self.claimed = set()
         self.codex_pct = 0
-        self.weapons = {1}       # sword tiers owned (StarterWeapon = Sword1)
+        self.weapons = set()     # sword tiers owned: new players start with the Qi Palm (no starter weapon since 2026-11-16)
         self.forged = set()
         self.elements = set()
         self.relics_done = set()
@@ -482,12 +482,17 @@ class Player:
 
     # -- a theft
     def strike(self):
-        tier = max(self.weapons)
-        damage = self.R.weapons[tier - 1]["Damage"] * (1 + self.R.cfg["Forge"]["DamageBonus"] if tier in self.forged else 1)
+        if self.weapons:
+            tier = max(self.weapons)
+            damage = self.R.weapons[tier - 1]["Damage"] * (1 + self.R.cfg["Forge"]["DamageBonus"] if tier in self.forged else 1)
+            cooldown = self.R.cfg["WeaponKinds"]["Sword"]["Cooldown"]
+        else:  # the Qi Palm (Combat.Palm)
+            damage = self.R.cfg["Combat"]["Palm"]["Damage"]
+            cooldown = self.R.cfg["Combat"]["Palm"]["Cooldown"]
         power = 1 + self.idx * self.R.cfg["Combat"]["RankPowerStep"]  # Combat.powerOf
         crit = self.R.cfg["Combat"]["Crit"]
         damage *= power * (1 + crit["Chance"] * (crit["Multiplier"] - 1))
-        return damage / self.R.cfg["WeaponKinds"]["Sword"]["Cooldown"] * self.b["hit_share"]
+        return damage / cooldown * self.b["hit_share"]
 
     def cycle_seconds(self, gid):
         """A theft's play seconds at this guardian, the stands' waiting aside (assumptions: BEHAVIOUR)."""
