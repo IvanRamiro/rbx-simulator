@@ -734,7 +734,7 @@ local function play(result)
     tapper.Size = UDim2.fromScale(1, 1)
     tapper.ZIndex = 50
     tapper.Parent = gui
-    local hint = UiKit.label({ Name = "Hint", Font = "Strong", TextSize = 12, Text = "TAP TO SKIP", TextColor3 = C.Muted,
+    local hint = UiKit.label({ Name = "Hint", Font = "Strong", TextSize = 12, Text = if UiKit.usingTouch() then "TAP TO SKIP" else "CLICK TO SKIP", TextColor3 = C.Muted,
         AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.95), Size = UDim2.fromOffset(200, 16),
         TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 6, Parent = gui })
 
@@ -892,7 +892,7 @@ local function play(result)
             return
         end
         revealed = true
-        hint.Text = "TAP TO CONTINUE"
+        hint.Text = if UiKit.usingTouch() then "TAP TO CONTINUE" else "CLICK TO CONTINUE"
         tween(panel, 0.25, { Position = UDim2.new(0.5, 0, 1.4, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
         if rank >= 6 then
             for _, bar in bars do
