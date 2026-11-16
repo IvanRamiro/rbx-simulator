@@ -36,6 +36,9 @@ COLOURS = {
     "Moss": (96, 126, 70), "Lily": (74, 124, 66), "LilyFlower": (252, 238, 242), "Reed": (102, 138, 78),
     "KoiWhite": (246, 243, 236), "KoiRed": (226, 82, 40), "KoiBlack": (32, 30, 32), "KoiGold": (240, 182, 72),
     "KoiFin": (250, 238, 226), "Ripple": (255, 255, 255),
+    # the shrine (2026-11-16, the owner: "Also add japanese shrine on that area")
+    "Lacquer": (176, 58, 44), "RoofDark": (58, 46, 44), "Copper": (104, 140, 122), "Timber": (150, 112, 82),
+    "Plaster": (236, 230, 220), "Glow": (255, 214, 160), "ShrineWater": (110, 170, 170),
 }
 TILE = 8.0
 CANOPY_FLOOR = 7.5        # nothing but a trunk below this (studs above the ground)
@@ -1681,6 +1684,355 @@ def ripple():
 
 
 # ======================================================================================================================
+# The shrine (the owner, 2026-11-16: "Also add japanese shrine on that area"): a torii, the hall, stone lanterns, the
+# purification pavilion and the approach's paving. Restrained and premium: vermilion lacquer only on the torii and the
+# hall's railings, natural cedar, white plaster, a dark cypress-bark roof with verdigris copper trims, the island's stone.
+# No writing anywhere (the torii's plaque is a plain bordered panel), no guardian figures.
+# ======================================================================================================================
+def box(g, c, s, yaw=0.0, tf=None):
+    """A closed box: centre c, size s (x, y, z), turned `yaw` about the vertical; tf(p) shapes the local corners first."""
+    hx, hy, hz = s[0] / 2, s[1] / 2, s[2] / 2
+    ids = []
+    for x, y, z in ((-hx, -hy, -hz), (hx, -hy, -hz), (hx, -hy, hz), (-hx, -hy, hz),
+                    (-hx, hy, -hz), (hx, hy, -hz), (hx, hy, hz), (-hx, hy, hz)):
+        p = Vector((x, y, z))
+        if tf:
+            p = tf(p)
+        ids.append(g.vert(rot_y(p, yaw) + Vector(c)))
+    a = ids
+    for f in ((0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)):
+        g.face(*[a[i] for i in f])
+
+
+def post(g, x, z, y0, y1, r0, r1=None, seg=12, lean=(0.0, 0.0)):
+    """A round post from y0 to y1 (radius r0 at the foot, r1 at the head), its head shifted by `lean` (a batter)."""
+    r1 = r0 if r1 is None else r1
+    sub = Geo()
+    lathe(sub, [(0.0, y1), (r1, y1), (r0, y0), (0.0, y0)], seg)
+    h = max(y1 - y0, 1e-6)
+    sub.transform(lambda p: Vector((p.x + x + lean[0] * (p.y - y0) / h, p.y, p.z + z + lean[1] * (p.y - y0) / h)))
+    g.add(sub)
+
+
+def sweep_x(g, xs, section):
+    """Sweeps a closed (z, y) section along X: section(x) -> [(z, y)], the same count at every station."""
+    sub = Geo()
+    sweep(sub, xs, lambda x: [(-zz, yy) for zz, yy in section(x)])
+    # (sweep runs along Z with (x, y) sections: turn it to run along X)
+    sub.transform(lambda p: Vector((p.z, p.y, p.x)))
+    g.add(sub)
+
+
+def torii():
+    """A myojin torii: two round lacquered posts with a slight batter on stone footings, black root collars, the nuki tie
+    beam through the posts, a short central strut carrying a plain bordered (blank) plaque, the vermilion shimagi and over
+    it the dark kasagi whose ends sweep up. Opening 9 wide, 10 high under the tie beam; 15.2 wide and 13.5 high overall."""
+    lac, dark, stone = Geo(), Geo(), Geo()
+    X = 5.05
+    for sx in (-1, 1):
+        lathe(stone, [(0.0, 0.62), (0.62, 0.62), (0.86, 0.42), (0.95, 0.12), (0.95, -0.35), (0.0, -0.35)], 16,
+              centre=(sx * X, 0, 0))
+        post(lac, sx * X, 0.0, 0.45, 12.25, 0.58, 0.5, seg=16, lean=(-sx * 0.22, 0.0))
+        post(dark, sx * X, 0.0, 0.5, 1.45, 0.66, 0.65, seg=16, lean=(-sx * 0.018, 0.0))
+    # the nuki (tie beam), through both posts and out past them
+    box(lac, (0.0, 10.12, 0.0), (13.2, 0.62, 0.42))
+    # the central strut and the blank plaque: a dark frame round a plain inset panel
+    box(lac, (0.0, 11.2, 0.0), (0.52, 1.75, 0.34))
+    box(dark, (0.0, 11.12, 0.0), (1.25, 1.45, 0.5))
+    box(lac, (0.0, 11.12, 0.0), (0.95, 1.12, 0.56))
+
+    def lift(x, span):
+        return 0.5 * (abs(x) / span) ** 2.4
+
+    # the shimagi: lacquered, just beneath the kasagi, gently lifted at the ends
+    xs = [-7.0 + 14.0 * i / 16 for i in range(17)]
+    sweep_x(lac, xs, lambda x: [(-0.3, 11.98 + lift(x, 7.6)), (0.3, 11.98 + lift(x, 7.6)), (0.3, 12.5 + lift(x, 7.6)),
+                                (-0.3, 12.5 + lift(x, 7.6))])
+    # the kasagi: dark, wider at the top than below, its ends swept up and cut back at an angle
+    xs = [-7.6 + 15.2 * i / 20 for i in range(21)]
+
+    def kasagi(x):
+        y = 12.45 + lift(x, 7.6)
+        e = abs(x) / 7.6
+        back = 0.12 * max(0.0, e - 0.9) * 10
+        return [(-0.42, y), (0.42, y), (0.52, y + 0.42 - back * 0.3), (0.46, y + 0.66), (-0.46, y + 0.66), (-0.52, y + 0.42 - back * 0.3)]
+    sweep_x(dark, xs, kasagi)
+    return {"Lacquer": lac, "RoofDark": dark, "Stone": stone}, {"opening": {"width": round(2 * (X - 0.58), 2), "height_under_nuki": 9.81,
+                                                                         "height_under_shimagi": 11.98}}
+
+
+def lantern():
+    """A stone toro lantern, 6.5 tall: a hexagonal footing, a round shaft with a collar, a hexagonal platform, a light box
+    framed by six corner posts (open toward front and back, solid panels on the other four faces), a hexagonal roof whose
+    corners curl gently up, a small knob finial. A Glow block sits inside the light box for the light Studio adds."""
+    st, glow = Geo(), Geo()
+    lathe(st, [(0.0, 0.62), (0.95, 0.62), (1.18, 0.42), (1.25, 0.2), (1.25, -0.25), (0.0, -0.25)], 6, phase=0.0)
+    lathe(st, [(0.0, 3.05), (0.33, 3.05), (0.36, 1.95), (0.46, 1.85), (0.46, 1.62), (0.37, 1.52), (0.42, 0.55), (0.0, 0.55)], 14)
+    lathe(st, [(0.0, 3.6), (0.95, 3.6), (1.02, 3.46), (0.88, 3.2), (0.42, 2.98), (0.0, 2.98)], 6)
+    # light box: floor and lid slabs, six corner posts, four solid side panels; open front and back
+    lathe(st, [(0.0, 3.72), (0.78, 3.72), (0.78, 3.55), (0.0, 3.55)], 6)
+    lathe(st, [(0.0, 4.86), (0.84, 4.86), (0.84, 4.68), (0.0, 4.68)], 6)
+    for k in range(6):
+        a = TAU * k / 6
+        box(st, (math.cos(a) * 0.68, 4.2, math.sin(a) * 0.68), (0.2, 1.06, 0.2), yaw=-a)
+    for k in range(6):
+        a = TAU * (k + 0.5) / 6
+        if k in (1, 4):          # (the faces toward +Z and -Z stay open)
+            continue
+        box(st, (math.cos(a) * 0.6, 4.2, math.sin(a) * 0.6), (0.62, 0.96, 0.1), yaw=-a + math.pi / 2)
+    lathe(glow, [(0.0, 4.25), (0.32, 4.25), (0.32, 3.66), (0.0, 3.66)], 6, phase=math.pi / 6)
+    # the roof: hexagonal, 12 around so its corners can curl up
+    def curl(th, y, r):
+        return r
+    roof = Geo()
+    prof = [(0.0, 5.55), (0.3, 5.5), (1.25, 5.0), (1.52, 4.86), (1.5, 4.74), (1.12, 4.72), (0.0, 4.72)]
+    rings = lathe(roof, prof, 12)
+    for i, ring in enumerate(rings):
+        if isinstance(ring, int) or i < 2:
+            continue
+        for k, vid in enumerate(ring):
+            corner = k % 2 == 0
+            v = roof.v[vid]
+            rr = math.hypot(v.x, v.z)
+            if corner:
+                f = 1.0 / math.cos(math.pi / 6)
+                roof.v[vid] = Vector((v.x * f, v.y + (0.16 if i >= 3 else 0.05), v.z * f))
+    st.add(roof)
+    lathe(st, [(0.0, 6.5), (0.14, 6.46), (0.24, 6.3), (0.24, 6.12), (0.15, 5.98), (0.2, 5.8), (0.2, 5.68), (0.1, 5.45), (0.0, 5.45)], 10)
+    return {"Stone": st, "Glow": glow}, {"glow_object": "BS_ShrineLantern__Glow"}
+
+
+def path_slab():
+    """A worn rectangular paving slab for the approach: 5 x 2.6 x 0.5, its walking face level at y = 0, arrises worn."""
+    g = Geo()
+    L, w = 5.0, 2.6
+
+    def sec(x):
+        e = 1.0 - 0.06 * smooth01((abs(x) - (L / 2 - 0.12)) / 0.12)
+        hw = w / 2 * e
+        n = W.fbm(x * 0.7, 0.4, 503, octaves=2) * 0.02
+        return [(hw, -0.5), (hw + n, -0.07), (hw - 0.09, 0.0), (-hw + 0.09, 0.0), (-hw - n, -0.07), (-hw, -0.5)]
+    sw = Geo()
+    sweep(sw, [-L / 2, -L / 2 + 0.12, L / 2 - 0.12, L / 2], sec)
+    sw.transform(lambda p: Vector((p.z, p.y, -p.x)))
+    g.add(sw)
+    return {"Stone": g}, {}
+
+
+def _gable_roof(g_roof, g_under, g_trim, ridge_z, ridge_y, front_z, front_y, back_z, back_y, half, t=0.4, t2=0.3, n=7, lift=0.35,
+                bargeboard=True):
+    """A gabled roof along X, both slopes concave (steep at the ridge, easing to the eaves), the eave corners swept up:
+    a cypress-bark layer over a timber under-layer set back at the edges (a layered eave), copper on the ridge, along both
+    eaves and on the bargeboards."""
+    def slope(z0, y0, z1, y1, k):
+        s = k / n
+        return (z0 + (z1 - z0) * s, y0 - (y0 - y1) * (1.0 - (1.0 - s) ** 1.6))
+    front = [slope(ridge_z, ridge_y, front_z, front_y, k) for k in range(n + 1)]
+    back = [slope(ridge_z, ridge_y, back_z, back_y, k) for k in range(n + 1)]
+    top = back[::-1] + front[1:]                       # rear eave -> ridge -> front eave
+
+    def corner_lift(x, k_from_end):
+        e = (abs(x) / half) ** 3
+        return lift * e * (1.0 if k_from_end == 0 else 0.45 if k_from_end == 1 else 0.0)
+    xs = [-half + 2 * half * i / 12 for i in range(13)]
+
+    def layer(off, dt, trim_e):
+        def sec(x):
+            m = len(top)
+            up = []
+            for i, (z, y) in enumerate(top):
+                kd = min(i, m - 1 - i)
+                up.append((z, y + corner_lift(x, kd) + off))
+            # pull the eave ends in for the lower layer
+            if trim_e:
+                (z0, y0), (z1, y1) = up[0], up[1]
+                up[0] = (z0 + (z1 - z0) * trim_e, y0 + (y1 - y0) * trim_e)
+                (z0, y0), (z1, y1) = up[-1], up[-2]
+                up[-1] = (z0 + (z1 - z0) * trim_e, y0 + (y1 - y0) * trim_e)
+            low = [(z, y - dt) for z, y in up[::-1]]
+            return up + low
+        return sec
+    sweep_x(g_roof, xs, layer(0.0, t, 0.0))
+    xs2 = [-half * 0.985 + 2 * half * 0.985 * i / 12 for i in range(13)]
+    sweep_x(g_under, xs2, layer(-t + 0.05, t2, 0.22))
+    # copper: the ridge roll, and a band along each eave edge
+    sweep_x(g_trim, [-half - 0.05, half + 0.05], lambda x: [(ridge_z - 0.38, ridge_y - 0.05), (ridge_z + 0.38, ridge_y - 0.05),
+                                                            (ridge_z + 0.3, ridge_y + 0.32), (ridge_z, ridge_y + 0.45),
+                                                            (ridge_z - 0.3, ridge_y + 0.32)])
+    for (z0, y0), (z1, y1) in ((top[0], top[1]), (top[-1], top[-2])):
+        def band(x, z0=z0, y0=y0, z1=z1, y1=y1):
+            lf = corner_lift(x, 0)
+            dz, dy = z1 - z0, y1 - y0
+            L = math.hypot(dz, dy)
+            uz, uy = dz / L, dy / L
+            return [(z0 - uz * 0.08, y0 + lf - uy * 0.08 + 0.1), (z0 + uz * 0.5, y0 + lf + uy * 0.5 + 0.1),
+                    (z0 + uz * 0.5, y0 + lf + uy * 0.5 - t - 0.06), (z0 - uz * 0.08, y0 + lf - uy * 0.08 - t - 0.06)]
+        sweep_x(g_trim, xs, band)
+    if bargeboard:
+        for sx in (-1, 1):
+            def bb(x):
+                m = len(top)
+                pts = [(z, y + corner_lift(half * sx, min(i, m - 1 - i)) + 0.12) for i, (z, y) in enumerate(top)]
+                return pts + [(z, y - t - 0.32) for z, y in pts[::-1]]
+            sub = Geo()
+            sweep_x(sub, [half - 0.18, half + 0.12] if sx > 0 else [-half - 0.12, -half + 0.18], bb)
+            g_trim.add(sub)
+    return top
+
+
+def chozuya():
+    """The purification pavilion: four cedar posts on a stone pad, tie beams, a small dark gabled roof with copper trims,
+    and under it a long hollowed stone basin on a plinth, filled to just below its lip, a cedar spout over it."""
+    st, wood, roof, under, cu, water = Geo(), Geo(), Geo(), Geo(), Geo(), Geo()
+    box(st, (0.0, -0.05, 0.0), (6.6, 0.4, 4.6))
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            lathe(st, [(0.0, 0.42), (0.38, 0.42), (0.42, 0.15), (0.0, 0.1)], 8, centre=(sx * 2.7, 0, sz * 1.7))
+            post(wood, sx * 2.7, sz * 1.7, 0.3, 5.3, 0.24, 0.22, seg=10)
+    for sz in (-1, 1):
+        box(wood, (0.0, 5.05, sz * 1.7), (6.1, 0.42, 0.34))
+    for sx in (-1, 1):
+        box(wood, (sx * 2.7, 4.75, 0.0), (0.32, 0.36, 3.9))
+    # (the roof's under-layer is timber: in the game it reads as the boarded soffit)
+    _gable_roof(roof, under, cu, 0.0, 7.0, 3.05, 5.15, -3.05, 5.15, 3.75, t=0.32, t2=0.22, n=5, lift=0.22)
+    # a short king post up to the ridge at each end, on the tie beams
+    for sx in (-1, 1):
+        box(wood, (sx * 2.7, 5.95, 0.0), (0.26, 1.6, 0.26))
+        box(wood, (sx * 2.7, 5.35, 0.0), (0.3, 0.26, 3.6))
+    # the basin: a long hollowed block on a plinth
+    box(st, (0.0, 0.9, 0.15), (2.6, 1.6, 0.95))
+    tub = Geo()
+    L, Wd, y0, y1, wall, depth = 3.4, 1.35, 1.55, 2.45, 0.22, 0.55
+    o = [(-L / 2, -Wd / 2), (L / 2, -Wd / 2), (L / 2, Wd / 2), (-L / 2, Wd / 2)]
+    i_ = [(-L / 2 + wall, -Wd / 2 + wall), (L / 2 - wall, -Wd / 2 + wall), (L / 2 - wall, Wd / 2 - wall), (-L / 2 + wall, Wd / 2 - wall)]
+    ob = [tub.vert((x, y0, z + 0.15)) for x, z in o]
+    ot = [tub.vert((x, y1, z + 0.15)) for x, z in o]
+    it = [tub.vert((x, y1, z + 0.15)) for x, z in i_]
+    ib = [tub.vert((x, y1 - depth, z + 0.15)) for x, z in i_]
+    tub.face(*ob[::-1])
+    for k in range(4):
+        j = (k + 1) % 4
+        tub.face(ob[k], ob[j], ot[j], ot[k])
+        tub.face(ot[k], ot[j], it[j], it[k])
+        tub.face(it[k], it[j], ib[j], ib[k])
+    tub.face(*ib)
+    st.add(tub)
+    box(water, (0.0, y1 - 0.2, 0.15), (L - 2 * wall + 0.04, 0.06, Wd - 2 * wall + 0.04))
+    # the spout: a cedar upright behind the basin and a pipe reaching over the water
+    post(wood, 1.05, -0.35, 1.7, 3.35, 0.1, 0.09, seg=6)
+    tube(wood, resample([Vector((1.05, 3.2, -0.42)), Vector((0.95, 3.18, -0.05)), Vector((0.8, 3.05, 0.3))], 2),
+         lambda t, s_, d, c: 0.075, 6, tip=0.2)
+    return {"Stone": st, "Timber": wood.add(under), "RoofDark": roof, "Copper": cu, "ShrineWater": water}, {}
+
+
+HALL = {"floor": 3.0, "steps": 4, "rise": 0.6, "tread": 0.8, "stair_width": 8.4, "stair_front_z": 7.7}
+
+
+def shrine_hall():
+    """A small nagare-style hall on a dressed stone plinth: a raised cedar floor at 3.0 with a veranda and low vermilion
+    railings, a broad front stair (four 0.6 rises), round cedar posts, white plaster walls with cedar base boards and
+    tie bands on the sides and back (cedar lattice in the two narrow front bays), an open front bay 8.2 wide and 8.4 high,
+    simple bracket blocks at the post heads, and the roof: a long concave front slope flowing out over the stair and a
+    shorter rear slope, layered cypress bark over a timber soffit, copper ridge, eave bands and bargeboards, restrained
+    crossed finials at the gable ends. The inner sanctum doors (plain dark panels) close the back of the hall."""
+    st, wood, lac, plas, roof, under, cu, dark = Geo(), Geo(), Geo(), Geo(), Geo(), Geo(), Geo(), Geo()
+    F = HALL["floor"]
+    # the plinth: dressed stone with a chamfered top edge
+    sweep_x(st, [-7.9, 7.9], lambda x: [(-7.4, -0.3), (4.9, -0.3), (4.9, 0.75), (4.75, 0.9), (-7.25, 0.9), (-7.4, 0.75)])
+    # the floor and veranda (cedar), carried by the posts and a ring of short stilts
+    box(wood, (0.0, F - 0.22, -1.25), (15.0, 0.44, 11.6))
+    for x in (-7.2, -3.6, 0.0, 3.6, 7.2):
+        for z in (-6.8, 4.3):
+            post(wood, x, z, 0.75, F - 0.3, 0.26, seg=8)
+    for z in (-3.1, 0.6):
+        for x in (-7.2, 7.2):
+            post(wood, x, z, 0.75, F - 0.3, 0.26, seg=8)
+    # the stair: one solid of four 0.6 rises and 0.8 treads, 8.4 wide, with lacquered side boards
+    def stair(x):
+        pts = [(4.3, -0.2), (7.7, -0.2)]
+        z = 7.7
+        for k in range(1, 5):
+            pts.append((z, 0.6 * k))
+            z -= 0.8
+            pts.append((z, 0.6 * k))
+        pts.append((4.3, 2.4))
+        return pts
+    sweep_x(wood, [-4.2, 4.2], stair)
+    for sx in (-1, 1):
+        sweep_x(lac, [sx * 4.15, sx * 4.47] if sx > 0 else [-4.47, -4.15], lambda x: [(4.25, 0.25), (7.9, 0.25), (7.9, 0.95),
+                                                                                        (4.25, 3.55)])
+    # veranda railings (low, vermilion): along both sides and the front either side of the stair
+    for sx in (-1, 1):
+        box(lac, (sx * 7.25, F + 1.15, -1.2), (0.2, 0.2, 11.0))
+        for z in (-6.5, -4.3, -2.1, 0.1, 2.3, 4.25):
+            box(lac, (sx * 7.25, F + 0.55, z), (0.22, 1.15, 0.22))
+        box(lac, (sx * 5.85, F + 1.15, 4.3), (2.95, 0.2, 0.2))
+        box(lac, (sx * 4.45, F + 0.55, 4.3), (0.22, 1.15, 0.22))
+    # posts: corners, the two front posts framing the open bay, mid posts on the sides and back
+    P = [(-6.2, 3.0), (-4.5, 3.0), (4.5, 3.0), (6.2, 3.0), (-6.2, -1.25), (6.2, -1.25), (-6.2, -5.5), (-2.1, -5.5), (2.1, -5.5),
+         (6.2, -5.5)]
+    for x, z in P:
+        post(wood, x, z, 0.75, 12.55, 0.42, 0.4, seg=12)
+    # walls: plaster between posts on the sides and back; cedar base boards and a cedar tie band proud of the plaster
+    def wall(x0, z0, x1, z1):
+        L = math.hypot(x1 - x0, z1 - z0)
+        yaw = -math.atan2(z1 - z0, x1 - x0)
+        c = ((x0 + x1) / 2, 0, (z0 + z1) / 2)
+        box(plas, (c[0], (F - 0.1 + 11.5) / 2, c[2]), (L, 11.5 - F + 0.1, 0.3), yaw=yaw)
+        box(wood, (c[0], F + 0.6, c[2]), (L, 1.2, 0.42), yaw=yaw)
+        box(wood, (c[0], 7.6, c[2]), (L, 0.36, 0.4), yaw=yaw)
+    for sx in (-1, 1):
+        wall(sx * 6.2, 3.0, sx * 6.2, -1.25)
+        wall(sx * 6.2, -1.25, sx * 6.2, -5.5)
+    for x0, x1 in ((-6.2, -2.1), (-2.1, 2.1), (2.1, 6.2)):
+        wall(x0, -5.5, x1, -5.5)
+    # the two narrow front bays: cedar lattice over a dark backing
+    for sx in (-1, 1):
+        cxb = sx * 5.35
+        box(dark, (cxb, (F + 11.5) / 2, 3.0), (1.75, 11.5 - F, 0.12))
+        box(wood, (cxb, F + 0.6, 3.0), (1.75, 1.2, 0.4))
+        for k in range(4):
+            box(wood, (cxb - 0.6 + 0.4 * k, (F + 1.2 + 11.5) / 2, 3.12), (0.1, 11.5 - F - 1.2, 0.12))
+        for k in range(8):
+            box(wood, (cxb, F + 1.9 + k * 1.15, 3.12), (1.72, 0.1, 0.13))
+    # head beams all round, the wall plate over them, bracket blocks on the post heads
+    for z in (3.0, -5.5):
+        box(wood, (0.0, 11.75, z), (13.3, 0.6, 0.5))
+        box(wood, (0.0, 12.3, z), (13.6, 0.5, 0.62))
+    for sx in (-1, 1):
+        box(wood, (sx * 6.2, 11.75, -1.25), (0.5, 0.6, 9.3))
+        box(wood, (sx * 6.2, 12.3, -1.25), (0.62, 0.5, 9.6))
+    for x, z in P:
+        if abs(z + 1.25) < 0.01:
+            continue
+        box(wood, (x, 12.7, z), (0.78, 0.42, 0.78))
+        box(wood, (x, 13.0, z + (0.5 if z > 0 else -0.5)), (0.5, 0.26, 1.9))
+    # the sanctum doors on the back wall: two plain dark panels in a cedar frame (seen through the open bay)
+    box(wood, (0.0, F + 3.4, -5.3), (3.6, 5.6, 0.2))
+    for sx in (-1, 1):
+        box(dark, (sx * 0.82, F + 3.4, -5.18), (1.45, 5.0, 0.12))
+    # the roof: nagare form, ridge at 17, the front slope out to 6.9 over the stair, the rear to -8.3
+    top = _gable_roof(roof, under, cu, -1.3, 17.0, 6.9, 11.2, -8.3, 13.0, 8.6, t=0.5, t2=0.32, n=8, lift=0.5)
+    # the attic (gables and ceiling): from the wall plate up into the roof's underside
+    def attic(x):
+        pts = [(z, y - 0.4) for z, y in top if -5.8 <= z <= 3.3]
+        return [(3.3, 12.4), (-5.8, 12.4)] + [(z, y) for z, y in pts]
+    def attic_sec(x):
+        pts = attic(x)
+        return pts
+    sweep_x(plas, [-6.15, 6.15], lambda x: [(3.25, 12.35), (-5.75, 12.35)] +
+            [(z, y - 0.62) for z, y in top if -5.75 < z < 3.25][::-1] if False else
+            [(-5.75, 12.35), (3.25, 12.35)] + [(z, y - 0.62) for z, y in top[::-1] if -5.75 < z < 3.25])
+    # crossed finials at the gable ends (restrained: short cedar boards crossing just above the ridge)
+    for sx in (-1, 1):
+        for tz in (-1, 1):
+            box(wood, (sx * 8.45, 17.35, -1.3 + tz * 0.35), (0.16, 2.0, 0.32), tf=lambda p, tz=tz: rot_x(p, tz * 0.6))
+    return ({"Stone": st, "Timber": wood.add(under), "Lacquer": lac, "Plaster": plas, "RoofDark": roof, "Copper": cu},
+            {"floor_y": F, "stairs": {"rises": 4, "rise": 0.6, "tread": 0.8, "width": 8.4, "bottom_front_z": 7.7, "top_z": 4.5},
+             "front_bay": {"clear_width": round(9.0 - 0.84, 2), "clear_height": round(11.45 - F, 2)}})
+
+
+# ======================================================================================================================
 # Objects, UVs, shading
 # ======================================================================================================================
 def preview_material(suffix):
@@ -1776,7 +2128,8 @@ def make_object(name, geo, suffix, coll, smooth_angle=80.0, weighted=False):
     return o
 
 
-SHADING = {"Stone": (55.0, True), "Moss": (70.0, True), "Bark": (80.0, False), "Blossom": (180.0, False), "BlossomPale": (180.0, False),
+SHADING = {"Timber": (50.0, True), "Lacquer": (50.0, True), "RoofDark": (45.0, True), "Copper": (50.0, True),
+           "Plaster": (40.0, True), "Glow": (40.0, False), "ShrineWater": (40.0, False), "Stone": (55.0, True), "Moss": (70.0, True), "Bark": (80.0, False), "Blossom": (180.0, False), "BlossomPale": (180.0, False),
            "LilyFlower": (180.0, False)}
 
 
@@ -1812,6 +2165,8 @@ PIECES.update({
     "BS_KoiShowa": lambda: koi_body("Showa"), "BS_KoiShowaTail": lambda: koi_tail("Showa"),
     "BS_KoiOgon": lambda: koi_body("Ogon"), "BS_KoiOgonTail": lambda: koi_tail("Ogon"),
     "BS_Ripple": ripple,
+    "BS_Torii": torii, "BS_ShrineHall": shrine_hall, "BS_ShrineLantern": lantern, "BS_Chozuya": chozuya,
+    "BS_ShrinePathSlab": path_slab,
 })
 
 

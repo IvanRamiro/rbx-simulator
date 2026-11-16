@@ -194,26 +194,55 @@ def path_dist(x, z):
 # framing the bridge from the arrival, a Weeping tree at the bridge's far end, Leaning trees reaching over the water, the Twins
 # and the Gnarled ones in the Grove and on the Lookout's cliff, Young trees opening the lawn's edges. None inside the lawn.
 TREES = [
-    ("BS_TreeElder", -128, 18, 0.4, 1.0),
-    ("BS_TreeElder", -262, 70, 2.4, 0.85),
-    ("BS_TreeWeeping", -84, 2, 2.0, 1.0),
-    ("BS_TreeWeeping", -190, -42, 4.0, 0.95),
-    ("BS_TreeWeeping", -62, 122, 1.0, 0.9),
-    ("BS_TreeLeaning", -26, -82, -0.31, 1.0),
-    ("BS_TreeLeaning", -154, -60, 0.95, 0.9),
-    ("BS_TreeTwin", -208, 62, 1.2, 1.0),
-    ("BS_TreeTwin", -252, -22, 2.6, 0.9),
-    ("BS_TreeTwin", 8, 112, 5.0, 0.95),
-    ("BS_TreeTwin", -40, -116, 3.9, 0.85),
-    ("BS_TreeYoung", -170, 98, 0.3, 1.1),
-    ("BS_TreeYoung", -112, 76, 1.7, 0.9),
-    ("BS_TreeYoung", -300, 15, 3.0, 1.0),
-    ("BS_TreeYoung", 96, 76, 2.2, 1.0),
-    ("BS_TreeYoung", 140, -88, 0.8, 0.95),
-    ("BS_TreeYoung", -6, -142, 4.0, 1.0),
-    ("BS_TreeGnarled", 248, -58, 2.1, 1.0),
-    ("BS_TreeGnarled", 200, 32, 1.0, 0.9),
-    ("BS_TreeGnarled", 78, -128, 3.5, 0.9),
+    # the pond and the bridge (scaled up 2026-11-16 after the import: at 1.0 they read as small tufts on a 600-stud island)
+    ("BS_TreeElder", -128, 18, 0.4, 1.5),        # the hero: over the small pool's far bank, framing the bridge from the landing
+    ("BS_TreeWeeping", -84, 4, 2.0, 1.3),        # at the bridge's far end
+    ("BS_TreeLeaning", -26, -82, -0.31, 1.3),    # reaching over the kidney from its near bank
+    ("BS_TreeLeaning", -154, -60, 0.95, 1.15),   # over the small pool
+    ("BS_TreeTwin", -40, -116, 3.9, 1.15),       # framing the landing's view
+    ("BS_TreeYoung", -6, -142, 4.0, 1.2),
+    ("BS_TreeGnarled", -100, -100, 0.6, 1.1),
+    # the Grove: a stand inside its path's loop and round it
+    ("BS_TreeElder", -262, 70, 2.4, 1.3),
+    ("BS_TreeTwin", -208, 62, 1.2, 1.35),
+    ("BS_TreeGnarled", -215, 25, 0.9, 1.2),
+    ("BS_TreeYoung", -232, 42, 4.4, 1.15),
+    ("BS_TreeTwin", -252, -22, 2.6, 1.25),
+    ("BS_TreeWeeping", -190, -42, 4.0, 1.2),
+    ("BS_TreeYoung", -170, 98, 0.3, 1.3),
+    ("BS_TreeYoung", -300, 15, 3.0, 1.2),
+    ("BS_TreeTwin", -232, -78, 5.6, 1.1),
+    ("BS_TreeElder", -300, 75, 1.0, 1.1),
+    ("BS_TreeLeaning", -175, -70, 2.8, 1.1),
+    ("BS_TreeYoung", -128, -90, 1.1, 1.2),
+    # the far meadow (open in the middle: the island's open ground)
+    ("BS_TreeTwin", 8, 112, 5.0, 1.3),
+    ("BS_TreeYoung", -112, 76, 1.7, 1.15),
+    ("BS_TreeElder", -70, 128, 3.3, 1.25),
+    ("BS_TreeYoung", 40, 140, 2.6, 1.2),
+    ("BS_TreeGnarled", -10, 170, 0.2, 1.15),
+    # round the Training Ground (never on it)
+    ("BS_TreeYoung", 96, 76, 2.2, 1.2),
+    ("BS_TreeYoung", 140, -88, 0.8, 1.15),
+    ("BS_TreeGnarled", 78, -128, 3.5, 1.1),
+    ("BS_TreeTwin", 150, -55, 1.9, 1.15),
+    ("BS_TreeLeaning", 40, 52, 2.76, 1.1),       # leaning toward the lawn
+    # the Lookout, and the hub-facing edge's silhouette
+    ("BS_TreeGnarled", 248, -58, 2.1, 1.3),
+    ("BS_TreeGnarled", 200, 32, 1.0, 1.15),
+    ("BS_TreeElder", 205, 12, 4.0, 1.2),         # shading the Lookout's seats
+    ("BS_TreeYoung", 275, 10, 1.4, 1.1),
+    ("BS_TreeElder", 175, -95, 2.2, 1.15),
+    # a few more (the owner, 2026-11-16: "I love the new are, but add some few more blossom trees"), each for a reason:
+    ("BS_TreeTwin", 10, -168, 0.9, 1.05),        # either side of the stepping stones' landing
+    ("BS_TreeYoung", 68, -170, 4.3, 1.1),
+    ("BS_TreeLeaning", 116, -112, 3.6, 1.05),    # the hub-facing edge, seen on the approach
+    ("BS_TreeYoung", -30, 12, 2.0, 1.15),        # the pond's far bank, off the landing's line to the bridge
+    ("BS_TreeLeaning", -55, 14, 3.09, 1.1),      # leaning out over the kidney
+    ("BS_TreeTwin", 70, 110, 3.0, 1.2),          # the meadow's edge
+    ("BS_TreeGnarled", -150, 140, 1.6, 1.1),
+    ("BS_TreeTwin", 272, -62, 2.4, 1.2),         # framing the Lookout (the shrine's site) from behind
+    ("BS_TreeLeaning", 262, 32, -2.46, 1.1),
 ]
 CANOPY_R = {"BS_TreeElder": 21, "BS_TreeWeeping": 12, "BS_TreeLeaning": 9, "BS_TreeTwin": 14, "BS_TreeYoung": 7, "BS_TreeGnarled": 14}
 CANOPY_AT = {"BS_TreeLeaning": (0, 9.3), "BS_TreeGnarled": (2.2, 0.2)}   # the canopy's centre off the trunk (pieces.json)

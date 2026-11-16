@@ -209,7 +209,9 @@ local function buildDeepTerrain(data, settings)
                             local solid = math.min(math.clamp((top - y0 - VOXEL / 2) / VOXEL, 0, 1), math.clamp((y0 + VOXEL - bottom) / VOXEL, 0, 1))
                             if solid > 0 then
                                 local depth = top - (y0 + VOXEL / 2)
-                                if depth <= VOXEL then
+                                -- (two voxels deep: a top just over a voxel's boundary leaves the one under it showing, and at 4 the
+                                -- paths' edges showed the Ground beneath as brown scars, seen after the import)
+                                if depth <= 6 then
                                     material = surface
                                 elseif depth < 10 then
                                     material = if keep then surface else subMaterial
@@ -787,9 +789,11 @@ WorldBuilder.MaterialLooks = {
     -- the Blossom Sanctuary (blossom_assets.py): a dark plum-brown bark, two tones of blossom, warm ivory water-worn stone, moss, the
     -- pond's life and the koi. Only the bark and the stone collide.
     Bark = { Material = Enum.Material.Wood, Color = Color3.fromRGB(86, 60, 58) },
-    Blossom = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(232, 146, 176), CanCollide = false },
-    BlossomPale = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(250, 214, 226), CanCollide = false },
-    Stone = { Material = Enum.Material.Limestone, Color = Color3.fromRGB(222, 212, 192) },
+    -- (judged in Studio after the import, 2026-11-16: the paler 250, 214, 226 read as white cotton; Sand and LeafyGrass greyed the
+    -- pinks to a dusty mauve; a deeper rose in SmoothPlastic reads as blossom)
+    Blossom = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(222, 118, 158), CanCollide = false },
+    BlossomPale = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(244, 178, 204), CanCollide = false },
+    Stone = { Material = Enum.Material.Limestone, Color = Color3.fromRGB(196, 186, 170) }, -- (222, 212, 192 read stark white in the sun)
     Moss = { Material = Enum.Material.LeafyGrass, Color = Color3.fromRGB(96, 126, 70), CanCollide = false },
     Lily = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(74, 124, 66), CanCollide = false, CastShadow = false },
     LilyFlower = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(252, 238, 242), CanCollide = false, CastShadow = false },

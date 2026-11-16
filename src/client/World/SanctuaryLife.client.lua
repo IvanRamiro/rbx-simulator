@@ -33,7 +33,8 @@ local SWAY_NEAR = 170          -- canopies sway within this of the camera
 local SWAY_ANGLE = math.rad(0.7)
 local PETAL_RATE = if Quality.Low then 10 else 24
 local PETAL_REDUCED = 4
-local PETAL_TEXTURE = "rbxasset://textures/particles/SquareParticle.png" -- Roblox's own plain square, small and tumbling
+-- Roblox's own soft puff, small, squashed and tumbling: reads as a soft petal (its plain square read as white confetti in Play)
+local PETAL_TEXTURE = "rbxasset://textures/particles/smoke_main.dds"
 local SPLASH_TEXTURE = "rbxasset://textures/particles/SquareParticle.png"
 
 local function reduced()
@@ -65,14 +66,14 @@ local function raining()
 end
 
 -- ---------- petals ----------
-local PINK = Color3.fromRGB(246, 178, 202)
-local PALE = Color3.fromRGB(255, 226, 236)
+local PINK = Color3.fromRGB(236, 132, 172)
+local PALE = Color3.fromRGB(250, 192, 214)
 local function petalEmitter(parent)
     local e = Instance.new("ParticleEmitter")
     e.Name = "Petals"
     e.Texture = PETAL_TEXTURE
     e.Color = ColorSequence.new(PALE, PINK)
-    e.LightEmission = 0
+    e.LightEmission = 0.15
     e.LightInfluence = 1
     e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 0.16) })
     -- the squash swings from flat to wide and back: a small square tumbling end over end, read as a petal

@@ -38,6 +38,7 @@ GROUPS = {
                "BS_EdgeRockC", "BS_KerbStone", "BS_SeatStone"],
     "Water": ["BS_LilyPadA", "BS_LilyPadB", "BS_LilyPadCluster", "BS_LilyFlower", "BS_Reeds", "BS_WaterPlantain", "BS_PetalDrift"],
     "Koi": ["BS_KoiKohaku", "BS_KoiKohakuTail", "BS_KoiShowa", "BS_KoiShowaTail", "BS_KoiOgon", "BS_KoiOgonTail", "BS_Ripple"],
+    "Shrine": ["BS_Torii", "BS_ShrineHall", "BS_ShrineLantern", "BS_Chozuya", "BS_ShrinePathSlab"],
 }
 
 
@@ -198,7 +199,9 @@ def render(pieces):
         A.clear_scene()
         objs, meta = A.build_piece(p)
         print("BUILT", p, sum(A.tris(o) for o in objs), {o.name: A.tris(o) for o in objs}, json.dumps(meta))
-        out = piece_views(p, objs, os.path.join(RENDERS, p + ".png"))
+        folder = os.path.join(RENDERS, "shrine") if p in GROUPS["Shrine"] else RENDERS
+        os.makedirs(folder, exist_ok=True)
+        out = piece_views(p, objs, os.path.join(folder, p + ".png"))
         print("RENDER", out)
         A.clear_scene()
 
