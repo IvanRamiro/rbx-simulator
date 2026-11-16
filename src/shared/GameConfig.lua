@@ -1010,9 +1010,10 @@ local GameConfig = {
         -- the 8x and 16x passes are Retired: taken off sale on Roblox, never shown, and anyone who owns one counts as the 4x tier (only
         -- the creator's account ever had them: the game wasn't public). They stay listed so their ownership is still checked.
         -- The 2x tier is the old Qi Surge pass (Id kept, so its owners keep it), renamed and repriced on Roblox the same day.
-        { Id = "QiSurge", Name = "Qi Boost", GamePassId = 2083202424, Price = 3, Headline = "2x QI!", Icon = "rbxassetid://71034417049645",
+        -- Repriced on Roblox on 2026-11-16 by the owner's decision, from 3 and 6 Robux: 2x 49, 4x 149 (the timed boosts are 5, 12, 39).
+        { Id = "QiSurge", Name = "Qi Boost", GamePassId = 2083202424, Price = 49, Headline = "2x QI!", Icon = "rbxassetid://71034417049645",
             Text = "Double Qi from cultivating, while you're away and from every Qi reward.", QiTier = 2 },
-        { Id = "Qi4x", Name = "Greater Qi Boost", GamePassId = 2088004027, Price = 6, Headline = "4x QI!", Icon = "rbxassetid://71034417049645",
+        { Id = "Qi4x", Name = "Greater Qi Boost", GamePassId = 2088004027, Price = 149, Headline = "4x QI!", Icon = "rbxassetid://71034417049645",
             Text = "Four times the Qi from cultivating, while you're away and from every Qi reward.", QiTier = 4 },
         { Id = "Qi8x", Name = "Grand Qi Boost", GamePassId = 2088975892, Price = 12, Headline = "8x QI!", Icon = "rbxassetid://71034417049645",
             Text = "Eight times the Qi from cultivating, while you're away and from every Qi reward.", QiTier = 8, Retired = true },
