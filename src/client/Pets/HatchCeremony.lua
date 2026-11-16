@@ -1412,7 +1412,15 @@ local function endShowing()
     end
 end
 
+-- True while a hatch cinematic plays, or is about to (its staged egg may still be on the way): other notices
+-- (a title earned by the new pet) wait until it ends, so they never give the result away (2-player test, 2026-11-16).
+local requestedAt = nil
+function HatchCeremony.isPlaying()
+    return active ~= nil or (requestedAt ~= nil and os.clock() - requestedAt < 3)
+end
+
 function HatchCeremony.play(result)
+    requestedAt = os.clock()
     endShowing()
     -- The staged egg rides in the result, but with streaming on it can land a moment after the remote that names it: on real hatches
     -- Staged arrived nil and the cinematic ran without its camera or its egg (seen in Play, 2026-11-10). Wait for it at the altar, briefly

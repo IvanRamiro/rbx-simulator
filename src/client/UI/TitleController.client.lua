@@ -15,6 +15,7 @@ local Toast = require(script.Parent:WaitForChild("Toast"))
 local UiKit = require(script.Parent:WaitForChild("UiKit"))
 local UiTheme = require(script.Parent:WaitForChild("UiTheme"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
+local HatchCeremony = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("HatchCeremony"))
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -349,8 +350,16 @@ RemoteEvents.TitleEvent.OnClientEvent:Connect(function(kind, data)
                 unseen += 1
                 setBadge(tostring(unseen), "Highlight")
             end
-            notice:show("New title: " .. entry.Text, "Reward", entry.Color)
-            Sfx.play("Notify")
+            -- a title the new pet earned (Keeper of Secrets) mustn't show while its hatch is still spinning: wait for the
+            -- ceremony to end (at most 30 s)
+            task.spawn(function()
+                local waited = 0
+                while HatchCeremony.isPlaying() and waited < 30 do
+                    waited += task.wait(0.25)
+                end
+                notice:show("New title: " .. entry.Text, "Reward", entry.Color)
+                Sfx.play("Notify")
+            end)
         end
     end
 end)

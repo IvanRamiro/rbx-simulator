@@ -124,8 +124,9 @@ local function register(island, stand)
     setPrompt(slot)
     if slot.prompt then
         slot.prompt.HoldDuration = 0.5
+        -- (an empty stand too: someone who reached for the egg a moment after another took it is told so, 2-player test 2026-11-16)
         slot.prompt.Triggered:Connect(function(player)
-            if slot.eggId and onTake then
+            if onTake then
                 onTake(player, slot)
             end
         end)

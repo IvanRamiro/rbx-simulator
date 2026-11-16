@@ -377,6 +377,13 @@ end
 function Guardian:takeFromStand(player, slot)
     local root = rootOf(player)
     local eggId = slot.eggId
+    if eggId == nil and root and (self.egg.state == "Carried" or self.egg.state == "Dropped") and self.egg.owner ~= player
+        and EggStands.within(slot, root.Position) then
+        -- the stand was emptied a moment ago by someone else: say so instead of nothing
+        RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = self.egg.eggId, Reason = "Guarded", Guardian = self.config.DisplayName,
+            Called = self.config.Called, Busy = true })
+        return
+    end
     if not (root and eggId) or player:GetAttribute("IsFlying") == true or player:GetAttribute("CarryingEgg")
         or not EggStands.within(slot, root.Position) or MovementGuard.isSuspect(player) then
         return
