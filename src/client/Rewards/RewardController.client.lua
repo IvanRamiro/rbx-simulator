@@ -104,6 +104,26 @@ if hasGroup then
     end)
 end
 
+-- On a short screen the window is shorter than its body (a 666x354 phone left it 24 px short, the code row hanging over its
+-- foot): the rows close up, with CLAIM at a field's height, which fits the body into 192 px (pre-beta check, 2026-11-17).
+local function fitRows()
+    local room = window.Frame.Size.Y.Offset - (UiTheme.Height.TitleBar + UiTheme.Space.M + UiTheme.Pad.Window)
+    local tight = room < BODY
+    local gap = if tight then UiTheme.Space.XS else GAP
+    local claimHeight = if tight then UiTheme.Height.Field else UiTheme.Height.ButtonLarge
+    local claimY = DAY_HEIGHT + gap
+    local codeY = claimY + claimHeight + gap
+    claim.Position = UDim2.fromOffset(0, claimY)
+    claim.Size = UDim2.new(1, 0, 0, claimHeight)
+    codeBox.Position = UDim2.fromOffset(0, codeY)
+    redeem.Position = UDim2.new(1, 0, 0, codeY)
+    if groupButton then
+        groupButton.Position = UDim2.fromOffset(0, codeY + UiTheme.Height.Field + gap)
+    end
+end
+window.Frame:GetPropertyChangedSignal("Size"):Connect(fitRows)
+fitRows()
+
 local function render()
     local isReady = player:GetAttribute("DailyReady") == true
     local current = player:GetAttribute("DailyDay") or 1
