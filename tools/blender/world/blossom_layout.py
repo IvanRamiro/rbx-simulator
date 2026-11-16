@@ -156,7 +156,7 @@ PATHS = [
     ([(44, -132), (10, -110), (-30, -96), (-75, -86), (-104, -66), (-108, -50)], 3.0),   # along the pond's near bank -> the bridge
     ([(-100, -16), (-98, 6), (-104, 30), (-140, 46), (-185, 30), (-228, -6), (-262, 18), (-245, 70), (-200, 92), (-150, 70), (-104, 30)], 3.0),  # the Grove's loop
     ([(-100, 30), (-70, 70), (-25, 92), (30, 78), (50, 44), (53, 22)], 3.0),      # the far meadow -> the lawn's back
-    ([(130, -21), (150, -22), (176, -26), (214, -32), (246, -40)], 3.5),         # the lawn -> up to the Lookout
+    ([(130, -21), (150, -22), (166, -24), (176, -25)], 3.5),                      # the lawn -> up to the Lookout's torii
 ]
 
 
@@ -244,6 +244,39 @@ TREES = [
     ("BS_TreeTwin", 272, -62, 2.4, 1.2),         # framing the Lookout (the shrine's site) from behind
     ("BS_TreeLeaning", 262, 32, -2.46, 1.1),
 ]
+# The shrine on the Lookout (the owner, 2026-11-16: "Also add japanese shrine on that area", then "Yes, build the Japanese
+# shrine on the Blossom Sanctuary (torii, hall, lanterns), modelled in Blender"; "JAPANESE is good to me, but not chinese design"):
+# its pieces (blossom_assets.py) in the hall's own frame, the hall at the origin facing +Z and the approach coming in along +Z
+# (blossom_assets_run.SHRINE_SET is the same list): the torii where the path tops the plateau, twelve paving slabs, a pair of
+# toro lanterns halfway, the chozuya beside the approach facing it. The hall faces west, back down the path to the lawn.
+SHRINE_AT = (232.0, -25.0)
+SHRINE_YAW = -math.pi / 2          # turns the hall's +Z (its front) toward local -X
+SHRINE_PIECES = [("BS_ShrineHall", 0.0, 0.0, 0.0), ("BS_Torii", 0.0, 54.0, 0.0),
+                 ("BS_ShrineLantern", -6.0, 32.0, 0.0), ("BS_ShrineLantern", 6.0, 32.0, 0.0), ("BS_Chozuya", 11.0, 37.0, -math.pi / 2)] + \
+                [("BS_ShrinePathSlab", 0.0, 9.0 + 3.2 * k, 0.0) for k in range(12)]
+SHRINE_COURT = (-15.0, 15.0, -11.0, 58.0)   # the gravel court under it (the hall's frame: x from, x to, z from, z to)
+
+
+def shrine_point(xs, zs):
+    c, s_ = math.cos(SHRINE_YAW), math.sin(SHRINE_YAW)
+    return SHRINE_AT[0] + xs * c + zs * s_, SHRINE_AT[1] - xs * s_ + zs * c
+
+
+def shrine_local(x, z):
+    dx, dz = x - SHRINE_AT[0], z - SHRINE_AT[1]
+    c, s_ = math.cos(SHRINE_YAW), math.sin(SHRINE_YAW)
+    return dx * c - dz * s_, dx * s_ + dz * c
+
+
+def in_shrine_court(x, z, pad=0.0):
+    xs, zs = shrine_local(x, z)
+    x0, x1, z0, z1 = SHRINE_COURT
+    # a rounded rectangle (corner radius 4)
+    qx = max(x0 + 4 - xs, xs - (x1 - 4), 0.0)
+    qz = max(z0 + 4 - zs, zs - (z1 - 4), 0.0)
+    return math.hypot(qx, qz) <= 4 + pad
+
+
 CANOPY_R = {"BS_TreeElder": 21, "BS_TreeWeeping": 12, "BS_TreeLeaning": 9, "BS_TreeTwin": 14, "BS_TreeYoung": 7, "BS_TreeGnarled": 14}
 CANOPY_AT = {"BS_TreeLeaning": (0, 9.3), "BS_TreeGnarled": (2.2, 0.2)}   # the canopy's centre off the trunk (pieces.json)
 
@@ -325,6 +358,8 @@ def ground(x, z):
         mat = "Ground"
     elif p > 0.25 and e < 7:
         mat = "Rock"
+    if mat == "Grass" and in_shrine_court(x, z):
+        mat = "Cobblestone"   # the shrine's gravel court
     if mat == "Grass":
         zf = zone_field(x, z)
         if -4.0 < zf <= 0.0:
@@ -521,9 +556,11 @@ def placements():
     for k, t in enumerate((0.2, 0.4, 0.6, 0.8)):
         x, z = lerp(-146, -120, t) + (rnd(k, 61) - 0.5) * 3, lerp(-44, 4, t)
         add("BS_SteppingStoneC", x, z, WATER + 0.55, rnd(k, 63) * 6.28, 0.62)
-    # a few seat stones on the Lookout, facing out over the cliff
-    for k, (x, z) in enumerate(((232, -12), (238, -26), (226, -44))):
-        add("BS_SeatStone", x, z, ground(x, z)[0] - 0.1, math.atan2(1, -0.3) + k * 0.2)
+    # the shrine on the Lookout (its seats went: the hall stands there now)
+    for piece, xs, zs, yaw in SHRINE_PIECES:
+        x, z = shrine_point(xs, zs)
+        lift = 0.06 if piece == "BS_ShrinePathSlab" else 0.0   # (the slabs' faces just over the gravel)
+        add(piece, x, z, ground(x, z)[0] + lift, SHRINE_YAW + yaw)
     # the arrival: a pair of the big edge rocks either side of the landing, a petal drift on the paving
     add("BS_EdgeRockC", ARRIVAL[0] - 13, ARRIVAL[1] + 6, LAWN - 0.6, 0.6, 1.1)
     add("BS_EdgeRockB", ARRIVAL[0] + 12.5, ARRIVAL[1] + 3, LAWN - 0.5, 2.2, 1.0)
@@ -841,6 +878,8 @@ def report():
             conflicts.append("%s at (%d, %d) stands on a path" % (piece, x, z))
         if island_field(x, z) < 6:
             conflicts.append("%s at (%d, %d) is at the island's edge" % (piece, x, z))
+        if in_shrine_court(x, z, pad=3):
+            conflicts.append("%s at (%d, %d) stands in the shrine's court" % (piece, x, z))
     lows = [b for b in B if b is not None]
     return {
         "grid": {"origin": (ox, oz), "size": n, "cells": cells},

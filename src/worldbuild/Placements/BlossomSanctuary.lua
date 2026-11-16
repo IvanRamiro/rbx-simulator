@@ -6,6 +6,9 @@ return {
         BS_Bridge = {
             { Position = Vector3.new(-104.00, 6.00, -31.00), Yaw = 0.2700 },
         },
+        BS_Chozuya = {
+            { Position = Vector3.new(195.00, 18.00, -14.00), Yaw = -3.1416 },
+        },
         BS_EdgeRockA = {
             { Position = Vector3.new(-122.14, 3.50, -38.54), Yaw = 4.9240, Scale = 0.805 },
             { Position = Vector3.new(-91.73, 3.57, -12.18), Yaw = 1.5586, Scale = 1.063 },
@@ -206,15 +209,36 @@ return {
             { Position = Vector3.new(28.65, 5.90, -28.26), Yaw = -1.7248 },
             { Position = Vector3.new(32.69, 5.90, -33.90), Yaw = -1.7960 },
             { Position = Vector3.new(38.35, 5.90, -38.84), Yaw = -1.4502 },
-            { Position = Vector3.new(232.00, 17.90, -12.00), Yaw = 1.8623 },
-            { Position = Vector3.new(238.00, 17.90, -26.00), Yaw = 2.0623 },
-            { Position = Vector3.new(226.00, 17.90, -44.00), Yaw = 2.2623 },
+        },
+        BS_ShrineHall = {
+            { Position = Vector3.new(232.00, 18.00, -25.00), Yaw = -1.5708 },
+        },
+        BS_ShrineLantern = {
+            { Position = Vector3.new(200.00, 18.00, -31.00), Yaw = -1.5708 },
+            { Position = Vector3.new(200.00, 18.00, -19.00), Yaw = -1.5708 },
+        },
+        BS_ShrinePathSlab = {
+            { Position = Vector3.new(223.00, 18.06, -25.00), Yaw = -1.5708 },
+            { Position = Vector3.new(219.80, 18.06, -25.00), Yaw = -1.5708 },
+            { Position = Vector3.new(216.60, 18.06, -25.00), Yaw = -1.5708 },
+            { Position = Vector3.new(213.40, 18.06, -25.00), Yaw = -1.5708 },
+            { Position = Vector3.new(210.20, 18.06, -25.00), Yaw = -1.5708 },
+            { Position = Vector3.new(207.00, 18.06, -25.00), Yaw = -1.5708 },
+            { Position = Vector3.new(203.80, 18.06, -25.00), Yaw = -1.5708 },
+            { Position = Vector3.new(200.60, 18.06, -25.00), Yaw = -1.5708 },
+            { Position = Vector3.new(197.40, 18.06, -25.00), Yaw = -1.5708 },
+            { Position = Vector3.new(194.20, 18.06, -25.00), Yaw = -1.5708 },
+            { Position = Vector3.new(191.00, 18.06, -25.00), Yaw = -1.5708 },
+            { Position = Vector3.new(187.80, 18.06, -25.00), Yaw = -1.5708 },
         },
         BS_SteppingStoneC = {
             { Position = Vector3.new(-139.87, 5.05, -34.40), Yaw = 1.8154, Scale = 0.620 },
             { Position = Vector3.new(-134.19, 5.05, -24.80), Yaw = 4.3481, Scale = 0.620 },
             { Position = Vector3.new(-130.29, 5.05, -15.20), Yaw = 2.3633, Scale = 0.620 },
             { Position = Vector3.new(-125.97, 5.05, -5.60), Yaw = 5.2036, Scale = 0.620 },
+        },
+        BS_Torii = {
+            { Position = Vector3.new(178.00, 18.00, -25.00), Yaw = -1.5708 },
         },
         BS_TreeElder = {
             { Position = Vector3.new(-128.00, 7.31, 18.00), Yaw = 0.4000, Scale = 1.500 },

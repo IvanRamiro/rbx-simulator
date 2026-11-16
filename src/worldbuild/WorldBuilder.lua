@@ -428,6 +428,11 @@ WorldBuilder.Collision = {
     { Prefix = "BS_EdgeRock", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "BS_KerbStone", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "BS_SeatStone", Fidelity = Enum.CollisionFidelity.Hull },
+    -- the shrine: you walk through the torii, up the hall's stair onto its floor and under the chozuya's roof
+    { Prefix = "BS_Torii", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "BS_ShrineHall", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "BS_Chozuya", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "BS_ShrineLantern", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "BS_", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "YG_MoundRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_GripRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
@@ -575,6 +580,8 @@ do
     end
 end
 
+-- the shrine's toro lanterns: a warm light, not the hub's cool crystal (the Glow material's colour)
+WorldBuilder.Appearance.BS_ShrineLantern__Glow = { Color = Color3.fromRGB(255, 200, 130) }
 WorldBuilder.Appearance.EP_ArenaGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 78, 14), CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance.EP_PylonFire = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 120, 20), Transparency = 0.35, CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance.OA_ArenaGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(115, 40, 255), CanCollide = false, CastShadow = false }
@@ -622,6 +629,7 @@ WorldBuilder.Lights = {
     OA_ColossusEyes = { Range = 16, Brightness = 1.4 },
     EP_PylonFire = { Range = 26, Brightness = 1.6 },
     HB_CrystalLampLight = { Range = 16, Brightness = 0.8 },  -- (one lamp of each pair: hub_ground.write_placements)
+    BS_ShrineLantern = { Range = 14, Brightness = 0.9 },     -- the shrine's toro (on its glow, warm)
     HB_MarketGlow = { Range = 16, Brightness = 0.8 },
 }
 
@@ -804,6 +812,16 @@ WorldBuilder.MaterialLooks = {
     KoiGold = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(240, 182, 72), Reflectance = 0.12, CanCollide = false, CastShadow = false },
     KoiFin = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(250, 238, 226), Transparency = 0.35, CanCollide = false, CastShadow = false },
     Ripple = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(235, 250, 255), Transparency = 1, CanCollide = false, CastShadow = false },
+    -- the shrine on the Lookout (blossom_assets.py, 2026-11-16): a Japanese Shinto shrine in the sanctuary's palette: a matte
+    -- vermilion on the torii and the railings, natural cedar, white plaster, a dark cypress-bark roof with verdigris copper trims,
+    -- a straw shimenawa rope
+    Lacquer = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(176, 58, 44) },
+    RoofDark = { Material = Enum.Material.Wood, Color = Color3.fromRGB(58, 46, 44) },
+    Copper = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(104, 140, 122) },
+    Timber = { Material = Enum.Material.Wood, Color = Color3.fromRGB(150, 112, 82) },
+    Plaster = { Material = Enum.Material.Plaster, Color = Color3.fromRGB(236, 230, 220) },
+    Rope = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(206, 182, 124), CanCollide = false },
+    ShrineWater = { Material = Enum.Material.Glass, Color = Color3.fromRGB(110, 170, 170), Transparency = 0.35, CanCollide = false, CastShadow = false },
 }
 
 local function splitName(name)
@@ -1157,7 +1175,13 @@ function WorldBuilder.placeKit(island)
     folder:ClearAllChildren()
     local ends = bridgeEnds()
     local placed = 0
+    local missing = {}
     for name, list in placements.Kit do
+        -- a piece whose kit isn't stored yet (an FBX still to import) is left out and named, not an error
+        if not pcall(templates, island, name) then
+            table.insert(missing, name)
+            continue
+        end
         for index, entry in list do
             local frame = centre * CFrame.new(entry.Position) * CFrame.Angles(0, entry.Yaw, 0)
             if WorldBuilder.ClearOfBridges[name] and onBridgeEnd(ends, frame.Position) then
@@ -1176,7 +1200,11 @@ function WorldBuilder.placeKit(island)
         end
     end
     WorldBuilder.applyCollision(folder)
-    return placed
+    if #missing > 0 then
+        table.sort(missing)
+        warn("placeKit(" .. island .. "): not in the kit yet, left out: " .. table.concat(missing, ", "))
+    end
+    return placed, missing
 end
 
 -- ---------- the hub's people (tools/blender/npcs/hub_npcs.py; the owner approved them 2026-11-12) ----------

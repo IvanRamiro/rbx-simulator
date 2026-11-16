@@ -38,7 +38,7 @@ COLOURS = {
     "KoiFin": (250, 238, 226), "Ripple": (255, 255, 255),
     # the shrine (2026-11-16, the owner: "Also add japanese shrine on that area")
     "Lacquer": (176, 58, 44), "RoofDark": (58, 46, 44), "Copper": (104, 140, 122), "Timber": (150, 112, 82),
-    "Plaster": (236, 230, 220), "Glow": (255, 214, 160), "ShrineWater": (110, 170, 170),
+    "Plaster": (236, 230, 220), "Glow": (255, 214, 160), "ShrineWater": (110, 170, 170), "Rope": (206, 182, 124),
 }
 TILE = 8.0
 CANOPY_FLOOR = 7.5        # nothing but a trunk below this (studs above the ground)
@@ -1717,9 +1717,12 @@ def post(g, x, z, y0, y1, r0, r1=None, seg=12, lean=(0.0, 0.0)):
 def sweep_x(g, xs, section):
     """Sweeps a closed (z, y) section along X: section(x) -> [(z, y)], the same count at every station."""
     sub = Geo()
-    sweep(sub, xs, lambda x: [(-zz, yy) for zz, yy in section(x)])
-    # (sweep runs along Z with (x, y) sections: turn it to run along X)
+    sweep(sub, xs, lambda x: [(zz, yy) for zz, yy in section(x)])
+    # (sweep runs along Z with (x, y) sections: swap X and Z to run along X. The swap is a mirror, so the faces are wound back
+    # to keep their normals outward. Until 2026-11-16 the section's z was negated instead, which mirrored every swept part
+    # in Z: the hall's stair, plinth and roof came out back to front.)
     sub.transform(lambda p: Vector((p.z, p.y, p.x)))
+    sub.f = [f[::-1] for f in sub.f]
     g.add(sub)
 
 
@@ -1798,7 +1801,8 @@ def lantern():
                 f = 1.0 / math.cos(math.pi / 6)
                 roof.v[vid] = Vector((v.x * f, v.y + (0.16 if i >= 3 else 0.05), v.z * f))
     st.add(roof)
-    lathe(st, [(0.0, 6.5), (0.14, 6.46), (0.24, 6.3), (0.24, 6.12), (0.15, 5.98), (0.2, 5.8), (0.2, 5.68), (0.1, 5.45), (0.0, 5.45)], 10)
+    # the finial: a squat jewel, wider than it is tall (a tall double bulb could read the wrong way at thumbnail size)
+    lathe(st, [(0.0, 6.12), (0.07, 6.1), (0.22, 5.94), (0.3, 5.76), (0.24, 5.62), (0.12, 5.52), (0.0, 5.48)], 10)
     return {"Stone": st, "Glow": glow}, {"glow_object": "BS_ShrineLantern__Glow"}
 
 
@@ -1867,12 +1871,16 @@ def _gable_roof(g_roof, g_under, g_trim, ridge_z, ridge_y, front_z, front_y, bac
             uz, uy = dz / L, dy / L
             return [(z0 - uz * 0.08, y0 + lf - uy * 0.08 + 0.1), (z0 + uz * 0.5, y0 + lf + uy * 0.5 + 0.1),
                     (z0 + uz * 0.5, y0 + lf + uy * 0.5 - t - 0.06), (z0 - uz * 0.08, y0 + lf - uy * 0.08 - t - 0.06)]
-        sweep_x(g_trim, xs, band)
+        # (a hair past the roof's ends: flush end caps z-fought with the roof's, QA 2026-11-16)
+        sweep_x(g_trim, [x * (half + 0.05) / half for x in xs], band)
     if bargeboard:
         for sx in (-1, 1):
             def bb(x):
                 m = len(top)
                 pts = [(z, y + corner_lift(half * sx, min(i, m - 1 - i)) + 0.12) for i, (z, y) in enumerate(top)]
+                # (a hair past both eaves: their end faces lay in the roof's eave planes and z-fought, QA 2026-11-16)
+                pts[0] = (pts[0][0] - 0.06, pts[0][1])
+                pts[-1] = (pts[-1][0] + 0.06, pts[-1][1])
                 return pts + [(z, y - t - 0.32) for z, y in pts[::-1]]
             sub = Geo()
             sweep_x(sub, [half - 0.18, half + 0.12] if sx > 0 else [-half - 0.12, -half + 0.18], bb)
@@ -1972,15 +1980,17 @@ def shrine_hall():
     P = [(-6.2, 3.0), (-4.5, 3.0), (4.5, 3.0), (6.2, 3.0), (-6.2, -1.25), (6.2, -1.25), (-6.2, -5.5), (-2.1, -5.5), (2.1, -5.5),
          (6.2, -5.5)]
     for x, z in P:
-        post(wood, x, z, 0.75, 12.55, 0.42, 0.4, seg=12)
+        post(wood, x, z, 0.75, 12.45, 0.42, 0.4, seg=12)     # (inside the wall plate: its top at 12.55 was the plate's)
     # walls: plaster between posts on the sides and back; cedar base boards and a cedar tie band proud of the plaster
     def wall(x0, z0, x1, z1):
+        # (each wall stops inside the posts at its ends, and its plaster, base board and tie band each end at their own
+        # distance, so no two boxes share a face: neighbours met end to end and z-fought, QA 2026-11-16)
         L = math.hypot(x1 - x0, z1 - z0)
         yaw = -math.atan2(z1 - z0, x1 - x0)
         c = ((x0 + x1) / 2, 0, (z0 + z1) / 2)
-        box(plas, (c[0], (F - 0.1 + 11.5) / 2, c[2]), (L, 11.5 - F + 0.1, 0.3), yaw=yaw)
-        box(wood, (c[0], F + 0.6, c[2]), (L, 1.2, 0.42), yaw=yaw)
-        box(wood, (c[0], 7.6, c[2]), (L, 0.36, 0.4), yaw=yaw)
+        box(plas, (c[0], (F - 0.1 + 11.5) / 2, c[2]), (L - 0.62, 11.5 - F + 0.1, 0.3), yaw=yaw)
+        box(wood, (c[0], F + 0.6, c[2]), (L - 0.5, 1.2, 0.42), yaw=yaw)
+        box(wood, (c[0], 7.6, c[2]), (L - 0.56, 0.36, 0.4), yaw=yaw)
     for sx in (-1, 1):
         wall(sx * 6.2, 3.0, sx * 6.2, -1.25)
         wall(sx * 6.2, -1.25, sx * 6.2, -5.5)
@@ -1989,24 +1999,25 @@ def shrine_hall():
     # the two narrow front bays: cedar lattice over a dark backing
     for sx in (-1, 1):
         cxb = sx * 5.35
-        box(dark, (cxb, (F + 11.5) / 2, 3.0), (1.75, 11.5 - F, 0.12))
+        box(dark, (cxb, (F + 11.5) / 2, 3.0), (1.62, 11.5 - F - 0.04, 0.12))
         box(wood, (cxb, F + 0.6, 3.0), (1.75, 1.2, 0.4))
         for k in range(4):
             box(wood, (cxb - 0.6 + 0.4 * k, (F + 1.2 + 11.5) / 2, 3.12), (0.1, 11.5 - F - 1.2, 0.12))
-        for k in range(8):
+        for k in range(7):   # (to 10.8, under the head beam: an eighth bar at 12.95 came through the roof)
             box(wood, (cxb, F + 1.9 + k * 1.15, 3.12), (1.72, 0.1, 0.13))
     # head beams all round, the wall plate over them, bracket blocks on the post heads
     for z in (3.0, -5.5):
         box(wood, (0.0, 11.75, z), (13.3, 0.6, 0.5))
         box(wood, (0.0, 12.3, z), (13.6, 0.5, 0.62))
     for sx in (-1, 1):
-        box(wood, (sx * 6.2, 11.75, -1.25), (0.5, 0.6, 9.3))
-        box(wood, (sx * 6.2, 12.3, -1.25), (0.62, 0.5, 9.6))
+        # (offset from the front and back ones: the same heights z-fought where they cross, QA 2026-11-16)
+        box(wood, (sx * 6.2, 11.73, -1.25), (0.5, 0.54, 9.3))
+        box(wood, (sx * 6.2, 12.27, -1.25), (0.62, 0.46, 9.6))
     for x, z in P:
-        if abs(z + 1.25) < 0.01:
-            continue
-        box(wood, (x, 12.7, z), (0.78, 0.42, 0.78))
-        box(wood, (x, 13.0, z + (0.5 if z > 0 else -0.5)), (0.5, 0.26, 1.9))
+        if abs(z + 1.25) < 0.01 or z > 0:
+            continue   # (none on the front posts: under the low concave front slope their tops came through the roof)
+        box(wood, (x, 12.6, z), (0.78, 0.3, 0.78))
+        # (no projecting bracket arm: under the low front eave it came up through the roof, seen in the renders 2026-11-16)
     # the sanctum doors on the back wall: two plain dark panels in a cedar frame (seen through the open bay)
     box(wood, (0.0, F + 3.4, -5.3), (3.6, 5.6, 0.2))
     for sx in (-1, 1):
@@ -2026,8 +2037,42 @@ def shrine_hall():
     # crossed finials at the gable ends (restrained: short cedar boards crossing just above the ridge)
     for sx in (-1, 1):
         for tz in (-1, 1):
-            box(wood, (sx * 8.45, 17.35, -1.3 + tz * 0.35), (0.16, 2.0, 0.32), tf=lambda p, tz=tz: rot_x(p, tz * 0.6))
-    return ({"Stone": st, "Timber": wood.add(under), "Lacquer": lac, "Plaster": plas, "RoofDark": roof, "Copper": cu},
+            # (each board a little off the other in X: crossed in one plane, their faces z-fought, QA 2026-11-16)
+            box(wood, (sx * 8.45 + tz * 0.03, 17.35, -1.3 + tz * 0.35), (0.16 if tz < 0 else 0.13, 2.0, 0.32),
+                tf=lambda p, tz=tz: rot_x(p, tz * 0.6))
+    # katsuogi: three short round logs lying across the ridge, on the copper ridge roll
+    for x in (-4.6, 0.0, 4.6):
+        log = Geo()
+        # (rings at the ridge, and seated into the copper roll: with only end rings the QA read them as floating)
+        lathe(log, [(0.0, 1.25), (0.28, 1.25), (0.3, 0.4), (0.3, 0.0), (0.3, -0.4), (0.28, -1.25), (0.0, -1.25)], 10)
+        log.transform(lambda p, x=x: Vector((p.x + x, -p.z + 17.48, p.y - 1.3)))
+        wood.add(log)
+    # the shimenawa: a thick twisted straw rope hung in a shallow curve under the front head beam, across the open bay,
+    # with four zigzag paper shide hanging from it (in the Plaster's white)
+    rope = Geo()
+    def rope_curve(phase):
+        pts = []
+        for k in range(25):
+            u = k / 24
+            x = -4.1 + 8.2 * u
+            sag = 0.55 * (1 - (2 * u - 1) ** 2)
+            tw = phase + u * 8 * math.pi
+            pts.append(Vector((x, 11.05 - sag + 0.12 * math.sin(tw), 3.5 + 0.12 * math.cos(tw))))
+        return pts
+    for ph in (0.0, math.pi):
+        tube(rope, rope_curve(ph), lambda t, s_, d, c: 0.17 * (1.0 - 0.35 * abs(2 * t - 1) ** 3), 8, tip=0.15)
+    for x in (-2.9, -1.0, 1.0, 2.9):
+        u = (x + 4.1) / 8.2
+        y = 11.05 - 0.55 * (1 - (2 * u - 1) ** 2) - 0.2
+        # four paper steps, each leaning the other way and at its own depth (so no two share a plane): a zigzag
+        for k in range(4):
+            lean = 0.55 if k % 2 == 0 else -0.55
+            box(plas, (x + (0.1 if k % 2 == 0 else -0.1), y - 0.18 - k * 0.34, 3.5 + 0.025 * (k % 2)), (0.3, 0.4, 0.03),
+                tf=lambda p, lean=lean: Vector((p.x + p.y * lean, p.y, p.z)))
+    # (the rope goes with the hall's Rope material)
+    shrine_rope = rope
+    return ({"Stone": st, "Timber": wood.add(under), "Lacquer": lac, "Plaster": plas, "RoofDark": roof.add(dark), "Copper": cu,
+             "Rope": shrine_rope},
             {"floor_y": F, "stairs": {"rises": 4, "rise": 0.6, "tread": 0.8, "width": 8.4, "bottom_front_z": 7.7, "top_z": 4.5},
              "front_bay": {"clear_width": round(9.0 - 0.84, 2), "clear_height": round(11.45 - F, 2)}})
 

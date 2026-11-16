@@ -6,7 +6,8 @@
       render    build each piece and render renders/blossom_sanctuary/assets/<Piece>.png (front, side, top, three-quarter)
       lineup    the six trees side by side (trees_lineup.png) and their black silhouettes (trees_silhouettes.png)
       sheet     every other piece on one sheet (others_sheet.png)
-      export    build, QA, export the four FBX files (anchor BS_Anchor), scrub them, write qa.txt and pieces.json
+      shrine_set the shrine as placed on the Lookout (renders/blossom_sanctuary/assets/shrine/shrine_set.png)
+      export    build, QA, export the FBX files (anchor BS_Anchor), scrub them, write qa.txt and pieces.json
 Scratch images go to $BS_TMP (default: the system temp folder).
 """
 import json
@@ -350,7 +351,12 @@ def export(pieces):
     os.makedirs(RENDERS, exist_ok=True)
     qa_lines, data, files = [], {}, {}
     all_pass = True
+    # with pieces named, only the groups holding them are exported (the others' FBX files, already imported, stay as they are),
+    # and pieces.json is merged, the QA written beside that group's renders
+    only = set(NAMES) if NAMES else None
     for group, plist in GROUPS.items():
+        if only and not (only & set(plist)):
+            continue
         A.clear_scene()
         objs_all, expect = [], {}
         for p in plist:
@@ -402,12 +408,22 @@ def export(pieces):
     for g, f in files.items():
         head.append("    %s: %s" % (f["fbx"], f["verify"]))
     head.append("")
-    with open(os.path.join(RENDERS, "qa.txt"), "w") as fh:
-        fh.write("\n".join(head + qa_lines) + "\n")
-    with open(os.path.join(OUT, "pieces.json"), "w") as fh:
-        json.dump({"units": "Roblox studs; Y up; each piece's front is +Z; origin at the ground contact under the base centre "
-                            "(koi and ripple: their centre)", "anchor": "BS_Anchor (1-stud cube at the origin)", "files": files,
-                   "pieces": data}, fh, indent=1)
+    if only:
+        folder = os.path.join(RENDERS, "shrine") if only & set(GROUPS["Shrine"]) else RENDERS
+        with open(os.path.join(folder, "qa.txt"), "w") as fh:
+            fh.write("\n".join(head + qa_lines) + "\n")
+        old = json.load(open(os.path.join(OUT, "pieces.json")))
+        old["files"].update(files)
+        old["pieces"].update(data)
+        with open(os.path.join(OUT, "pieces.json"), "w") as fh:
+            json.dump(old, fh, indent=1)
+    else:
+        with open(os.path.join(RENDERS, "qa.txt"), "w") as fh:
+            fh.write("\n".join(head + qa_lines) + "\n")
+        with open(os.path.join(OUT, "pieces.json"), "w") as fh:
+            json.dump({"units": "Roblox studs; Y up; each piece's front is +Z; origin at the ground contact under the base centre "
+                                "(koi and ripple: their centre)", "anchor": "BS_Anchor (1-stud cube at the origin)", "files": files,
+                       "pieces": data}, fh, indent=1)
     print("QA_ALL", all_pass)
 
 
@@ -437,6 +453,88 @@ def bridge_views(pieces):
     A.clear_scene()
 
 
+# The shrine as it stands on the Lookout (blossom_layout.SHRINE_SET: the same arrangement, in the hall's own frame: the hall at
+# the origin facing +Z, the approach coming in along +Z), rendered from the approach and from above, with the 5-stud bar.
+SHRINE_SET = [("BS_ShrineHall", 0.0, 0.0, 0.0), ("BS_Torii", 0.0, 54.0, 0.0),
+              ("BS_ShrineLantern", -6.0, 32.0, 0.0), ("BS_ShrineLantern", 6.0, 32.0, 0.0), ("BS_Chozuya", 11.0, 37.0, -math.pi / 2)] + \
+             [("BS_ShrinePathSlab", 0.0, 9.0 + 3.2 * k, 0.0) for k in range(12)]
+
+
+def shrine_set():
+    A.clear_scene()
+    setup_scene((1280, 720))
+    built = {}
+    placed = []
+    for piece, x, z, yaw in SHRINE_SET:
+        if piece not in built:
+            objs, meta = A.build_piece(piece)
+            built[piece] = objs
+            src = objs
+        else:
+            src = []
+            for o in built[piece]:
+                c = o.copy()
+                c.data = o.data
+                bpy.context.scene.collection.objects.link(c)
+                src.append(c)
+        for o in src:
+            o.location = Vector(W.rb(x, 0.0, z))
+            o.rotation_euler = (0.0, 0.0, yaw)
+            placed.append(o)
+    # the Lookout's own blossom trees round it (blossom_layout.TREES within 80 studs), in the hall's frame, for context
+    import blossom_layout as L
+    trees = {}
+    for piece, tx, tz, tyaw, sc in L.TREES:
+        if math.hypot(tx - L.SHRINE_AT[0], tz - L.SHRINE_AT[1]) > 80:
+            continue
+        xs, zs = L.shrine_local(tx, tz)
+        if piece not in trees:
+            trees[piece] = A.build_piece(piece)[0]
+            objs = trees[piece]
+        else:
+            objs = []
+            for o in trees[piece]:
+                c = o.copy()
+                c.data = o.data
+                bpy.context.scene.collection.objects.link(c)
+                objs.append(c)
+        for o in objs:
+            o.location = Vector(W.rb(xs, 0.0, zs))
+            o.rotation_euler = (0.0, 0.0, tyaw - L.SHRINE_YAW)
+            o.scale = (sc, sc, sc)
+    # a grass-coloured ground and a gravel court, for context
+    bpy.ops.mesh.primitive_plane_add(size=200, location=W.rb(0, -0.02, 20))
+    g = bpy.context.active_object
+    m = bpy.data.materials.new("SetGround")
+    bsdf = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+    bsdf.inputs["Base Color"].default_value = (0.09, 0.25, 0.07, 1)
+    g.data.materials.append(m)
+    bpy.ops.mesh.primitive_plane_add(size=1, location=W.rb(0, -0.01, 22))
+    court = bpy.context.active_object
+    court.scale = (30, 64, 1)
+    mc = bpy.data.materials.new("SetCourt")
+    bc = next(n for n in mc.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+    bc.inputs["Base Color"].default_value = (0.42, 0.40, 0.36, 1)
+    court.data.materials.append(mc)
+    bar = ref_bar(3.6, 0.0, 30.0)
+    os.makedirs(os.path.join(RENDERS, "shrine"), exist_ok=True)
+    panels = []
+    panels.append((shoot(cam("BSSetA", (30, 20, 96), (0, 8, 18), lens=30), os.path.join(TMP, "shrine_set_a.png")),
+                   "The shrine set from the approach (as placed on the Lookout); bar = 5 studs"))
+    panels.append((shoot(cam("BSSetB", (-6, 42, -38), (0, 6, 30), lens=30), os.path.join(TMP, "shrine_set_b.png")),
+                   "From behind the hall, toward the torii"))
+    top = cam("BSSetC", (0, 160, 26), (0, 0, 25), ortho=150)
+    top.rotation_euler = (0, 0, 0)
+    panels.append((shoot(top, os.path.join(TMP, "shrine_set_c.png")), "From above, with the Lookout's trees (approach at the bottom)"))
+    panels.append((shoot(cam("BSSetD", (14, 6, 30), (-2, 8, 2), lens=28), os.path.join(TMP, "shrine_set_d.png")),
+                   "At a player's eye height on the path"))
+    import hub_district_stages as S
+    os.environ["HUB_LOOK_DIR"] = TMP
+    out = os.path.join(RENDERS, "shrine", "shrine_set.png")
+    S.compose(panels, 2, out, 1280, 720)
+    print("RENDER", out)
+
+
 def main():
     if STAGE == "build":
         for p in names():
@@ -456,6 +554,8 @@ def main():
         sheet(names())
     elif STAGE == "elevation":
         bridge_views(names())
+    elif STAGE == "shrine_set":
+        shrine_set()
     elif STAGE == "export":
         export(names())
     else:

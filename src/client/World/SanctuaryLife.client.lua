@@ -7,7 +7,7 @@
 --   so they darken with the night on their own;
 -- * the blossom canopies swaying a little in the same wind (each canopy turned a fraction of a degree about its base), near the
 --   camera only, not on a phone (Quality.Low) or with Reduced Effects;
--- * the pond's water sound near it, and a koi's splash.
+-- * the pond's water sound near it, and a koi's splash; now and then a few seconds of wind chimes at the shrine on the Lookout.
 -- Nothing here touches Lighting or the weather's own effects (WeatherController owns those); it only reads the weather.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -159,6 +159,9 @@ local nextRipple = os.clock() + 2
 local rippleTemplate = nil
 local ripples = {}   -- { part, start, at, size }
 local stopWater = nil
+local nextChime = os.clock() + 12
+local CHIME_EVERY = { 25, 50 }
+local CHIME_NEAR = 110
 
 local splashPart = carrier("KoiSplash", Vector3.new(1, 0.2, 1))
 local splash = Instance.new("ParticleEmitter")
@@ -377,6 +380,16 @@ RunService.Heartbeat:Connect(function(dt)
     elseif stopWater then
         stopWater()
         stopWater = nil
+    end
+
+    -- the shrine's chimes, now and then, from the hall (its first part, once streamed in)
+    if near and now > nextChime then
+        nextChime = now + CHIME_EVERY[1] + math.random() * (CHIME_EVERY[2] - CHIME_EVERY[1])
+        local kit = island:FindFirstChild("Kit")
+        local hall = kit and kit:FindFirstChild("BS_ShrineHall_1")
+        if hall and (hall.Position - camPos).Magnitude < CHIME_NEAR then
+            Sfx.play("ShrineChime", hall)
+        end
     end
 
     -- the canopies (about 20 times a second)
