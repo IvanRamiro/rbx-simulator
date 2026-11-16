@@ -31,7 +31,7 @@ local QiBoost = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("
 local AuctionLedger = require(script.Parent.Parent:WaitForChild("Auction"):WaitForChild("AuctionLedger"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 23
+local SCHEMA_VERSION = 24
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -103,7 +103,10 @@ end
 -- version 22 added Boost (the timed Qi boost's seconds left, bought or from the daily reward: QiBoost), MIGRATIONS[21] below;
 -- version 23 added Auction (the Auction House's journal: items and stones in flight, mail being claimed, the player's listings and
 -- bids: AuctionLedger), MIGRATIONS[22] below. The bump matters: an older server would drop the journal, and with it an item or
--- stones on their way to a listing.
+-- stones on their way to a listing;
+-- version 24 added PaidEggs (how many of each egg came from Robux: EggInventory) and a pet's Paid (it came from Robux, so the
+-- Auction House keeps it from players who may not trade paid items), MIGRATIONS[23] below. The bump matters: an older server
+-- would drop both, and a paid pet would come out of it tradable anywhere.
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -177,6 +180,13 @@ MIGRATIONS[22] = function(progress)
     return progress
 end
 
+-- Version 24 added paid eggs and paid pets. An older save marks nothing: what it holds is read as not paid (sanitizeProgress). Eggs
+-- won with a bought spin before the mark existed can't be told apart, but spins were first sold on 2026-11-16, before the game's
+-- release, so no player's save holds one; the Exclusive Egg's own beasts are paid by kind anyway (AuctionRules.isPaidPet).
+MIGRATIONS[23] = function(progress)
+    return progress
+end
+
 -- Playtesting in Studio: with ServerStorage's StudioTestSave attribute set, saves go to a separate store of that name, so
 -- each new name starts a new player and a real save can't be touched (set to true, a store called "StudioTestSave").
 -- Ignored outside Studio.
@@ -211,6 +221,7 @@ local function sanitizeProgress(raw)
         Relics = {},
         OutfitId = nil,
         Eggs = {},
+        PaidEggs = {},
         SpiritStones = 0,
         Weapons = {},
         EquippedWeapon = nil,
@@ -266,6 +277,7 @@ local function sanitizeProgress(raw)
                     InstanceId = pet.InstanceId, PetId = pet.PetId, Level = PetRules.level(pet), Locked = pet.Locked == true,
                     Size = PetRules.size(pet),
                     Worth = PetRules.worth(pet),
+                    Paid = if pet.Paid == true then true else nil,
                 })
             end
         end
@@ -314,6 +326,7 @@ local function sanitizeProgress(raw)
     end
 
     progress.Eggs = EggInventory.sanitize(raw.Eggs)
+    progress.PaidEggs = EggInventory.sanitizePaid(raw.PaidEggs, progress.Eggs)
     progress.SpiritStones = Wallet.sanitize(raw.SpiritStones)
     progress.Weapons, progress.EquippedWeapon = WeaponInventory.sanitize(raw.Weapons, raw.EquippedWeapon)
     progress.ForgeElements = Elements.sanitize(raw.ForgeElements)
@@ -353,6 +366,7 @@ local function captureProgress(player)
     local pets = PetInventory.exportData(player)
     local relics = Discoveries.exportData(player)
     local eggs = EggInventory.exportData(player)
+    local paidEggs = EggInventory.exportPaid(player)
     local stones = Wallet.exportData(player)
     local weapons = WeaponInventory.exportData(player)
     local elements = Elements.exportData(player)
@@ -403,6 +417,7 @@ local function captureProgress(player)
         Relics = relics,
         OutfitId = player:GetAttribute("OutfitId"),
         Eggs = eggs,
+        PaidEggs = paidEggs or {},
         SpiritStones = stones,
         Weapons = weapons.Weapons,
         EquippedWeapon = weapons.Equipped,
@@ -457,6 +472,13 @@ local function holdsUnknownContent(progress, version)
     end
     if typeof(progress.Eggs) == "table" then
         for eggId in progress.Eggs do
+            if typeof(eggId) == "string" and GameConfig.Eggs[eggId] == nil then
+                return true
+            end
+        end
+    end
+    if typeof(progress.PaidEggs) == "table" then -- (a paid egg of an unknown kind would be dropped, and its paid mark with it)
+        for eggId in progress.PaidEggs do
             if typeof(eggId) == "string" and GameConfig.Eggs[eggId] == nil then
                 return true
             end

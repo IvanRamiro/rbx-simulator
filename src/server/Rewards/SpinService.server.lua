@@ -102,7 +102,7 @@ local function settle(player, late)
     elseif kind == "Egg" or kind == "Jackpot" then
         local eggId = pending.EggId or (if kind == "Jackpot" then GameConfig.ExclusiveEgg.EggId else SpinRules.bestEgg(rankName))
         player:SetAttribute("FreeEggAt", workspace:GetServerTimeNow()) -- (the Store's thanks for a bought egg stays quiet: StoreController)
-        if EggInventory.grant(player, eggId) then
+        if EggInventory.grant(player, eggId, pending.Paid == true) then
             local name = GameConfig.Eggs[eggId].DisplayName
             text = (if string.find(name, "^[AEIOUaeiou]") then "an " else "a ") .. name .. "! Hatch it at the Hatching Sanctum."
         else -- (holding the most of that egg)
@@ -153,8 +153,10 @@ function actions.Spin(player)
 
     local index = SpinRules.roll(random)
     local info = SpinRules.describe(index, Ranks.getPlayerRankName(player), player)
-    SpinLedger.take(player) -- (a free or won spin first, then a bought one)
-    data.Pending = { Segment = index, Day = data.Day, Kind = info.Kind, Stones = info.Stones, EggId = info.EggId }
+    local _, bought = SpinLedger.take(player) -- (a free or won spin first, then a bought one)
+    -- an egg won on a spin bought with Robux is a paid egg: the pet it hatches is a paid item (EggInventory, the Auction House's policy)
+    data.Pending = { Segment = index, Day = data.Day, Kind = info.Kind, Stones = info.Stones, EggId = info.EggId,
+        Paid = if bought then true else nil }
     publish(player)
     PlayerData.saveSoon(player)
 

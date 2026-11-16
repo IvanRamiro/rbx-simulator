@@ -22,7 +22,8 @@ local function stones(n)
     return NumberFormat.compact(n) .. " Spirit Stones"
 end
 
-local PAID = "Beasts from the Exclusive Egg can't be traded where you live."
+local PAID = "Beasts that came from Robux (the Exclusive Egg or a bought spin) can't be traded where you live."
+AuctionChecks.PaidText = PAID
 
 function AuctionChecks.item(f)
     if f.kind == "Pet" then
@@ -45,7 +46,7 @@ function AuctionChecks.item(f)
         if f.isCreatorPet then
             return "This pet always comes back to you, so it can't be sold."
         end
-        if AuctionRules.isPaidPet(pet.PetId) and not f.paidOk then
+        if AuctionRules.isPaid("Pet", pet) and not f.paidOk then
             return PAID
         end
         return nil

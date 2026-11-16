@@ -31,7 +31,7 @@ local function shortText(text)
     return if typeof(text) == "string" and #text <= 120 then text else nil
 end
 
--- an item record as it left the inventory: a pet { InstanceId, PetId, Level, Size, Worth, Locked } or a weapon
+-- an item record as it left the inventory: a pet { InstanceId, PetId, Level, Size, Worth, Locked, Paid } or a weapon
 -- { InstanceId, WeaponId, Element, Name }; nil if it isn't one
 function AuctionLedger.sanitizeItem(kind, item)
     if typeof(item) ~= "table" or not isId(item.InstanceId) then
@@ -41,6 +41,7 @@ function AuctionLedger.sanitizeItem(kind, item)
         return {
             InstanceId = item.InstanceId, PetId = item.PetId, Level = tonumber(item.Level) or 1,
             Size = if typeof(item.Size) == "string" then item.Size else "Normal", Worth = tonumber(item.Worth), Locked = false,
+            Paid = if item.Paid == true then true else nil,
         }
     elseif kind == "Weapon" and Shop.weapon(item.WeaponId) then
         return {

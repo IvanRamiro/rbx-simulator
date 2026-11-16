@@ -829,6 +829,34 @@ return function(Core, log)
             local _, outcome = core:bid(A.p, id, 100)
             check(outcome == "Accepted", "allowed elsewhere")
         end)
+        -- a pet from a bought spin's egg (an ordinary kind, marked Paid): the mark travels through the escrow to the winner
+        local marked = pet("PV", "VoltFox")
+        marked.Paid = true
+        table.insert(S.p.mem.pets, marked)
+        local B = W.player(3, "Bo", 5000)
+        B.paidOk = false
+        W.load(3)
+        local id2
+        W.run(function()
+            local s = spec("PV", 100, 1)
+            s.Paid = true -- (AuctionChecks: AuctionRules.isPaid reads the record's mark)
+            local _, lid = core:list(S.p, s)
+            id2 = lid
+            local _, outcome, why = core:bid(B.p, id2, 100)
+            check(outcome == "Refused" and why == "Paid", "a bought-spin pet is refused where paid trading isn't allowed")
+            local _, outcome2 = core:bid(A.p, id2, 100)
+            check(outcome2 == "Accepted", "and taken elsewhere")
+        end)
+        W.clock += 3600 + 10
+        W.quiesce(core)
+        local got
+        for _, p in A.p.mem.pets do
+            if p.InstanceId == "PV" then
+                got = p
+            end
+        end
+        check(got ~= nil and got.Paid == true, "the winner's pet is still marked Paid")
+        check(B.p.mem.stones == 5000, "the refused bidder kept every stone")
     end
 
     say(string.format("AUCTION HARNESS: %d passed, %d failed", passed, failed))

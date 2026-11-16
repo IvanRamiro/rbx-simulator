@@ -39,11 +39,11 @@ local PRODUCTS = {}
 local exclusive = GameConfig.ExclusiveEgg
 if (exclusive.ProductId or 0) > 0 then
     PRODUCTS[exclusive.ProductId] = function(player)
-        if not EggInventory.grant(player, exclusive.EggId) then
+        if not EggInventory.grant(player, exclusive.EggId, true) then -- (a paid egg: bought with Robux)
             return false -- (holding the most of it: given once they have hatched some)
         end
         return true, function()
-            EggInventory.take(player, exclusive.EggId)
+            EggInventory.revoke(player, exclusive.EggId, true)
         end
     end
 end

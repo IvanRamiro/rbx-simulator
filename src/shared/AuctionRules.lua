@@ -2,8 +2,9 @@
 -- fee, a floor or a raise. Items are tables: a pet { PetId, Level, Size, Worth } or a weapon { WeaponId, Element, Name }.
 --
 --   AuctionRules.Config                     GameConfig.AuctionHouse
---   AuctionRules.isPaidPet(petId)           whether this kind of pet comes from a Robux egg (an Exclusive egg's pool): a paid item
---   AuctionRules.isPaid(kind, item)         the same for any item (weapons are never paid: bought with Spirit Stones)
+--   AuctionRules.isPaidPet(petId)           whether this kind of pet comes from a Robux egg (an Exclusive egg's pool): always paid
+--   AuctionRules.isPaid(kind, item)         whether this item is a paid item: a pet marked Paid (hatched from a paid egg: EggInventory)
+--                                           or of an Exclusive egg's kind (the rule for saves from before the mark); never a weapon
 --   AuctionRules.value(kind, item)          its sell value (what Buy & Sell pays for it)
 --   AuctionRules.rarity(kind, item)         a pet's rarity, or "Weapon"
 --   AuctionRules.rarityRank(rarity)         1 (Common) .. 8 (Divine); a weapon 0: for sorting by rarity
@@ -19,6 +20,7 @@
 --   AuctionRules.itemName(kind, item)       what to call it
 --   AuctionRules.whole(n)                   n as a whole number of stones if it is one in range, else nil
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
@@ -48,7 +50,7 @@ function AuctionRules.isPaidPet(petId)
 end
 
 function AuctionRules.isPaid(kind, item)
-    return kind == "Pet" and typeof(item) == "table" and AuctionRules.isPaidPet(item.PetId)
+    return kind == "Pet" and typeof(item) == "table" and (item.Paid == true or AuctionRules.isPaidPet(item.PetId))
 end
 
 function AuctionRules.value(kind, item)
@@ -122,7 +124,8 @@ function AuctionRules.canUse(rankName, ageDays)
     if not Ranks.isAtLeast(rankName, CONFIG.MinRank) then
         return false, "Reach " .. Ranks.getRankById(CONFIG.MinRank).Name .. " to trade at the Auction House."
     end
-    if typeof(ageDays) == "number" and ageDays < CONFIG.MinAccountAgeDays then
+    -- (not in Studio: a Local Server test's players are brand-new accounts, age 0; live servers always check it)
+    if typeof(ageDays) == "number" and ageDays < CONFIG.MinAccountAgeDays and not RunService:IsStudio() then
         return false, "Your Roblox account must be " .. CONFIG.MinAccountAgeDays .. " days old to trade at the Auction House."
     end
     return true

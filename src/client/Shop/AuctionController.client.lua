@@ -465,7 +465,7 @@ local function renderDetail()
     })
     local lines = { detailOf(entry), "Seller: " .. tostring(entry.Sn or "?") }
     if entry.Paid then
-        table.insert(lines, "From the Exclusive Egg")
+        table.insert(lines, "Came from Robux: some regions can't trade it")
     end
     for i, text in lines do
         UiKit.label({

@@ -151,15 +151,17 @@ local function onHatchRequest(player, eggId)
         RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "InventoryFull" })
         return
     end
-    if not EggInventory.take(player, eggId) then
+    local took, paidEgg = EggInventory.take(player, eggId) -- (a paid egg first while any is held: EggInventory)
+    if not took then
         return
     end
     local petId, chance = rollEggPet(egg, player)
     -- its size, rolled apart from the beast at PetRules.Sizes' chances (no luck: the Luck pass changes which beast, not its size)
     local size = PetRules.rollSize(random)
     local isNew = not Codex.isFound(player, petId)
-    if not PetInventory.grantPet(player, petId, size) then
-        EggInventory.grant(player, eggId)
+    -- a pet from a paid egg (the Exclusive Egg, or an egg won on a bought spin) is a paid item for good (PetInventory: Paid)
+    if not PetInventory.grantPet(player, petId, size, paidEgg or egg.Exclusive == true) then
+        EggInventory.grant(player, eggId, paidEgg)
         return
     end
     hatching[player] = true

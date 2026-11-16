@@ -1302,8 +1302,11 @@ other for Spirit Stones. Its egg sales are gone, so it no longer overlaps the Wa
   and name (never the equipped one). A forged name is filtered again when listed. The creator's always-held pets can't be listed
   by a creator account. Eggs are not traded.
 - **Roblox policy:** a player whose region doesn't allow trading paid items (`PolicyService`, `IsPaidItemTradingAllowed`; no
-  answer counts as no) can't list or bid on the Exclusive Egg's beasts (the Nine-Tail Moonfox, Crysalith, the Eclipse Dreadwing:
-  every copy counts as paid, as the save doesn't know where a copy came from).
+  answer counts as no) can't list or bid on paid items: a pet marked `Paid`, and every Exclusive Egg beast (the Nine-Tail
+  Moonfox, Crysalith, the Eclipse Dreadwing, by kind, for saves from before the mark). **The mark** (save schema 24): eggs from
+  Robux (the Exclusive Egg, an egg won on a spin bought with Robux) are counted per kind (`PaidEggs`); a hatch uses a paid egg
+  first while any is held, and its pet is marked `Paid` for good (kept through fusing, the pen, levels and auctions). Free
+  spins, stolen eggs and the Merchant's eggs are not paid.
 - **The window** (`client/Shop/AuctionController`, the old Cultivation Bold style, `Hud.window`): BROWSE (all, pets or weapons; any
   rarity; ending soon, lowest or highest price, rarest, newest; pages of 8), a listing's page (portrait, rarity, size, level,
   element, seller, top bid, bids, a live countdown, the last bids, a bid with quick raises and a confirm), SELL (each pet and

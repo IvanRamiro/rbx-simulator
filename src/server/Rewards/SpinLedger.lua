@@ -36,6 +36,9 @@ local function sanitizePending(raw)
     if typeof(raw.EggId) == "string" and GameConfig.Eggs[raw.EggId] then
         pending.EggId = raw.EggId
     end
+    if raw.Paid == true then -- (rolled on a spin bought with Robux: its egg is a paid one, EggInventory; save schema 24)
+        pending.Paid = true
+    end
     return pending
 end
 
@@ -76,20 +79,21 @@ function SpinLedger.spinsLeft(player)
     return if data then SpinRules.spinsLeft(data) else 0
 end
 
--- Takes one spin: today's free or won one if any is left, else a bought one. False when none is left.
+-- Takes one spin: today's free or won one if any is left, else a bought one. Returns true and whether it was a bought (Robux)
+-- spin; false when none is left.
 function SpinLedger.take(player)
     local data = SpinLedger.today(player)
     if not data then
-        return false
+        return false, false
     end
     if SpinRules.freeLeft(data) > 0 then
         data.Used += 1
+        return true, false
     elseif data.Bought > 0 then
         data.Bought -= 1
-    else
-        return false
+        return true, true
     end
-    return true
+    return false, false
 end
 
 -- Whether `count` more bought spins fit under GameConfig.SpinWheel.MaxBought.

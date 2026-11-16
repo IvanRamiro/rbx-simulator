@@ -291,7 +291,7 @@ local function buy(player, dealId)
         end
         if granted < deal.Count then
             for _ = 1, granted do
-                EggInventory.take(player, deal.ItemId)
+                EggInventory.revoke(player, deal.ItemId, false) -- (the exact undo: never one of their paid eggs)
             end
             Wallet.add(player, deal.Price, "MerchantRefund", deal.Id)
             return false, "You can't hold " .. deal.Count .. " more of that egg."

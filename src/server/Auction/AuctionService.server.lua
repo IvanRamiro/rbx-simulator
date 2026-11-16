@@ -544,7 +544,9 @@ function actions.Bid(player, state, listingId, amount)
         return result(player, false, why)
     end
     local placed, outcome, refusal, after = core:bid(state.p, listingId, amount)
-    records[listingId] = nil
+    -- the record as the bid left it: shown at once and kept for the next reads (a GetAsync straight after a write can still return
+    -- the store's few-seconds-old copy: seen in the 2-player test, the bidder's page showed no bid until its next refresh)
+    records[listingId] = if after and after.Seller then { at = os.clock(), record = after } else nil
     local name = AuctionRules.itemName(record.Kind, record.Item)
     if not placed then
         return result(player, false, "You need more Spirit Stones.")
@@ -585,14 +587,7 @@ function reads.Browse(player, _, query)
     Event:FireClient(player, "Browse", browsePage(query))
 end
 
-function reads.Detail(player, state, listingId)
-    if typeof(listingId) ~= "string" or #listingId > 64 then
-        return
-    end
-    local ok, record = readRecord(listingId)
-    if not ok then
-        return Event:FireClient(player, "Busy", "The Auction House is busy. Try again in a moment.")
-    end
+local function sendDetail(player, state, listingId, record)
     if not record or not record.Seller then
         return Event:FireClient(player, "Detail", { Id = listingId, Gone = true })
     end
@@ -614,10 +609,21 @@ function reads.Detail(player, state, listingId)
         can, why = AuctionRules.canOwn(rankName(player), record.Kind, record.Item)
     end
     if can and record.Paid and not state.p.paidOk then
-        can, why = false, "Beasts from the Exclusive Egg can't be traded where you live."
+        can, why = false, AuctionChecks.PaidText
     end
     shown.CanBid, shown.WhyNot = can, why
     Event:FireClient(player, "Detail", shown)
+end
+
+function reads.Detail(player, state, listingId)
+    if typeof(listingId) ~= "string" or #listingId > 64 then
+        return
+    end
+    local ok, record = readRecord(listingId)
+    if not ok then
+        return Event:FireClient(player, "Busy", "The Auction House is busy. Try again in a moment.")
+    end
+    sendDetail(player, state, listingId, record)
 end
 
 function reads.Mine(player, state)

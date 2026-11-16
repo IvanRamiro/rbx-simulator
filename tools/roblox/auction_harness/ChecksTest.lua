@@ -36,6 +36,12 @@ return function(AuctionChecks, AuctionRules, GameConfig)
         check(AuctionRules.isPaidPet(petId), petId .. " is a paid item")
     end
     check(not AuctionRules.isPaidPet("VoltFox"), "an egg-stand beast is not a paid item")
+    check(AuctionRules.isPaid("Pet", pet("VoltFox", { Paid = true })), "a pet marked Paid (from a paid egg) is a paid item")
+    check(not AuctionRules.isPaid("Pet", pet("VoltFox")), "an unmarked egg-stand beast is not")
+    local okPaid, whyPaid = AuctionChecks.list(listFacts({ pet = pet("VoltFox", { Paid = true }), paidOk = false }))
+    check(not okPaid and string.find(whyPaid, "Robux") ~= nil, "POLICY: a pet from a bought spin's egg can't be listed where paid trading isn't allowed")
+    check(AuctionChecks.list(listFacts({ pet = pet("VoltFox", { Paid = true }), paidOk = true })) == true, "POLICY: allowed elsewhere")
+    check(AuctionChecks.list(listFacts({ pet = pet("VoltFox"), paidOk = false })) == true, "an unpaid pet trades everywhere")
     check(not AuctionRules.isPaid("Weapon", { WeaponId = "Sword1" }), "weapons are never paid items")
 
     -- who may trade
@@ -43,7 +49,11 @@ return function(AuctionChecks, AuctionRules, GameConfig)
     local ok, why = AuctionChecks.list(listFacts({ rankName = RANK_LOW }))
     check(not ok and string.find(why, "Core Initiate") ~= nil, "below Core Initiate: refused (" .. tostring(why) .. ")")
     ok, why = AuctionChecks.list(listFacts({ ageDays = 1 }))
-    check(not ok and string.find(why, "days old") ~= nil, "a 1-day-old account: refused")
+    if game:GetService("RunService"):IsStudio() then
+        check(ok, "a 1-day-old account: allowed in Studio only (Local Server test players are age 0)")
+    else
+        check(not ok and string.find(why, "days old") ~= nil, "a 1-day-old account: refused")
+    end
 
     -- what can go up
     for flag, word in { Locked = "Unlock", Equipped = "Unequip", InPen = "pen" } do
@@ -55,7 +65,7 @@ return function(AuctionChecks, AuctionRules, GameConfig)
     ok, why = AuctionChecks.list(listFacts({ isCreatorPet = true }))
     check(not ok and string.find(why, "comes back") ~= nil, "a creator's always-held pet refused")
     ok, why = AuctionChecks.list(listFacts({ pet = pet("NineTailMoonfox"), paidOk = false }))
-    check(not ok and string.find(why, "Exclusive Egg") ~= nil, "POLICY: a paid pet can't be listed where trading paid items isn't allowed")
+    check(not ok and string.find(why, "Exclusive Egg") ~= nil, "POLICY: an Exclusive Egg beast (old save, no mark) can't be listed where trading paid items isn't allowed")
     check(AuctionChecks.list(listFacts({ pet = pet("NineTailMoonfox"), paidOk = true })) == true, "POLICY: allowed elsewhere")
     ok, why = AuctionChecks.list(listFacts({ kind = "Weapon", pet = nil, weapon = { InstanceId = "W1", WeaponId = "Sword1" }, equippedWeapon = "W1" }))
     check(not ok and string.find(why, "Unequip") ~= nil, "the equipped weapon refused")
@@ -118,6 +128,11 @@ return function(AuctionChecks, AuctionRules, GameConfig)
     paidRecord.Paid, paidRecord.Item = true, pet("Crysalith")
     ok, why = AuctionChecks.bid(bidFacts({ record = paidRecord, paidOk = false }))
     check(not ok and string.find(why, "Exclusive Egg") ~= nil, "POLICY: can't bid on a paid pet where trading paid items isn't allowed")
+    local markedRecord = table.clone(record)
+    markedRecord.Paid, markedRecord.Item = true, pet("VoltFox", { Paid = true })
+    ok = AuctionChecks.bid(bidFacts({ record = markedRecord, paidOk = false }))
+    check(not ok, "POLICY: can't bid on a bought-spin pet where paid trading isn't allowed")
+    check(AuctionChecks.bid(bidFacts({ record = markedRecord, paidOk = true })) == true, "POLICY: allowed elsewhere")
     local bigWeapon = table.clone(record)
     bigWeapon.Kind, bigWeapon.Item = "Weapon", { InstanceId = "W", WeaponId = "Sword12" }
     ok, why = AuctionChecks.bid(bidFacts({ record = bigWeapon }))

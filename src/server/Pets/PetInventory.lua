@@ -35,7 +35,9 @@ local function penIndex(data, instanceId)
     return table.find(data.pen, instanceId)
 end
 
-local function addPet(data, petId, size)
+-- `paid`: it came from Robux (a paid egg: EggInventory), so it is a paid item wherever it goes (Paid, save schema 24; the Auction
+-- House keeps it from players whose region doesn't allow trading paid items). It stays paid through fusing, the pen and auctions.
+local function addPet(data, petId, size, paid)
     local definition = GameConfig.Pets[petId]
     local instanceId = HttpService:GenerateGUID(false)
     table.insert(data.ownedPets, {
@@ -45,6 +47,7 @@ local function addPet(data, petId, size)
         Locked = GameConfig.PetFusion.AutoLock[definition.Rarity] == true,
         Size = PetRules.size(size),
         Worth = PetRules.sizeInfo(size).Value,
+        Paid = if paid == true then true else nil,
     })
     return instanceId
 end
@@ -72,6 +75,7 @@ function PetInventory.setupPlayer(player, savedProgress)
                 Locked = pet.Locked == true,
                 Size = PetRules.size(pet),
                 Worth = PetRules.worth(pet),
+                Paid = if pet.Paid == true then true else nil,
             })
         end
         data.equipped = table.clone(savedProgress.EquippedPetIds)
@@ -149,13 +153,14 @@ function PetInventory.isFull(player)
     return data == nil or #data.ownedPets >= GameConfig.MaxOwnedPets
 end
 
--- Gives a new pet (size: its hatch size; nil, a bought or given pet: Normal). True and its InstanceId, or false when full.
-function PetInventory.grantPet(player, petId, size)
+-- Gives a new pet (size: its hatch size; nil, a bought or given pet: Normal; paid: it came from Robux). True and its InstanceId, or
+-- false when full.
+function PetInventory.grantPet(player, petId, size, paid)
     if PetInventory.isFull(player) or not GameConfig.Pets[petId] then
         return false
     end
 
-    local instanceId = addPet(playerData[player], petId, size)
+    local instanceId = addPet(playerData[player], petId, size, paid)
     Codex.discover(player, petId)
     return true, instanceId
 end
@@ -315,6 +320,9 @@ function PetInventory.fuse(player, targetId, confirmSecret)
     end
     local record = findOwnedPet(data, targetId)
     record.Worth = PetRules.worth(record) + PetRules.worth(material) -- (each copy keeps what it was worth: fusing makes no stones)
+    if material.Paid then
+        record.Paid = true -- (a paid copy fused in makes the whole pet a paid item: it can never wash the mark off)
+    end
     record.Level = PetRules.level(record) + PetRules.level(material)
     local size = PetRules.bigger(record.Size, material.Size)
     local grew = size ~= PetRules.size(record.Size)
@@ -357,7 +365,8 @@ function PetInventory.takeRecord(player, instanceId)
                 return nil
             end
             table.remove(data.ownedPets, index)
-            return { InstanceId = pet.InstanceId, PetId = pet.PetId, Level = pet.Level, Locked = false, Size = pet.Size, Worth = pet.Worth }
+            return { InstanceId = pet.InstanceId, PetId = pet.PetId, Level = pet.Level, Locked = false, Size = pet.Size, Worth = pet.Worth,
+                Paid = pet.Paid }
         end
     end
     return nil
@@ -376,7 +385,7 @@ function PetInventory.restore(player, record)
     end
     local rarity = GameConfig.Pets[record.PetId].Rarity
     local pet = { InstanceId = instanceId, PetId = record.PetId, Level = PetRules.level(record), Size = PetRules.size(record),
-        Locked = GameConfig.PetFusion.AutoLock[rarity] == true }
+        Locked = GameConfig.PetFusion.AutoLock[rarity] == true, Paid = if record.Paid == true then true else nil }
     pet.Worth = PetRules.worth({ Level = pet.Level, Size = pet.Size, Worth = record.Worth })
     table.insert(data.ownedPets, pet)
     Codex.discover(player, record.PetId)
@@ -408,7 +417,8 @@ function PetInventory.exportData(player)
 
     local pets = {}
     for _, pet in data.ownedPets do
-        table.insert(pets, { InstanceId = pet.InstanceId, PetId = pet.PetId, Level = pet.Level, Locked = pet.Locked, Size = pet.Size, Worth = pet.Worth })
+        table.insert(pets, { InstanceId = pet.InstanceId, PetId = pet.PetId, Level = pet.Level, Locked = pet.Locked, Size = pet.Size, Worth = pet.Worth,
+            Paid = pet.Paid })
     end
 
     return {
@@ -436,6 +446,7 @@ function PetInventory.getSnapshot(player)
             Size = pet.Size,
             Worth = pet.Worth,
             InPen = penIndex(data, pet.InstanceId) ~= nil,
+            Paid = pet.Paid == true,
         })
     end
 
