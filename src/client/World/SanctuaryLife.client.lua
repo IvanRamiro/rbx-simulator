@@ -116,7 +116,18 @@ local treeEmitter = petalEmitter(treePetals)
 local carriedAt = nil
 
 -- the Elder by the bridge: under its canopy (found once its kit has streamed in)
+-- (kept between frames: searching the kit's ~430 pieces each frame cost about 0.2 ms; searched again at most once a second
+-- while it isn't streamed in, and whenever the one found streams out)
+local elder, elderSearchedAt = nil, -math.huge
 local function findElder()
+    if elder and elder.Parent then
+        return elder
+    end
+    local now = os.clock()
+    if now - elderSearchedAt < 1 then
+        return nil
+    end
+    elderSearchedAt = now
     local kit = island:FindFirstChild("Kit")
     local best = nil
     for _, part in kit and kit:GetChildren() or {} do
@@ -126,6 +137,7 @@ local function findElder()
             end
         end
     end
+    elder = best
     return best
 end
 
@@ -253,8 +265,11 @@ local function doSplash(at, count)
     Sfx.play("KoiSplash", at)
 end
 
+local koiParts, koiFrames = {}, {} -- (reused each frame)
 local function swimKoi(now, water)
-    local parts, frames = {}, {}
+    local parts, frames = koiParts, koiFrames
+    table.clear(parts)
+    table.clear(frames)
     for _, entry in fish do
         local loop = loops[entry.loop]
         local u = (now * entry.speed / loop.length + entry.phase) % 1
@@ -325,6 +340,8 @@ end
 
 -- ---------- each frame ----------
 local swayTick = 0
+local pondTriedAt = -math.huge
+local swayParts, swayFrames = {}, {} -- (reused each sway)
 RunService.Heartbeat:Connect(function(dt)
     local camera = Workspace.CurrentCamera
     if not camera then
@@ -364,8 +381,9 @@ RunService.Heartbeat:Connect(function(dt)
         treeEmitter.Rate = 0
     end
 
-    -- the pond
-    if near and (not pond or not pond.Parent) then
+    -- the pond (loaded again if it streamed in before its fish: a second's wait between tries)
+    if near and (not pond or not pond.Parent or #fish == 0) and now - pondTriedAt > 1 then
+        pondTriedAt = now
         loadPond()
     end
     local water = pond and pond.Parent and pond:GetAttribute("Water")
@@ -396,7 +414,9 @@ RunService.Heartbeat:Connect(function(dt)
     swayTick += dt
     if near and swayTick >= 0.05 and not Quality.Low and not reduced() then
         swayTick = 0
-        local parts, frames = {}, {}
+        local parts, frames = swayParts, swayFrames
+        table.clear(parts)
+        table.clear(frames)
         local axis = Vector3.new(dir.Z, 0, -dir.X)
         for part, c in canopies do
             if part.Parent and (part.Position - camPos).Magnitude < SWAY_NEAR then

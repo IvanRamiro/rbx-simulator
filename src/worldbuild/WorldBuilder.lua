@@ -1608,6 +1608,7 @@ local function deckPiece(model, theme, width, a, b, zoneFolder)
         local zone = bridgePart("Zone", Vector3.new(width + 8, BRIDGE.ZoneHeight, length + overlap),
             frame * CFrame.new(0, BRIDGE.ZoneHeight / 2 - 3, 0), zoneFolder, theme.Glow)
         zone.Transparency = 1
+        zone.Material = Enum.Material.Plastic -- (see hideCollision)
         zone.CanCollide, zone.CanTouch, zone.CastShadow = false, false, false
         zone.CanQuery = true -- the server finds players on the bridge by querying these
     end
@@ -1701,6 +1702,18 @@ end
 local SUPPORT_EVERY = { Jade = 3, Ember = 2, Moon = 4, Lion = 3, Origin = 3 } -- deck pieces between supports
 local SUPPORT_CLEAR = 24 -- studs from either end with no support (they would sink into the islands)
 
+-- A blockout piece left as invisible collision under the kit. Invisible parts still cost the renderer a batch for each material
+-- they're in: all in Plastic, with their old material's footing kept, the hub's view drew about 250 fewer draw calls (2026-11-17).
+local function hideCollision(part)
+    part.Transparency = 1
+    if part.Material ~= Enum.Material.Plastic then
+        if part.CustomPhysicalProperties == nil then
+            part.CustomPhysicalProperties = PhysicalProperties.new(part.Material)
+        end
+        part.Material = Enum.Material.Plastic
+    end
+end
+
 -- Dress a built bridge with its theme's kit, if the kit is stored: a deck section on every
 -- piece of deck, supports hanging under it, the gate. The blockout
 -- stays as the invisible collision. Returns the number of pieces placed.
@@ -1775,7 +1788,7 @@ local function dressBridge(model, theme)
         count += 1
         for _, part in gate:GetChildren() do
             if part.Name == "Pillar" or part.Name == "Lintel" then
-                part.Transparency = 1
+                hideCollision(part)
             end
         end
     elseif barrier then
@@ -1784,7 +1797,7 @@ local function dressBridge(model, theme)
             count += 1
             for _, part in gate:GetChildren() do
                 if part.Name == "Pillar" or part.Name == "Lintel" then
-                    part.Transparency = 1
+                    hideCollision(part)
                 end
             end
         end
@@ -1794,7 +1807,7 @@ local function dressBridge(model, theme)
     if count > 0 and not bareDeck then
         for _, c in model:GetChildren() do
             if c.Name == "Deck" or c.Name == "Rail" then
-                c.Transparency = 1
+                hideCollision(c)
                 c.CastShadow = false
             end
         end
