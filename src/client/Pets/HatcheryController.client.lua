@@ -21,6 +21,7 @@ local Hud = require(UI:WaitForChild("Hud"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Portraits = require(UI:WaitForChild("Portraits"))
+local Toast = require(UI:WaitForChild("Toast"))
 local CodexState = require(script.Parent:WaitForChild("CodexState"))
 local HatchCeremony = require(script.Parent:WaitForChild("HatchCeremony"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
@@ -29,7 +30,7 @@ local player = Players.LocalPlayer
 local C = UiTheme.Colors
 
 local LEAVE_MARGIN = 4 -- studs past the prompt's range the window closes: inside the server's own limit (its range + 6)
-local REVEAL_TIME = 2.8 -- seconds the window stays aside after the egg breaks: the hatch cinematic's reveal card and its fade (HatchCeremony)
+local REVEAL_SPARE = 0.6 -- seconds past the cinematic's own length the window waits for it to say it's done (HatchCeremony.Finished)
 local BREAK_MARGIN = 0.15 -- seconds after the egg breaks that Hatch wakes, so a press never reaches a server still busy
 local NO_ANSWER = GameConfig.HatchingAltar.Stage + 3 -- seconds Hatch waits for an answer that never came
 local RARITY_ORDER = { Divine = 8, Secret = 7, Mythical = 6, Legendary = 5, Epic = 4, Rare = 3, Uncommon = 2, Common = 1 }
@@ -300,7 +301,18 @@ RemoteEvents.EggHatchResultEvent.OnClientEvent:Connect(function(result)
             local part, reach = altarPart, leaveDistance -- closing forgets the altar
             window.close()
             local this = press
-            task.delay(untilBroken + REVEAL_TIME + HatchCeremony.extraHold(result), function() -- (a Large or Giant reveal stays longer)
+            -- it comes back as soon as the cinematic ends (a tap on the card ends it early: repeats stay quick), or, should that never
+            -- be heard, once the cinematic's own length for this result has passed (a grand or Giant reveal stays longer)
+            local back = false
+            local ended
+            local function comeBack()
+                if back then
+                    return
+                end
+                back = true
+                if ended then
+                    ended:Disconnect()
+                end
                 if this ~= press or window.isOpen() or #heldEggs() == 0 then
                     return
                 end
@@ -311,7 +323,13 @@ RemoteEvents.EggHatchResultEvent.OnClientEvent:Connect(function(result)
                 else
                     altarPart = nil
                 end
+            end
+            ended = HatchCeremony.Finished:Connect(function(breakAt)
+                if breakAt == result.BreakAt then -- (this hatch's cinematic, not the one it cut short)
+                    comeBack()
+                end
             end)
+            task.delay(untilBroken + HatchCeremony.afterBreak(result) + REVEAL_SPARE, comeBack)
         end
     end
 end)
@@ -353,8 +371,12 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- another player's hatch, heard by anyone near the Sanctum: their egg breaks in the cradle (PetService stages it, with who hatches
--- it, its rarity and when it breaks), quieter than the hatcher's own; a grand one carries further
+-- it, its rarity and when it breaks), quieter than the hatcher's own; a grand one carries further. The staged egg reaches every
+-- player (it streams as Persistent), so the top rarities are told to the whole server as it breaks: a short notice in the rarity's
+-- colour (the big pet games do the same: a rare pull is a public event)
 local GRAND = { Legendary = true, Mythical = true, Secret = true, Divine = true }
+local ANNOUNCED = { Mythical = true, Secret = true, Divine = true }
+local news = Toast.new("HatchNews", nil, 5)
 workspace.DescendantAdded:Connect(function(egg)
     if egg.Name ~= "HatchingEgg" or not egg:IsA("Model") or egg:GetAttribute("HatcherId") == player.UserId then
         return
@@ -364,6 +386,16 @@ workspace.DescendantAdded:Connect(function(egg)
         return
     end
     local at = egg:GetPivot().Position
-    local sound = if GRAND[egg:GetAttribute("Rarity")] then "HatchNearbyGrand" else "HatchNearby"
-    Sfx.after(math.max(0, breakAt - workspace:GetServerTimeNow()), sound, at)
+    local rarity = egg:GetAttribute("Rarity")
+    local untilBreak = math.max(0, breakAt - workspace:GetServerTimeNow())
+    Sfx.after(untilBreak, if GRAND[rarity] then "HatchNearbyGrand" else "HatchNearby", at)
+    local hatcher = Players:GetPlayerByUserId(egg:GetAttribute("HatcherId") or 0)
+    if ANNOUNCED[rarity] and hatcher then
+        task.delay(untilBreak, function()
+            if hatcher.Parent then
+                news:show(hatcher.DisplayName .. " just hatched a " .. string.upper(rarity) .. " beast!", "Info",
+                    GameConfig.PetRarityColors[rarity])
+            end
+        end)
+    end
 end)

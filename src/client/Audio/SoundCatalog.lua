@@ -195,23 +195,51 @@ local catalog = {
     -- the crack: a real eggshell's crunch (Crack Egg Crunchy 11: 121 x 1.3 = 157) and glass breaking under it (80 x 1.8 = 144)
     EggCrack = { Id = "9113959343", Volume = 1.3, Start = 0.12, Near = 15, Reach = 90, Key = true, With = "CrackShatter" },
     CrackShatter = { Id = "9114591872", Volume = 1.8, Length = 0.7, Near = 15, Reach = 90 },
-    -- the reveal, by rarity: Common and Uncommon, a sparkling chime; Rare and Epic, a glowing thud under it; Legendary and
-    -- Mythical, the reward stinger's impact and rising harp; Secret and Divine, the angelic vocal too
+    -- the reveal, a sound of its own for each rarity, each adding to the one below (HatchCeremony's ladder; every file is one the game
+    -- already uses, at the level it's used at): Common, a sparkling chime; Uncommon, a ping on it; Rare, a glowing thud under it;
+    -- Epic, a short rising harp and a glassy tone too; Legendary, the reward stinger's impact, full harp and shimmer; Mythical, a
+    -- bright ding and fairy dust on that; Secret, the deeper impact and the angelic vocal; Divine, both impacts, the vocal, the ding
+    -- and the dust
     HatchReveal = { Id = "9125635430", Volume = 0.5, Group = "Interface", Moment = 1.5 },                               -- 275 x 0.5 = 137
+    HatchRevealUncommon = { Id = "9125635430", Volume = 0.5, Group = "Interface", Moment = 1.5, With = { { "RevealPing", 0.12 } } },
+    RevealPing = { Id = "9126076118", Volume = 0.45, Pitch = 1.25, Group = "Interface" },                                -- SummonPing's
     HatchRevealRare = { Id = "9116385087", Volume = 0.6, Group = "Interface", With = "HatchReveal" },
+    HatchRevealEpic = { Id = "9116385087", Volume = 0.65, Group = "Interface", Duck = { 0.5, 2.5 }, Moment = 2,
+        With = { "HatchReveal", { "RevealHarpShort", 0.05 }, { "RevealGlass", 0.35 } } },
+    RevealHarpShort = { Id = "1840525370", Volume = 1.8, Start = 0.3, Pitch = 1.26, Length = 1.3, Fade = 0.4, Group = "Interface" },
+    RevealGlass = { Id = "9126073644", Volume = 0.8, Pitch = 1.12, Group = "Interface" },                               -- FuseTone's
     HatchRevealLegendary = { Id = "9116384485", Volume = 0.6, Start = 0.1, Length = 2.4, Fade = 0.6, Group = "Interface", Key = true,
         Duck = { 0.35, 3.5 }, Moment = 3, With = { { "RevealHarp", 0.05 }, { "HatchReveal", 0.1 }, { "RevealTail", 0.8 } } },
-    HatchRevealDivine = { Id = "9116384485", Volume = 0.65, Start = 0.1, Length = 2.6, Fade = 0.6, Group = "Interface", Key = true,
+    HatchRevealMythical = { Id = "9116384485", Volume = 0.62, Start = 0.1, Length = 2.5, Fade = 0.6, Group = "Interface", Key = true,
+        Duck = { 0.3, 4 }, Moment = 3.2,
+        With = { { "RevealHarp", 0.05 }, { "HatchReveal", 0.1 }, { "RevealDing", 0.8 }, { "RevealTail", 0.85 }, { "RevealDust", 0.9 } } },
+    HatchRevealSecret = { Id = "9116384473", Volume = 0.55, Start = 0.2, Length = 2.4, Fade = 0.6, Group = "Interface", Key = true,
         Duck = { 0.25, 4.5 }, Moment = 3.5, With = { { "RevealHarp", 0.05 }, { "HatchReveal", 0.1 }, { "RevealChoir", 0 }, { "RevealTail", 0.9 } } },
+    HatchRevealDivine = { Id = "9116384485", Volume = 0.65, Start = 0.1, Length = 2.6, Fade = 0.6, Group = "Interface", Key = true,
+        Duck = { 0.25, 4.5 }, Moment = 3.5,
+        With = { { "RevealDeep", 0 }, { "RevealHarp", 0.05 }, { "HatchReveal", 0.1 }, { "RevealChoir", 0 }, { "RevealDing", 0.8 },
+            { "RevealTail", 0.9 }, { "RevealDust", 1 } } },
     RevealHarp = { Id = "1840525370", Volume = 2, Start = 0.3, Pitch = 1.26, Length = 2, Fade = 0.6, Group = "Interface" },
     RevealTail = { Id = "9116418035", Volume = 1.7, Start = 0.65, Length = 1.8, Fade = 0.6, Group = "Interface" },
     RevealChoir = { Id = "1839901317", Volume = 0.75, Length = 4, Fade = 1, Group = "Interface" },
+    RevealDing = { Id = "9126072453", Volume = 0.75, Start = 0.25, Group = "Interface" },                              -- RewardDing's
+    RevealDust = { Id = "9114369623", Volume = 1.1, Start = 0.2, Length = 2, Fade = 0.6, Group = "Interface" },        -- PremiumDust's
+    RevealDeep = { Id = "9116384473", Volume = 0.45, Start = 0.2, Length = 2.2, Fade = 0.6, Group = "Interface" },     -- PremiumPurchase's
+    -- the held breath before a grand one breaks (Legendary up): a humming swell (TakeReadySwell's, 240 x 0.6); a Secret's and a
+    -- Divine's drawn breath, the reversed whoosh (StealSting's); the Divine's pillar coming down, the air rush (TakeoffRush's)
+    HatchCharge = { Id = "9116393976", Volume = 0.6, Group = "Interface", Length = 1.4, Fade = 0.3 },
+    HatchHush = { Id = "9118158081", Volume = 1.6, Group = "Interface", Length = 0.9, Fade = 0.15 },
+    HatchPillar = { Id = "9116416120", Volume = 0.8, Start = 1.5, Length = 1.4, Fade = 0.4, Group = "Interface" },
     -- the size stamps: Large, a bright thud and a glassy tone; Giant, after its trembling beat (EggRumble), a deep slam
     SizeLarge = { Id = "9116385087", Volume = 0.55, Pitch = 1.12, Group = "Interface", With = { { "SizeTone", 0.05 } } },
     SizeTone = { Id = "9126073644", Volume = 0.9, Group = "Interface" },
     SizeGiant = { Id = "9116384485", Volume = 0.7, Start = 0.1, Pitch = 0.82, Length = 2, Fade = 0.6, Group = "Interface", Key = true,
         Duck = { 0.4, 2.5 }, Moment = 2.2, With = { { "SizeGiantThud", 0 }, { "RevealTail", 0.4 } } },
     SizeGiantThud = { Id = "9116385087", Volume = 0.6, Pitch = 0.7, Group = "Interface" },
+    -- a big one landing on the card: a heavy body thud (EggDrop's, 213 x 0.7); a Small one: a light poof (PetSummon's) and a high ping
+    SizeLand = { Id = "9113480917", Volume = 0.7, Pitch = 0.8, Group = "Interface" },
+    SizeSmall = { Id = "9116405867", Volume = 0.5, Pitch = 1.35, Group = "Interface", With = { { "SizeSmallPing", 0.06 } } },
+    SizeSmallPing = { Id = "9126076118", Volume = 0.45, Notes = { 1.5, 1.68 }, Group = "Interface" },
     -- another player's hatch at the Sanctum, as anyone near hears it: the crack and a chime, quieter (a grand one with the thud)
     HatchNearby = { Id = "9113959343", Volume = 1, Start = 0.12, Near = 12, Reach = 80, With = { "CrackShatterNear", { "HatchNearbyChime", 0.05 } } },
     CrackShatterNear = { Id = "9114591872", Volume = 1.3, Length = 0.7, Near = 12, Reach = 80 },
