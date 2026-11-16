@@ -546,7 +546,9 @@ def _hall_lines():
          "        Centre = %s, Yaw = %.4f, Court = %g," % (_lua_v3(cx, base, cz), HL.yaw(), HL.COURT_R),
          "        Pieces = {"]
     for piece, x, z, yaw in HL.stations():
-        L.append('            { Piece = "%s", Position = Vector3.new(%.3f, 0, %.3f), Yaw = %.4f },' % (piece, x, z, yaw))
+        # (the court: its mesh as modelled, scaled in X and Z to the court's radius; its height as modelled)
+        scale = ", Scale = Vector3.new(%.4f, 1, %.4f)" % (HL.COURT_SCALE, HL.COURT_SCALE) if piece == "HR_Court" else ""
+        L.append('            { Piece = "%s", Position = Vector3.new(%.3f, 0, %.3f), Yaw = %.4f%s },' % (piece, x, z, yaw, scale))
     L.append("        },")
     L.append("        Flags = {")
     for x, z, yaw in HL.flag_path():

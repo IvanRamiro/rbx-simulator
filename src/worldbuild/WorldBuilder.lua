@@ -1046,7 +1046,7 @@ local function template(island, name)
 end
 
 -- Places a template (every material part of it) so its authored origin lands on `frame`, optionally scaled
--- about that origin; returns its first part. Its look comes from the material and WorldBuilder.Appearance as
+-- about that origin (a number, or a Vector3 per axis for a template turned only about Y); returns its first part. Its look comes from the material and WorldBuilder.Appearance as
 -- they are now, not as they were when the template was stored.
 local function placeTemplate(island, name, frame, parent, scale)
     scale = scale or 1
@@ -1930,7 +1930,8 @@ function WorldBuilder.buildHallOfRecords(island)
         holder.Name = entry.Piece .. "_" .. index
         holder.Parent = folder
         if hasTemplate(island, entry.Piece) then
-            placeTemplate(island, entry.Piece, frame, holder)
+            -- (Scale: the court's mesh as modelled, stretched in X and Z to the court's radius, its height kept)
+            placeTemplate(island, entry.Piece, frame, holder, entry.Scale)
         elseif entry.Piece == "HR_Court" then
             local court = hallBlockout("HR_Court", { Centre = Vector3.new(0, 0.1, 0), Size = Vector3.new(0.3, spec.Court * 2, spec.Court * 2),
                 Look = "Flagstone" }, frame, holder)

@@ -11,8 +11,14 @@ Frames, all in Roblox studs (Y up):
 """
 import math
 
-CENTRE = (-151.6, 92.9)       # island-local (the hub's centre is world (0, 200, 0), no turns): the owner's spot, 2026-11-16
-COURT_R = 27.0                # the slate court's radius (its bronze kerb's outer edge)
+OWNER_SPOT = (-151.6, 92.9)   # island-local (the hub's centre is world (0, 200, 0), no turns): where the owner stood, 2026-11-16
+# The court's middle: on the old south-west avenue's line, 11 studs from the owner's spot (still on the court), so it fits r 38
+# between the pens at bearings 120 and 180 (45 studs to their plots) and the Ring Road (46) (the owner, 2026-11-17: "The hall of
+# records is way too crowded, I need you to expand it")
+CENTRE = (math.cos(math.radians(151.0)) * 170.0, math.sin(math.radians(151.0)) * 170.0)
+COURT_MESH_R = 27.0           # the court as modelled and imported (hall_records.court, HallOfRecords.fbx)
+COURT_R = 38.0                # the court as placed: the mesh scaled in X and Z (COURT_SCALE), its height as modelled
+COURT_SCALE = COURT_R / COURT_MESH_R
 TREE_RING_OUT = 104.0         # hub_ground.RING[1]: where the hall's front flag path starts
 RING_ROAD_IN = 216.0          # hub_ground.RING_ROAD[0]: where its back path ends
 BACK_EXIT = 152.0             # the back path leaves the court here (degrees), between the hourglass and the stele, toward the Ring Road
@@ -26,16 +32,16 @@ def yaw():
 
 # (piece, angle in degrees from +Z toward +X, radius, faces_in): faces_in turns the piece's front toward the middle; the entrance
 # faces out (its name plaque greets players coming from the tree).
-STATIONS = [
-    ("HR_Trilithon", 0.0, 26.0, False),
-    ("HR_Lectern", 0.0, 3.0, False),          # the Chronicle, in the middle: read facing into the court
-    ("HR_Stele", 180.0, 19.5, True),          # Highest Cultivation, across from the entrance
-    ("HR_Hourglass", 132.0, 20.0, True),      # Longest Cultivators
-    ("HR_WantedBoard", -132.0, 20.0, True),   # Greatest Thieves
-    ("HR_FirstsWall", 80.0, 22.0, True),      # Hall of Firsts
-    ("HR_Showcase", -80.0, 21.0, True),       # Rarest Beasts
-    ("HR_BannerPole", 32.0, 24.0, True),
-    ("HR_BannerPole", -32.0, 24.0, True),
+STATIONS = [   # (spread out 2026-11-17: each board 8-10 studs clear of the next, the book 20 studs clear all round)
+    ("HR_Trilithon", 0.0, COURT_R - 1.5, False),
+    ("HR_Lectern", 0.0, 2.0, False),          # the Chronicle, in the middle: read facing into the court
+    ("HR_Stele", 180.0, 29.0, True),          # Highest Cultivation, across from the entrance
+    ("HR_Hourglass", 130.0, 28.5, True),      # Longest Cultivators
+    ("HR_WantedBoard", -130.0, 28.5, True),   # Greatest Thieves
+    ("HR_FirstsWall", 78.0, 30.5, True),      # Hall of Firsts
+    ("HR_Showcase", -80.0, 29.5, True),       # Rarest Beasts
+    ("HR_BannerPole", 34.0, 33.0, True),
+    ("HR_BannerPole", -34.0, 33.0, True),
     ("HR_Court", 0.0, 0.0, False),
 ]
 
@@ -59,7 +65,7 @@ def _to_island(x, z):
 def paths():
     """The hall's two flag paths, in its frame: [(start (x, z), end (x, z))]: the front one from just past the entrance to the Tree
     Ring's edge (+Z, toward the tree), the back one from the court's edge at BACK_EXIT out to the Ring Road's inner edge."""
-    front = ((0.0, 30.0), (0.0, math.hypot(*CENTRE) - TREE_RING_OUT - 1.0))
+    front = ((0.0, COURT_R + 3.0), (0.0, math.hypot(*CENTRE) - TREE_RING_OUT - 1.0))
     a = math.radians(BACK_EXIT)
     ux, uz = math.sin(a), math.cos(a)
     r = COURT_R + 1.0

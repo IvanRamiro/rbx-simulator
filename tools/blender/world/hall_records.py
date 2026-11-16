@@ -419,7 +419,7 @@ def court():
     """The court: slate flags laid in rings like a great dial (a round middle stone, courses outward), a bronze ring round the middle,
     twelve bronze dial lines across the inner courses, a bronze ring between the inner and outer courses, a bronze kerb, on a dark bed."""
     flag, bronze, bed = Geo(), Geo(), Geo()
-    R = L.COURT_R
+    R = L.COURT_MESH_R   # (placed larger: WorldBuilder scales it in X and Z by hall_layout.COURT_SCALE)
     A.lathe(bed, [(0.0, 0.14), (R - 0.4, 0.14), (R - 0.4, -0.02), (0.0, -0.02)], 96)
     A.lathe(flag, [(0.0, 0.25), (5.0, 0.25), (5.12, 0.19), (5.12, -0.1), (0.0, -0.1)], 40)
     inner = [(6.2, 9.2), (9.2, 12.2), (12.2, 15.1), (15.1, 18.0)]
