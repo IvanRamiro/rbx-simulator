@@ -321,13 +321,14 @@ end
 local Portraits -- (required on first use: it builds the beasts' models)
 local function drawRarest(root, data, ctx)
     local rows = data.rows or {}
-    local B = ctx.px.Y * (0.5 - 0.024)
+    local B = ctx.px.Y * (0.5 - 0.044)
     for index = 1, RecordsConfig.Rarest.Show do
         local col, line = (index - 1) % 3, (index - 1) // 3
         local row = rows[index]
         local pet = row and GameConfig.Pets[row.p]
         local tone = if pet then GameConfig.PetRarityColors[pet.Rarity] else C.StoneLine
-        local bay = frame(root, { Position = UDim2.fromScale(col / 3 + 0.006, line / 2 + 0.012), Size = UDim2.fromScale(1 / 3 - 0.012, 0.5 - 0.024),
+        -- (clear of the case's bronze mullions: 0.22 studs wide on a 15 x 6.3 face)
+        local bay = frame(root, { Position = UDim2.fromScale(col / 3 + 0.011, line / 2 + 0.022), Size = UDim2.fromScale(1 / 3 - 0.022, 0.5 - 0.044),
             BackgroundColor3 = if pet then tone:Lerp(C.Stone, 0.8) else C.Stone, BackgroundTransparency = 0.1, BorderSizePixel = if pet then 3 else 0,
             BorderColor3 = tone, BorderMode = Enum.BorderMode.Inset })
         if not row then

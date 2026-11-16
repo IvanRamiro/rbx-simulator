@@ -832,7 +832,9 @@ WorldBuilder.MaterialLooks = {
     -- bronze with green patina in its recesses, a dark slate court and flags, deep wine banners, the hourglass's glass and sand, the
     -- Chronicle's parchment, the notice board's timber (Timber, above). (Names of their own: Cloth and Glass are the hub's people's)
     Basalt = { Material = Enum.Material.Basalt, Color = Color3.fromRGB(66, 63, 66) },
-    Bronze = { Material = Enum.Material.Metal, Color = Color3.fromRGB(150, 100, 56) },
+    -- (judged in Studio after the import, 2026-11-17: 150, 100, 56 read as bright orange copper, CorrodedMetal as rust; a dark
+    -- brown in Metal reads as old bronze, the sky's reflection lifting its edges)
+    Bronze = { Material = Enum.Material.Metal, Color = Color3.fromRGB(108, 80, 50) },
     Patina = { Material = Enum.Material.CorrodedMetal, Color = Color3.fromRGB(92, 136, 116) },
     Flagstone = { Material = Enum.Material.Slate, Color = Color3.fromRGB(78, 76, 80) },
     Banner = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(112, 30, 44), CanCollide = false },
