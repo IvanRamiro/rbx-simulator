@@ -497,7 +497,7 @@ local GameConfig = {
 
         MagmaCub = { DisplayName = "Magma Cub", Rarity = "Common", Theme = "Lava", QiBonus = 10 },
         SunscaleDragon = { DisplayName = "Sunscale Dragon", Rarity = "Legendary", Theme = "Solar", QiBonus = 60 },
-        DawnPhoenix = { DisplayName = "Dawn Phoenix", Rarity = "Legendary", Theme = "Fire", QiBonus = 60 },
+        DawnPhoenix = { DisplayName = "Dawn Phoenix", Rarity = "Mythical", Theme = "Fire", QiBonus = 110 }, -- Mythical since 2026-11-16 (the owner's call, with its remake)
         WindSprite = { DisplayName = "Wind Sprite", Rarity = "Common", Theme = "Wind", QiBonus = 10 },
         CloudSheep = { DisplayName = "Cloud Sheep", Rarity = "Uncommon", Theme = "Clouds", QiBonus = 25 },
         SpiritCrane = { DisplayName = "Spirit Crane", Rarity = "Rare", Theme = "Spiritual energy", QiBonus = 40 },
@@ -816,8 +816,8 @@ local GameConfig = {
                 { PetId = "EmberWyrm", HatchChance = 27 },
                 { PetId = "ObsidianGuardian", HatchChance = 15 },
                 { PetId = "AzureSkyDragon", HatchChance = 8 },
-                { PetId = "SunscaleDragon", HatchChance = 2.5 },
-                { PetId = "DawnPhoenix", HatchChance = 2.5 },
+                { PetId = "SunscaleDragon", HatchChance = 4 },
+                { PetId = "DawnPhoenix", HatchChance = 1 },
             },
         },
 
@@ -1057,7 +1057,7 @@ local GameConfig = {
             { Kind = "Egg", EggId = "VoidRiftEgg", Count = 3, Discount = 0.25 },
             { Kind = "Pet", PetId = "GoldenKirin" },
             { Kind = "Pet", PetId = "AzureSkyDragon" },
-            { Kind = "Pet", PetId = "DawnPhoenix" },
+            { Kind = "Pet", PetId = "SunscaleDragon" }, -- (the Dawn Phoenix's place until it became Mythical, 2026-11-16)
             { Kind = "Pet", PetId = "GravityImp" },
             { Kind = "Pet", PetId = "JadeWyrmTurtle" },
             { Kind = "Pet", PetId = "MoonfangTiger" },

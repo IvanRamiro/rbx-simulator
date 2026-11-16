@@ -455,7 +455,7 @@ The owner chose it from the suggestions ("do the 3"): the pets were silent. Each
 | Magma Cub ★ | Common | Lava | +10% |
 | Obsidian Guardian ★ | Rare | Darkness and crystal | +55% |
 | Sunscale Dragon ★ | Legendary | Solar | +60% |
-| Dawn Phoenix ★ | Legendary | Fire | +60% |
+| Dawn Phoenix ★ | Mythical | Fire | +110% |
 
 **Magma Heart Egg (Ember Peak)**
 
@@ -686,7 +686,7 @@ Fifteen eggs, **three on each of the five outer islands** (none on Yggdrasil, th
 | Jade Grove | Jade Spirit Egg | Qi Gatherer | Moss Golem 45%, Mycelium Sprite 27%, Jade Spirit Panda 15%, Jade Antler Deer 8%, Golden Kirin 5% |
 | Jade Grove | Bloomwood Egg | Foundation Adept | Dream Moth 45%, Crystal Snail 27%, Prism Armadillo 15%, Lantern Warden 8%, Jade Wyrm Turtle 5% |
 | Jade Grove | Ancient Grove Egg | Core Initiate | Echo Bat 45%, Qi Clockwork Finch 27%, Moonfang Tiger 15%, Lotus Elephant 8%, Ninefold Spirit Serpent 4%, Worldroot Colossus 1% |
-| Ember Peak | Inferno Egg | Qi Awakener | Magma Cub 45%, Ember Wyrm 27%, Obsidian Guardian 15%, Azure Sky Dragon 8%, Sunscale Dragon 2.5%, Dawn Phoenix 2.5% |
+| Ember Peak | Inferno Egg | Qi Awakener | Magma Cub 45%, Ember Wyrm 27%, Obsidian Guardian 15%, Azure Sky Dragon 8%, Sunscale Dragon 4%, Dawn Phoenix 1% (Mythical since November 16, 2026; it was Legendary at 2.5%, as was the Sunscale Dragon) |
 | Ember Peak | Magma Heart Egg | Perfect Foundation | Sand Phantom 45%, Solar Butterfly 27%, Obsidian Guardian 15%, Golden Mane Lion 8%, Bonefire Dragon 5% |
 | Ember Peak | Phoenix Ash Egg | Core Adept | Sand Phantom 45%, Solar Butterfly 27%, Obsidian Guardian 15%, Dreadfang Cerberus 8%, Bonefire Dragon 4%, Prismatic Phoenix 1% |
 | Moonlit Isle | Celestial Egg | Soul Awakening | Starfall Fox 45%, Cosmic Jellyfish 27%, Nebula Owl 15%, Celestial Snow Leopard 8%, Comet Stag 4%, Celestial Pearl Dragon 1% |
