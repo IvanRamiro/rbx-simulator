@@ -86,7 +86,7 @@ brows: the head kept through the reduction and subdivided once); head 2 (eyes to
 
 ## The model as delivered for approval (2026-11-16)
 
-Files: `tools/blender/pets/InfernoEgg/Dawn_Phoenix_{Blockout,Anatomy,Wings,Final}.blend`; FBX and maps in `assets/pets/InfernoEgg/DawnPhoenix_Model/`
+Files: `tools/blender/pets/InfernoEgg/Dawn_Phoenix_{Blockout,Anatomy,Wings,Final}.blend`; FBX and maps in `assets/pets/InfernoEgg/`
 (kept apart from the live pet's `DawnPhoenix.fbx` until approval and rigging); QA renders in `renders/pets/InfernoEgg/DawnPhoenix_final/`.
 
 - **Triangles: 19,136** (evaluated, triangulated, every piece; limit 20,000; about 1,100 over the 16-18k target, spent on the head and on
@@ -155,7 +155,7 @@ The before set is kept in `renders/pets/InfernoEgg/DawnPhoenix_stages/iterations
 ## Rigged for the game (approved model, 2026-11-16)
 
 `dawn_phoenix.py -- rig` opens the approved `Dawn_Phoenix_Final.blend` and rigs those exact pieces (no geometry rebuilt): it writes
-`tools/blender/pets/InfernoEgg/Dawn_Phoenix_Rigged.blend` and the rigged `assets/pets/InfernoEgg/DawnPhoenix_Model/DawnPhoenix.fbx` (the approved maps
+`tools/blender/pets/InfernoEgg/Dawn_Phoenix_Rigged.blend` and the rigged `assets/pets/InfernoEgg/DawnPhoenix.fbx` (the approved maps
 embedded), with stress and pose renders in `renders/pets/InfernoEgg/DawnPhoenix_rig/`.
 
 - **Skeleton, 48 bones:** Root; Body, Chest; Neck1-3, Head, Jaw (the lower beak), Crest1-2 (+ CrestTip); EyeL/R, LidUL/LL/UR/LR; each wing
@@ -177,7 +177,7 @@ embedded), with stress and pose renders in `renders/pets/InfernoEgg/DawnPhoenix_
 
 ## Importing it (for the owner)
 
-1. In Studio: File > Import 3D, pick `assets/pets/InfernoEgg/DawnPhoenix_Model/DawnPhoenix.fbx`. Keep the importer's defaults (the rig and the
+1. In Studio: File > Import 3D, pick `assets/pets/InfernoEgg/DawnPhoenix.fbx`. Keep the importer's defaults (the rig and the
    textures on). Its colour map is uploaded to Roblox as part of the import: look at `DawnPhoenix_color.png` first.
 2. Put the imported model in `ReplicatedStorage.PetMeshes.InfernoEgg`, named `DawnPhoenix`, in place of the old one (delete the old).
 3. The fixes the past skinned pets needed: shrink the holder part `RootPart` to 0.05 x 0.05 x 0.05; move the model so its root sits at the

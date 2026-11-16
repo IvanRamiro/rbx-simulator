@@ -13,7 +13,7 @@ feathers sweeping back from the crown. It is physical, not fire: its fire is in 
 Stages (the directive's section 11): blockout | anatomy | wings | feathers | materials | final (= all). Each later stage builds on the earlier ones.
 blockout, anatomy and wings each save their stage file (tools/blender/pets/InfernoEgg/Dawn_Phoenix_<Stage>.blend); final builds the game meshes (at most
 20,000 triangles), bakes the painted detail into one set of maps, checks it, renders the QA set (renders/pets/InfernoEgg/DawnPhoenix_final/), writes
-Dawn_Phoenix_Final.blend and the FBX (assets/pets/InfernoEgg/DawnPhoenix_Model/). Stage renders go to renders/pets/InfernoEgg/DawnPhoenix_stages/.
+Dawn_Phoenix_Final.blend and the FBX (assets/pets/InfernoEgg/). Stage renders go to renders/pets/InfernoEgg/DawnPhoenix_stages/.
 Faces -Y, Z up, 1 unit = 1 metre, +X is its left. The game files sit on the ground: its talons' lowest point is at z = 0.
 
 How it is made: the skin is sculpted as one volume (overlapping forms fused by a voxel remesh and smoothed, as a sculpt base is) and retopologised
@@ -46,7 +46,7 @@ ROOT = pet_kit.ROOT
 STAGE_DIR = os.path.join(ROOT, "renders/pets", EGG, PET + "_stages", STAGE)
 FINAL_DIR = os.path.join(ROOT, "renders/pets", EGG, PET + "_final")
 BLEND_DIR = os.path.join(ROOT, "tools/blender/pets", EGG)
-OUT_DIR = os.path.join(ROOT, "assets/pets", EGG, PET + "_Model")      # its own folder: the live pet's files are not touched before approval
+OUT_DIR = os.path.join(ROOT, "assets/pets", EGG)      # the approved model replaced the old one here (2026-11-16)
 os.makedirs(STAGE_DIR, exist_ok=True)
 HI, GAME = pet_kit.start(PET, EGG)
 pet_kit.OUT, pet_kit.TOOLS = OUT_DIR, BLEND_DIR
