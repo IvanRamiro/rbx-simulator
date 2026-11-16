@@ -582,12 +582,17 @@ Each kind has its own visual purpose. None is a recolour of another.
   - **A wisp** rising from the feet past the head, narrowing to a point, and **sparkles** rising from a ring round the feet.
   - **A soft glow** over the body (none round a void core), and from Ascendant on, the breathing outline and PointLight.
   - **Scale:** the dummy's look is Ascendant's base. Sizes and reach run from 0.6 times that at Qi Awakening to 1.8 times at Eternal's Peak. The ground layers' count barely grows and they dim as they grow, so a high realm's core never burns white.
+- **Realm 1, the Jade Qi Vortex** (the owner chose it in a side-by-side comparison, November 16, 2026: "I like the new realm better"; built in `RealmAura`'s `realm1`, in place of the mote rings, shoulder wisp, Qi arcs and First Breath):
+  - **Shape:** four spiral strands (five from Qi Adept; one fewer on phones) rise from the floor round the seated body to just over the head. Each is a wide soft glow under a thin bright core, lighter where it passes the chest, with sparks peeling off its tip.
+  - **Motion:** the strands turn round the body all the time. On each breath out of the lotus seat (its 5 s loop) they spin faster, widen and brighten at once, then ease back slowly.
+  - **Source:** improvised from a Creator Store aura, as the owner asked ("get an existing aura from other assets and improvise it, the look should be intense"): the spiral strands of Aura_FlameCrown in "Aura Pack Premium By Sanzzzzz" (75779654972403), used by texture id only (125283151882051, 113083314207224), recoloured jade and fitted to the seat. Its crown, magic circles, runes and fire flipbooks were dropped. The tip sparks are the PDS kit's 15419190159.
+  - **Comparing a future candidate:** the stage `ServerStorage.DevStage.AuraCompare` and the template in `tools/roblox/aura_compare/`.
 - **On every realm, the owner's body aura:** smoke, a dark shadow, sparks and star glints, fainter at low Qi and bigger at high Qi.
 - **Each realm's unique piece** (the owner, November 11, 2026: "add each realm a unique particle emitter, trails or beam", built in Studio as instances, no code): a Model per realm in `ReplicatedStorage.AuraMeshes.RealmUnique` (`Tier01` to `Tier12`, pivot where the root stands), copied onto the player by `RealmAura`. Edit them there in Studio.
 
   | Realm | Unique piece |
   |---|---|
-  | Qi Awakening | First Breath: jade motes drawn in toward the body |
+  | Qi Awakening | Jade Qi Vortex (replaced First Breath, November 16, 2026): built in code, not from `Tier01` (see below) |
   | Qi Foundation | Meridian Current: flowing teal currents round the waist and chest |
   | Spirit Core | Core Pulse: a golden shell swelling out from the chest |
   | Spirit Soul | Soul Flames: blue flames on both shoulders (the owner's FireFB16 flipbook) |

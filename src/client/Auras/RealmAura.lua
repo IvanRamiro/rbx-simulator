@@ -9,7 +9,7 @@
 --   Every realm: the owner's base aura (baseAura: the ground burst, smoke and slashes, the rising
 --   wisp and sparkles, the body glow; bigger with the level) and body aura (bodyAura), in the realm's
 --   own colours (AuraConfig's Palette, no two alike).
---   Realms 1-4: their own builds (realm1 .. realm4).
+--   Realms 1-4: their own builds (realm1 .. realm4; Realm 1's is a jade Qi vortex).
 --   From Ascendant (5): the breathing outline and light; ribbon arcs (one at Ascendant, two from
 --   Immortal).
 --   Cosmic, Void and Eternal: a dark void core inside a bright rim (in place of the body glow).
@@ -47,10 +47,8 @@ local TEX = {
     Ring = "rbxassetid://130173906719836",
     LawStreak = "rbxassetid://75983337371298",
     Nebula = "rbxassetid://128568519603570",
-    -- Realm 1, from the PDS' Particles & Models Kit (Workspace)
-    Mote = "rbxassetid://16512006463",         -- one tiny core with a faint halo (Sparkles&Debris)
+    -- from the PDS' Particles & Models Kit
     QiThread = "rbxassetid://11829306338",     -- one soft waving thread (Beams)
-    Wisp = "rbxassetid://7216854921",          -- a faint soft smoke wisp (Fogs)
     -- Realm 2, from the PDS kit
     Spark = "rbxassetid://16511998441",         -- a small dot with a faint cross flare (Sparkles&Debris)
     -- Realm 3, from the PDS kit (Rings)
@@ -196,10 +194,6 @@ local function mistRibbons(root, fx, main, count, speed, alpha)
     end
 end
 
--- Realm 1, Qi Awakening: the first breath of Qi. Motes revolve round the body the full 360 degrees
--- on two rings turning opposite ways; a faint mist rises off the shoulders; from Qi Adept, arcs of
--- Qi circle the body; a faint outline, a fainter fill and a soft PointLight breathe together.
--- Nothing gathers on the body's middle (the owner's calls). Each sub-rank adds more.
 -- every realm's body glow (the owner's must-haves): a faint outline round the whole body with a
 -- fainter fill, and a soft PointLight on the body and the ground; all breathe together (4 s in,
 -- 4 s out)
@@ -253,28 +247,89 @@ local function qiArcs(root, tint, count, alpha, speedK)
     end
 end
 
--- Realm 1, Qi Awakening: the first breath of Qi. Motes revolve round the body the full 360 degrees
--- on two rings turning opposite ways; a faint mist rises off the shoulders; from Qi Adept, arcs of
--- Qi circle the body. Nothing gathers on the body's middle, and nothing is too bright (the owner's
--- calls). Each sub-rank adds more.
-local function realm1(root, fx, tint, p)
-    local main = lastColor(tint)
-    for i, ring in { { r = 2.7, rate = 12 + 10 * p, turn = 0.9 + 0.4 * p, y = -0.3 }, { r = 2.1, rate = 6 + 6 * p, turn = -(0.6 + 0.3 * p), y = 0.4 } } do
-        local part = host(fx, root, ring.r, 5, ring.y)
-        emitter(part, { Texture = TEX.Mote, Color = tint, LightEmission = 0.6, LockedToPart = true,
-            Shape = Enum.ParticleEmitterShape.Cylinder, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
-            Size = seq({ { 0, 0 }, { 0.2, 3.4 }, { 0.8, 2.8 }, { 1, 0 } }),
-            Transparency = seq({ { 0, 1 }, { 0.2, 0.3 }, { 0.8, 0.45 }, { 1, 1 } }), Lifetime = NumberRange.new(3, 4),
-            Rate = ring.rate, Speed = NumberRange.new(0), Acceleration = Vector3.new(0, 0.35, 0) })
-        table.insert(spinners, { kind = "mesh", part = part, root = root, offset = Vector3.new(0, ring.y, 0), speed = ring.turn,
-            angle = i * 1.3 })
+-- Realm 1, Qi Awakening: a jade Qi vortex (the owner chose it over the mote rings, 2026-11-16, after
+-- a side-by-side comparison: "I like the new realm better"). Four spiral strands (five from Qi Adept)
+-- rise from the floor round the seated body to just over the head, turning round it all the time;
+-- on each breath out of the lotus seat they spin up, widen and brighten at once, then ease back
+-- slowly. Each strand is a wide soft glow and a thin bright core (two beams on one pair of
+-- attachments), lighter where it passes the chest, with sparks peeling off its tip.
+--   Improvised from a Creator Store aura, as the owner asked ("get an existing aura from other assets
+-- and improvise it, the look should be intense"): the spiral strands of Aura_FlameCrown in "Aura Pack
+-- Premium By Sanzzzzz" (asset 75779654972403, uploaded by Pikamebo75), used by texture id only (no
+-- model, no scripts). Its 12 static fire-orange strands round a standing dummy became 4-5 turning jade
+-- helixes fitted to the seat; its crown, magic circles, runes and fire flipbooks were dropped.
+local VORTEX = {
+    Core = "rbxassetid://125283151882051", -- Aura_FlameCrown's thin strand (R_4MB0)
+    Glow = "rbxassetid://113083314207224", -- Aura_FlameCrown's wide strand ("Trails12", BloxenRBLX)
+    Spark = "rbxassetid://15419190159",    -- PDS kit (Sparkles&Debris): a tiny four-point spark
+}
+local BREATH_LOOP = 5   -- the lotus seat's breath (MeditationPoses LOTUS.Loop, on os.clock), seconds
+local BREATH_LAG = 0.3  -- its chest lags the loop by this
+
+local function realm1(root, fx, palette, p)
+    local hot, main, deep = palette.Hot, palette.Main, palette.Deep
+    local count = (if p >= 0.6 then 5 else 4) - (if LOW then 1 else 0)
+    local strands = {}
+    for i = 1, count do
+        local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
+        a0.Name, a1.Name = "VortexA", "VortexB"
+        a0.Parent, a1.Parent = root, root
+        local beams = {}
+        for _, L in {
+            { name = "VortexGlow", tex = VORTEX.Glow, w0 = 2.6, w1 = 1.7, len = 0.5, speed = 0.8, light = 0.45, bright = 3, z = 0 },
+            { name = "VortexCore", tex = VORTEX.Core, w0 = 1.1, w1 = 0.7, len = 1, speed = 1.1, light = 0.6, bright = 3.5, z = 0.01 },
+        } do
+            local b = Instance.new("Beam")
+            b.Name = L.name
+            b.Attachment0, b.Attachment1 = a0, a1
+            b.Texture = L.tex
+            b.TextureMode = Enum.TextureMode.Stretch
+            b.TextureLength = L.len
+            b.TextureSpeed = L.speed
+            -- floor to tip: jade, the hot colour past the shoulders, deeper at the tip
+            b.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, main), ColorSequenceKeypoint.new(0.75, hot:Lerp(main, 0.5)),
+                ColorSequenceKeypoint.new(1, main:Lerp(deep, 0.3)) })
+            b.LightEmission = L.light
+            b.LightInfluence = 0
+            b.Brightness = L.bright
+            -- faded at both ends, and lighter where it passes the chest (nothing gathers on the body's middle)
+            b.Transparency = seq({ { 0, 1 }, { 0.14, 0.15 }, { 0.42, 0.6 }, { 0.72, 0.08 }, { 0.9, 0.3 }, { 1, 1 } })
+            b.FaceCamera = false
+            b.Segments = 24
+            b.ZOffset = L.z
+            b.Parent = root
+            table.insert(beams, { beam = b, w0 = L.w0, w1 = L.w1, bright = L.bright })
+        end
+        emitter(a1, { Name = "VortexSparks", Texture = VORTEX.Spark, Color = ColorSequence.new(hot:Lerp(main, 0.3), main),
+            LightEmission = 0.7, LightInfluence = 0, Brightness = 3, Size = seq({ { 0, 0 }, { 0.1, 0.6 }, { 1, 0 } }),
+            Transparency = seq({ { 0, 0 }, { 0.7, 0.2 }, { 1, 1 } }), Lifetime = NumberRange.new(0.4, 0.7),
+            Speed = NumberRange.new(2, 4.5), SpreadAngle = Vector2.new(60, 60), Drag = 3, Acceleration = Vector3.new(0, 1.5, 0),
+            Rotation = NumberRange.new(0, 360), Rate = math.min(MAX_RATE, 9) })
+        -- the strands differ a little, so the vortex never looks stamped
+        table.insert(strands, { a0 = a0, a1 = a1, beams = beams, offset = (i - 1) * math.tau / count,
+            twist = 2.4 + 0.25 * ((i % 2) * 2 - 1), lean = 0.12 * ((i % 3) - 1) })
     end
-    qiArcs(root, tint, if p >= 0.8 then 3 elseif p >= 0.6 then 2 else 0, 0.35, 1)
-    emitter(host(fx, root, 1.1, 0.3, 1.5), { Texture = TEX.Wisp, Color = ColorSequence.new(main:Lerp(Color3.new(1, 1, 1), 0.4)),
-        LightEmission = 0.4, EmissionDirection = Enum.NormalId.Top, Size = seq({ { 0, 1.6 }, { 1, 3.2 } }),
-        Transparency = seq({ { 0, 1 }, { 0.35, 0.2 - 0.1 * p }, { 1, 1 } }), Lifetime = NumberRange.new(2.2, 3),
-        Rate = 1.2 + 0.8 * p, Speed = NumberRange.new(0.5, 0.9), Rotation = NumberRange.new(0, 360), RotSpeed = NumberRange.new(-12, 12) })
+    local character = root.Parent
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+    rayParams.FilterDescendantsInstances = { character }
+    rayParams.RespectCanCollide = true
+    table.insert(spinners, { kind = "vortex", root = root, strands = strands, speed = 0, angle = 0,
+        torso = character and (character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")),
+        spin = math.random() * math.tau, spinBase = 1.1 + 0.4 * p, radius = 2.8 + 0.3 * p, height = 6.2 + 0.8 * p,
+        widthK = 0.9 + 0.3 * p, ex = 0, exhale = 0, wasRising = false, rayParams = rayParams, rayClock = 0,
+        floorY = root.Position.Y - 2.95 })
     bodyGlow(root, fx, main, 0.55 - 0.25 * p, 0.92 - 0.08 * p, 0.6 + 0.5 * p, 9 + 3 * p)
+end
+
+-- a point on a helix round the body: X along the helix (a beam curves along its attachments' X), Y
+-- across it in the cylinder's skin (a FaceCamera-off beam lays its width along Y)
+local function helixFrame(centre, yaw, angle, radius, y, climb)
+    local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
+    local around = Vector3.new(-math.sin(angle), 0, math.cos(angle))
+    local tangent = (around * radius + Vector3.new(0, climb, 0)).Unit
+    local across = out:Cross(tangent).Unit
+    return CFrame.fromMatrix(centre + yaw * (out * radius + Vector3.new(0, y, 0)), yaw * tangent, yaw * across)
 end
 
 -- Realm 2, Qi Foundation: the foundation is laid, and Qi now circulates in steady orbits. Two
@@ -796,7 +851,7 @@ local function buildRealm(root, tier, sub)
             Transparency = seq({ { 0, 0.1 }, { 1, 1 } }), Lifetime = NumberRange.new(0.7, 1), Rate = rate(6),
             Speed = NumberRange.new(0), LockedToPart = true, Rotation = NumberRange.new(0, 360), ZOffset = 0.5 }) end
     elseif tier == 1 then
-        realm1(root, fx, tint, p)
+        realm1(root, fx, palette, p)
     elseif tier == 2 then
         realm2(root, fx, tint, p)
     elseif tier == 3 then
@@ -884,7 +939,8 @@ local function buildRealm(root, tier, sub)
     -- Spin attribute (radians a second) turns round the body as it rides
     local library = ReplicatedStorage:FindFirstChild("AuraMeshes")
     library = library and library:FindFirstChild("RealmUnique")
-    local template = library and library:FindFirstChild(string.format("Tier%02d", tier))
+    -- (Realm 1's vortex took the place of its First Breath piece, 2026-11-16)
+    local template = tier ~= 1 and library and library:FindFirstChild(string.format("Tier%02d", tier))
     local riders = {}
     -- (a test-range dummy already wearing its preview copy, a Model named Unique, keeps that one)
     if template and not (root.Parent and root.Parent:FindFirstChild("Unique")) then
@@ -994,9 +1050,7 @@ local function step(dt)
             continue
         end
         s.angle += dt * s.speed
-        if s.kind == "mesh" then        -- an emitter host turning round the body (Realm 1's mote rings)
-            s.part.CFrame = s.root.CFrame * CFrame.Angles(0, s.angle, 0) * CFrame.new(s.offset)
-        elseif s.kind == "orbit" then       -- a tilted ring turning round the body
+        if s.kind == "orbit" then       -- a tilted ring turning round the body
             s.part.CFrame = s.root.CFrame * CFrame.new(s.offset) * CFrame.Angles(s.tilt, 0, 0) * CFrame.Angles(0, s.angle, 0)
         elseif s.kind == "mist" then        -- a mist ribbon's head racing round its tilted circle
             s.clock += dt
@@ -1117,6 +1171,41 @@ local function step(dt)
             s.highlight.OutlineTransparency = s.line + 0.18 * out
             s.highlight.FillTransparency = s.fill + 0.04 * out
             s.light.Brightness = s.glow * (1 - 0.35 * out)
+        elseif s.kind == "vortex" then      -- Realm 1's jade vortex, turning and surging on the breath out
+            local rising = math.cos(math.tau * os.clock() / BREATH_LOOP - BREATH_LAG)
+            if s.wasRising and rising <= 0 then
+                s.exhale = 1 -- a breath out begins as the chest tops out
+            end
+            s.wasRising = rising > 0
+            s.ex += (s.exhale - s.ex) * math.min(1, dt / (if s.exhale > s.ex then 0.15 else 1.2)) -- fast in, slow out
+            s.exhale = math.max(0, s.exhale - dt * 0.9)
+            local ex = s.ex
+            local centre = if s.torso and s.torso.Parent then s.torso.Position else s.root.Position
+            s.rayClock -= dt
+            if s.rayClock <= 0 then                                          -- the floor under the seat, twice a second
+                s.rayClock = 0.5
+                local hit = workspace:Raycast(s.root.Position, Vector3.new(0, -12, 0), s.rayParams)
+                s.floorY = if hit then hit.Position.Y else s.root.Position.Y - 2.95
+            end
+            local base = Vector3.new(centre.X, s.floorY, centre.Z)
+            local rootCF = s.root.CFrame
+            local yaw = rootCF.Rotation
+            s.spin += dt * (s.spinBase + 1.6 * ex)
+            local swell = 1 + 0.35 * ex
+            local rBottom, rTop, top = s.radius, s.radius * 0.82, s.height
+            for _, strand in s.strands do
+                local a = s.spin + strand.offset
+                -- a circular arc's handles, 4/3 tan(sweep / 4) r, a little more for the climb
+                local curve = 4 / 3 * math.tan(strand.twist / 4) * (rBottom + rTop) / 2 * 1.08
+                local climb = (top - 0.25) / strand.twist
+                strand.a0.CFrame = rootCF:ToObjectSpace(helixFrame(base, yaw, a, rBottom, 0.25, climb))
+                strand.a1.CFrame = rootCF:ToObjectSpace(helixFrame(base, yaw, a + strand.twist, rTop, top + strand.lean, climb))
+                for _, L in strand.beams do
+                    L.beam.CurveSize0, L.beam.CurveSize1 = curve, curve
+                    L.beam.Width0, L.beam.Width1 = L.w0 * s.widthK * swell, L.w1 * s.widthK * swell
+                    L.beam.Brightness = L.bright * (0.85 + 0.35 * ex)
+                end
+            end
         elseif s.kind == "follow" then      -- an emitter host, keeping its place round the root (riding the body's lift if marked)
             local shift = if s.lifted and s.record and s.record.shift then s.record.shift else Vector3.zero
             s.part.CFrame = s.root.CFrame * CFrame.new(shift) * s.offset
@@ -1145,6 +1234,15 @@ function RealmAura.build(root, realm, sub, options)
         local partial = root:FindFirstChild("ActiveAuraFX")
         if partial then
             partial:Destroy()
+        end
+        -- and what it had hung on the root, and its spinners
+        for _, child in root:GetChildren() do
+            if not before[child] then
+                child:Destroy()
+            end
+        end
+        for i = #spinners, first, -1 do
+            table.remove(spinners, i)
         end
         return nil
     end
