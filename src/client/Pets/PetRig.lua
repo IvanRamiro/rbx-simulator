@@ -9982,7 +9982,16 @@ local function burst(rig)
     end
 end
 
+-- Pets' special moves (the Blasts below, and each animate function's special pose) are switched OFF for now (the owner,
+-- 2026-11-16: "temporarily remove all special moves and abilities from every pet ... We may reintroduce special moves in
+-- the future"). Everything stays in place: set this back to true to bring them all back (the cultivating and rank-up
+-- specials, PetCompanionController, and the Codex's "WATCH IT", CodexController and SpecialPreview).
+PetRig.SPECIALS_ENABLED = false
+
 function PetRig.nova(rig)
+    if not PetRig.SPECIALS_ENABLED then
+        return
+    end
     if rig.nova == nil then
         rig.nova = { start = rig.state.time, fired = false }
     end

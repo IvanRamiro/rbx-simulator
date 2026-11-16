@@ -16,7 +16,15 @@ local LEAD_IN, LEAD_OUT = 0.35, 0.45
 local SpecialPreview = {}
 local playing = false
 
+-- whether specials can be shown at all (they are switched off for now: PetRig.SPECIALS_ENABLED)
+function SpecialPreview.enabled()
+    return PetRig.SPECIALS_ENABLED
+end
+
 function SpecialPreview.play(petId, onDone)
+    if not PetRig.SPECIALS_ENABLED then
+        return false
+    end
     local character = Players.LocalPlayer.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     if playing or not root or not PetRig.Profiles[petId] then

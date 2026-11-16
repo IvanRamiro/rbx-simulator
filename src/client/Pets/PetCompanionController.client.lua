@@ -303,7 +303,7 @@ local function updateCompanions(deltaTime)
             if not rig then
                 continue
             end
-            if cultivating then
+            if cultivating and PetRig.SPECIALS_ENABLED then -- (pets' specials are switched off for now: PetRig.SPECIALS_ENABLED)
                 pet.nextNova = pet.nextNova or now + 6
                 if now >= pet.nextNova then
                     pet.nextNova = now + NOVA_INTERVAL
@@ -314,7 +314,7 @@ local function updateCompanions(deltaTime)
             else
                 pet.nextNova = nil
             end
-            if rankedUp and novaAllowed(player, pet) then
+            if rankedUp and PetRig.SPECIALS_ENABLED and novaAllowed(player, pet) then
                 PetRig.nova(rig)
             end
             -- posed every entry.every frames, with the time since its last pose (each pet on its own beat, so a crowd's

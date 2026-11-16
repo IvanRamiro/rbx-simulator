@@ -450,7 +450,8 @@ local function renderEntry(petId)
         end
     end
 
-    if lore.Special then
+    -- (pets' specials are switched off for now, so the Codex shows no Special section and no WATCH IT: SpecialPreview.enabled)
+    if lore.Special and SpecialPreview.enabled() then
         heading("Special")
         if known then
             line({ Font = "Strong", TextSize = 14, TextColor3 = C.Highlight, Text = lore.Special.Name })
