@@ -40,21 +40,10 @@ local INSET = UiTheme.Pad.Card -- the seal's from the window's left, the words' 
 local BLEED = 3 -- the margin the fading group keeps round the window, so its glow isn't cut off
 local HudMetrics = require(script.Parent:WaitForChild("HudMetrics"))
 local MIN_WIDTH = 200 -- a tablet leaves about 215 between the side panels
-local SIDE_GAP = 10 -- px kept from the profile and the QUEST panel
 -- as wide as the room between the profile and the QUEST panel allows (UI audit 2026-11-11: a fixed 420 overlapped both on a
 -- tablet, 334 the profile on a small phone), up to the nominal width; in the HUD's own units (its scale applies after)
 local function width()
-    local nominal = if Hud.isCompact() then 334 else 420
-    local view, scale = HudMetrics.viewport(), HudMetrics.scale()
-    local profile = Hud.Status:FindFirstChild("StatusWindow")
-    local left = if profile and profile.Visible then profile.AbsolutePosition.X + profile.AbsoluteSize.X else 0
-    local quest = Hud.Quest
-    local camera = workspace.CurrentCamera -- (the quest panel's place is on the real screen, even under HudTestViewport)
-    local screenX = if camera then camera.ViewportSize.X else view.X
-    local right = if quest.Visible and quest.AbsoluteSize.X > 1 then screenX - quest.AbsolutePosition.X else 0
-    local side = math.max(left, right) + SIDE_GAP * scale
-    local room = (view.X - 2 * side) / scale
-    return math.clamp(room, MIN_WIDTH, nominal)
+    return math.max(MIN_WIDTH, Hud.centreRoom(if Hud.isCompact() then 334 else 420))
 end
 
 -- ---------- the window ----------

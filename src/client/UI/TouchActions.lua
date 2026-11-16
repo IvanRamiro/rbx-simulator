@@ -1,7 +1,7 @@
 -- The touch buttons round Roblox's jump button, kept down to what's useful right now, so the thumb never has to pick among
 -- them: never more than two big ones beside the jump button, and the small lotus (Meditate: the owner, 2026-11-16, "a small
 -- round meditate button" for touch screens; a keyboard presses E instead).
---   Near something to fight:  Strike and Dash, and Meditate
+--   Near something to fight, or the weapon in hand:  Strike and Dash, and Meditate
 --   Otherwise:                Sword (once it can be ridden) and Dash, and Meditate
 --   Riding the sword:         Sword, to land
 --   Cultivating:              Meditate alone, to stand up (the player is sitting down)
@@ -90,7 +90,8 @@ end
 local function refresh()
     local flying = player:GetAttribute("IsFlying") == true
     local cultivating = player:GetAttribute("IsCultivating") == true
-    local fighting = nearSomethingToStrike()
+    -- (a drawn weapon is a wish to fight: on a keyboard a click swings it anywhere, so a touch screen gets Strike too)
+    local fighting = nearSomethingToStrike() or player:GetAttribute("WeaponDrawn") == true
     local canRide = (player:GetAttribute("QinggongFlightSpeed") or 0) > 0
     local show = {
         Strike = fighting and not flying and not cultivating,
@@ -114,6 +115,9 @@ function TouchActions.add(name, text, onPress, image)
         gui.Parent = player:WaitForChild("PlayerGui")
         gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
         HudMetrics.Changed:Connect(place) -- (the screen's size: and in Studio, its HudTestViewport stand-in)
+        for _, name in { "WeaponDrawn", "IsFlying", "IsCultivating", "CarryingEgg" } do -- (at once, not at the next check)
+            player:GetAttributeChangedSignal(name):Connect(refresh)
+        end
         task.spawn(function()
             while gui.Parent do
                 refresh()

@@ -99,20 +99,143 @@ Hud.Dock = region("Dock", Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -M), Enum.Fi
     Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Bottom, 8)
 Hud.Banner = region("Banner", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, M), Enum.FillDirection.Vertical,
     Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top, 6)
--- where the notification shows: top centre, hanging just under whatever the Banner holds (it follows the Banner's foot)
+-- where the notification shows: top centre, hanging just under whatever the Banner holds (layoutTop places it)
 Hud.Notice = region("Notice", Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, M), Enum.FillDirection.Vertical,
     Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Top, 6, noticeGui)
--- Under the Banner; but where an open window would be covered (its title, its tabs), it moves down to sit just over the
--- window's foot instead (a short screen: a purchase's message hid the Blacksmith's title, a new player's run, 2026-11-11).
+Hud.Quest = region("Quest", Vector2.new(1, 0), UDim2.new(1, -M, 0, M), Enum.FillDirection.Vertical,
+    Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Top, 6)
+
+-- ---------- the top centre: one stack ----------
+-- The Banner's pieces (the Lightning Trial, the egg panel, the tutorial, the Merchant's line) and the notification under them
+-- are one stack at the top centre, between the left column (the profile, the menu) and the right one (the quest panel, the air
+-- leaps), and each hangs only as low as it stays clear of them and of the inventory bar. On a phone the menu's row runs under
+-- the profile into the middle of the screen: the tutorial, the Merchant's line and a notification piled down over its tiles
+-- and the player (phone pass, 2026-11-16). What doesn't fit waits its turn and comes back when there is room: the Banner's
+-- later pieces first; and while a notification shows (a few seconds; a tap puts it away), the pieces it needs the room of.
+-- A piece with a LayoutOrder under 0 (the Lightning Trial, the egg panel: the moment's own) never waits.
+-- Where an open window would be covered (its title, its tabs), the notification sits just over the window's foot instead
+-- (a short screen: a purchase's message hid the Blacksmith's title, a new player's run, 2026-11-11).
+local STACK_GAP = 6 -- the Banner's own gap
+local SIDE_GAP = 8 -- kept from the side pieces
 local openWindowFrame = nil -- set by Hud.window: the frame of the window that is open, if any
-local function placeNotice()
-    local banner = Hud.Banner
+local bannerWaiting = Instance.new("Frame") -- where a Banner piece waits: hidden, at the HUD's scale so it measures the same
+bannerWaiting.Name = "BannerWaiting"
+bannerWaiting.BackgroundTransparency = 1
+bannerWaiting.Visible = false
+bannerWaiting.Parent = gui
+applyHudScale(bannerWaiting)
+local bannerPieces = setmetatable({}, { __mode = "k" })
+
+-- The width the top centre has between the side columns, in the HUD's units (its scale applies after), up to `nominal`.
+-- The notification and the tutorial are sized by it (UI audit 2026-11-11: a fixed 420 overlapped both columns on a tablet).
+function Hud.centreRoom(nominal)
+    local view, scale = HudMetrics.viewport(), HudMetrics.scale()
+    local profile = Hud.Status:FindFirstChild("StatusWindow")
+    local left = if Hud.Status.Visible and profile and profile.Visible then M + profile.AbsoluteSize.X else 0 -- (at rest)
+    local quest = Hud.Quest
+    local right = if quest.Visible and quest.AbsoluteSize.X > 1 then M + quest.AbsoluteSize.X else 0
+    local side = math.max(left, right) + (SIDE_GAP + 2) * scale
+    return math.min((view.X - 2 * side) / scale, nominal)
+end
+
+-- the boxes the stack keeps clear of, in pixels, where they rest (the side columns slide in when the game starts)
+local function sideBoxes()
+    local boxes = {}
+    local width, height = gui.AbsoluteSize.X, gui.AbsoluteSize.Y
+    local function add(piece, shift)
+        if piece:IsA("GuiObject") and piece.Visible and piece.AbsoluteSize.X > 1 and piece.AbsoluteSize.Y > 1 then
+            local at = piece.AbsolutePosition - shift
+            table.insert(boxes, { at, at + piece.AbsoluteSize })
+        end
+    end
+    local status, quest, dock = Hud.Status, Hud.Quest, Hud.Dock
+    if status.Visible then
+        local shift = Vector2.new(status.AbsolutePosition.X - M, 0)
+        for _, piece in status:GetChildren() do
+            add(piece, shift)
+        end
+    end
+    if quest.Visible then
+        local shift = Vector2.new(quest.AbsolutePosition.X + quest.AbsoluteSize.X - (width - M), 0)
+        for _, piece in quest:GetChildren() do
+            add(piece, shift)
+        end
+    end
+    if dock.Visible then
+        add(dock, Vector2.new(0, dock.AbsolutePosition.Y + dock.AbsoluteSize.Y - (height - M)))
+    end
+    return boxes
+end
+
+-- the lowest a piece spanning x0 to x1, hanging from y, may reach and stay clear of the boxes
+local function floorUnder(x0, x1, y, boxes)
+    local floor = gui.AbsoluteSize.Y
+    local gap = SIDE_GAP * HudMetrics.scale()
+    for _, box in boxes do
+        if x0 < box[2].X + gap and x1 > box[1].X - gap and box[2].Y > y then
+            floor = math.min(floor, box[1].Y - gap)
+        end
+    end
+    return floor
+end
+
+local laidOut = true
+local function layoutTop()
+    laidOut = true
     local scale = HudMetrics.scale()
+    local boxes = sideBoxes()
+    local centre = gui.AbsoluteSize.X / 2
+    local function fits(size, y)
+        return y + size.Y <= floorUnder(centre - size.X / 2, centre + size.X / 2, y, boxes)
+    end
+    local pieces = {}
+    for piece in bannerPieces do
+        if (piece.Parent == Hud.Banner or piece.Parent == bannerWaiting) and piece.Visible then
+            table.insert(pieces, piece)
+        end
+    end
+    table.sort(pieces, function(a, b)
+        return a.LayoutOrder < b.LayoutOrder
+    end)
+    -- the Banner's pieces, in order, while they fit (the first always shows)
+    local top = Hud.Banner.AbsolutePosition.Y
+    local kept, feet = {}, {}
+    for _, piece in pieces do
+        local y = if #kept == 0 then top else feet[#kept] + STACK_GAP * scale
+        if #kept > 0 and piece.LayoutOrder >= 0 and not fits(piece.AbsoluteSize, y) then
+            break
+        end
+        table.insert(kept, piece)
+        table.insert(feet, y + piece.AbsoluteSize.Y)
+    end
+    -- the notification under them: while it shows and doesn't fit, the latest that may wait makes room
     local notice = Hud.Notice
+    local bleed = (notice:GetAttribute("Bleed") or 0) * scale
+    local size = notice.AbsoluteSize - Vector2.new(2, 2) * bleed -- (its visible window, without the margin for its glow)
+    local function noticeTop()
+        return if #kept > 0 then feet[#kept] + STACK_GAP * scale else top
+    end
+    if notice.AbsoluteSize.Y > 1 then
+        while #kept > 0 and kept[#kept].LayoutOrder >= 0 and not fits(size, noticeTop()) do
+            table.remove(kept)
+            table.remove(feet)
+        end
+    end
+    local keep = {}
+    for _, piece in kept do
+        keep[piece] = true
+    end
+    for piece in bannerPieces do
+        if piece.Parent == Hud.Banner or piece.Parent == bannerWaiting then
+            local home = if keep[piece] or not piece.Visible then Hud.Banner else bannerWaiting
+            if piece.Parent ~= home then
+                piece.Parent = home
+            end
+        end
+    end
     -- what it holds may keep a margin round itself for its glow (its "Bleed", in its own units): the region rises by that much,
     -- so the notification's visible edge, not its margin, is what sits on the line (the profile's and the QUEST panel's top)
-    local bleed = (notice:GetAttribute("Bleed") or 0) * scale
-    local foot = (if banner.AbsoluteSize.Y > 1 then banner.AbsolutePosition.Y + banner.AbsoluteSize.Y + 6 * scale else M) - bleed
+    local foot = noticeTop() - bleed
     local frame = openWindowFrame
     if frame and frame.Visible and notice.AbsoluteSize.Y > 1 and foot + notice.AbsoluteSize.Y > frame.AbsolutePosition.Y then
         local bottom = frame.AbsolutePosition.Y + frame.AbsoluteSize.Y - 12 * scale -- over the window's lowest part
@@ -123,12 +246,164 @@ local function placeNotice()
     notice.AnchorPoint = Vector2.new(0.5, 0)
     notice.Position = UDim2.new(0.5, 0, 0, foot)
 end
-Hud.Banner:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeNotice)
-Hud.Banner:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeNotice)
-Hud.Notice:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeNotice)
+local function placeNotice() -- (once a frame at most, whatever asked)
+    if laidOut then
+        laidOut = false
+        task.defer(layoutTop)
+    end
+end
+local function addBannerPiece(piece)
+    if bannerPieces[piece] or not piece:IsA("GuiObject") then
+        return
+    end
+    bannerPieces[piece] = true
+    for _, property in { "Visible", "AbsoluteSize", "LayoutOrder" } do
+        piece:GetPropertyChangedSignal(property):Connect(placeNotice)
+    end
+    placeNotice()
+end
+Hud.Banner.ChildAdded:Connect(addBannerPiece)
+Hud.Banner.ChildRemoved:Connect(placeNotice)
+for _, region in { Hud.Banner, Hud.Notice, Hud.Status, Hud.Quest, Hud.Dock } do
+    region:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeNotice)
+    region:GetPropertyChangedSignal("Visible"):Connect(placeNotice)
+end
+Hud.Status:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeNotice)
+Hud.Quest:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeNotice)
 Hud.Notice:GetAttributeChangedSignal("Bleed"):Connect(placeNotice)
-Hud.Quest = region("Quest", Vector2.new(1, 0), UDim2.new(1, -M, 0, M), Enum.FillDirection.Vertical,
-    Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Top, 6)
+HudMetrics.Changed:Connect(placeNotice)
+
+-- ---------- the right column's foot ----------
+-- The quest panel and the air leaps under it go down the right side only as far as they stay clear of the touch buttons
+-- round the jump button (TouchActions) and of the jump button itself: on a phone the quest panel, unfolded for a new quest,
+-- pushed the air leaps onto the lotus and Dash buttons (phone pass, 2026-11-16). A piece that would reach them waits (the air
+-- leaps, while the panel is unfolded) and comes back when there is room; the first piece always shows.
+local columnWaiting = Instance.new("Frame")
+columnWaiting.Name = "QuestWaiting"
+columnWaiting.BackgroundTransparency = 1
+columnWaiting.Visible = false
+columnWaiting.Parent = gui
+applyHudScale(columnWaiting)
+local columnPieces = setmetatable({}, { __mode = "k" })
+local touchWatched = setmetatable({}, { __mode = "k" })
+local columnLaid = true
+
+-- the lowest the right column may reach (pixels, the HUD's): over the touch buttons and the jump button that stand under it
+local function columnFloor(widest)
+    local scale = HudMetrics.scale()
+    local right = gui.AbsoluteSize.X - M -- the column's right edge at rest
+    local floor = gui.AbsoluteSize.Y
+    -- the buttons it keeps clear of: the touch actions shown, and Roblox's jump button
+    local blockers = {}
+    local touchGui = playerGui:FindFirstChild("TouchActions")
+    if touchGui and touchGui.Enabled then
+        for _, button in touchGui:GetChildren() do
+            if button:IsA("GuiButton") and button.Visible then
+                table.insert(blockers, button)
+            end
+        end
+    end
+    local roblox = playerGui:FindFirstChild("TouchGui")
+    local jump = roblox and roblox.Enabled and roblox:FindFirstChild("JumpButton", true)
+    if jump and jump:IsA("GuiObject") and jump.Visible then
+        table.insert(blockers, jump)
+    end
+    for _, button in blockers do
+        local at, size = button.AbsolutePosition, button.AbsoluteSize
+        if at.X < right + SIDE_GAP * scale and at.X + size.X > right - widest - SIDE_GAP * scale then
+            floor = math.min(floor, at.Y - SIDE_GAP * scale)
+        end
+    end
+    return floor
+end
+function Hud.rightColumnFloor()
+    return columnFloor(Hud.rightColumnWidth() * HudMetrics.scale())
+end
+
+local function layoutColumn()
+    columnLaid = true
+    local scale = HudMetrics.scale()
+    local quest = Hud.Quest
+    local pieces = {}
+    for piece in columnPieces do
+        if (piece.Parent == quest or piece.Parent == columnWaiting) and piece.Visible then
+            table.insert(pieces, piece)
+        end
+    end
+    table.sort(pieces, function(a, b)
+        return a.LayoutOrder < b.LayoutOrder
+    end)
+    local widest = 0
+    for _, piece in pieces do
+        widest = math.max(widest, piece.AbsoluteSize.X)
+    end
+    local floor = columnFloor(widest)
+    local y = quest.AbsolutePosition.Y
+    local keep = {}
+    for index, piece in pieces do
+        local top = if index == 1 then y else y + STACK_GAP * scale
+        if index > 1 and top + piece.AbsoluteSize.Y > floor then
+            break
+        end
+        keep[piece] = true
+        y = top + piece.AbsoluteSize.Y
+    end
+    for piece in columnPieces do
+        if piece.Parent == quest or piece.Parent == columnWaiting then
+            local home = if keep[piece] or not piece.Visible then quest else columnWaiting
+            if piece.Parent ~= home then
+                piece.Parent = home
+            end
+        end
+    end
+end
+local function placeColumn()
+    if columnLaid then
+        columnLaid = false
+        task.defer(layoutColumn)
+    end
+end
+Hud.Quest.ChildAdded:Connect(function(piece)
+    if piece:IsA("GuiObject") and not columnPieces[piece] then
+        columnPieces[piece] = true
+        for _, property in { "Visible", "AbsoluteSize", "LayoutOrder" } do
+            piece:GetPropertyChangedSignal(property):Connect(placeColumn)
+        end
+    end
+    placeColumn()
+end)
+Hud.Quest.ChildRemoved:Connect(placeColumn)
+Hud.Quest:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeColumn)
+HudMetrics.Changed:Connect(placeColumn)
+-- the touch buttons come and go (Strike near a guardian, Dash on landing ...): each one shown or hidden lays the column out again
+local function watchTouch(touchGui)
+    if touchWatched[touchGui] or not touchGui:IsA("ScreenGui") then
+        return
+    end
+    touchWatched[touchGui] = true
+    local function watch(button)
+        if button:IsA("GuiObject") then
+            button:GetPropertyChangedSignal("Visible"):Connect(placeColumn)
+            button:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeColumn)
+        end
+    end
+    for _, button in touchGui:GetDescendants() do
+        watch(button)
+    end
+    touchGui.DescendantAdded:Connect(watch)
+    placeColumn()
+end
+playerGui.ChildAdded:Connect(function(child)
+    if child.Name == "TouchActions" or child.Name == "TouchGui" then
+        watchTouch(child)
+    end
+end)
+for _, name in { "TouchActions", "TouchGui" } do
+    local child = playerGui:FindFirstChild(name)
+    if child then
+        watchTouch(child)
+    end
+end
 -- The row beside Roblox's own buttons: the counters and the round buttons share one middle line (placeTopRow, under the
 -- compact screens' code), whatever their own heights.
 Hud.Currency = region("Currency", Vector2.new(0.5, 0.5), UDim2.new(0.5, 0, 0, 0), Enum.FillDirection.Horizontal,
@@ -176,23 +451,77 @@ checkCompact()
 -- left two middles 4 px apart)
 local TOP_ROW_TOP = 6
 local TOP_BUTTON = { [true] = 56, [false] = 46 } -- a round button's side; 56 on a phone is 45 pixels at its 0.8 scale
+-- The counters keep to the room the row leaves them, between Roblox's own buttons (GuiService.TopbarInset: where the row's
+-- room for a game starts) and the round buttons at the right: centred on the screen if they fit there, moved over if not, and
+-- on a screen too narrow for them they shrink, never under MIN_COUNTERS of their size, instead of running under either.
+local TOP_GAP = 8
+local MIN_COUNTERS = 0.8
+local countersFit = Instance.new("UIScale") -- on the strip, inside the region's own scale
+countersFit.Name = "Fit"
 local function placeTopRow()
-    local middle = TOP_ROW_TOP + TOP_BUTTON[compact == true] * HudMetrics.scale() / 2
-    Hud.Currency.Position = UDim2.new(0.5, 0, 0, middle)
+    -- the row stays inside Roblox's top bar, whatever the screen: on a big screen the HUD's scale (1.28 on an iPad) made the
+    -- round buttons taller than the bar, and their badges ran off the top of the screen. So the row's own scale stops where its
+    -- buttons fill the bar less TOP_ROW_TOP above and below.
+    local bar = GuiService:GetGuiInset().Y
+    local most = if bar > 0 then (bar - 2 * TOP_ROW_TOP) / TOP_BUTTON[compact == true] else math.huge
+    local scale = math.min(HudMetrics.scale(), most)
+    for _, region in { Hud.Currency, Hud.TopRight } do
+        local regionScale = region:FindFirstChildOfClass("UIScale")
+        if regionScale and math.abs(regionScale.Scale - scale) > 0.001 then
+            regionScale.Scale = scale
+        end
+    end
+    local middle = TOP_ROW_TOP + TOP_BUTTON[compact == true] * scale / 2
     Hud.TopRight.Position = UDim2.new(1, -M, 0, middle)
+    local strip = Hud.Currency:FindFirstChild("Counters")
+    local view = topGui.AbsoluteSize.X
+    if not (strip and view > 0) then
+        Hud.Currency.Position = UDim2.new(0.5, 0, 0, middle)
+        return
+    end
+    countersFit.Parent = strip
+    local left = GuiService.TopbarInset.Min.X + TOP_GAP * scale
+    local topRight = Hud.TopRight
+    local right = (if topRight.AbsoluteSize.X > 1 then view - M - topRight.AbsoluteSize.X else view - M) - TOP_GAP * scale
+    local width = strip.AbsoluteSize.X / countersFit.Scale
+    if width <= 0 then
+        return
+    end
+    local fit = math.clamp((right - left) / width, MIN_COUNTERS, 1)
+    if math.abs(fit - countersFit.Scale) > 0.005 then
+        countersFit.Scale = fit
+    end
+    width *= fit
+    local centre = math.clamp(view / 2, left + width / 2, math.max(left + width / 2, right - width / 2))
+    Hud.Currency.Position = UDim2.new(0, math.round(centre), 0, middle)
 end
-HudMetrics.Changed:Connect(placeTopRow)
-Hud.CompactChanged:Connect(placeTopRow)
+local topRowQueued = false
+local function queueTopRow()
+    if not topRowQueued then
+        topRowQueued = true
+        task.defer(function()
+            topRowQueued = false
+            placeTopRow()
+        end)
+    end
+end
+HudMetrics.Changed:Connect(queueTopRow)
+Hud.CompactChanged:Connect(queueTopRow)
+Hud.Currency:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueTopRow)
+Hud.TopRight:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueTopRow)
+GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(queueTopRow)
+topGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueTopRow)
 placeTopRow()
 
 HudMetrics.keepReadable(gui)
 HudMetrics.keepReadable(topGui)
 HudMetrics.keepReadable(windowGui, HudMetrics.windowScale) -- (a window is drawn at its own scale: Hud.window)
+HudMetrics.keepReadable(noticeGui) -- (the notification: its kind's word was drawn 8.9 px on a phone)
 
 -- On a phone the menu runs along under the profile as icons alone: the thumbstick has the screen's lower left. A tile made
 -- with KeepWord (the Shop) keeps its word there, in gold, and its icon moves up over it, as on the desktop's tiles.
 local PHONE_TILE = 56 -- 56 at a phone's scale (0.8) is 45 pixels: a thumb's 44 (UI overhaul 2026-11-15; the audit of 2026-11-11 found 35)
-local WORD_HEIGHT, WORD_INSET, ICON_TOP = 13, 4, 6 -- a tile's word: its height and its inset from the foot; the icon's from the top
+local WORD_HEIGHT, WORD_INSET, ICON_TOP = 14, 4, 6 -- (14: a phone draws the word at 14, to stay 11 px on the screen) -- a tile's word: its height and its inset from the foot; the icon's from the top
 local function layoutRail(isCompact)
     local tile = if isCompact then PHONE_TILE else RAIL_TILE
     railGrid.CellSize = UDim2.fromOffset(tile, tile)
@@ -403,7 +732,8 @@ end
 -- props: Name, Title, Size (Vector2), OnClose (function); Side = true keeps the AnchorPoint and Position given (the
 -- Hatching Altar's, which stands beside the altar it belongs to). Every other window opens in the same place: the middle
 -- of the room beside the left column (the profile and the menu), or of the screen on a phone.
--- While one is open the quest panel and the inventory bar step aside, so nothing shows through or round it, and the
+-- While one is open the quest panel, the inventory bar and the top centre's pieces step aside, so nothing shows through or
+-- round it, and the
 -- menu button that opened it (win.link(button)) stays lit.
 -- Returns { Frame, Body, open(), close(), isOpen(), setTitle(text), link(button) }.
 local windows = {}
@@ -449,6 +779,7 @@ local function stepAside()
     end
     Hud.Quest.Visible = not open
     Hud.Dock.Visible = not open
+    Hud.Banner.Visible = not open -- (its pieces showed round a window's edge: the Merchant's line beside the Hatching Sanctum)
 end
 local WINDOW_MARGIN = 24
 local switching = false -- a window opening closes the one before it: that close is silent (the opening has its own sound)
@@ -746,6 +1077,11 @@ pillHolder.BackgroundTransparency = 1
 pillHolder.LayoutOrder = 20
 pillHolder.Visible = false
 pillHolder.Parent = Hud.Dock
+local pillWaiting = Instance.new("Frame") -- where a line waits while there is no room for it (hidden)
+pillWaiting.Name = "PillsWaiting"
+pillWaiting.BackgroundTransparency = 1
+pillWaiting.Visible = false
+pillWaiting.Parent = Hud.Dock
 
 -- whether a column of `height` and `width` (the HUD's units) over the bar would reach into the menu's row, on the screen as it is
 local function columnMeetsRail(height, width)
@@ -816,6 +1152,31 @@ local function layoutPills()
         rows = shared
         height = measure(rows)
     end
+    -- and if even that reaches the menu's row (a short phone: the breakthrough over the "cultivating" line), the lines (a
+    -- label's row) wait and the buttons keep their place; they come back when there is room (phone pass, 2026-11-16)
+    local waiting = {}
+    while #rows > 1 and columnMeetsRail(height, select(2, measure(rows))) do
+        local lineRow = nil
+        for index = #rows, 1, -1 do
+            if rows[index][1].opts.Height then
+                lineRow = index
+                break
+            end
+        end
+        if not lineRow then
+            break
+        end
+        for _, pill in table.remove(rows, lineRow) do
+            waiting[pill] = true
+        end
+        height = measure(rows)
+    end
+    for _, pill in shown do
+        local home = if waiting[pill] then pillWaiting else pillHolder
+        if pill.object.Parent ~= home then
+            pill.object.Parent = home
+        end
+    end
     local centre = PILL_ROOM / 2
     local y = 0
     for _, row in rows do
@@ -870,6 +1231,22 @@ Hud.Status:GetPropertyChangedSignal("Visible"):Connect(function()
     task.defer(layoutPills)
 end)
 
+-- ---------- a guardian fight ----------
+-- While a guardian's bar is on the screen (GuardianController), pieces that take room can make way for it: a phone's quest panel
+-- folds (QuestController), so the bar has room under the top of the screen and clear of the touch buttons.
+local fightChanged = Instance.new("BindableEvent")
+Hud.FightChanged = fightChanged.Event
+local fighting = false
+function Hud.setFighting(on)
+    if on ~= fighting then
+        fighting = on
+        fightChanged:Fire(on)
+    end
+end
+function Hud.isFighting()
+    return fighting
+end
+
 -- ---------- the right column's width ----------
 -- The quest panel and the air leaps under it (QinggongController) read as one column: one width, one right edge.
 local RIGHT_COLUMN = { [true] = 236, [false] = 280 }
@@ -893,6 +1270,8 @@ arrive(Hud.Dock, UDim2.fromOffset(0, 260), 0.72)
 task.delay(1.4, function()
     placeTopRow()
     layoutPills()
+    placeNotice()
+    placeColumn()
 end)
 
 return Hud

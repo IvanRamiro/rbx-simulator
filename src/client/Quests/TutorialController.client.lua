@@ -1,12 +1,14 @@
 -- The first-time tutorial (the owner, 2026-11-16: "we will just add a tutorial for the game, so player will press letter E to
 -- cultivate"): a short card at the top centre (Hud.Banner) that teaches cultivating, then hands the player to the quests.
---   1. "Press E to cultivate" (a touch screen: "Tap the lotus button", the small round button by jump). Done when they sit down.
+-- It is as wide as the room between the side columns (Hud.centreRoom). On a phone it is two rows (the step's words and SKIP, or
+-- GOT IT on the last step), so it fits over the menu's row there (phone pass, 2026-11-16: it lay over the menu's tiles).
+--   1. "Press E to cultivate" (playing by touch, UiKit.usingTouch: "Tap the lotus button", the small round button by jump; it
+--      follows the player's input as it changes). Done when they sit down.
 --   2. "Qi is coming in!": what Qi is for, and that the quest panel (top right) says what to do next. GOT IT ends it.
 -- It shows once: only to a player on the first quest who hasn't seen it, and SKIP or the end saves that (the TutorialDone setting,
 -- server/Data/Settings). A player who is past the first quest never sees it.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
@@ -15,6 +17,7 @@ local Hud = require(UI:WaitForChild("Hud"))
 local UiFx = require(UI:WaitForChild("UiFx"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
+local HudMetrics = require(UI:WaitForChild("HudMetrics"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
@@ -44,7 +47,15 @@ end
 
 -- ---------- the card ----------
 local WIDTH, PAD = 360, UiTheme.Pad.Card
-local card = UiKit.panel({ Name = "Tutorial", Brackets = false, Size = UDim2.fromOffset(WIDTH, 0), LayoutOrder = 5, Parent = Hud.Banner })
+local MIN_WIDTH = 200 -- a tablet leaves about 215 between the side columns
+local function width()
+    return math.max(MIN_WIDTH, Hud.centreRoom(WIDTH))
+end
+-- a narrow card (a tablet's) drops the step's count from its header and draws the step's words a size smaller, so they fit
+local function narrow()
+    return width() < 280
+end
+local card = UiKit.panel({ Name = "Tutorial", Brackets = false, Size = UDim2.fromOffset(width(), 0), LayoutOrder = 5, Parent = Hud.Banner })
 local inner = Instance.new("Frame")
 inner.Name = "Inner"
 inner.BackgroundTransparency = 1
@@ -56,7 +67,7 @@ UiKit.list(inner, { Padding = UDim.new(0, 6) })
 local function fitHeight() -- as tall as what it holds (the quest panel's way: its own AutomaticSize would count the glow's margin)
     local drawn = card.AbsoluteSize.X
     local ratio = if drawn > 0 then card.Size.X.Offset / drawn else 1
-    card.Size = UDim2.fromOffset(WIDTH, math.ceil(inner.AbsoluteSize.Y * ratio))
+    card.Size = UDim2.fromOffset(width(), math.ceil(inner.AbsoluteSize.Y * ratio))
 end
 inner:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitHeight)
 
@@ -111,10 +122,10 @@ local gotIt = UiKit.button({
     Size = UDim2.fromOffset(120, UiTheme.Height.ButtonSmall), Parent = actions,
 })
 
-local function words(order, text, color)
+local function words(order, text, color, size)
     UiKit.boldLabel({
-        Text = text, TextSize = 18, TextColor3 = color or C.Highlight, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 26),
-        LayoutOrder = order, Parent = line,
+        Text = text, TextSize = size or (if narrow() then 15 else 18), TextColor3 = color or C.Highlight, AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.fromOffset(0, 26), LayoutOrder = order, Parent = line,
     })
 end
 local function clearLine()
@@ -125,14 +136,25 @@ local function clearLine()
     end
 end
 
-local touch = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+-- SKIP, or GOT IT where the phone's card has no row for it: the button as wide as its word, the step's count just left of it
+local function setHeaderButton(text)
+    skip.Text = text
+    local wide = if text == "SKIP" then 64 else 86
+    skip.Size = UDim2.fromOffset(wide, 30)
+    stepLabel.Position = UDim2.new(1, -(wide + 14), 0.5, 0)
+end
+
 local step = 0
 local function show(n)
     step = n
+    local compact = Hud.isCompact()
     stepLabel.Text = n .. " / 2"
+    stepLabel.Visible = not narrow()
     clearLine()
+    body.Visible = not compact
+    setHeaderButton(if compact and n == 2 then "GOT IT" else "SKIP")
     if n == 1 then
-        if touch then
+        if UiKit.usingTouch() then
             words(1, "Tap")
             local lotus = Instance.new("ImageLabel")
             lotus.Name = "Lotus"
@@ -157,8 +179,11 @@ local function show(n)
         actions.Visible = false
     else
         words(1, "Qi is coming in!", C.Highlight)
+        if compact then
+            words(2, "Next: follow your quest.", C.Text, 13)
+        end
         body.Text = "Qi makes you stronger and lets you rank up. Your quest, at the top right, shows what to do next."
-        actions.Visible = true
+        actions.Visible = not compact
         local tracker = Hud.Quest:FindFirstChild("QuestTracker")
         if tracker and tracker.Visible then
             UiFx.flash(tracker, C.Highlight)
@@ -194,6 +219,19 @@ player:GetAttributeChangedSignal("SettingTutorialDone"):Connect(function()
         closed = true
         card:Destroy()
     end
+end)
+
+-- the screen's class or the player's input changed: the card is laid out again for it
+local function again()
+    if not closed and step > 0 then
+        card.Size = UDim2.fromOffset(width(), card.Size.Y.Offset)
+        show(step)
+    end
+end
+Hud.CompactChanged:Connect(again)
+UiKit.InputChanged:Connect(again)
+HudMetrics.Changed:Connect(function()
+    task.defer(again) -- (once the side columns have their new sizes)
 end)
 
 show(if player:GetAttribute("IsCultivating") == true then 2 else 1)

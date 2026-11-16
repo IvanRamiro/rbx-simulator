@@ -18,6 +18,7 @@ local CombatFx = require(script.Parent:WaitForChild("CombatFx"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
 local Toast = require(UI:WaitForChild("Toast"))
+local UiKit = require(UI:WaitForChild("UiKit"))
 local TouchActions = require(UI:WaitForChild("TouchActions"))
 local Portraits = require(UI:WaitForChild("Portraits"))
 
@@ -80,7 +81,7 @@ slot.Button.Activated:Connect(function()
     elseif player:GetAttribute("CarryingEgg") ~= nil then
         message:show("Your hands are full: bring the egg home first.", "Warning")
     elseif player:GetAttribute("IsCultivating") == true then
-        message:show("Stop cultivating first (press E).", "Info")
+        message:show(if UiKit.usingTouch() then "Stop cultivating first (tap the lotus)." else "Stop cultivating first (press E).", "Info")
     else
         toggleDrawn()
     end

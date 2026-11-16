@@ -13,7 +13,6 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
@@ -149,6 +148,28 @@ local function hudBottomOver(x0, x1)
     end
     return lowest
 end
+-- The touch buttons round the jump button, and the jump button: the box they make, in viewport pixels (nil without them). The
+-- bar keeps out of it: on a phone, Dash and the lotus lay over the bar's health numbers (phone pass, 2026-11-16).
+local function touchCluster()
+    local inset = GuiService:GetGuiInset().Y
+    local playerGui = player:FindFirstChild("PlayerGui")
+    local left, top, found = math.huge, math.huge, false
+    for _, name in { "TouchActions", "TouchGui" } do
+        local touchGui = playerGui and playerGui:FindFirstChild(name)
+        if touchGui and touchGui.Enabled then
+            for _, button in touchGui:GetDescendants() do
+                if button:IsA("GuiButton") and button.Visible and button.AbsoluteSize.X > 0
+                    and (name == "TouchActions" or button.Name == "JumpButton") then
+                    left = math.min(left, button.AbsolutePosition.X)
+                    top = math.min(top, button.AbsolutePosition.Y + inset)
+                    found = true
+                end
+            end
+        end
+    end
+    return if found then Vector2.new(left, top) else nil
+end
+
 local barLayer = Instance.new("ScreenGui")
 barLayer.Name = "GuardianBarLayer"
 barLayer.ResetOnSpawn = false
@@ -156,6 +177,7 @@ barLayer.IgnoreGuiInset = true -- so the bar's place is the viewport's own pixel
 barLayer.DisplayOrder = -1     -- under the HUD's panels
 barLayer.Enabled = false
 barLayer.Parent = player:WaitForChild("PlayerGui")
+HudMetrics.keepReadable(barLayer) -- (at the HUD's scale: its state's word was drawn 10.4 px on a phone)
 -- Its pieces from one set of measures: the shield icon centred down the bar, PAD in from its left as the health track ends PAD
 -- from its right, and the name row over the track as one block centred down the bar (the block sat 2 px over the icon's middle,
 -- and the icon 14 in against the track's 16)
@@ -448,7 +470,7 @@ local function updateTakeIndicator()
     if nearestDistance <= reach then
         takeArrow.Text = "!"
         takeArrow.Rotation = 0
-        takeHow.Text = if UserInputService.TouchEnabled then "Hold the Take button on the stand"
+        takeHow.Text = if UiKit.usingTouch() then "Hold the Take button on the stand"
             else "Hold " .. nearest.prompt.KeyboardKeyCode.Name .. " at the stand"
     else
         takeArrow.Text = "^"
@@ -501,6 +523,15 @@ local function updateBar(dt)
         local barX = if leftLimit + half <= rightLimit - half then math.clamp(point.X, leftLimit + half, rightLimit - half) else view.X / 2
         -- the bar hangs from the point: its bottom sits there, so the point must be a bar's height under the HUD above it
         local margin = hudBottomOver(barX - half, barX + half) + BAR_GAP * scale + BAR_HEIGHT * scale
+        -- and it stays left of the touch buttons wherever it would hang down to them (then under the HUD over its new place)
+        local cluster = touchCluster()
+        if cluster and math.max(point.Y, margin) > cluster.Y - BAR_GAP * scale and barX + half > cluster.X - BAR_GAP * scale then
+            local leftOf = cluster.X - BAR_GAP * scale - half
+            if leftOf >= leftLimit + half then
+                barX = leftOf
+                margin = hudBottomOver(barX - half, barX + half) + BAR_GAP * scale + BAR_HEIGHT * scale
+            end
+        end
         -- eased: a notification coming or going moves the HUD's foot, and the bar glides to it instead of jumping
         shownMargin = if shownMargin then shownMargin + (margin - shownMargin) * (1 - math.exp(-dt * 12)) else margin
         margin = shownMargin
@@ -519,10 +550,18 @@ local function updateBar(dt)
         if point.Z > 0 then
             placed = true
             barScale.Scale = scale
-            bar.Position = UDim2.fromOffset(barX, math.max(point.Y, margin))
+            -- and over the inventory bar and what rises over it, as long as that leaves it under the HUD above
+            local y = math.max(point.Y, margin)
+            local dock = Hud.Dock
+            if dock.Visible and dock.AbsoluteSize.Y > 1 and barX - half < dock.AbsolutePosition.X + dock.AbsoluteSize.X
+                and barX + half > dock.AbsolutePosition.X then
+                y = math.max(margin, math.min(y, dock.AbsolutePosition.Y + GuiService:GetGuiInset().Y - BAR_GAP * scale))
+            end
+            bar.Position = UDim2.fromOffset(barX, y)
         end
     end
     barLayer.Enabled = placed
+    Hud.setFighting(placed)
     if not best then
         outline.Enabled = false
         alertState = nil

@@ -8,7 +8,9 @@
 --   button(props)               an action: "Primary" (the one main action, with a halo), "Accent",
 --                               "Highlight" (a breakthrough, with a halo), "Quiet", "Danger"; on hover
 --                               it lifts and light crosses it, pressed it sinks with a ripple
---   keycap(key)                 a keyboard key's hint (hidden on touch screens)
+--   usingTouch()                whether the player plays by touch right now (InputChanged fires when that changes):
+--                               words that say "press E" or "tap the lotus" and the keys' hints follow it
+--   keycap(key)                 a keyboard key's hint (hidden while the player plays by touch)
 --   keycapOn(button, key)       that hint inside a button's right end; keyRoom(button) is what its words must leave free
 --   fitWords(text, size, room)  words at `size`, or smaller if they would not fit across `room`
 --   pillShape(button, height)   a button rounded into a pill, its halo and light following
@@ -538,6 +540,42 @@ end
 local KEYCAP_SIZE = Vector2.new(24, 22)
 local KEYCAP_INSET = UiTheme.Space.L -- from the button's right end, on every button that carries one
 
+-- ---------- touch or keys ----------
+-- Whether the player plays by touch right now: what they last used decides (a touch, or a key, the mouse or a pad), so a
+-- touch-screen laptop follows its user and a phone with a keyboard plugged in shows its keys. Before anything has been
+-- used, a screen that can be touched counts as touch. (KeyboardEnabled alone can't tell: Studio's phone emulator, a
+-- touch-screen laptop and some tablets report a keyboard, and a phone's player then read "Press E".)
+local TOUCH_INPUTS = { [Enum.UserInputType.Touch] = true }
+local KEY_INPUTS = {
+    [Enum.UserInputType.Keyboard] = true, [Enum.UserInputType.MouseButton1] = true, [Enum.UserInputType.MouseButton2] = true,
+    [Enum.UserInputType.MouseButton3] = true, [Enum.UserInputType.MouseWheel] = true,
+} -- (not the pointer only moving: Studio's phone emulator reports that before any touch, and a click or a key says more)
+local function isGamepad(inputType)
+    return inputType.Name:find("^Gamepad") ~= nil
+end
+local touchMode = UserInputService.TouchEnabled
+local function decide(inputType)
+    if TOUCH_INPUTS[inputType] then
+        return true
+    elseif KEY_INPUTS[inputType] or isGamepad(inputType) then
+        return false
+    end
+    return touchMode -- (focus, accelerometer ...: no change)
+end
+touchMode = decide(UserInputService:GetLastInputType())
+local inputChanged = Instance.new("BindableEvent")
+UiKit.InputChanged = inputChanged.Event
+UserInputService.LastInputTypeChanged:Connect(function(inputType)
+    local now = decide(inputType)
+    if now ~= touchMode then
+        touchMode = now
+        inputChanged:Fire(now)
+    end
+end)
+function UiKit.usingTouch()
+    return touchMode
+end
+
 function UiKit.keycap(key)
     local cap = UiKit.label({
         Name = "Keycap", Font = "Strong", Text = key, TextSize = 13, TextColor3 = C.AccentBright,
@@ -546,7 +584,13 @@ function UiKit.keycap(key)
     })
     corner(cap, 2)
     stroke(cap, C.Accent, 0.35)
-    cap.Visible = not UserInputService.TouchEnabled or UserInputService.KeyboardEnabled
+    cap.Visible = not touchMode
+    local connection = inputChanged.Event:Connect(function(touch) -- (it follows the player's input)
+        cap.Visible = not touch
+    end)
+    cap.Destroying:Once(function()
+        connection:Disconnect()
+    end)
     return cap
 end
 

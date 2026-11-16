@@ -155,6 +155,31 @@ local function questAllowed()
 end
 Hud.Quest:GetPropertyChangedSignal("Visible"):Connect(questAllowed)
 
+-- On a short screen the unfolded panel keeps above the touch buttons under it (Hud.rightColumnFloor): its words are cut to the
+-- lines that fit there (a 667x375 phone: the panel reached the lotus button by 6 px, phone pass 2026-11-16)
+local capping = false
+local function capBody()
+    if capping then
+        return
+    end
+    capping = true
+    body.AutomaticSize = Enum.AutomaticSize.Y
+    body.Size = UDim2.new(1, 0, 0, 0)
+    body.TextTruncate = Enum.TextTruncate.None
+    task.defer(function() -- (once laid out at its full height)
+        fitHeight()
+        local over = panel.AbsolutePosition.Y + panel.AbsoluteSize.Y - Hud.rightColumnFloor()
+        if over > 0 and body.Visible and panel.Visible and panel.AbsoluteSize.X > 0 then
+            local unitsPerPixel = panel.Size.X.Offset / panel.AbsoluteSize.X
+            body.AutomaticSize = Enum.AutomaticSize.None
+            body.Size = UDim2.new(1, 0, 0, math.max(14, math.floor((body.AbsoluteSize.Y - over) * unitsPerPixel)))
+            body.TextTruncate = Enum.TextTruncate.AtEnd
+            fitHeight()
+        end
+        capping = false
+    end)
+end
+
 local chosenFold = nil -- what the player chose: until then a phone starts folded
 local peekUntil = 0    -- a new quest shows in full until this moment
 local footerRef = footer
@@ -164,6 +189,9 @@ local function applyFold()
     local folded = if chosenFold ~= nil then chosenFold else Hud.isCompact()
     if os.clock() < peekUntil then
         folded = false
+    end
+    if Hud.isCompact() and Hud.isFighting() then -- a phone's panel folds while a guardian is fought: the bar needs the room
+        folded = true
     end
     body.Visible = not folded
     footerRef.Visible = not folded
@@ -179,6 +207,7 @@ local function applyFold()
     -- a thumb's 44 pixels on a phone, at its 0.8 scale
     footerRef.Size = UDim2.new(1, 0, 0, if compact then 56 else UiTheme.Height.ButtonSmall)
     fold.Size = UDim2.new(1, 0, 1, if compact then 34 else 20)
+    capBody()
 end
 
 fold.Activated:Connect(function()
@@ -188,6 +217,7 @@ fold.Activated:Connect(function()
     applyFold()
 end)
 Hud.CompactChanged:Connect(applyFold)
+Hud.FightChanged:Connect(applyFold)
 
 local lastStep = nil
 local function render()

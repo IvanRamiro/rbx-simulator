@@ -165,7 +165,7 @@ local function isCultivating()
 end
 
 local function stopHint()
-    if UserInputService.KeyboardEnabled then
+    if not UiKit.usingTouch() then
         return "CULTIVATING  ·  PRESS " .. string.upper(keyName) .. " TO STOP"
     end
     return "CULTIVATING  ·  TAP THE LOTUS TO STOP"
@@ -206,6 +206,7 @@ local function updateCultivating()
     end
 end
 player:GetAttributeChangedSignal("IsCultivating"):Connect(updateCultivating)
+UiKit.InputChanged:Connect(updateCultivating)
 updateCultivating()
 
 local function updateStationLabel()

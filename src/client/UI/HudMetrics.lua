@@ -6,8 +6,8 @@
 --   HudMetrics.Changed      fires when the screen's size changes
 --   HudMetrics.windowScale() a window's scale: the HUD's, but never under 1 on a phone (a window is what the player is looking
 --                            at: its words stay readable and its buttons a thumb's size)
---   HudMetrics.keepReadable(gui, scaleOf)  no text under gui is ever drawn smaller than MIN_DRAWN_TEXT, however the scale
---                            (scaleOf(), the HUD's by default) shrinks it
+--   HudMetrics.keepReadable(gui, scaleOf)  no text under gui is ever drawn smaller than MIN_DRAWN_TEXT (a phone's: 11, held
+--                            closer to the eye but smaller), however the scale (scaleOf(), the HUD's by default) shrinks it
 -- In Studio, the player's HudTestViewport attribute (a Vector2) stands in for the screen, to check a layout at another size.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -16,7 +16,7 @@ local PHONE_BELOW, TABLET_BELOW = 500, 800 -- px on the screen's shorter side
 local SMALL_REFERENCE = 600  -- the shorter side at which the scale is 1
 local LARGE_REFERENCE = 800  -- past this the HUD grows with the screen ...
 local MIN_SCALE, MAX_SCALE = 0.8, 1.6 -- ... up to here
-local MIN_DRAWN_TEXT = 10    -- px on the screen
+local MIN_DRAWN_TEXT = { Phone = 11, Tablet = 10, Desktop = 10 } -- px on the screen (a phone's 10.4 read too small, 2026-11-16)
 
 local changed = Instance.new("BindableEvent")
 local HudMetrics = { Changed = changed.Event }
@@ -55,7 +55,7 @@ end
 
 -- ---------- readable text ----------
 local function floorFor(scale)
-    return math.ceil(MIN_DRAWN_TEXT / scale)
+    return math.ceil(MIN_DRAWN_TEXT[HudMetrics.class()] / scale)
 end
 
 local authored = setmetatable({}, { __mode = "k" }) -- [label] = the TextSize its script asked for

@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local GameConfig = require(game:GetService("ReplicatedStorage"):WaitForChild("GameConfig"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
+local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKit"))
 
 local player = Players.LocalPlayer
 local HINT_EVERY = 8
@@ -62,7 +63,7 @@ local function nudge()
     end
     hintedAt = os.clock()
     local key = GameConfig.CultivationKeybind.Name
-    hint:show(if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+    hint:show(if UiKit.usingTouch()
         then "You're cultivating: tap the lotus button to stand up first."
         else "You're cultivating: press " .. key .. " to stand up first.", "Info")
 end

@@ -279,7 +279,7 @@ local function play(result)
 
     -- the HUD steps aside (and comes back as it was)
     local hidden = {}
-    for _, name in { "Hud", "HudTop" } do
+    for _, name in { "Hud", "HudTop", "TouchActions" } do -- (the touch buttons too: Strike and Dash stood over the bars on a phone)
         local gui = playerGui:FindFirstChild(name)
         if gui and gui.Enabled then
             gui.Enabled = false
@@ -290,6 +290,7 @@ local function play(result)
     local gui = Instance.new("ScreenGui")
     gui.Name = "HatchCinema"
     gui.IgnoreGuiInset = true
+    gui.ScreenInsets = Enum.ScreenInsets.None -- the bars run edge to edge: on a phone with a notch they stopped short of its sides
     gui.ResetOnSpawn = false
     gui.DisplayOrder = 30
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
