@@ -677,7 +677,9 @@ local GameConfig = {
     -- realm); 0.32 eggs (at the Marketplace's price, all in 1.0 to 2.8 claims; at what its pet sells for, about 1 to 2.2); 9.2 minutes
     -- of cultivating Qi (under two stolen eggs' bursts); and an Exclusive Egg about once in five months (1 in 158 days). It helps without
     -- replacing play: one active minute stealing eggs pays more stones.
-    -- Free, so it is given where paid random items are restricted too (PolicyService restricts buying random items, and nothing here is bought).
+    -- Where paid random items are restricted (PolicyService), the jackpot pays segment 6's stones instead of the Exclusive Egg, and
+    -- the wheel shows it so (the owner, 2026-11-17: "apply this regions that restrict paid random items"). If Roblox can't answer, the
+    -- player is treated as restricted.
     -- The stones segments pay the player's daily-stones pass bonus too (VIP +50%: the owner, 2026-11-17), SpinRules.stones.
     -- A full egg slot (EggInventory.MAX_PER_EGG) pays segment 6's stones instead.
     SpinWheel = {

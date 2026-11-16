@@ -9,6 +9,8 @@
 --   SpinRules.bestEgg(rankName)     the best Marketplace egg this rank can take (the Egg segment's egg)
 --   SpinRules.describe(index, rankName, player)  { Kind, Stones, Minutes, EggId, Short, Long, Icon key } of a segment for this rank
 --   SpinRules.angleOf(index)        the segment's centre, degrees clockwise from the top
+--   SpinRules.restricted(player)    whether paid random items are restricted where the player is (SpinService sets the player's
+--                                    "RandomItemsRestricted" from PolicyService): there the jackpot pays stones, not an egg
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
@@ -109,6 +111,12 @@ function SpinRules.bestEgg(rankName)
     return marketEggs[#marketEggs].Id
 end
 
+-- Where Roblox restricts paid random items (PolicyService: some countries treat paying for a random prize like gambling), the
+-- jackpot's Exclusive Egg, an egg otherwise sold for Robux, is swapped for the largest stones prize (the owner, 2026-11-17).
+function SpinRules.restricted(player)
+    return player ~= nil and player:GetAttribute("RandomItemsRestricted") == true
+end
+
 -- What a segment gives a player of this rank, in words: Short for the wheel, Long for the message.
 function SpinRules.describe(index, rankName, player)
     local segment = config.Segments[index]
@@ -136,6 +144,12 @@ function SpinRules.describe(index, rankName, player)
         info.Short = "EXTRA SPIN"
         info.Long = "1 more spin"
         info.Icon = "Spin"
+    elseif segment.Kind == "Jackpot" and SpinRules.restricted(player) then
+        info.Kind = "Stones"
+        info.Stones = SpinRules.fallbackStones(rankName, player)
+        info.Short = NumberFormat.compact(info.Stones) .. " STONES"
+        info.Long = NumberFormat.compact(info.Stones) .. " Spirit Stones"
+        info.Icon = "Stones"
     elseif segment.Kind == "Jackpot" then
         info.EggId = GameConfig.ExclusiveEgg.EggId
         info.Short = "JACKPOT"

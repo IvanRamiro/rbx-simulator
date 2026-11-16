@@ -524,6 +524,13 @@ RemoteEvents.SpinEvent.OnClientEvent:Connect(function(kind, data)
 end)
 
 -- ---------- keeping it current ----------
+local function relabel()
+    labelWheel()
+    if window.isOpen() then
+        renderWindow()
+    end
+end
+player:GetAttributeChangedSignal("RandomItemsRestricted"):Connect(relabel) -- (there the jackpot shows its stones)
 player:GetAttributeChangedSignal("Pass_VIP"):Connect(function() -- (VIP's +50% shows on the wheel's stones)
     labelWheel()
     if window.isOpen() then

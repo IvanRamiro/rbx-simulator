@@ -9,6 +9,7 @@
 --   (the spinner, once paid), "Jackpot" name (everyone).
 -- Attributes: the player's "SpinsLeft"; the wheel model's "Rest" (degrees it rests at) and "TurningUntil" (server time).
 local Players = game:GetService("Players")
+local PolicyService = game:GetService("PolicyService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
@@ -83,14 +84,15 @@ local function settle(player, late)
     local index = pending.Segment
     local segment = SpinRules.Segments[index]
     local rankName = Ranks.getPlayerRankName(player)
-    local text, kind, big = nil, segment.Kind, false
+    -- (the kind decided when it was rolled: a restricted player's jackpot is stones; older pending prizes carry no Kind)
+    local text, kind, big = nil, pending.Kind or segment.Kind, false
     local function payStones(amount)
         Wallet.add(player, amount, "Spin", "Segment" .. index)
         return NumberFormat.compact(amount) .. " Spirit Stones"
     end
     if kind == "Stones" then
         text = payStones(pending.Stones or SpinRules.stones(index, rankName, player))
-        big = segment.Share >= 1
+        big = (segment.Share or 1) >= 1
     elseif kind == "Qi" then
         local qi = QiReward.grantMinutes(player, segment.Minutes)
         text = NumberFormat.compact(qi) .. " Qi (" .. segment.Minutes .. " minutes of cultivating)"
@@ -149,7 +151,7 @@ function actions.Spin(player)
     local index = SpinRules.roll(random)
     local info = SpinRules.describe(index, Ranks.getPlayerRankName(player), player)
     data.Used += 1
-    data.Pending = { Segment = index, Day = data.Day, Stones = info.Stones, EggId = info.EggId }
+    data.Pending = { Segment = index, Day = data.Day, Kind = info.Kind, Stones = info.Stones, EggId = info.EggId }
     publish(player)
     PlayerData.saveSoon(player)
 
@@ -196,7 +198,29 @@ task.spawn(function()
     end)
 end)
 
+-- Whether paid random items are restricted where the player is (SpinRules.restricted). Asked before they can spin; if Roblox can't
+-- answer after a few tries, the safe answer: restricted (the jackpot then pays stones).
+local function checkPolicy(player)
+    for try = 1, 3 do
+        local ok, info = pcall(PolicyService.GetPolicyInfoForPlayerAsync, PolicyService, player)
+        if ok and typeof(info) == "table" then
+            player:SetAttribute("RandomItemsRestricted", info.ArePaidRandomItemsRestricted == true)
+            return
+        end
+        if player.Parent ~= Players then
+            return
+        end
+        task.wait(try)
+    end
+    player:SetAttribute("RandomItemsRestricted", true)
+end
+
 local function setupPlayer(player)
+    local policyChecked = false
+    task.spawn(function()
+        checkPolicy(player)
+        policyChecked = true
+    end)
     local progress, isNewPlayer = PlayerData.waitForData(player)
     if not progress or player.Parent ~= Players then
         return
@@ -205,7 +229,7 @@ local function setupPlayer(player)
     publish(player)
     -- paying needs the player's wallet, eggs and Qi (their services set them up alongside this one)
     local deadline = os.clock() + 20
-    while not canPay(player) and player.Parent == Players and os.clock() < deadline do
+    while not (canPay(player) and policyChecked) and player.Parent == Players and os.clock() < deadline do
         task.wait(0.2)
     end
     if player.Parent ~= Players then
