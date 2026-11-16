@@ -93,14 +93,22 @@ local function attempt(requestType, fn)
 end
 
 -- a DataStore as AuctionCore wants it: get(key) -> ok, value; update(key, transform) -> ok, err
-local function dataStore(store)
+-- With uncached set, get always reads the store itself: GetAsync's few-seconds copy can still hold what this server's own
+-- UpdateAsync just changed (seen with bids in the 2-player test), and a mailbox read that way would show mail already crossed
+-- off, after its Claimed entry was cleared: given twice (pre-beta review, 2026-11-17).
+local function dataStore(store, uncached)
     local s = {}
+    local options = nil
+    if uncached then
+        options = Instance.new("DataStoreGetOptions")
+        options.UseCache = false
+    end
     function s.get(key)
         if not store then
             return false, nil
         end
         return attempt(Enum.DataStoreRequestType.GetAsync, function()
-            return (store:GetAsync(key))
+            return (store:GetAsync(key, options))
         end)
     end
     function s.update(key, transform)
@@ -118,7 +126,7 @@ local function dataStore(store)
 end
 
 AuctionStores.listings = dataStore(listingStore)
-AuctionStores.mail = dataStore(mailStore)
+AuctionStores.mail = dataStore(mailStore, true)
 
 -- ---------- the indexes ----------
 local orderedEnd = {} -- [id] = the end this server last wrote to the ordered index (only a change is written)

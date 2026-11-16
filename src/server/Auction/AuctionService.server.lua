@@ -298,7 +298,16 @@ local function refreshPointers(state)
         for _, id in table.clone(list) do
             local summary = browse.byId[id]
             if not (summary and summary.End > now) or not records[id] then
-                local ok, record = readRecord(id)
+                -- a closed listing with nothing left to send never changes again: its cached read is kept (re-reading every
+                -- closed pointer on each My Auctions poll used up the server's whole GetAsync budget: pre-beta review, 2026-11-17)
+                local cached = records[id]
+                local final = cached and cached.record and cached.record.State ~= "Active" and not next(cached.record.Outbox or {})
+                local ok, record
+                if final then
+                    ok, record = true, cached.record
+                else
+                    ok, record = readRecord(id)
+                end
                 if ok then
                     if record == nil or record.State == "Void" then
                         AuctionCore.removePointer(list, id)
@@ -618,6 +627,12 @@ end
 function reads.Detail(player, state, listingId)
     if typeof(listingId) ~= "string" or #listingId > 64 then
         return
+    end
+    -- only a listing this player can have seen (browsing, their own, their bids): an unknown id costs a store read each, and a
+    -- client sending new ones could use up the server's GetAsync budget for everyone (pre-beta review, 2026-11-17)
+    if not (browse.byId[listingId] or records[listingId] or table.find(state.p.ledger.Mine, listingId)
+        or table.find(state.p.ledger.Watch, listingId)) then
+        return Event:FireClient(player, "Detail", { Id = listingId, Gone = true })
     end
     local ok, record = readRecord(listingId)
     if not ok then
