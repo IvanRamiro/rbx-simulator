@@ -880,111 +880,6 @@ def buy_sell_glow(coll, mat, bands):
     return mb.object("HB_BuySellStones", coll, mat)
 
 
-# ---------- the Qi Spring: a celestial fountain whose water is full of Qi (+50% cultivation inside its rune ring) ----------
-# (the owner, 2026-11-12: "We can still add a qi spring that give 50% bonus but a better one")
-# A round marble basin of shallow water you can walk into, its floor a glowing lotus seen through the water; a two-tier fountain
-# in the middle, water sheeting off each gold-rimmed tier, a crystal lotus on top; eight meditation seats round the pool; a ring of
-# runes on the platform marks the bonus's edge (GameConfig.TrainingStation.Radius from the water's centre). The overflow leaves
-# by a spout at the back into a channel to the island's edge (hub_ground.spring_channel) and falls as a waterfall.
-QS_PLAT_R, QS_PLAT_TOP = 11.2, 0.3
-QS_POOL_R, QS_CURB_R, QS_CURB_TOP = 7.0, 7.8, 0.95
-QS_FLOOR, QS_WATER = 0.35, 0.8
-QS_ZONE_R = 10.0                                         # = GameConfig.TrainingStation.Radius
-QS_LOW, QS_HIGH = 4.75, 7.3                              # the two tiers' lips
-QS_SEATS = 8
-
-
-def wall_in(mb, r, y0, y1, band, seg=48, shade=0.75):
-    """A round wall seen from inside (its faces point at the middle)."""
-    for k in range(seg):
-        a0, a1 = TAU * k / seg, TAU * (k + 1) / seg
-        W_oriented(mb, [(math.cos(a0) * r, y1, math.sin(a0) * r), (math.cos(a1) * r, y1, math.sin(a1) * r),
-                        (math.cos(a1) * r, y0, math.sin(a1) * r), (math.cos(a0) * r, y0, math.sin(a0) * r)],
-                   (-math.cos((a0 + a1) / 2), 0, -math.sin((a0 + a1) / 2)), band, shade)
-
-
-def qi_spring(coll, mat, bands):
-    global MARBLE_BAND, GOLD_BAND
-    MARBLE_BAND, GOLD_BAND = bands[MARBLE], bands[GOLD]
-    mb = W.MeshBuilder()
-    # the platform, gold edged
-    drum(mb, QS_PLAT_R, -0.4, QS_PLAT_TOP, bands[MARBLE], shade=(0.95, 0.6))
-    ring(mb, QS_PLAT_R - 0.35, QS_PLAT_R, QS_PLAT_TOP + 0.01, bands[GOLD])
-    # the basin: a marble curb (a gold line along its top), its inner face, a lapis floor
-    mb.lathe([(QS_CURB_R, QS_CURB_TOP, 0.9), (QS_CURB_R + 0.15, QS_PLAT_TOP, 0.65)], 64, bands[MARBLE], cap_top=False)
-    ring(mb, QS_POOL_R, QS_CURB_R, QS_CURB_TOP, bands[MARBLE], shade=0.95)
-    ring(mb, 7.32, 7.48, QS_CURB_TOP + 0.01, bands[GOLD])
-    wall_in(mb, QS_POOL_R, QS_FLOOR, QS_CURB_TOP, bands[MARBLE], seg=64)
-    ring(mb, 5.4, QS_POOL_R, QS_FLOOR, bands[LAPIS], seg=48, shade=0.7)
-    # the spout at the back: a notch-lip of gold where the overflow leaves for the channel
-    mb.box((0, QS_CURB_TOP - 0.25, -QS_CURB_R + 0.1), (2.2, 0.12, 1.4), bands[GOLD], u=0.5, top_shade=1.0, side_shade=0.85)
-    # the fountain: a fluted column on a gold foot, the low tier, a slim stem, the high tier, a gold calyx for the crystal lotus
-    mb.lathe([(1.3, QS_FLOOR + 0.5, 1.0), (1.4, QS_FLOOR, 0.8)], 24, bands[GOLD], cap_top=True)
-    mb.lathe([(0.75, QS_LOW - 1.1, 0.95), (0.85, QS_FLOOR + 0.5, 0.7)], 24, bands[MARBLE], cap_top=False,
-             rmod=lambda a, k: 1.0 - 0.07 * (0.5 + 0.5 * math.cos(a * 12)))
-    mb.lathe([(3.3, QS_LOW, 0.95), (3.05, QS_LOW - 0.35, 0.85), (1.9, QS_LOW - 0.9, 0.7), (0.8, QS_LOW - 1.15, 0.6)], 40, bands[MARBLE], cap_top=False)
-    mb.lathe([(3.4, QS_LOW + 0.12, 1.0), (3.4, QS_LOW - 0.15, 0.85)], 40, bands[GOLD], cap_top=False)
-    ring(mb, 3.0, 3.4, QS_LOW + 0.12, bands[GOLD], seg=40)
-    mb.lathe([(0.42, QS_HIGH - 0.8, 0.95), (0.5, QS_LOW - 0.1, 0.75)], 16, bands[MARBLE], cap_top=False)
-    mb.lathe([(1.95, QS_HIGH, 0.95), (1.75, QS_HIGH - 0.3, 0.85), (0.9, QS_HIGH - 0.7, 0.7), (0.45, QS_HIGH - 0.85, 0.6)], 32, bands[MARBLE], cap_top=False)
-    mb.lathe([(2.03, QS_HIGH + 0.1, 1.0), (2.03, QS_HIGH - 0.14, 0.85)], 32, bands[GOLD], cap_top=False)
-    ring(mb, 1.7, 2.03, QS_HIGH + 0.1, bands[GOLD], seg=32)
-    for k in range(6):   # the calyx: gold sepals cupping the lotus
-        a = TAU * k / 6
-        ca, sa = math.cos(a), math.sin(a)
-        tube(mb, [(ca * 0.3, QS_HIGH - 0.05, sa * 0.3), (ca * 0.8, QS_HIGH + 0.5, sa * 0.8), (ca * 0.95, QS_HIGH + 1.0, sa * 0.95)],
-             lambda f: 0.16 - 0.1 * f, bands[GOLD], sides=5, shade=1.0)
-    # the meditation seats: low marble drums, gold rimmed, lapis cushions
-    for k in range(QS_SEATS):
-        a = TAU * (k + 0.5) / QS_SEATS
-        c = (math.cos(a) * 9.0, math.sin(a) * 9.0)
-        drum(mb, 0.95, QS_PLAT_TOP, 0.75, bands[MARBLE], seg=20, centre=c)
-        ring(mb, 0.78, 0.95, 0.76, bands[GOLD], seg=20, centre=c)
-        ring(mb, 0.0, 0.78, 0.77, bands[LAPIS], seg=20, centre=c, shade=0.75)
-    return mb.object("HB_QiSpring", coll, mat)
-
-
-def qi_spring_water(coll, mat, bands):
-    """The water: the pool, each tier's surface and the sheets falling off their lips (see-through in the game)."""
-    mb = W.MeshBuilder()
-    ring(mb, 0.85, QS_POOL_R, QS_WATER, bands[CRYSTAL], seg=64, shade=0.85)
-    ring(mb, 0.5, 3.05, QS_LOW - 0.05, bands[CRYSTAL], seg=40, shade=0.9)
-    ring(mb, 0.0, 1.75, QS_HIGH - 0.06, bands[CRYSTAL], seg=32, shade=0.9)
-    mb.lathe([(3.42, QS_LOW + 0.05, 0.9), (3.6, QS_LOW - 1.6, 0.85), (3.85, QS_WATER, 0.8)], 40, bands[CRYSTAL], cap_top=False)
-    mb.lathe([(2.05, QS_HIGH + 0.05, 0.9), (2.15, QS_HIGH - 1.0, 0.85), (2.3, QS_LOW, 0.8)], 32, bands[CRYSTAL], cap_top=False)
-    return mb.object("HB_SpringWater", coll, mat)
-
-
-def qi_spring_glow(coll, mat, bands):
-    """The Qi in it: a lotus glowing on the pool's floor, the crystal lotus on the fountain, the ring of runes at the bonus's edge."""
-    mb = W.MeshBuilder()
-    y = QS_FLOOR + 0.02
-    for k in range(8):   # the floor lotus: eight petals round a disc
-        a = TAU * k / 8
-        ca, sa = math.cos(a), math.sin(a)
-        px, pz = -sa, ca
-        base, tip = 1.7, 5.1
-        W_oriented(mb, [(ca * base + px * 0.75, y, sa * base + pz * 0.75), (ca * (base + tip) / 2 + px * 0.9, y, sa * (base + tip) / 2 + pz * 0.9),
-                        (ca * tip, y, sa * tip), (ca * (base + tip) / 2 - px * 0.9, y, sa * (base + tip) / 2 - pz * 0.9),
-                        (ca * base - px * 0.75, y, sa * base - pz * 0.75)], (0, 1, 0), bands[GLOW], 1.0)
-    ring(mb, 1.45, 1.6, y, bands[GLOW], seg=32)
-    for k in range(8):   # the crystal lotus on top: petals of crystal round a bud
-        a = TAU * k / 8
-        shard(mb, (math.cos(a) * 0.25, QS_HIGH + 0.3, math.sin(a) * 0.25), (math.cos(a) * 0.9, 1.0, math.sin(a) * 0.9), 1.3, 0.22, bands[GLOW], twist=a)
-    shard(mb, (0, QS_HIGH + 0.2, 0), (0, 1, 0), 2.0, 0.32, bands[GLOW])
-    # the bonus's edge: a thin ring and a glyph every 12 degrees
-    ring(mb, QS_ZONE_R - 0.08, QS_ZONE_R + 0.08, QS_PLAT_TOP + 0.02, bands[GLOW], seg=96)
-    for k in range(30):
-        a = TAU * k / 30
-        ca, sa = math.cos(a), math.sin(a)
-        px, pz = -sa, ca
-        r0, r1 = QS_ZONE_R + 0.3, QS_ZONE_R + 0.75
-        W_oriented(mb, [(ca * r0 - px * 0.12, QS_PLAT_TOP + 0.02, sa * r0 - pz * 0.12), (ca * r0 + px * 0.12, QS_PLAT_TOP + 0.02, sa * r0 + pz * 0.12),
-                        (ca * r1 + px * 0.05, QS_PLAT_TOP + 0.02, sa * r1 + pz * 0.05), (ca * r1 - px * 0.05, QS_PLAT_TOP + 0.02, sa * r1 - pz * 0.05)],
-                   (0, 1, 0), bands[GLOW], 1.0)
-    return mb.object("HB_SpringGlow", coll, mat)
-
-
 # ---------- the bridge gates: where each bridge leaves the hub (the owner, 2026-11-12: the islands' own gates there were red, tiled,
 # Chinese; "do 1": the hub's side in the city's style) ----------
 # Two tall tapered marble pylons either side of the 40-stud deck, banded in gold, a crystal on each; a shallow marble arch on gold ribs
@@ -1109,5 +1004,5 @@ def leaderboard_glow(coll, mat, bands):
 
 
 BUILDINGS = [sanctum, sanctum_glass, sanctum_crystal, sanctum_runes, market, market_canopies, market_glow, blacksmith, blacksmith_core, blacksmith_crystal,
-             buy_sell, buy_sell_glow, qi_spring, qi_spring_water, qi_spring_glow, bridge_gate, bridge_gate_glow, leaderboard, leaderboard_glow,
+             buy_sell, buy_sell_glow, bridge_gate, bridge_gate_glow, leaderboard, leaderboard_glow,
              crystal_lamp, crystal_lamp_glow]

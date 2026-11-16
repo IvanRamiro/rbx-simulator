@@ -330,6 +330,12 @@ local catalog = {
     AmbEmber = { Id = "9112823197", Volume = 0.13, Group = "Ambience" },       -- lava bubbling and rumbling
     AmbMoon = { Id = "9117114457", Volume = 1.3, Group = "Ambience" },         -- night insects
     AmbAbyss = { Id = "9114625552", Volume = 0.24, Group = "Ambience" },       -- an eerie wind
+    -- the Blossom Sanctuary (2026-11-16): Pro Sound Effects' "Leaves Rustle Wind Blowing Through Trees 1" as its bed (a few birds in it);
+    -- the pond's water near it (the grove's stream, low), and a koi's leap: "Small Splash Shallow Water Fountain Pool 1" (SanctuaryLife)
+    -- (measured 2026-11-16: wind 5.8 x 1.8 = 10.4, a little under the hub's birds, 8 x 1.6; the pond 36.7 x 0.22 = 8 beside it)
+    AmbSanctuary = { Id = "9116258071", Volume = 1.8, Group = "Ambience" },
+    PondWater = { Id = "9119646409", Volume = 0.22, Group = "Ambience", Near = 30, Reach = 110 },
+    KoiSplash = { Id = "9119293555", Volume = 0.45, Pitch = { 0.95, 1.15 }, Near = 12, Reach = 70, Max = 2 },
     -- the weather (WeatherConfig, AudioController): Pro Sound Effects' "Rain On Water 1", a 61 s outdoor loop
     AmbRain = { Id = "9112854469", Volume = 0.4, Group = "Ambience", FadeIn = 6, FadeOut = 6 }, -- 39 x 0.4: a little over the birds (9 x 1.6)
 

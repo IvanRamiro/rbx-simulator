@@ -2,13 +2,13 @@
 
     python3 tools/balance_report.py
 
-Reads the ranks, pet bonuses, Qi Spring bonus, relic rewards, egg chances and Qinggong levels
+Reads the ranks, pet bonuses, the Training Ground bonus, relic rewards, egg chances and Qinggong levels
 straight from src/shared/GameConfig.lua, so it always matches the game.
 Times are minutes of cultivating alone. Securing a guardian's egg also pays a burst worth
 EggTheft.SecureQiMinutes of cultivating, so real players who fight go faster than this.
 
 The "typical" player follows the pets they would usually own by then (see
-TYPICAL_PETS), always cultivating in the Qi Spring. From Spirit Soul on, each
+TYPICAL_PETS), always cultivating on the Training Ground. From Spirit Soul on, each
 realm's QiMultiplier multiplies every reward.
 """
 
@@ -90,7 +90,7 @@ def main():
     config = read_config()
     ranks = config["ranks"]
 
-    print("Rank progression (minutes of cultivating in the Qi Spring)")
+    print("Rank progression (minutes of cultivating on the Training Ground)")
     print(f"{'Rank':<22}{'Realm':<23}{'Qi needed':>12}{'x':>5}{'Qi/s':>9}{'Step':>8}{'Total h':>9}{'Leaps':>6}{'Run':>5}")
     qinggong_by_rank = {rank_id: (leaps, run) for rank_id, leaps, run in config["qinggong"]}
     total_seconds = 0
@@ -108,7 +108,7 @@ def main():
         )
 
     print()
-    print("Qi per second with different pets (in the Qi Spring / outside it)")
+    print("Qi per second with different pets (on the Training Ground / off it)")
     for label, pets in [
         ("No pets", []),
         ("Aqua Wisp", ["AquaWisp"]),

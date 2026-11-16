@@ -1,8 +1,10 @@
 -- Cultivating: CultivationEvent starts and stops it, and every CultivationInterval the server pays each cultivating player
--- their Qi (the rank's multiplier, Qi passes, their pets' bonus and the Qi Spring's). Moving, or carrying an egg, stops it.
--- It also sets whether they stand in the Qi Spring (the AtTrainingStation attribute).
+-- their Qi (the rank's multiplier, Qi passes, their pets' bonus and the Training Ground's). Moving, or carrying an egg, stops it.
+-- It also sets whether they sit on the Blossom Sanctuary's Training Ground (the AtTrainingStation attribute): inside its kerb's
+-- outline (Placements.BlossomSanctuary.TrainingGround, island-local) and within its Height of the lawn.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local WeatherConfig = require(ReplicatedStorage:WaitForChild("WeatherConfig"))
@@ -12,8 +14,6 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
-
-local STATION_HEIGHT_TOLERANCE = 12
 
 local cultivatingPlayers = {}
 
@@ -29,7 +29,8 @@ local function hasAliveCharacter(player)
     return humanoid ~= nil and humanoid.Health > 0
 end
 
-local stationCenter = nil
+-- the Training Ground, once its island is found: { frame (island-local to world), outline (Vector2s), floor, height, min, max }
+local trainingGround = nil
 
 -- where each player began cultivating: walking or teleporting off ends it, on the server's own word
 local cultivatingFrom = {}
@@ -45,16 +46,33 @@ local function setCultivating(player, isCultivating)
     end
 end
 
+-- even-odd: is (x, z) inside the closed outline?
+local function insideOutline(outline, x, z)
+    local inside = false
+    local count = #outline
+    local j = count
+    for i = 1, count do
+        local a, b = outline[i], outline[j]
+        if (a.Y > z) ~= (b.Y > z) and x < (b.X - a.X) * (z - a.Y) / (b.Y - a.Y) + a.X then
+            inside = not inside
+        end
+        j = i
+    end
+    return inside
+end
+
 local function isAtTrainingStation(player)
     local character = player.Character
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    if not (stationCenter and rootPart) then
+    local zone = trainingGround
+    if not (zone and rootPart) then
         return false
     end
-
-    local offset = rootPart.Position - stationCenter
-    local horizontalDistance = Vector3.new(offset.X, 0, offset.Z).Magnitude
-    return horizontalDistance <= GameConfig.TrainingStation.Radius and math.abs(offset.Y) <= STATION_HEIGHT_TOLERANCE
+    local at = zone.frame:PointToObjectSpace(rootPart.Position)
+    if math.abs(at.Y - zone.floor) > zone.height or at.X < zone.min.X or at.X > zone.max.X or at.Z < zone.min.Y or at.Z > zone.max.Y then
+        return false
+    end
+    return insideOutline(zone.outline, at.X, at.Z)
 end
 
 local function onCharacterAdded(player, character)
@@ -183,12 +201,21 @@ for _, player in Players:GetPlayers() do
 end
 
 task.spawn(function()
-    local island = workspace:WaitForChild(WorldConfig.FolderName):WaitForChild(WorldConfig.StartIsland)
-    -- (optional: the hub's rebuild of 2026-11-12 removed the Qi Spring; without it there is no station bonus)
-    local station = island:WaitForChild("QiSpring", 10)
-    if station then
-        stationCenter = station:WaitForChild("SpringWater").Position
+    -- (only where the island is built: without it there is no Training Ground bonus)
+    local name = GameConfig.TrainingStation.Island
+    local island = workspace:WaitForChild(WorldConfig.FolderName):WaitForChild(name, 30)
+    local build = ServerStorage:FindFirstChild("WorldBuild")
+    local module = build and build:FindFirstChild("Placements") and build.Placements:FindFirstChild(name)
+    if not (island and module) then
+        warn("QiService: no " .. name .. " (or its placements): no Training Ground bonus")
+        return
     end
+    local rules = require(module).TrainingGround
+    local min, max = Vector2.new(math.huge, math.huge), Vector2.new(-math.huge, -math.huge)
+    for _, point in rules.Outline do
+        min, max = min:Min(point), max:Max(point)
+    end
+    trainingGround = { frame = WorldConfig.frame(name), outline = rules.Outline, floor = rules.Floor, height = rules.Height, min = min, max = max }
 end)
 
 while true do

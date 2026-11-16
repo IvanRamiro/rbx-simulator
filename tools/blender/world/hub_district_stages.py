@@ -172,7 +172,6 @@ VIEWS = {
     "MerchantDais": (((16, 14, 26), (0, 2, -2)), ((4, 5.5, 22), (0, 3, -4))),
     "SpawnPad": (((8, 7, 12), (0, 0.5, 0)), ((2, 5.5, 13), (0, 0.6, 0))),
     "SanctumPlinth": (((30, 18, 34), (0, 0, 0)), ((6, 5.5, 32), (0, 0.5, 0))),
-    "SpringPlinth": (((18, 12, 22), (0, 0, 0)), ((4, 5.5, 22), (0, 0.4, 0))),
     "SquareCompass": (((8, 7, 12), (0, 3.5, 0)), ((2, 5.5, 13), (0, 4, 0))),
 }
 
@@ -248,7 +247,7 @@ def _place(o, x, y, z, yaw=0.0):
 
 
 def assemble():
-    """Every new piece where the layout puts it (island-local studs), the moved Sanctum and Qi Spring on their plinths, the paving,
+    """Every new piece where the layout puts it (island-local studs), the moved Sanctum on its plinth, the paving,
     and a preview of the ground (the terrain's heights and the new rim). Returns {group: [objects]}."""
     import hub_ground as G
     import hub_celestial as H
@@ -267,9 +266,6 @@ def assemble():
         _place(o, G.SQUARE[0], 0.0, G.SQUARE[1])
     for o in groups["SanctumPlinth"]:
         _place(o, G.SANCTUM[0], G.LIFT, G.SANCTUM[1])
-    sp_yaw = G.face_yaw(-G.SPRING[0], -G.SPRING[1])
-    for o in groups["SpringPlinth"]:
-        _place(o, G.SPRING[0], G.LIFT, G.SPRING[1], sp_yaw)
     pads = list(groups["SpawnPad"])
     copies = []
     for i, b, _, _, (sx, sz) in G.pens():
@@ -280,14 +276,14 @@ def assemble():
                 copies.append(c)
             _place(c, sx, 0.0, sz, G.face_yaw(math.cos(math.radians(b)), math.sin(math.radians(b))))
     groups["SpawnPad"] += copies
-    # the Sanctum and the Qi Spring as they are (hub_celestial), for context
+    # the Sanctum as it is (hub_celestial), for context
     img, bands = H.W.atlas_image("Hub_CelestialAtlas", 512, H.HUB_STRIPS) if hasattr(H, "W") else (None, None)
     import worldlib as W
     img, bands = W.atlas_image("Hub_CelestialAtlas", 512, H.HUB_STRIPS)
     H.MARBLE_BAND, H.GOLD_BAND = bands[H.MARBLE], bands[H.GOLD]
     ctx = W.collection("HD_Context")
     W.clear_collection(ctx)
-    old = [fn(ctx, None, bands) for fn in (H.sanctum, H.sanctum_glass, H.sanctum_crystal, H.sanctum_runes, H.qi_spring, H.qi_spring_water, H.qi_spring_glow,
+    old = [fn(ctx, None, bands) for fn in (H.sanctum, H.sanctum_glass, H.sanctum_crystal, H.sanctum_runes,
                                          H.crystal_lamp, H.crystal_lamp_glow)]
     old = F.finish(old, bands, ctx)
     F.preview_materials(old)
@@ -295,8 +291,6 @@ def assemble():
     for o in old:
         if o.name.startswith(("HB_Hatch", "HB_Sanctum")):
             _place(o, G.SANCTUM[0], G.LIFT, G.SANCTUM[1])
-        elif o.name.startswith(("HB_QiSpring", "HB_Spring")):
-            _place(o, G.SPRING[0], G.LIFT, G.SPRING[1], sp_yaw)
     lamp_objs = []
     for k, (x, z, yaw) in enumerate(G.lamp_layout()):
         for o in lamps:
@@ -547,8 +541,7 @@ def review(names):
     shot("square", (200, 6.5, -96), (300, 14, -140), 26, "The Market Square at eye height: Market ahead, Blacksmith left, Buy & Sell right")
     shot("merchant", (14, 13, -150), (0, 2, -120), 30, "The Hidden Merchant's dais (empty: it still reads as a place)")
     shot("pad", (64, 7, 116), (60, 0.5, 104), 30, "Spawn pad (facing its pen), the Arrival side")
-    shot("sanctum", (40, 30, -120), (0, 6, -178), 30, "The Hatching Sanctum and the Qi Spring move as they are: Sanctum on its new plinth")
-    shot("spring", (-120, 24, 110), (-147, 3, 85), 30, "The Qi Spring on its new plinth")
+    shot("sanctum", (40, 30, -120), (0, 6, -178), 30, "The Hatching Sanctum moves as it is, on its new plinth")
     shot("compass", (238, 7, -96), (226.5, 4, -110.5), 30, "The Market Square's centrepiece (restrained)")
     # clay and wireframe
     district = groups["Market"] + groups["Blacksmith"] + groups["BuySell"] + groups["SquareCompass"] + groups["Paving"]

@@ -1,4 +1,4 @@
--- Qi from outside meditation, all at the cultivating rate (the player's pets and Qi passes count, the Qi Spring
+-- Qi from outside meditation, all at the cultivating rate (the player's pets and Qi passes count, the Training Ground
 -- doesn't; the timed boost does). Securing a stolen egg pays a burst worth EggTheft.SecureQiMinutes, so the chase is the
 -- fastest way to grow and meditation stays the steady base. Its realm multiplier is the lower of the
 -- player's and the egg's, so a high realm farming a beginner's guardian earns a beginner's Qi, and

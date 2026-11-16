@@ -14,6 +14,9 @@ local WorldConfig = {
         MoonlitIsle = { Centre = Vector3.new(192, 200, -804), Radius = 125, Turns = 0 }, -- doubled 2026-11-02
         OriginAbyss = { Centre = Vector3.new(596, 200, -856), Radius = 165, Turns = 0 }, -- doubled 2026-11-02
         BeginnerIsle = { Centre = Vector3.new(-480, 200, 24), Radius = 140, Turns = 2.13292 }, -- the owner, 2026-11-04
+        -- the Training Ground's island (the owner, 2026-11-16), south-east of the hub, reached by stepping stones
+        -- (tools/blender/world/blossom_layout.py: Turns faces its arrival at the hub)
+        BlossomSanctuary = { Centre = Vector3.new(452, 200, 380), Radius = 170, Reach = 335, Turns = -0.55496 },
     },
 
     -- the Ascension Stele (FloatingIslands.Yggdrasil.Leaderboard): the most Qi across every server

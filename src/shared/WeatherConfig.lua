@@ -68,7 +68,7 @@ WeatherConfig.States = {
         Cover = 0.6, CloudDensity = 0.4, CloudShade = 0.95, Saturation = -0.08, Contrast = -0.03, Lamps = 0.2,
     },
     -- the rare one: the air fills with slow glowing motes of Qi, the light turns faintly jade and gold. While it lasts,
-    -- cultivating gathers QiBonusPercent more Qi (added like the Qi Spring's; the owner's call, 2026-11-16: about +0.6% Qi
+    -- cultivating gathers QiBonusPercent more Qi (added like the Training Ground's; the owner's call, 2026-11-16: about +0.6% Qi
     -- overall, as it is about 6% of the time). QiService adds it; WeatherController tells players when one begins.
     QiBloom = {
         Weight = 6, Repeat = false, QiBonusPercent = 10,

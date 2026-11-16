@@ -1,6 +1,6 @@
 -- The Status region of the HUD (portrait, name, rank, realm, progress), the Qi counter with its income while cultivating,
 -- and the cultivate toggle (GameConfig.CultivationKeybind, a gamepad's L1, or the touch screens' lotus button), with the
--- "cultivating" line, the Qi Spring's bonus line and the breakthrough over the inventory bar.
+-- "cultivating" line, the Training Ground's bonus line (the Blossom Sanctuary's) and the breakthrough over the inventory bar.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")

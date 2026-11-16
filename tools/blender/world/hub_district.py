@@ -1,6 +1,6 @@
 """The hub's redesign (2026-11-15; layout approved by the owner: "PROCEED WITH THAT LAYOUT"): the Merchants' Terrace's three shops,
-the Market Square's centrepiece, the Leaderboard, the Hidden (Wandering) Merchant's dais, the spawn pads and the new plinths under the
-Hatching Sanctum and the Qi Spring. Plan: renders/hub_redesign/LAYOUT_PLAN.md.
+the Market Square's centrepiece, the Leaderboard, the Hidden (Wandering) Merchant's dais, the spawn pads and the new plinth under the
+Hatching Sanctum (the Qi Spring's plinth went with the spring, 2026-11-16). Plan: renders/hub_redesign/LAYOUT_PLAN.md.
 
 The celestial city's language (hub_celestial.py): white marble, lapis, gold and glowing sky-blue crystal; heavy, layered, bevelled
 forms; no Chinese forms (no pagodas, curved tiled roofs, paifang, lanterns or motifs). Each building says what it is from across the
@@ -10,7 +10,7 @@ front of a tall furnace tower with a burning crown; Buy & Sell is a gold-domed v
 Every piece is authored in Roblox studs at its own origin on y = 0, its front toward +Z (a shop's toward the Market Square). Names
 keep the game's: WorldBuilder.Shops (HB_Blacksmith, HB_BlacksmithCore, HB_BlacksmithCrystal; HB_Market, HB_MarketCanopy,
 HB_MarketGlow; HB_BuySell, HB_BuySellStones), WorldBuilder.Board (HB_Leaderboard, HB_LeaderboardGlow), so the builders, the
-collision rules and the looks stay as they are; the new pieces (HB_MerchantDais, HB_SpawnPad, HB_SanctumPlinth, HB_SpringPlinth,
+collision rules and the looks stay as they are; the new pieces (HB_MerchantDais, HB_SpawnPad, HB_SanctumPlinth,
 HB_SquareCompass and their glows) need entries of their own (LAYOUT_PLAN.md, phase 3).
 
 The finish pass (finish()): each piece is split by material (<piece>__Marble, __Gold, __Lapis, ...; WorldBuilder.MaterialLooks
@@ -811,7 +811,7 @@ def spawn_pad():
 
 
 # ======================================================================================================================
-# The new plinths: a stepped marble apron round the Hatching Sanctum's dais and round the Qi Spring's platform
+# The new plinth: a stepped marble apron round the Hatching Sanctum's dais (the Qi Spring's went with the spring, 2026-11-16)
 # ======================================================================================================================
 def plinth_ring(mb, r_in, r_out, top, studs):
     annulus(mb, H.MARBLE, r_in, r_out, -0.5, top, seg=96)
@@ -827,12 +827,6 @@ def sanctum_plinth():
     mb = W.MeshBuilder()
     plinth_ring(mb, H.DAIS[0][0] - 0.05, 23.6, 0.3, 24)     # under its first step (r 20, top 0.6)
     return {"HB_SanctumPlinth": mb}, {}
-
-
-def spring_plinth():
-    mb = W.MeshBuilder()
-    plinth_ring(mb, H.QS_PLAT_R - 0.05, 14.6, 0.2, 16)       # round its platform (r 11.2, top 0.3)
-    return {"HB_SpringPlinth": mb}, {}
 
 
 # ======================================================================================================================
@@ -869,7 +863,6 @@ ASSETS = {
     "MerchantDais": merchant_dais,
     "SpawnPad": spawn_pad,
     "SanctumPlinth": sanctum_plinth,
-    "SpringPlinth": spring_plinth,
     "SquareCompass": square_compass,
 }
 

@@ -9,10 +9,13 @@ local GameConfig = {
     CultivationToggleCooldown = 1, -- also limits how often a client can make everyone rebuild its aura
     CultivationKeybind = Enum.KeyCode.E,
 
+    -- The Training Ground on the Blossom Sanctuary (the owner, 2026-11-16: the hub's Qi Spring was removed and its +50% moved
+    -- there): cultivating inside its kerb adds QiBonusPercent. QiService reads the ground's outline from
+    -- Placements.BlossomSanctuary.TrainingGround (tools/blender/world/blossom_layout.py).
     TrainingStation = {
-        DisplayName = "Qi Spring",
+        DisplayName = "Blossom Sanctuary",
         QiBonusPercent = 50,
-        Radius = 10,
+        Island = "BlossomSanctuary",
     },
 
     -- Qinggong: leap again in mid-air (once per air leap) and hold jump while falling to glide.

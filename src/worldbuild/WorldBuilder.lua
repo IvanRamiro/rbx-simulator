@@ -12,10 +12,15 @@
 --   WB.placeKit(island); WB.buildEggStands(island); WB.buildRelics(island)
 --   Yggdrasil (the hub, the celestial city since 2026-11-12: tools/blender/world/hub_ground.py exports its terrain,
 --   placements and Yggdrasil_Celestial.fbx; WB.storeKit("Yggdrasil", <import>, "HB_Anchor")): WB.buildTerrain,
---   WB.placeKit, WB.buildShops, WB.buildAltar, WB.buildQiSpring, WB.buildLeaderboard, WB.buildSpawn, WB.buildRootColliders,
+--   WB.placeKit, WB.buildShops, WB.buildAltar, WB.buildLeaderboard, WB.buildSpawn, WB.buildRootColliders,
 --   WB.buildHubNpcs, WB.buildMerchantTemplate; the bridges (WB.buildBridges) take the hub's gate from its kit
 --   every other island: WB.buildCheckpoint(island); Ember Peak also WB.buildLavafall, Moonlit Isle
 --   WB.buildStarWell
+--   the Blossom Sanctuary (tools/blender/world/blossom_layout.py writes its terrain and placements; blossom_assets.py its four FBX
+--   files in assets/world/BlossomSanctuary, each stored with WB.storeKit("BlossomSanctuary", <import>, "BS_Anchor")):
+--   WB.buildTerrain("BlossomSanctuary") (never clearTerrain: its square takes in a corner of the hub's rim), WB.buildApproach,
+--   WB.buildSanctuary, then, once its kit is stored, WB.placeKit and again WB.buildApproach and WB.buildSanctuary (the stones' caps,
+--   the koi and the garden court's tree come from the kit)
 --   terrain colours (once, after any terrain build): WB.applyMaterialColors()
 --
 -- Bridges (assets/world/Bridges): WB.storeBridgeKit(<import>, theme), then WB.buildBridges().
@@ -77,6 +82,10 @@ WorldBuilder.TerrainSettings = {
     -- on Yggdrasil's palette: terrain colours are global to the place
     -- grass all the way down: on a slope the voxels under the top one show, and Ground there made brown patches
     BeginnerIsle = { ShellDepth = 9, SubMaterial = "Ground", KeepThrough = { Rock = true, Grass = true } },
+    -- on Yggdrasil's palette (plus Jade Grove's LeafyGrass under the blossom, where no grass blades hide the fallen petals, and
+    -- its Mud for the pond's bed); its rock underside is terrain too (Bottoms in its data), Rock with bands of Ground like strata
+    BlossomSanctuary = { ShellDepth = 9, SubMaterial = "Ground", KeepThrough = { Rock = true, Grass = true, LeafyGrass = true, Mud = true },
+        UndersideMaterial = "Rock", StrataMaterial = "Ground" },
 }
 
 -- An island's terrain data, its grids turned by its quarter turns (Turns, layout.py) about its
@@ -142,9 +151,99 @@ function WorldBuilder.clearTerrain(island)
     workspace.Terrain:FillBlock(CFrame.new((min + max) / 2), max - min, Enum.Material.Air)
 end
 
+-- An island whose data carries Bottoms (the Blossom Sanctuary) is terrain all the way down: each column runs from its ground to its
+-- own depth, the underside rock with a band of Ground every 28 studs, written in strips so Studio stays responsive. Only the
+-- island's own columns are written; the rest of its square (a corner of the hub's rim) stays as it is, so a rebuild is safe.
+local function buildDeepTerrain(data, settings)
+    local materials = {}
+    for index, name in data.Materials do
+        materials[index] = Enum.Material[name]
+    end
+    local subMaterial = Enum.Material[settings.SubMaterial]
+    local underside = Enum.Material[settings.UndersideMaterial]
+    local strata = settings.StrataMaterial and Enum.Material[settings.StrataMaterial]
+    local lowest, highest = 0, -math.huge
+    for index, h in data.Heights do
+        if h then
+            highest = math.max(highest, h, data.WaterLevels and data.WaterLevels[index] or -math.huge)
+            lowest = math.min(lowest, data.Bottoms[index] or -settings.ShellDepth)
+        end
+    end
+    local minY = math.floor((data.Centre.Y + lowest) / VOXEL) * VOXEL - VOXEL
+    local maxY = math.ceil((data.Centre.Y + highest) / VOXEL) * VOXEL + VOXEL
+    local layers = (maxY - minY) / VOXEL
+    local size = data.Size
+    local STRIP = 12
+    local filled = 0
+    for j0 = 1, size, STRIP do
+        local rows = math.min(STRIP, size - j0 + 1)
+        local owned = false
+        for j = j0, j0 + rows - 1 do
+            for i = 1, size do
+                if data.Heights[(j - 1) * size + i] then
+                    owned = true
+                    break
+                end
+            end
+        end
+        if owned then
+            local regionMin = Vector3.new(data.Origin.X, minY, data.Origin.Y + (j0 - 1) * VOXEL)
+            local region = Region3.new(regionMin, regionMin + Vector3.new(size * VOXEL, layers * VOXEL, rows * VOXEL))
+            local matGrid, occGrid = workspace.Terrain:ReadVoxels(region, VOXEL)
+            for jj = 1, rows do
+                local j = j0 + jj - 1
+                for i = 1, size do
+                    local index = (j - 1) * size + i
+                    local h = data.Heights[index]
+                    if h then
+                        local top = data.Centre.Y + h
+                        local bottom = data.Centre.Y + (data.Bottoms[index] or -settings.ShellDepth)
+                        local surface = materials[data.MaterialIndex[index]]
+                        local keep = settings.KeepThrough[data.Materials[data.MaterialIndex[index]]]
+                        local waterLevel = data.WaterLevels and data.WaterLevels[index]
+                        local waterTop = waterLevel and data.Centre.Y + waterLevel
+                        for k = 1, layers do
+                            local y0 = minY + (k - 1) * VOXEL
+                            local material, occupancy = Enum.Material.Air, 0
+                            -- a voxel's surface renders from its centre (occupancy 0) to the next one up (1), measured in Studio
+                            local solid = math.min(math.clamp((top - y0 - VOXEL / 2) / VOXEL, 0, 1), math.clamp((y0 + VOXEL - bottom) / VOXEL, 0, 1))
+                            if solid > 0 then
+                                local depth = top - (y0 + VOXEL / 2)
+                                if depth <= VOXEL then
+                                    material = surface
+                                elseif depth < 10 then
+                                    material = if keep then surface else subMaterial
+                                elseif strata and math.floor((y0 - data.Centre.Y) / VOXEL) % 7 == 3 then
+                                    material = strata
+                                else
+                                    material = underside
+                                end
+                                occupancy = solid
+                                filled += 1
+                            elseif waterTop and y0 < waterTop and y0 + VOXEL > top - VOXEL then
+                                -- (water's surface renders from the voxel's bottom, not its centre: measured in Studio)
+                                material = Enum.Material.Water
+                                occupancy = math.clamp((waterTop - y0) / VOXEL, 0, 1)
+                            end
+                            matGrid[i][k][jj] = material
+                            occGrid[i][k][jj] = occupancy
+                        end
+                    end
+                end
+            end
+            workspace.Terrain:WriteVoxels(region, VOXEL, matGrid, occGrid)
+            task.wait()
+        end
+    end
+    return filled
+end
+
 function WorldBuilder.buildTerrain(island)
     local data = terrainData(island)
     local settings = WorldBuilder.TerrainSettings[island]
+    if data.Bottoms then
+        return buildDeepTerrain(data, settings)
+    end
     local materials = {}
     for index, name in data.Materials do
         materials[index] = Enum.Material[name]
@@ -302,7 +401,6 @@ WorldBuilder.Collision = {
     { Prefix = "HB_SquareCompass", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "HB_SpawnPad", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "HB_SanctumPlinth", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
-    { Prefix = "HB_SpringPlinth", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "HB_HatchSanctum", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "HB_HatchGlass", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "HB_MarketCanopy", Fidelity = Enum.CollisionFidelity.Box },
@@ -317,14 +415,18 @@ WorldBuilder.Collision = {
     { Prefix = "HB_BridgeGate", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "HB_LeaderboardGlow", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "HB_Leaderboard", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
-    { Prefix = "HB_QiSpring", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
-    { Prefix = "HB_SpringChannelWater", Fidelity = Enum.CollisionFidelity.Box },
-    { Prefix = "HB_SpringChannel", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
-    { Prefix = "HB_SpringWater", Fidelity = Enum.CollisionFidelity.Box },
-    { Prefix = "HB_SpringGlow", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "HB_CrystalLampGlow", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "HB_CrystalLampLight", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "HB_CrystalLamp", Fidelity = Enum.CollisionFidelity.Hull },
+    -- the Blossom Sanctuary: you walk under the trees' limbs and over the bridge's arch; the canopies, lilies, reeds and petals
+    -- don't collide (their materials say so: MaterialLooks), so they get a plain box
+    { Prefix = "BS_Tree", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "BS_Bridge", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    { Prefix = "BS_SteppingStone", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "BS_EdgeRock", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "BS_KerbStone", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "BS_SeatStone", Fidelity = Enum.CollisionFidelity.Hull },
+    { Prefix = "BS_", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "YG_MoundRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_GripRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "YG_PathRoot", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
@@ -455,15 +557,10 @@ do
     WorldBuilder.Appearance.HB_HatchGlass = table.clone(glass)
     WorldBuilder.Appearance.HB_MarketCanopy = table.clone(glass)
     WorldBuilder.Appearance.HB_MarketCanopy.CanCollide = false
-    -- the Qi Spring: water you wade in (it doesn't collide: you stand on the pool's floor), Qi glowing under it
-    local water = { Material = Enum.Material.Glass, Color = Color3.fromRGB(120, 200, 235), Transparency = 0.3, CanCollide = false, CastShadow = false }
-    WorldBuilder.Appearance.HB_SpringWater = table.clone(water)
-    WorldBuilder.Appearance.HB_SpringChannelWater = table.clone(water)
     WorldBuilder.Appearance.HB_BridgeGateGlow = { Material = Enum.Material.Neon, CanCollide = false, CastShadow = false } -- (coloured per route)
     WorldBuilder.Appearance.HB_LeaderboardGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(226, 240, 255), CanCollide = false, CastShadow = false }
-    WorldBuilder.Appearance.HB_SpringGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(90, 220, 255), CanCollide = false, CastShadow = false }
     -- the hub's redesign (2026-11-15, tools/blender/world/hub_district.py and hub_ground.py): the Ring Road, the bridges' aprons and the
-    -- parapet over the great root's cove; the spawn pads, the Merchant's dais, the Market Square's centrepiece and the new plinths
+    -- parapet over the great root's cove; the spawn pads, the Merchant's dais, the Market Square's centrepiece and the Sanctum's plinth
     for _, name in { "HB_RingRoadNE", "HB_RingRoadSE", "HB_RingRoadSW", "HB_RingRoadNW", "HB_Aprons" } do
         WorldBuilder.Appearance[name] = { CanCollide = false, CastShadow = false }
         WorldBuilder.Appearance[name .. "__Gold"] = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(226, 176, 70) }
@@ -471,7 +568,7 @@ do
     for _, name in { "HB_SpawnPadGlow", "HB_SquareCompassGlow", "HB_MerchantDaisGlow" } do
         WorldBuilder.Appearance[name] = { Material = Enum.Material.Neon, Color = CRYSTAL, CanCollide = false, CastShadow = false }
     end
-    for _, name in { "HB_SpawnPad", "HB_SanctumPlinth", "HB_SpringPlinth" } do
+    for _, name in { "HB_SpawnPad", "HB_SanctumPlinth" } do
         WorldBuilder.Appearance[name] = { CastShadow = false }
     end
 end
@@ -509,7 +606,7 @@ WorldBuilder.Appearance.OA_ShardCore.Color = Color3.fromRGB(165, 50, 255)
 WorldBuilder.Appearance.OA_ColossusEyes.Color = Color3.fromRGB(115, 40, 255) -- bluer violet: redder ones bloom pink
 WorldBuilder.Appearance.OA_VoidCrystals.Color = Color3.fromRGB(55, 22, 100)
 WorldBuilder.Appearance.OA_VoidCrystalGlow.Color = Color3.fromRGB(160, 55, 255)
-WorldBuilder.Appearance.YG_TrunkVeins.Color = Color3.fromRGB(40, 210, 235) -- the Qi Spring's and the compass's Qi
+WorldBuilder.Appearance.YG_TrunkVeins.Color = Color3.fromRGB(40, 210, 235) -- the compass's Qi
 WorldBuilder.Appearance.YG_SeedLanterns.Color = Color3.fromRGB(255, 170, 40)
 
 -- Kit pieces that carry a PointLight (lights take the piece's colour).
@@ -687,6 +784,22 @@ WorldBuilder.MaterialLooks = {
     Slate = { Material = Enum.Material.Slate, Color = Color3.fromRGB(64, 66, 76) },
     Crystal = { Material = Enum.Material.Glass, Color = Color3.fromRGB(175, 215, 255), Transparency = 0.35, CastShadow = false },
     Glow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(226, 240, 255), CastShadow = false, CanCollide = false },
+    -- the Blossom Sanctuary (blossom_assets.py): a dark plum-brown bark, two tones of blossom, warm ivory water-worn stone, moss, the
+    -- pond's life and the koi. Only the bark and the stone collide.
+    Bark = { Material = Enum.Material.Wood, Color = Color3.fromRGB(86, 60, 58) },
+    Blossom = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(232, 146, 176), CanCollide = false },
+    BlossomPale = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(250, 214, 226), CanCollide = false },
+    Stone = { Material = Enum.Material.Limestone, Color = Color3.fromRGB(222, 212, 192) },
+    Moss = { Material = Enum.Material.LeafyGrass, Color = Color3.fromRGB(96, 126, 70), CanCollide = false },
+    Lily = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(74, 124, 66), CanCollide = false, CastShadow = false },
+    LilyFlower = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(252, 238, 242), CanCollide = false, CastShadow = false },
+    Reed = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(102, 138, 78), CanCollide = false, CastShadow = false },
+    KoiWhite = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(246, 243, 236), CanCollide = false, CastShadow = false },
+    KoiRed = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(226, 82, 40), CanCollide = false, CastShadow = false },
+    KoiBlack = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(32, 30, 32), CanCollide = false, CastShadow = false },
+    KoiGold = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(240, 182, 72), Reflectance = 0.12, CanCollide = false, CastShadow = false },
+    KoiFin = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(250, 238, 226), Transparency = 0.35, CanCollide = false, CastShadow = false },
+    Ripple = { Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(235, 250, 255), Transparency = 1, CanCollide = false, CastShadow = false },
 }
 
 local function splitName(name)
@@ -1763,7 +1876,7 @@ function WorldBuilder.buildLeaderboard(island)
     return folder
 end
 
--- ---------- spawn, Qi Spring, relic ----------
+-- ---------- spawn, relic ----------
 
 function WorldBuilder.buildSpawn(island)
     local placements = placementsFor(island)
@@ -1979,101 +2092,388 @@ function WorldBuilder.buildAltar(island)
     return model
 end
 
--- The Qi Spring (tools/blender/world/hub_celestial.py qi_spring; rebuilt 2026-11-12, the owner: "a qi spring that give 50%
--- bonus but a better one"): FloatingIslands.<island>.QiSpring, placed by Placements.<island>.QiSpring, with "SpringWater"
--- (QiService measures GameConfig.TrainingStation.Radius from it: the rune ring on the platform marks that edge), Qi
--- motes rising off the pool, spray off the fountain's tiers, and the waterfall where its channel pours off the island.
--- Spots in the spring's frame, as authored (hub_celestial QS_*).
-WorldBuilder.QiSpring = {
-    Pieces = { "HB_QiSpring", "HB_SpringWater", "HB_SpringGlow" },
-    Water = Vector3.new(0, 0.8, 0),
-    Tiers = { Vector3.new(0, 4.8, 0), Vector3.new(0, 7.35, 0) },
-    Sign = Vector3.new(0, 12.5, 0),
-}
+-- ---------- the Blossom Sanctuary (the owner's directive, 2026-11-16; tools/blender/world/blossom_layout.py, blossom_assets.py) ----------
+-- The Qi Spring's +50% moved here (GameConfig.TrainingStation): QiService reads the Training Ground's outline from
+-- Placements.BlossomSanctuary itself, so nothing in the place has to stay in step with it but its sign and kerb.
 
-function WorldBuilder.buildQiSpring(island)
-    local placements = placementsFor(island)
-    local spot = placements.QiSpring
-    local stationRules = GameConfig.TrainingStation
-    local model = WorldBuilder.islandFolder(island)
-    local old = model:FindFirstChild("QiSpring")
-    if old then
-        old:Destroy()
+local SANCTUARY_STONE = { Material = Enum.Material.Limestone, Color = Color3.fromRGB(222, 212, 192) }
+-- each cap piece's smallest half-width as modelled (pieces.json), so a stone's Radius scales it to cover its rock all round
+local CAP_RADIUS = { BS_SteppingStoneA = 4.8, BS_SteppingStoneB = 4.14, BS_SteppingStoneC = 2.87 }
+
+local function hasTemplate(island, name)
+    local kit = ServerStorage:FindFirstChild("WorldKit")
+    local folder = kit and kit:FindFirstChild(island)
+    if not folder then
+        return false
     end
-    local glow = Color3.fromRGB(70, 215, 255)
-    local station = Instance.new("Model")
-    station.Name = "QiSpring"
-    local frame = islandFrame(island) * CFrame.new(spot.Centre) * CFrame.Angles(0, spot.Yaw, 0)
-    for _, piece in WorldBuilder.QiSpring.Pieces do
-        placeTemplate(island, piece, frame, station)
+    if folder:FindFirstChild(name) then
+        return true
     end
-
-    -- QiService measures the cultivation radius from this part
-    local water = marker("SpringWater", Vector3.new(2, 0.2, 2), frame * CFrame.new(WorldBuilder.QiSpring.Water), station)
-    addLight(water, glow, 20, 0.8)
-
-    -- Qi rising off the pool, in a disc the pool's size
-    local motes = Instance.new("ParticleEmitter")
-    motes.Name = "QiMotes"
-    motes.Shape = Enum.ParticleEmitterShape.Disc
-    motes.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
-    motes.EmissionDirection = Enum.NormalId.Top
-    motes.Color = ColorSequence.new(glow, Color3.fromRGB(190, 250, 255))
-    motes.LightEmission = 0.8
-    motes.LightInfluence = 0
-    motes.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 0.24), NumberSequenceKeypoint.new(1, 0) })
-    motes.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
-    motes.Lifetime = NumberRange.new(2.5, 4.5)
-    motes.Speed = NumberRange.new(0.8, 1.8)
-    motes.SpreadAngle = Vector2.new(10, 10)
-    motes.Rate = 14
-    local disc = marker("QiMotes", Vector3.new(13, 0.2, 13), frame * CFrame.new(WorldBuilder.QiSpring.Water + Vector3.new(0, 0.1, 0)), station)
-    motes.Parent = disc
-
-    -- spray off each tier's lip: fine droplets falling into the water below
-    for index, at in WorldBuilder.QiSpring.Tiers do
-        local lip = marker("Spray" .. index, Vector3.new(1, 0.2, 1), frame * CFrame.new(at), station)
-        local spray = Instance.new("ParticleEmitter")
-        spray.Name = "Spray"
-        spray.Shape = Enum.ParticleEmitterShape.Disc -- (Surface: from the disc's edge, the tier's lip)
-        spray.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
-        spray.EmissionDirection = Enum.NormalId.Bottom
-        spray.Color = ColorSequence.new(Color3.fromRGB(225, 248, 255))
-        spray.LightEmission = 0.3
-        spray.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.12), NumberSequenceKeypoint.new(1, 0.05) })
-        spray.Transparency = NumberSequence.new(0.3, 1)
-        spray.Lifetime = NumberRange.new(0.5, 0.8)
-        spray.Speed = NumberRange.new(1, 2)
-        spray.Acceleration = Vector3.new(0, -20, 0)
-        spray.Rate = 24
-        lip.Size = if index == 1 then Vector3.new(6.9, 0.2, 6.9) else Vector3.new(4.1, 0.2, 4.1)
-        spray.Parent = lip
+    for _, child in folder:GetChildren() do
+        if splitName(child.Name) == name then
+            return true
+        end
     end
+    return false
+end
 
+-- A billboard sign in plain words over an invisible part.
+local function signPost(name, parent, at, title, line, color)
+    local post = marker(name, Vector3.new(1, 1, 1), CFrame.new(at), parent)
     local sign = Instance.new("BillboardGui")
     sign.Name = "Sign"
-    sign.Size = UDim2.fromOffset(240, 56)
-    sign.StudsOffsetWorldSpace = WorldBuilder.QiSpring.Sign - WorldBuilder.QiSpring.Water
-    sign.MaxDistance = 80
+    sign.Size = UDim2.fromOffset(250, 58)
+    sign.MaxDistance = 90
     sign.LightInfluence = 0
-    sign.Parent = water
+    sign.Parent = post
     local label = Instance.new("TextLabel")
     label.Size = UDim2.fromScale(1, 1)
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.GothamBold
     label.TextScaled = true
-    label.TextColor3 = Color3.fromRGB(150, 245, 255)
-    label.TextStrokeTransparency = 0.4
-    label.Text = stationRules.DisplayName .. "\nCultivate here: +" .. stationRules.QiBonusPercent .. "% Qi"
+    label.TextColor3 = color
+    label.TextStrokeTransparency = 0.45
+    label.Text = title .. "\n" .. line
     label.Parent = sign
+    return post
+end
 
-    -- (since the hub's redesign, 2026-11-15, the spring has no channel to the edge: no SpillEnd, no waterfall)
-    if spot.SpillEnd then
-        WorldBuilder.buildWaterfall(station, islandPoint(island, spot.SpillEnd), frame.Position, WorldBuilder.Falls.Water)
+-- A floating rock of terrain (no draw calls of its own, exact collision): a flat top at `top` (world Y) of radius r, tapering to a
+-- point `depth` below it, its outline and underside a little uneven. Written column by column with the same occupancy rule as the
+-- islands (a voxel's surface renders from its centre: measured), so the top is where it is asked to be; Studio's FillBall and
+-- FillCylinder round to the voxel grid and left rock up to 5 studs over a stone's cap. `grass`: a grass top over Ground (the
+-- platforms); a stone's rock stops 1.2 under its cap's top (the cap is 1.4-1.6 thick, so they overlap). `erase`: clears the same columns instead.
+local function floatingRock(centre, top, r, depth, grass, seed, erase)
+    local terrain = workspace.Terrain
+    local reach = r + VOXEL
+    local x0 = math.floor((centre.X - reach) / VOXEL) * VOXEL
+    local z0 = math.floor((centre.Z - reach) / VOXEL) * VOXEL
+    local n = math.ceil((centre.X + reach - x0) / VOXEL)
+    local m = math.ceil((centre.Z + reach - z0) / VOXEL)
+    local y0 = math.floor((top - depth - VOXEL) / VOXEL) * VOXEL
+    local layers = math.ceil((top + 2 * VOXEL - y0) / VOXEL)
+    local region = Region3.new(Vector3.new(x0, y0, z0), Vector3.new(x0 + n * VOXEL, y0 + layers * VOXEL, z0 + m * VOXEL))
+    local mats, occs = terrain:ReadVoxels(region, VOXEL)
+    local surfaceTop = if grass then top else top - 1.2
+    for i = 1, n do
+        for k = 1, m do
+            local x, z = x0 + (i - 0.5) * VOXEL, z0 + (k - 0.5) * VOXEL
+            local dx, dz = x - centre.X, z - centre.Z
+            local angle = math.atan2(dz, dx)
+            local edge = r * (0.92 + 0.08 * math.noise(math.cos(angle) * 1.3 + seed, math.sin(angle) * 1.3, seed * 0.37))
+            local d = math.sqrt(dx * dx + dz * dz)
+            if d <= (if erase then r + 2 else edge) then
+                local t = d / edge
+                local hang = 2.5 + (depth - 2.5) * (1 - t) ^ 1.25 * (0.85 + 0.3 * math.noise(x * 0.11, z * 0.11, seed))
+                local bottom = top - hang
+                for j = 1, layers do
+                    local yv = y0 + (j - 1) * VOXEL
+                    if erase then
+                        mats[i][j][k] = Enum.Material.Air
+                        occs[i][j][k] = 0
+                    else
+                        local solid = math.min(math.clamp((surfaceTop - yv - VOXEL / 2) / VOXEL, 0, 1), math.clamp((yv + VOXEL - bottom) / VOXEL, 0, 1))
+                        if solid > 0 then
+                            local below = surfaceTop - (yv + VOXEL / 2)
+                            mats[i][j][k] = if grass and below <= VOXEL then Enum.Material.Grass elseif grass and below < 8 then Enum.Material.Ground else Enum.Material.Rock
+                            occs[i][j][k] = solid
+                        elseif yv + VOXEL / 2 > bottom then
+                            mats[i][j][k] = Enum.Material.Air
+                            occs[i][j][k] = 0
+                        end
+                    end
+                end
+            end
+        end
     end
-    station.Parent = model
-    WorldBuilder.applyCollision(station)
-    return station
+    terrain:WriteVoxels(region, VOXEL, mats, occs)
+end
+
+-- Erases what floatingRock laid for a piece built last time (its extent is kept on it as attributes).
+local function eraseRock(part)
+    local r, depth, top, centre = part:GetAttribute("RockRadius"), part:GetAttribute("RockDepth"), part:GetAttribute("RockTop"), part:GetAttribute("RockCentre")
+    if r and depth and top and centre then
+        floatingRock(centre, top, r, depth, false, 0, true)
+    end
+end
+
+local function zonePart(name, size, cframe, parent)
+    local zone = marker(name, size, cframe, parent)
+    zone.CanQuery = true -- WorldService finds it with an overlap query
+    return zone
+end
+
+-- The climb from the hub's south-east avenue to the island (Placements.BlossomSanctuary.Approach): every stone is a rock pillar of
+-- terrain under a carved cap (BS_SteppingStone*, or a plain limestone disc until the kit is stored), the two platforms floating
+-- islets of terrain with a tree and a seat; a pair of the hub's crystal lamps marks where the avenue now leads (the lamps'
+-- rule: a pair where an avenue reaches its place). Zones: every piece has one ("Route"), the hub's verge, both platforms and the
+-- island's landing a "Check" with the place a fall returns to (WorldService). Also places the garden court's tree on the hub.
+function WorldBuilder.buildApproach(island)
+    local placements = placementsFor(island)
+    local approach = placements.Approach
+    local frame = islandFrame(island)
+    local model = WorldBuilder.islandFolder(island)
+    local old = model:FindFirstChild("Approach")
+    if old then
+        for _, part in old:GetDescendants() do
+            if part:IsA("BasePart") then
+                eraseRock(part)
+            end
+        end
+        old:Destroy()
+    end
+    local folder = Instance.new("Folder")
+    folder.Name = "Approach"
+    local zones = Instance.new("Folder")
+    zones.Name = "Zones"
+    zones.Parent = folder
+    local towardIsland = (frame.Position - Vector3.new(0, frame.Position.Y, 0)) * Vector3.new(1, 0, 1)
+    local outward = towardIsland.Unit
+
+    local function check(name, at, size, returnTo)
+        local zone = zonePart("Check", size, CFrame.new(at + Vector3.new(0, size.Y / 2 - 1, 0)), zones)
+        zone:SetAttribute("Name", name)
+        zone:SetAttribute("ReturnTo", returnTo)
+        return zone
+    end
+
+    for index, stone in approach.Stones do
+        local top = frame:PointToWorldSpace(stone.Position)
+        local yaw = (index * 1.618) % (2 * math.pi)
+        local at = CFrame.new(top) * CFrame.Angles(0, yaw, 0)
+        local cap
+        if hasTemplate(island, stone.Piece) then
+            cap = placeTemplate(island, stone.Piece, at, folder, stone.Radius / CAP_RADIUS[stone.Piece])
+        else
+            cap = Instance.new("Part")
+            cap.Shape = Enum.PartType.Cylinder
+            cap.Size = Vector3.new(1.6, stone.Radius * 2, stone.Radius * 2)
+            cap.CFrame = at * CFrame.new(0, -0.8, 0) * CFrame.Angles(0, 0, math.pi / 2)
+            cap.Anchored = true
+            cap.CanTouch = false
+            cap.TopSurface, cap.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+            cap.Material, cap.Color = SANCTUARY_STONE.Material, SANCTUARY_STONE.Color
+            cap.Parent = folder
+        end
+        cap.Name = (if stone.Leap then "LeapStone_" else "Stone_") .. index
+        cap:SetAttribute("RockCentre", top)
+        cap:SetAttribute("RockTop", top.Y)
+        cap:SetAttribute("RockRadius", stone.Radius)
+        cap:SetAttribute("RockDepth", 16)
+        floatingRock(top, top.Y, stone.Radius, 16, false, index)
+        zonePart("Route", Vector3.new(stone.Radius * 2 + 2, 9, stone.Radius * 2 + 2), CFrame.new(top + Vector3.new(0, 3.5, 0)), zones)
+    end
+
+    for index, platform in approach.Platforms do
+        local top = frame:PointToWorldSpace(platform.Position)
+        local holder = marker(platform.Name, Vector3.new(1, 1, 1), CFrame.new(top), folder)
+        holder:SetAttribute("RockCentre", top)
+        holder:SetAttribute("RockTop", top.Y)
+        -- (terrain rounds a rim off over its last couple of studs: 2 more keep the walkable top at Radius)
+        holder:SetAttribute("RockRadius", platform.Radius + 2)
+        holder:SetAttribute("RockDepth", platform.Depth)
+        floatingRock(top, top.Y, platform.Radius + 2, platform.Depth, true, 10 + index)
+        local facing = CFrame.lookAt(top, top + outward)
+        check(platform.Name, top, Vector3.new(platform.Radius * 2, 10, platform.Radius * 2), facing + Vector3.new(0, 0.2, 0))
+        zonePart("Route", Vector3.new(platform.Radius * 2 + 2, 9, platform.Radius * 2 + 2), CFrame.new(top + Vector3.new(0, 3.5, 0)), zones)
+        for _, dress in approach.Dressing do
+            if dress.Platform == platform.Name and hasTemplate(island, dress.Piece) then
+                local piece = placeTemplate(island, dress.Piece, CFrame.new(top) * frame.Rotation * CFrame.new(dress.Position)
+                    * CFrame.Angles(0, dress.Yaw, 0), folder, dress.Scale)
+                piece.Name = dress.Piece .. "_" .. platform.Name
+            end
+        end
+    end
+
+    -- the island's end: its landing (the island's checkpoint), facing into the island
+    local landing = frame * CFrame.new(placements.Checkpoint.Position) * CFrame.Angles(0, placements.Checkpoint.Yaw, 0)
+    check("Arrival", landing.Position, Vector3.new(24, 10, 24), landing + Vector3.new(0, 0.2, 0))
+
+    -- the hub's end: where the south-east avenue's line meets the verge past the Ring Road (world space: the hub is at the origin)
+    local hubStart = frame:PointToWorldSpace(approach.HubStart.Position)
+    local bearing = Vector3.new(hubStart.X, 0, hubStart.Z).Unit
+    local side = Vector3.new(-bearing.Z, 0, bearing.X)
+    local hubY = WorldBuilder.islandFrame("Yggdrasil").Position.Y
+    local verge = Vector3.new(0, hubY, 0) + bearing * 241.5
+    check("HubStart", verge, Vector3.new(18, 10, 18), CFrame.lookAt(verge, verge + bearing) + Vector3.new(0, 0.25, 0))
+    local lamps = 0
+    if hasTemplate("Yggdrasil", "HB_CrystalLamp") then
+        for k, s in { -1, 1 } do
+            local at = Vector3.new(0, hubY, 0) + bearing * 239.5 + side * s * 8.2
+            local lampFrame = CFrame.lookAt(at, Vector3.new(0, hubY, 0)) * CFrame.Angles(0, math.pi, 0)
+            local lamp = placeTemplate("Yggdrasil", "HB_CrystalLamp", lampFrame, folder)
+            lamp.Name = "HB_CrystalLamp_Sanctuary" .. k
+            local crystal = if k == 1 then "HB_CrystalLampLight" else "HB_CrystalLampGlow"
+            local glow = placeTemplate("Yggdrasil", crystal, lampFrame, folder)
+            local light = WorldBuilder.Lights[crystal]
+            if light then
+                addLight(glow, glow.Color, light.Range, light.Brightness)
+            end
+            lamps += 1
+        end
+    end
+    signPost("HubSign", folder, verge + Vector3.new(0, 9, 0), "Blossom Sanctuary", "Training: +" .. GameConfig.TrainingStation.QiBonusPercent .. "% Qi",
+        Color3.fromRGB(255, 214, 230))
+
+    -- the garden court on the hub (the Qi Spring's court until 2026-11-16): one of the sanctuary's young trees in its lawn
+    local garden = ServerStorage.WorldBuild.Placements:FindFirstChild("Yggdrasil") and placementsFor("Yggdrasil").Garden
+    if garden and hasTemplate(island, "BS_TreeYoung") then
+        local gardenFrame = islandFrame("Yggdrasil") * CFrame.new(garden.Centre) * CFrame.Angles(0, garden.Yaw, 0)
+        local tree = placeTemplate(island, "BS_TreeYoung", gardenFrame * CFrame.new(0, -0.3, 0) * CFrame.Angles(0, 0.7, 0), folder, 1.05)
+        tree.Name = "BS_TreeYoung_Garden"
+        local drift = placeTemplate(island, "BS_PetalDrift", gardenFrame * CFrame.new(1, 0.02, 0.5), folder, 0.75)
+        drift.Name = "BS_PetalDrift_Garden"
+    end
+
+    folder.Parent = model
+    WorldBuilder.applyCollision(folder)
+    return #approach.Stones, #approach.Platforms, lamps
+end
+
+-- A fallback koi until the kit is stored: a body and a tail fin from Roblox's own shapes (no upload), in the variant's colours.
+local function fallbackKoi(name, colour, patch)
+    local fish = Instance.new("Model")
+    fish.Name = name
+    local body = Instance.new("Part")
+    body.Name = "Body"
+    body.Size = Vector3.new(0.9, 0.7, 3)
+    body.Color = colour
+    body.Material = Enum.Material.SmoothPlastic
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshType = Enum.MeshType.Sphere
+    mesh.Parent = body
+    local tail = Instance.new("WedgePart")
+    tail.Name = "Tail"
+    tail.Size = Vector3.new(0.12, 0.8, 0.9)
+    tail.Color = patch
+    tail.Material = Enum.Material.SmoothPlastic
+    tail.Transparency = 0.2
+    for _, part in { body, tail } do
+        part.Anchored = true
+        part.CanCollide = false
+        part.CanQuery = false
+        part.CanTouch = false
+        part.CastShadow = false
+        part.Parent = fish
+    end
+    body.CFrame = CFrame.new()
+    tail.CFrame = CFrame.new(0, 0, -1.75)
+    tail:SetAttribute("Hinge", Vector3.new(0, 0, -1.3))
+    return fish
+end
+
+local KOI = {
+    { Variant = "Kohaku", Fallback = { Color3.fromRGB(246, 243, 236), Color3.fromRGB(226, 82, 40) } },
+    { Variant = "Showa", Fallback = { Color3.fromRGB(32, 30, 32), Color3.fromRGB(226, 82, 40) } },
+    { Variant = "Ogon", Fallback = { Color3.fromRGB(240, 182, 72), Color3.fromRGB(250, 220, 160) } },
+}
+local KOI_PER_LOOP = { 3, 2, 2 }
+local KOI_HINGE = Vector3.new(0, 0.03, -0.85) -- pieces.json: where each tail joins its body
+
+-- The island's own pieces besides its kit: the Training Ground's sign, the checkpoint, and the pond's koi (each a model whose
+-- parts the client swims round Placements' loops: SanctuaryLife), their ripple template and the pond's sound spot.
+function WorldBuilder.buildSanctuary(island)
+    local placements = placementsFor(island)
+    local frame = islandFrame(island)
+    local model = WorldBuilder.islandFolder(island)
+    for _, name in { "TrainingGround", "Pond", "Checkpoint" } do
+        local old = model:FindFirstChild(name)
+        if old then
+            old:Destroy()
+        end
+    end
+    local station = GameConfig.TrainingStation
+    local ground = Instance.new("Folder")
+    ground.Name = "TrainingGround"
+    local rules = placements.TrainingGround
+    signPost("Sign", ground, frame:PointToWorldSpace(rules.Sign), "Training Ground", "Cultivate here: +" .. station.QiBonusPercent .. "% Qi",
+        Color3.fromRGB(255, 214, 230))
+    ground.Parent = model
+
+    local checkpoint = placements.Checkpoint
+    marker("Checkpoint", Vector3.new(4, 1, 4), frame * CFrame.new(checkpoint.Position) * CFrame.Angles(0, checkpoint.Yaw, 0), model)
+
+    local pond = Instance.new("Model")
+    pond.Name = "Pond"
+    pond.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- the koi arrive with the pond, whole
+    local centre = marker("PondCentre", Vector3.new(1, 1, 1), frame * CFrame.new(placements.Pond.Centre), pond)
+    pond.PrimaryPart = centre
+    local koiFolder = Instance.new("Folder")
+    koiFolder.Name = "Koi"
+    koiFolder.Parent = pond
+    local count = 0
+    for loopIndex, loop in placements.Pond.Koi do
+        for n = 1, KOI_PER_LOOP[loopIndex] or 1 do
+            count += 1
+            local kind = KOI[(count - 1) % #KOI + 1]
+            local name = "BS_Koi" .. kind.Variant
+            local fish
+            if hasTemplate(island, name) and hasTemplate(island, name .. "Tail") then
+                fish = Instance.new("Model")
+                fish.Name = name
+                for _, source in templates(island, name) do
+                    local part = source:Clone()
+                    part.Name = "Body_" .. (select(2, splitName(source.Name)) or "Part")
+                    part.CFrame = source.CFrame
+                    applyLook(part, source.Name)
+                    part.Parent = fish
+                end
+                for _, source in templates(island, name .. "Tail") do
+                    local part = source:Clone()
+                    part.Name = "Tail_" .. (select(2, splitName(source.Name)) or "Part")
+                    part.CFrame = source.CFrame
+                    part:SetAttribute("Hinge", KOI_HINGE)
+                    applyLook(part, source.Name)
+                    part.Parent = fish
+                end
+            else
+                fish = fallbackKoi(name, kind.Fallback[1], kind.Fallback[2])
+            end
+            for _, part in fish:GetDescendants() do
+                if part:IsA("BasePart") then
+                    part:SetAttribute("Rest", part.CFrame) -- its place in the fish's own frame (the fish's origin at the world's)
+                    part.Anchored = true
+                    part.CanCollide = false
+                    part.CanQuery = false
+                    part.CanTouch = false
+                    part.CastShadow = false
+                end
+            end
+            fish:SetAttribute("Loop", loopIndex)
+            fish:SetAttribute("Phase", (n - 1) / (KOI_PER_LOOP[loopIndex] or 1) + loopIndex * 0.13)
+            -- parked at its loop's first point until the client swims it
+            local start = frame:PointToWorldSpace(loop[1])
+            for _, part in fish:GetDescendants() do
+                if part:IsA("BasePart") then
+                    part.CFrame = CFrame.new(start) * part:GetAttribute("Rest")
+                end
+            end
+            fish.Parent = koiFolder
+        end
+    end
+    -- the swimming loops, in world space, for the client (Placements live in ServerStorage)
+    local loops = Instance.new("Folder")
+    loops.Name = "Loops"
+    loops.Parent = pond
+    for loopIndex, loop in placements.Pond.Koi do
+        local points = Instance.new("Configuration")
+        points.Name = "Loop" .. loopIndex
+        for k, point in loop do
+            points:SetAttribute("P" .. k, frame:PointToWorldSpace(point))
+        end
+        points:SetAttribute("Count", #loop)
+        points.Parent = loops
+    end
+    pond:SetAttribute("Water", frame.Position.Y + placements.Pond.Water)
+    model:SetAttribute("Centre", frame.Position)
+    model:SetAttribute("Reach", placements.Reach)
+    if hasTemplate(island, "BS_Ripple") then
+        local ripple = placeTemplate(island, "BS_Ripple", CFrame.new(centre.Position - Vector3.new(0, 30, 0)), pond)
+        ripple.Name = "RippleTemplate"
+        ripple.Transparency = 1
+    end
+    pond.Parent = model
+    return count
 end
 
 -- Seamless vertical streaks (assets/world/StartingIsland/waterfall_streaks.png).

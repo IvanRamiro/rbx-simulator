@@ -5,7 +5,8 @@
 -- to its checkpoint (on the hub: to their own pad). A player below a bridge's RankId
 -- (FloatingIslands.Bridges) who is past its Qi barrier, or on the island it leads to, is put back in
 -- front of the barrier. (Yggdrasil's named spawn slots went with the hub's rebuild of 2026-11-12;
--- their code was removed 2026-11-13.)
+-- their code was removed 2026-11-13.) On the stepping stones up to the Blossom Sanctuary (its Approach), a fall returns the
+-- player to the last platform they stood on (or the hub's end of the climb, or the island's landing), not to their pen.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -176,8 +177,57 @@ local function trespass(player, position)
     return nil
 end
 
+-- The Blossom Sanctuary's climb (WorldBuilder.buildApproach): a "Route" zone over every stone and platform, and a "Check" zone
+-- (its ReturnTo a CFrame on the ground) on the hub's verge where it starts, on each platform and on the island's landing.
+-- Standing in a Check remembers it; a player who last stood on the climb and drops ROUTE_FALL below where they stood goes back
+-- to it. Standing anywhere off the climb forgets it.
+local ROUTE_FALL = 25 -- (the climb's own drops are at most 4 studs)
+local routeParams = OverlapParams.new()
+routeParams.FilterType = Enum.RaycastFilterType.Include
+do
+    local zones = {}
+    for _, island in islandsFolder:GetChildren() do
+        local approach = island:FindFirstChild("Approach")
+        local folder = approach and approach:FindFirstChild("Zones")
+        for _, zone in folder and folder:GetChildren() or {} do
+            table.insert(zones, zone)
+        end
+    end
+    routeParams.FilterDescendantsInstances = zones
+end
+local onRoute = {} -- [player] = { standY = where they last stood on it, returnTo = the last Check's CFrame }
+
+-- True if the player fell off the climb and was put back.
+local function routeFall(player, character, rootPart, humanoid)
+    local state = onRoute[player]
+    if humanoid.FloorMaterial ~= Enum.Material.Air then
+        local zones = workspace:GetPartBoundsInRadius(rootPart.Position, 0.5, routeParams)
+        if #zones == 0 then
+            onRoute[player] = nil
+            return false
+        end
+        state = state or {}
+        state.standY = rootPart.Position.Y
+        for _, zone in zones do
+            local returnTo = zone.Name == "Check" and zone:GetAttribute("ReturnTo")
+            if typeof(returnTo) == "CFrame" then
+                state.returnTo = returnTo
+            end
+        end
+        onRoute[player] = state
+        return false
+    end
+    if state and state.returnTo and rootPart.Position.Y < state.standY - ROUTE_FALL and player:GetAttribute("IsFlying") ~= true then
+        standAt(player, character, state.returnTo)
+        state.standY = state.returnTo.Position.Y
+        return true
+    end
+    return false
+end
+
 Players.PlayerAdded:Connect(setupPlayer)
 Players.PlayerRemoving:Connect(function(player)
+    onRoute[player] = nil
     lastIsland[player] = nil
     lastBurn[player] = nil
     spawnedAt[player] = nil
@@ -200,6 +250,9 @@ while true do
                 MovementGuard.reset(player, blocked.ReturnTo)
                 character:PivotTo(CFrame.lookAt(blocked.ReturnTo, blocked.ReturnTo - (blocked.Model.Gate.QiBarrier.Position - blocked.ReturnTo) * Vector3.new(1, 0, 1)))
                 setIsland(player, WorldConfig.StartIsland)
+                continue
+            end
+            if routeFall(player, character, rootPart, humanoid) then
                 continue
             end
             if humanoid.FloorMaterial ~= Enum.Material.Air then

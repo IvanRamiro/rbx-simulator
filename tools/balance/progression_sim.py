@@ -14,12 +14,12 @@ PetRules, Bridges and EggStands, run with --root) against the game now (current)
 
 Every game number is read from the Luau files (luau_table.py parses them; nothing is copied by hand):
   src/shared/GameConfig.lua   ranks, realm multipliers, pets, eggs, passes, guardians, weapons, combat, Qinggong, stones,
-                              relics, quests, daily rewards, offline Qi, Spin Wheel, Codex, fusion, Tribulation, Qi Spring
+                              relics, quests, daily rewards, offline Qi, Spin Wheel, Codex, fusion, Tribulation, the Training Ground
   src/shared/PetRules.lua     hatch sizes (Qi and value per size)
   src/worldbuild/Placements/Bridges.lua   bridge paths (how far an egg is carried) and the rank each bridge opens at
 The formulas mirror the code, with the source named at each one:
-  meditation   QiService.awardCultivationQi: floor(10 * realmMult * passMult * (100 + pets% + codex% + spring%) / 100) per second
-  egg burst    QiReward.grantEggBurst / grantAtRate: 300 s at the cultivating rate, no Qi Spring, realm multiplier capped
+  meditation   QiService.awardCultivationQi: floor(10 * realmMult * passMult * (100 + pets% + codex% + Training Ground%) / 100) per second
+  egg burst    QiReward.grantEggBurst / grantAtRate: 300 s at the cultivating rate, no Training Ground bonus, realm multiplier capped
                at the egg's realm unless it is the best egg the player can take
   offline      RewardService.grantOffline: 0.2 of the time away (at most 8 h) at grantAtRate
   relic        DiscoveryService: QiReward * passMult (no realm multiplier, no pets)
@@ -246,7 +246,7 @@ PROFILES = [
     {"key": "whale", "label": "All passes (4x, VIP, Luck, +3 slots) + 4 h boost + 5 Exclusive Eggs", "style": "efficient",
      "tier": 4, "vip": True, "luck": True, "slots": True, "boost_minutes": 240, "exclusive": 5},
     {"key": "owns16", "label": "Owner of the retired 16x pass (counts as the cap)", "style": "efficient", "tier": 16},
-    {"key": "free_idle", "label": "Free, idle in the Qi Spring only", "style": "idle"},
+    {"key": "free_idle", "label": "Free, idle on the Training Ground only", "style": "idle"},
 ]
 
 # How each style plays (not in the code: estimates, see the module docstring).
@@ -279,6 +279,19 @@ BEHAVIOUR = {
 }
 NO_MARKET = False        # --no-market: nobody buys eggs for stones (the Marketplace's egg sales removed for the Auction House)
 SESSION_OVERHEAD = 120   # seconds per play session: joining, loading, walking out
+# --station: where the +50% cultivating bonus is (GameConfig.TrainingStation), for the trips to it and back. "none" is the
+# assumption before 2026-11-16 (meditating there costs no travel). Each stint of meditating there after a theft or a session's
+# start costs the trip from the Hatching Sanctum (where a theft ends, and about where a session starts: the pens), and the next
+# theft the trip back; nothing is earned on the way. Studs from the layouts (tools/blender/world/hub_ground.py,
+# blossom_layout.py), on foot at the rank's run speed, or by sword flight once it unlocks (straight over the sky).
+STATION = "none"
+STATIONS = {
+    # the Qi Spring, on the hub's south-west avenue (removed 2026-11-16): 301 studs from the Sanctum
+    "spring": {"walk": 301.4, "climb": 0.0, "fly": 301.4},
+    # the Blossom Sanctuary's Training Ground: 365 studs across the hub to the south-east avenue's verge, the climb (10.7 s by a
+    # bot at the first rank in Play, 2026-11-16; 14 s for a person), 115 studs from the landing to the lawn's kerb; flying, 690
+    "sanctuary": {"walk": 480.0, "climb": 14.0, "fly": 690.0},
+}
 PLAY_DAY_HOURS = 4       # in the play-hours runs, a day's boosts (bought and daily-reward ones) come every this many hours of play
 DAILY_HOURS = (2, 4, 8)
 
@@ -563,6 +576,7 @@ class Player:
 
     def steal(self, plan, gid):
         seconds, egg_id, slot = plan[0], plan[1], plan[2]
+        self.travel(False)
         self.t += seconds
         self.theft_seconds += seconds
         if self.rng.random() < self.b["fail"]:
@@ -654,7 +668,25 @@ class Player:
             self.relics()
             self.refresh()
 
+    def station_trip(self):
+        """Seconds from the Hatching Sanctum to the cultivating bonus (or back), at this rank (STATION)."""
+        if STATION == "none":
+            return 0.0
+        where = STATIONS[STATION]
+        q = self.R.qinggong_at(self.idx)
+        fly = q["FlightSpeed"] if self.idx >= self.R.flight_rank else 0
+        return where["fly"] / fly if fly else where["walk"] / q["RunSpeed"] + where["climb"]
+
+    def travel(self, arriving):
+        trip = self.station_trip()
+        if trip > 0 and getattr(self, "at_station", False) != arriving:
+            self.t += trip
+            self.travel_seconds = getattr(self, "travel_seconds", 0.0) + trip
+        self.at_station = arriving
+
     def meditate(self, seconds, spring=True):
+        if spring:
+            self.travel(True)
         self.qi += self.meditate_rate(spring) * int(seconds)
         self.t += seconds
         self.med_seconds = getattr(self, "med_seconds", 0.0) + seconds
@@ -731,6 +763,7 @@ class Player:
             elif seg["Kind"] == "Jackpot":
                 self.hatch("ExclusiveEgg", luck_applies=False)
         self.t += SESSION_OVERHEAD
+        self.at_station = False   # each session starts at the player's pen
         self.refresh()
 
     def day_boosts(self, day):
@@ -914,11 +947,14 @@ def main():
     parser.add_argument("--stands", choices=["own", "code"], help="the proposal's stand rule (default PROPOSAL's)")
     parser.add_argument("--compare", nargs=2, metavar=("BEFORE", "AFTER"),
                         help="only write output/compare.md from two earlier runs' .csv files (e.g. before_2026-11-16 current)")
+    parser.add_argument("--station", choices=sorted(["none"] + list(STATIONS)), default="none",
+                        help="where the cultivating bonus is, for the trips to it (see STATIONS); none: no trips (the old assumption)")
     parser.add_argument("--no-market", action="store_true",
                         help="no fixed-price eggs for stones (the Market became the Auction House, 2026-11-16)")
     args = parser.parse_args()
-    global NO_MARKET
+    global NO_MARKET, STATION
     NO_MARKET = args.no_market
+    STATION = args.station
     if args.compare:
         write_compare(*args.compare)
         return

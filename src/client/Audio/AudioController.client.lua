@@ -13,10 +13,12 @@ local Sfx = require(script.Parent:WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
 
-local AMBIENCE = { Yggdrasil = "AmbYggdrasil", BeginnerIsle = "AmbYggdrasil", JadeGrove = "AmbJade", EmberPeak = "AmbEmber", MoonlitIsle = "AmbMoon", OriginAbyss = "AmbAbyss" }
+local AMBIENCE = { Yggdrasil = "AmbYggdrasil", BeginnerIsle = "AmbYggdrasil", JadeGrove = "AmbJade", EmberPeak = "AmbEmber", MoonlitIsle = "AmbMoon", OriginAbyss = "AmbAbyss",
+    BlossomSanctuary = "AmbSanctuary" } -- (the sanctuary's pond and koi splashes: SanctuaryLife)
 local BIRDS = { AmbYggdrasil = true } -- a daytime bed: night insects after dark, nothing under the rain
 local NIGHT_BED = "AmbMoon"
-local MUSIC = { Yggdrasil = "MusicHub", BeginnerIsle = "MusicHub", JadeGrove = "MusicJade", EmberPeak = "MusicEmber", MoonlitIsle = "MusicMoon", OriginAbyss = "MusicAbyss" }
+local MUSIC = { Yggdrasil = "MusicHub", BeginnerIsle = "MusicHub", JadeGrove = "MusicJade", EmberPeak = "MusicEmber", MoonlitIsle = "MusicMoon", OriginAbyss = "MusicAbyss",
+    BlossomSanctuary = "MusicHub" }
 local AWAKE = { Guardian = true, Weakened = true, Enraged = true }
 local BATTLE_DISTANCE = 150    -- studs from an awake guardian at which the battle theme takes over
 local CROSSFADE = 2.5          -- seconds

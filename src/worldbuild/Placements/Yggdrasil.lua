@@ -100,9 +100,6 @@ return {
             { Position = Vector3.new(60.00, 0.00, -103.92), Yaw = 2.6180 },
             { Position = Vector3.new(120.00, 0.00, 0.00), Yaw = 1.5708 },
         },
-        HB_SpringPlinth = {
-            { Position = Vector3.new(-147.20, 0.25, 85.00), Yaw = 2.0945 },
-        },
         HB_SquareCompass = {
             { Position = Vector3.new(226.50, 0.00, -110.50), Yaw = 0.0000 },
         },
@@ -184,8 +181,9 @@ return {
     Leaderboard = { Centre = Vector3.new(0.00, 0.00, 118.00), Yaw = 0.0000 },
     -- the Wandering Merchant's camp (MerchantService), on his dais (HB_MerchantDais, top 0.70 over the ground), facing the bridges
     Merchant = { Centre = Vector3.new(0.00, 0.70, -120.00), Yaw = 3.1416 },
-    -- the Qi Spring (hub_celestial.qi_spring) on its new plinth, facing the tree; no channel or waterfall since the redesign
-    QiSpring = { Centre = Vector3.new(-147.20, 0.25, 85.00), Yaw = 2.0945 },
+    -- the garden court at the end of the south-west avenue (the Qi Spring's until 2026-11-16): one blossom tree, from the
+    -- Blossom Sanctuary's kit (WorldBuilder.buildApproach places it), facing the tree
+    Garden = { Centre = Vector3.new(-147.20, 0.00, 85.00), Yaw = 2.0945 },
     -- the Spin Wheel (SpinWheelBuilder): its plinth's middle on the ground, outside the Ring Road east, facing the tree
     SpinWheel = { Centre = Vector3.new(253.70, -0.12, -14.60), Yaw = -1.5133 },
     Relics = { IslandRoot = Vector3.new(88.50, -82.00, 153.29) },
