@@ -710,7 +710,7 @@ local GameConfig = {
     },
 
     -- each player's own view and sound (server/Data/Settings, client/UI/SettingsController)
-    Settings = { Music = 1, Sound = 1, ReducedEffects = false, StatusMinimized = false, ShowQuest = true, TutorialDone = false },
+    Settings = { Music = 1, Sound = 1, ReducedEffects = false, StatusMinimized = false, ShowQuest = true, TutorialDone = false, MenuHidden = false },
 
     MaxOwnedPets = 50,
 

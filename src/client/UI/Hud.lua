@@ -1,7 +1,8 @@
 -- The HUD's regions, laid out from the owner's reference (2026-11-04). Every controller puts its pieces
 -- into a region, in its LayoutOrder, instead of placing them by pixel, so they line up and never overlap:
 --   Status    top left, one column: the player's profile, then the Rail
---   Rail      the menu down the left: Shop, Pets, Codex, Robes, Quests, Titles, Settings (on a phone, icons in a row under the profile)
+--   Rail      the menu down the left: Shop, Pets, Codex, Robes, Quests, Titles, Settings (on a phone, icons in a row under the profile),
+--             under its MENU toggle, which slides it away and back (M, a gamepad's d-pad left; saved in the player's settings)
 --   Currency  top centre, in the row beside Roblox's own buttons: Qi, Spirit Stones, Relics, sharing one slim strip
 --   TopRight  top right, in that row: small round buttons (Rewards)
 --   Quest     right, under them: the current quest (QuestController), the air leaps under it (QinggongController)
@@ -14,6 +15,7 @@
 local GuiService = game:GetService("GuiService")
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -411,14 +413,27 @@ Hud.Currency = region("Currency", Vector2.new(0.5, 0.5), UDim2.new(0.5, 0, 0, 0)
 Hud.TopRight = region("TopRight", Vector2.new(1, 0.5), UDim2.new(1, -M, 0, 0), Enum.FillDirection.Horizontal,
     Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center, 8, topGui)
 
--- The menu down the left, under the profile
+-- The menu down the left, under the profile: its toggle (Hud's "the menu's toggle", below), then the Rail in a holder it slides
+-- out of. On a big screen the toggle is a bar over the tiles; on a phone, a tile at the start of their row.
+local menu = Instance.new("Frame")
+menu.Name = "Menu"
+menu.BackgroundTransparency = 1
+menu.AutomaticSize = Enum.AutomaticSize.XY
+menu.Size = UDim2.new()
+menu.LayoutOrder = 20
+menu.Parent = Hud.Status
+local menuList = UiKit.list(menu, { Padding = UDim.new(0, 8) })
+local railHolder = Instance.new("Frame") -- sized to the Rail (placeRail): the Rail slides off the screen's edge inside it
+railHolder.Name = "RailHolder"
+railHolder.BackgroundTransparency = 1
+railHolder.LayoutOrder = 2
+railHolder.Parent = menu
 local rail = Instance.new("Frame")
 rail.Name = "Rail"
 rail.BackgroundTransparency = 1
 rail.AutomaticSize = Enum.AutomaticSize.XY
 rail.Size = UDim2.new()
-rail.LayoutOrder = 20
-rail.Parent = Hud.Status
+rail.Parent = railHolder
 -- square tiles, two to a row (the owner, 2026-11-13: "Cultivation Bold", the top games' icon tiles in our colours)
 local railGrid = Instance.new("UIGridLayout")
 railGrid.SortOrder = Enum.SortOrder.LayoutOrder
@@ -552,6 +567,8 @@ local function layoutRail(isCompact)
     end
 end
 Hud.CompactChanged:Connect(layoutRail)
+local placeMenu -- (the menu's toggle, below: it follows the Rail's layout)
+local watchBadge -- (and every tile's badge, for its dot)
 
 -- The three counters share one slim strip, side by side
 local strip = UiKit.panel({ -- (bold, the owner 2026-11-13: bigger icons and numbers, outlined, as the top games show their money)
@@ -654,7 +671,14 @@ function Hud.railButton(name, image, word, order, opts)
     })
     UiKit.outline(label, 1.5)
     layoutRail(compact == true)
-    return button, addBadge(button)
+    local setBadge = addBadge(button)
+    if watchBadge then
+        watchBadge(button)
+    end
+    if placeMenu then
+        placeMenu()
+    end
+    return button, setBadge
 end
 
 -- A small round button in the top row, with the same badge.
@@ -1086,7 +1110,7 @@ pillWaiting.Parent = Hud.Dock
 -- whether a column of `height` and `width` (the HUD's units) over the bar would reach into the menu's row, on the screen as it is
 local function columnMeetsRail(height, width)
     local rail, room = Hud.Rail, Hud.Dock.Parent
-    if not (Hud.Status.Visible and rail.AbsoluteSize.Y > 1 and room:IsA("GuiBase2d")) then
+    if not (Hud.Status.Visible and rail.Parent.Visible and rail.AbsoluteSize.Y > 1 and room:IsA("GuiBase2d")) then
         return false
     end
     local scale = HudMetrics.scale()
@@ -1253,6 +1277,246 @@ local RIGHT_COLUMN = { [true] = 236, [false] = 280 }
 function Hud.rightColumnWidth()
     return RIGHT_COLUMN[compact == true]
 end
+
+-- ---------- the menu's toggle ----------
+-- The owner, 2026-11-16: "Toggleable UI for all the Icons in the left side". The toggle slides every tile of the menu off the
+-- screen's left edge and back: on a big screen it is a slim MENU bar over the tiles (its key, M, hinted at its right end), on a
+-- phone a tile at the start of their row (a thumb's 45 px, as theirs). Its chevron points the way the tiles will go. While they
+-- are away, a dot on the toggle says one of them has a badge (a new pet, a reward to claim ...), and it jumps when one arrives.
+-- M, or a gamepad's d-pad left, does the same. The choice is the player's setting MenuHidden (server/Data/Settings): kept for the
+-- session and the next. While the tiles are away the menu takes no room: the top centre, the inventory bar's lines and the
+-- notifications keep clear of the toggle alone.
+local MENU_BAR = 34 -- the bar's height on a big screen (43.5 px on an iPad, at its 1.28: a thumb's)
+local MENU_KEYS = { [Enum.KeyCode.M] = true, [Enum.KeyCode.DPadLeft] = true }
+local SLIDE_OUT = TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+local SLIDE_IN = TweenInfo.new(0.34, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local localPlayer = Players.LocalPlayer
+local menuToggle = UiKit.button({
+    Name = "MenuToggle", Text = "", Tone = "Tile", LayoutOrder = 1, ZIndex = 3, Size = UDim2.fromOffset(2 * RAIL_TILE + 8, MENU_BAR),
+    Parent = menu,
+})
+menuToggle:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, UiTheme.Radius.Card)
+menuToggle:SetAttribute("EdgeThickness", UiTheme.Stroke.Button)
+-- the chevron: two bars meeting in a point ("<" while the tiles show), in an unturned frame it turns round
+local chevron = Instance.new("Frame")
+chevron.Name = "Chevron"
+chevron.BackgroundTransparency = 1
+chevron.AnchorPoint = Vector2.new(0.5, 0.5)
+chevron.Size = UDim2.fromOffset(16, 16)
+chevron.ZIndex = 4
+chevron.Parent = menuToggle
+local chevronScale = Instance.new("UIScale")
+chevronScale.Parent = chevron
+for _, arm in { { -3.5, -45 }, { 3.5, 45 } } do
+    local bar = Instance.new("Frame")
+    bar.Name = "Arm"
+    bar.BorderSizePixel = 0
+    bar.BackgroundColor3 = UiTheme.Colors.Highlight
+    bar.AnchorPoint = Vector2.new(0.5, 0.5)
+    bar.Position = UDim2.new(0.5, 0, 0.5, arm[1])
+    bar.Size = UDim2.fromOffset(11, 3.5)
+    bar.Rotation = arm[2]
+    bar.ZIndex = 4
+    bar.Parent = chevron
+    UiKit.corner(bar, 2)
+end
+local menuWord = UiKit.label({
+    Name = "Word", Font = "Heavy", Text = "MENU", TextSize = 12, TextColor3 = UiTheme.Colors.Text, AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -64, 1, 0), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4,
+    Parent = menuToggle,
+})
+UiKit.outline(menuWord, 1.5)
+local menuKey = UiKit.keycapOn(menuToggle, "M")
+menuKey.ZIndex = 4
+-- the dot: where the tiles' badges sit (BADGE_OUT), in the badges' own colours
+local dot = Instance.new("Frame")
+dot.Name = "BadgeDot"
+dot.BorderSizePixel = 0
+dot.AnchorPoint = Vector2.new(1, 0)
+dot.Position = UDim2.new(1, BADGE_OUT.X, 0, -BADGE_OUT.Y)
+dot.Size = UDim2.fromOffset(16, 16)
+dot.BackgroundColor3 = UiTheme.Colors.Accent
+dot.Visible = false
+dot.ZIndex = 5
+dot.Parent = menuToggle
+UiKit.corner(dot, 8)
+UiKit.stroke(dot, UiTheme.Colors.Outline, 0.2, 1.5)
+local dotScale = Instance.new("UIScale")
+dotScale.Parent = dot
+
+local menuHidden = false
+local menuTween = nil
+
+-- the tiles' size, in the HUD's units, as layoutRail lays them out
+local function railSize()
+    local count = 0
+    for _, button in rail:GetChildren() do
+        if button:IsA("GuiButton") and button.Visible then
+            count += 1
+        end
+    end
+    local gap = railGrid.CellPadding.X.Offset
+    if count == 0 then
+        return Vector2.zero
+    elseif compact then
+        return Vector2.new(count * PHONE_TILE + (count - 1) * gap, PHONE_TILE)
+    end
+    local rows, columns = math.ceil(count / 2), math.min(count, 2)
+    return Vector2.new(columns * RAIL_TILE + (columns - 1) * gap, rows * RAIL_TILE + (rows - 1) * gap)
+end
+-- how far left the tiles go to be off the screen (generous: past the toggle and the screen's margin too)
+local function awayOffset()
+    return UDim2.fromOffset(-(railSize().X + PHONE_TILE + 2 * M + 24), 0)
+end
+
+function placeMenu()
+    local size = railSize()
+    railHolder.Size = UDim2.fromOffset(size.X, size.Y)
+    if compact then -- a tile at the start of the row: the chevron alone, larger
+        menuList.FillDirection = Enum.FillDirection.Horizontal
+        menuToggle.Size = UDim2.fromOffset(PHONE_TILE, PHONE_TILE)
+        chevron.Position = UDim2.fromScale(0.5, 0.5)
+        chevronScale.Scale = 1.4
+        menuWord.Visible = false
+        menuKey.Parent = nil
+    else -- a bar over the tiles, as wide as their two columns: the chevron, MENU, and the key
+        menuList.FillDirection = Enum.FillDirection.Vertical
+        menuToggle.Size = UDim2.fromOffset(2 * RAIL_TILE + railGrid.CellPadding.X.Offset, MENU_BAR)
+        chevron.Position = UDim2.new(0, 18, 0.5, 0)
+        chevronScale.Scale = 1
+        menuWord.Visible = true
+        menuKey.Parent = menuToggle
+    end
+    if menuHidden and not menuTween then
+        rail.Position = awayOffset()
+    end
+end
+Hud.CompactChanged:Connect(function()
+    task.defer(placeMenu)
+end)
+-- (and follows the tiles: a controller may show its tile a while after making it)
+rail:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+    task.defer(placeMenu)
+end)
+
+-- the dot shows while the tiles are away and one of them has a badge; it jumps when a badge arrives or changes
+local function refreshDot(arrived)
+    local any, color = false, UiTheme.Colors.Accent
+    for _, button in rail:GetChildren() do
+        local badge = button:IsA("GuiButton") and button.Visible and button:FindFirstChild("Badge")
+        if badge and badge.Visible then
+            any = true
+            if badge.BackgroundColor3 == UiTheme.Colors.Highlight then
+                color = UiTheme.Colors.Highlight
+            end
+        end
+    end
+    local show = menuHidden and any
+    dot.BackgroundColor3 = color
+    if show and (arrived or not dot.Visible) then
+        dotScale.Scale = 1.7
+        UiFx.tween(dotScale, 0.36, { Scale = 1 }, Enum.EasingStyle.Back)
+    end
+    dot.Visible = show
+end
+function watchBadge(button)
+    local badge = button:FindFirstChild("Badge")
+    if not badge then
+        return
+    end
+    badge:GetPropertyChangedSignal("Visible"):Connect(function()
+        refreshDot(badge.Visible)
+    end)
+    badge:GetPropertyChangedSignal("Text"):Connect(function()
+        refreshDot(badge.Visible)
+    end)
+    badge:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
+        refreshDot(false)
+    end)
+end
+for _, button in rail:GetChildren() do -- (any made before this ran)
+    if button:IsA("GuiButton") then
+        watchBadge(button)
+    end
+end
+
+-- shows or hides the tiles: sliding (animate) or at once (the saved choice arriving as the game starts)
+local function setMenuHidden(hidden, animate)
+    if hidden == menuHidden and animate then
+        return
+    end
+    menuHidden = hidden
+    if menuTween then
+        menuTween:Cancel()
+        menuTween = nil
+    end
+    UiFx.tween(chevron, if animate then 0.28 else 0, { Rotation = if hidden then 180 else 0 }, Enum.EasingStyle.Quad)
+    menuToggle:SetAttribute("Hidden", hidden)
+    if hidden then
+        local away = awayOffset()
+        if animate and railHolder.Visible then
+            menuTween = TweenService:Create(rail, SLIDE_OUT, { Position = away })
+            menuTween.Completed:Connect(function(state)
+                if state == Enum.PlaybackState.Completed and menuHidden then
+                    railHolder.Visible = false
+                    menuTween = nil
+                end
+            end)
+            menuTween:Play()
+        else
+            rail.Position = away
+            railHolder.Visible = false
+        end
+    else
+        railHolder.Visible = true
+        if animate then
+            menuTween = TweenService:Create(rail, SLIDE_IN, { Position = UDim2.new() })
+            menuTween.Completed:Connect(function(state)
+                if state == Enum.PlaybackState.Completed then
+                    menuTween = nil
+                end
+            end)
+            menuTween:Play()
+        else
+            rail.Position = UDim2.new()
+        end
+    end
+    refreshDot(false)
+end
+
+local function toggleMenu()
+    local hidden = not menuHidden
+    setMenuHidden(hidden, true)
+    Sfx.play(if hidden then "Close" else "Open")
+    -- the attribute at once (it answers without waiting for the server's copy), and saved with the player's settings
+    localPlayer:SetAttribute("SettingMenuHidden", hidden)
+    -- (required here, not at the top: the HUD is built before the server's remotes exist, and must not wait for them)
+    local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
+    RemoteEvents.SettingsEvent:FireServer("MenuHidden", hidden)
+end
+Hud.toggleMenu = toggleMenu
+function Hud.isMenuHidden()
+    return menuHidden
+end
+
+menuToggle.Activated:Connect(toggleMenu)
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed or not MENU_KEYS[input.KeyCode] then
+        return
+    end
+    -- (the d-pad moves a gamepad's selection while one is on a button: it is the menu's key only when nothing is selected)
+    if input.KeyCode == Enum.KeyCode.DPadLeft and GuiService.SelectedObject ~= nil then
+        return
+    end
+    toggleMenu()
+end)
+local menuStarted = os.clock()
+localPlayer:GetAttributeChangedSignal("SettingMenuHidden"):Connect(function()
+    -- (the saved choice arrives a moment after joining, while the HUD is still arriving: it takes its place without a slide)
+    setMenuHidden(localPlayer:GetAttribute("SettingMenuHidden") == true, os.clock() - menuStarted > 3)
+end)
+placeMenu()
+setMenuHidden(localPlayer:GetAttribute("SettingMenuHidden") == true, false)
 
 -- ---------- the first moment ----------
 -- The HUD arrives from the screen's edges, once, instead of being there already.
