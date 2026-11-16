@@ -1819,12 +1819,20 @@ def match_feathers(o, plumes):
     """Which feather each vertex belongs to (its sheet's centre against each feather's own middle) and how far along it."""
     P = verts(o)
     gid = islands_of(o)
-    mids = np.array([tuple(Vector(p.point(0.5, 0.5))) for p in plumes])
+    # each feather's whole centre line, not only its middle: matched by its middle alone, the two long central tail feathers (side by side, one
+    # longer) went to the same chain, and TailA1-3 carried no weight (the importer then dropped them)
+    lines = []
+    for p in plumes:
+        if isinstance(p, LongFeather):
+            lines.append([along(p.path, k / 12) for k in range(13)])
+        else:
+            lines.append([Vector(p.point(k / 8, 0.5)) for k in range(9)])
     owner = np.zeros(len(P), dtype=int)
     for g in np.unique(gid):
-        sel = gid == g
-        c = P[sel].mean(0)
-        owner[sel] = int(np.argmin(np.linalg.norm(mids - c, axis=1)))
+        idx = np.where(gid == g)[0]
+        pick = P[idx[:: max(1, len(idx) // 24)]]
+        cost = [float(nearest_on(line, pick)[1].mean()) for line in lines]
+        owner[idx] = int(np.argmin(cost))
     u = np.zeros(len(P))
     for k, p in enumerate(plumes):
         sel = owner == k

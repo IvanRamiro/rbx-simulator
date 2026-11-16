@@ -48,7 +48,7 @@ PetModels.Pets = {
     JadeAntlerDeer = { Scale = 1.05, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
     MagmaCub = { Scale = 0.95, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
     SunscaleDragon = { Scale = 1, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
-    DawnPhoenix = { Scale = 1.15, Parts = {} }, -- its imported model; its old procedural design removed (MESH_LOOKS was tuned with this scale)
+    DawnPhoenix = { Scale = 1.15, Parts = {} }, -- remade 2026-11-16 (skinned, from Blender): only its imported model (MESH_LOOKS was tuned with this scale)
 }
 
 -- every other pet: its imported model at its rarity's scale (every pet has its own model since 2026-11-12: the placeholder
@@ -182,7 +182,7 @@ local MESH_LOOKS = {
     PrismArmadillo = { Glow = Color3.fromRGB(190, 150, 255), Length = 4.0 },
     CrystalSnail = { Glow = Color3.fromRGB(110, 230, 200), Length = 3.2 },
     GoldenManeLion = { Glow = Color3.fromRGB(255, 180, 60), Length = 4.4 },
-    DawnPhoenix = { Glow = Color3.fromRGB(255, 170, 70), Length = 4.6, SkinnedLength = 3.2 }, -- the remade phoenix (skinned, 2026-11-16): its wingspan is its longest side, about 7.4 studs; about 5.3 tall
+    DawnPhoenix = { Glow = Color3.fromRGB(255, 170, 70), Length = 3.2 }, -- its wingspan (its longest side): about 7.4 studs, 5.4 tall beside its 5-stud owner (remade 2026-11-16, measured in Play)
     AquaWisp = { Glow = Color3.fromRGB(60, 196, 232), Length = 1.8 }, -- crown to tail (its longest, upright): about 3.4 studs, a small starter beside its owner
     EmberWyrm = { Glow = Color3.fromRGB(255, 122, 30), Length = 2.4 }, -- nose to campfire (its longest): about 5 studs long and 1.5 tall, a small salamander at its owner's feet
     LunarHopper = { Glow = Color3.fromRGB(143, 188, 255), Length = 1.85 }, -- feet to ear crowns (its longest, sat up): about 3.7 studs, a little moon rabbit at its owner's feet; its old star sparkles removed
@@ -222,13 +222,11 @@ local function addImported(model, rootPart, template, design, petId, factor)
     -- (the size factor goes into k, so the rig's unit and metres, and with them its pose offsets, sole, glows, points, effects and
     -- special, all scale together and keep the pet's proportions)
     local k = design.Scale * PetModels.SIZE * factor
-    -- (a pet remade as a skinned model carries its new length beside the old model's until the new mesh is imported: PetRig.profileFor)
-    local length = if look.SkinnedLength and template:FindFirstChildWhichIsA("Bone", true) then look.SkinnedLength else look.Length
-    local scale = (length or longest) * k / longest
+    local scale = (look.Length or longest) * k / longest
 
     if PetRig.isRigged(petId, template) then
-        if PetRig.profileFor(petId, template).Skinned then
-            keep(model, PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, (length or longest) * k))
+        if PetRig.Profiles[petId].Skinned then
+            keep(model, PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, (look.Length or longest) * k))
             return
         end
         local function place(piece)

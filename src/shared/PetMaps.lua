@@ -26,7 +26,7 @@ return {
     },
     CrystalBeetle = "rbxassetid://116113641028026",
     CrystalSnail = "rbxassetid://119626589372847",
-    DawnPhoenix = "rbxassetid://125937144749128",
+    DawnPhoenix = "rbxassetid://128675442523260", -- the remade phoenix (2026-11-16)
     DreadfangCerberus = "rbxassetid://90383585387525",
     DreamMoth = "rbxassetid://116224404517599",
     EchoBat = "rbxassetid://102294631497654",

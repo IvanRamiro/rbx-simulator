@@ -217,38 +217,6 @@ do
         end
     end
 end
-local animatePhoenix -- animatePhoenix's section below (its own locals stay in its block)
-do
-
-    function animatePhoenix(rig, s, moving, fly, nova)
-        local m, u, t = rig.motors, rig.unit, s.time
-        s.stride = (s.stride or 0) + rig.deltaTime * (1.5 + 5 * moving)
-        s.flap = (s.flap or 0) + rig.deltaTime * (1.2 + 6 * fly)
-        local breathe = math.sin(t * 1.0)
-        local beat = math.sin(s.flap)
-        local flare = math.sin(math.min(nova * 1.3, 1) * math.pi / 2)
-
-        pose(m.Body, CFrame.new(0, (0.02 * breathe + 0.06 * math.sin(s.flap) * fly + 0.12 * flare) * u, 0)
-            * CFrame.Angles(0.03 * breathe + 0.35 * fly - 0.12 * flare, 0, 0.04 * math.sin(s.stride) * moving))
-        pose(m.Neck, CFrame.Angles(0.05 * math.sin(t * 0.7) - 0.25 * fly - 0.15 * flare, 0.12 * math.sin(t * 0.33) * (1 - fly), 0))
-        pose(m.Head, CFrame.Angles(0.05 * math.sin(t * 0.9 + 1) - 0.1 * fly - 0.2 * flare, 0.3 * math.sin(t * 0.4) * (1 - fly) * (1 - flare), 0.08 * math.sin(t * 0.55)))
-
-        for _, side in { "L", "R" } do
-            local sign = rig.sides["Wing" .. side] or 0
-            local idle = 0.06 * math.sin(t * 1.1 + (if side == "L" then 0 else 0.4))
-            local stroke = (0.55 * beat - 0.1) * fly
-            pose(m["Wing" .. side], CFrame.Angles(0, sign * (0.08 * breathe * (1 - fly) - 0.2 * flare), sign * (idle + stroke + 0.35 * flare)))
-            pose(m["Wing" .. side .. "2"], CFrame.Angles(0, sign * 0.12 * math.max(0, -beat) * fly, sign * (0.04 * math.sin(t * 1.1 + 0.6) + 0.3 * math.max(0, beat) * fly + 0.2 * flare)))
-            local leg = m["Leg" .. side]
-            if leg then
-                local swing = 0.35 * math.sin(s.stride + (if side == "L" then 0 else math.pi)) * moving
-                pose(leg, CFrame.Angles(swing + 0.9 * fly, 0, 0))
-            end
-        end
-
-        pose(m.Tail, CFrame.Angles(0.06 * math.sin(t * 0.8) - 0.3 * fly + 0.2 * flare, 0.14 * math.sin(t * 0.6), 0.05 * math.sin(t * 1.3)))
-    end
-end
 local animateSphinx -- animateSphinx's section below (its own locals stay in its block)
 do
 
@@ -5627,48 +5595,6 @@ PetRig.Profiles.JadeAntlerDeer = {
     Animate = animateDeer,
 }
 
-PetRig.Profiles.DawnPhoenix = {
-    Joints = {
-        Body = "Root",
-        Neck = "Body",
-        Head = "Neck",
-        WingL = "Body",
-        WingR = "Body",
-        WingL2 = "WingL",
-        WingR2 = "WingR",
-        Tail = "Body",
-        LegL = "Body",
-        LegR = "Body",
-    },
-    SeeThroughGlow = { ffe195 = 0.25 },
-    GlowColors = {
-        ffe195 = Color3.fromRGB(255, 170, 40),
-        ffedb3 = Color3.fromRGB(255, 190, 60),
-        ffe595 = Color3.fromRGB(255, 185, 50),
-        ffad30 = Color3.fromRGB(255, 130, 10),
-        ff8927 = Color3.fromRGB(255, 90, 0),
-        ffbc59 = Color3.fromRGB(255, 140, 25),
-    },
-    Effects = {
-        Motes = "Body",
-        Light = "Body",
-        Pulse = "Body",
-        Burst = "Body",
-        Sparks = { "Tail_TipA", "Tail_TipB", "Tail_TipC" },
-        Trail = { "WingL2_Tip", "WingR2_Tip" },
-        Blast = "SunriseRebirth",
-        NovaLight = 3,
-    },
-    Colors = {
-        Gold = Color3.fromRGB(255, 190, 70),
-        Amber = Color3.fromRGB(150, 30, 25),
-        Orange = Color3.fromRGB(255, 120, 40),
-        Sun = Color3.fromRGB(255, 235, 170),
-        Ivory = Color3.fromRGB(255, 245, 225),
-    },
-    Animate = animatePhoenix,
-}
-
 PetRig.Profiles.RuneSphinx = {
     Joints = {
         Body = "Root",
@@ -6661,19 +6587,8 @@ PetRig.Profiles.GalaxyManta = {
     Animate = animateGalaxyManta,
 }
 
--- A pet remade as a skinned model keeps its old jointed profile until its new mesh is imported into the place: its SkinnedProfiles entry takes
--- over the moment the stored template has bones (the Dawn Phoenix, 2026-11-16), so the live pet never breaks in between.
-PetRig.SkinnedProfiles = {}
-function PetRig.profileFor(petId, template)
-    local skinned = PetRig.SkinnedProfiles[petId]
-    if skinned and template and template:FindFirstChildWhichIsA("Bone", true) then
-        return skinned
-    end
-    return PetRig.Profiles[petId]
-end
-
 function PetRig.isRigged(petId, template)
-    local profile = PetRig.profileFor(petId, template)
+    local profile = PetRig.Profiles[petId]
     if not profile then
         return false
     end
@@ -6938,7 +6853,7 @@ end
 -- pose a jointed pet: a pose in the pet's axes, turned into the bone's own (a bone may rest at any angle): rest:Inverse() * pose * rest.
 -- rig.unit keeps effects the size they are on other pets; rig.meters is studs per metre as built, what its own poses are written in.
 function PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, length)
-    local profile = PetRig.profileFor(petId, template)
+    local profile = PetRig.Profiles[petId]
     local prefix = petId .. "_"
     local rig = {
         petId = petId,
@@ -7046,7 +6961,9 @@ function PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, leng
                 end,
             })
         else
-            warn("PetRig: " .. petId .. " has no bone " .. name)
+            if not (profile.OptionalBones and profile.OptionalBones[name]) then
+                warn("PetRig: " .. petId .. " has no bone " .. name)
+            end
             rig.motors[name] = {} -- poses of a missing bone land nowhere
         end
     end
@@ -7374,66 +7291,6 @@ function Blasts.SacredGrove(rig, fx)
     TweenService:Create(light, TweenInfo.new(1.1), { Brightness = 0 }):Play()
     if rig.burst then
         rig.burst:Emit(30)
-    end
-end
-
-function Blasts.SunriseRebirth(rig, fx)
-    local colors, u, origin, neon = rig.profile.Colors, rig.unit, fx.origin, fx.neon
-    local centre = origin + Vector3.new(0, 0.5 * u, 0)
-    local ground = origin - Vector3.new(0, 1.1 * u, 0)
-
-    local sun = neon(Vector3.one * 0.3 * u, CFrame.new(centre), colors.Sun)
-    sun.Shape = Enum.PartType.Ball
-    sun.Transparency = 0.35
-    TweenService:Create(sun, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Size = Vector3.one * 3.4 * u,
-        Transparency = 1,
-    }):Play()
-
-    for index = 1, 14 do
-        local direction = Vector3.new(math.random() - 0.5, math.random() * 0.8 - 0.15, math.random() - 0.5).Unit
-        local ray = neon(Vector3.new(0.06 * u, 0.06 * u, 0.2 * u), CFrame.lookAt(centre, centre + direction), if index % 2 == 0 then colors.Gold else colors.Sun)
-        ray.Transparency = 0.15
-        local length = (2.2 + math.random() * 1.2) * u
-        TweenService:Create(ray, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = Vector3.new(0.03 * u, 0.03 * u, length),
-            CFrame = CFrame.lookAt(centre, centre + direction) * CFrame.new(0, 0, -length / 2),
-            Transparency = 1,
-        }):Play()
-    end
-
-    local ring = neon(Vector3.new(0.1 * u, 1.2 * u, 1.2 * u), CFrame.new(ground) * CFrame.Angles(0, 0, math.pi / 2), colors.Orange)
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Transparency = 0.3
-    TweenService:Create(ring, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Size = Vector3.new(0.04 * u, 8 * u, 8 * u),
-        Transparency = 1,
-    }):Play()
-
-    for index = 1, 14 do
-        local angle = index / 14 * 2 * math.pi
-        local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
-        local start = centre + out * 0.4 * u
-        local plume = neon(Vector3.new(0.08, 0.02, 0.32) * u, CFrame.lookAt(start, start + out), if index % 3 == 0 then colors.Sun elseif index % 3 == 1 then colors.Gold else colors.Orange)
-        local mesh = Instance.new("SpecialMesh")
-        mesh.MeshType = Enum.MeshType.Sphere
-        mesh.Parent = plume
-        local swirl = angle + 1.2
-        local finish = centre + Vector3.new(math.cos(swirl), 0, math.sin(swirl)) * 2.2 * u + Vector3.new(0, (1 + math.random()) * u, 0)
-        TweenService:Create(plume, TweenInfo.new(1.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-            CFrame = CFrame.lookAt(finish, finish + Vector3.new(math.cos(swirl + 1.5), 0.3, math.sin(swirl + 1.5))),
-            Transparency = 1,
-        }):Play()
-    end
-
-    local light = Instance.new("PointLight")
-    light.Color = colors.Gold
-    light.Range = 12 * u
-    light.Brightness = 2.2
-    light.Parent = sun
-    TweenService:Create(light, TweenInfo.new(1.1), { Brightness = 0 }):Play()
-    if rig.burst then
-        rig.burst:Emit(35)
     end
 end
 
@@ -17946,15 +17803,16 @@ do
             }):Play()
         end
 
-        local flash = fx.neon(Vector3.one * 0.2 * u, CFrame.new(centre), DP.DAWN)
+        -- (a bigger, brighter flash and a 2.5 light washed the bird pale yellow under Bloom, seen in Play)
+        local flash = fx.neon(Vector3.one * 0.15 * u, CFrame.new(centre), DP.EMBER)
         flash.Shape = Enum.PartType.Ball
-        flash.Transparency = 0.35
-        TweenService:Create(flash, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * 1.8 * u, Transparency = 1 }):Play()
+        flash.Transparency = 0.6
+        TweenService:Create(flash, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * 0.9 * u, Transparency = 1 }):Play()
         if not reduced then
             local light = Instance.new("PointLight")
             light.Color = DP.GLOW
-            light.Range = 14 * u
-            light.Brightness = 2.5
+            light.Range = 12 * u
+            light.Brightness = 1.4
             light.Shadows = false
             light.Parent = flash
             TweenService:Create(light, TweenInfo.new(1.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Brightness = 0 }):Play()
@@ -17973,11 +17831,11 @@ do
             }):Play()
         end
         if rig.burst then
-            rig.burst:Emit(if reduced then 10 else 24)
+            rig.burst:Emit(if reduced then 8 else 16)
         end
     end
 
-    PetRig.SkinnedProfiles.DawnPhoenix = {
+    PetRig.Profiles.DawnPhoenix = {
         Skinned = true,
         LightScale = 0.6, -- a warm glow round it, not a lamp
         Bones = {
@@ -17986,7 +17844,10 @@ do
             "Tail1", "TailFanL", "TailFanR", "TailA1", "TailA2", "TailA3", "TailB1", "TailB2", "TailB3",
             "LegL1", "LegL2", "FootL", "ToesL", "LegR1", "LegR2", "FootR", "ToesR",
         },
-        -- (only bones that carry weight: whether the importer keeps a weightless tip bone is not proven here, so the tips' own bones are not read)
+        -- the first import had no TailA chain (its weights had gone to TailB: fixed in dawn_phoenix.py and re-exported, 2026-11-16); until the
+        -- fixed file is imported, feather A rides the B chain and these bones are absent: nothing reads them unchecked
+        OptionalBones = { TailA1 = true, TailA2 = true, TailA3 = true },
+        -- (only bones that carry weight: the importer drops a weightless bone, so the tips' own bones are not read)
         Points = { "Chest", "Head", "Crest2", "WingL4", "WingR4", "TailA3", "TailB3" },
         Effects = {
             Burst = "Body",
@@ -17994,13 +17855,13 @@ do
             TrailWidth = 0.05,
             TrailTaper = true,
             Blast = "FirstLight",
-            NovaLight = 2,
+            NovaLight = 0.8,
         },
-        Colors = {
+        Colors = { -- (Sun and Orange colour its burst sparks and its tail's threads: deep, so they never bloom white)
             Gold = Color3.fromRGB(255, 160, 50),
             Amber = Color3.fromRGB(150, 40, 20),
-            Orange = Color3.fromRGB(255, 110, 25),
-            Sun = Color3.fromRGB(255, 185, 90),
+            Orange = Color3.fromRGB(240, 90, 20),
+            Sun = Color3.fromRGB(255, 145, 50),
             Ivory = Color3.fromRGB(255, 232, 200),
         },
         Animate = animateDawnPhoenix,

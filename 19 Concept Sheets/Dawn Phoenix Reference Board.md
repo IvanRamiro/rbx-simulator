@@ -175,12 +175,21 @@ embedded), with stress and pose renders in `renders/pets/InfernoEgg/DawnPhoenix_
 - **QA, profile roblox: PASS, 0 errors.** Accepted: 83 coincident vertices where the skin's pieces met (same weights: no seam opens); 194 hidden
   back-to-back pairs. FBX re-imported: one skinned mesh, 48 bones, 3 maps; no home path in it.
 
+## In game (2026-11-16)
+
+The owner's import is stored at `ReplicatedStorage.PetMeshes.InfernoEgg.DawnPhoenix`, restructured like the Spirit Crane's template (a 0.05
+`RootPart` holding the Root bone, a Motor6D to the body), at the origin; play-tested (screenshots in `renders/pets/InfernoEgg/DawnPhoenix_ingame/`).
+The first export bound both long central tail feathers to the B chain, so the importer dropped TailA1-3 (weightless); fixed and re-exported:
+re-importing `assets/pets/InfernoEgg/DawnPhoenix.fbx` gives feather A its own chain. The importer also drops every weightless tip bone, so the
+game reads only weighted bones.
+
 ## Importing it (for the owner)
 
 1. In Studio: File > Import 3D, pick `assets/pets/InfernoEgg/DawnPhoenix.fbx`. Keep the importer's defaults (the rig and the
    textures on). Its colour map is uploaded to Roblox as part of the import: look at `DawnPhoenix_color.png` first.
 2. Put the imported model in `ReplicatedStorage.PetMeshes.InfernoEgg`, named `DawnPhoenix`, in place of the old one (delete the old).
-3. The fixes the past skinned pets needed: shrink the holder part `RootPart` to 0.05 x 0.05 x 0.05; move the model so its root sits at the
-   origin; check the bones have not drifted from their places (48 bones).
+3. The fixes it needs (done for the first import, 2026-11-16): the importer now hangs the Root bone under the mesh with no `RootPart`, so a 0.05
+   `RootPart` takes the Root bone (its world place kept), a Motor6D joins it to `DawnPhoenix_Body`, it becomes the PrimaryPart, and the model is
+   pivoted to the origin; then check the bone count (42 weighted bones come through) and that no bone drifted.
 4. Tell me when it is in. I then read its colour map's new id into `PetMaps`, test it in Play on a test save, and delete the old phoenix code
    (its jointed profile, `animatePhoenix`, `Blasts.SunriseRebirth`) now that nothing uses it.
