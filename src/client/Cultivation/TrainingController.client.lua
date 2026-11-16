@@ -259,13 +259,17 @@ local function showRate()
     while rateSamples[1] and now - rateSamples[1][1] > RATE_WINDOW do
         table.remove(rateSamples, 1)
     end
-    -- the gains after the first, over the time from the first to now: right from the second tick, and falling once they stop
+    -- the gains after the first, over the time from the first to the last while the ticks keep coming (measured to now, it
+    -- read up to a third low between ticks: +42/s for a steady 48 a second, seen in Play 2026-11-16), and to now once they
+    -- stop, so it falls away
     local count = #rateSamples
     local gained = 0
     for i = 2, count do
         gained += rateSamples[i][2]
     end
-    local span = if count >= 2 then now - rateSamples[1][1] else 0
+    local last = rateSamples[count]
+    local flowing = last ~= nil and now - last[1] <= GameConfig.CultivationInterval * 1.5
+    local span = if count >= 2 then (if flowing then last[1] else now) - rateSamples[1][1] else 0
     local cultivating = player:GetAttribute("IsCultivating") == true
     qiRate.Visible = cultivating and span > 0 and gained > 0
     if qiRate.Visible then

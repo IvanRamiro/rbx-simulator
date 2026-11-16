@@ -2,13 +2,21 @@
 -- position, so a hacked client can teleport or speed about; rewards that depend on where a player
 -- stands (prompts, shops, stands, strikes) ask here first.
 --
--- It keeps a travel allowance per player, a bucket filled at the fastest they can honestly keep up for
--- their rank (RunSpeed, dashing as often as stamina allows, or sword flight), up to a burst for the dashes
--- and air leaps in hand. Each sample spends what they moved, not counting falls. Overdrawn, or moving
--- far too far in one sample, they're "suspect" for SUSPECT_TIME: rewards are refused and it's logged. It never kicks or drags anyone back:
--- a wrong guess costs an honest player a few seconds, nothing more.
+-- Two checks, both from the player's rank (GameConfig.Qinggong; the slack below):
+-- * one burst (every frame): from any place the server saw them at in the last TRAIL_SECONDS, they can't
+--   have got farther across than their top speed (a dash, a run, a leap's push or sword flight) for the time
+--   since, nor higher than their top climb (a leap, a jump or a climbing flight); falling is free. The time
+--   is counted from when each place first showed, so a hitch that holds them still and then lets the
+--   backlog arrive at once is fair, while a teleport the server spreads over a dozen frames is still a
+--   teleport. The carried egg (Guardian) drops on the same rule: `movedSince`.
+-- * the long run (every SAMPLE_TIME): a travel allowance, a bucket filled at the fastest they can honestly
+--   keep up (RunSpeed, dashing as often as stamina allows, or sword flight), up to a burst for the dashes
+--   and air leaps in hand. Each sample spends what they moved, not counting falls.
+-- Caught by either, they're "suspect" for SUSPECT_TIME: rewards are refused and it's logged. It never
+-- kicks or drags anyone back: a wrong guess costs an honest player a few seconds, nothing more.
 --
 --   MovementGuard.isSuspect(player)          true while rewards should be refused
+--   MovementGuard.movedSince(player, t)      true if, since os.clock() `t`, they outran the burst rule or the server moved them
 --   MovementGuard.maxTravel(player, seconds) the farthest they could honestly get in that time
 --   MovementGuard.reset(player, to)          the server moved them itself (checkpoint, a gate's return) to `to` (a Vector3)
 --   MovementGuard.allow(player, studs)       the server threw them that far (a guardian's knockback)
@@ -24,11 +32,20 @@ local MovementGuard = {}
 
 local SAMPLE_TIME = 0.25
 local SUSPECT_TIME = 5
-local BURST_SLACK = 60  -- studs of allowance for lag and small errors
+local BURST_SLACK = 60  -- studs of allowance for lag and small errors (the long run)
 local SPEED_SLACK = 1.15
-local JUMP_SECONDS = 1
+-- the burst rule's slack: LAG_SECONDS more of their top speed (packets reaching the server bunched, the server's own
+-- smoothing) and LAG_STUDS (steps, physics pushing them out of a wall). A client teleport of 55 studs spread over 14
+-- frames (largest step 22.5) passed the old 40-studs-a-frame check 2 times in 3 (2-player test, 2026-11-16).
+local LAG_SECONDS = 0.2
+local LAG_STUDS = 8
+local TRAIL_SECONDS = 1 -- how far back the burst rule looks
+local SPAWN_GRACE = 1   -- seconds after a new character in which Roblox may still be putting it at its spawn
+local RESET_GRACE = 1   -- MovementGuard.reset: seconds the client may still report where it was before the server moved it
+local RESET_NEAR = 25   -- studs from where the server put them that count as there
+local THROW_TIME = 1.5  -- MovementGuard.allow: seconds a throw's studs widen the burst rule (the long run keeps them until spent)
 
-local states = {} -- [player] = { position, budget, suspectUntil }
+local states = {} -- [player] = { position, budget, suspectUntil, extra, trail, movedAt, ... }
 
 local function levelOf(player)
     return (Ranks.getQinggong(Ranks.getPlayerRankName(player)))
@@ -55,6 +72,17 @@ local function burst(level)
     return dashes + leaps + BURST_SLACK
 end
 
+-- The fastest they ever move, studs a second, across and up, whatever they're doing now (a flight just ended keeps its
+-- speed for a moment): a dash, a glide, a leap's push or sword flight; a leap, a jump or a flight climbing as it goes.
+local function topSpeeds(level, humanoid)
+    local q = GameConfig.Qinggong
+    local across = math.max(level.DashSpeed, level.RunSpeed * q.GlideSpeedFactor, q.LeapForwardSpeed, level.FlightSpeed)
+    local jump = if humanoid and humanoid.UseJumpPower then humanoid.JumpPower
+        elseif humanoid then math.sqrt(2 * workspace.Gravity * humanoid.JumpHeight) else 0
+    local up = math.max(q.LeapUpSpeed, jump, if level.FlightSpeed > 0 then level.FlightSpeed + GameConfig.SwordFlight.ClimbSpeed else 0)
+    return across * SPEED_SLACK, up * SPEED_SLACK
+end
+
 function MovementGuard.maxTravel(player, seconds)
     local level = levelOf(player)
     return sustainedSpeed(player, level) * seconds + burst(level)
@@ -65,18 +93,98 @@ function MovementGuard.isSuspect(player)
     return state ~= nil and os.clock() < state.suspectUntil
 end
 
+local function flag(player, state, level, moved, seconds)
+    local clock = os.clock()
+    if clock >= state.suspectUntil then
+        warn("MovementGuard:", player.Name, "moved", math.floor(moved), "studs in", string.format("%.2f", seconds), "s")
+        Analytics.event(player, "MovementSuspect", 1, level.RankId)
+    end
+    state.suspectUntil = clock + SUSPECT_TIME
+end
+
+local function restartTrail(state, at, clock)
+    table.clear(state.trail)
+    if at then
+        table.insert(state.trail, { position = at, at = clock })
+    end
+end
+
+-- The burst rule (see the top), for one player, now. Records where they are if they've moved, and flags a move past the rule.
+local function observe(player, state)
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        restartTrail(state, nil, 0)
+        return
+    end
+    local clock = os.clock()
+    local now = root.Position
+    local trail = state.trail
+    local last = trail[#trail]
+    if last and (now - last.position).Magnitude < 0.01 then
+        return -- not moved: the place keeps the time it first showed
+    end
+    if clock < state.spawnUntil then
+        restartTrail(state, now, clock)
+        return
+    end
+    if state.resetTo then
+        if (now - state.resetTo).Magnitude <= RESET_NEAR then
+            state.resetTo = nil -- there: measure on from here
+        elseif clock < state.graceUntil then
+            return -- still reporting where they were before the server moved them
+        else
+            state.resetTo = nil -- never got there: what they moved is measured from where they were put
+        end
+    end
+    local level = levelOf(player)
+    local across, up = topSpeeds(level, character:FindFirstChildOfClass("Humanoid"))
+    -- the oldest places first, keeping the newest one even when it's old (they stood still)
+    while #trail > 1 and clock - trail[1].at > TRAIL_SECONDS do
+        table.remove(trail, 1)
+    end
+    for _, seen in trail do
+        local move = now - seen.position
+        local seconds = clock - seen.at + LAG_SECONDS
+        local slack = LAG_STUDS + (if clock < state.thrownUntil then state.thrown else 0)
+        if (move * Vector3.new(1, 0, 1)).Magnitude > across * seconds + slack or move.Y > up * seconds + slack then
+            flag(player, state, level, move.Magnitude, clock - seen.at)
+            state.movedAt, state.movedFrom = clock, seen.position
+            restartTrail(state, now, clock)
+            return
+        end
+    end
+    table.insert(trail, { position = now, at = clock })
+end
+
+-- True if, since `since` (os.clock()), they moved faster than the burst rule allows or the server moved them (MovementGuard.reset);
+-- then also where they were before an outrun move (nil after a server move). Checks them first, so a move this frame counts
+-- whichever Heartbeat runs first.
+function MovementGuard.movedSince(player, since)
+    local state = states[player]
+    if not state then
+        return false, nil
+    end
+    observe(player, state)
+    if state.movedAt >= since then
+        return true, state.movedFrom
+    end
+    return false, nil
+end
+
 -- Their next move is measured from where the server put them, not from wherever they report next: forgetting the position here
 -- let a cheat teleport anywhere for free right after a checkpoint return (release audit, 2026-11-12). For RESET_GRACE seconds a
--- report far from `to` is taken for the client still showing where they were before the server moved them, and skipped.
-local RESET_GRACE = 1
-local RESET_NEAR = 25
-
+-- report far from `to` (RESET_NEAR, declared at the top) is taken for the client still showing where they were before, and skipped.
 function MovementGuard.reset(player, to)
     local state = states[player]
     if state then
+        local clock = os.clock()
         state.position = to
         state.landing = to
-        state.graceUntil = if to then os.clock() + RESET_GRACE else 0
+        state.graceUntil = if to then clock + RESET_GRACE else 0
+        state.resetTo = to
+        state.movedAt, state.movedFrom = clock, nil
+        restartTrail(state, to, clock)
     end
 end
 
@@ -85,9 +193,11 @@ function MovementGuard.allow(player, studs)
     if state then
         state.budget += studs
         state.extra = studs -- over the usual cap until it's spent
+        state.thrown, state.thrownUntil = studs, os.clock() + THROW_TIME
     end
 end
 
+-- the long run (see the top), every SAMPLE_TIME
 local function sample(dt)
     for player, state in states do
         local character = player.Character
@@ -114,34 +224,31 @@ local function sample(dt)
         end
         local from = state.position
         state.position = now
-        if from then
+        if from and os.clock() >= state.spawnUntil then
             local move = now - from
             -- falling is free; everything else is spent
-            local spent = (move * Vector3.new(1, 0, 1)).Magnitude + math.max(move.Y, 0)
-            state.budget -= spent
-            -- the allowance is for several dashes in a row, not all at once: no sample may hold more than a
-            -- second's movement at their top speed (a network hitch), whatever is saved up
-            local fastest = math.max(level.DashSpeed, level.FlightSpeed) * SPEED_SLACK
-            if state.budget < 0 or spent > fastest * JUMP_SECONDS + BURST_SLACK + state.extra then
+            state.budget -= (move * Vector3.new(1, 0, 1)).Magnitude + math.max(move.Y, 0)
+            if state.budget < 0 then
                 state.budget = cap / 2
-                local clock = os.clock()
-                if clock >= state.suspectUntil then
-                    warn("MovementGuard:", player.Name, "moved", math.floor(move.Magnitude), "studs in", SAMPLE_TIME, "s")
-                    Analytics.event(player, "MovementSuspect", 1, level.RankId)
-                end
-                state.suspectUntil = clock + SUSPECT_TIME
+                flag(player, state, level, move.Magnitude, dt)
             end
         end
     end
 end
 
 local function watch(player)
-    local state = { position = nil, budget = burst(levelOf(player)), suspectUntil = 0, extra = 0 }
+    local state = {
+        position = nil, budget = burst(levelOf(player)), suspectUntil = 0, extra = 0,
+        trail = {}, movedAt = -math.huge, spawnUntil = 0, graceUntil = 0, thrown = 0, thrownUntil = 0,
+    }
     states[player] = state
     player.CharacterAdded:Connect(function()
         state.position = nil
         state.landing = nil
+        state.resetTo = nil
         state.budget = burst(levelOf(player))
+        state.spawnUntil = os.clock() + SPAWN_GRACE
+        restartTrail(state, nil, 0)
     end)
 end
 
@@ -155,6 +262,9 @@ end)
 
 local waited = 0
 RunService.Heartbeat:Connect(function(dt)
+    for player, state in states do
+        observe(player, state)
+    end
     waited += dt
     if waited >= SAMPLE_TIME then
         sample(waited)

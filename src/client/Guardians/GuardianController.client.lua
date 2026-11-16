@@ -342,6 +342,7 @@ local TAKE_MARK_ABOVE = Vector3.new(0, 7.5, 0)
 local TAKE_REFRESH = 0.5
 local takeMarks = {} -- [stand] = its mark, drawn on the screen over the stand
 local TAKE_MARK_SLACK = 40 -- pixels it may sit below its proper place, over the egg's own height
+local TAKE_MARK_GAP = 6 -- pixels it keeps from the guardian's bar
 local takeRefreshAt = 0
 local takeStands = {}
 local wasAbleToTake = false
@@ -380,17 +381,50 @@ local function markStand(stand)
     takeMarks[stand] = mark
 end
 
+-- The guardian's bar, or nil while it's hidden. (Its layer ignores the top inset, but AbsolutePosition is measured below the
+-- inset on every layer, so it reads in the HUD's pixels as it is: checked in Play, 2026-11-16.)
+local function barBox()
+    if not barLayer.Enabled or bar.AbsoluteSize.Y < 1 then
+        return nil
+    end
+    return bar.AbsolutePosition.X, bar.AbsolutePosition.Y, bar.AbsoluteSize.X, bar.AbsoluteSize.Y
+end
+
 -- Each frame, over its stand, above the egg; a stand out of view is left to the panel's arrow.
 local function placeTakeMarks(camera, now)
+    local barX, barY, barW, barH = barBox()
+    local topFoot = 0
+    for _, piece in { Hud.Banner, Hud.Notice } do
+        if piece.Visible and piece.AbsoluteSize.Y > 1 then
+            topFoot = math.max(topFoot, piece.AbsolutePosition.Y + piece.AbsoluteSize.Y)
+        end
+    end
     for _, entry in takeStands do
         local mark = takeMarks[entry.stand]
         if mark then
             local point, inFront = camera:WorldToScreenPoint(entry.pedestal.Position + TAKE_MARK_ABOVE)
-            -- it never climbs behind the bars at the top of the screen: it stops just under them, and goes only once
-            -- the egg itself is up there, when the panel has it
-            local lowest = takePanel.AbsolutePosition.Y + takePanel.AbsoluteSize.Y + mark.AbsoluteSize.Y
-            mark.Visible = inFront and point.Z > 0 and point.Y + TAKE_MARK_SLACK >= lowest
-            mark.Position = UDim2.fromOffset(point.X, math.max(point.Y, lowest))
+            local size = mark.AbsoluteSize
+            -- it never climbs behind the panels at the top of the screen (the Banner's: this panel, the tutorial, the Merchant's
+            -- line; and a notification under them): it stops just under them
+            local highest = topFoot + size.Y
+            local y = math.max(point.Y, highest)
+            local fits = point.Y + TAKE_MARK_SLACK >= y
+            -- nor over the guardian's bar, which slides about over the guardian (the 2-player test, 2026-11-16: TAKE sat
+            -- across the bar's name): where they'd cross, it hangs just under the bar, or else just over it, where the bar
+            -- hides the egg's own place
+            if barX and point.X + size.X / 2 > barX and point.X - size.X / 2 < barX + barW
+                and y > barY - TAKE_MARK_GAP and y - size.Y < barY + barH + TAKE_MARK_GAP then
+                local under, over = barY + barH + TAKE_MARK_GAP + size.Y, barY - TAKE_MARK_GAP
+                if point.Y + TAKE_MARK_SLACK >= under then
+                    y, fits = under, true
+                else
+                    y, fits = over, over >= highest and point.Y > over
+                end
+            end
+            -- and it goes once it would be more than a little under its proper place (the egg itself is up there, when
+            -- the panel has it)
+            mark.Visible = inFront and point.Z > 0 and fits
+            mark.Position = UDim2.fromOffset(point.X, y)
             mark.Chevron.Position = UDim2.fromOffset(0, 24 + 4 * math.sin(now * 5))
         end
     end

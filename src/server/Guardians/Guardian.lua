@@ -55,7 +55,6 @@ local DECIDE_EVERY = 0.1        -- seconds between decisions; movement runs ever
 local CHASE_STOP = 13           -- it stops this far from its prey (its face is ~20 studs ahead of the chest); config.ChaseStop overrides
 local SAFE_WAYPOINT_INSET = 20 -- studs inside the hub's edge the way home points (inSafeZone secures 8 inside it)
 local KNOCK_IMMUNITY = 0.6      -- seconds
-local TELEPORT_JUMP = 40        -- a thief moving this far in one frame was returned by the world
 local CARRY_SLACK = 40          -- studs of allowance on the carry's speed check (knockbacks, falls)
 local TAKE_GRACE = 1.5          -- seconds a fresh thief can't be knocked: a blow already on its way would feel random
 local EGG_PROMPT_DISTANCE = 12
@@ -346,7 +345,6 @@ function Guardian:carry(player)
     egg.takenAt = os.clock()
     egg.carryStarted = egg.carryStarted or egg.takenAt -- dropping and retaking it doesn't restart MAX_CARRY
     egg.lastGrounded = nil
-    egg.lastPosition = root.Position
     egg.takenFrom = root.Position
     egg.airborneSince = nil
     self.knocked[player] = os.clock() + TAKE_GRACE
@@ -539,13 +537,15 @@ function Guardian:watchThief()
         return
     end
     local position = root.Position
-    if egg.lastPosition and (position - egg.lastPosition).Magnitude > TELEPORT_JUMP then
-        self:dropEgg(egg.lastGrounded or egg.lastPosition)
+    -- returned by the world (a fall's checkpoint, a gate) or moved faster than they honestly can, however many frames the
+    -- server spreads a teleport over: MovementGuard's burst rule, the one every reward goes by. The egg falls where they were
+    local moved, from = MovementGuard.movedSince(player, egg.takenAt)
+    if moved then
+        self:dropEgg(from or egg.lastGrounded or egg.takenFrom)
         return
     end
-    egg.lastPosition = position
     -- farther from where it was taken than the thief could honestly get: a hacked client creeping along
-    -- under TELEPORT_JUMP a frame. The egg falls where they stood
+    -- under the burst rule. The egg falls where they stood
     if (position - egg.takenFrom).Magnitude > MovementGuard.maxTravel(player, os.clock() - egg.takenAt) + CARRY_SLACK then
         self:dropEgg(egg.takenFrom)
         return
