@@ -89,7 +89,7 @@ local function settle(player, late)
         return NumberFormat.compact(amount) .. " Spirit Stones"
     end
     if kind == "Stones" then
-        text = payStones(pending.Stones or SpinRules.stones(index, rankName))
+        text = payStones(pending.Stones or SpinRules.stones(index, rankName, player))
         big = segment.Share >= 1
     elseif kind == "Qi" then
         local qi = QiReward.grantMinutes(player, segment.Minutes)
@@ -103,7 +103,7 @@ local function settle(player, late)
             text = (if string.find(name, "^[AEIOUaeiou]") then "an " else "a ") .. name .. "! Hatch it at the Hatching Sanctum."
         else -- (holding the most of that egg)
             kind = "Stones"
-            text = payStones(SpinRules.fallbackStones(rankName)) .. " (your eggs of that kind are full)"
+            text = payStones(SpinRules.fallbackStones(rankName, player)) .. " (your eggs of that kind are full)"
         end
         big = true
     elseif kind == "Spin" then
@@ -147,7 +147,7 @@ function actions.Spin(player)
     end
 
     local index = SpinRules.roll(random)
-    local info = SpinRules.describe(index, Ranks.getPlayerRankName(player))
+    local info = SpinRules.describe(index, Ranks.getPlayerRankName(player), player)
     data.Used += 1
     data.Pending = { Segment = index, Day = data.Day, Stones = info.Stones, EggId = info.EggId }
     publish(player)

@@ -678,6 +678,7 @@ local GameConfig = {
     -- of cultivating Qi (under two stolen eggs' bursts); and an Exclusive Egg about once in five months (1 in 158 days). It helps without
     -- replacing play: one active minute stealing eggs pays more stones.
     -- Free, so it is given where paid random items are restricted too (PolicyService restricts buying random items, and nothing here is bought).
+    -- The stones segments pay the player's daily-stones pass bonus too (VIP +50%: the owner, 2026-11-17), SpinRules.stones.
     -- A full egg slot (EggInventory.MAX_PER_EGG) pays segment 6's stones instead.
     SpinWheel = {
         DailySpins = 3,

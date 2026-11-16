@@ -4,14 +4,16 @@
 --   SpinRules.secondsToReset(now)   seconds until the next day's spins (now: the server's time, os.time() or GetServerTimeNow)
 --   SpinRules.spinsLeft(record)     what a player's day record { Day, Used, Extra } leaves today
 --   SpinRules.roll(random)          a segment's index, by weight (random: a Random; the server's own)
---   SpinRules.stones(index, rankName)  what a Stones segment pays a player of this rank
+--   SpinRules.stones(index, rankName, player)  what a Stones segment pays a player of this rank (with their passes' daily-stones
+--                                    bonus: VIP's +50%, the owner 2026-11-17; player nil: without it)
 --   SpinRules.bestEgg(rankName)     the best Marketplace egg this rank can take (the Egg segment's egg)
---   SpinRules.describe(index, rankName)  { Kind, Stones, Minutes, EggId, Short, Long, Icon key } of a segment for this rank
+--   SpinRules.describe(index, rankName, player)  { Kind, Stones, Minutes, EggId, Short, Long, Icon key } of a segment for this rank
 --   SpinRules.angleOf(index)        the segment's centre, degrees clockwise from the top
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
+local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RewardRules = require(ReplicatedStorage:WaitForChild("RewardRules"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
@@ -64,24 +66,25 @@ local function rankIndex(rankName)
     return Ranks.getIndex(rankName) or 1
 end
 
-function SpinRules.stones(index, rankName)
+function SpinRules.stones(index, rankName, player)
     local segment = config.Segments[index]
     if not (segment and segment.Share) then
         return 0
     end
     local rank = GameConfig.Ranks[rankIndex(rankName)]
-    return Shop.roundNice(Shop.rankValue(rank.Id) * segment.Share)
+    local stones = Shop.roundNice(Shop.rankValue(rank.Id) * segment.Share)
+    return if player then PassRules.dailyStones(player, stones) else stones
 end
 
 -- the largest stones segment's pay: what a full egg slot pays instead
-function SpinRules.fallbackStones(rankName)
+function SpinRules.fallbackStones(rankName, player)
     local best, bestShare = nil, 0
     for index, segment in config.Segments do
         if segment.Share and segment.Share > bestShare then
             best, bestShare = index, segment.Share
         end
     end
-    return SpinRules.stones(best, rankName)
+    return SpinRules.stones(best, rankName, player)
 end
 
 -- the Marketplace's eggs (not the Robux one), each with its rank's place
@@ -107,14 +110,14 @@ function SpinRules.bestEgg(rankName)
 end
 
 -- What a segment gives a player of this rank, in words: Short for the wheel, Long for the message.
-function SpinRules.describe(index, rankName)
+function SpinRules.describe(index, rankName, player)
     local segment = config.Segments[index]
     if not segment then
         return nil
     end
     local info = { Kind = segment.Kind, Index = index }
     if segment.Kind == "Stones" then
-        info.Stones = SpinRules.stones(index, rankName)
+        info.Stones = SpinRules.stones(index, rankName, player)
         info.Short = NumberFormat.compact(info.Stones) .. " STONES"
         info.Long = NumberFormat.compact(info.Stones) .. " Spirit Stones"
         info.Icon = "Stones"

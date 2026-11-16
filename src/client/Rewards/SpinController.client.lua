@@ -75,7 +75,7 @@ local function labelWheel()
         return
     end
     for index = 1, SpinRules.Count do
-        local info = SpinRules.describe(index, rankName())
+        local info = SpinRules.describe(index, rankName(), player)
         local holder = gui:FindFirstChild("Seg" .. index)
         if holder then
             local icon, words = holder:FindFirstChild("Icon"), holder:FindFirstChild("Words")
@@ -412,7 +412,7 @@ local function renderWindow()
     resetLabel.Text = resetText()
     local name = rankName()
     for index, t in tiles do
-        local info = SpinRules.describe(index, name)
+        local info = SpinRules.describe(index, name, player)
         local image = iconOf(info)
         t.picture.Image = image or ""
         t.picture.Visible = image ~= nil
@@ -524,6 +524,12 @@ RemoteEvents.SpinEvent.OnClientEvent:Connect(function(kind, data)
 end)
 
 -- ---------- keeping it current ----------
+player:GetAttributeChangedSignal("Pass_VIP"):Connect(function() -- (VIP's +50% shows on the wheel's stones)
+    labelWheel()
+    if window.isOpen() then
+        renderWindow()
+    end
+end)
 player:GetAttributeChangedSignal("SpinsLeft"):Connect(function()
     renderButton()
     if window.isOpen() then
