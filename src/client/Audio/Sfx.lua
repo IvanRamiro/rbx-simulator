@@ -297,11 +297,22 @@ function Sfx.hold(seconds)
     momentUntil = math.max(momentUntil, os.clock() + seconds)
 end
 
+-- Sounds switched off: their names stay in the catalog and every call stays in place, so removing a name here brings the
+-- sound back. The owner, 2026-11-17: "remove the notification, warning, success, and danger sounds": the notice chime
+-- (a title earned), the "egg can be taken" tone and the refusal tone that goes with every warning.
+Sfx.MUTED = { Notify = true, TakeReady = true, Error = true }
+
 function Sfx.play(name, at, pitch)
+    if Sfx.MUTED[name] then
+        return nil
+    end
     return playLayer(name, at, pitch)
 end
 
 function Sfx.after(delay, name, at, pitch)
+    if Sfx.MUTED[name] then
+        return
+    end
     task.delay(delay, playLayer, name, at, pitch)
 end
 
