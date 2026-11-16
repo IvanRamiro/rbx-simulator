@@ -10,7 +10,10 @@
 --              come slower. Health never falls below 1.
 --   Enraged    the egg is taken: it chases the thief, pouncing and striking, and takes no damage.
 --   Returning  walking back to its lair: the egg came back to it, or was secured.
---   Resting    the egg was secured: it sleeps without one for RespawnTime.
+--   Resting    the egg was secured: it sleeps at its lair until RespawnTime has passed since the secure, and while every
+--              stand on its island is empty, until the first egg comes back (EggStands.nextEggAt). It can't be fought
+--              or robbed meanwhile: its cooldown. The end is the model's AvailableAt attribute (server time, nil when it
+--              is available), so every client counts down to the same moment, each guardian on its own.
 -- With nobody near for CalmAfter seconds, a Guardian or Weakened one heals and sleeps.
 --
 -- The theft (the model's "Egg" attribute, for clients and Studio): Guarded (its stands can't be
@@ -148,6 +151,7 @@ function Guardian.new(id, config, source, folder)
     model:SetAttribute("HitRadius", config.HitRadius)
     model:SetAttribute("TargetId", 0)
     model:SetAttribute("SafeZone", self.safeCentre) -- clients show the thief the way
+    model:SetAttribute("Home", self.lair) -- its lair: clients show its cooldown there, where it rests
     model:PivotTo(self.lair)
     CollectionService:AddTag(model, GameConfig.GuardianTag)
     CollectionService:AddTag(model, GameConfig.Combat.TargetTag)
@@ -516,9 +520,40 @@ function Guardian:secure()
     end
     egg.model:Destroy()
     egg.model, egg.prompt, egg.eggId, egg.slot = nil, nil, nil, nil
+    -- its cooldown runs from now (not from reaching its lair), so the countdown every client shows is known at once
+    self.restUntil = os.clock() + self.config.RespawnTime
     self:setEggState("None")
     self:setState("Returning")
+    self:publishCooldown()
     self:broadcast("Secure", position)
+end
+
+-- The moment (os.clock) it can be robbed again, or nil while it can be (its egg isn't "None"): its rest after the secure,
+-- and, with every stand on its island empty, the first egg's return. (A stand whose egg isn't on its way doesn't hold it.)
+function Guardian:cooldownEnd()
+    if self.egg.state ~= "None" then
+        return nil
+    end
+    local finish = self.restUntil or 0
+    local island = self.config.Island
+    if not EggStands.anyEgg(island) then
+        finish = math.max(finish, EggStands.nextEggAt(island) or 0)
+    end
+    return finish
+end
+
+-- Its cooldown's end for clients, as a server time (AvailableAt), set only when it really changes.
+function Guardian:publishCooldown()
+    local finish = self:cooldownEnd()
+    local at = finish and workspace:GetServerTimeNow() + (finish - os.clock())
+    local shown = self.model:GetAttribute("AvailableAt")
+    if at == nil then
+        if shown ~= nil then
+            self.model:SetAttribute("AvailableAt", nil)
+        end
+    elseif typeof(shown) ~= "number" or math.abs(shown - at) > 0.5 then
+        self.model:SetAttribute("AvailableAt", at)
+    end
 end
 
 -- Every frame while the egg is carried: secured in the safe zone; dropped if the thief is gone,
@@ -823,6 +858,7 @@ function Guardian:updateTakers(now)
         return
     end
     self.nextTakerCheck = now + TAKER_CHECK
+    self:publishCooldown() -- (a stand's egg coming back early or late moves it)
     local id = self.model:GetAttribute("GuardianId")
     -- (and an egg on a stand to take: after a few thefts every stand can stand empty while it respawns, and players were sent to
     -- empty stands, release audit 2026-11-12)
@@ -883,8 +919,7 @@ function Guardian:step(dt)
         if self:moveToward(self.lair.Position, config.WalkSpeed, 1.5, dt) then
             self:holdAtLair()
             if egg.state == "None" then
-                self:setState("Resting")
-                self.restUntil = now + config.RespawnTime
+                self:setState("Resting") -- until its cooldown ends (decide), counted from the secure
                 self:heal()
             else
                 self.lastEngaged = now
@@ -915,9 +950,11 @@ function Guardian:decide(now)
     local state = self.state
 
     if state == "Resting" then
-        if now >= self.restUntil then
+        local finish = self:cooldownEnd()
+        if not finish or now >= finish then
             self:setState("Dormant")
             self:setEggState("Guarded")
+            self:publishCooldown()
         end
         return
     end

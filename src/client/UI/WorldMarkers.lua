@@ -1,4 +1,4 @@
--- Labels over places in the world, drawn on the screen each frame (as the guardian's bar is): a BillboardGui drawn
+-- Labels over places in the world, drawn on the screen each frame: a BillboardGui drawn
 -- AlwaysOnTop didn't show in Studio (2026-11-11: the way home read "YGGDRASIL 448m" in the middle of the screen, and nothing
 -- was there). With `edge`, a place off the screen or behind the camera is shown at the screen's edge, an arrow pointing to it.
 --

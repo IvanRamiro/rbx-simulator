@@ -6,7 +6,7 @@
 --   Currency  top centre, in the row beside Roblox's own buttons: Qi, Spirit Stones, Relics, sharing one slim strip
 --   TopRight  top right, in that row: small round buttons (Rewards)
 --   Quest     right, under them: the current quest (QuestController), the air leaps under it (QinggongController)
---   Banner    top centre, under the currencies: the guardian's bar and messages (Toast)
+--   Banner    top centre, under the currencies: messages (Toast) and the TAKE AN EGG panel
 --   Dock      bottom centre, bottom up: the inventory bar (the weapon's slot), what rises over it (the breakthrough ...)
 -- The touch actions stand beside Roblox's jump button, bottom right (TouchActions). Roblox's chat stays where Roblox
 -- puts it, at the top. Windows (the pets list, the altar, the shops): Hud.window, one open at a time.
@@ -1254,22 +1254,6 @@ end)
 Hud.Status:GetPropertyChangedSignal("Visible"):Connect(function()
     task.defer(layoutPills)
 end)
-
--- ---------- a guardian fight ----------
--- While a guardian's bar is on the screen (GuardianController), pieces that take room can make way for it: a phone's quest panel
--- folds (QuestController), so the bar has room under the top of the screen and clear of the touch buttons.
-local fightChanged = Instance.new("BindableEvent")
-Hud.FightChanged = fightChanged.Event
-local fighting = false
-function Hud.setFighting(on)
-    if on ~= fighting then
-        fighting = on
-        fightChanged:Fire(on)
-    end
-end
-function Hud.isFighting()
-    return fighting
-end
 
 -- ---------- the right column's width ----------
 -- The quest panel and the air leaps under it (QinggongController) read as one column: one width, one right edge.

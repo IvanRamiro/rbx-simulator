@@ -190,9 +190,6 @@ local function applyFold()
     if os.clock() < peekUntil then
         folded = false
     end
-    if Hud.isCompact() and Hud.isFighting() then -- a phone's panel folds while a guardian is fought: the bar needs the room
-        folded = true
-    end
     body.Visible = not folded
     footerRef.Visible = not folded
     bar.Visible = questHasBar and not folded
@@ -217,7 +214,6 @@ fold.Activated:Connect(function()
     applyFold()
 end)
 Hud.CompactChanged:Connect(applyFold)
-Hud.FightChanged:Connect(applyFold)
 
 local lastStep = nil
 local function render()

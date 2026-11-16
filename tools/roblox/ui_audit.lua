@@ -11,7 +11,7 @@ local pg = p.PlayerGui
 local inset = game:GetService("GuiService"):GetGuiInset()
 local real = workspace.CurrentCamera.ViewportSize
 local V = VIEW or real
-local SKIP_GUIS = { Freecam = true, GuardianBarLayer = true, WorldMarkers = true, DamageNumbers = true, PerfProbe = true, ProximityPrompts = true }
+local SKIP_GUIS = { Freecam = true, WorldMarkers = true, DamageNumbers = true, PerfProbe = true, ProximityPrompts = true }
 
 local function shown(g)
     local x = g

@@ -159,6 +159,18 @@ function EggStands.anyEgg(island)
     return false
 end
 
+-- When (os.clock) the first egg on its way back to one of the island's stands arrives, or nil if none is coming. A guardian
+-- whose stands are all empty waits for it (Guardian:cooldownEnd).
+function EggStands.nextEggAt(island)
+    local soonest = nil
+    for slot in slotsOf[island] or {} do
+        if slot.respawnAt and (soonest == nil or slot.respawnAt < soonest) then
+            soonest = slot.respawnAt
+        end
+    end
+    return soonest
+end
+
 -- What to do when a player asks to take a stand's egg: function(player, slot).
 function EggStands.setTakeHandler(handler)
     onTake = handler
@@ -174,7 +186,7 @@ function EggStands.take(slot)
     local eggId = slot.eggId
     if slot.respawn then
         task.cancel(slot.respawn)
-        slot.respawn = nil
+        slot.respawn, slot.respawnAt = nil, nil
     end
     clear(slot)
     return eggId
@@ -196,8 +208,9 @@ function EggStands.respawn(slot, eggIds)
     if slot.respawn then
         task.cancel(slot.respawn)
     end
+    slot.respawnAt = os.clock() + GameConfig.EggTheft.RespawnTime
     slot.respawn = task.delay(GameConfig.EggTheft.RespawnTime, function()
-        slot.respawn = nil
+        slot.respawn, slot.respawnAt = nil, nil
         if slot.eggId == nil and slot.stand.Parent then
             show(slot, if GameConfig.Eggs[slot.home or ""] then slot.home else eggIds[1])
         end

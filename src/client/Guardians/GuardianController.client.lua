@@ -3,8 +3,8 @@
 --     (GuardianRigs/<GuardianId>; GuardianAnim drives it, GuardianFx gives the building blocks);
 --   - knockback: a guardian's blow throws this player's character (the client owns it) off its
 --     feet for a moment; nothing ever kills;
---   - the health bar of the guardian this player is fighting, with its state and weak mark, floating over the guardian
---     itself (the owner, 2026-11-11: "the boss Hp should be above on the boss, not in the player screen");
+--   - each guardian's health bar over its head and its cooldown sign over its lair, in the world (GuardianBars), and a gold
+--     outline through anything in the way round the weakened guardian nearest this player;
 --   - each guardian's voice and blows (VOICES), and the egg's sounds;
 --   - a thief is shown the way to the safe zone (home to Yggdrasil: its end of the island's bridge);
 --     a dropped egg stands under a pillar of light,
@@ -21,11 +21,11 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local GuardianAnim = require(script.Parent:WaitForChild("GuardianAnim"))
 local GuardianFx = require(script.Parent:WaitForChild("GuardianFx"))
+local GuardianBars = require(script.Parent:WaitForChild("GuardianBars"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
 local Hud = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"))
 local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKit"))
-local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiTheme"))
 local UiFx = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiFx"))
 local HudMetrics = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("HudMetrics"))
 local WorldMarkers = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("WorldMarkers"))
@@ -34,20 +34,9 @@ local player = Players.LocalPlayer
 
 local LOW = require(script.Parent.Parent:WaitForChild("Quality")).Low
 local ANIMATE_DISTANCE = if LOW then 150 else 400
-local BAR_DISTANCE = 130
+local NEAR_DISTANCE = 130 -- studs: its wake and weak messages, and the weakened outline, are for players this near
 
 local GOLD = Color3.fromRGB(232, 200, 120) -- the in-world waypoint to the safe zone
-local NAME_COLOR = Color3.fromRGB(236, 246, 255)
-local STATE_LOOK = {
-    Guardian = { Text = "GUARDIAN", Color = Color3.fromRGB(120, 214, 255) },
-    Weakened = { Text = "WEAK · TAKE AN EGG", Color = Color3.fromRGB(255, 196, 70) },
-    Enraged = { Text = "ANGRY", Color = Color3.fromRGB(255, 96, 50) },
-}
-local FILL = { -- the HUD's blue while it guards; gold, pulsing, once weakened; red once enraged
-    Calm = { Color3.fromRGB(120, 214, 255), Color3.fromRGB(26, 104, 196) },
-    Weak = { Color3.fromRGB(255, 232, 130), Color3.fromRGB(224, 140, 20) },
-    Rage = { Color3.fromRGB(255, 110, 120), Color3.fromRGB(176, 22, 44) },
-}
 local WEAK_GOLD = Color3.fromRGB(255, 200, 70)
 
 -- Each guardian's sounds by action (SoundCatalog names). `Start` plays as the action arrives; `Hit`
@@ -103,7 +92,6 @@ local function voice(model, action, ...)
 end
 
 local anims = {} -- [model] = GuardianAnim
-local updateAlert, takeSize -- below, with the guardian's bar
 
 local function guardianModel(guardianId)
     for _, model in CollectionService:GetTagged(GameConfig.GuardianTag) do
@@ -117,167 +105,9 @@ end
 -- ---------- the HUD ----------
 local message = Toast.new("GuardianMessage", Color3.new(1, 1, 1), 4)
 
--- the health bar of the guardian being fought, over the guardian itself: a screen panel placed each frame at the point
--- over its body (as DamageNumbers places its numbers), so nothing in the world can hide it and it reads the same at any
--- distance. (A BillboardGui drawn AlwaysOnTop didn't show in Studio, 2026-11-11; one that isn't would sink into the
--- guardian's body as the bar slides down it.)
-local function smallBar() -- on a phone it shouldn't take the whole screen
-    return Hud.isCompact()
-end
-local function barWidth()
-    return if smallBar() then 300 else 360
-end
-local BAR_ABOVE = 3 -- studs over the top of the guardian's body
-local BAR_GAP = 8 -- pixels between the bar and the HUD above it
--- The lowest bottom (viewport pixels) of the HUD's top pieces over the screen's columns x0 to x1: the profile, the
--- currencies, the notification and the egg panel, the QUEST panel. The bar keeps under them (a guardian is 30-45 studs
--- tall, so close by its head is up there, and the bar slides down the guardian until it's clear). Measured each frame,
--- not a fixed margin: on a short screen a fixed one put the bar in the middle of it (the owner, "the position of UI are off").
-local GuiService = game:GetService("GuiService")
-local function hudBottomOver(x0, x1)
-    -- read each time: when this script starts the top bar may not be laid out yet, and its height reads 0
-    local guiInset = GuiService:GetGuiInset()
-    local lowest = guiInset.Y -- never into Roblox's own top bar (its menu and chat buttons)
-    for _, piece in { Hud.Status:FindFirstChild("StatusWindow"), Hud.Currency, Hud.Banner, Hud.Notice, Hud.Quest } do
-        if piece and piece.Visible and piece.AbsoluteSize.Y > 1 then
-            local left = piece.AbsolutePosition.X
-            if left < x1 and left + piece.AbsoluteSize.X > x0 then
-                lowest = math.max(lowest, piece.AbsolutePosition.Y + piece.AbsoluteSize.Y + guiInset.Y)
-            end
-        end
-    end
-    return lowest
-end
--- The touch buttons round the jump button, and the jump button: the box they make, in viewport pixels (nil without them). The
--- bar keeps out of it: on a phone, Dash and the lotus lay over the bar's health numbers (phone pass, 2026-11-16).
-local function touchCluster()
-    local inset = GuiService:GetGuiInset().Y
-    local playerGui = player:FindFirstChild("PlayerGui")
-    local left, top, found = math.huge, math.huge, false
-    for _, name in { "TouchActions", "TouchGui" } do
-        local touchGui = playerGui and playerGui:FindFirstChild(name)
-        if touchGui and touchGui.Enabled then
-            for _, button in touchGui:GetDescendants() do
-                if button:IsA("GuiButton") and button.Visible and button.AbsoluteSize.X > 0
-                    and (name == "TouchActions" or button.Name == "JumpButton") then
-                    left = math.min(left, button.AbsolutePosition.X)
-                    top = math.min(top, button.AbsolutePosition.Y + inset)
-                    found = true
-                end
-            end
-        end
-    end
-    return if found then Vector2.new(left, top) else nil
-end
-
-local barLayer = Instance.new("ScreenGui")
-barLayer.Name = "GuardianBarLayer"
-barLayer.ResetOnSpawn = false
-barLayer.IgnoreGuiInset = true -- so the bar's place is the viewport's own pixel
-barLayer.DisplayOrder = -1     -- under the HUD's panels
-barLayer.Enabled = false
-barLayer.Parent = player:WaitForChild("PlayerGui")
-HudMetrics.keepReadable(barLayer) -- (at the HUD's scale: its state's word was drawn 10.4 px on a phone)
--- Its pieces from one set of measures: the shield icon centred down the bar, PAD in from its left as the health track ends PAD
--- from its right, and the name row over the track as one block centred down the bar (the block sat 2 px over the icon's middle,
--- and the icon 14 in against the track's 16)
-local BAR_HEIGHT, PAD, ICON = 72, UiTheme.Space.L, 34
-local NAME_HEIGHT, ROW_GAP, TRACK_HEIGHT = 20, 5, 24
-local BLOCK_TOP = (BAR_HEIGHT - (NAME_HEIGHT + ROW_GAP + TRACK_HEIGHT)) // 2
-local TEXT_LEFT = PAD + ICON + UiTheme.Space.S
-local bar = UiKit.panel({ Name = "GuardianBar", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(barWidth(), BAR_HEIGHT), Parent = barLayer })
-local barScale = Instance.new("UIScale")
-barScale.Parent = bar
-local barHeights = {} -- [model] = studs from its PrimaryPart up to over its body, measured once
-local barIcon = UiKit.icon(UiTheme.Icons.Guardian, ICON, "Danger")
-barIcon.AnchorPoint = Vector2.new(0, 0.5)
-barIcon.Position = UDim2.new(0, PAD, 0.5, 0)
-barIcon.Parent = bar
-
--- the name and the state share one middle line (the name's row); the state is as wide as its word, and the name has all the
--- room it leaves (a fixed 60 / 40 split cut "Awakened Stone Lion" short on a phone's narrower bar, with room to spare)
-local nameLabel = UiKit.label({
-    Name = "GuardianName", Font = "Title", TextSize = 16, TextColor3 = NAME_COLOR, AnchorPoint = Vector2.new(0, 0.5),
-    Position = UDim2.fromOffset(TEXT_LEFT, BLOCK_TOP + NAME_HEIGHT / 2),
-    Size = UDim2.new(0.6, -TEXT_LEFT, 0, NAME_HEIGHT), TextTruncate = Enum.TextTruncate.AtEnd, Parent = bar,
-})
-
-local stateLabel = UiKit.label({
-    Name = "GuardianState", Font = "Strong", TextSize = 13, AnchorPoint = Vector2.new(1, 0.5),
-    Position = UDim2.new(1, -PAD, 0, BLOCK_TOP + NAME_HEIGHT / 2), AutomaticSize = Enum.AutomaticSize.X,
-    Size = UDim2.fromOffset(0, NAME_HEIGHT), TextXAlignment = Enum.TextXAlignment.Right, Parent = bar,
-})
-local function fitName()
-    local state = if stateLabel.Text ~= "" then UiKit.wordsWidth(stateLabel) + UiTheme.Space.S else 0
-    nameLabel.Size = UDim2.new(1, -(TEXT_LEFT + PAD + state), 0, NAME_HEIGHT)
-end
-stateLabel:GetPropertyChangedSignal("TextBounds"):Connect(fitName)
-fitName()
-
-local barTrack = Instance.new("Frame")
-barTrack.Name = "Track"
-barTrack.Position = UDim2.fromOffset(TEXT_LEFT, BLOCK_TOP + NAME_HEIGHT + ROW_GAP)
-barTrack.Size = UDim2.new(1, -(TEXT_LEFT + PAD), 0, TRACK_HEIGHT)
-barTrack.BackgroundColor3 = UiTheme.Colors.Well
-barTrack.ClipsDescendants = true
-barTrack.Parent = bar
-UiKit.corner(barTrack, 2)
-UiKit.stroke(barTrack, UiTheme.Colors.EdgeDim, 0.3)
-
--- the health just lost, catching up behind the bar
-local trailFill = Instance.new("Frame")
-trailFill.BorderSizePixel = 0
-trailFill.BackgroundColor3 = Color3.fromRGB(236, 246, 255)
-trailFill.Size = UDim2.fromScale(1, 1)
-trailFill.Parent = barTrack
-
-local fill = Instance.new("Frame")
-fill.BorderSizePixel = 0
-fill.BackgroundColor3 = Color3.new(1, 1, 1)
-fill.Size = UDim2.fromScale(1, 1)
-fill.Parent = barTrack
-local fillGradient = Instance.new("UIGradient")
-fillGradient.Rotation = 90
-fillGradient.Parent = fill
-
--- where it weakens
-local weakMark = Instance.new("Frame")
-weakMark.BorderSizePixel = 0
-weakMark.BackgroundColor3 = UiTheme.Colors.Highlight
-weakMark.AnchorPoint = Vector2.new(0.5, 0)
-weakMark.Size = UDim2.new(0, 3, 1, 0)
-weakMark.ZIndex = 3
-weakMark.Parent = barTrack
-
-local healthText = Instance.new("TextLabel")
-healthText.Name = "Health"
-healthText.BackgroundTransparency = 1
-healthText.Size = UDim2.fromScale(1, 1)
-healthText.FontFace = UiTheme.Fonts.Strong
-healthText.TextSize = 14
-healthText.TextColor3 = Color3.new(1, 1, 1)
-healthText.TextStrokeTransparency = 0.5
-healthText.ZIndex = 4
-healthText.Parent = barTrack
-
-local function setFill(colours)
-    fillGradient.Color = ColorSequence.new(colours[1], colours[2])
-end
-setFill(FILL.Calm)
-
-local function formatNumber(n)
-    local s = tostring(math.floor(n))
-    return (s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", ""))
-end
-
-HudMetrics.Changed:Connect(function()
-    bar.Size = UDim2.fromOffset(barWidth(), BAR_HEIGHT)
-    takeSize()
-end)
-
 -- ---------- weakened: impossible to miss ----------
--- The moment a guardian weakens the bar flashes gold and its edge keeps pulsing, and the guardian itself is outlined in gold through
--- anything in the way, so it can be found in the fight. One outline, on the one guardian the bar shows.
+-- The weakened guardian nearest this player is outlined in gold through anything in the way, so it can be found in the fight
+-- (its bar flashes and pulses gold too: GuardianBars). One outline.
 local outline = Instance.new("Highlight")
 outline.Name = "WeakenedOutline"
 outline.FillTransparency = 1
@@ -285,42 +115,34 @@ outline.OutlineColor = WEAK_GOLD
 outline.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 outline.Enabled = false
 outline.Parent = Workspace
-local barEdge = bar:FindFirstChildOfClass("UIStroke")
-local EDGE_COLOR, EDGE_THICK = barEdge.Color, barEdge.Thickness
-local alertState = nil
 
-function updateAlert(model, state)
-    local weak = state == "Weakened"
-    if state ~= alertState then
-        if weak then
-            UiFx.flash(bar, WEAK_GOLD)
-            UiFx.sweep(bar, WEAK_GOLD, 0.8)
-        elseif state == "Enraged" then
-            UiFx.flash(bar, STATE_LOOK.Enraged.Color)
+local function updateOutline()
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    local best, bestDistance = nil, NEAR_DISTANCE
+    for model in anims do
+        local body = model.PrimaryPart
+        if root and body and model:GetAttribute("State") == "Weakened" then
+            local distance = (body.Position - root.Position).Magnitude
+            if distance < bestDistance then
+                best, bestDistance = model, distance
+            end
         end
-        alertState = state
     end
-    outline.Adornee = if weak then model else nil
-    outline.Enabled = weak
-    if weak then
-        local pulse = 0.5 + 0.5 * math.sin(os.clock() * 5)
-        outline.OutlineTransparency = 0.15 + 0.45 * pulse
-        barEdge.Color = WEAK_GOLD
-        barEdge.Thickness = 2 + 2 * pulse
-    else
-        barEdge.Color = EDGE_COLOR
-        barEdge.Thickness = EDGE_THICK
+    outline.Adornee = best
+    outline.Enabled = best ~= nil
+    if best then
+        outline.OutlineTransparency = 0.15 + 0.45 * (0.5 + 0.5 * math.sin(os.clock() * 5))
     end
 end
 
 -- ---------- an egg this player can take ----------
--- While the server says they can (their CanTakeEgg attribute: they've earned a share of the fight, and nothing stops them), a panel under
--- the bar says so and points to the nearest stand, and each stand holding an egg their rank can carry is marked TAKE, seen through anything.
+-- While the server says they can (their CanTakeEgg attribute: they've earned a share of the fight, and nothing stops them), a panel at
+-- the top of the screen says so and points to the nearest stand, and each stand holding an egg their rank can carry is marked TAKE, seen through anything.
 -- The marks stand above the eggs and touch nothing on them: eggs have only their Highlight and bloom.
-local takePanel = UiKit.panel({ Name = "TakeEggPanel", Size = UDim2.fromOffset(if smallBar() then 300 else 340, 48), LayoutOrder = -1, Visible = false, Brackets = false, Parent = Hud.Banner })
-function takeSize()
-    takePanel.Size = UDim2.fromOffset(if smallBar() then 300 else 340, 48)
-end
+local takePanel = UiKit.panel({ Name = "TakeEggPanel", Size = UDim2.fromOffset(if Hud.isCompact() then 300 else 340, 48), LayoutOrder = -1, Visible = false, Brackets = false, Parent = Hud.Banner })
+HudMetrics.Changed:Connect(function()
+    takePanel.Size = UDim2.fromOffset(if Hud.isCompact() then 300 else 340, 48)
+end)
 local takeEdge = takePanel:FindFirstChildOfClass("UIStroke")
 takeEdge.Color = WEAK_GOLD
 takeEdge.Thickness = 2
@@ -342,7 +164,7 @@ local TAKE_MARK_ABOVE = Vector3.new(0, 7.5, 0)
 local TAKE_REFRESH = 0.5
 local takeMarks = {} -- [stand] = its mark, drawn on the screen over the stand
 local TAKE_MARK_SLACK = 40 -- pixels it may sit below its proper place, over the egg's own height
-local TAKE_MARK_GAP = 6 -- pixels it keeps from the guardian's bar
+local TAKE_MARK_GAP = 6 -- pixels it keeps from a guardian's bar or sign
 local takeRefreshAt = 0
 local takeStands = {}
 local wasAbleToTake = false
@@ -381,24 +203,15 @@ local function markStand(stand)
     takeMarks[stand] = mark
 end
 
--- The guardian's bar, or nil while it's hidden. (Its layer ignores the top inset, but AbsolutePosition is measured below the
--- inset on every layer, so it reads in the HUD's pixels as it is: checked in Play, 2026-11-16.)
-local function barBox()
-    if not barLayer.Enabled or bar.AbsoluteSize.Y < 1 then
-        return nil
-    end
-    return bar.AbsolutePosition.X, bar.AbsolutePosition.Y, bar.AbsoluteSize.X, bar.AbsoluteSize.Y
-end
-
 -- Each frame, over its stand, above the egg; a stand out of view is left to the panel's arrow.
 local function placeTakeMarks(camera, now)
-    local barX, barY, barW, barH = barBox()
     local topFoot = 0
     for _, piece in { Hud.Banner, Hud.Notice } do
         if piece.Visible and piece.AbsoluteSize.Y > 1 then
             topFoot = math.max(topFoot, piece.AbsolutePosition.Y + piece.AbsoluteSize.Y)
         end
     end
+    local boxes = GuardianBars.screenBoxes(camera)
     for _, entry in takeStands do
         local mark = takeMarks[entry.stand]
         if mark then
@@ -409,16 +222,18 @@ local function placeTakeMarks(camera, now)
             local highest = topFoot + size.Y
             local y = math.max(point.Y, highest)
             local fits = point.Y + TAKE_MARK_SLACK >= y
-            -- nor over the guardian's bar, which slides about over the guardian (the 2-player test, 2026-11-16: TAKE sat
-            -- across the bar's name): where they'd cross, it hangs just under the bar, or else just over it, where the bar
-            -- hides the egg's own place
-            if barX and point.X + size.X / 2 > barX and point.X - size.X / 2 < barX + barW
-                and y > barY - TAKE_MARK_GAP and y - size.Y < barY + barH + TAKE_MARK_GAP then
-                local under, over = barY + barH + TAKE_MARK_GAP + size.Y, barY - TAKE_MARK_GAP
-                if point.Y + TAKE_MARK_SLACK >= under then
-                    y, fits = under, true
-                else
-                    y, fits = over, over >= highest and point.Y > over
+            -- nor over a guardian's bar or sign in the world (marks are drawn over the world): where they'd cross, it hangs just
+            -- under it, or else just over it, where the bar hides the egg's own place
+            for _, box in boxes do
+                local barX, barY, barW, barH = box[1], box[2], box[3], box[4]
+                if point.X + size.X / 2 > barX and point.X - size.X / 2 < barX + barW
+                    and y > barY - TAKE_MARK_GAP and y - size.Y < barY + barH + TAKE_MARK_GAP then
+                    local under, over = barY + barH + TAKE_MARK_GAP + size.Y, barY - TAKE_MARK_GAP
+                    if point.Y + TAKE_MARK_SLACK >= under then
+                        y, fits = under, true
+                    else
+                        y, fits = over, over >= highest and point.Y > over
+                    end
                 end
             end
             -- and it goes once it would be more than a little under its proper place (the egg itself is up there, when
@@ -512,110 +327,6 @@ local function updateTakeIndicator()
         takeArrow.Rotation = math.deg(math.atan2(away.X, -away.Z))
         takeHow.Text = "Go to the stand: " .. math.floor(nearestDistance) .. " studs"
     end
-end
-
-local shownTrail = 1
-local shownMargin = nil -- the bar's eased top limit, in viewport pixels
-local function updateBar(dt)
-    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    local best, bestDistance = nil, BAR_DISTANCE
-    for model in anims do
-        local state = model:GetAttribute("State")
-        local body = model.PrimaryPart
-        if body and STATE_LOOK[state] then
-            local distance = if root then (body.Position - root.Position).Magnitude else math.huge
-            if player:GetAttribute("CarryingGuardian") == model:GetAttribute("GuardianId") then
-                distance = 0 -- a thief always sees their pursuer
-            end
-            if distance < bestDistance then
-                best, bestDistance = model, distance
-            end
-        end
-    end
-    local camera = Workspace.CurrentCamera
-    local placed = false
-    if best and camera then
-        local body = best.PrimaryPart
-        if not barHeights[best] then
-            local box, size = best:GetBoundingBox()
-            barHeights[best] = box.Position.Y + size.Y / 2 - body.Position.Y
-        end
-        local scale = HudMetrics.scale()
-        local function onScreen(h)
-            local point = camera:WorldToViewportPoint(body.Position + Vector3.new(0, h, 0))
-            return point
-        end
-        local height = barHeights[best] + BAR_ABOVE
-        local point = onScreen(height)
-        local half = barWidth() * scale / 2
-        -- across, it keeps on the screen and clear of the left column (the profile and the menu): a guardian at the edge
-        -- of the view had the bar half off the screen, under the menu
-        local view = camera.ViewportSize
-        local status = Hud.Status
-        local leftLimit = (if status.Visible then status.AbsolutePosition.X + status.AbsoluteSize.X else 0) + BAR_GAP * scale
-        local rightLimit = view.X - BAR_GAP * scale
-        local barX = if leftLimit + half <= rightLimit - half then math.clamp(point.X, leftLimit + half, rightLimit - half) else view.X / 2
-        -- the bar hangs from the point: its bottom sits there, so the point must be a bar's height under the HUD above it
-        local margin = hudBottomOver(barX - half, barX + half) + BAR_GAP * scale + BAR_HEIGHT * scale
-        -- and it stays left of the touch buttons wherever it would hang down to them (then under the HUD over its new place)
-        local cluster = touchCluster()
-        if cluster and math.max(point.Y, margin) > cluster.Y - BAR_GAP * scale and barX + half > cluster.X - BAR_GAP * scale then
-            local leftOf = cluster.X - BAR_GAP * scale - half
-            if leftOf >= leftLimit + half then
-                barX = leftOf
-                margin = hudBottomOver(barX - half, barX + half) + BAR_GAP * scale + BAR_HEIGHT * scale
-            end
-        end
-        -- eased: a notification coming or going moves the HUD's foot, and the bar glides to it instead of jumping
-        shownMargin = if shownMargin then shownMargin + (margin - shownMargin) * (1 - math.exp(-dt * 12)) else margin
-        margin = shownMargin
-        if point.Z > 0 and point.Y < margin then
-            local low, high = 0, height -- the highest point on the guardian that is still in view
-            for _ = 1, 8 do
-                local middle = (low + high) / 2
-                if onScreen(middle).Y < margin then
-                    high = middle
-                else
-                    low = middle
-                end
-            end
-            point = onScreen(low)
-        end
-        if point.Z > 0 then
-            placed = true
-            barScale.Scale = scale
-            -- and over the inventory bar and what rises over it, as long as that leaves it under the HUD above
-            local y = math.max(point.Y, margin)
-            local dock = Hud.Dock
-            if dock.Visible and dock.AbsoluteSize.Y > 1 and barX - half < dock.AbsolutePosition.X + dock.AbsoluteSize.X
-                and barX + half > dock.AbsolutePosition.X then
-                y = math.max(margin, math.min(y, dock.AbsolutePosition.Y + GuiService:GetGuiInset().Y - BAR_GAP * scale))
-            end
-            bar.Position = UDim2.fromOffset(barX, y)
-        end
-    end
-    barLayer.Enabled = placed
-    Hud.setFighting(placed)
-    if not best then
-        outline.Enabled = false
-        alertState = nil
-        return
-    end
-    local config = GameConfig.Guardians[best:GetAttribute("GuardianId")]
-    local state = best:GetAttribute("State")
-    local health, maxHealth = best:GetAttribute("Health") or 0, best:GetAttribute("MaxHealth") or 1
-    local share = math.clamp(health / maxHealth, 0, 1)
-    nameLabel.Text = config and config.DisplayName or best.Name
-    local look = STATE_LOOK[state]
-    stateLabel.Text = if smallBar() then string.split(look.Text, " ·")[1] else look.Text
-    stateLabel.TextColor3 = look.Color
-    setFill(if state == "Enraged" then FILL.Rage elseif state == "Weakened" then FILL.Weak else FILL.Calm)
-    updateAlert(best, state, dt)
-    fill.Size = UDim2.fromScale(share, 1)
-    shownTrail = if share > shownTrail then share else shownTrail + (share - shownTrail) * (1 - math.exp(-dt * 3))
-    trailFill.Size = UDim2.fromScale(shownTrail, 1)
-    weakMark.Position = UDim2.fromScale(config and config.WeakenedAt or 0.4, 0)
-    healthText.Text = formatNumber(health) .. " / " .. formatNumber(maxHealth)
 end
 
 -- ---------- knockback ----------
@@ -783,6 +494,7 @@ local function track(model)
     end
     local rig = require(rigModule)
     rigs[model] = rig
+    GuardianBars.add(model)
     task.spawn(function()
         local anim = GuardianAnim.new(model, rig)
         if anim and model:IsDescendantOf(Workspace) then
@@ -794,6 +506,7 @@ CollectionService:GetInstanceAddedSignal(GameConfig.GuardianTag):Connect(track)
 CollectionService:GetInstanceRemovedSignal(GameConfig.GuardianTag):Connect(function(model)
     anims[model] = nil
     rigs[model] = nil
+    GuardianBars.remove(model)
 end)
 for _, model in CollectionService:GetTagged(GameConfig.GuardianTag) do
     track(model)
@@ -862,11 +575,11 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
         end
     end
     if action == "Awaken" then
-        if isNear(model, BAR_DISTANCE) then
+        if isNear(model, NEAR_DISTANCE) then
             message:show((config.Called or "The " .. config.DisplayName) .. " wakes up!", "Info")
         end
     elseif action == "Weaken" then
-        if isNear(model, BAR_DISTANCE) then
+        if isNear(model, NEAR_DISTANCE) then
             message:show((config.Called or "The " .. config.DisplayName) .. " " .. config.WeakenedHint, "Info")
         end
     elseif action == "Steal" and style then
@@ -910,7 +623,8 @@ RunService.RenderStepped:Connect(function(dt)
             end
         end
     end
-    updateBar(dt)
+    GuardianBars.update(dt)
+    updateOutline()
     updateTakeIndicator()
     updateWaypointText()
     updateCountdowns()
