@@ -31,6 +31,20 @@ local TIMES = WeatherConfig.Times
 local RAIN = WeatherConfig.Rain
 local MOTES = WeatherConfig.Motes
 
+-- a Qi Bloom tells everyone when it begins: cultivating gathers more Qi while it lasts (QiService adds it)
+do
+    local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
+    local bloomNotice = Toast.new("QiBloomNotice", Color3.fromRGB(120, 255, 214), 6)
+    local last = ReplicatedStorage:GetAttribute("Weather")
+    ReplicatedStorage:GetAttributeChangedSignal("Weather"):Connect(function()
+        local now = ReplicatedStorage:GetAttribute("Weather")
+        if now == "QiBloom" and last ~= "QiBloom" then
+            bloomNotice:show("A Qi Bloom! Cultivate now for +" .. STATES.QiBloom.QiBonusPercent .. "% Qi.", "Reward")
+        end
+        last = now
+    end)
+end
+
 local LOOK_EVERY = 0.2   -- seconds between working out the look
 local COVER_EVERY = 0.5  -- seconds between roof checks while it rains
 local FOLLOW_STEP = 4    -- studs the camera moves before the rain's area follows

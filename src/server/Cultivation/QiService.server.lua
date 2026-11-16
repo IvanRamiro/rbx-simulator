@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local WeatherConfig = require(ReplicatedStorage:WaitForChild("WeatherConfig"))
 local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
@@ -157,6 +158,10 @@ local function awardCultivationQi(player)
     local bonusPercent = PetInventory.getQiBonusPercent(player)
     if atStation then
         bonusPercent += GameConfig.TrainingStation.QiBonusPercent
+    end
+    -- a Qi Bloom (the weather, WeatherService's published state) adds its share too
+    if ReplicatedStorage:GetAttribute("Weather") == "QiBloom" then
+        bonusPercent += WeatherConfig.States.QiBloom.QiBonusPercent
     end
     local _, rankValue = PlayerData.getStats(player)
     local multiplier = Ranks.getQiMultiplier(rankValue and rankValue.Value) * PassRules.qiMultiplier(player)
