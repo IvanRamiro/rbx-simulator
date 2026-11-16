@@ -13,14 +13,15 @@ function RewardRules.today()
     return math.floor(os.time() / 86400)
 end
 
--- day: 1 to #Rewards.Daily; returns its Spirit Stones (with the player's pass bonus, VIP's, if a player is given) and minutes of Qi
+-- day: 1 to #Rewards.Daily; returns its Spirit Stones (with the player's pass bonus, VIP's, if a player is given), minutes of Qi,
+-- and minutes of the timed Qi boost (GameConfig.TimedBoost)
 function RewardRules.daily(day, realmIndex, player)
     local entry = GameConfig.Rewards.Daily[day]
     local stones = math.max(5, Shop.roundNice(entry.Stones * GameConfig.SpiritStones.RealmFactor ^ ((realmIndex or 1) - 1)))
     if player then
         stones = PassRules.dailyStones(player, stones)
     end
-    return stones, entry.QiMinutes or 0
+    return stones, entry.QiMinutes or 0, entry.BoostMinutes or 0
 end
 
 -- the streak day the next claim is: the one after yesterday's claim, or day 1 after a missed day

@@ -109,9 +109,11 @@ local function render()
     local current = player:GetAttribute("DailyDay") or 1
     local realm = Shop.playerRealmIndex(player)
     for day, c in cards do
-        local stones, minutes = RewardRules.daily(day, realm, player)
+        local stones, minutes, boostMinutes = RewardRules.daily(day, realm, player)
         c.amount.Text = NumberFormat.compact(stones)
-        c.extra.Text = if minutes > 0 then "+" .. minutes .. "m Qi" else "" -- ("+2 MIN QI" didn't fit a day card)
+        -- ("+2 MIN QI" didn't fit a day card): the timed boost's minutes, else any minutes of Qi
+        c.extra.Text = if boostMinutes > 0 then "+" .. boostMinutes .. "m 2x Qi" elseif minutes > 0 then "+" .. minutes .. "m Qi" else ""
+        c.extra.TextColor3 = if boostMinutes > 0 then C.Highlight else C.Sky
         local claimed = day < current or (day == current and not isReady)
         local isNext = day == current and isReady
         c.word.TextColor3 = if isNext then C.Highlight elseif claimed then C.Buy:Lerp(C.Text, 0.3) else C.Muted
@@ -158,7 +160,7 @@ toggleButton.Activated:Connect(function()
     end
 end)
 
-RemoteEvents.RewardEvent.OnClientEvent:Connect(function(kind, a, b, c)
+RemoteEvents.RewardEvent.OnClientEvent:Connect(function(kind, a, b, c, d)
     if kind == "Offline" and typeof(a) == "number" and typeof(b) == "number" then
         local hours = b / 3600
         local away = if hours >= 1 then string.format("%.1f hours", hours) else math.floor(b / 60) .. " minutes"
@@ -167,7 +169,8 @@ RemoteEvents.RewardEvent.OnClientEvent:Connect(function(kind, a, b, c)
     elseif kind == "Daily" and typeof(a) == "number" then
         Sfx.play("RewardClaim")
         local qi = if typeof(b) == "number" and b > 0 then "  +" .. NumberFormat.compact(b) .. " Qi" else ""
-        message:show("Day " .. tostring(c) .. " claimed: +" .. NumberFormat.compact(a) .. " Spirit Stones" .. qi, "Reward")
+        local boost = if typeof(d) == "number" and d > 0 then "  +" .. d .. " minutes of 2x Qi" else ""
+        message:show("Day " .. tostring(c) .. " claimed: +" .. NumberFormat.compact(a) .. " Spirit Stones" .. qi .. boost, "Reward")
     elseif (kind == "Code" or kind == "Group") and typeof(b) == "string" then
         Sfx.play(if a then "RewardClaim" else "Error")
         message:show(b, if a then "Reward" else "Error")

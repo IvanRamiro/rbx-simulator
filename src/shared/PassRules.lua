@@ -4,8 +4,12 @@
 --
 --   PassRules.List / PassRules.ById    the passes, in the Store's order
 --   PassRules.owns(player, id)         whether they own it
---   PassRules.qiTier(player)           the highest Qi boost tier they own (2, 4, 8, 16; 1 with none): tiers never stack
---   PassRules.qiMultiplier(player)     their Qi boost tier times every other pass's Qi multiplier (VIP's +10%); 1 with none
+--   PassRules.ForSale                  the passes the Store shows and sells (all but the Retired ones)
+--   PassRules.qiTier(player)           the highest Qi pass tier they own (2, 4; 1 with none), never over GameConfig.MaxQiTier: tiers
+--                                      never stack, and a Retired 8x or 16x pass counts as the cap
+--   PassRules.qiMultiplier(player, withoutTimed)  their Qi pass tier times every other pass's Qi multiplier (VIP's +10%) times the
+--                                      timed boost while it runs (withoutTimed leaves it out); 1 with none
+--   PassRules.boostSecondsLeft(player), boostMultiplier(player)   the timed boost: seconds left, and its multiplier now (1 when off)
 --   PassRules.luck(player)             how many times likelier their rare hatches are (1 with no luck)
 --   PassRules.maxEquipped(player)      how many beasts they can equip; PassRules.MostEquipped: the most anyone can
 --   PassRules.dailyStones(player, n)   a daily reward's Spirit Stones with their passes' bonus
@@ -18,10 +22,14 @@ local PassRules = {}
 
 PassRules.List = GameConfig.GamePasses
 PassRules.ById = {}
+PassRules.ForSale = {}
 local extraSlots = 0
 for _, pass in PassRules.List do
     PassRules.ById[pass.Id] = pass
     extraSlots += pass.ExtraSlots or 0
+    if not pass.Retired then
+        table.insert(PassRules.ForSale, pass)
+    end
 end
 PassRules.MostEquipped = GameConfig.MaxEquippedPets + extraSlots
 
@@ -41,18 +49,35 @@ local function product(player, field, default)
     return value
 end
 
+-- (a tier over GameConfig.MaxQiTier, a Retired pass's, counts as the cap)
 function PassRules.qiTier(player)
     local tier = 1
     for _, pass in PassRules.List do
         if pass.QiTier and PassRules.owns(player, pass.Id) then
-            tier = math.max(tier, pass.QiTier)
+            tier = math.max(tier, math.min(pass.QiTier, GameConfig.MaxQiTier or math.huge))
         end
     end
     return tier
 end
 
-function PassRules.qiMultiplier(player)
-    return PassRules.qiTier(player) * product(player, "QiMultiplier", 1)
+-- The timed boost (GameConfig.TimedBoost): running while the player's "QiBoostEnds" attribute, a server time set by server/Shop/QiBoost,
+-- is still ahead. Its clock only runs while they're in the game: QiBoost saves the seconds left and sets a new end when they rejoin.
+function PassRules.boostEnds(player)
+    local ends = player and player:GetAttribute("QiBoostEnds")
+    return if typeof(ends) == "number" then ends else 0
+end
+
+function PassRules.boostSecondsLeft(player)
+    return math.max(0, PassRules.boostEnds(player) - workspace:GetServerTimeNow())
+end
+
+function PassRules.boostMultiplier(player)
+    return if PassRules.boostSecondsLeft(player) > 0 then GameConfig.TimedBoost.Multiplier else 1
+end
+
+-- withoutTimed: leave the timed boost out (offline Qi: its clock doesn't run while the player is away)
+function PassRules.qiMultiplier(player, withoutTimed)
+    return PassRules.qiTier(player) * product(player, "QiMultiplier", 1) * (if withoutTimed then 1 else PassRules.boostMultiplier(player))
 end
 
 function PassRules.luck(player)

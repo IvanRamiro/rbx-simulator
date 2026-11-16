@@ -395,9 +395,12 @@ local GameConfig = {
     StartingRank = "Qi Initiate",
 
     Ranks = {
-        -- (every QiRequired raised 2026-11-12 for the release balance: 2x at the start tapering to 1.5x at Soul Awakening and after. An
-        -- active player reached Spirit Core in 7 minutes and outgrew the first islands in half an hour; and the egg and pet fixes made that
-        -- day shortened the climb to the top from about 34 hours of active play to 23. Now about 15 minutes to Spirit Core, 34 hours in all)
+        -- (every QiRequired raised 2026-11-12 for the release balance: 2x at the start tapering to 1.5x at Soul Awakening and after)
+        -- QiMultiplier (the balance of 2026-11-16; the owner: "player should be able to reach max realm within 5 days if free to play",
+        -- then Qi passes capped at 4x plus timed boosts): x1 for the first three realms, x2 at Spirit Soul, then about 2.3x a realm
+        -- (5, 12, 30, 70, 160, 400, 900, 2000; it doubled up to 512 before). With the egg stands' fix (EggStands.respawn) a free player
+        -- who plays well reaches Eternal Origin in about 5 days at 4 hours a day (tools/balance/progression_sim.py). The thresholds
+        -- were left as they were, so no save's rank moves (PlayerData lowers a rank whose Qi is under its QiRequired).
         { Id = "QiInitiate", Name = "Qi Initiate", Realm = "Qi Awakening", Level = 1, QiRequired = 0, AuraTier = 1, QiMultiplier = 1 },
         { Id = "QiGatherer", Name = "Qi Gatherer", Realm = "Qi Awakening", Level = 2, QiRequired = 600, AuraTier = 1, QiMultiplier = 1 },
         { Id = "QiCondenser", Name = "Qi Condenser", Realm = "Qi Awakening", Level = 3, QiRequired = 1700, AuraTier = 2, QiMultiplier = 1 },
@@ -421,53 +424,53 @@ local GameConfig = {
         { Id = "SoulManifestation", Name = "Soul Manifestation", Realm = "Spirit Soul", Level = 4, QiRequired = 680000, AuraTier = 5, QiMultiplier = 2 },
         { Id = "SpiritSoulMaster", Name = "Spirit Soul Master", Realm = "Spirit Soul", Level = 5, QiRequired = 870000, AuraTier = 5, QiMultiplier = 2 },
 
-        { Id = "AscendantInitiate", Name = "Ascendant Initiate", Realm = "Ascendant Realm", Level = 1, QiRequired = 1000000, AuraTier = 5, QiMultiplier = 4 },
-        { Id = "SkyAscendant", Name = "Sky Ascendant", Realm = "Ascendant Realm", Level = 2, QiRequired = 1500000, AuraTier = 5, QiMultiplier = 4 },
-        { Id = "HeavenlyAdept", Name = "Heavenly Adept", Realm = "Ascendant Realm", Level = 3, QiRequired = 2000000, AuraTier = 5, QiMultiplier = 4 },
-        { Id = "CelestialMaster", Name = "Celestial Master", Realm = "Ascendant Realm", Level = 4, QiRequired = 2600000, AuraTier = 5, QiMultiplier = 4 },
-        { Id = "AscendantSovereign", Name = "Ascendant Sovereign", Realm = "Ascendant Realm", Level = 5, QiRequired = 3300000, AuraTier = 5, QiMultiplier = 4 },
+        { Id = "AscendantInitiate", Name = "Ascendant Initiate", Realm = "Ascendant Realm", Level = 1, QiRequired = 1000000, AuraTier = 5, QiMultiplier = 5 },
+        { Id = "SkyAscendant", Name = "Sky Ascendant", Realm = "Ascendant Realm", Level = 2, QiRequired = 1500000, AuraTier = 5, QiMultiplier = 5 },
+        { Id = "HeavenlyAdept", Name = "Heavenly Adept", Realm = "Ascendant Realm", Level = 3, QiRequired = 2000000, AuraTier = 5, QiMultiplier = 5 },
+        { Id = "CelestialMaster", Name = "Celestial Master", Realm = "Ascendant Realm", Level = 4, QiRequired = 2600000, AuraTier = 5, QiMultiplier = 5 },
+        { Id = "AscendantSovereign", Name = "Ascendant Sovereign", Realm = "Ascendant Realm", Level = 5, QiRequired = 3300000, AuraTier = 5, QiMultiplier = 5 },
 
-        { Id = "LesserImmortal", Name = "Lesser Immortal", Realm = "Immortal Realm", Level = 1, QiRequired = 3800000, AuraTier = 5, QiMultiplier = 8 },
-        { Id = "TrueImmortal", Name = "True Immortal", Realm = "Immortal Realm", Level = 2, QiRequired = 5200000, AuraTier = 5, QiMultiplier = 8 },
-        { Id = "GoldenImmortal", Name = "Golden Immortal", Realm = "Immortal Realm", Level = 3, QiRequired = 6900000, AuraTier = 5, QiMultiplier = 8 },
-        { Id = "ImmortalLord", Name = "Immortal Lord", Realm = "Immortal Realm", Level = 4, QiRequired = 8900000, AuraTier = 5, QiMultiplier = 8 },
-        { Id = "ImmortalEmperor", Name = "Immortal Emperor", Realm = "Immortal Realm", Level = 5, QiRequired = 11000000, AuraTier = 5, QiMultiplier = 8 },
+        { Id = "LesserImmortal", Name = "Lesser Immortal", Realm = "Immortal Realm", Level = 1, QiRequired = 3800000, AuraTier = 5, QiMultiplier = 12 },
+        { Id = "TrueImmortal", Name = "True Immortal", Realm = "Immortal Realm", Level = 2, QiRequired = 5200000, AuraTier = 5, QiMultiplier = 12 },
+        { Id = "GoldenImmortal", Name = "Golden Immortal", Realm = "Immortal Realm", Level = 3, QiRequired = 6900000, AuraTier = 5, QiMultiplier = 12 },
+        { Id = "ImmortalLord", Name = "Immortal Lord", Realm = "Immortal Realm", Level = 4, QiRequired = 8900000, AuraTier = 5, QiMultiplier = 12 },
+        { Id = "ImmortalEmperor", Name = "Immortal Emperor", Realm = "Immortal Realm", Level = 5, QiRequired = 11000000, AuraTier = 5, QiMultiplier = 12 },
 
-        { Id = "DivineInitiate", Name = "Divine Initiate", Realm = "Divine Realm", Level = 1, QiRequired = 13000000, AuraTier = 5, QiMultiplier = 16 },
-        { Id = "DivineAdept", Name = "Divine Adept", Realm = "Divine Realm", Level = 2, QiRequired = 17000000, AuraTier = 5, QiMultiplier = 16 },
-        { Id = "DivineLord", Name = "Divine Lord", Realm = "Divine Realm", Level = 3, QiRequired = 22000000, AuraTier = 5, QiMultiplier = 16 },
-        { Id = "DivineKing", Name = "Divine King", Realm = "Divine Realm", Level = 4, QiRequired = 28000000, AuraTier = 5, QiMultiplier = 16 },
-        { Id = "DivineEmperor", Name = "Divine Emperor", Realm = "Divine Realm", Level = 5, QiRequired = 35000000, AuraTier = 5, QiMultiplier = 16 },
+        { Id = "DivineInitiate", Name = "Divine Initiate", Realm = "Divine Realm", Level = 1, QiRequired = 13000000, AuraTier = 5, QiMultiplier = 30 },
+        { Id = "DivineAdept", Name = "Divine Adept", Realm = "Divine Realm", Level = 2, QiRequired = 17000000, AuraTier = 5, QiMultiplier = 30 },
+        { Id = "DivineLord", Name = "Divine Lord", Realm = "Divine Realm", Level = 3, QiRequired = 22000000, AuraTier = 5, QiMultiplier = 30 },
+        { Id = "DivineKing", Name = "Divine King", Realm = "Divine Realm", Level = 4, QiRequired = 28000000, AuraTier = 5, QiMultiplier = 30 },
+        { Id = "DivineEmperor", Name = "Divine Emperor", Realm = "Divine Realm", Level = 5, QiRequired = 35000000, AuraTier = 5, QiMultiplier = 30 },
 
-        { Id = "StarInitiate", Name = "Star Initiate", Realm = "Cosmic Realm", Level = 1, QiRequired = 39000000, AuraTier = 5, QiMultiplier = 32 },
-        { Id = "StarForger", Name = "Star Forger", Realm = "Cosmic Realm", Level = 2, QiRequired = 52000000, AuraTier = 5, QiMultiplier = 32 },
-        { Id = "NebulaMaster", Name = "Nebula Master", Realm = "Cosmic Realm", Level = 3, QiRequired = 66000000, AuraTier = 5, QiMultiplier = 32 },
-        { Id = "GalaxySovereign", Name = "Galaxy Sovereign", Realm = "Cosmic Realm", Level = 4, QiRequired = 83000000, AuraTier = 5, QiMultiplier = 32 },
-        { Id = "CosmicEmperor", Name = "Cosmic Emperor", Realm = "Cosmic Realm", Level = 5, QiRequired = 100000000, AuraTier = 5, QiMultiplier = 32 },
+        { Id = "StarInitiate", Name = "Star Initiate", Realm = "Cosmic Realm", Level = 1, QiRequired = 39000000, AuraTier = 5, QiMultiplier = 70 },
+        { Id = "StarForger", Name = "Star Forger", Realm = "Cosmic Realm", Level = 2, QiRequired = 52000000, AuraTier = 5, QiMultiplier = 70 },
+        { Id = "NebulaMaster", Name = "Nebula Master", Realm = "Cosmic Realm", Level = 3, QiRequired = 66000000, AuraTier = 5, QiMultiplier = 70 },
+        { Id = "GalaxySovereign", Name = "Galaxy Sovereign", Realm = "Cosmic Realm", Level = 4, QiRequired = 83000000, AuraTier = 5, QiMultiplier = 70 },
+        { Id = "CosmicEmperor", Name = "Cosmic Emperor", Realm = "Cosmic Realm", Level = 5, QiRequired = 100000000, AuraTier = 5, QiMultiplier = 70 },
 
-        { Id = "VoidWalker", Name = "Void Walker", Realm = "Void Realm", Level = 1, QiRequired = 110000000, AuraTier = 5, QiMultiplier = 64 },
-        { Id = "VoidShaper", Name = "Void Shaper", Realm = "Void Realm", Level = 2, QiRequired = 150000000, AuraTier = 5, QiMultiplier = 64 },
-        { Id = "VoidMaster", Name = "Void Master", Realm = "Void Realm", Level = 3, QiRequired = 190000000, AuraTier = 5, QiMultiplier = 64 },
-        { Id = "SpaceTimeLord", Name = "Space-Time Lord", Realm = "Void Realm", Level = 4, QiRequired = 240000000, AuraTier = 5, QiMultiplier = 64 },
-        { Id = "VoidSovereign", Name = "Void Sovereign", Realm = "Void Realm", Level = 5, QiRequired = 290000000, AuraTier = 5, QiMultiplier = 64 },
+        { Id = "VoidWalker", Name = "Void Walker", Realm = "Void Realm", Level = 1, QiRequired = 110000000, AuraTier = 5, QiMultiplier = 160 },
+        { Id = "VoidShaper", Name = "Void Shaper", Realm = "Void Realm", Level = 2, QiRequired = 150000000, AuraTier = 5, QiMultiplier = 160 },
+        { Id = "VoidMaster", Name = "Void Master", Realm = "Void Realm", Level = 3, QiRequired = 190000000, AuraTier = 5, QiMultiplier = 160 },
+        { Id = "SpaceTimeLord", Name = "Space-Time Lord", Realm = "Void Realm", Level = 4, QiRequired = 240000000, AuraTier = 5, QiMultiplier = 160 },
+        { Id = "VoidSovereign", Name = "Void Sovereign", Realm = "Void Realm", Level = 5, QiRequired = 290000000, AuraTier = 5, QiMultiplier = 160 },
 
-        { Id = "DaoSeeker", Name = "Dao Seeker", Realm = "Heavenly Dao", Level = 1, QiRequired = 330000000, AuraTier = 5, QiMultiplier = 128 },
-        { Id = "DaoAdept", Name = "Dao Adept", Realm = "Heavenly Dao", Level = 2, QiRequired = 420000000, AuraTier = 5, QiMultiplier = 128 },
-        { Id = "DaoMaster", Name = "Dao Master", Realm = "Heavenly Dao", Level = 3, QiRequired = 540000000, AuraTier = 5, QiMultiplier = 128 },
-        { Id = "HeavenlyLawkeeper", Name = "Heavenly Lawkeeper", Realm = "Heavenly Dao", Level = 4, QiRequired = 660000000, AuraTier = 5, QiMultiplier = 128 },
-        { Id = "DaoSovereign", Name = "Dao Sovereign", Realm = "Heavenly Dao", Level = 5, QiRequired = 810000000, AuraTier = 5, QiMultiplier = 128 },
+        { Id = "DaoSeeker", Name = "Dao Seeker", Realm = "Heavenly Dao", Level = 1, QiRequired = 330000000, AuraTier = 5, QiMultiplier = 400 },
+        { Id = "DaoAdept", Name = "Dao Adept", Realm = "Heavenly Dao", Level = 2, QiRequired = 420000000, AuraTier = 5, QiMultiplier = 400 },
+        { Id = "DaoMaster", Name = "Dao Master", Realm = "Heavenly Dao", Level = 3, QiRequired = 540000000, AuraTier = 5, QiMultiplier = 400 },
+        { Id = "HeavenlyLawkeeper", Name = "Heavenly Lawkeeper", Realm = "Heavenly Dao", Level = 4, QiRequired = 660000000, AuraTier = 5, QiMultiplier = 400 },
+        { Id = "DaoSovereign", Name = "Dao Sovereign", Realm = "Heavenly Dao", Level = 5, QiRequired = 810000000, AuraTier = 5, QiMultiplier = 400 },
 
-        { Id = "PrimordialAwakening", Name = "Primordial Awakening", Realm = "Primordial Realm", Level = 1, QiRequired = 910000000, AuraTier = 5, QiMultiplier = 256 },
-        { Id = "AncientOrigin", Name = "Ancient Origin", Realm = "Primordial Realm", Level = 2, QiRequired = 1200000000, AuraTier = 5, QiMultiplier = 256 },
-        { Id = "PrimordialLord", Name = "Primordial Lord", Realm = "Primordial Realm", Level = 3, QiRequired = 1500000000, AuraTier = 5, QiMultiplier = 256 },
-        { Id = "OriginEmperor", Name = "Origin Emperor", Realm = "Primordial Realm", Level = 4, QiRequired = 1900000000, AuraTier = 5, QiMultiplier = 256 },
-        { Id = "PrimordialSovereign", Name = "Primordial Sovereign", Realm = "Primordial Realm", Level = 5, QiRequired = 2300000000, AuraTier = 5, QiMultiplier = 256 },
+        { Id = "PrimordialAwakening", Name = "Primordial Awakening", Realm = "Primordial Realm", Level = 1, QiRequired = 910000000, AuraTier = 5, QiMultiplier = 900 },
+        { Id = "AncientOrigin", Name = "Ancient Origin", Realm = "Primordial Realm", Level = 2, QiRequired = 1200000000, AuraTier = 5, QiMultiplier = 900 },
+        { Id = "PrimordialLord", Name = "Primordial Lord", Realm = "Primordial Realm", Level = 3, QiRequired = 1500000000, AuraTier = 5, QiMultiplier = 900 },
+        { Id = "OriginEmperor", Name = "Origin Emperor", Realm = "Primordial Realm", Level = 4, QiRequired = 1900000000, AuraTier = 5, QiMultiplier = 900 },
+        { Id = "PrimordialSovereign", Name = "Primordial Sovereign", Realm = "Primordial Realm", Level = 5, QiRequired = 2300000000, AuraTier = 5, QiMultiplier = 900 },
 
-        { Id = "EternalInitiate", Name = "Eternal Initiate", Realm = "Eternal Transcendence", Level = 1, QiRequired = 2600000000, AuraTier = 5, QiMultiplier = 512 },
-        { Id = "EternalAscendant", Name = "Eternal Ascendant", Realm = "Eternal Transcendence", Level = 2, QiRequired = 3300000000, AuraTier = 5, QiMultiplier = 512 },
-        { Id = "InfinityMaster", Name = "Infinity Master", Realm = "Eternal Transcendence", Level = 3, QiRequired = 4200000000, AuraTier = 5, QiMultiplier = 512 },
-        { Id = "TranscendentOne", Name = "Transcendent One", Realm = "Eternal Transcendence", Level = 4, QiRequired = 5100000000, AuraTier = 5, QiMultiplier = 512 },
-        { Id = "EternalOrigin", Name = "Eternal Origin", Realm = "Eternal Transcendence", Level = 5, QiRequired = 6300000000, AuraTier = 5, QiMultiplier = 512 },
+        { Id = "EternalInitiate", Name = "Eternal Initiate", Realm = "Eternal Transcendence", Level = 1, QiRequired = 2600000000, AuraTier = 5, QiMultiplier = 2000 },
+        { Id = "EternalAscendant", Name = "Eternal Ascendant", Realm = "Eternal Transcendence", Level = 2, QiRequired = 3300000000, AuraTier = 5, QiMultiplier = 2000 },
+        { Id = "InfinityMaster", Name = "Infinity Master", Realm = "Eternal Transcendence", Level = 3, QiRequired = 4200000000, AuraTier = 5, QiMultiplier = 2000 },
+        { Id = "TranscendentOne", Name = "Transcendent One", Realm = "Eternal Transcendence", Level = 4, QiRequired = 5100000000, AuraTier = 5, QiMultiplier = 2000 },
+        { Id = "EternalOrigin", Name = "Eternal Origin", Realm = "Eternal Transcendence", Level = 5, QiRequired = 6300000000, AuraTier = 5, QiMultiplier = 2000 },
     },
 
     MaxEquippedPets = 3,
@@ -649,9 +652,12 @@ local GameConfig = {
         -- Spirit Stones at realm 1 (RewardRules scales them by realm). Raised four times on November 11, 2026: a day used to
         -- pay 5 stones against the 40 one stolen egg pays (15 seconds of play), so logging in wasn't worth it. Now day 1 is
         -- about half an egg, day 7 about six, and a full week about five weapons of the player's realm (measured 2026-11-12).
+        -- BoostMinutes: minutes of the timed 2x Qi boost (TimedBoost), so free players get boosts too: 90 minutes a week (2026-11-16;
+        -- they replaced 2, 3 and 5 minutes of Qi on days 3, 5 and 7, which no longer fit a day's card beside them)
         Daily = {
-            { Stones = 20 }, { Stones = 25 }, { Stones = 30, QiMinutes = 2 }, { Stones = 35 },
-            { Stones = 45, QiMinutes = 3 }, { Stones = 55 }, { Stones = 100, QiMinutes = 5 },
+            { Stones = 20, BoostMinutes = 5 }, { Stones = 25, BoostMinutes = 5 }, { Stones = 30, BoostMinutes = 10 },
+            { Stones = 35, BoostMinutes = 10 }, { Stones = 45, BoostMinutes = 15 }, { Stones = 55, BoostMinutes = 15 },
+            { Stones = 100, BoostMinutes = 30 },
         },
         Offline = { Share = 0.2, MaxHours = 8, MinMinutes = 10 },
         Group = { GroupId = 0, Stones = 200 },
@@ -1000,15 +1006,34 @@ local GameConfig = {
             Text = "The VIP title and chat tag, +10% Qi and +50% daily Spirit Stones.", QiMultiplier = 1.1, DailyStones = 1.5, Title = "VIP" },
         -- The Qi boosts (the owner, 2026-11-15: "2x 3 + 4x 6 + 8x 12 etc... like the multiplier in steal an eggs"): tiers, not
         -- stacking. Only the highest QiTier a player owns counts (PassRules.qiMultiplier); VIP's QiMultiplier still multiplies on top.
+        -- Capped at MaxQiTier (the owner, 2026-11-16: "just keep the multiplier until 4x then also add a consumable multiplier"):
+        -- the 8x and 16x passes are Retired: taken off sale on Roblox, never shown, and anyone who owns one counts as the 4x tier (only
+        -- the creator's account ever had them: the game wasn't public). They stay listed so their ownership is still checked.
         -- The 2x tier is the old Qi Surge pass (Id kept, so its owners keep it), renamed and repriced on Roblox the same day.
         { Id = "QiSurge", Name = "Qi Boost", GamePassId = 2083202424, Price = 3, Headline = "2x QI!", Icon = "rbxassetid://71034417049645",
             Text = "Double Qi from cultivating, while you're away and from every Qi reward.", QiTier = 2 },
         { Id = "Qi4x", Name = "Greater Qi Boost", GamePassId = 2088004027, Price = 6, Headline = "4x QI!", Icon = "rbxassetid://71034417049645",
             Text = "Four times the Qi from cultivating, while you're away and from every Qi reward.", QiTier = 4 },
         { Id = "Qi8x", Name = "Grand Qi Boost", GamePassId = 2088975892, Price = 12, Headline = "8x QI!", Icon = "rbxassetid://71034417049645",
-            Text = "Eight times the Qi from cultivating, while you're away and from every Qi reward.", QiTier = 8 },
+            Text = "Eight times the Qi from cultivating, while you're away and from every Qi reward.", QiTier = 8, Retired = true },
         { Id = "Qi16x", Name = "Supreme Qi Boost", GamePassId = 2087998028, Price = 24, Headline = "16x QI!", Icon = "rbxassetid://71034417049645",
-            Text = "Sixteen times the Qi from cultivating, while you're away and from every Qi reward.", QiTier = 16 },
+            Text = "Sixteen times the Qi from cultivating, while you're away and from every Qi reward.", QiTier = 16, Retired = true },
+    },
+    MaxQiTier = 4, -- the most any Qi pass counts for (PassRules.qiTier)
+
+    -- Timed Qi boosts (the owner, 2026-11-16: "add a consumable multiplier like 2x qi multiplier per 5 mins"): developer products
+    -- (ProductService) that add minutes of Multiplier times Qi, on top of the Qi pass and VIP, on everything that gives Qi but offline Qi.
+    -- Buying more adds time, up to MaxMinutes banked. The time runs only while the player is in the game: it is saved as seconds left
+    -- (PlayerData's Boost, server/Shop/QiBoost) and runs again when they rejoin. The daily reward gives some too (Rewards.Daily
+    -- BoostMinutes), so free players have them. Prices sit with the spins' (5 and 20 Robux): a short boost costs about a spin.
+    TimedBoost = {
+        Multiplier = 2,
+        MaxMinutes = 24 * 60,
+        Products = {
+            { Minutes = 5, ProductId = 3732227230, Price = 5 },   -- "2x Qi Boost: 5 Minutes" (made 2026-11-16 via Open Cloud)
+            { Minutes = 15, ProductId = 3732227300, Price = 12 }, -- "2x Qi Boost: 15 Minutes"
+            { Minutes = 60, ProductId = 3732227320, Price = 39 }, -- "2x Qi Boost: 1 Hour"
+        },
     },
     -- Lucky hatches (the Luck pass): every Rare-or-rarer beast that is also rarer than an egg's commonest is that many times likelier,
     -- taken from the others, which always keep at least this many percent between them (PassRules.luckyPool).

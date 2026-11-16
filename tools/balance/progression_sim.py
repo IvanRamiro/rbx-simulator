@@ -3,11 +3,14 @@
     python3 -I tools/balance/progression_sim.py              the game as it is
     python3 -I tools/balance/progression_sim.py --proposal   with the tuning proposed in PROPOSAL below
     python3 -I tools/balance/progression_sim.py --both       both, and the before/after table
-    python3 -I -B tools/balance/progression_sim.py --proposal --stands code   the proposal's multipliers alone (no code change)
+    python3 -I -B tools/balance/progression_sim.py --root <folder> --name before   an older version's files (src/... under it)
+    python3 -I -B tools/balance/progression_sim.py --compare before current        compare.md from two runs
+    python3 -I -B tools/balance/progression_sim.py --proposal --stands code   a variant of PROPOSAL (try other numbers)
     options: --runs N (Monte Carlo runs per profile, default 30), --seed S, --mults 2,5,12,... (realms 4-12, to try others)
 
 Writes tools/balance/output/<current|proposal|proposal_config_only>.md and .csv (and compare.md with --both).
-The results in the vault note "Balance Analysis 2026-11-16" came from --both --runs 30 and --proposal --stands code --runs 30.
+The results in the vault note "Balance Analysis 2026-11-16": the game before the 2026-11-16 balance (git ed75c91's GameConfig,
+PetRules, Bridges and EggStands, run with --root) against the game now (current), 30 runs each.
 
 Every game number is read from the Luau files (luau_table.py parses them; nothing is copied by hand):
   src/shared/GameConfig.lua   ranks, realm multipliers, pets, eggs, passes, guardians, weapons, combat, Qinggong, stones,
@@ -57,6 +60,13 @@ def load_game():
         "sizes": read("src/shared/PetRules.lua", "PetRules.Sizes ="),
         "bridges": read("src/worldbuild/Placements/Bridges.lua", "return")["Bridges"],
     }
+    # the egg stands' respawn rule (EggStands.respawn): "own" since 2026-11-16 (a stand brings back its own egg), before it the
+    # lowest-or-random rule
+    stands_path = os.path.join(ROOT, "src/server/Guardians/EggStands.lua")
+    if os.path.exists(stands_path):
+        with open(stands_path, encoding="utf-8") as handle:
+            if "slot.home" in handle.read():
+                game["cfg"]["__stand_rule"] = "own"
     return game
 
 
@@ -220,17 +230,22 @@ class Rules:
 # Profiles. luck/slots/vip/tier are the passes (GameConfig.GamePasses); exclusive = Exclusive Eggs bought at the start.
 PROFILES = [
     {"key": "free_casual", "label": "Free, casual", "style": "casual"},
-    {"key": "free_efficient", "label": "Free, efficient", "style": "efficient"},
-    {"key": "boost2", "label": "Qi Boost 2x", "style": "efficient", "tier": 2},
-    {"key": "boost4", "label": "Qi Boost 4x", "style": "efficient", "tier": 4},
-    {"key": "boost8", "label": "Qi Boost 8x", "style": "efficient", "tier": 8},
-    {"key": "boost16", "label": "Qi Boost 16x", "style": "efficient", "tier": 16},
-    {"key": "vip_boost2", "label": "VIP + 2x", "style": "efficient", "tier": 2, "vip": True},
-    {"key": "all_passes16", "label": "All passes (16x, VIP, Luck, +3 slots)", "style": "efficient", "tier": 16,
-     "vip": True, "luck": True, "slots": True},
-    {"key": "vip16_exclusive", "label": "VIP + 16x + 5 Exclusive Eggs", "style": "efficient", "tier": 16, "vip": True,
-     "exclusive": 5},
+    {"key": "free_efficient", "label": "Free, efficient (with the free boosts)", "style": "efficient"},
     {"key": "free_fast", "label": "Free, fast (sensitivity: a strong player)", "style": "fast"},
+    {"key": "pass2", "label": "2x pass only", "style": "efficient", "tier": 2},
+    {"key": "pass4", "label": "4x pass only", "style": "efficient", "tier": 4},
+    {"key": "pass4_vip", "label": "4x + VIP", "style": "efficient", "tier": 4, "vip": True},
+    # the paying player (the owner's target): 4x pass + VIP + 30 minutes of timed boost a play day (one 15-minute pack twice,
+    # or half the 60-minute pack)
+    {"key": "payer", "label": "PAYING PLAYER: 4x + VIP + 30 min of timed boost a day", "style": "efficient", "tier": 4,
+     "vip": True, "boost_minutes": 30},
+    {"key": "payer_heavy", "label": "4x + VIP + 4 h of timed boost a day (all play time)", "style": "efficient", "tier": 4,
+     "vip": True, "boost_minutes": 240},
+    {"key": "pass2_vip_light", "label": "2x + VIP + 15 min of timed boost a day", "style": "efficient", "tier": 2, "vip": True,
+     "boost_minutes": 15},
+    {"key": "whale", "label": "All passes (4x, VIP, Luck, +3 slots) + 4 h boost + 5 Exclusive Eggs", "style": "efficient",
+     "tier": 4, "vip": True, "luck": True, "slots": True, "boost_minutes": 240, "exclusive": 5},
+    {"key": "owns16", "label": "Owner of the retired 16x pass (counts as the cap)", "style": "efficient", "tier": 16},
     {"key": "free_idle", "label": "Free, idle in the Qi Spring only", "style": "idle"},
 ]
 
@@ -263,6 +278,7 @@ BEHAVIOUR = {
     },
 }
 SESSION_OVERHEAD = 120   # seconds per play session: joining, loading, walking out
+PLAY_DAY_HOURS = 4       # in the play-hours runs, a day's boosts (bought and daily-reward ones) come every this many hours of play
 DAILY_HOURS = (2, 4, 8)
 
 
@@ -275,6 +291,11 @@ PROPOSAL = {
     # 2. EggStands.respawn: a stand brings back its own egg (the one it was built with) instead of the lowest-or-random rule,
     #    so eggs the player can't take yet never fill an island's stands ("code" keeps the game's rule)
     "stand_rule": "own",
+    # 3. the owner's set (2026-11-16): permanent Qi passes capped at 4x, and a timed 2x boost bought in packs
+    "max_tier": 4,
+    "timed_boost": {"Multiplier": 2, "MaxMinutes": 24 * 60},
+    # 4. free timed boost minutes on the daily reward's seven days
+    "daily_boost_minutes": [5, 5, 10, 10, 15, 15, 30],
 }
 
 
@@ -287,11 +308,39 @@ def apply_proposal(cfg, proposal=None):
             seen.append(rank["Realm"])
         rank["QiMultiplier"] = multipliers[len(seen)]
     cfg["__stand_rule"] = None if proposal.get("stand_rule") == "code" else proposal.get("stand_rule")
+    if proposal.get("max_tier"):
+        cfg["MaxQiTier"] = proposal["max_tier"]
+    if proposal.get("timed_boost"):
+        cfg["TimedBoost"] = dict(proposal["timed_boost"])
+    for day, minutes in enumerate(proposal.get("daily_boost_minutes") or []):
+        if minutes:
+            cfg["Rewards"]["Daily"][day]["BoostMinutes"] = minutes
     return cfg
 
 
 # ------------------------------------------------------------------------------------------------ the player
 class Player:
+    @property
+    def t(self):
+        return self._t
+
+    @t.setter
+    def t(self, value):
+        spent = value - getattr(self, "_t", 0.0)
+        self._t = value
+        if spent > 0 and getattr(self, "boost_left", 0) > 0:
+            self.boost_used += min(spent, self.boost_left)
+            self.boost_left = max(0.0, self.boost_left - spent)
+
+    @property
+    def pass_mult(self):
+        """PassRules.qiMultiplier: the Qi pass tier (capped at MaxQiTier) x VIP x the timed boost while it runs."""
+        return self.base_pass * (self.boost_mult if self.boost_left > 0 else 1)
+
+    def add_boost(self, minutes):
+        cap = self.R.cfg.get("TimedBoost", {}).get("MaxMinutes", 24 * 60) * 60
+        self.boost_left = min(cap, self.boost_left + minutes * 60)
+
     def __init__(self, rules, profile, rng, calendar_hours=None):
         self.R = rules
         self.p = profile
@@ -319,11 +368,13 @@ class Player:
         self.stands = {gid: [(egg, 0.0) for egg in g["eggs"]] for gid, g in rules.guardians.items()}
         self.slots = cfg["MaxEquippedPets"] + (self.R.passes["PetSlots"]["ExtraSlots"] if profile.get("slots") else 0)
         self.luck = self.R.passes["Luck"]["Luck"] if profile.get("luck") else 1
-        tier = profile.get("tier", 1)
-        self.pass_mult = tier * (self.R.passes["VIP"]["QiMultiplier"] if profile.get("vip") else 1)
-        cap = cfg.get("__pass_cap")
-        if cap:
-            self.pass_mult = min(self.pass_mult, cap)
+        tier = min(profile.get("tier", 1), cfg.get("MaxQiTier", 16))  # PassRules.qiTier: a tier above the cap counts as the cap
+        self.base_pass = tier * (self.R.passes["VIP"]["QiMultiplier"] if profile.get("vip") else 1)
+        boost = cfg.get("TimedBoost")
+        self.boost_mult = boost["Multiplier"] if boost else 1  # (none in a game without timed boosts)
+        self.boost_left = 0.0
+        self.boost_used = 0.0
+        self.boost_bought = 0
         self.daily_stones_mult = self.R.passes["VIP"]["DailyStones"] if profile.get("vip") else 1
         self.thefts = 0
         self.hatches = 0
@@ -417,8 +468,8 @@ class Player:
         bonus = self.pet_pct + self.codex_pct + (self.R.cfg["TrainingStation"]["QiBonusPercent"] if spring else 0)
         return math.floor(self.R.cfg["CultivationQiReward"] * self.realm_mult() * self.pass_mult * (100 + bonus) / 100)
 
-    def at_rate(self, seconds, cap=None):  # QiReward.grantAtRate
-        mult = min(self.realm_mult(), cap if cap is not None else math.inf) * self.pass_mult
+    def at_rate(self, seconds, cap=None, no_boost=False):  # QiReward.grantAtRate (offline Qi leaves the timed boost out)
+        mult = min(self.realm_mult(), cap if cap is not None else math.inf) * (self.base_pass if no_boost else self.pass_mult)
         per_second = self.R.cfg["CultivationQiReward"] / self.R.cfg["CultivationInterval"] * mult * (100 + self.pet_pct + self.codex_pct) / 100
         return math.floor(per_second * seconds)
 
@@ -639,13 +690,16 @@ class Player:
         R = self.R
         cfg = R.cfg["Rewards"]
         if away_seconds >= cfg["Offline"]["MinMinutes"] * 60:
-            self.qi += self.at_rate(cfg["Offline"]["Share"] * min(away_seconds, cfg["Offline"]["MaxHours"] * 3600))
+            self.qi += self.at_rate(cfg["Offline"]["Share"] * min(away_seconds, cfg["Offline"]["MaxHours"] * 3600), no_boost=True)
+        self.day_boosts(day)
         daily = cfg["Daily"][day % len(cfg["Daily"])]
         realm = R.realm_of[self.idx]
         stones = max(5, round_nice(daily["Stones"] * R.stones_cfg["RealmFactor"] ** (realm - 1)))
         self.stones += math.floor(stones * self.daily_stones_mult + 0.5)
         if daily.get("QiMinutes"):
             self.qi += self.at_rate(daily["QiMinutes"] * 60)
+        if daily.get("BoostMinutes") and self.boost_mult > 1:
+            self.add_boost(daily["BoostMinutes"])
         spins = R.cfg["SpinWheel"]["DailySpins"]
         segments = R.cfg["SpinWheel"]["Segments"]
         total = sum(s["Weight"] for s in segments)
@@ -664,10 +718,18 @@ class Player:
                 self.hatch(R.market_eggs_for(self.idx))
             elif seg["Kind"] == "Spin":
                 spins += 1
+            elif seg["Kind"] == "Boost" and self.boost_mult > 1:
+                self.add_boost(seg["Minutes"])
             elif seg["Kind"] == "Jackpot":
                 self.hatch("ExclusiveEgg", luck_applies=False)
         self.t += SESSION_OVERHEAD
         self.refresh()
+
+    def day_boosts(self, day):
+        """The timed boost minutes the profile buys each play day (none in a game without timed boosts)."""
+        if self.boost_mult > 1 and self.p.get("boost_minutes"):
+            self.add_boost(self.p["boost_minutes"])
+            self.boost_bought += self.p["boost_minutes"]
 
     def done(self):
         return self.idx + 1 >= len(self.R.ranks)
@@ -679,7 +741,16 @@ def run(rules, profile, seed, calendar_hours=None, limit_hours=2000):
     limit = limit_hours * 3600
     if calendar_hours is None:
         player.t += SESSION_OVERHEAD
+        next_day, day = 0.0, 0
         while not player.done() and player.t < limit:
+            if player.t >= next_day:  # (no offline Qi or daily reward here: only the boosts a day brings)
+                player.day_boosts(day)
+                if player.boost_mult > 1:
+                    daily = rules.cfg["Rewards"]["Daily"][day % len(rules.cfg["Rewards"]["Daily"])]
+                    if daily.get("BoostMinutes"):
+                        player.add_boost(daily["BoostMinutes"])
+                day += 1
+                next_day += PLAY_DAY_HOURS * 3600
             player.break_through()
             player.shop()
             if player.done():
@@ -785,8 +856,8 @@ def write_report(rules, results, name, runs):
     for res in results.values():
         found = walls(rules, res["ranks"])
         lines.append("- %s: %s" % (res["label"], "; ".join(found) if found else "none"))
-    lines += ["", "## Minutes per rank, free efficient and Qi Boost 16x", "", "| Rank | Free efficient | 16x |", "|---|---|---|"]
-    fe, b16 = results["free_efficient"]["ranks"], results["boost16"]["ranks"]
+    lines += ["", "## Minutes per rank, free efficient and the paying player", "", "| Rank | Free efficient | Paying player |", "|---|---|---|"]
+    fe, b16 = results["free_efficient"]["ranks"], results["payer"]["ranks"]
     for i in range(min(len(fe), len(b16))):
         lines.append("| %s | %.1f | %.1f |" % (rules.ranks[i + 1]["Name"], fe[i] / 60, b16[i] / 60))
     with open(os.path.join(OUT, name + ".md"), "w", encoding="utf-8") as handle:
@@ -802,19 +873,50 @@ def write_report(rules, results, name, runs):
     return "\n".join(lines)
 
 
+def write_compare(before, after):
+    """compare.md: play hours and days to the top, per profile, from two runs' .csv files."""
+    def rows(name):
+        with open(os.path.join(OUT, name + ".csv"), encoding="utf-8") as handle:
+            return {row["profile"]: row for row in csv.DictReader(handle)}
+    labels = {p["key"]: p["label"] for p in PROFILES}
+    a, b = rows(before), rows(after)
+    lines = ["# Before (%s) and after (%s)" % (before, after), "",
+             "| Profile | Play h before | after | Days at 2 h/day before | after | 4 h/day before | after | 8 h/day before | after |",
+             "|---|---|---|---|---|---|---|---|---|"]
+    for key in a:
+        if key in b:
+            x, y = a[key], b[key]
+            values = [float(v[f]) for f in ("play_hours_median", "days_2h", "days_4h", "days_8h") for v in (x, y)]
+            lines.append("| %s | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f | %.1f |" % tuple([labels.get(key, key)] + values))
+    text = "\n".join(lines) + "\n"
+    with open(os.path.join(OUT, "compare.md"), "w", encoding="utf-8") as handle:
+        handle.write(text)
+    print(text)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--proposal", action="store_true")
     parser.add_argument("--both", action="store_true")
     parser.add_argument("--runs", type=int, default=30)
     parser.add_argument("--seed", type=int, default=20261116)
+    parser.add_argument("--root", help="read the game from this folder instead (holding src/...), e.g. an older version's files")
+    parser.add_argument("--name", help="the output's name instead of current")
     parser.add_argument("--mults", help="the proposal's realm 4-12 multipliers, comma-separated (default PROPOSAL's)")
     parser.add_argument("--stands", choices=["own", "code"], help="the proposal's stand rule (default PROPOSAL's)")
+    parser.add_argument("--compare", nargs=2, metavar=("BEFORE", "AFTER"),
+                        help="only write output/compare.md from two earlier runs' .csv files (e.g. before_2026-11-16 current)")
     args = parser.parse_args()
+    if args.compare:
+        write_compare(*args.compare)
+        return
+    global ROOT
+    if args.root:
+        ROOT = os.path.abspath(args.root)
     game = load_game()
     todo = []
     if args.both or not args.proposal:
-        todo.append(("current", Rules(copy.deepcopy(game))))
+        todo.append((args.name or "current", Rules(copy.deepcopy(game))))
     if args.both or args.proposal:
         changed = copy.deepcopy(game)
         proposal = dict(PROPOSAL)

@@ -27,9 +27,10 @@ local TitleBook = require(script.Parent.Parent:WaitForChild("Titles"):WaitForChi
 local MerchantLedger = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("MerchantLedger"))
 local Receipts = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("Receipts"))
 local SpinLedger = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("SpinLedger"))
+local QiBoost = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("QiBoost"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 21
+local SCHEMA_VERSION = 22
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -97,7 +98,8 @@ end
 -- (A test build's Pens, six pens of one pet each, never released, is read into Pen in order by sanitizeProgress.)
 -- version 20 added Spin (the Spin Wheel's day: SpinLedger), MIGRATIONS[19] below;
 -- version 21 added Spin.Bought (Spin Wheel spins bought with Robux, kept until used: SpinLedger), which starts with none (the bump
--- stops older servers, which don't know it, from dropping paid spins).
+-- stops older servers, which don't know it, from dropping paid spins);
+-- version 22 added Boost (the timed Qi boost's seconds left, bought or from the daily reward: QiBoost), MIGRATIONS[21] below.
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -159,6 +161,12 @@ MIGRATIONS[19] = function(progress)
     return progress
 end
 
+-- Version 22 added the timed Qi boost (QiBoost): an older save has none left (sanitizeProgress then starts it at none).
+MIGRATIONS[21] = function(progress)
+    progress.Boost = nil
+    return progress
+end
+
 -- Playtesting in Studio: with ServerStorage's StudioTestSave attribute set, saves go to a separate store of that name, so
 -- each new name starts a new player and a real save can't be touched (set to true, a store called "StudioTestSave").
 -- Ignored outside Studio.
@@ -205,6 +213,7 @@ local function sanitizeProgress(raw)
         Merchant = MerchantLedger.sanitize(nil),
         Receipts = Receipts.sanitize(nil),
         Spin = SpinLedger.sanitize(nil),
+        Boost = QiBoost.sanitize(nil),
     }
 
     if typeof(raw) ~= "table" then
@@ -305,6 +314,7 @@ local function sanitizeProgress(raw)
     progress.Merchant = MerchantLedger.sanitize(raw.Merchant)
     progress.Receipts = Receipts.sanitize(raw.Receipts)
     progress.Spin = SpinLedger.sanitize(raw.Spin)
+    progress.Boost = QiBoost.sanitize(raw.Boost)
 
     return progress
 end
@@ -347,6 +357,8 @@ local function captureProgress(player)
     local receipts = Receipts.exportData(player) or (loaded and loaded.Receipts) or Receipts.sanitize(nil)
     -- (and the Spin Wheel's day: kept as loaded until SpinService sets it up)
     local spin = SpinLedger.exportData(player) or (loaded and loaded.Spin) or SpinLedger.sanitize(nil)
+    -- (and the timed Qi boost: kept as loaded until ProductService sets it up)
+    local boost = QiBoost.exportData(player) or (loaded and loaded.Boost) or QiBoost.sanitize(nil)
     if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings and rewards and codex) then
         -- nothing is saved until every part is set up: say once which part is missing, or a session could go unsaved unseen
         local profile = profiles[player]
@@ -389,6 +401,7 @@ local function captureProgress(player)
         Merchant = merchant,
         Receipts = receipts,
         Spin = spin,
+        Boost = boost,
     }
 end
 
@@ -721,6 +734,7 @@ function PlayerData.release(player)
     MerchantLedger.removePlayer(player)
     Receipts.removePlayer(player)
     SpinLedger.removePlayer(player)
+    QiBoost.removePlayer(player)
 
     if not profile then
         return

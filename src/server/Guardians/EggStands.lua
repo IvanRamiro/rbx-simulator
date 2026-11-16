@@ -4,8 +4,8 @@
 --   * taking it empties the stand (EggStands.take);
 --   * a dropped egg that times out, or a theft that fails, puts it back (EggStands.restore);
 --   * a secured one leaves the stand empty for GameConfig.EggTheft.RespawnTime seconds, then the
---     island's lowest-rank egg appears there unless another stand shows it, else a random one of
---     its eggs (EggStands.respawn).
+--     stand's own egg, the one it was built with, comes back (EggStands.respawn), so each island
+--     always shows its three eggs.
 -- Stands are found in Workspace.FloatingIslands.<Island>.EggStands (WorldBuilder.buildEggStands):
 -- a Model per stand (named after the egg it was built with: its slot's name, which stays) with a
 -- Pedestal, a GlowRing, the egg's body "Egg" and its "<EggId>_Glow_<hex>" pieces, and the EggRest
@@ -109,6 +109,7 @@ local function register(island, stand)
     end
     local slot = {
         island = island, stand = stand, name = stand.Name, rest = rest, eggId = stand:GetAttribute("EggId"),
+        home = stand:GetAttribute("EggId"), -- the egg it was built with, which it always brings back (respawn)
         prompt = pedestal and pedestal:FindFirstChildWhichIsA("ProximityPrompt"),
     }
     slotsOf[island] = slotsOf[island] or {}
@@ -185,9 +186,11 @@ function EggStands.restore(slot, eggId)
     end
 end
 
--- A theft succeeded: after the respawn time a random egg of `eggIds` appears on the stand, unless no
--- other stand of the guardian holds the first of them, the lowest-rank egg: then that one, so a player
--- who has just reached the island's rank always has an egg they can take.
+-- A theft succeeded: after the respawn time the stand's own egg (the one it was built with: slot.home) comes back, so every
+-- island always shows its three eggs. (Until 2026-11-16 a random one of `eggIds` came, or the lowest-rank egg when no other stand
+-- showed it: on a quiet server eggs nobody there could take yet filled the stands, and the egg that pays a player's realm in full
+-- stopped coming. tools/balance/progression_sim.py measured it as the game's biggest wall.) `eggIds[1]` only stands in for a
+-- stand whose own egg isn't known.
 function EggStands.respawn(slot, eggIds)
     if slot.respawn then
         task.cancel(slot.respawn)
@@ -195,11 +198,7 @@ function EggStands.respawn(slot, eggIds)
     slot.respawn = task.delay(GameConfig.EggTheft.RespawnTime, function()
         slot.respawn = nil
         if slot.eggId == nil and slot.stand.Parent then
-            local lowestShown = false
-            for other in slotsOf[slot.island] do
-                lowestShown = lowestShown or (other ~= slot and other.eggId == eggIds[1])
-            end
-            show(slot, if lowestShown then eggIds[math.random(1, #eggIds)] else eggIds[1])
+            show(slot, if GameConfig.Eggs[slot.home or ""] then slot.home else eggIds[1])
         end
     end)
 end

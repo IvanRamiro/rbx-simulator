@@ -2,11 +2,11 @@
 --   offline Qi    on joining, a share of the player's cultivating rate for the time they were away,
 --                 from MinMinutes up to MaxHours
 --   daily reward  one claim a UTC day; the streak climbs to day 7 and starts over, and a missed day
---                 goes back to day 1 (shared/RewardRules)
+--                 goes back to day 1 (shared/RewardRules); each day also gives minutes of the timed Qi boost (QiBoost)
 --   codes         each once per save (Codes, never sent to clients)
 --   group reward  once, for members of Group.GroupId (off while it's 0)
 -- RewardEvent, client to server: "ClaimDaily" | "Redeem" code | "ClaimGroup".
--- Server to client: "Offline" qi seconds | "Daily" stones qi day | "Code" ok message | "Group" ok message.
+-- Server to client: "Offline" qi seconds | "Daily" stones qi day boostMinutes | "Code" ok message | "Group" ok message.
 -- Attributes for the window: "DailyReady", "DailyDay" (the next claim's day), "GroupClaimed".
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -21,6 +21,7 @@ local QiReward = require(Server:WaitForChild("Cultivation"):WaitForChild("QiRewa
 local PlayerData = require(Server:WaitForChild("Data"):WaitForChild("PlayerData"))
 local PetInventory = require(Server:WaitForChild("Pets"):WaitForChild("PetInventory"))
 local Wallet = require(Server:WaitForChild("Shop"):WaitForChild("Wallet"))
+local QiBoost = require(Server:WaitForChild("Shop"):WaitForChild("QiBoost"))
 local Codes = require(script.Parent:WaitForChild("Codes"))
 local Rewards = require(script.Parent:WaitForChild("Rewards"))
 
@@ -49,7 +50,7 @@ local function grantOffline(player, lastSeen)
     if seconds < config.Offline.MinMinutes * 60 then
         return
     end
-    local qi = QiReward.grantAtRate(player, config.Offline.Share * seconds)
+    local qi = QiReward.grantAtRate(player, config.Offline.Share * seconds, nil, true) -- (no timed boost: its clock stops while away)
     if qi > 0 then
         RemoteEvents.RewardEvent:FireClient(player, "Offline", qi, seconds)
         Analytics.event(player, "OfflineQi", qi)
@@ -93,18 +94,26 @@ function actions.ClaimDaily(player)
     if data.LastDay == today then
         return
     end
-    if Wallet.exportData(player) == nil then
+    if Wallet.exportData(player) == nil or not QiBoost.isSetUp(player) then
         return -- their wallet isn't set up yet: claiming now would mark the day taken and lose its stones (release audit, 2026-11-12)
     end
     local day = RewardRules.nextDay(data.LastDay, data.Streak)
-    local stones, minutes = RewardRules.daily(day, Shop.playerRealmIndex(player), player)
+    local stones, minutes, boostMinutes = RewardRules.daily(day, Shop.playerRealmIndex(player), player)
     data.LastDay, data.Streak = today, day
     Wallet.add(player, stones, "Daily", "Day" .. day)
     local qi = if minutes > 0 then QiReward.grantMinutes(player, minutes) else 0
+    -- the day's timed boost; past MaxMinutes banked, only what fits (a day's free boost never waits like a purchase)
+    if boostMinutes > 0 then
+        local room = math.floor((GameConfig.TimedBoost.MaxMinutes * 60 - QiBoost.secondsLeft(player)) / 60)
+        boostMinutes = math.max(0, math.min(boostMinutes, room))
+        if boostMinutes <= 0 or not QiBoost.add(player, boostMinutes) then
+            boostMinutes = 0
+        end
+    end
     publish(player)
     PlayerData.saveSoon(player)
     Analytics.event(player, "DailyClaimed", day)
-    RemoteEvents.RewardEvent:FireClient(player, "Daily", stones, qi, day)
+    RemoteEvents.RewardEvent:FireClient(player, "Daily", stones, qi, day, boostMinutes)
 end
 
 function actions.Redeem(player, raw)

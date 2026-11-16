@@ -15,6 +15,8 @@
 -- bought spins (SpinLedger), which never run out. A paid spin is a paid random item, so the same rules as the egg: the wheel
 -- shows every prize's chance beside the buttons, offers none where paid random items are restricted, and still gives a
 -- purchase that arrives anyway. The buyer is told ("Bought" on SpinEvent) once it is saved.
+--
+-- Timed Qi boosts (GameConfig.TimedBoost.Products): minutes of 2x Qi added to the player's boost (QiBoost); told on BoostEvent.
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,6 +29,7 @@ local PlayerData = require(Server:WaitForChild("Data"):WaitForChild("PlayerData"
 local EggInventory = require(Server:WaitForChild("Pets"):WaitForChild("EggInventory"))
 local SpinLedger = require(Server:WaitForChild("Rewards"):WaitForChild("SpinLedger"))
 local Receipts = require(script.Parent:WaitForChild("Receipts"))
+local QiBoost = require(script.Parent:WaitForChild("QiBoost"))
 
 local READY_WAIT = 30 -- seconds a purchase waits for the buyer's data to load
 
@@ -64,12 +67,31 @@ for _, product in GameConfig.SpinWheel.SpinProducts do
     end
 end
 
+-- Timed Qi boosts (GameConfig.TimedBoost.Products, the owner 2026-11-16: "a consumable multiplier like 2x qi multiplier per 5 mins"):
+-- minutes added to the player's boost (QiBoost), which runs while they play. Not random, so no PolicyService rule. Over MaxMinutes
+-- banked the purchase waits (NotProcessedYet) until the boost has run down enough; the Shop doesn't offer one that won't fit.
+for _, product in GameConfig.TimedBoost.Products do
+    if (product.ProductId or 0) > 0 then
+        PRODUCTS[product.ProductId] = function(player)
+            if not QiBoost.add(player, product.Minutes) then
+                return false
+            end
+            return true, function()
+                QiBoost.add(player, -product.Minutes)
+            end
+        end
+        AFTER[product.ProductId] = function(player)
+            RemoteEvents.BoostEvent:FireClient(player, "Bought", product.Minutes)
+        end
+    end
+end
+
 -- [PurchaseId] = true while its grant waits on the save: Roblox may offer the same purchase again meanwhile, and that offer must
 -- neither give it twice nor answer PurchaseGranted before the save is known to hold it
 local inFlight = {}
 
 local function ready(player)
-    return Receipts.isSetUp(player) and EggInventory.exportData(player) ~= nil and SpinLedger.isSetUp(player)
+    return Receipts.isSetUp(player) and EggInventory.exportData(player) ~= nil and SpinLedger.isSetUp(player) and QiBoost.isSetUp(player)
 end
 
 local function processReceipt(info)
@@ -120,11 +142,12 @@ end
 
 MarketplaceService.ProcessReceipt = processReceipt
 
--- the purchases each player has been given, from their save
+-- the purchases each player has been given, and their timed boost's time left, from their save
 local function onPlayerAdded(player)
-    local progress = PlayerData.waitForData(player) -- (nil when the load failed: then nothing is saved, so nothing is given)
+    local progress, isNewPlayer = PlayerData.waitForData(player) -- (nil when the load failed: then nothing is saved, so nothing is given)
     if player.Parent == Players then
         Receipts.setupPlayer(player, progress)
+        QiBoost.setupPlayer(player, if isNewPlayer then nil else progress)
     end
 end
 

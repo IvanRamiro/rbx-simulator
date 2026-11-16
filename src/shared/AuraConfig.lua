@@ -29,42 +29,42 @@ AuraConfig.Tiers = {
         Color = ColorSequence.new(Color3.fromRGB(165, 195, 255), Color3.fromRGB(60, 100, 255)), -- royal blue
         Palette = { Hot = Color3.fromRGB(165, 195, 255), Main = Color3.fromRGB(60, 100, 255), Deep = Color3.fromRGB(20, 25, 140), Glow = 1 },
     },
-    [5] = { -- Ascendant Realm (x4)
+    [5] = { -- Ascendant Realm (x5)
         Name = "Ascendant Realm",
         Color = ColorSequence.new(Color3.fromRGB(255, 190, 110), Color3.fromRGB(255, 125, 40)), -- solar orange
         Palette = { Hot = Color3.fromRGB(255, 190, 110), Main = Color3.fromRGB(255, 125, 40), Deep = Color3.fromRGB(190, 45, 10), Glow = 1 },
     },
-    [6] = { -- Immortal Realm (x8)
+    [6] = { -- Immortal Realm (x12)
         Name = "Immortal Realm",
         Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(210, 222, 245)), -- silver-white
         Palette = { Hot = Color3.fromRGB(255, 255, 255), Main = Color3.fromRGB(210, 222, 245), Deep = Color3.fromRGB(110, 125, 165), Glow = 0.5 },
     },
-    [7] = { -- Divine Realm (x16)
+    [7] = { -- Divine Realm (x30)
         Name = "Divine Realm",
         Color = ColorSequence.new(Color3.fromRGB(255, 110, 90), Color3.fromRGB(225, 20, 45)), -- crimson
         Palette = { Hot = Color3.fromRGB(255, 110, 90), Main = Color3.fromRGB(225, 20, 45), Deep = Color3.fromRGB(115, 0, 20), Glow = 1 },
     },
-    [8] = { -- Cosmic Realm (x32)
+    [8] = { -- Cosmic Realm (x70)
         Name = "Cosmic Realm",
         Color = ColorSequence.new(Color3.fromRGB(215, 170, 255), Color3.fromRGB(145, 60, 235)), -- violet
         Palette = { Hot = Color3.fromRGB(215, 170, 255), Main = Color3.fromRGB(145, 60, 235), Deep = Color3.fromRGB(55, 15, 115), Glow = 1 },
     },
-    [9] = { -- Void Realm (x64)
+    [9] = { -- Void Realm (x160)
         Name = "Void Realm",
         Color = ColorSequence.new(Color3.fromRGB(150, 210, 255), Color3.fromRGB(120, 200, 240)), -- black core, ice-blue rim
         Palette = { Hot = Color3.fromRGB(150, 210, 255), Main = Color3.fromRGB(120, 200, 240), Deep = Color3.fromRGB(6, 8, 20), Glow = 0.6 },
     },
-    [10] = { -- Heavenly Dao (x128)
+    [10] = { -- Heavenly Dao (x400)
         Name = "Heavenly Dao",
         Color = ColorSequence.new(Color3.fromRGB(255, 195, 228), Color3.fromRGB(255, 85, 170)), -- rose pink
         Palette = { Hot = Color3.fromRGB(255, 195, 228), Main = Color3.fromRGB(255, 85, 170), Deep = Color3.fromRGB(145, 20, 90), Glow = 0.8 },
     },
-    [11] = { -- Primordial Realm (x256)
+    [11] = { -- Primordial Realm (x900)
         Name = "Primordial Realm",
         Color = ColorSequence.new(Color3.fromRGB(255, 140, 30), Color3.fromRGB(185, 35, 5)), -- lava: amber to dark ember
         Palette = { Hot = Color3.fromRGB(255, 140, 30), Main = Color3.fromRGB(185, 35, 5), Deep = Color3.fromRGB(55, 5, 0), Glow = 0.75 },
     },
-    [12] = { -- Eternal Transcendence (x512)
+    [12] = { -- Eternal Transcendence (x2000)
         Name = "Eternal Transcendence",
         Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 215, 90)),

@@ -34,6 +34,7 @@ local EVENT_NAMES = {
     "MerchantEvent",
     "PenEvent",
     "SpinEvent",
+    "BoostEvent", -- the timed Qi boost: the server tells the buyer ("Bought", minutes) once the purchase is saved
 }
 
 local RemoteEvents = {}

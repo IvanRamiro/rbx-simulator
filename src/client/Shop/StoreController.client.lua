@@ -5,7 +5,9 @@
 -- Its look is "Cultivation Bold" (the owner, 2026-11-13: the top Roblox shops' patterns in our colours): three tabs (QI BOOSTS, GAME
 -- PASSES, EXCLUSIVE EGG), cards with heavy outlined words, and each price on a big green Robux button, the old price struck above it.
 -- QI BOOSTS (the owner, 2026-11-15) sells the Qi multiplier tiers (passes with a QiTier): only the highest one owned counts, so a
--- tier under one already owned says INCLUDED and can't be bought.
+-- tier under one already owned says INCLUDED and can't be bought. Since 2026-11-16 (the owner: "keep the multiplier until 4x then also
+-- add a consumable multiplier") only the 2x and 4x passes are shown (PassRules.ForSale), and under them the timed boosts
+-- (GameConfig.TimedBoost: developer products of minutes of 2x Qi). The header shows the whole multiplier now and the boost's clock.
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local PolicyService = game:GetService("PolicyService")
@@ -14,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
 local Toast = require(UI:WaitForChild("Toast"))
@@ -269,7 +272,7 @@ local function cardRows(passes, parent, firstOrder)
     end
 end
 local qiTiers, otherPasses = {}, {}
-for _, pass in PassRules.List do
+for _, pass in PassRules.ForSale do -- (the Retired 8x and 16x passes are never shown: PassRules.ForSale)
     table.insert(if pass.QiTier then qiTiers else otherPasses, pass)
 end
 table.sort(qiTiers, function(a, b)
@@ -277,8 +280,9 @@ table.sort(qiTiers, function(a, b)
 end)
 cardRows(otherPasses, list, 2)
 
--- QI BOOSTS: what the player's Qi is multiplied by now, the rule, then the tiers
-local qiHeader = UiKit.card({ Name = "Current", Size = UDim2.new(1, 0, 0, 64), LayoutOrder = 1, Parent = qiPage })
+-- QI BOOSTS: what the player's Qi is multiplied by now and what makes it up, the rule, then the passes (2x and 4x: the owner capped
+-- them there, 2026-11-16), then the timed boosts
+local qiHeader = UiKit.card({ Name = "Current", Size = UDim2.new(1, 0, 0, 84), LayoutOrder = 1, Parent = qiPage })
 qiHeader.BackgroundTransparency = 0.1
 qiHeader:FindFirstChildOfClass("UIStroke").Thickness = 2
 local qiIcon = Instance.new("ImageLabel")
@@ -289,11 +293,122 @@ qiIcon.AnchorPoint = Vector2.new(0, 0.5)
 qiIcon.Position = UDim2.new(0, 12, 0.5, 0)
 qiIcon.Size = UDim2.fromOffset(40, 40)
 qiIcon.Parent = qiHeader
-local qiNow = bold({ Name = "Now", Text = "", TextSize = 18, Position = UDim2.fromOffset(62, 8), Size = UDim2.new(1, -74, 0, 24), Parent = qiHeader })
+local qiNow = bold({ Name = "Now", Text = "", TextSize = 18, Position = UDim2.fromOffset(62, 6), Size = UDim2.new(1, -74, 0, 24), Parent = qiHeader })
+local qiParts = UiKit.label({ Name = "Parts", Font = "Strong", TextSize = 12, TextColor3 = C.Highlight, Text = "",
+    TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(62, 30), Size = UDim2.new(1, -74, 0, 16), Parent = qiHeader })
 UiKit.label({ Name = "Rule", Font = "Strong", TextSize = 12, TextColor3 = C.Muted, TextWrapped = true,
-    Text = "Only your biggest Qi boost counts, on everything that gives Qi. VIP's +10% adds on top.",
-    Position = UDim2.fromOffset(62, 32), Size = UDim2.new(1, -74, 0, 28), Parent = qiHeader })
+    Text = "Only your biggest Qi pass counts. VIP and a timed boost multiply on top, on everything that gives Qi.",
+    Position = UDim2.fromOffset(62, 48), Size = UDim2.new(1, -74, 0, 30), Parent = qiHeader })
 cardRows(qiTiers, qiPage, 2)
+
+-- the timed boosts (GameConfig.TimedBoost, developer products: ProductService adds the minutes, server/Shop/QiBoost runs them)
+local BOOST = GameConfig.TimedBoost
+local function clock(seconds) -- 75 -> "1:15", 3725 -> "1:02:05"
+    seconds = math.max(0, math.floor(seconds))
+    local h, m, s = seconds // 3600, (seconds // 60) % 60, seconds % 60
+    return if h > 0 then string.format("%d:%02d:%02d", h, m, s) else string.format("%d:%02d", m, s)
+end
+local boostTitle = Instance.new("Frame")
+boostTitle.Name = "TimedTitle"
+boostTitle.BackgroundTransparency = 1
+boostTitle.Size = UDim2.new(1, 0, 0, 50)
+boostTitle.LayoutOrder = 20
+boostTitle.Parent = qiPage
+UiKit.header(boostTitle, "Timed boosts: " .. BOOST.Multiplier .. "x Qi", { Color = C.Highlight, Position = UDim2.fromOffset(0, 4) })
+UiKit.label({ Name = "What", Font = "Strong", TextSize = 12, TextColor3 = C.Muted, TextWrapped = true,
+    Text = "Doubles all your Qi on top of your pass and VIP. Buying more adds time. It only counts down while you play.",
+    Position = UDim2.fromOffset(2, 30), Size = UDim2.new(1, -4, 0, 18), Parent = boostTitle })
+local boostRow = Instance.new("Frame")
+boostRow.Name = "TimedRow"
+boostRow.BackgroundTransparency = 1
+boostRow.Size = UDim2.new(1, 0, 0, 150)
+boostRow.LayoutOrder = 21
+boostRow.Parent = qiPage
+local boostCards = {}
+local boostPrices = {} -- [ProductId] = its live price, once Roblox has said
+local boostCount = #BOOST.Products
+for index, product in BOOST.Products do
+    local share = 1 / boostCount
+    local card = UiKit.card({
+        Name = "Boost" .. product.Minutes, Position = UDim2.new((index - 1) * share, if index == 1 then 0 else GAP / 2, 0, 0),
+        Size = UDim2.new(share, -GAP * (boostCount - 1) / boostCount, 1, 0), Parent = boostRow,
+    })
+    card.BackgroundTransparency = 0.1
+    card:FindFirstChildOfClass("UIStroke").Thickness = 2
+    card:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(0, 10)
+    local picture = Instance.new("ImageLabel")
+    picture.Name = "Picture"
+    picture.BackgroundTransparency = 1
+    picture.Image = UiTheme.Icons.Qi
+    picture.AnchorPoint = Vector2.new(0.5, 0)
+    picture.Position = UDim2.new(0.5, 0, 0, 6)
+    picture.Size = UDim2.fromOffset(46, 46)
+    picture.Parent = card
+    bold({ Name = "Times", Text = BOOST.Multiplier .. "x", TextSize = 22, TextColor3 = C.Highlight, TextXAlignment = Enum.TextXAlignment.Center,
+        AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 6), Size = UDim2.new(1, 0, 0, 26), ZIndex = picture.ZIndex + 1,
+        Parent = picture })
+    bold({ Name = "Length", Text = if product.Minutes >= 60 then (product.Minutes // 60) .. " HOUR" .. (if product.Minutes >= 120 then "S" else "")
+            else product.Minutes .. " MIN", TextSize = 18, TextXAlignment = Enum.TextXAlignment.Center,
+        Position = UDim2.fromOffset(4, 58), Size = UDim2.new(1, -8, 0, 22), Parent = card })
+    local button = UiKit.button({ Name = "Buy", TextSize = 18, Text = "", AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.new(0, 10, 1, -10), Size = UDim2.new(1, -20, 0, UiTheme.Height.ButtonLarge - 8), Parent = card })
+    local price = bold({ Name = "Price", Text = "", TextSize = 20, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center,
+        Size = UDim2.fromScale(1, 1), ZIndex = button.ZIndex + 1, Parent = button })
+    button.Activated:Connect(function()
+        if not button.Active then
+            return
+        end
+        if PassRules.boostSecondsLeft(player) + product.Minutes * 60 > BOOST.MaxMinutes * 60 then
+            Sfx.play("Error")
+            message:show("You already have as much boost time as you can hold. Use some first.", "Warning")
+            return
+        end
+        Sfx.play("Click")
+        MarketplaceService:PromptProductPurchase(player, product.ProductId)
+    end)
+    boostCards[index] = { product = product, button = button, price = price }
+end
+
+-- the multiplier now, its parts, and the boost's clock (every second while the window is open)
+local function renderMultiplier()
+    local tier = PassRules.qiTier(player)
+    local multiplier = PassRules.qiMultiplier(player)
+    local left = PassRules.boostSecondsLeft(player)
+    qiNow.Text = if multiplier > 1 then string.format("YOUR QI BOOST: x%s", string.format("%.3g", multiplier)) else "NO QI BOOST YET"
+    local parts = {}
+    if tier > 1 then
+        table.insert(parts, tier .. "x pass")
+    end
+    if PassRules.owns(player, "VIP") then
+        table.insert(parts, "VIP +10%")
+    end
+    if left > 0 then
+        table.insert(parts, BOOST.Multiplier .. "x timed boost, " .. clock(left) .. " left")
+    end
+    qiParts.Text = table.concat(parts, "   ·   ")
+end
+
+local function renderBoosts()
+    for _, entry in boostCards do
+        local onSale = (entry.product.ProductId or 0) > 0
+        entry.button.Active = onSale
+        entry.button:SetAttribute("Tone", if onSale then "Buy" else "Quiet")
+        entry.price.Text = if onSale then ROBUX .. " " .. tostring(boostPrices[entry.product.ProductId] or entry.product.Price) else "COMING SOON"
+        entry.price.TextSize = if onSale then 20 else 14
+    end
+end
+
+-- a boost bought (ProductService, once it is saved)
+RemoteEvents.BoostEvent.OnClientEvent:Connect(function(kind, minutes)
+    if kind == "Bought" and typeof(minutes) == "number" then
+        Sfx.play("PremiumPurchase")
+        message:show("+" .. minutes .. " minutes of " .. BOOST.Multiplier .. "x Qi! Thank you for supporting the game!", "Reward")
+        renderMultiplier()
+    end
+end)
+player:GetAttributeChangedSignal("QiBoostEnds"):Connect(function()
+    renderMultiplier()
+end)
 
 -- the Exclusive Egg (the owner, 2026-11-13): bought with Robux, one egg each time (ProductService gives it), hatched at the Hatching
 -- Altar. Its three beasts and their chances are on the card, beside the price, before anyone buys; where paid random items are
@@ -462,9 +577,8 @@ end)
 
 function render()
     local tier = PassRules.qiTier(player)
-    local multiplier = PassRules.qiMultiplier(player)
-    qiNow.Text = if tier > 1 then string.format("YOUR QI BOOST: %dx  (QI x%s)", tier, string.format("%.3g", multiplier))
-        else "NO QI BOOST YET" .. (if multiplier > 1 then string.format("  (QI x%.3g)", multiplier) else "")
+    renderMultiplier()
+    renderBoosts()
     for _, entry in cards do
         local pass, button = entry.pass, entry.button
         local onSale = (pass.GamePassId or 0) > 0
@@ -505,7 +619,19 @@ local function fetchPrices()
             end
         end)
     end
-    for _, pass in PassRules.List do
+    for _, product in GameConfig.TimedBoost.Products do
+        local id = product.ProductId or 0
+        if id > 0 and not boostPrices[id] then
+            task.spawn(function()
+                local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, id, Enum.InfoType.Product)
+                if ok and info and typeof(info.PriceInRobux) == "number" then
+                    boostPrices[id] = info.PriceInRobux
+                    render()
+                end
+            end)
+        end
+    end
+    for _, pass in PassRules.ForSale do
         local id = pass.GamePassId or 0
         if id > 0 and not prices[id] then
             task.spawn(function()
@@ -542,5 +668,12 @@ toggleButton.Activated:Connect(function()
         fetchPrices()
         render()
         window.open()
+        -- the boost's clock in the header, while the window stays open
+        task.spawn(function()
+            while window.isOpen() do
+                task.wait(1)
+                renderMultiplier()
+            end
+        end)
     end
 end)

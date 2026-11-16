@@ -8,6 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
+local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
@@ -116,6 +117,36 @@ local qiRate = UiKit.label({
 })
 UiKit.outline(qiRate, 1.5)
 local RATE_WINDOW = 3 -- seconds of gains averaged
+
+-- and while a timed Qi boost runs (GameConfig.TimedBoost; PassRules reads the "QiBoostEnds" attribute server/Shop/QiBoost sets), a gold
+-- pill with its multiplier and the time left, at the end of the Qi's row: it reads as part of the Qi, and the row's other
+-- neighbours (the stones, the relics) just move over
+local boostPill = UiKit.label({
+    Name = "Boost", Font = "Heavy", TextSize = 13, TextColor3 = C.Panel, Text = "",
+    BackgroundTransparency = 0, BackgroundColor3 = C.Highlight, AutomaticSize = Enum.AutomaticSize.X,
+    Size = UDim2.fromOffset(0, 22), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 4, Visible = false,
+    Parent = qiChip:FindFirstChild("Row"),
+})
+boostPill.FontFace = UiTheme.Fonts.Heavy
+UiKit.corner(boostPill, 11)
+UiKit.padding(boostPill, 8, 0)
+UiKit.stroke(boostPill, C.Outline, 0.2, 1.5)
+local function showBoost()
+    local left = math.floor(PassRules.boostSecondsLeft(player))
+    boostPill.Visible = left > 0
+    if left > 0 then
+        local h, m, s = left // 3600, (left // 60) % 60, left % 60
+        boostPill.Text = GameConfig.TimedBoost.Multiplier .. "x QI  "
+            .. (if h > 0 then string.format("%d:%02d:%02d", h, m, s) else string.format("%d:%02d", m, s))
+    end
+end
+player:GetAttributeChangedSignal("QiBoostEnds"):Connect(showBoost)
+task.spawn(function()
+    while true do
+        showBoost()
+        task.wait(1)
+    end
+end)
 
 -- ---------- over the inventory bar: the breakthrough (when it's ready), the station's bonus, "cultivating" ----------
 -- pills over the bar (Hud.Inventory.addPill): on its centre line, at the HUD's pill height, as wide as their words need
