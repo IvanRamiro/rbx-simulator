@@ -957,52 +957,6 @@ def bridge_gate_glow(coll, mat, bands):
     return mb.object("HB_BridgeGateGlow", coll, mat)
 
 
-# ---------- the Ascension Board: the leaderboard (the owner, 2026-11-12: "do 3"), facing the spawn ----------
-# A round marble dais; a marble board between two pylons, its face a gold-framed lapis panel the cultivators with the most Qi are
-# written on (LeaderboardService); a gold arch over it carrying a white crystal star, the board's name on a plaque beneath.
-LB_HALF, LB_PYLON = 6.6, 12.4
-LB_BOARD = ((0.0, 6.6, 0.56), (10.4, 8.6))
-LB_TITLE = ((0.0, 12.15, 0.62), (8.2, 1.3))
-
-
-def leaderboard(coll, mat, bands):
-    global MARBLE_BAND, GOLD_BAND
-    MARBLE_BAND, GOLD_BAND = bands[MARBLE], bands[GOLD]
-    mb = W.MeshBuilder()
-    drum(mb, 7.6, -0.4, 0.4, bands[MARBLE], shade=(0.95, 0.6))
-    ring(mb, 7.25, 7.6, 0.41, bands[GOLD])
-    drum(mb, 6.6, 0.35, 0.8, bands[MARBLE], shade=(0.95, 0.62))
-    ring(mb, 6.25, 6.6, 0.81, bands[GOLD])
-    # the board: a marble slab, a gold frame, the lapis face (the text: the builder's SurfaceGui)
-    mb.box((0, 6.6, 0), (2 * LB_HALF - 1.2, 10.8, 0.9), bands[MARBLE], u=0.5, top_shade=0.95, side_shade=0.75)
-    (bx, by, bz), (bw, bh) = LB_BOARD
-    mb.box((0, by, bz - 0.12), (bw + 0.7, bh + 0.7, 0.26), bands[GOLD], u=0.5, top_shade=1.0, side_shade=0.85)
-    W_oriented(mb, [(-bw / 2, by - bh / 2, bz + 0.02), (bw / 2, by - bh / 2, bz + 0.02), (bw / 2, by + bh / 2, bz + 0.02), (-bw / 2, by + bh / 2, bz + 0.02)],
-               (0, 0, 1), bands[LAPIS], 0.55)
-    for side in (-1, 1):
-        x = side * LB_HALF
-        mb.lathe([(1.25, 1.4, 0.9), (1.4, 0.8, 0.7)], 4, bands[GOLD], centre=(x, 0, 0), phase=math.pi / 4, cap_top=True)
-        mb.lathe([(1.0, LB_PYLON - 0.8, 0.95), (1.2, 1.4, 0.7)], 4, bands[MARBLE], centre=(x, 0, 0), phase=math.pi / 4, cap_top=False)
-        mb.lathe([(1.4, LB_PYLON + 0.2, 1.0), (1.25, LB_PYLON - 0.8, 0.85)], 4, bands[GOLD], centre=(x, 0, 0), phase=math.pi / 4, cap_top=True)
-    # the arch over it: a gold band from pylon to pylon, the star's mount at its crown
-    pts = [(math.cos(math.pi * k / 24) * LB_HALF, LB_PYLON + 0.2 + math.sin(math.pi * k / 24) * 3.2, 0.0) for k in range(25)]
-    tube(mb, pts, 0.3, bands[GOLD], sides=8, shade=1.0, caps=False)
-    tube(mb, [(math.cos(TAU * k / 16) * 0.9, LB_PYLON + 3.4 + math.sin(TAU * k / 16) * 0.9, 0.0) for k in range(17)], 0.12, bands[GOLD], sides=6, shade=1.0, caps=False)
-    panel(mb, bands, *LB_TITLE)
-    return mb.object("HB_Leaderboard", coll, mat)
-
-
-def leaderboard_glow(coll, mat, bands):
-    """The crystal star at the arch's crown: a six-pointed burst of shards round a gem."""
-    mb = W.MeshBuilder()
-    c = (0.0, LB_PYLON + 3.4, 0.0)
-    gem(mb, c, 0.55, 0.8, bands[GLOW], sides=6)
-    for k in range(6):
-        a = TAU * k / 6 + math.pi / 2
-        shard(mb, (c[0] + math.cos(a) * 0.35, c[1] + math.sin(a) * 0.35, 0.0), (math.cos(a), math.sin(a), 0.0), 1.1, 0.18, bands[GLOW], twist=a)
-    return mb.object("HB_LeaderboardGlow", coll, mat)
-
-
 BUILDINGS = [sanctum, sanctum_glass, sanctum_crystal, sanctum_runes, market, market_canopies, market_glow, blacksmith, blacksmith_core, blacksmith_crystal,
-             buy_sell, buy_sell_glow, bridge_gate, bridge_gate_glow, leaderboard, leaderboard_glow,
+             buy_sell, buy_sell_glow, bridge_gate, bridge_gate_glow,
              crystal_lamp, crystal_lamp_glow]

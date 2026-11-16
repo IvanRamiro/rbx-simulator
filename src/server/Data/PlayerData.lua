@@ -29,9 +29,10 @@ local Receipts = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild(
 local SpinLedger = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("SpinLedger"))
 local QiBoost = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("QiBoost"))
 local AuctionLedger = require(script.Parent.Parent:WaitForChild("Auction"):WaitForChild("AuctionLedger"))
+local RecordBook = require(script.Parent.Parent:WaitForChild("Records"):WaitForChild("RecordBook"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 24
+local SCHEMA_VERSION = 25
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -106,7 +107,9 @@ end
 -- stones on their way to a listing;
 -- version 24 added PaidEggs (how many of each egg came from Robux: EggInventory) and a pet's Paid (it came from Robux, so the
 -- Auction House keeps it from players who may not trade paid items), MIGRATIONS[23] below. The bump matters: an older server
--- would drop both, and a paid pet would come out of it tradable anywhere.
+-- would drop both, and a paid pet would come out of it tradable anywhere;
+-- version 25 added Records (play time and eggs carried home, for the Hall of Records: RecordBook), MIGRATIONS[24] below. The bump
+-- matters: an older server would drop both counts.
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -187,6 +190,12 @@ MIGRATIONS[23] = function(progress)
     return progress
 end
 
+-- Version 25 added the Hall of Records' counts (RecordBook): an older save has neither kept, so both start at none (sanitizeProgress).
+MIGRATIONS[24] = function(progress)
+    progress.Records = nil
+    return progress
+end
+
 -- Playtesting in Studio: with ServerStorage's StudioTestSave attribute set, saves go to a separate store of that name, so
 -- each new name starts a new player and a real save can't be touched (set to true, a store called "StudioTestSave").
 -- Ignored outside Studio.
@@ -236,6 +245,7 @@ local function sanitizeProgress(raw)
         Spin = SpinLedger.sanitize(nil),
         Boost = QiBoost.sanitize(nil),
         Auction = AuctionLedger.sanitize(nil),
+        Records = RecordBook.sanitize(nil),
     }
 
     if typeof(raw) ~= "table" then
@@ -340,6 +350,7 @@ local function sanitizeProgress(raw)
     progress.Spin = SpinLedger.sanitize(raw.Spin)
     progress.Boost = QiBoost.sanitize(raw.Boost)
     progress.Auction = AuctionLedger.sanitize(raw.Auction)
+    progress.Records = RecordBook.sanitize(raw.Records)
 
     return progress
 end
@@ -387,6 +398,8 @@ local function captureProgress(player)
     local boost = QiBoost.exportData(player) or (loaded and loaded.Boost) or QiBoost.sanitize(nil)
     -- (and the Auction House's journal: kept as loaded until AuctionService sets it up; it may hold an item or stones in flight)
     local auction = AuctionLedger.exportData(player) or (loaded and loaded.Auction) or AuctionLedger.sanitize(nil)
+    -- (and the Hall of Records' counts: kept as loaded until RecordsService sets them up)
+    local records = RecordBook.exportData(player) or (loaded and loaded.Records) or RecordBook.sanitize(nil)
     if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings and rewards and codex) then
         -- nothing is saved until every part is set up: say once which part is missing, or a session could go unsaved unseen
         local profile = profiles[player]
@@ -432,6 +445,7 @@ local function captureProgress(player)
         Spin = spin,
         Boost = boost,
         Auction = auction,
+        Records = records,
     }
 end
 
@@ -785,6 +799,7 @@ function PlayerData.release(player)
     SpinLedger.removePlayer(player)
     QiBoost.removePlayer(player)
     AuctionLedger.removePlayer(player)
+    RecordBook.removePlayer(player)
 
     if not profile then
         return

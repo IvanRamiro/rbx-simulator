@@ -1,0 +1,201 @@
+{
+ "units": "Roblox studs; Y up; each piece's front is +Z; origin on the ground under its base centre",
+ "anchor": "HR_Anchor (1-stud cube at the origin)",
+ "file": "assets/world/HallOfRecords/HallOfRecords.fbx",
+ "pieces": {
+  "HR_Stele": {
+   "objects": {
+    "HR_Stele__Basalt": 220,
+    "HR_Stele__Bronze": 1776,
+    "HR_Stele__Patina": 112
+   },
+   "tris": 2108,
+   "bbox_min": [
+    -8.5,
+    -0.3,
+    -3.3
+   ],
+   "bbox_max": [
+    8.5,
+    27.0,
+    3.3
+   ]
+  },
+  "HR_Hourglass": {
+   "objects": {
+    "HR_Hourglass__Basalt": 220,
+    "HR_Hourglass__Bronze": 696,
+    "HR_Hourglass__Sand": 360,
+    "HR_Hourglass__SandGlass": 840
+   },
+   "tris": 2116,
+   "bbox_min": [
+    -5.8,
+    -0.3,
+    -2.3
+   ],
+   "bbox_max": [
+    5.8,
+    18.27,
+    2.3
+   ]
+  },
+  "HR_WantedBoard": {
+   "objects": {
+    "HR_WantedBoard__Basalt": 88,
+    "HR_WantedBoard__Bronze": 216,
+    "HR_WantedBoard__Timber": 484
+   },
+   "tris": 788,
+   "bbox_min": [
+    -7.25,
+    -0.5,
+    -0.85
+   ],
+   "bbox_max": [
+    7.25,
+    11.35,
+    0.85
+   ]
+  },
+  "HR_Showcase": {
+   "objects": {
+    "HR_Showcase__Basalt": 132,
+    "HR_Showcase__Bronze": 352
+   },
+   "tris": 484,
+   "bbox_min": [
+    -8.5,
+    -0.3,
+    -1.8
+   ],
+   "bbox_max": [
+    8.5,
+    11.12,
+    1.8
+   ]
+  },
+  "HR_FirstsWall": {
+   "objects": {
+    "HR_FirstsWall__Basalt": 264,
+    "HR_FirstsWall__Bronze": 2772
+   },
+   "tris": 3036,
+   "bbox_min": [
+    -13.85,
+    -0.3,
+    -1.32
+   ],
+   "bbox_max": [
+    13.85,
+    13.62,
+    3.8
+   ]
+  },
+  "HR_Lectern": {
+   "objects": {
+    "HR_Lectern__Banner": 44,
+    "HR_Lectern__Basalt": 192,
+    "HR_Lectern__Bronze": 368,
+    "HR_Lectern__Parchment": 88
+   },
+   "tris": 692,
+   "bbox_min": [
+    -4.75,
+    -0.3,
+    -2.87
+   ],
+   "bbox_max": [
+    4.75,
+    6.67,
+    2.97
+   ]
+  },
+  "HR_Trilithon": {
+   "objects": {
+    "HR_Trilithon__Basalt": 132,
+    "HR_Trilithon__Bronze": 572
+   },
+   "tris": 704,
+   "bbox_min": [
+    -8.27,
+    -0.3,
+    -1.32
+   ],
+   "bbox_max": [
+    8.27,
+    15.48,
+    1.39
+   ]
+  },
+  "HR_BannerPole": {
+   "objects": {
+    "HR_BannerPole__Banner": 236,
+    "HR_BannerPole__Basalt": 44,
+    "HR_BannerPole__Bronze": 888
+   },
+   "tris": 1168,
+   "bbox_min": [
+    -2.11,
+    -0.3,
+    -0.6
+   ],
+   "bbox_max": [
+    2.11,
+    12.55,
+    0.6
+   ]
+  },
+  "HR_Court": {
+   "objects": {
+    "HR_Court__Basalt": 384,
+    "HR_Court__Bronze": 2640,
+    "HR_Court__Flagstone": 6432
+   },
+   "tris": 9456,
+   "bbox_min": [
+    -27.0,
+    -0.15,
+    -27.0
+   ],
+   "bbox_max": [
+    27.0,
+    0.33,
+    27.0
+   ]
+  },
+  "HR_PathFlag": {
+   "objects": {
+    "HR_PathFlag__Flagstone": 44
+   },
+   "tris": 44,
+   "bbox_min": [
+    -2.3,
+    -0.12,
+    -1.32
+   ],
+   "bbox_max": [
+    2.3,
+    0.25,
+    1.3
+   ]
+  }
+ },
+ "paving": {
+  "file": "assets/world/Yggdrasil/Yggdrasil_Paving.fbx",
+  "anchor": "HB_Anchor (the hub's centre)",
+  "objects": [
+   "HB_Avenues__Gold",
+   "HB_Avenues__GoldFlat",
+   "HB_Avenues__Lapis",
+   "HB_Avenues__Marble",
+   "HB_Avenues__Shade",
+   "HB_PavingRunes",
+   "HB_Plazas__Gold",
+   "HB_Plazas__GoldFlat",
+   "HB_Plazas__Lapis",
+   "HB_Plazas__Marble",
+   "HB_Plazas__Shade"
+  ]
+ }
+}

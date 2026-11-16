@@ -17,6 +17,7 @@ local Wallet = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("W
 local Analytics = require(script.Parent.Parent:WaitForChild("Analytics"):WaitForChild("Analytics"))
 local PromptRules = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("PromptRules"))
 local EggModel = require(script.Parent.Parent:WaitForChild("Guardians"):WaitForChild("EggModel"))
+local RecordBook = require(script.Parent.Parent:WaitForChild("Records"):WaitForChild("RecordBook"))
 
 local random = Random.new()
 local REQUEST_COOLDOWN = 0.5 -- seconds between a player's equip/unequip/aura requests: each rebuilds models on every client
@@ -174,6 +175,7 @@ local function onHatchRequest(player, eggId)
     if size ~= "Normal" then
         Analytics.event(player, "PetSizeHatched", 1, size, petId)
     end
+    RecordBook.hatched(player, eggId, petId, size) -- (the Hall of Records: the rarest hatches, the firsts, the Chronicle)
     RemoteEvents.EggHatchResultEvent:FireClient(player, {
         EggId = eggId,
         PetId = petId,

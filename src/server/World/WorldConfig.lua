@@ -19,13 +19,7 @@ local WorldConfig = {
         BlossomSanctuary = { Centre = Vector3.new(452, 200, 380), Radius = 170, Reach = 335, Turns = -0.55496 },
     },
 
-    -- the Ascension Stele (FloatingIslands.Yggdrasil.Leaderboard): the most Qi across every server
-    Leaderboard = {
-        FolderName = "Leaderboard",
-        StoreName = "QiLeaderboard",  -- an OrderedDataStore: UserId -> whole Qi
-        RefreshEvery = 60,           -- seconds between reads of the top entries
-        WriteEvery = 120,            -- seconds between writes of a player's Qi (and once as they leave)
-    },
+    -- the Hall of Records (its boards and stores): shared/RecordsConfig
 
     -- touching a part with this tag (Ember Peak's lava) returns a player to their island's checkpoint
     HazardTag = "LavaHazard",

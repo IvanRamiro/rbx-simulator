@@ -168,7 +168,6 @@ VIEWS = {
     "Market": (((34, 26, 58), (0, 10, -2)), ((9, 5.5, 34), (0, 9, 0))),
     "Blacksmith": (((36, 28, 58), (0, 13, -4)), ((10, 5.5, 36), (0, 11, 0))),
     "BuySell": (((32, 24, 52), (0, 12, -2)), ((8, 5.5, 33), (0, 10, 0))),
-    "Leaderboard": (((18, 12, 30), (0, 9, 0)), ((5, 5.5, 26), (0, 9, 0))),
     "MerchantDais": (((16, 14, 26), (0, 2, -2)), ((4, 5.5, 22), (0, 3, -4))),
     "SpawnPad": (((8, 7, 12), (0, 0.5, 0)), ((2, 5.5, 13), (0, 0.6, 0))),
     "SanctumPlinth": (((30, 18, 34), (0, 0, 0)), ((6, 5.5, 32), (0, 0.5, 0))),
@@ -258,8 +257,6 @@ def assemble():
         asset = {"Marketplace": "Market"}.get(name, name)
         for o in groups[asset]:
             _place(o, x, G.ground(x, z), z, yaw)
-    for o in groups["Leaderboard"]:
-        _place(o, G.LEADERBOARD[0], 0.0, G.LEADERBOARD[1], G.face_yaw(0, 1))
     for o in groups["MerchantDais"]:
         _place(o, G.MERCHANT[0], 0.0, G.MERCHANT[1], math.pi)
     for o in groups["SquareCompass"]:
@@ -524,15 +521,12 @@ def review(names):
         if asset in ("Market", "Blacksmith", "BuySell"):
             key = {"Market": "Marketplace"}.get(asset, asset)
             x, z, w, d, yaw = G.shops()[key]
-        elif asset == "Leaderboard":
-            (x, z), yaw = G.LEADERBOARD, 0.0
         else:
             (x, z), yaw = G.MERCHANT, math.pi
         lx, ly, lz = p
         return (x + lx * math.cos(yaw) + lz * math.sin(yaw), ly + G.ground(x, z), z - lx * math.sin(yaw) + lz * math.cos(yaw))
-    titles = {"Market": "Market (the Crystal Market)", "Blacksmith": "Blacksmith (the Celestial Forge)", "BuySell": "Buy & Sell (the Gilded Vault)",
-              "Leaderboard": "Leaderboard (the Ascension Board)"}
-    for asset in ("Market", "Blacksmith", "BuySell", "Leaderboard"):
+    titles = {"Market": "Market (the Crystal Market)", "Blacksmith": "Blacksmith (the Celestial Forge)", "BuySell": "Buy & Sell (the Gilded Vault)"}
+    for asset in ("Market", "Blacksmith", "BuySell"):
         (a, b), (c, d) = VIEWS[asset]
         shot(asset + "34", local(asset, a), local(asset, b), 30, titles[asset] + ": front three-quarter")
         shot(asset + "eye", local(asset, c), local(asset, d), 24, titles[asset] + ": player's eye height")

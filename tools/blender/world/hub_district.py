@@ -1,6 +1,7 @@
 """The hub's redesign (2026-11-15; layout approved by the owner: "PROCEED WITH THAT LAYOUT"): the Merchants' Terrace's three shops,
-the Market Square's centrepiece, the Leaderboard, the Hidden (Wandering) Merchant's dais, the spawn pads and the new plinth under the
-Hatching Sanctum (the Qi Spring's plinth went with the spring, 2026-11-16). Plan: renders/hub_redesign/LAYOUT_PLAN.md.
+the Market Square's centrepiece, the Hidden (Wandering) Merchant's dais, the spawn pads and the new plinth under the Hatching Sanctum
+(the Qi Spring's plinth went with the spring, and the Leaderboard with the Hall of Records, 2026-11-16: hall_records.py). Plan:
+renders/hub_redesign/LAYOUT_PLAN.md.
 
 The celestial city's language (hub_celestial.py): white marble, lapis, gold and glowing sky-blue crystal; heavy, layered, bevelled
 forms; no Chinese forms (no pagodas, curved tiled roofs, paifang, lanterns or motifs). Each building says what it is from across the
@@ -9,7 +10,7 @@ front of a tall furnace tower with a burning crown; Buy & Sell is a gold-domed v
 
 Every piece is authored in Roblox studs at its own origin on y = 0, its front toward +Z (a shop's toward the Market Square). Names
 keep the game's: WorldBuilder.Shops (HB_Blacksmith, HB_BlacksmithCore, HB_BlacksmithCrystal; HB_Market, HB_MarketCanopy,
-HB_MarketGlow; HB_BuySell, HB_BuySellStones), WorldBuilder.Board (HB_Leaderboard, HB_LeaderboardGlow), so the builders, the
+HB_MarketGlow; HB_BuySell, HB_BuySellStones), so the builders, the
 collision rules and the looks stay as they are; the new pieces (HB_MerchantDais, HB_SpawnPad, HB_SanctumPlinth,
 HB_SquareCompass and their glows) need entries of their own (LAYOUT_PLAN.md, phase 3).
 
@@ -682,56 +683,6 @@ def door(mb, cx, cy, z):
 
 
 # ======================================================================================================================
-# The Leaderboard (the Ascension Board): a broad board between two pylons under a gold arch and a star
-# ======================================================================================================================
-LB_DAIS = (13.0, 11.6)
-LB_BOARD = (12.0, 16.4, 0.8)              # half width, top, half depth
-LB_FACE = ((0.0, 8.6), (20.0, 10.4))      # the lapis face the rows are written on: centre (x, y), size
-LB_TITLE = ((0.0, 15.35), (11.0, 1.35))
-LB_STAR = (0.0, 21.3)
-
-
-def leaderboard():
-    mb, glow = W.MeshBuilder(), W.MeshBuilder()
-    floor = round_podium(mb, LB_DAIS, rise=0.5)
-    hw, top, hd = LB_BOARD
-    bx(mb, H.MARBLE, (0, floor + 0.7, 0), (2 * hw + 1.4, 1.5, 2 * hd + 1.6))            # the plinth
-    bx(mb, H.GOLD, (0, floor + 1.48, 0), (2 * hw + 1.7, 0.2, 2 * hd + 1.9))
-    bx(mb, H.MARBLE, (0, (floor + 1.4 + top) / 2, 0), (2 * hw, top - floor - 1.4, 2 * hd))  # the board's slab
-    bx(mb, H.GOLD, (0, top + 0.1, 0), (2 * hw + 0.3, 0.3, 2 * hd + 0.3))
-    (fx, fy), (fw, fh) = LB_FACE
-    bx(mb, H.GOLD, (fx, fy, hd - 0.05), (fw + 0.9, fh + 0.9, 0.4))
-    bx(mb, H.LAPIS, (fx, fy, hd + 0.2), (fw, fh, 0.12))
-    face = (fx, fy, round(hd + 0.26 + 0.03, 3))
-    (tx, ty), (tw, th) = LB_TITLE
-    bx(mb, H.GOLD, (tx, ty, hd - 0.05), (tw + 0.7, th + 0.6, 0.4))
-    bx(mb, H.LAPIS, (tx, ty, hd + 0.2), (tw, th, 0.12))
-    title = (tx, ty, round(hd + 0.26 + 0.03, 3))
-    # the back: a gold medallion of the star in a lapis roundel
-    disc_xy(mb, H.LAPIS, 0.0, 8.6, -hd - 0.02, 3.2, 32, -1, 0.8)
-    tube(mb, [(math.cos(TAU * k / 32) * 3.2, 8.6 + math.sin(TAU * k / 32) * 3.2, -hd - 0.05) for k in range(33)], 0.2, B[H.GOLD],
-           sides=6, shade=1.0, caps=False)
-    # the pylons: tapering marble obelisks, gold capped
-    for s in (-1, 1):
-        x = s * (hw + 1.7)
-        mb.lathe([(1.15, 17.8, 0.92), (1.5, floor + 1.6, 0.7)], 4, B[H.MARBLE], centre=(x, 0, 0), phase=math.pi / 4, cap_top=False)
-        mb.lathe([(1.9, floor + 1.75, 0.95), (1.9, floor - 0.05, 0.7)], 4, B[H.MARBLE], centre=(x, 0, 0), phase=math.pi / 4, cap_top=True)
-        mb.lathe([(0.05, 19.6, 1.0), (1.35, 17.95, 0.9), (1.35, 17.7, 0.85)], 4, B[H.GOLD], centre=(x, 0, 0), phase=math.pi / 4, cap_top=True)
-        bx(mb, H.GOLD, (x, floor + 1.83, 0), (2.9, 0.22, 2.9))
-    # the arch over the board, the star's mount at its crown
-    pts = [(math.cos(math.pi * k / 24) * (hw + 0.4), top + 0.2 + math.sin(math.pi * k / 24) * 3.5, 0.0) for k in range(25)]
-    tube(mb, pts, 0.34, B[H.GOLD], sides=8, shade=1.0, caps=True)
-    sy = LB_STAR[1]
-    tube(mb, [(math.cos(TAU * k / 20) * 1.15, sy + math.sin(TAU * k / 20) * 1.15, 0.0) for k in range(21)], 0.14, B[H.GOLD], sides=6, shade=1.0, caps=False)
-    H.gem(glow, (0.0, sy, 0.0), 0.6, 0.9, B[H.GLOW], sides=6)
-    for k in range(6):
-        a = TAU * k / 6 + math.pi / 2
-        H.shard(glow, (math.cos(a) * 0.4, sy + math.sin(a) * 0.4, 0.0), (math.cos(a), math.sin(a), 0.0), 1.2, 0.17, B[H.GLOW], twist=a)
-    return {"HB_Leaderboard": mb, "HB_LeaderboardGlow": glow}, {"Face": face, "FaceSize": (fw, fh), "Title": title, "TitleSize": (tw, th),
-                                                                "Star": (0.0, sy, 0.0)}
-
-
-# ======================================================================================================================
 # The Merchant's dais: a round dais with a crescent screen behind him and two crystal posts (it reads as a place when he is away)
 # ======================================================================================================================
 MD_R = (15.0, 13.6)
@@ -859,7 +810,6 @@ ASSETS = {
     "Market": market,
     "Blacksmith": blacksmith,
     "BuySell": buy_sell,
-    "Leaderboard": leaderboard,
     "MerchantDais": merchant_dais,
     "SpawnPad": spawn_pad,
     "SanctumPlinth": sanctum_plinth,
@@ -1008,7 +958,7 @@ def finish(obj, bands, coll, materials, single=False, base=None, paving=False):
 
 
 # pieces that stay one mesh (the game gives them one look: WorldBuilder.Appearance)
-SINGLE_PIECES = {"HB_MarketCanopy", "HB_MarketGlow", "HB_BlacksmithCore", "HB_BlacksmithCrystal", "HB_BuySellStones", "HB_LeaderboardGlow",
+SINGLE_PIECES = {"HB_MarketCanopy", "HB_MarketGlow", "HB_BlacksmithCore", "HB_BlacksmithCrystal", "HB_BuySellStones",
                  "HB_MerchantDaisGlow", "HB_SpawnPadGlow", "HB_SquareCompassGlow"}
 
 

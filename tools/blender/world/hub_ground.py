@@ -5,10 +5,13 @@ Layout, island-local studs (x east, z south; a bearing runs from +x toward +z, n
 - the Tree Ring round the World Tree's mound (r 80-104), as before;
 - six beast pens on a ring (r 168, bearings 60, 120, 180, -120, -60, 0), each with its owner's spawn pad on a short spur from the
   Tree Ring, 10 studs before the pen's board (src/worldbuild/Placements/Pastures.lua);
-- the Ring Road (r 216-236) joining every avenue, bridge and the shops; six avenues out between the pens (south to the Arrival
-  Plaza, north to the Hatching Sanctum, north-east the Market Avenue into the Market Square, south-west to the Qi Spring,
-  north-west and south-east to the Ring Road);
-- the Leaderboard at the head of the south avenue against the tree, the Hidden (Wandering) Merchant's dais opposite it;
+- the Ring Road (r 216-236) joining every avenue, bridge and the shops; five avenues out between the pens (south to the Arrival
+  Plaza, north to the Hatching Sanctum, north-east the Market Avenue into the Market Square, north-west and south-east to the
+  Ring Road). The south-west avenue and its garden court (the Qi Spring's until 2026-11-16) were taken up for the Hall of Records
+  (the owner, 2026-11-16: "you must remove the road on this part of the main hub"): its slate court where the owner stood, and a
+  path of slate flags from the Tree Ring to its entrance (hall_layout.py; the flags are the hall's kit, the terrain under them here);
+- the Hidden (Wandering) Merchant's dais at the head of the north avenue against the tree (the old leaderboard opposite it,
+  at the head of the south avenue, went with the Hall of Records: the south avenue runs on to the Tree Ring there);
 - the Merchants' Terrace: new ground out of the north-east rim (ygg_island.terrace_reach), the Market Square and the three shops
   (hub_district.py), clear of the Origin Abyss bridge;
 - an apron the deck's width from the Ring Road to each bridge's gate, unchanged lines (Placements/Bridges.lua);
@@ -27,6 +30,7 @@ import random
 import worldlib as W
 import ygg_island as Y
 import hub_celestial as H
+import hall_layout as HL
 
 TAU = 2 * math.pi
 LIFT = 0.25                    # the paving's top over the levelled ground
@@ -40,12 +44,9 @@ PEN_AREAS = ("south-east ring", "south-west ring", "west ring", "north-west ring
 PEN_PLOT = (62.0, 84.0)        # the level-9 pen with its paving ring (54 x 76) and 4 studs round it
 PEN_FOOTPRINT = (54.0, 76.0)   # (Pastures.lua Footprint: what PastureBuilder checks)
 SPUR_TO = PEN_R - 37.0         # the pen's paving ring's front edge
-LEADERBOARD = (0.0, 118.0)     # faces south (+Z), down the south avenue to the Arrival Plaza
 MERCHANT = (0.0, -120.0)       # faces north (-Z), up the north avenue to the bridges
 SANCTUM = (0.0, -178.0)        # the Hatching Sanctum (GameConfig.HatchingAltar), its front (+Z) toward the tree
-GARDEN = (-147.2, 85.0)        # the garden court where the south-west avenue ends (the Qi Spring's court until 2026-11-16, when the
-                               # spring moved to the Blossom Sanctuary as its Training Ground): grass inside the paving ring
-GARDEN_LAWN = 14.3             # the lawn's radius: just inside the paving ring's inner kerb (14.55)
+HALL = HL.CENTRE              # the Hall of Records' court (hall_layout.py), on the south-west avenue's old line, where the owner stood
 SPIN_WHEEL = (253.7, -14.6)    # the Spin Wheel (SpinWheelBuilder), where the owner stood (2026-11-16), outside the Ring Road east, facing the tree
 ARRIVAL = (0.0, 176.0, 24.0)   # the Arrival Plaza: the hub's main spawn (IslandSpawn)
 GUIDE_SPOT = (10.0, 162.0)
@@ -55,7 +56,6 @@ AVENUES = [   # (name, bearing, half width, from r, to r): each runs from the Tr
     ("South", 90.0, 10.0, RING[1], RING_ROAD[0]),
     ("North", -90.0, 10.0, RING[1], RING_ROAD[0]),
     ("Market", -30.0, 10.0, RING[1], RING_ROAD[0]),
-    ("SouthWest", 150.0, 8.0, RING[1], RING_ROAD[0]),
     ("NorthWest", -150.0, 8.0, RING[1], RING_ROAD[0]),
     ("SouthEast", 30.0, 8.0, RING[1], RING_ROAD[0]),
 ]
@@ -63,8 +63,8 @@ SPUR_HALF = 6.0
 APRON_HALF = 20.0
 FORECOURT_HALF = 7.0
 # the model footprints the terrain is levelled under and kept bare (grass grows up through meshes): centre x, z, radius
-MODEL_DISCS = [(LEADERBOARD[0], LEADERBOARD[1], 13.2), (MERCHANT[0], MERCHANT[1], 15.2), (SANCTUM[0], SANCTUM[1], 23.8),
-               (SQUARE[0], SQUARE[1], 4.4)]
+MODEL_DISCS = [(MERCHANT[0], MERCHANT[1], 15.2), (SANCTUM[0], SANCTUM[1], 23.8), (SQUARE[0], SQUARE[1], 4.4),
+               (HALL[0], HALL[1], HL.COURT_R + 0.5)]
 HRP_OVER_FEET = 3.192
 
 
@@ -103,7 +103,37 @@ def bridges():
 # ---------- what is paved ----------
 def discs():
     """(x, z, radius, inner radius) of every paved round."""
-    return [(ARRIVAL[0], ARRIVAL[1], ARRIVAL[2], 0.0), (SQUARE[0], SQUARE[1], SQUARE[2], 4.15), (GARDEN[0], GARDEN[1], 24.0, 14.55)]
+    return [(ARRIVAL[0], ARRIVAL[1], ARRIVAL[2], 0.0), (SQUARE[0], SQUARE[1], SQUARE[2], 4.15)]
+
+
+def hall_frame(x, z):
+    """A point in the Hall of Records' frame (hall_layout.py) in island coordinates."""
+    a = HL.yaw()
+    return (HALL[0] + x * math.cos(a) + z * math.sin(a), HALL[1] - x * math.sin(a) + z * math.cos(a))
+
+
+HALL_PATH_HALF = 2.9           # the flag path's ground (bare earth between the flags, levelled), either side of its line
+
+
+_HALL_PATHS = None
+
+
+def hall_paths():
+    """[(a, b)] of the hall's two flag paths in island coordinates, from inside the court's kerb to the Tree Ring's and the Ring Road's
+    edges (terrain only: the flags themselves are the hall's kit, WorldBuilder.buildHallOfRecords)."""
+    global _HALL_PATHS
+    if _HALL_PATHS is None:
+        out = []
+        for (x0, z0), (x1, z1) in HL.paths():
+            L = math.hypot(x1 - x0, z1 - z0)
+            ux, uz = (x1 - x0) / L, (z1 - z0) / L
+            out.append((hall_frame(x0 - ux * 3.0, z0 - uz * 3.0), hall_frame(x1 + ux * 1.5, z1 + uz * 1.5)))
+        _HALL_PATHS = out
+    return _HALL_PATHS
+
+
+def _hall_path_distance(x, z):
+    return min(_seg(x, z, a, b) for a, b in hall_paths())
 
 
 def segments():
@@ -152,8 +182,7 @@ def paved_distance(x, z):
     best = min(best, abs(r - (RING_ROAD[0] + RING_ROAD[1]) / 2) - (RING_ROAD[1] - RING_ROAD[0]) / 2)
     for cx, cz, R, inner in discs():
         d = math.hypot(x - cx, z - cz)
-        # a paved ring: the garden court's middle is open ground (the Square's middle is its centrepiece's disc, below)
-        best = min(best, max(d - R, inner - d) if (cx, cz) == GARDEN else d - R)
+        best = min(best, d - R)    # (the Square's middle is its centrepiece's disc, below)
     for cx, cz, R in MODEL_DISCS:
         best = min(best, math.hypot(x - cx, z - cz) - R)
     for a, b, half, _ in segments():
@@ -162,6 +191,7 @@ def paved_distance(x, z):
         best = min(best, math.hypot(x - sx, z - sz) - 6.2)
     for name, (cx, cz, w, d, yaw) in shops().items():
         best = min(best, _rect(x, z, cx, cz, w + 1.0, d + 1.0, yaw))
+    best = min(best, _hall_path_distance(x, z) - HALL_PATH_HALF)
     return best
 
 
@@ -193,8 +223,8 @@ def height(x, z):
         mat = "Cobblestone"   # pale stone under the marble and under every model (grass grows up through a mesh)
     else:
         mat = "Grass"
-    if math.hypot(x - GARDEN[0], z - GARDEN[1]) < GARDEN_LAWN:
-        mat = "Grass"         # the garden court's lawn, inside its paving ring (the avenue's line under it is not paved)
+    if _hall_path_distance(x, z) < HALL_PATH_HALF + 0.6 and math.hypot(x - HALL[0], z - HALL[1]) > HL.COURT_R + 0.5:
+        mat = "Ground"        # the Hall of Records' flag path: bare earth between its slate flags
     return h, mat
 
 
@@ -420,7 +450,7 @@ def paving(coll, mat, bands):
         ring_courses(mb, glow, rnd, bands, (0.0, 0.0), RING_ROAD[0], RING_ROAD[1], lapis=ROAD_LAPIS, rune_every=6, kerb_in=True,
                      b0=b0, b1=b1, gap=sq)
         out.append(mb.object(name, coll, mat))
-    # the plazas: the Arrival Plaza, the Market Square (round its centrepiece), the Qi Spring's court (round its plinth)
+    # the plazas: the Arrival Plaza, the Market Square (round its centrepiece)
     mb = W.MeshBuilder()
     for cx, cz, R, inner in discs():
         lap = (R - 5.0, R - 3.4) if R >= 24 else None
@@ -492,7 +522,6 @@ def lamp_layout():
             spots.append((x, z, face_yaw(-x, -z)))
     pair(-90.0, SANCTUM[1] * -1 - 23.8 - 4.0, 10.0)          # the north avenue reaching the Sanctum
     pair(90.0, ARRIVAL[1] - ARRIVAL[2] - 4.0, 10.0)           # the south avenue reaching the Arrival Plaza
-    pair(150.0, math.hypot(*GARDEN) - 24.0 - 4.0, 8.0)        # the south-west avenue reaching the garden court
     pair(-30.0, RING_ROAD[0] - 5.0, 10.0)                     # the Market Avenue, where it crosses to the square
     for name, (x, z, b) in bridges().items():
         pair(b, RING_ROAD[1] + 3.5, APRON_HALF)               # each bridge's apron, on the verge past the Ring Road
@@ -504,8 +533,55 @@ def _lua_v3(x, y, z):
     return "Vector3.new(%.2f, %.2f, %.2f)" % (x, y, z)
 
 
+def _hall_lines():
+    """The HallOfRecords table (hall_layout.py): the court's centre and turn, its pieces, flags, board faces, blockout and lights."""
+    def v3(p):
+        return "Vector3.new(%.3f, %.3f, %.3f)" % tuple(p)
+    cx, cz = HALL
+    base = ground(cx, cz)
+    L = ["    -- the Hall of Records (WorldBuilder.buildHallOfRecords; tools/blender/world/hall_layout.py): the court where the owner stood,",
+         "    -- its +Z toward the World Tree. Pieces and Flags in the hall's frame (y over the court's ground); Faces, Blockout and Lights",
+         "    -- in each piece's own frame (its front +Z). Faces: where each board's SurfaceGui is drawn (client/World/HallOfRecords).",
+         "    HallOfRecords = {",
+         "        Centre = %s, Yaw = %.4f, Court = %g," % (_lua_v3(cx, base, cz), HL.yaw(), HL.COURT_R),
+         "        Pieces = {"]
+    for piece, x, z, yaw in HL.stations():
+        L.append('            { Piece = "%s", Position = Vector3.new(%.3f, 0, %.3f), Yaw = %.4f },' % (piece, x, z, yaw))
+    L.append("        },")
+    L.append("        Flags = {")
+    for x, z, yaw in HL.flag_path():
+        wx, wz = hall_frame(x, z)
+        L.append("            { Position = Vector3.new(%.3f, %.3f, %.3f), Yaw = %.4f }," % (x, ground(wx, wz) - base, z, yaw))
+    L.append("        },")
+    L.append("        Faces = {")
+    for piece, faces in sorted(HL.faces().items()):
+        L.append("            %s = {" % piece)
+        for board, c, (w, h), n, up in faces:
+            L.append('                { Board = "%s", Centre = %s, Size = Vector2.new(%.3f, %.3f), Normal = %s, Up = %s },'
+                     % (board, v3(c), w, h, v3(n), v3(up)))
+        L.append("            },")
+    L.append("        },")
+    L.append("        Blockout = {")
+    for piece, boxes in sorted(HL.blockout().items()):
+        L.append("            %s = {" % piece)
+        for box in boxes:
+            c, size, look = box[0], box[1], box[2]
+            yaw = box[3] if len(box) > 3 else 0.0
+            pitch = box[4] if len(box) > 4 else 0.0
+            L.append('                { Centre = %s, Size = %s, Look = "%s", Yaw = %.4f, Pitch = %.4f },' % (v3(c), v3(size), look, yaw, pitch))
+        L.append("            },")
+    L.append("        },")
+    L.append("        Lights = {")
+    for piece, (off, rng, bright) in sorted(HL.LIGHTS.items()):
+        L.append("            %s = { Offset = %s, Range = %g, Brightness = %g }," % (piece, v3(off), rng, bright))
+    L.append("        },")
+    L.append("    },")
+    return L
+
+
 def write_placements(spots, path=None):
-    """src/worldbuild/Placements/Yggdrasil.lua. `spots`: hub_district.build()'s second result (each asset's signs, faces and spots)."""
+    """src/worldbuild/Placements/Yggdrasil.lua. `spots`: hub_district.build()'s second result (each asset's signs, faces and spots),
+    or None to keep the shops' block as it is in the file (nothing of the shops changed)."""
     import re
     import hub_district as D
     path = path or W.REPO + "/src/worldbuild/Placements/Yggdrasil.lua"
@@ -516,6 +592,7 @@ def write_placements(spots, path=None):
         m = re.search(r"        %s = \{\n(.*?)\n        \}," % name, old, re.S)
         keep[name] = m.group(1)
     relic = re.search(r"    Relics = \{.*?\},", old).group(0)
+    shops_block = re.search(r"    -- each shop's name board.*?\n    \},\n", old, re.S).group(0) if spots is None else None
     kit = {}
 
     def add(name, x, y, z, yaw=0.0):
@@ -534,7 +611,7 @@ def write_placements(spots, path=None):
     add("HB_SanctumPlinth", SANCTUM[0], LIFT, SANCTUM[1])
     add("HB_MerchantDais", MERCHANT[0], ground(*MERCHANT), MERCHANT[1], math.pi)
     add("HB_MerchantDaisGlow", MERCHANT[0], ground(*MERCHANT), MERCHANT[1], math.pi)
-    L = ["-- Written by tools/blender/world/hub_ground.py (the hub's redesign, 2026-11-15). Do not edit by hand.",
+    L = ["-- Written by tools/blender/world/hub_ground.py (the hub's redesign, 2026-11-15; the Hall of Records, 2026-11-16). Do not edit by hand.",
          "-- Island-local Roblox studs. Kit entries place each piece's authored origin. HB_* are the hub's (Yggdrasil_Celestial.fbx and",
          "-- Yggdrasil_District.fbx); SI_RootShelf / SI_CradleFloor are the great root's, kept from the hub before.", "return {", "    Kit = {"]
     for name in sorted(kit):
@@ -550,14 +627,17 @@ def write_placements(spots, path=None):
     for name, (x, z, w, d, yaw) in shops().items():
         L.append("        %s = { Centre = %s, Size = Vector2.new(%g, %g), Yaw = %.4f }," % (name, _lua_v3(x, ground(x, z), z), w, d, yaw))
     L.append("    },")
-    L.append("    -- each shop's name board, where its prompt stands and its effects, in its site's frame (hub_district.py)")
-    L.append("    Shops = {")
-    shop_spots = {
+    if shops_block:
+        L += shops_block.rstrip("\n").split("\n")
+    shop_spots = {} if shops_block else {
         "Blacksmith": (spots["Blacksmith"]["Sign"], D.BS_SIGN_SIZE, D.BS_PROMPT,
                        [("Forge", D.BS_HEARTH), ("Smoke", (D.BS_TOWER[0], D.BS_TOWER[3] + 7.5, D.BS_TOWER[1]))]),
         "BuySell": (spots["BuySell"]["Sign"], D.BV_SIGN_SIZE, D.BV_PROMPT, [("Stones", (D.BV_DRUM[0] - D.BV_SCALE[0], D.BV_SCALE[2] + 1.0, D.BV_DRUM[1]))]),
         "Marketplace": (spots["Market"]["Sign"], D.MK_SIGN_SIZE, D.MK_PROMPT, [("Coins", D.MK_FX)]),
     }
+    if not shops_block:
+        L.append("    -- each shop's name board, where its prompt stands and its effects, in its site's frame (hub_district.py)")
+        L.append("    Shops = {")
     for name, (sc, ss, prompt, fx) in shop_spots.items():
         L.append("        %s = {" % name)
         L.append("            Sign = { Centre = Vector3.new(%g, %g, %g), Size = Vector2.new(%g, %g) }," % (sc[0], sc[1], sc[2], ss[0], ss[1]))
@@ -567,7 +647,8 @@ def write_placements(spots, path=None):
             L.append('                { Kind = "%s", Position = Vector3.new(%g, %g, %g) },' % (kind, p[0], p[1], p[2]))
         L.append("            },")
         L.append("        },")
-    L.append("    },")
+    if not shops_block:
+        L.append("    },")
     L.append("    -- the hub's own spawn: the Arrival Plaza (for a player without a pen yet); each player's own spawn is before their pen")
     L.append("    Spawn = %s," % _lua_v3(ARRIVAL[0], _y(ARRIVAL[0], ARRIVAL[1]) + 1.98, ARRIVAL[1]))
     L.append("    -- the six pen spawn pads (HB_SpawnPad), in pen order: where each holder spawns, facing their pen (Pastures.lua Spawn)")
@@ -587,13 +668,9 @@ def write_placements(spots, path=None):
     gx, gz = GUIDE_SPOT
     L.append("        Guide = { Position = %s, Yaw = %.4f }," % (_lua_v3(gx, _y(gx, gz) + HRP_OVER_FEET, gz), face_yaw(ARRIVAL[0] - gx, ARRIVAL[1] - gz) + math.pi))
     L.append("    },")
-    L.append("    -- the Ascension Board (WorldBuilder.buildLeaderboard): at the head of the south avenue, facing the Arrival Plaza")
-    L.append("    Leaderboard = { Centre = %s, Yaw = %.4f }," % (_lua_v3(LEADERBOARD[0], ground(*LEADERBOARD), LEADERBOARD[1]), face_yaw(0.0, 1.0)))
     L.append("    -- the Wandering Merchant's camp (MerchantService), on his dais (HB_MerchantDais, top %.2f over the ground), facing the bridges" % D.MD_TOP)
     L.append("    Merchant = { Centre = %s, Yaw = %.4f }," % (_lua_v3(MERCHANT[0], ground(*MERCHANT) + D.MD_TOP, MERCHANT[1]), face_yaw(0.0, -1.0)))
-    L.append("    -- the garden court at the end of the south-west avenue (the Qi Spring's until 2026-11-16): one blossom tree, from the")
-    L.append("    -- Blossom Sanctuary's kit (WorldBuilder.buildApproach places it), facing the tree")
-    L.append("    Garden = { Centre = %s, Yaw = %.4f }," % (_lua_v3(GARDEN[0], ground(*GARDEN), GARDEN[1]), face_yaw(-GARDEN[0], -GARDEN[1])))
+    L += _hall_lines()
     L.append("    -- the Spin Wheel (SpinWheelBuilder): its plinth's middle on the ground, outside the Ring Road east, facing the tree")
     L.append("    SpinWheel = { Centre = %s, Yaw = %.4f }," % (_lua_v3(SPIN_WHEEL[0], ground(*SPIN_WHEEL), SPIN_WHEEL[1]), face_yaw(-SPIN_WHEEL[0], -SPIN_WHEEL[1])))
     L.append("    " + relic.strip())

@@ -12,15 +12,18 @@
 --   WB.placeKit(island); WB.buildEggStands(island); WB.buildRelics(island)
 --   Yggdrasil (the hub, the celestial city since 2026-11-12: tools/blender/world/hub_ground.py exports its terrain,
 --   placements and Yggdrasil_Celestial.fbx; WB.storeKit("Yggdrasil", <import>, "HB_Anchor")): WB.buildTerrain,
---   WB.placeKit, WB.buildShops, WB.buildAltar, WB.buildLeaderboard, WB.buildSpawn, WB.buildRootColliders,
+--   WB.placeKit, WB.buildShops, WB.buildAltar, WB.buildHallOfRecords, WB.buildSpawn, WB.buildRootColliders,
 --   WB.buildHubNpcs, WB.buildMerchantTemplate; the bridges (WB.buildBridges) take the hub's gate from its kit
+--   the Hall of Records (2026-11-16; tools/blender/world/hall_layout.py and hall_records.py): WB.storeHallOfRecords(<hall import>,
+--   <paving import>) stores assets/world/HallOfRecords/HallOfRecords.fbx and assets/world/Yggdrasil/Yggdrasil_Paving.fbx and places
+--   both; before its import, WB.buildHallOfRecords("Yggdrasil") builds it as a blockout of plain parts with its boards
 --   every other island: WB.buildCheckpoint(island); Ember Peak also WB.buildLavafall, Moonlit Isle
 --   WB.buildStarWell
 --   the Blossom Sanctuary (tools/blender/world/blossom_layout.py writes its terrain and placements; blossom_assets.py its four FBX
 --   files in assets/world/BlossomSanctuary, each stored with WB.storeKit("BlossomSanctuary", <import>, "BS_Anchor")):
 --   WB.buildTerrain("BlossomSanctuary") (never clearTerrain: its square takes in a corner of the hub's rim), WB.buildApproach,
---   WB.buildSanctuary, then, once its kit is stored, WB.placeKit and again WB.buildApproach and WB.buildSanctuary (the stones' caps,
---   the koi and the garden court's tree come from the kit)
+--   WB.buildSanctuary, then, once its kit is stored, WB.placeKit and again WB.buildApproach and WB.buildSanctuary (the stones' caps
+--   and the koi come from the kit)
 --   terrain colours (once, after any terrain build): WB.applyMaterialColors()
 --
 -- Bridges (assets/world/Bridges): WB.storeBridgeKit(<import>, theme), then WB.buildBridges().
@@ -415,8 +418,10 @@ WorldBuilder.Collision = {
     { Prefix = "HB_BuySell", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "HB_BridgeGateGlow", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "HB_BridgeGate", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
-    { Prefix = "HB_LeaderboardGlow", Fidelity = Enum.CollisionFidelity.Box },
-    { Prefix = "HB_Leaderboard", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
+    -- the Hall of Records (hall_records.py): the court and the flags are flat; the banners' cloth doesn't collide (Banner)
+    { Prefix = "HR_Court", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HR_PathFlag", Fidelity = Enum.CollisionFidelity.Box },
+    { Prefix = "HR_", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "HB_CrystalLampGlow", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "HB_CrystalLampLight", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "HB_CrystalLamp", Fidelity = Enum.CollisionFidelity.Hull },
@@ -565,7 +570,6 @@ do
     WorldBuilder.Appearance.HB_MarketCanopy = table.clone(glass)
     WorldBuilder.Appearance.HB_MarketCanopy.CanCollide = false
     WorldBuilder.Appearance.HB_BridgeGateGlow = { Material = Enum.Material.Neon, CanCollide = false, CastShadow = false } -- (coloured per route)
-    WorldBuilder.Appearance.HB_LeaderboardGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(226, 240, 255), CanCollide = false, CastShadow = false }
     -- the hub's redesign (2026-11-15, tools/blender/world/hub_district.py and hub_ground.py): the Ring Road, the bridges' aprons and the
     -- parapet over the great root's cove; the spawn pads, the Merchant's dais, the Market Square's centrepiece and the Sanctum's plinth
     for _, name in { "HB_RingRoadNE", "HB_RingRoadSE", "HB_RingRoadSW", "HB_RingRoadNW", "HB_Aprons" } do
@@ -824,6 +828,17 @@ WorldBuilder.MaterialLooks = {
     Plaster = { Material = Enum.Material.Plaster, Color = Color3.fromRGB(236, 230, 220) },
     Rope = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(206, 182, 124), CanCollide = false },
     ShrineWater = { Material = Enum.Material.Glass, Color = Color3.fromRGB(110, 170, 170), Transparency = 0.35, CanCollide = false, CastShadow = false },
+    -- the Hall of Records (hall_records.py, 2026-11-16): its own stone circle, not the celestial city's: near-black basalt, weathered
+    -- bronze with green patina in its recesses, a dark slate court and flags, deep wine banners, the hourglass's glass and sand, the
+    -- Chronicle's parchment, the notice board's timber (Timber, above). (Names of their own: Cloth and Glass are the hub's people's)
+    Basalt = { Material = Enum.Material.Basalt, Color = Color3.fromRGB(66, 63, 66) },
+    Bronze = { Material = Enum.Material.Metal, Color = Color3.fromRGB(150, 100, 56) },
+    Patina = { Material = Enum.Material.CorrodedMetal, Color = Color3.fromRGB(92, 136, 116) },
+    Flagstone = { Material = Enum.Material.Slate, Color = Color3.fromRGB(78, 76, 80) },
+    Banner = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(112, 30, 44), CanCollide = false },
+    Parchment = { Material = Enum.Material.Fabric, Color = Color3.fromRGB(226, 208, 170) },
+    SandGlass = { Material = Enum.Material.Glass, Color = Color3.fromRGB(226, 220, 204), Transparency = 0.55, CanCollide = false, CastShadow = false },
+    Sand = { Material = Enum.Material.Sand, Color = Color3.fromRGB(222, 170, 92), CanCollide = false, CastShadow = false },
 }
 
 local function splitName(name)
@@ -1857,57 +1872,128 @@ function WorldBuilder.buildBridges(only)
     return #folder:GetChildren()
 end
 
--- ---------- the Ascension Board (the leaderboard; hub_celestial.leaderboard, rebuilt 2026-11-12) ----------
--- FloatingIslands.<island>.Leaderboard: the board's pieces at Placements.<island>.Leaderboard, the title plaque ("Title") and the board
--- ("Board"), whose SurfaceGui holds a heading and rows "Row1".."Row<BoardRows>", each with Place, Cultivator, Rank and Qi labels.
--- LeaderboardService writes the names; the builder leaves the rows empty.
-WorldBuilder.BoardRows = 10
-WorldBuilder.Board = {   -- (the hub's redesign, 2026-11-15: tools/blender/world/hub_district.py leaderboard, its LB_ spots)
-    Pieces = { "HB_Leaderboard", "HB_LeaderboardGlow" },
-    Title = { Centre = Vector3.new(0, 15.35, 1.09), Size = Vector2.new(11, 1.35) },  -- (LB_TITLE, just off its lapis face)
-    Face = { Centre = Vector3.new(0, 8.6, 1.09), Size = Vector2.new(20, 10.4) },     -- (LB_FACE)
-    Star = Vector3.new(0, 21.3, 0),
-}
-local BOARD_INK = { Color3.fromRGB(255, 210, 95), Color3.fromRGB(225, 232, 245), Color3.fromRGB(235, 160, 95) } -- the top three
-local BOARD_TEXT = Color3.fromRGB(236, 230, 214)
-
-function WorldBuilder.buildLeaderboard(island)
-    local placements = placementsFor(island)
-    local spot = placements.Leaderboard
-    local folder = WorldBuilder.islandFolder(island, "Leaderboard")
-    folder:ClearAllChildren()
-    local frame = islandFrame(island) * CFrame.new(spot.Centre) * CFrame.Angles(0, spot.Yaw, 0)
-    for _, piece in WorldBuilder.Board.Pieces do
-        placeTemplate(island, piece, frame, folder)
+-- Whether the island's kit holds a template of this name (one part, or its material parts).
+local function hasTemplate(island, name)
+    local kit = ServerStorage:FindFirstChild("WorldKit")
+    local folder = kit and kit:FindFirstChild(island)
+    if not folder then
+        return false
     end
-    local star = marker("Star", Vector3.new(1, 1, 1), frame * CFrame.new(WorldBuilder.Board.Star), folder)
-    addLight(star, Color3.fromRGB(220, 236, 255), 16, 0.7)
+    if folder:FindFirstChild(name) then
+        return true
+    end
+    for _, child in folder:GetChildren() do
+        if splitName(child.Name) == name then
+            return true
+        end
+    end
+    return false
+end
 
-    local _, titleGui = textPanel("Title", WorldBuilder.Board.Title.Size, frame * CFrame.new(WorldBuilder.Board.Title.Centre), folder, 60)
-    steleLabel("Text", titleGui, UDim2.fromScale(0.96, 0.86), UDim2.fromScale(0.02, 0.07), Enum.TextXAlignment.Center,
-        Color3.fromRGB(240, 222, 170)).Text = "Leaderboard"
+-- ---------- the Hall of Records (2026-11-16; tools/blender/world/hall_layout.py, hall_records.py) ----------
+-- FloatingIslands.<island>.HallOfRecords: the hall's pieces at Placements.<island>.HallOfRecords (each from the kit once it is stored,
+-- or as a blockout of plain parts until then), the slate flags of its path, a few warm lights, and one invisible face part per board,
+-- tagged RecordsConfig.Tag with a Board attribute: the client draws each board's SurfaceGui on its front (client/World/HallOfRecords;
+-- the data: server/Records/RecordsService).
+WorldBuilder.HallLight = Color3.fromRGB(255, 196, 140)
+local HALL_BLOCKOUT_FLAG = Vector3.new(4.6, 0.3, 2.6)
 
-    local _, gui = textPanel("Board", WorldBuilder.Board.Face.Size, frame * CFrame.new(WorldBuilder.Board.Face.Centre), folder, 40)
-    local heading = steleLabel("Heading", gui, UDim2.fromScale(0.9, 0.1), UDim2.fromScale(0.05, 0.02), Enum.TextXAlignment.Center, BOARD_INK[1])
-    heading.Text = "The most Qi in all the realms"
-    local rowHeight = 0.84 / WorldBuilder.BoardRows
-    for index = 1, WorldBuilder.BoardRows do
-        local row = Instance.new("Frame")
-        row.Name = "Row" .. index
-        row.Size = UDim2.fromScale(0.94, rowHeight * 0.92)
-        row.Position = UDim2.fromScale(0.03, 0.14 + (index - 1) * rowHeight)
-        row.BackgroundColor3 = Color3.new(1, 1, 1)
-        row.BackgroundTransparency = if index % 2 == 0 then 0.94 else 1
-        row.BorderSizePixel = 0
-        row.Parent = gui
-        local ink = BOARD_INK[index] or BOARD_TEXT
-        steleLabel("Place", row, UDim2.fromScale(0.08, 1), UDim2.fromScale(0, 0), Enum.TextXAlignment.Center, ink).Text = tostring(index)
-        steleLabel("Cultivator", row, UDim2.fromScale(0.44, 1), UDim2.fromScale(0.1, 0), Enum.TextXAlignment.Left, ink)
-        steleLabel("Rank", row, UDim2.fromScale(0.28, 0.8), UDim2.fromScale(0.55, 0.1), Enum.TextXAlignment.Left, BOARD_TEXT)
-        steleLabel("Qi", row, UDim2.fromScale(0.16, 1), UDim2.fromScale(0.84, 0), Enum.TextXAlignment.Right, ink)
+local function hallBlockout(name, box, frame, parent)
+    local part = Instance.new("Part")
+    part.Name = name
+    part.Size = box.Size
+    part.CFrame = frame * CFrame.new(box.Centre) * CFrame.Angles(0, box.Yaw or 0, 0) * CFrame.Angles(box.Pitch or 0, 0, 0)
+    part.Anchored = true
+    part.CanTouch = false
+    part.TopSurface, part.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
+    for property, value in WorldBuilder.MaterialLooks[box.Look] or WorldBuilder.MaterialLooks.Basalt do
+        part[property] = value -- (setLook is for MeshParts: a plain Part has no TextureID)
+    end
+    part.CanQuery = part.CanCollide
+    part:SetAttribute("Blockout", true)
+    part.Parent = parent
+    return part
+end
+
+function WorldBuilder.buildHallOfRecords(island)
+    local spec = placementsFor(island).HallOfRecords
+    local folder = WorldBuilder.islandFolder(island, "HallOfRecords")
+    folder:ClearAllChildren()
+    local hall = islandFrame(island) * CFrame.new(spec.Centre) * CFrame.Angles(0, spec.Yaw, 0)
+    local tag = require(ReplicatedStorage:WaitForChild("RecordsConfig"):Clone()).Tag
+    local blockouts = 0
+    for index, entry in spec.Pieces do
+        local frame = hall * CFrame.new(entry.Position) * CFrame.Angles(0, entry.Yaw, 0)
+        local holder = Instance.new("Folder")
+        holder.Name = entry.Piece .. "_" .. index
+        holder.Parent = folder
+        if hasTemplate(island, entry.Piece) then
+            placeTemplate(island, entry.Piece, frame, holder)
+        elseif entry.Piece == "HR_Court" then
+            local court = hallBlockout("HR_Court", { Centre = Vector3.new(0, 0.1, 0), Size = Vector3.new(0.3, spec.Court * 2, spec.Court * 2),
+                Look = "Flagstone" }, frame, holder)
+            court.Shape = Enum.PartType.Cylinder
+            court.CFrame = frame * CFrame.new(0, 0.1, 0) * CFrame.Angles(0, 0, math.pi / 2)
+            blockouts += 1
+        else
+            for k, box in spec.Blockout[entry.Piece] or {} do
+                hallBlockout(entry.Piece .. "_Block" .. k, box, frame, holder)
+                blockouts += 1
+            end
+        end
+        for _, face in spec.Faces[entry.Piece] or {} do
+            local centre = frame:PointToWorldSpace(face.Centre)
+            local normal = frame:VectorToWorldSpace(face.Normal)
+            local up = frame:VectorToWorldSpace(face.Up)
+            local part = marker("Face_" .. face.Board, Vector3.new(face.Size.X, face.Size.Y, 0.05),
+                CFrame.lookAt(centre, centre + normal, up), holder)
+            part:SetAttribute("Board", face.Board)
+            CollectionService:AddTag(part, tag)
+        end
+        local light = spec.Lights[entry.Piece]
+        if light then
+            addLight(marker("Light", Vector3.new(1, 1, 1), frame * CFrame.new(light.Offset), holder), WorldBuilder.HallLight,
+                light.Range, light.Brightness)
+        end
+    end
+    local flags = Instance.new("Folder")
+    flags.Name = "Flags"
+    flags.Parent = folder
+    for index, flag in spec.Flags do
+        local frame = hall * CFrame.new(flag.Position) * CFrame.Angles(0, flag.Yaw, 0)
+        if hasTemplate(island, "HR_PathFlag") then
+            placeTemplate(island, "HR_PathFlag", frame, flags).Name = "HR_PathFlag_" .. index
+        else
+            hallBlockout("HR_PathFlag_" .. index, { Centre = Vector3.new(0, 0.1, 0), Size = HALL_BLOCKOUT_FLAG, Look = "Flagstone" }, frame, flags)
+            blockouts += 1
+        end
     end
     WorldBuilder.applyCollision(folder)
-    return folder
+    return folder, blockouts
+end
+
+-- After the owner's import of assets/world/HallOfRecords/HallOfRecords.fbx (anchor HR_Anchor) and
+-- assets/world/Yggdrasil/Yggdrasil_Paving.fbx (anchor HB_Anchor: the avenues and plazas without the south-west avenue, the garden
+-- court and the old leaderboard's disc): stores both in the hub's kit (the old avenue and plaza templates removed first, so no
+-- material part of them is left behind), then lays the hub's kit and the hall again. Either import may be nil.
+function WorldBuilder.storeHallOfRecords(hallImport, pavingImport)
+    local stored = 0
+    if pavingImport then
+        local kit = ServerStorage.WorldKit.Yggdrasil
+        for _, part in kit:GetChildren() do
+            local base = splitName(part.Name)
+            if base == "HB_Avenues" or base == "HB_Plazas" or base == "HB_PavingRunes" then
+                part:Destroy()
+            end
+        end
+        stored += WorldBuilder.storeKit("Yggdrasil", pavingImport, "HB_Anchor")
+    end
+    if hallImport then
+        stored += WorldBuilder.storeKit("Yggdrasil", hallImport, "HR_Anchor")
+    end
+    local placed, missing = WorldBuilder.placeKit("Yggdrasil")
+    local _, blockouts = WorldBuilder.buildHallOfRecords("Yggdrasil")
+    return stored, placed, #missing, blockouts
 end
 
 -- ---------- spawn, relic ----------
@@ -2134,23 +2220,6 @@ local SANCTUARY_STONE = { Material = Enum.Material.Limestone, Color = Color3.fro
 -- each cap piece's smallest half-width as modelled (pieces.json), so a stone's Radius scales it to cover its rock all round
 local CAP_RADIUS = { BS_SteppingStoneA = 4.8, BS_SteppingStoneB = 4.14, BS_SteppingStoneC = 2.87 }
 
-local function hasTemplate(island, name)
-    local kit = ServerStorage:FindFirstChild("WorldKit")
-    local folder = kit and kit:FindFirstChild(island)
-    if not folder then
-        return false
-    end
-    if folder:FindFirstChild(name) then
-        return true
-    end
-    for _, child in folder:GetChildren() do
-        if splitName(child.Name) == name then
-            return true
-        end
-    end
-    return false
-end
-
 -- A billboard sign in plain words over an invisible part.
 local function signPost(name, parent, at, title, line, color)
     local post = marker(name, Vector3.new(1, 1, 1), CFrame.new(at), parent)
@@ -2348,16 +2417,6 @@ function WorldBuilder.buildApproach(island)
     end
     signPost("HubSign", folder, verge + Vector3.new(0, 9, 0), "Blossom Sanctuary", "Training: +" .. GameConfig.TrainingStation.QiBonusPercent .. "% Qi",
         Color3.fromRGB(255, 214, 230))
-
-    -- the garden court on the hub (the Qi Spring's court until 2026-11-16): one of the sanctuary's young trees in its lawn
-    local garden = ServerStorage.WorldBuild.Placements:FindFirstChild("Yggdrasil") and placementsFor("Yggdrasil").Garden
-    if garden and hasTemplate(island, "BS_TreeYoung") then
-        local gardenFrame = islandFrame("Yggdrasil") * CFrame.new(garden.Centre) * CFrame.Angles(0, garden.Yaw, 0)
-        local tree = placeTemplate(island, "BS_TreeYoung", gardenFrame * CFrame.new(0, -0.3, 0) * CFrame.Angles(0, 0.7, 0), folder, 1.05)
-        tree.Name = "BS_TreeYoung_Garden"
-        local drift = placeTemplate(island, "BS_PetalDrift", gardenFrame * CFrame.new(1, 0.02, 0.5), folder, 0.75)
-        drift.Name = "BS_PetalDrift_Garden"
-    end
 
     folder.Parent = model
     WorldBuilder.applyCollision(folder)
