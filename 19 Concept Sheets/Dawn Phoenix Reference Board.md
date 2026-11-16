@@ -151,3 +151,36 @@ The before set is kept in `renders/pets/InfernoEgg/DawnPhoenix_stages/iterations
 - The wings extended and folded in the QA renders use a temporary review skeleton, not the creature's rig, which comes after approval.
 - The colour map (`DawnPhoenix_color.png`) is an atlas of many small feather shapes. The owner should look at it before importing, since the
   import uploads it.
+
+## Rigged for the game (approved model, 2026-11-16)
+
+`dawn_phoenix.py -- rig` opens the approved `Dawn_Phoenix_Final.blend` and rigs those exact pieces (no geometry rebuilt): it writes
+`tools/blender/pets/InfernoEgg/Dawn_Phoenix_Rigged.blend` and the rigged `assets/pets/InfernoEgg/DawnPhoenix_Model/DawnPhoenix.fbx` (the approved maps
+embedded), with stress and pose renders in `renders/pets/InfernoEgg/DawnPhoenix_rig/`.
+
+- **Skeleton, 48 bones:** Root; Body, Chest; Neck1-3, Head, Jaw (the lower beak), Crest1-2 (+ CrestTip); EyeL/R, LidUL/LL/UR/LR; each wing
+  Wing1 (upper arm), Wing2 (forearm), Wing3 (hand), Wing4 (the primaries' fan), WingSec (the secondaries' fan) (+ WingTip); Tail1, TailFanL/R (the
+  side feathers' fan), the two long central feathers each on three bones TailA1-3 and TailB1-3 (+ TailTipA/B); each leg Leg1 (thigh), Leg2 (tarsus),
+  Foot, Toes. The tip bones carry no weight: the game reads only weighted bones.
+- **Skin:** all 22 pieces weighted, then joined into one skinned mesh (`DawnPhoenix_Body`, 19,136 tris, one material): the body's skin and every
+  feather lying on it by the spine, neck chain, head and thighs; the beak, eyes and lids 100% on their bones; the crest along its chain; the arm
+  and every wing feather rigidly on its own segment, blended only right at the elbow and the wrist; flight feathers easing onto their fan bones
+  along their length; the tail's long pair along their chains. At most 3 influences; nothing unweighted.
+- **Stress (edge by edge against rest):** wings full up, full down, the upstroke, the glide, folded at its sides, wrapped round its breast; neck
+  turned and bent; tail swept; legs tucked; the display; the jaw; the blink: every stance under 4.1 cm of stretch, nothing collapsed. Fixed on the
+  way: the face in front of the eyes took part of the neck's weight and tore at the eye socket when the neck turned (7.7x: now a head zone along
+  the beak line); the fold first stood the wings up behind its back like a shield (it turned about the vertical: a bird folds in the wing's own
+  plane); the forearm smeared in the fold (blended along its whole length: now only at the joints); tertials and inner secondaries stretched
+  between the upper arm and the forearm's fan bone (now rigid).
+- **QA, profile roblox: PASS, 0 errors.** Accepted: 83 coincident vertices where the skin's pieces met (same weights: no seam opens); 194 hidden
+  back-to-back pairs. FBX re-imported: one skinned mesh, 48 bones, 3 maps; no home path in it.
+
+## Importing it (for the owner)
+
+1. In Studio: File > Import 3D, pick `assets/pets/InfernoEgg/DawnPhoenix_Model/DawnPhoenix.fbx`. Keep the importer's defaults (the rig and the
+   textures on). Its colour map is uploaded to Roblox as part of the import: look at `DawnPhoenix_color.png` first.
+2. Put the imported model in `ReplicatedStorage.PetMeshes.InfernoEgg`, named `DawnPhoenix`, in place of the old one (delete the old).
+3. The fixes the past skinned pets needed: shrink the holder part `RootPart` to 0.05 x 0.05 x 0.05; move the model so its root sits at the
+   origin; check the bones have not drifted from their places (48 bones).
+4. Tell me when it is in. I then read its colour map's new id into `PetMaps`, test it in Play on a test save, and delete the old phoenix code
+   (its jointed profile, `animatePhoenix`, `Blasts.SunriseRebirth`) now that nothing uses it.

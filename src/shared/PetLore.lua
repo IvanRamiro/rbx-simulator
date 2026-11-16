@@ -57,8 +57,8 @@ return {
         Special = { Name = "Solar Corona", Text = "Spreads its wings and lifts its head as a sun forms in front of it, sending out a ring of rays, golden scales and a wave of sunlight along the ground." },
     },
     DawnPhoenix = {
-        Lore = "A firebird that stands tall, the colour of sunrise. Wherever it rests, the night there ends a little early.",
-        Special = { Name = "Sunrise Rebirth", Text = "Spreads its wings and bursts out a rising sun with rays and spinning flames." },
+        Lore = "The firebird of the very first sunrise, coloured like the sky when night turns to morning. Wherever it flies at dawn, the light comes a little sooner.",
+        Special = { Name = "First Light", Text = "Folds its wings around itself and glows like a hot coal, then throws them wide with a cry: a ring of morning light rushes out and warm sparks drift up." },
     },
     WindSprite = {
         Lore = "A curl of breeze that decided to stay. It tugs at sleeves when it wants attention.",

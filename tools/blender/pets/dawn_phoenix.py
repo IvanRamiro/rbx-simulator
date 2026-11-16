@@ -31,7 +31,7 @@ from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pet_kit
-from pet_kit import (EyeFrame, Mesh, V, apply_mods, build_eye, build_lid, catmull, eye_coords, hi_material, low_eye, low_lid, mir, mix,
+from pet_kit import (EyeFrame, Mesh, V, apply_mods, build_eye, build_lid, catmull, chain_weight, eye_coords, hi_material, low_eye, low_lid, mir, mix,
                      nearest_on, normals, paint, rgb, set_verts, shots, smooth, stage_setup, tree_of, verts, TAU)
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -40,7 +40,7 @@ if STAGE == "all":
     STAGE = "final"
 PET, EGG = "DawnPhoenix", "InfernoEgg"
 N = PET + "_"
-ORDER = ("blockout", "anatomy", "wings", "feathers", "materials", "final")
+ORDER = ("blockout", "anatomy", "wings", "feathers", "materials", "final", "rig")
 LEVEL = ORDER.index(STAGE)
 ROOT = pet_kit.ROOT
 STAGE_DIR = os.path.join(ROOT, "renders/pets", EGG, PET + "_stages", STAGE)
@@ -1699,4 +1699,438 @@ if __name__ == "__main__" and STAGE == "final":
     scene.cycles.samples = 160
     shots(os.path.join(FINAL_DIR, "beauty"), [(0.5, -0.78, 0.18)], target=at, dist=4.2, size=1400)
     os.replace(os.path.join(FINAL_DIR, "beauty_0.png"), os.path.join(FINAL_DIR, "07_beauty.png"))
+    print("DONE", flush=True)
+
+
+
+# ---------- the skeleton (stage "rig": the approved model, rigged; nothing of its look rebuilt) ----------
+RIG_DIR = os.path.join(ROOT, "renders/pets", EGG, PET + "_rig")
+NECK_F = (0.06, 0.36, 0.66, 0.93)          # Neck1, Neck2, Neck3 and Head along the neck's line
+CENTRAL_F = (0.0, 0.3, 0.6, 0.86)          # Tail1 (the root), then the central feathers' own chains
+PIECE_NAMES = ("Body", "Neck", "Head", "BeakUpper", "BeakLower", "EyeL", "EyeR", "LidUpperL", "LidUpperR", "LidLowerL", "LidLowerR", "Crest",
+               "NeckFeathers", "Chest", "BodyFeathers", "LeftWing", "RightWing", "LeftWingFeathers", "RightWingFeathers", "Legs", "Talons",
+               "TailFeathers")
+
+
+def fit_sphere(P):
+    """The centre of the sphere a set of points lies on (least squares)."""
+    A = np.c_[2 * P, np.ones(len(P))]
+    b = (P * P).sum(1)
+    sol = np.linalg.lstsq(A, b, rcond=None)[0]
+    return sol[:3]
+
+
+ROOT_Z = [0.0]          # the root bone sits on the ground (set to the shift once the file is read)
+
+
+def rig_bones():
+    """(name, head, parent): every bone at its joint, in the build's coordinates. Tip bones (WingLTip, TailTipA, CrestTip...) carry no weight:
+    they are the points the game's effects and its special read."""
+    central = [p for p in tail_feathers() if p.group in (0, 1)]
+    crest_mid = crest_plumes()[3]
+    b = [("Root", V(0, 0, ROOT_Z[0]), None), ("Body", BELLY.copy(), "Root"), ("Chest", CHEST.copy(), "Body")]
+    prev = "Chest"
+    for name, f in zip(("Neck1", "Neck2", "Neck3", "Head"), NECK_F):
+        b.append((name, along(NECK, f), prev))
+        prev = name
+    b += [("Jaw", BEAK_ROOT + V(0, 0.012, -0.017), "Head"), ("Crest1", HEAD_C + V(0, 0.01, 0.05), "Head"),
+          ("Crest2", Vector(crest_mid.point(0.45, 0.5)), "Crest1"), ("CrestTip", Vector(crest_mid.point(1.0, 0.5)), "Crest2")]
+    for side, tag in ((1, "L"), (-1, "R")):
+        e = mir(EYE_C, side)
+        b += [("Eye" + tag, e.copy(), "Head"), ("LidU" + tag, e.copy(), "Head"), ("LidL" + tag, e.copy(), "Head")]
+        prev = "Chest"
+        for k, f in enumerate(ARM_F):
+            nm = "Wing%s%d" % (tag, k + 1)
+            b.append((nm, mir(along(ARM_PATH, f), side), prev))
+            prev = nm
+        b.append(("Wing%sSec" % tag, mir(along(ARM_PATH, 0.5), side), "Wing%s2" % tag))
+        prims = [p for p in wing_plumes(side) if p.group == GROUPS["primary"]]
+        b.append(("Wing%sTip" % tag, Vector(max(prims, key=lambda q: q.length).point(1.0, 0.5)), "Wing%s4" % tag))
+        b += [("Leg%s1" % tag, mir(LEG[0], side), "Body"), ("Leg%s2" % tag, mir(LEG[1], side), "Leg%s1" % tag),
+              ("Foot" + tag, mir(LEG[2], side), "Leg%s2" % tag), ("Toes" + tag, mir(LEG[2], side) + V(0, -0.008, -0.01), "Foot" + tag)]
+    b += [("Tail1", TAIL_ROOT.copy(), "Body"), ("TailFanL", TAIL_ROOT + V(0.02, 0.02, -0.01), "Tail1"), ("TailFanR", TAIL_ROOT + V(-0.02, 0.02, -0.01), "Tail1")]
+    for tag, feather in (("A", central[0]), ("B", central[1])):
+        prev = "Tail1"
+        for k, f in enumerate(CENTRAL_F[1:]):
+            nm = "Tail%s%d" % (tag, k + 1)
+            b.append((nm, along(feather.path, f), prev))
+            prev = nm
+        b.append(("TailTip" + tag, along(feather.path, 1.0), prev))
+    return b
+
+
+def blend_w(a, b_, t):
+    out = {k: v * (1 - t) for k, v in a.items()}
+    for k, v in b_.items():
+        out[k] = out.get(k, 0) + v * t
+    return {k: v for k, v in out.items() if v > 1e-4}
+
+
+def skin_weight(Pv):
+    """The body's skin, and every feather lying on it: the spine (Body, Chest), the neck's chain and the head, the thighs, the rump on the tail."""
+    sf, _ = nearest_on(SPINE, Pv)
+    nf, nd = nearest_on(NECK, Pv)
+    hf, hd = nearest_on([HEAD_C + V(0, 0.05, 0.0), HEAD_C, BEAK_ROOT + V(0, 0.012, 0.0)], Pv)
+    out = []
+    for i, p in enumerate(Pv):
+        w = chain_weight(["Body", "Chest"], (0.45, 0.85), float(sf[i]))
+        if sf[i] < 0.22:
+            w = blend_w(w, {"Tail1": 1.0}, float(smooth(0.22, 0.05, sf[i])) * 0.8)
+        neck_share = float((1 - smooth(0.075, 0.1, nd[i])) * smooth(0.0, 0.12, nf[i]))
+        if neck_share > 0 and p[2] > 0.64:
+            w = blend_w(w, chain_weight(["Chest", "Neck1", "Neck2", "Neck3", "Head"], (0.0,) + NECK_F, float(nf[i])), neck_share)
+        hs = float(smooth(0.074, 0.056, hd[i]))
+        if hs > 0:
+            w = blend_w(w, {"Head": 1.0}, hs)
+        for side, tag in ((1, "L"), (-1, "R")):
+            if p[0] * side > 0.0:
+                lf, ld = nearest_on([mir(LEG[0], side), mir(LEG[1], side)], np.array([p]))
+                share = float(smooth(0.07, 0.03, ld[0]) * smooth(0.0, 0.35, lf[0]))
+                if share > 0:
+                    w = blend_w(w, chain_weight(["Leg%s1" % tag, "Leg%s2" % tag], (0.6, 1.0), float(lf[0])), share)
+        out.append(w)
+    return out
+
+
+def islands_of(o):
+    me = o.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    gid = np.full(len(bm.verts), -1)
+    g = 0
+    for v in bm.verts:
+        if gid[v.index] >= 0:
+            continue
+        stack = [v]
+        gid[v.index] = g
+        while stack:
+            w = stack.pop()
+            for e in w.link_edges:
+                x = e.other_vert(w)
+                if gid[x.index] < 0:
+                    gid[x.index] = g
+                    stack.append(x)
+        g += 1
+    bm.free()
+    return gid
+
+
+def match_feathers(o, plumes):
+    """Which feather each vertex belongs to (its sheet's centre against each feather's own middle) and how far along it."""
+    P = verts(o)
+    gid = islands_of(o)
+    mids = np.array([tuple(Vector(p.point(0.5, 0.5))) for p in plumes])
+    owner = np.zeros(len(P), dtype=int)
+    for g in np.unique(gid):
+        sel = gid == g
+        c = P[sel].mean(0)
+        owner[sel] = int(np.argmin(np.linalg.norm(mids - c, axis=1)))
+    u = np.zeros(len(P))
+    for k, p in enumerate(plumes):
+        sel = owner == k
+        if not sel.any():
+            continue
+        if isinstance(p, LongFeather):
+            u[sel], _ = nearest_on(p.path, P[sel])
+        else:
+            u[sel] = np.clip(((P[sel] - np.array(tuple(p.root))) @ np.array(tuple(p.d))) / p.length, 0, 1)
+    return owner, u
+
+
+def wing_weight(tag, f, width=0.035):
+    """Along the arm: each segment on its own bone, blended only right at the elbow and the wrist (blended along the whole forearm, a folded
+    wrist smeared it: 20 edges stretched over 6 cm in the folded pose)."""
+    names = ["Wing%s1" % tag, "Wing%s2" % tag, "Wing%s3" % tag]
+    for k, joint in enumerate(ARM_F[1:3]):
+        if f < joint - width:
+            return {names[k]: 1.0}
+        if f < joint + width:
+            t = float(smooth(joint - width, joint + width, f))
+            return {names[k]: 1 - t, names[k + 1]: t}
+    return {names[2]: 1.0}
+
+
+def wing_feather_weights(o, side, tag):
+    plumes = wing_plumes(side)
+    owner, u = match_feathers(o, plumes)
+    G = GROUPS
+    out = []
+    for i in range(len(owner)):
+        p = plumes[owner[i]]
+        w = wing_weight(tag, p.f)
+        if p.group == G["primary"]:
+            fingered = p.seed < 4
+            w = blend_w(w, {"Wing%s4" % tag: 1.0}, float(smooth(0.1, 0.5, u[i])) * (1.0 if fingered else 0.75))
+        elif p.group == G["secondary"] and p.f > ARM_F[1] + 0.04:      # (only those rooted on the forearm: the Sec bone rides the forearm)
+            w = blend_w(w, {"Wing%sSec" % tag: 1.0}, float(smooth(0.2, 0.75, u[i])) * 0.85)
+        elif p.group == G["pcovert"]:
+            w = blend_w(w, {"Wing%s4" % tag: 1.0}, float(smooth(0.3, 0.9, u[i])) * 0.35)
+        out.append(w)
+    return out
+
+
+def tail_weights(o):
+    plumes = tail_feathers() + tail_coverts()
+    owner, u = match_feathers(o, plumes)
+    out = []
+    for i in range(len(owner)):
+        p = plumes[owner[i]]
+        if isinstance(p, LongFeather) and p.group in (0, 1):
+            tag = "A" if p.group == 0 else "B"
+            out.append(chain_weight(["Tail1", "Tail%s1" % tag, "Tail%s2" % tag, "Tail%s3" % tag], CENTRAL_F, float(u[i])))
+        elif isinstance(p, LongFeather):
+            fan = "TailFanL" if p.f > 0 else "TailFanR"
+            out.append(blend_w({"Tail1": 1.0}, {fan: 1.0}, float(smooth(0.0, 0.25, u[i]))))
+        else:
+            out.append({"Tail1": 1.0})
+    return out
+
+
+def leg_weights(o):
+    P = verts(o)
+    out = []
+    for p in P:
+        side, tag = (1, "L") if p[0] > 0 else (-1, "R")
+        tf, td = nearest_on([mir(LEG[1], side), mir(LEG[2], side)], np.array([p]))
+        best_toe = 1e9
+        toe_f = 0.0
+        for toe, _ in toe_paths(side):
+            f, d = nearest_on(toe, np.array([p]))
+            if d[0] < best_toe:
+                best_toe, toe_f = d[0], f[0]
+        if best_toe < td[0]:
+            out.append(blend_w({"Foot" + tag: 1.0}, {"Toes" + tag: 1.0}, float(smooth(0.1, 0.35, toe_f))))
+        else:
+            out.append(chain_weight(["Leg%s2" % tag, "Foot" + tag], (0.85, 1.0), float(tf[0])))
+    return out
+
+
+def crest_weights(o):
+    P = verts(o)
+    root = np.array(tuple(HEAD_C + V(0, 0.01, 0.05)))
+    d = np.array((0, 0.92, 0.4))
+    d = d / np.linalg.norm(d)
+    t = np.clip(((P - root) @ d) / 0.27, 0, 1)
+    return [chain_weight(["Head", "Crest1", "Crest2"], (0.0, 0.12, 0.55), float(x)) for x in t]
+
+
+def rig_weights(objs):
+    out = {}
+    for key, o in objs.items():
+        P = verts(o)
+        if key in ("Body", "Neck", "Head", "NeckFeathers", "Chest", "BodyFeathers"):
+            out[key] = skin_weight(P)
+        elif key in ("BeakUpper",):
+            out[key] = [{"Head": 1.0}] * len(P)
+        elif key == "BeakLower":
+            out[key] = [{"Jaw": 1.0}] * len(P)
+        elif key in ("EyeL", "EyeR"):
+            out[key] = [{key: 1.0}] * len(P)
+        elif key.startswith("Lid"):
+            out[key] = [{("LidU" if "Upper" in key else "LidL") + key[-1]: 1.0}] * len(P)
+        elif key == "Crest":
+            out[key] = crest_weights(o)
+        elif key in ("LeftWing", "RightWing"):
+            side, tag = (1, "L") if key == "LeftWing" else (-1, "R")
+            f, _ = nearest_on([mir(q, side) for q in ARM_PATH], P)
+            out[key] = [wing_weight(tag, float(x)) for x in f]
+        elif key in ("LeftWingFeathers", "RightWingFeathers"):
+            side, tag = (1, "L") if key.startswith("Left") else (-1, "R")
+            out[key] = wing_feather_weights(o, side, tag)
+        elif key == "Legs":
+            out[key] = leg_weights(o)
+        elif key == "Talons":
+            out[key] = [{"Toes" + ("L" if p[0] > 0 else "R"): 1.0} for p in P]
+        elif key == "TailFeathers":
+            out[key] = tail_weights(o)
+    return out
+
+
+def g_turn(rx, ry, rz):
+    """A turn in the game's axes (x to its right, y up, z back), as pet_kit.pose wants it: the same numbers the game's code uses."""
+    r = Matrix.Rotation(rx, 3, Vector((-1, 0, 0))) @ Matrix.Rotation(ry, 3, Vector((0, 0, 1))) @ Matrix.Rotation(rz, 3, Vector((0, 1, 0)))
+    axis, angle = r.to_quaternion().to_axis_angle()
+    return (tuple(axis), math.degrees(angle), (0, 0, 0))
+
+
+def gspec(table):
+    return {bone: g_turn(*v) for bone, v in table.items()}
+
+
+def wings_g(up, sweep=0.0, elbow=0.0, hand=0.0, tip=0.0, sec=0.0):
+    """Both wings in the game's axes: up raises the whole wing (z turn), sweep brings it back (y turn), elbow and hand fold back (y), tip and sec
+    spread or close the hand's and the arm's fans."""
+    out = {}
+    for tag, s in (("L", 1), ("R", -1)):
+        out["Wing%s1" % tag] = (0, s * sweep, -s * up)
+        out["Wing%s2" % tag] = (0, s * elbow, 0)
+        out["Wing%s3" % tag] = (0, s * hand, 0)
+        out["Wing%s4" % tag] = (0, s * tip, 0)
+        out["Wing%sSec" % tag] = (sec, 0, 0)
+    return out
+
+
+WING_NORMAL_G = {"L": (math.sin(DIHEDRAL), math.cos(DIHEDRAL), 0.0), "R": (-math.sin(DIHEDRAL), math.cos(DIHEDRAL), 0.0)}   # the wing's plane, at rest (game axes)
+
+
+def g_axis(axis):
+    """A game-axes direction in Blender's axes."""
+    return Vector((-axis[0], axis[2], axis[1]))
+
+
+def fold_g(lower, sweep, elbow, wrist, tip):
+    """Both wings folded about their own plane (a bird folds its elbow and wrist in the wing's plane, not about the vertical): the shoulder lowered
+    (about the body's long axis) then swept back; elbow, wrist and hand turned in the wing's plane. Returned as pose specs (axis, degrees) in
+    Blender's axes, built from game-axes numbers: PetRig builds the same turns with CFrame.fromAxisAngle."""
+    out = {}
+    for tag, s in (("L", 1), ("R", -1)):
+        n = g_axis(WING_NORMAL_G[tag])
+        z = g_axis((0, 0, 1))
+        r1 = Matrix.Rotation(s * sweep, 3, n) @ Matrix.Rotation(s * lower, 3, z)
+        a, ang = r1.to_quaternion().to_axis_angle()
+        out["Wing%s1" % tag] = (tuple(a), math.degrees(ang), (0, 0, 0))
+        out["Wing%s2" % tag] = (tuple(n), math.degrees(s * elbow), (0, 0, 0))
+        out["Wing%s3" % tag] = (tuple(n), math.degrees(s * wrist), (0, 0, 0))
+        out["Wing%s4" % tag] = (tuple(n), math.degrees(s * tip), (0, 0, 0))
+    return out
+
+
+FOLD = (1.0, 0.5, -1.3, 2.45, 0.3)           # lower, sweep, elbow, wrist, tip (radians): resting at its sides
+WRAP = (0.55, -0.85, -0.55, -0.45, -0.2)     # the special's gathering: wings drawn forward round its breast
+
+# the stances, in the game's axes (PetRig's DP tables use these same numbers)
+STANCES = {
+    "WingsUp": wings_g(0.75, 0, 0, 0, -0.15),
+    "WingsDown": wings_g(-0.75, 0, 0, 0.05, 0.1),
+    "Upstroke": wings_g(0.55, 0.25, 0.35, 0.45, 0.25, -0.25),
+
+    "Glide": wings_g(-0.42, -0.08, -0.12, -0.08, -0.12),
+    "NeckTurn": {"Neck1": (0, 0.25, 0), "Neck2": (0, 0.3, 0), "Neck3": (0.05, 0.35, 0), "Head": (0, 0.45, 0.1)},
+    "NeckBend": {"Neck1": (-0.3, 0, 0), "Neck2": (-0.25, 0, 0), "Neck3": (0.15, 0, 0), "Head": (0.35, 0, 0)},
+    "TailSwept": {"Tail1": (0.15, 0.35, 0), "TailA1": (0, 0.25, 0), "TailA2": (0, 0.3, 0), "TailA3": (0, 0.3, 0), "TailB1": (0, 0.25, 0),
+                  "TailB2": (0, 0.3, 0), "TailB3": (0, 0.3, 0), "TailFanL": (0, 0.25, 0), "TailFanR": (0, -0.1, 0)},
+    "LegsTucked": {"LegL1": (0.45, 0, 0), "LegR1": (0.45, 0, 0), "LegL2": (-0.7, 0, 0), "LegR2": (-0.7, 0, 0), "ToesL": (0.8, 0, 0),
+                   "ToesR": (0.8, 0, 0)},
+    "Display": {**wings_g(0.55, -0.12, -0.1, -0.1, -0.2), "Chest": (-0.12, 0, 0), "Neck1": (0.1, 0, 0), "Head": (-0.15, 0, 0), "Crest1": (0.2, 0, 0),
+                "Crest2": (0.15, 0, 0), "TailFanL": (0, -0.25, 0), "TailFanR": (0, 0.25, 0)},
+    "Jaw": {"Jaw": (-0.35, 0, 0)},
+}
+
+
+def lid_spec(frames, upper_deg, lower_deg):
+    out = {}
+    for tag, fr in frames.items():
+        out["LidU" + tag] = (tuple(fr.hinge), -upper_deg, (0, 0, 0))
+        out["LidL" + tag] = (tuple(fr.hinge), lower_deg, (0, 0, 0))
+    return out
+
+
+if __name__ == "__main__" and STAGE == "rig":
+    final_path = os.path.join(BLEND_DIR, "Dawn_Phoenix_Final.blend")
+    bpy.ops.wm.open_mainfile(filepath=final_path, load_ui=False)
+    scene = bpy.context.scene
+    pet_kit.scene = scene
+    GAME = bpy.data.collections.get(PET) or bpy.data.collections.new(PET)
+    pet_kit.GAME = GAME
+    pet_kit.OUT, pet_kit.TOOLS = OUT_DIR, BLEND_DIR
+    os.makedirs(RIG_DIR, exist_ok=True)
+    objs = {k: bpy.data.objects[N + k] for k in PIECE_NAMES}
+    tris_before = sum(tris_of(o) for o in objs.values())
+    # the game file sits on the ground; the rig is laid out in the build's coordinates: find the shift from the left eye (a sphere round EYE_C)
+    eye = verts(objs["EyeL"])
+    zshift = float(EYE_C.z - fit_sphere(eye)[2])
+    print("GROUND SHIFT", round(zshift, 4), flush=True)
+    for o in objs.values():
+        o.parent = None
+        o.data.transform(Matrix.Translation((0, 0, zshift)))
+        o.data.update()
+    root_empty = bpy.data.objects.get(N + "Root")
+    if root_empty:
+        bpy.data.objects.remove(root_empty, do_unlink=True)
+    ROOT_Z[0] = zshift
+    bones = rig_bones()
+    rig = pet_kit.armature(bones)
+    names = [b_[0] for b_ in bones]
+    weights = rig_weights(objs)
+    for key, o in objs.items():
+        o.vertex_groups.clear()
+        for nm in names:                       # the same groups, in the same order, on every piece before they are joined
+            o.vertex_groups.new(name=nm)
+        pet_kit.weigh(o, weights[key])
+    body = pet_kit.join_into({"Skin": objs["Body"], **{k: o for k, o in objs.items() if k != "Body"}}, "Body")
+    body.name = body.data.name = N + "Body"
+    for vg in list(body.vertex_groups):        # tip bones and the root carry no weight: drop their empty groups
+        idx = vg.index
+        if not any(g.group == idx for v in body.data.vertices for g in v.groups):
+            body.vertex_groups.remove(vg)
+    pet_kit.bind(rig, [body])
+    counts = [len(v.groups) for v in body.data.vertices]
+    unweighted = sum(1 for v in body.data.vertices if not v.groups or sum(g.weight for g in v.groups) < 0.99)
+    print("BODY tris", tris_of(body), "(before", tris_before, ") bones", len(rig.data.bones), "groups", len(body.vertex_groups),
+          "max influences", max(counts), "unweighted", unweighted, flush=True)
+    # eyelid hinges and the points, in the game's axes, for PetRig
+    frames = {tag: EyeFrame(mir(EYE_C, side), mir(EYE_AXIS, side), side, EYE_R, LID_UP, LID_LOW, tilt=LID_TILT) for side, tag in ((1, "L"), (-1, "R"))}
+    for tag, fr in frames.items():
+        h = fr.hinge
+        print("LID HINGE", tag, (round(-h.x, 4), round(h.z, 4), round(h.y, 4)), flush=True)
+    # review: the stances, each against the rest pose (edge by edge: a tear or a collapse shows as a number before it shows in a render)
+    lib = {k: gspec(v) for k, v in STANCES.items()}
+    lib["Folded"] = fold_g(*FOLD)
+    lib["Wrap"] = {**fold_g(*WRAP), **gspec({"Neck2": (-0.25, 0, 0), "Neck3": (-0.2, 0, 0), "Head": (0.15, 0, 0), "Crest1": (-0.15, 0, 0)})}
+    lib["Blink"] = lid_spec(frames, 34, 11)
+    lib["Perch"] = {**lib["Folded"], **lib["LegsTucked"]}
+    for name, row in pet_kit.stress_report(rig, body, lib).items():
+        print("STRESS", name, row, flush=True)
+    for o in [o for o in scene.objects if o.type in ("LIGHT", "CAMERA")]:        # (the stage file's own lights and camera: set up afresh)
+        bpy.data.objects.remove(o, do_unlink=True)
+    stage_setup((0.085, 0.085, 0.095, 1))
+    scene.cycles.samples = 40
+    at = (0, 0.18, 0.75)
+    views = {"WingsUp": [(0, -1, 0.15), (0.6, 0.7, 0.3)], "WingsDown": [(0, -1, 0.15), (0.6, 0.7, 0.3)], "Upstroke": [(0.62, -0.72, 0.25)],
+             "Folded": [(1, 0, 0.1), (0.6, -0.75, 0.3), (0, 1, 0.3), (0, -0.05, 1)], "Glide": [(0.62, -0.72, 0.25)], "NeckTurn": [(0.62, -0.72, 0.25)],
+             "NeckBend": [(1, 0, 0.05)], "TailSwept": [(0, 0.4, 1), (0.6, 0.7, 0.3)], "LegsTucked": [(1, 0, 0.05)], "Display": [(0.5, -0.8, 0.2)],
+             "Perch": [(1, 0, 0.1), (0.62, -0.72, 0.25)], "Wrap": [(0.62, -0.72, 0.25), (1, 0, 0.1)]}
+    pet_kit.pose(rig, {})
+    shots(os.path.join(RIG_DIR, "rest"), [(0.62, -0.72, 0.25), (1, 0, 0.05)], target=at, dist=4.4, size=640)
+    for name, vs in views.items():
+        pet_kit.pose(rig, lib[name])
+        shots(os.path.join(RIG_DIR, name), vs, target=at, dist=4.4, size=640)
+    face = (0.4, -0.9, 0.08, 0.55, (0, -0.23, 1.065))
+    for name in ("Blink", "Jaw"):
+        pet_kit.pose(rig, lib[name])
+        shots(os.path.join(RIG_DIR, name), [face], target=at, size=640)
+    pet_kit.pose(rig, {})
+    # back to the ground, and out
+    for o in (body,):
+        o.data.transform(Matrix.Translation((0, 0, -zshift)))
+        o.data.update()
+    pet_kit.select_only([rig])
+    bpy.ops.object.mode_set(mode="EDIT")
+    for eb in rig.data.edit_bones:
+        eb.head.z -= zshift
+        eb.tail.z -= zshift
+    bpy.ops.object.mode_set(mode="OBJECT")
+    for b_ in ("Root", "Body", "Head", "CrestTip", "WingLTip", "WingRTip", "TailTipA", "TailTipB", "WingL1", "WingL4", "Tail1"):
+        p_ = rig.data.bones[b_].head_local
+        print("BONE", b_, "game axes", (round(-p_.x, 4), round(p_.z, 4), round(p_.y, 4)), flush=True)
+    zs = [v.co.z for v in body.data.vertices]
+    xs = [v.co.x for v in body.data.vertices]
+    ys = [v.co.y for v in body.data.vertices]
+    print("BOX x", round(max(xs) - min(xs), 4), "y", round(max(ys) - min(ys), 4), "z", round(min(zs), 4), round(max(zs), 4), flush=True)
+    pet_kit.pose(rig, {})
+    if STAGE == "rig":
+        fbx = pet_kit.export_fbx(rig, body, [])
+        raw = open(fbx, "rb").read()
+        home = os.path.expanduser("~").encode()
+        if home.startswith(b"/Users/") and len(home) > 7:
+            raw = raw.replace(home + b"/", b"/Users/" + b"user"[:len(home) - 7].ljust(len(home) - 7, b"_") + b"/")
+            open(fbx, "wb").write(raw)
+        print("FBX", fbx, os.path.getsize(fbx) // 1024, "KB", flush=True)
+        for img in bpy.data.images:
+            if img.packed_file is None and img.source == "FILE" and img.filepath_raw:
+                try:
+                    img.pack()
+                except RuntimeError:
+                    pass
+        save_stage("Dawn_Phoenix_Rigged.blend")
     print("DONE", flush=True)
