@@ -6961,9 +6961,7 @@ function PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, leng
                 end,
             })
         else
-            if not (profile.OptionalBones and profile.OptionalBones[name]) then
-                warn("PetRig: " .. petId .. " has no bone " .. name)
-            end
+            warn("PetRig: " .. petId .. " has no bone " .. name)
             rig.motors[name] = {} -- poses of a missing bone land nowhere
         end
     end
@@ -17844,9 +17842,6 @@ do
             "Tail1", "TailFanL", "TailFanR", "TailA1", "TailA2", "TailA3", "TailB1", "TailB2", "TailB3",
             "LegL1", "LegL2", "FootL", "ToesL", "LegR1", "LegR2", "FootR", "ToesR",
         },
-        -- the first import had no TailA chain (its weights had gone to TailB: fixed in dawn_phoenix.py and re-exported, 2026-11-16); until the
-        -- fixed file is imported, feather A rides the B chain and these bones are absent: nothing reads them unchecked
-        OptionalBones = { TailA1 = true, TailA2 = true, TailA3 = true },
         -- (only bones that carry weight: the importer drops a weightless bone, so the tips' own bones are not read)
         Points = { "Chest", "Head", "Crest2", "WingL4", "WingR4", "TailA3", "TailB3" },
         Effects = {
