@@ -1067,7 +1067,7 @@ end
 -- (WB.storeKit("HubNpcs", <import>, "NPC_Anchor")): ServerStorage.WorldKit.HubNpcs.<Npc>_<Piece>__<Material>, each welded to the
 -- body part Placements/HubNpcs.lua names, in the colour and Roblox material it gives. The stock painted face is cleared: each has
 -- its own, modelled. Their root is anchored; NpcService plays their idle. Tagged "HubNpc".
---   WB.buildHubNpcs("Yggdrasil")       the Blacksmith's, the Marketplace's and Buy & Sell's keepers and the Guide (who talks:
+--   WB.buildHubNpcs("Yggdrasil")       the Blacksmith's, the Auction House's and Buy & Sell's keepers and the Guide (who talks:
 --                                      her prompt has the Guide attribute, GuideController)
 --   WB.buildMerchantTemplate("Yggdrasil")  ServerStorage.WanderingMerchant: his camp and him, where MerchantService puts them
 local function npcData()
@@ -1781,16 +1781,16 @@ end
 -- that stands on it (Built).
 WorldBuilder.Plots = {
     Blacksmith = { Title = "Blacksmith", Built = "Celestial Forge" },
-    Marketplace = { Title = "Marketplace", Built = "Crystal Market" },
+    Marketplace = { Title = "Auction House", Built = "Crystal Market" }, -- (the Marketplace until 2026-11-16: the same building, its egg sales replaced by player auctions)
     BuySell = { Title = "Buy & Sell", Built = "Gilded Vault" },
 }
 -- ---------- the shops (Yggdrasil) ----------
 -- Each shop's building (tools/blender/world/hub_district.py since the hub's redesign, 2026-11-15): its plot, the kit pieces it is made of
--- and what its prompt says. ShopService opens the shop named by the prompt's "Shop" attribute.
+-- and what its prompt says. ShopService opens the shop named by the prompt's "Shop" attribute (AuctionService answers "Marketplace").
 WorldBuilder.Shops = {
     Blacksmith = { Plot = "Blacksmith", Pieces = { "HB_Blacksmith", "HB_BlacksmithCore", "HB_BlacksmithCrystal" }, Action = "Shop" },
     BuySell = { Plot = "BuySell", Pieces = { "HB_BuySell", "HB_BuySellStones" }, Action = "Trade" },
-    Marketplace = { Plot = "Marketplace", Pieces = { "HB_Market", "HB_MarketCanopy", "HB_MarketGlow" }, Action = "Shop" },
+    Marketplace = { Plot = "Marketplace", Pieces = { "HB_Market", "HB_MarketCanopy", "HB_MarketGlow" }, Action = "Open" }, -- the Auction House (AuctionService)
 }
 WorldBuilder.ForgeLight = Color3.fromRGB(255, 120, 40)
 WorldBuilder.LanternLight = Color3.fromRGB(255, 130, 70) -- warm: a red light tints the paving pink

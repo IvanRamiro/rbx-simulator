@@ -277,6 +277,7 @@ BEHAVIOUR = {
         "fuse": False, "forge": False, "market": "lazy", "theft_share": 0.0, "spring_share": 1.0, "relic_seconds": None,
     },
 }
+NO_MARKET = False        # --no-market: nobody buys eggs for stones (the Marketplace's egg sales removed for the Auction House)
 SESSION_OVERHEAD = 120   # seconds per play session: joining, loading, walking out
 PLAY_DAY_HOURS = 4       # in the play-hours runs, a day's boosts (bought and daily-reward ones) come every this many hours of play
 DAILY_HOURS = (2, 4, 8)
@@ -597,6 +598,8 @@ class Player:
                 self.forged.add(tier)
         if tier not in self.weapons:
             return  # saving for this realm's weapon
+        if NO_MARKET:
+            return  # no fixed-price eggs to buy (--no-market: the Market became the Auction House, 2026-11-16)
         egg = R.market_eggs_for(self.idx)
         egg_price = R.market_price(egg)
         reserve = egg_price * (3 if self.b["market"] == "lazy" else 1)
@@ -911,7 +914,11 @@ def main():
     parser.add_argument("--stands", choices=["own", "code"], help="the proposal's stand rule (default PROPOSAL's)")
     parser.add_argument("--compare", nargs=2, metavar=("BEFORE", "AFTER"),
                         help="only write output/compare.md from two earlier runs' .csv files (e.g. before_2026-11-16 current)")
+    parser.add_argument("--no-market", action="store_true",
+                        help="no fixed-price eggs for stones (the Market became the Auction House, 2026-11-16)")
     args = parser.parse_args()
+    global NO_MARKET
+    NO_MARKET = args.no_market
     if args.compare:
         write_compare(*args.compare)
         return

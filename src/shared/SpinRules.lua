@@ -8,7 +8,7 @@
 --   SpinRules.roll(random)          a segment's index, by weight (random: a Random; the server's own)
 --   SpinRules.stones(index, rankName, player)  what a Stones segment pays a player of this rank (with their passes' daily-stones
 --                                    bonus: VIP's +50%, the owner 2026-11-17; player nil: without it)
---   SpinRules.bestEgg(rankName)     the best Marketplace egg this rank can take (the Egg segment's egg)
+--   SpinRules.bestEgg(rankName)     the best ordinary (non-Robux) egg this rank can take (the Egg segment's egg)
 --   SpinRules.describe(index, rankName, player)  { Kind, Stones, Minutes, EggId, Short, Long, Icon key } of a segment for this rank
 --   SpinRules.angleOf(index)        the segment's centre, degrees clockwise from the top
 --   SpinRules.restricted(player)    whether paid random items are restricted where the player is (SpinService sets the player's
@@ -95,7 +95,7 @@ function SpinRules.fallbackStones(rankName, player)
     return SpinRules.stones(best, rankName, player)
 end
 
--- the Marketplace's eggs (not the Robux one), each with its rank's place
+-- the ordinary eggs (not the Robux one), each with its rank's place
 local marketEggs = {}
 for eggId, egg in GameConfig.Eggs do
     local rank = not egg.Exclusive and Ranks.getRankById(egg.RequiredRank)

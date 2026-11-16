@@ -20,7 +20,7 @@ local PAGES = {
     "Press E to cultivate and gather Qi. On a phone, tap the lotus button. The more Qi you gather, the higher your rank, and the brighter your aura.",
     "You start next to your own pen. Put pets in it and watch them walk around. Down the south-west road is the Qi Spring: cultivate there for " .. bonus .. "% more Qi.",
     "The bridges lead to the other islands. Hit a guardian until it is weak, take an egg from its stands and carry it home across the bridge.",
-    "Hatch your eggs at the Hatching Sanctum, up the north road. The shops are to the north-east: Brann at the Blacksmith makes weapons, Lyra at the Marketplace sells eggs, and Corvin at Buy & Sell buys your extra pets and weapons.",
+    "Hatch your eggs at the Hatching Sanctum, up the north road. The shops are to the north-east: Brann at the Blacksmith makes weapons, Lyra runs the Auction House, where players bid on each other's pets and weapons, and Corvin at Buy & Sell buys your extra pets and weapons.",
     "One more thing: every hour, for ten minutes, the Wandering Merchant visits the platform on the north side of the World Tree. He sells special deals. Good luck, cultivator!",
 }
 

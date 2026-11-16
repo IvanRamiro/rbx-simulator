@@ -35,6 +35,7 @@ local EVENT_NAMES = {
     "PenEvent",
     "SpinEvent",
     "BoostEvent", -- the timed Qi boost: the server tells the buyer ("Bought", minutes) once the purchase is saved
+    "AuctionEvent", -- the Auction House (server/Auction/AuctionService): browse, list, bid, cancel, mail
 }
 
 local RemoteEvents = {}

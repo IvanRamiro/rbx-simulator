@@ -12,7 +12,8 @@
 --   Shop.petEggRank(petId)    the rank of the earliest egg that hatches it (what a player needs to hatch it), or nil
 --   Shop.rankValue(rankId)    the rewards' ladder: a weapon's price at its realm's first rank, between
 --   Shop.eggStones(eggId)     what securing this egg pays
---   Shop.marketEggPrice(eggId)  what the Marketplace asks for this egg
+--   Shop.marketEggPrice(eggId)  this egg's reference price (what the Marketplace asked until it became the Auction House,
+--                             2026-11-16): what the Wandering Merchant's discounts come off
 --   Shop.relicStones(relic)   what a relic's first attunement pays
 --   Shop.penPrice(level)      what raising a beast pen to `level` costs (nil for level 1 or past the last)
 --   Shop.roundNice(n)         two significant figures (a price worth reading)

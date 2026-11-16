@@ -344,6 +344,45 @@ function PetInventory.take(player, instanceId)
     return nil
 end
 
+-- The Auction House (server/Auction): takes a free pet out whole, its full record ({ InstanceId, PetId, Level, Locked, Size, Worth }),
+-- or nil when it isn't theirs or isn't free (locked, equipped or in the pen: the player frees it first).
+function PetInventory.takeRecord(player, instanceId)
+    local data = playerData[player]
+    if not data or typeof(instanceId) ~= "string" then
+        return nil
+    end
+    for index, pet in data.ownedPets do
+        if pet.InstanceId == instanceId then
+            if pet.Locked or table.find(data.equipped, instanceId) or penIndex(data, instanceId) then
+                return nil
+            end
+            table.remove(data.ownedPets, index)
+            return { InstanceId = pet.InstanceId, PetId = pet.PetId, Level = pet.Level, Locked = false, Size = pet.Size, Worth = pet.Worth }
+        end
+    end
+    return nil
+end
+
+-- Puts a pet record back or gives one won at the Auction House: its level, size and worth kept (a new InstanceId if the player
+-- somehow holds that one already). A rarity that hatches locked arrives locked. True, or false when the inventory is full.
+function PetInventory.restore(player, record)
+    local data = playerData[player]
+    if not data or typeof(record) ~= "table" or not GameConfig.Pets[record.PetId] or #data.ownedPets >= GameConfig.MaxOwnedPets then
+        return false
+    end
+    local instanceId = record.InstanceId
+    if typeof(instanceId) ~= "string" or instanceId == "" or #instanceId > 64 or findOwnedPet(data, instanceId) then
+        instanceId = HttpService:GenerateGUID(false)
+    end
+    local rarity = GameConfig.Pets[record.PetId].Rarity
+    local pet = { InstanceId = instanceId, PetId = record.PetId, Level = PetRules.level(record), Size = PetRules.size(record),
+        Locked = GameConfig.PetFusion.AutoLock[rarity] == true }
+    pet.Worth = PetRules.worth({ Level = pet.Level, Size = pet.Size, Worth = record.Worth })
+    table.insert(data.ownedPets, pet)
+    Codex.discover(player, record.PetId)
+    return true
+end
+
 function PetInventory.getQiBonusPercent(player)
     local data = playerData[player]
     if not data then

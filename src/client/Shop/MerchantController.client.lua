@@ -158,7 +158,7 @@ local function dealCard(order, deal)
         Font = "Strong", TextSize = 11, TextColor3 = if deal.Locked then C.Danger else C.Muted, TextTruncate = Enum.TextTruncate.AtEnd,
         Text = if deal.Bought then "Bought this visit"
             elseif deal.Locked then deal.Locked
-            elseif deal.FullPrice then "Marketplace: " .. NumberFormat.compact(deal.FullPrice) .. " Stones"
+            elseif deal.FullPrice then "Usually " .. NumberFormat.compact(deal.FullPrice) .. " Stones"
             else "Yours right away, no hatching needed",
         Position = UDim2.fromOffset(76, 47), Size = UDim2.new(0.5, -76, 0, 14), Parent = card,
     })

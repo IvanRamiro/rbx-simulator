@@ -141,6 +141,24 @@ function WeaponInventory.take(player, instanceId)
     return record(weapon)
 end
 
+-- Puts a weapon record back or gives one won at the Auction House, its element and name kept (a new InstanceId if the player holds
+-- that one already). True, or false when the rack is full or it isn't a weapon.
+function WeaponInventory.restore(player, weapon)
+    local data = held[player]
+    if not data or typeof(weapon) ~= "table" or not Shop.weapon(weapon.WeaponId) or #data.weapons >= GameConfig.MaxOwnedWeapons then
+        return false
+    end
+    local instanceId = weapon.InstanceId
+    if typeof(instanceId) ~= "string" or instanceId == "" or #instanceId > 64 or find(data, instanceId) then
+        instanceId = HttpService:GenerateGUID(false)
+    end
+    local element = if Shop.element(weapon.Element) then weapon.Element else nil
+    local length = element and typeof(weapon.Name) == "string" and utf8.len(weapon.Name)
+    local name = if length and length <= GameConfig.Forge.NameLength.Max then weapon.Name else nil
+    table.insert(data.weapons, { InstanceId = instanceId, WeaponId = weapon.WeaponId, Element = element, Name = if element then name else nil })
+    return true
+end
+
 -- The weapon the player strikes with (shared/Shop.lua's entry) and its element, or nil for the Qi Palm.
 function WeaponInventory.equipped(player)
     local data = held[player]

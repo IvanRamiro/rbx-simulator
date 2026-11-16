@@ -11,7 +11,6 @@ local RunService = game:GetService("RunService")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
-local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local UI = script.Parent.Parent:WaitForChild("UI")
@@ -372,76 +371,6 @@ local function sellRow(order, picture, name, detail, detailColor, value, onSell,
         end)
 end
 
--- The eggs on sale, cheapest first. A purchase can't be undone either, so it asks once more too.
-local marketEggs = {}
-for eggId, egg in GameConfig.Eggs do
-    if not egg.Exclusive then -- (bought with Robux in the Shop)
-        table.insert(marketEggs, { id = eggId, egg = egg, price = Shop.marketEggPrice(eggId) })
-    end
-end
-table.sort(marketEggs, function(a, b)
-    return a.price < b.price or (a.price == b.price and a.egg.DisplayName < b.egg.DisplayName)
-end)
-
-local function rarestOf(egg)
-    local best, weight = nil, math.huge
-    for _, entry in egg.Pool do
-        if entry.HatchChance < weight then
-            best, weight = GameConfig.Pets[entry.PetId], entry.HatchChance
-        end
-    end
-    return best
-end
-
-local function renderMarket(contents)
-    window.setTitle("MARKETPLACE")
-    topNote.Text = "Spirit eggs. Hatch them at the Hatching Sanctum."
-    local rankName = Ranks.getPlayerRankName(player)
-    for index, entry in marketEggs do
-        local open = rankName ~= "" and Ranks.isAtLeast(rankName, entry.egg.RequiredRank)
-        local affordable = contents.Stones >= entry.price
-        local r = card(index, 72)
-        local icon = UiKit.icon(UiTheme.EggIcons[entry.id] or UiTheme.Icons.Hatch, 52, if open then "Accent" else "Danger")
-        icon.Position = UDim2.fromOffset(12, 10)
-        icon.Parent = r
-        UiKit.boldLabel({
-            TextSize = 14, Text = entry.egg.DisplayName, Position = UDim2.fromOffset(76, 9),
-            Size = UDim2.new(0.46, -76, 0, 18), TextTruncate = Enum.TextTruncate.AtEnd, Parent = r,
-        })
-        local rarest = rarestOf(entry.egg)
-        local held = contents.Eggs and contents.Eggs[entry.id] or 0
-        UiKit.label({
-            Font = "Strong", TextSize = 11, RichText = true, TextColor3 = C.Muted, Position = UDim2.fromOffset(76, 30), Size = UDim2.new(0.46, -76, 0, 14),
-            TextTruncate = Enum.TextTruncate.AtEnd, Parent = r,
-            Text = "Up to: " .. string.format('<font color="#%s">%s</font>',
-                (rarest and GameConfig.PetRarityColors[rarest.Rarity] or C.Text):ToHex(), rarest and rarest.DisplayName or "?"),
-        })
-        UiKit.label({
-            Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Position = UDim2.fromOffset(76, 46), Size = UDim2.new(0.46, -76, 0, 14),
-            Text = if open then "You hold " .. held else "Needs " .. Ranks.getRankById(entry.egg.RequiredRank).Name, Parent = r,
-        })
-        priceTag(r, entry.price, not affordable)
-        local why = if not open then "LOCKED" elseif not affordable then "NOT ENOUGH" else nil
-        local buy
-        local armedUntil = 0
-        buy = button(r, why or "BUY", if why then "Quiet" else "Buy", UDim2.new(0.28, -12, 0, ROW_BUTTON), UDim2.new(0.72, 0, 0.5, -ROW_BUTTON / 2),
-            if why then nil else function()
-                if os.clock() < armedUntil then
-                    armedUntil = 0
-                    ask("BuyEgg", entry.id)
-                    return
-                end
-                armedUntil = os.clock() + CONFIRM_SECONDS
-                buy.Text = "SURE?"
-                task.delay(CONFIRM_SECONDS, function()
-                    if buy.Parent and os.clock() >= armedUntil then
-                        buy.Text = "BUY"
-                    end
-                end)
-            end)
-    end
-end
-
 local function sellPet(pet, info)
     if info.Rarity ~= "Secret" and info.Rarity ~= "Divine" then
         ask("SellPet", pet.InstanceId)
@@ -533,8 +462,6 @@ function render()
     list.Size = UDim2.new(1, 0, 1, -top)
     if blacksmith then
         renderBlacksmith(contents)
-    elseif current.shop == "Marketplace" then
-        renderMarket(contents)
     else
         renderBuySell(contents)
     end

@@ -1,5 +1,5 @@
--- The Blacksmith, Buy & Sell and the Marketplace on Yggdrasil. Each shop's building carries a
--- ProximityPrompt with a "Shop" attribute ("Blacksmith", "BuySell" or "Marketplace") on its "Prompt" part,
+-- The Blacksmith and Buy & Sell on Yggdrasil. Each shop's building carries a
+-- ProximityPrompt with a "Shop" attribute ("Blacksmith" or "BuySell") on its "Prompt" part,
 -- at the Blacksmith's anvil, the foot of the Jade Scale and the money tree's plinth
 -- (WorldBuilder.buildShops); triggering it sends the player
 -- ShopEvent("Open", shop, snapshot). The client then asks with
@@ -13,7 +13,8 @@
 --                             at Buy & Sell, for Shop.petValue: never a locked or equipped pet, and a Secret one only when confirmed
 --   "SellSpares"              at Buy & Sell: every duplicate PetRules.spares names
 --   "SellWeapon" instanceId   at Buy & Sell, for Shop.weaponRefund (never the equipped one)
---   "BuyEgg" eggId            at the Marketplace: an egg the player's rank can carry, for Shop.marketEggPrice
+-- (The third building, the Market, sold eggs here until 2026-11-16; it is the Auction House now: server/Auction. Its prompt's
+-- "Shop" attribute is still "Marketplace", and AuctionService answers it.)
 -- and is answered ShopEvent("Result", ok, message, snapshot). Buying and selling need the player
 -- within REACH of that shop's prompt, and every request is throttled.
 --
@@ -25,12 +26,10 @@ local TextService = game:GetService("TextService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
-local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
-local EggInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("EggInventory"))
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
 local Elements = require(script.Parent:WaitForChild("Elements"))
 local Wallet = require(script.Parent:WaitForChild("Wallet"))
@@ -40,7 +39,7 @@ local WeaponInventory = require(script.Parent:WaitForChild("WeaponInventory"))
 local REACH = 45 -- studs from a shop's prompt
 local REQUEST_COOLDOWN = 0.25
 local FORGE_COOLDOWN = 2 -- seconds between name checks: they use Roblox's filter, which has a quota
-local SHOPS = { Blacksmith = true, BuySell = true, Marketplace = true }
+local SHOPS = { Blacksmith = true, BuySell = true }
 
 local lastRequest = {}
 local lastForge = {}
@@ -49,12 +48,7 @@ local ready = {}
 
 local function snapshot(player)
     local pets = PetInventory.getSnapshot(player)
-    local eggs = {}
-    for eggId in GameConfig.Eggs do
-        eggs[eggId] = EggInventory.count(player, eggId)
-    end
     return {
-        Eggs = eggs,
         Stones = Wallet.balance(player),
         Weapons = WeaponInventory.snapshot(player),
         Elements = Elements.list(player),
@@ -249,31 +243,6 @@ function actions.SellWeapon(player, instanceId)
     local value = Shop.weaponRefund(record.WeaponId, record.Element)
     Wallet.add(player, value, "SellWeapon", record.WeaponId)
     return true, "Sold " .. nameOf(record) .. " for " .. value .. " Spirit Stones."
-end
-
-function actions.BuyEgg(player, eggId)
-    local egg = typeof(eggId) == "string" and GameConfig.Eggs[eggId]
-    if not egg or egg.Exclusive then -- (an Exclusive egg is bought with Robux in the Shop: ProductService)
-        return false, "That egg isn't for sale."
-    end
-    if not nearShop(player, "Marketplace") then
-        return false, "You're too far from the Marketplace."
-    end
-    if not Ranks.isAtLeast(Ranks.getPlayerRankName(player), egg.RequiredRank) then
-        return false, "That egg needs " .. Ranks.getRankById(egg.RequiredRank).Name .. "."
-    end
-    if EggInventory.count(player, eggId) >= EggInventory.MAX_PER_EGG then
-        return false, "You can't hold any more of that egg."
-    end
-    local price = Shop.marketEggPrice(eggId)
-    if not Wallet.spend(player, price, "BuyEgg", eggId) then
-        return false, "You need " .. price .. " Spirit Stones."
-    end
-    if not EggInventory.grant(player, eggId) then
-        Wallet.add(player, price, "BuyEggRefund", eggId)
-        return false, "You can't hold any more of that egg."
-    end
-    return true, "Bought a " .. egg.DisplayName .. ". Hatch it at the Hatching Sanctum."
 end
 
 RemoteEvents.ShopEvent.OnServerEvent:Connect(function(player, action, id, extra)

@@ -31,7 +31,7 @@ local RULES = GameConfig.PetFusion
 -- Economy (measured in Play, 2026-11-15, with the Luck pass): the Wandering Merchant's discounted Void Rift Egg already sold back
 -- for 0.949 of its price before sizes, so the brief's Values (Large 1.5, Giant 3: an average of 1.10 a hatch) would have made buying
 -- it to sell its pets pay (1.044). The Values are lowered to average 1.018 a hatch: at most 0.966 of a Merchant egg's price and
--- 0.72 of a Marketplace egg's. The Merchant's pets are always Normal, so its MinPetMarkup holds. Re-check if any of these change.
+-- 0.72 of an egg's reference price (Shop.marketEggPrice). The Merchant's pets are always Normal, so its MinPetMarkup holds. Re-check if any of these change.
 -- Color: the size's colour in the windows (its pill, the hatch reveal's badge).
 PetRules.Sizes = {
     Small = { Order = 1, Scale = 0.75, Chance = 25, Value = 0.8, Qi = 0.9, RevealHold = 0, Color = Color3.fromRGB(150, 226, 255) },

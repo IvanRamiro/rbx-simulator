@@ -129,15 +129,41 @@ local GameConfig = {
         -- and that share falls by EggShareFalloff for each realm past the first (release balance, 2026-11-12: from Spirit Soul on, an active
         -- thief earned 8 to 50 weapons' worth of stones per realm against one weapon needed, and stones stopped meaning anything; now 3 to 6)
         EggShareFalloff = 0.8,
-        -- what the Marketplace asks for an egg, as a share of its required rank's value: 4 times what stealing (more past the first realm, EggShareFalloff)
-        -- one pays, and with no Qi or element. On average its pet sells for less than this, so buying
-        -- eggs to sell their pets loses stones (checked against every egg's pool, 2026-11-04; re-measured 2026-11-12 with the
-        -- Luck pass: at most 0.88 of the Marketplace price, the Primordial Abyss Egg. Re-check whenever pet values, pools, luck
-        -- or discounts change)
+        -- an egg's reference price (Shop.marketEggPrice), as a share of its required rank's value: 4 times what stealing (more past the
+        -- first realm, EggShareFalloff) one pays. The Marketplace sold eggs at this price until it became the Auction House
+        -- (2026-11-16); it is still what the Wandering Merchant's discounts are taken off. On average an egg's pet sells for less
+        -- than this, so buying eggs to sell their pets loses stones (checked against every egg's pool, 2026-11-04; re-measured
+        -- 2026-11-12 with the Luck pass: at most 0.88 of the price, the Primordial Abyss Egg. Re-check whenever pet values, pools,
+        -- luck or discounts change)
         MarketEggShare = 1,
         RelicShare = 0.5,
         MinReward = 40,
         Max = 1e12,
+    },
+
+    -- The Auction House (the owner, 2026-11-16: the Market "should become a player-driven marketplace where players can buy and sell
+    -- eligible items through auctions"; vault: Auction House Design 2026-11-16). One auction house for every server (server/Auction,
+    -- shared/AuctionRules). Pets and weapons are listed for a starting bid and a duration; bids are Spirit Stones, taken at once and
+    -- given back when someone bids higher; the top bid wins at the end. Values are multiples of the item's sell value (what Buy & Sell
+    -- pays: Shop.petValue, Shop.weaponRefund).
+    AuctionHouse = {
+        MinRank = "CoreInitiate",   -- the rank that may use it (about an hour of play): no fresh alt account can use it at once
+        MinAccountAgeDays = 3,      -- and a Roblox account at least this old
+        Hours = { 1, 4, 12, 24 },   -- the durations a seller can pick
+        MaxListings = 5,            -- listings a player may have at once
+        MaxBidOn = 10,              -- listings a player may be bidding on at once
+        ListingFee = { Share = 0.02, Min = 2 }, -- of the starting bid, paid when listing and kept even if nothing sells: stops list/cancel spam
+        SaleTax = 0.1,              -- of the final price, taken from what the seller gets: a Spirit Stone sink
+        StartFloor = 1,             -- the lowest starting bid: the item's sell value (selling at Buy & Sell pays that much anyway)
+        StartCeiling = 20,          -- the highest starting bid, in sell values
+        -- the highest bid allowed, in sell values: rare beasts may fetch a lot, but junk can't carry a fortune between accounts
+        PriceCap = { Common = 10, Uncommon = 10, Rare = 15, Epic = 20, Legendary = 30, Mythical = 50, Secret = 100, Divine = 100, Weapon = 5 },
+        MinRaise = 0.05,            -- a new bid beats the top bid by at least this share (and at least 1 stone)
+        SnipeWindow = 60,           -- seconds: a bid this close to the end...
+        SnipeExtend = 60,           -- ...moves the end to this many seconds after it
+        MaxExtension = 1800,        -- seconds past its first end an auction can be moved, at most
+        Reach = 45,                 -- studs from the Auction House's prompt an action may be asked from
+        PageSize = 8,               -- listings on one page of the window
     },
 
     -- Guardians (src/server/Guardians/GuardianService; design doc section 7). A guardian holds no
@@ -558,7 +584,7 @@ local GameConfig = {
         EternalClockworkDragon = { DisplayName = "Eternal Clockwork Dragon", Rarity = "Secret", Theme = "Time", QiBonus = 600 },
         AbyssAnomalocaris = { DisplayName = "Abyss Anomalocaris", Rarity = "Legendary", Theme = "Primordial seas", QiBonus = 230,
             -- sells as a realm-10 pet (Shop.petValue): its only egg is two realms past the egg before it, so at realm 11 it sold for
-            -- 1.55M, more than a Primordial weapon, and its egg resold for 88% of its Marketplace price (others about half). 2026-11-13
+            -- 1.55M, more than a Primordial weapon, and its egg resold for 88% of its reference price (Shop.marketEggPrice) (others about half). 2026-11-13
             ValueRealm = 10 },
     },
 
@@ -672,7 +698,7 @@ local GameConfig = {
     --   2 Qi      Minutes of cultivating (QiReward.grantMinutes: Qi passes and pets count)                                           22
     --   3 Stones  2x segment 1                                                                                                       16
     --   4 Qi      15 minutes                                                                                                         12
-    --   5 Egg     one egg of the best Marketplace egg the player's rank can take                                                     10
+    --   5 Egg     one of the best ordinary (non-Robux) egg the player's rank can take                                               10
     --   6 Stones  5x segment 1                                                                                                        8
     --   7 Spin    one more spin today                                                                                                 5
     --   8 Egg     JACKPOT: one Exclusive Egg (the 149 Robux egg), to hatch at the altar                                             0.2
@@ -680,7 +706,7 @@ local GameConfig = {
     -- Exclusive Egg doesn't take from its sales: 0.2, the 0.8 moved to segment 1.)
     -- Worth a day (worked out 2026-11-16 over all 60 ranks): 3 / (1 - 0.05) = 3.16 spins; stones 0.62 of a
     -- rank value (0.84 to 1.83 daily-reward claims as the player climbs through a realm, the daily claim averaging 44 x RealmFactor per
-    -- realm); 0.32 eggs (at the Marketplace's price, all in 1.0 to 2.8 claims; at what its pet sells for, about 1 to 2.2); 9.2 minutes
+    -- realm); 0.32 eggs (at their reference price, Shop.marketEggPrice, all in 1.0 to 2.8 claims; at what its pet sells for, about 1 to 2.2); 9.2 minutes
     -- of cultivating Qi (under two stolen eggs' bursts); and an Exclusive Egg about once in five months (1 in 158 days). It helps without
     -- replacing play: one active minute stealing eggs pays more stones.
     -- Where paid random items are restricted (PolicyService), the jackpot pays segment 6's stones instead of the Exclusive Egg, and
@@ -955,7 +981,7 @@ local GameConfig = {
             },
         },
         -- The Exclusive Egg (the owner, 2026-11-13): bought with Robux only (GameConfig.ExclusiveEgg, ProductService), never stolen,
-        -- sold at the Marketplace or the Merchant; open to every rank. No luck: its odds are the ones shown when it's bought.
+        -- sold by the Merchant (nor, before 2026-11-16, at the Marketplace); open to every rank. No luck: its odds are the ones shown when it's bought.
         ExclusiveEgg = {
             DisplayName = "Exclusive Egg",
             RequiredRank = "QiInitiate",
@@ -1054,7 +1080,7 @@ local GameConfig = {
     -- UTC hour, the same in every server. Each visit offers Deals of the Pool, drawn without repeats from a seed of the visit's
     -- number (shared/Merchant.lua), so every server shows the same ones; each player can buy each deal once a visit. All in
     -- Spirit Stones (MerchantService):
-    --   Egg  Count eggs at Discount off the Marketplace's price (Shop.marketEggPrice), for the egg's RequiredRank. At most
+    --   Egg  Count eggs at Discount off the egg's reference price (Shop.marketEggPrice, the old Marketplace price), for the egg's RequiredRank. At most
     --        MaxEggDiscount: with the Luck pass an egg's pet sells on average for at most 0.966 of the discounted price at today's
     --        deals (the Void Rift Egg, the worst; measured 2026-11-15 with hatch sizes' sell values, PetRules.Sizes; it was 0.949
     --        before sizes, after the 2026-11-12 Void Rift pool change; at 40% off it would pass even): re-check whenever pet values, pools, luck or
