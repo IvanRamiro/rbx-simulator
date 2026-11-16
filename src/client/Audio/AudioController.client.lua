@@ -1,16 +1,21 @@
 -- The background: each island's ambient bed and music, following the player's "Island" attribute
 -- (WorldService). Near an awake guardian the music turns to the battle theme, and a thief carrying
--- an egg hears the chase drums over it. Every button in the HUD clicks.
+-- an egg hears the chase drums over it. The weather (WeatherRules) adds its own bed: rain while it rains; and the hub's
+-- morning birds give way to night insects after dark, and to the rain alone while it rains. Every button in the HUD clicks.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local WeatherConfig = require(ReplicatedStorage:WaitForChild("WeatherConfig"))
+local WeatherRules = require(ReplicatedStorage:WaitForChild("WeatherRules"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
 
 local AMBIENCE = { Yggdrasil = "AmbYggdrasil", BeginnerIsle = "AmbYggdrasil", JadeGrove = "AmbJade", EmberPeak = "AmbEmber", MoonlitIsle = "AmbMoon", OriginAbyss = "AmbAbyss" }
+local BIRDS = { AmbYggdrasil = true } -- a daytime bed: night insects after dark, nothing under the rain
+local NIGHT_BED = "AmbMoon"
 local MUSIC = { Yggdrasil = "MusicHub", BeginnerIsle = "MusicHub", JadeGrove = "MusicJade", EmberPeak = "MusicEmber", MoonlitIsle = "MusicMoon", OriginAbyss = "MusicAbyss" }
 local AWAKE = { Guardian = true, Weakened = true, Enraged = true }
 local BATTLE_DISTANCE = 150    -- studs from an awake guardian at which the battle theme takes over
@@ -19,7 +24,7 @@ local CALM_AFTER = 4           -- seconds out of battle before the island's musi
 local CHECK_EVERY = 0.5
 
 -- one slot per layer: what it plays now, its Sound and how to stop it
-local layers = { ambience = {}, music = {}, chase = {} }
+local layers = { ambience = {}, music = {}, chase = {}, weather = {} }
 local resumeAt = {} -- [name] = where a track was left: the island's music picks up there after a fight
 
 local function set(layer, name)
@@ -61,7 +66,15 @@ local battleAt = -math.huge
 
 local function update()
     local island = player:GetAttribute("Island")
-    set("ambience", AMBIENCE[island])
+    -- the weather: rain once a change to it is half done (WeatherRules' blend), the hub's birds by day only
+    local clock, _, from, to, k = WeatherRules.current()
+    local raining = (if k >= 0.5 then to else from) == "Rain"
+    local bed = AMBIENCE[island]
+    if bed and BIRDS[bed] then
+        bed = if raining then nil elseif WeatherRules.nightAt(clock) > 0.6 then NIGHT_BED else bed
+    end
+    set("ambience", bed)
+    set("weather", if raining then WeatherConfig.Rain.Sound else nil)
     local carrying = player:GetAttribute("CarryingEgg") ~= nil
     if carrying or nearAwakeGuardian() then
         battleAt = os.clock()

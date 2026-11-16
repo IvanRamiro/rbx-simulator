@@ -330,6 +330,8 @@ local catalog = {
     AmbEmber = { Id = "9112823197", Volume = 0.13, Group = "Ambience" },       -- lava bubbling and rumbling
     AmbMoon = { Id = "9117114457", Volume = 1.3, Group = "Ambience" },         -- night insects
     AmbAbyss = { Id = "9114625552", Volume = 0.24, Group = "Ambience" },       -- an eerie wind
+    -- the weather (WeatherConfig, AudioController): Pro Sound Effects' "Rain On Water 1", a 61 s outdoor loop
+    AmbRain = { Id = "9112854469", Volume = 0.4, Group = "Ambience", FadeIn = 6, FadeOut = 6 }, -- 39 x 0.4: a little over the birds (9 x 1.6)
 
     -- ---------- music (APM) ----------
     MusicHub = { Id = "1847656215", Volume = 0.4, Group = "Music", FadeIn = 2.5 },     -- Forests Of The Orient

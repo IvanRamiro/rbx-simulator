@@ -35,20 +35,7 @@ local WorldConfig = {
         FallDepth = 110,
     },
 
-    Lighting = {
-        ClockTime = 14.5,
-        Brightness = 2.2,
-        Ambient = Color3.fromRGB(60, 70, 90),
-        OutdoorAmbient = Color3.fromRGB(130, 140, 165),
-        Atmosphere = {
-            Density = 0.32,
-            Offset = 0.2,
-            Color = Color3.fromRGB(199, 220, 240),
-            Decay = Color3.fromRGB(106, 132, 170),
-            Glare = 0.15,
-            Haze = 1.2,
-        },
-    },
+    -- the lighting, the day and night cycle and the weather: WeatherConfig (ReplicatedStorage)
 }
 
 -- An island's frame: its centre, turned by its quarter turns (each adds 90 degrees of bearing).

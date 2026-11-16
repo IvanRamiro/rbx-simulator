@@ -1,4 +1,4 @@
--- Spawning, fall safety, bridge access and lighting for the floating islands. Each player spawns on their own pen's spawn pad
+-- Spawning, fall safety and bridge access for the floating islands (the lighting is WeatherService's). Each player spawns on their own pen's spawn pad
 -- in the hub, facing the pen (the hub's redesign, 2026-11-15: PenService's PenSpawn attribute, the pasture's "Spawn"
 -- SpawnLocation); a player without a pen (a seventh, or before their pen is given) spawns at Yggdrasil's "IslandSpawn" on the
 -- Arrival Plaza. Every other island has a "Checkpoint" part; a player who falls far below the island they last stood on returns
@@ -7,7 +7,6 @@
 -- front of the barrier. (Yggdrasil's named spawn slots went with the hub's rebuild of 2026-11-12;
 -- their code was removed 2026-11-13.)
 local CollectionService = game:GetService("CollectionService")
-local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -17,19 +16,6 @@ local MovementGuard = require(script.Parent.Parent:WaitForChild("Security"):Wait
 
 local islandsFolder = workspace:WaitForChild(WorldConfig.FolderName)
 local lastIsland = {}
-
-local function applyLighting(settings)
-    Lighting.ClockTime = settings.ClockTime
-    Lighting.Brightness = settings.Brightness
-    Lighting.Ambient = settings.Ambient
-    Lighting.OutdoorAmbient = settings.OutdoorAmbient
-
-    local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
-    for property, value in settings.Atmosphere do
-        atmosphere[property] = value
-    end
-    atmosphere.Parent = Lighting
-end
 
 -- ---------- spawning ----------
 local startIsland = islandsFolder:WaitForChild(WorldConfig.StartIsland)
@@ -124,8 +110,6 @@ local function setupPlayer(player)
     end
     followPen(player)
 end
-
-applyLighting(WorldConfig.Lighting)
 
 -- Lava and other hazards: touching one returns the player to their island's checkpoint.
 local lastBurn = {}
