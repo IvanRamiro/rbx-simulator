@@ -306,7 +306,7 @@ RunService.RenderStepped:Connect(function()
     if near and target and target.Then then
         reachedWay[step] = true
     end
-    local after = target and target.Then and reachedWay[step] and target.Then
+    local after = if target and reachedWay[step] then target.Then else nil
     if after and root then
         local to = Vector3.new(after[2], after[3], after[4]) - root.Position
         wayMarker.world = if to.Magnitude > WAY_NEAR then Vector3.new(after[2], after[3], after[4]) else nil

@@ -12,7 +12,6 @@
 --                               words that say "press E" or "tap the lotus" and the keys' hints follow it
 --   keycap(key)                 a keyboard key's hint (hidden while the player plays by touch)
 --   keycapOn(button, key)       that hint inside a button's right end; keyRoom(button) is what its words must leave free
---   fitWords(text, size, room)  words at `size`, or smaller if they would not fit across `room`
 --   pillShape(button, height)   a button rounded into a pill, its halo and light following
 --   wordsWidth(text)            a text object's words' width in its own units
 --   bar(props)                  a progress bar; setBar(bar, fraction) eases it
@@ -622,16 +621,6 @@ function UiKit.wordsWidth(textObject)
         x = x.Parent
     end
     return textObject.TextBounds.X / math.max(scale, 0.01)
-end
-
--- Sets a button's words to `wanted` points, or smaller if that is what it takes for them to fit across `room` (its own units):
--- the words shrink rather than run under a key's hint or off the button's ends.
-function UiKit.fitWords(textObject, wanted, room)
-    textObject.TextSize = wanted
-    local width = UiKit.wordsWidth(textObject)
-    if width > room and width > 0 then
-        textObject.TextSize = math.max(1, math.floor(wanted * room / width))
-    end
 end
 
 -- Rounds a button into a pill of the given height: its corners, its halo, its light layer and its line of gloss keep to the

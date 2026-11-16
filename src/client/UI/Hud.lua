@@ -266,9 +266,9 @@ local function addBannerPiece(piece)
 end
 Hud.Banner.ChildAdded:Connect(addBannerPiece)
 Hud.Banner.ChildRemoved:Connect(placeNotice)
-for _, region in { Hud.Banner, Hud.Notice, Hud.Status, Hud.Quest, Hud.Dock } do
-    region:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeNotice)
-    region:GetPropertyChangedSignal("Visible"):Connect(placeNotice)
+for _, piece in { Hud.Banner, Hud.Notice, Hud.Status, Hud.Quest, Hud.Dock } do
+    piece:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeNotice)
+    piece:GetPropertyChangedSignal("Visible"):Connect(placeNotice)
 end
 Hud.Status:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeNotice)
 Hud.Quest:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeNotice)
@@ -1495,9 +1495,6 @@ local function toggleMenu()
     RemoteEvents.SettingsEvent:FireServer("MenuHidden", hidden)
 end
 Hud.toggleMenu = toggleMenu
-function Hud.isMenuHidden()
-    return menuHidden
-end
 
 menuToggle.Activated:Connect(toggleMenu)
 UserInputService.InputBegan:Connect(function(input, processed)

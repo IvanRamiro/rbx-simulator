@@ -95,9 +95,8 @@ local function stopBreakthrough(player)
     end
 end
 
-local function printBreakthroughSummary(player, effect, rankId)
-    print(string.format("[Breakthrough] %s: %s", player.Name, tostring(rankId)))
-
+-- in Studio only (PRINT_BUILD_SUMMARY): warns when a breakthrough's effect goes over its budget (AuraStyles.BreakthroughBudget)
+local function checkBreakthroughBudget(effect, rankId)
     task.delay(1.2, function()
         if effect.stopped then
             return
@@ -157,7 +156,7 @@ local function playBreakthrough(player)
     end
 
     if PRINT_BUILD_SUMMARY then
-        printBreakthroughSummary(player, effect, rankId)
+        checkBreakthroughBudget(effect, rankId)
     end
 end
 

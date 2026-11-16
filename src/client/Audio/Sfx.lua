@@ -354,11 +354,6 @@ function Sfx.loop(name, parent)
     return stop, sound
 end
 
--- the number of one-shots playing now (for testing the limits above)
-function Sfx.alive()
-    return alive
-end
-
 -- load the effects once in the background, so the first of each doesn't arrive late (music and
 -- beds stream when they start: they're long, and only one plays at a time)
 task.spawn(function()
