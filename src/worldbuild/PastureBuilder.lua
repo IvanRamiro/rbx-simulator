@@ -4,13 +4,15 @@
 --   local PB = require(game.ServerStorage.WorldBuild.PastureBuilder:Clone())
 --   PB.build()        -- Workspace.FloatingIslands.Yggdrasil.BeastPastures, from Placements/Pastures.lua (replaces any built before)
 --   PB.check()        -- each site's ground: how far it is from level, and what stands in its way (a report; changes nothing)
---   PB.clearGround()  -- gives back the grass under every site's ring (before moving a site; build() lays it again)
+--   PB.clearGround()  -- gives back the grass under every site's ring and yard (before moving a site; build() lays it again)
+--   PB.layGround()    -- lays only the ground (each site's yard, then its ring and lane), leaving the built pastures as they are
 --
 -- What stands at every level is built here, in the hub's celestial look: a ring of pale paving round the pasture's whole ground (terrain
--- Pavement, flush, so no grass grows through it and it reads as one place from afar), the pen's gate (two marble posts with gold caps
--- and crystals, at the middle of the front fence's line, which stays put at every level: shared/PenLayout) holding the PenPrompt that
--- opens the pen picker, and before it the owner's board (marble posts, a gold-framed navy board PenService writes the holder's name and
--- level on) holding the UpgradePrompt. PenController shows both prompts only to the pasture's holder. The fence itself grows with the
+-- Pavement, flush, so no grass grows through it and it reads as one place from afar), a lawn with no grass blades inside the ring
+-- (LeafyGrass: the pen's wooden deck, PenFence, lies on it, and Grass's blades grew up through the deck), the pen's gate (two marble
+-- posts with gold caps and crystals, at the middle of the front fence's line, which stays put at every level: shared/PenLayout)
+-- holding the PenPrompt that opens the pen picker, and before it the owner's board (marble posts, a gold-framed navy board PenService
+-- writes the holder's name and level on) holding the UpgradePrompt. PenController shows both prompts only to the pasture's holder. The fence itself grows with the
 -- level, so each client builds it (PenFence) from the pasture's replicated Level.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -138,6 +140,13 @@ end
 
 -- the ring and the lane, in the terrain: a strip of `material` laid flush with the ground (filled from below up to its surface)
 local GROUND_RING = Enum.Material.Pavement -- (the hub's paving tone; Limestone read as snow)
+-- the yard inside the ring, under the pen at every level: a ground with no grass blades, since Grass's blades (Terrain.Decoration)
+-- grow up through any part laid on it, and the pen's deck is a part (the owner, 2026-11-16: "add a wooden floor in every pen")
+local GROUND_YARD = Enum.Material.LeafyGrass
+local function yardStrips()
+    local ring = PenLayout.Ring
+    return { { CFrame.new(), Vector3.new(ring.Width - ring.Band, 0, ring.Depth - ring.Band) } }
+end
 local function groundStrips()
     local ring = PenLayout.Ring
     local w, d, band = ring.Width, ring.Depth, ring.Band
@@ -154,10 +163,10 @@ end
 -- Sets the surface material of every terrain column under the strips (its top two solid voxels), leaving every voxel's occupancy as it
 -- was: the ground never moves, however often this runs. (A FillBlock flush with the surface raised it 2 to 4 studs, and more each run:
 -- seen in Studio, 2026-11-15, and repaired column by column from the untouched grass beside each.)
-local function layGround(frame, material)
+local function layGround(frame, material, strips)
     local terrain = workspace.Terrain
     local done = {}
-    for _, strip in groundStrips() do
+    for _, strip in strips or groundStrips() do
         local size = strip[2]
         for a = -size.X / 2, size.X / 2, 2 do
             for b = -size.Z / 2, size.Z / 2, 2 do
@@ -257,6 +266,7 @@ function PastureBuilder.build()
         pasture:SetAttribute("Index", index)
         pasture:SetAttribute("Frame", frame)
         pasture:SetAttribute("Area", site.Area)
+        layGround(frame, GROUND_YARD, yardStrips()) -- (the yard first: the ring then takes back the cells they share)
         layGround(frame, GROUND_RING)
         buildGateAndBoard(pasture, frame, site.Area)
         if site.Spawn then
@@ -271,7 +281,18 @@ end
 
 function PastureBuilder.clearGround()
     for _, site in Sites do
-        layGround(PastureBuilder.frameOf(site), Enum.Material.Grass)
+        local frame = PastureBuilder.frameOf(site)
+        layGround(frame, Enum.Material.Grass, yardStrips())
+        layGround(frame, Enum.Material.Grass)
+    end
+end
+
+function PastureBuilder.layGround()
+    for _, site in Sites do
+        local frame = PastureBuilder.frameOf(site)
+        layGround(frame, GROUND_YARD, yardStrips())
+        layGround(frame, GROUND_RING)
+        task.wait()
     end
 end
 

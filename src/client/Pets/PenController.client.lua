@@ -1,10 +1,10 @@
 -- Every player's beast pen, shown and moved by this client alone (PenService replicates only each pasture's holder, pen level and the
 -- beasts in it: ReplicatedStorage.BeastPastures.<n>; the server does nothing per frame). For each pasture held:
---   the fence at its level (PenFence), which grows out of the ground when the level rises, with a ring of gold light;
+--   the fence and its wooden deck at its level (PenFence), which grow when the level rises, with a ring of gold light;
 --   each beast, its own rig (PetModels, at its hatch size; shown smaller only if it couldn't turn in the pen at this level:
 --   PenLayout.displayScale), roaming on its own: it idles a while, picks a spot inside the fence clear of the others (kept off the
 --   fence by its own footprint), turns to face it with a few steps on the spot, walks there with its own gait (PetRig's walk, from the
---   speed it moves at), and idles again; a name over it gives its name, rarity and size.
+--   speed it moves at), and idles again, on the deck; a name over it gives its name, rarity and size.
 -- Cost: a pasture's fence and beasts are built only while the camera is within BUILD_REACH (freed past FREE_REACH); a beast moves and
 -- poses only within ANIMATE_REACH (every 2nd frame past HALF_REACH), and rests otherwise; shorter reaches on a phone (Quality.Low).
 -- It also shows the pasture's prompts to its holder alone, and tells the player where their pasture is when they are given one.
@@ -101,8 +101,9 @@ local function nameTag(model, root, pet, height)
     gui.Parent = model
 end
 
--- builds a beast at its size for a pen of `level` (smaller only if it couldn't turn there); nil while its meshes load
-local function buildBeast(pet, level, penFrame, owner, others)
+-- builds a beast at its size for a pen of `level` (smaller only if it couldn't turn there), standing on the pen's deck (`floor`, its
+-- top's world Y: PenFence) or else on the ground; nil while its meshes load
+local function buildBeast(pet, level, penFrame, owner, others, floor)
     if not PetPreload.isReady(pet.PetId) then
         PetPreload.want(pet.PetId)
         return nil
@@ -144,7 +145,7 @@ local function buildBeast(pet, level, penFrame, owner, others)
         end
     end
     local at = penFrame * spot
-    local y = groundAt(at, penFrame.Y) + PenLayout.Hip * scale
+    local y = (floor or groundAt(at, penFrame.Y)) + PenLayout.Hip * scale
     local start = CFrame.new(at.X, y, at.Z) * CFrame.Angles(0, math.random() * math.pi * 2, 0)
     model:PivotTo(start)
     model.Parent = container
@@ -157,7 +158,7 @@ local function buildBeast(pet, level, penFrame, owner, others)
     return {
         model = model, root = root, rig = rig, penFrame = penFrame, half = half, radius = radius, scale = scale,
         unit = if rig then rig.unit else PetModels.SIZE * scale,
-        cframe = start, height = y, targetHeight = y,
+        cframe = start, height = y, targetHeight = y, floor = floor,
         state = "idle", stateUntil = os.clock() + math.random() * IDLE[2],
         target = nil, speed = 0, beat = math.random(0, 1), poseTime = 0,
     }
@@ -191,7 +192,7 @@ local function wander(beast, others, dt, now)
             end
             local world = beast.penFrame * best
             beast.target = Vector3.new(world.X, position.Y, world.Z)
-            beast.targetHeight = groundAt(world, beast.penFrame.Y) + PenLayout.Hip * beast.scale
+            beast.targetHeight = (beast.floor or groundAt(world, beast.penFrame.Y)) + PenLayout.Hip * beast.scale
             beast.state = "turn"
         end
     else
@@ -267,7 +268,8 @@ end
 local function celebrate(entry)
     local level = entry.level
     local penFrame = entry.frame * PenLayout.penFrame(level)
-    local at = Vector3.new(penFrame.X, groundAt(penFrame.Position, entry.frame.Y) + 0.3, penFrame.Z)
+    local deck = entry.fence and entry.fence:GetAttribute("DeckTop")
+    local at = Vector3.new(penFrame.X, (deck or groundAt(penFrame.Position, entry.frame.Y)) + 0.3, penFrame.Z)
     local holder = Instance.new("Part")
     holder.Anchored, holder.CanCollide, holder.CanQuery, holder.CanTouch, holder.CastShadow = true, false, false, false, false
     holder.Transparency = 1
@@ -401,10 +403,11 @@ RunService.Heartbeat:Connect(function(dt)
             end
         end
         local penFrame = frame * PenLayout.penFrame(level)
+        local floor = entry.fence:GetAttribute("DeckTop")
         local live = {}
         for _, slot in entry.beasts do
             if not slot.beast then
-                local ok, beast = pcall(buildBeast, slot.pet, level, penFrame, entry.owner, live)
+                local ok, beast = pcall(buildBeast, slot.pet, level, penFrame, entry.owner, live, floor)
                 if ok then
                     slot.beast = beast
                 elseif not slot.warned then
