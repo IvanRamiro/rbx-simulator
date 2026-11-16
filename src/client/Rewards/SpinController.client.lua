@@ -4,8 +4,12 @@
 --                     each peg, the segment flashing as it lands;
 --   the HUD button    round, beside Rewards: its badge counts the spins left, it glows while there are any; pressed far from the
 --                     wheel it points the way (a marker), near it it opens the window;
---   the window        opened by the wheel's prompt: the spins left, when new ones come, the eight prizes and their chances, SPIN.
+--   the window        opened by the wheel's prompt: the spins left, when new ones come, the eight prizes and their chances, SPIN,
+--                     and two green Robux buttons for more spins (GameConfig.SpinWheel.SpinProducts: ProductService pays them),
+--                     most prominent once the spins run out. The odds are on the same page, above the buttons, before anyone
+--                     buys (a paid spin is a paid random item); where those are restricted the buttons say so instead.
 -- What was won shows when the wheel stops (SpinEvent "Won"), with a sound by its size.
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -17,6 +21,7 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local SpinRules = require(ReplicatedStorage:WaitForChild("SpinRules"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
+local HudMetrics = require(UI:WaitForChild("HudMetrics"))
 local Toast = require(UI:WaitForChild("Toast"))
 local UiFx = require(UI:WaitForChild("UiFx"))
 local UiKit = require(UI:WaitForChild("UiKit"))
@@ -31,6 +36,7 @@ local SETTLE = 0.6       -- seconds the overshoot settles back (SpinService's SE
 local OVERSHOOT = 3      -- degrees past the landing, before settling back
 local NEAR = 30          -- studs from the wheel's prompt the HUD button opens the window (and the window stays open)
 local ANIMATE_RANGE = 450 -- studs from the camera the wheel's turning is drawn every frame
+local ROBUX = utf8.char(0xE002) -- Roblox's Robux sign, in its own fonts (as in the Shop)
 
 local message = Toast.new("SpinMessage", C.Highlight, 5)
 
@@ -331,7 +337,11 @@ local function showWay()
     end
     markerUntil = os.clock() + 90
     marker.world = wheel.axle.Position + Vector3.new(0, 9, 0)
-    message:show("The Spin Wheel is on the east side of the hub, past the Ring Road. Follow the arrow.", "Info")
+    if spinsLeft() <= 0 then
+        message:show("Out of spins: buy more at the wheel. Follow the arrow.", "Info")
+    else
+        message:show("The Spin Wheel is on the east side of the hub, past the Ring Road. Follow the arrow.", "Info")
+    end
 end
 
 task.spawn(function()
@@ -354,11 +364,22 @@ local INFO_H = 42
 local GRID_Y = INFO_H + 8
 local GRID_H = TILE_H * 2 + TILE_GAP
 local SPIN_Y = GRID_Y + GRID_H + UiTheme.Space.M
-local BODY = SPIN_Y + UiTheme.Height.ButtonLarge
+local HINT_Y = SPIN_Y + UiTheme.Height.ButtonLarge + UiTheme.Space.S
+local HINT_H = 16
+local BUY_Y = HINT_Y + HINT_H + UiTheme.Space.XS
+local BUY_H = 48 -- (a thumb's 44 and more)
+local BODY = BUY_Y + BUY_H
 local WIDTH = 360
+local FRAME_EXTRA = UiTheme.Height.TitleBar + UiTheme.Space.M + UiTheme.Pad.Window -- a window's title band and padding
+local FULL_HEIGHT = BODY + FRAME_EXTRA
+-- A short screen (a phone on its side) can't fit the window's height: it goes wide instead, the prizes on the left and SPIN with
+-- the Robux buttons on the right, so the buttons are never cut off.
+local WIDE_WIDTH = 690
+local WIDE_LEFT = 0.5 -- the prizes' share of the width
+local WIDE_HEIGHT = GRID_Y + GRID_H + FRAME_EXTRA
 local window = Hud.window({
     Name = "SpinWindow", Title = "SPIN THE WHEEL",
-    Size = Vector2.new(WIDTH, BODY + UiTheme.Height.TitleBar + UiTheme.Space.M + UiTheme.Pad.Window),
+    Size = Vector2.new(WIDTH, FULL_HEIGHT),
     AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -UiTheme.Margin, 0.5, 0), Side = true,
 })
 local body = window.Body
@@ -396,20 +417,171 @@ end
 local spinButton = UiKit.button({ Name = "Spin", Tone = "Go", TextSize = UiTheme.Text.ButtonLarge, Text = "SPIN!",
     Position = UDim2.fromOffset(0, SPIN_Y), Size = UDim2.new(1, 0, 0, UiTheme.Height.ButtonLarge), Parent = body })
 
+-- ---------- more spins for Robux ----------
+local PRODUCTS = config.SpinProducts
+local livePrices = {} -- [ProductId] = its price on Roblox, once asked
+local asking = {} -- [ProductId] = true while Roblox is being asked
+local hint = UiKit.label({ Name = "BuyHint", Font = "Strong", TextSize = 12, TextColor3 = C.Muted, Position = UDim2.fromOffset(0, HINT_Y),
+    Size = UDim2.new(1, 0, 0, HINT_H), TextXAlignment = Enum.TextXAlignment.Center, Parent = body })
+local buys = {}
+for i, product in PRODUCTS do -- (placed by renderBuys)
+    local buy = UiKit.button({ Name = "Buy" .. product.Spins, Tone = "Buy", Text = "", Size = UDim2.new(0.5, 0, 0, BUY_H), Parent = body })
+    -- the words on their own label, so they carry an outline (the button's own stroke is its border)
+    local words = UiKit.label({ Name = "Price", Font = "Heavy", Text = "", TextSize = 18, TextColor3 = Color3.new(1, 1, 1),
+        TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = buy.ZIndex + 1, Parent = buy })
+    UiKit.outline(words, 1.5)
+    buys[i] = { product = product, button = buy, words = words }
+end
+
+-- the layout, tall or wide (by the window's height after Hud fits it to the screen)
+local buyArea = { x = 0, width = 1, inset = 0, y = BUY_Y } -- where the Robux buttons go: a share of the body's width, and a top
+local renderBuys -- (below)
+
+local function layout()
+    local frame = window.Frame
+    local view, scale = HudMetrics.viewport(), Hud.windowScale()
+    local wide = frame.Size.Y.Offset < FULL_HEIGHT - 1
+    if wide then
+        local across = (view.X - 24) / scale
+        local size = UDim2.fromOffset(math.min(WIDE_WIDTH, across), math.min(frame.Size.Y.Offset, WIDE_HEIGHT))
+        if frame.Size ~= size then
+            frame.Size = size
+        end
+    end
+    local left = if wide then WIDE_LEFT else 1
+    local gap = UiTheme.Space.M
+    local share = left / COLUMNS
+    for index, t in tiles do
+        local column, row = (index - 1) % COLUMNS, math.floor((index - 1) / COLUMNS)
+        t.tile.Position = UDim2.new(column * share, TILE_GAP / 2, 0, GRID_Y + row * (TILE_H + TILE_GAP))
+        t.tile.Size = UDim2.new(share, -TILE_GAP, 0, TILE_H)
+    end
+    leftLabel.Size = UDim2.new(left, 0, 0, 22)
+    resetLabel.Size = UDim2.new(left, 0, 0, 18)
+    if wide then
+        -- the right column ends level with the prizes' last row
+        local x, w = UDim.new(left, gap), UDim.new(1 - left, -gap)
+        local buyY = GRID_Y + GRID_H - BUY_H
+        local hintY = buyY - UiTheme.Space.XS - HINT_H
+        spinButton.Position = UDim2.new(x, UDim.new(0, hintY - UiTheme.Space.S - UiTheme.Height.ButtonLarge))
+        spinButton.Size = UDim2.new(w, UDim.new(0, UiTheme.Height.ButtonLarge))
+        hint.Position = UDim2.new(x, UDim.new(0, hintY))
+        hint.Size = UDim2.new(w, UDim.new(0, HINT_H))
+        buyArea = { x = left, width = 1 - left, inset = gap, y = buyY }
+    else
+        spinButton.Position = UDim2.fromOffset(0, SPIN_Y)
+        spinButton.Size = UDim2.new(1, 0, 0, UiTheme.Height.ButtonLarge)
+        hint.Position = UDim2.fromOffset(0, HINT_Y)
+        hint.Size = UDim2.new(1, 0, 0, HINT_H)
+        buyArea = { x = 0, width = 1, inset = 0, y = BUY_Y }
+    end
+    renderBuys(spinsLeft())
+end
+
+-- nil until the server has asked Roblox (SpinService); true where paid random items are restricted
+local function restriction()
+    return player:GetAttribute("RandomItemsRestricted")
+end
+
+local function boughtSpins()
+    return player:GetAttribute("SpinsBought") or 0
+end
+
+function renderBuys(left)
+    local restricted = restriction()
+    local out = left <= 0
+    hint.Text = if restricted == true then "Spins can't be bought here."
+        elseif out then "Out of spins? Buy more. They never run out."
+        else "Bought spins never run out."
+    hint.TextColor3 = if out and restricted ~= true then C.Highlight else C.Muted
+    for i, entry in buys do
+        local product = entry.product
+        local area = buyArea
+        if restricted == nil or restricted == true then
+            -- one wide note in place of both buttons
+            entry.button.Visible = i == 1
+            entry.button.Position = UDim2.new(area.x, area.inset, 0, area.y)
+            entry.button.Size = UDim2.new(area.width, -area.inset, 0, BUY_H)
+            entry.button:SetAttribute("Tone", "Quiet")
+            entry.words.Text = if restricted then "NOT AVAILABLE IN YOUR REGION" else "PLEASE WAIT..."
+            entry.words.TextSize = 15
+            entry.words.TextColor3 = C.Muted
+        else
+            -- n buttons share the area (less its inset on the left) with gaps between them
+            local n, gap = #buys, UiTheme.Space.S
+            local share, less = area.width / n, (area.inset + (n - 1) * gap) / n
+            entry.button.Visible = true
+            entry.button.Position = UDim2.new(area.x + share * (i - 1), area.inset + (i - 1) * (gap - less), 0, area.y)
+            entry.button.Size = UDim2.new(share, -less, 0, BUY_H)
+            entry.button:SetAttribute("Tone", "Buy")
+            entry.words.Text = "+" .. product.Spins .. (if product.Spins == 1 then " SPIN  " else " SPINS  ") .. ROBUX .. " "
+                .. tostring(livePrices[product.ProductId] or product.Price)
+            entry.words.TextSize = if out then 19 else 16 -- (bigger once the spins run out)
+            entry.words.TextColor3 = Color3.new(1, 1, 1)
+        end
+    end
+end
+
+-- each product's live price, once (a price changed on Roblox shows without a new release)
+local function fetchPrices()
+    for _, product in PRODUCTS do
+        if (product.ProductId or 0) > 0 and not livePrices[product.ProductId] and not asking[product.ProductId] then
+            asking[product.ProductId] = true
+            task.spawn(function()
+                local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, product.ProductId, Enum.InfoType.Product)
+                asking[product.ProductId] = nil -- (on a failure, asked again next time the window opens)
+                if ok and info and typeof(info.PriceInRobux) == "number" then
+                    livePrices[product.ProductId] = info.PriceInRobux
+                    renderBuys(spinsLeft())
+                end
+            end)
+        end
+    end
+end
+
+window.Frame:GetPropertyChangedSignal("Size"):Connect(layout)
+layout()
+
+for _, entry in buys do
+    entry.button.Activated:Connect(function()
+        local restricted = restriction()
+        if restricted == nil then
+            return
+        elseif restricted then
+            Sfx.play("Error")
+            message:show("Spins can't be bought where you live: Roblox has rules about paying for random prizes.", "Warning")
+            return
+        end
+        if boughtSpins() + entry.product.Spins > config.MaxBought then
+            Sfx.play("Error")
+            message:show("You're holding as many bought spins as you can. Use some first.", "Warning")
+            return
+        end
+        Sfx.play("Click")
+        MarketplaceService:PromptProductPurchase(player, entry.product.ProductId)
+    end)
+end
+
 local waiting = false -- a spin asked for, the server's answer not here yet
 local myTurnUntil = 0 -- os.clock() this player's own spin is still turning
 
 local function resetText()
     local seconds = SpinRules.secondsToReset(workspace:GetServerTimeNow())
     local hours, minutes = math.floor(seconds / 3600), math.floor(seconds % 3600 / 60)
-    return "New spins in " .. (if hours > 0 then hours .. "h " .. minutes .. "m" else minutes .. "m " .. math.floor(seconds % 60) .. "s")
+    return "New free spins in " .. (if hours > 0 then hours .. "h " .. minutes .. "m" else minutes .. "m " .. math.floor(seconds % 60) .. "s")
 end
 
 local function renderWindow()
     local left = spinsLeft()
-    local gold = string.format("#%02X%02X%02X", math.floor(C.Highlight.R * 255), math.floor(C.Highlight.G * 255), math.floor(C.Highlight.B * 255))
-    leftLabel.Text = "Spins left today: <font color=\"" .. gold .. "\">" .. left .. "</font>"
+    local function hex(color)
+        return string.format("#%02X%02X%02X", math.floor(color.R * 255), math.floor(color.G * 255), math.floor(color.B * 255))
+    end
+    local gold = hex(C.Highlight)
+    local bought = boughtSpins()
+    leftLabel.Text = "Spins left: <font color=\"" .. gold .. "\">" .. left .. "</font>"
+        .. (if bought > 0 then "  <font size=\"13\" color=\"" .. hex(C.Muted) .. "\">(" .. bought .. " bought)</font>" else "")
     resetLabel.Text = resetText()
+    renderBuys(left)
     local name = rankName()
     for index, t in tiles do
         local info = SpinRules.describe(index, name, player)
@@ -429,7 +601,7 @@ local function renderWindow()
     spinButton:SetAttribute("Tone", if ready then "Go" else "Quiet")
     spinButton.Text = if waiting or os.clock() < myTurnUntil then "SPINNING..."
         elseif turning then "THE WHEEL IS TURNING..."
-        elseif left <= 0 then "NO SPINS LEFT TODAY"
+        elseif left <= 0 then "NO SPINS LEFT"
         else "SPIN!"
 end
 
@@ -449,6 +621,7 @@ spinButton.Activated:Connect(function()
 end)
 
 local function openWindow()
+    fetchPrices()
     renderWindow()
     window.open()
 end
@@ -470,6 +643,11 @@ task.spawn(function()
         task.wait(0.5)
         if window.isOpen() then
             renderWindow()
+            if spinsLeft() <= 0 and restriction() == false and os.clock() % 2.4 < 0.5 then -- (out of spins: light crosses the buttons)
+                for _, entry in buys do
+                    UiFx.sweep(entry.button, C.Highlight, 0.7)
+                end
+            end
             if distanceToWheel() > NEAR and os.clock() >= myTurnUntil then
                 window.close()
             end
@@ -518,6 +696,13 @@ RemoteEvents.SpinEvent.OnClientEvent:Connect(function(kind, data)
             else "You won " .. data.Text .. (if string.find(data.Text, "[!.]$") then "" else "!")
         message:show(text, "Reward")
         renderWindow()
+    elseif kind == "Bought" and typeof(data) == "table" and typeof(data.Spins) == "number" then
+        Sfx.play("PremiumPurchase")
+        message:show("+" .. data.Spins .. (if data.Spins == 1 then " spin!" else " spins!") .. " They're yours until you use them. Thank you for supporting the game!", "Reward")
+        if window.isOpen() then
+            UiFx.flash(spinButton, C.Highlight)
+        end
+        renderWindow()
     elseif kind == "Jackpot" and typeof(data) == "string" and data ~= player.DisplayName then
         message:show(data .. " won an Exclusive Egg on the Spin Wheel!", "Info")
     end
@@ -530,7 +715,12 @@ local function relabel()
         renderWindow()
     end
 end
-player:GetAttributeChangedSignal("RandomItemsRestricted"):Connect(relabel) -- (there the jackpot shows its stones)
+player:GetAttributeChangedSignal("RandomItemsRestricted"):Connect(relabel) -- (there the jackpot shows its stones, and no spins are sold)
+player:GetAttributeChangedSignal("SpinsBought"):Connect(function()
+    if window.isOpen() then
+        renderWindow()
+    end
+end)
 player:GetAttributeChangedSignal("Pass_VIP"):Connect(function() -- (VIP's +50% shows on the wheel's stones)
     labelWheel()
     if window.isOpen() then

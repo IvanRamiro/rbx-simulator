@@ -29,7 +29,7 @@ local Receipts = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild(
 local SpinLedger = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("SpinLedger"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 20
+local SCHEMA_VERSION = 21
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -95,7 +95,9 @@ end
 -- MIGRATIONS[17] below (a missing Worth is worked out from its level and size by PetRules.worth);
 -- version 19 added the beast pen (PenService): PenLevel, which starts at 1, and Pen, the pets in it in order, which starts empty.
 -- (A test build's Pens, six pens of one pet each, never released, is read into Pen in order by sanitizeProgress.)
--- version 20 added Spin (the Spin Wheel's day: SpinLedger), MIGRATIONS[19] below.
+-- version 20 added Spin (the Spin Wheel's day: SpinLedger), MIGRATIONS[19] below;
+-- version 21 added Spin.Bought (Spin Wheel spins bought with Robux, kept until used: SpinLedger), which starts with none (the bump
+-- stops older servers, which don't know it, from dropping paid spins).
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -402,13 +404,25 @@ end
 -- Whether a saved record holds a pet, egg or weapon this server's GameConfig doesn't know: it comes from newer content (a server
 -- not yet updated during a release's rollout). Sanitizing would drop it and the next save would make the loss permanent, so it is
 -- refused like a newer schema, whether or not the schema number was raised with the content (release audit, 2026-11-12).
-local function holdsUnknownContent(progress)
+-- A pet a migration renames (V1_PETS, V12_PETS) is checked under its new name in a save old enough to be renamed: it was refused,
+-- before its migration could run, so that save could never load again (old-save test, 2026-11-17).
+local function migratedPetId(petId, version)
+    if version <= 1 and V1_PETS[petId] then
+        petId = V1_PETS[petId]
+    end
+    if version <= 12 and V12_PETS[petId] then
+        petId = V12_PETS[petId]
+    end
+    return petId
+end
+
+local function holdsUnknownContent(progress, version)
     if typeof(progress) ~= "table" then
         return false
     end
     if typeof(progress.Pets) == "table" then
         for _, pet in progress.Pets do
-            if typeof(pet) == "table" and typeof(pet.PetId) == "string" and GameConfig.Pets[pet.PetId] == nil then
+            if typeof(pet) == "table" and typeof(pet.PetId) == "string" and GameConfig.Pets[migratedPetId(pet.PetId, version)] == nil then
                 return true
             end
         end
@@ -440,7 +454,7 @@ local function claimSession(stored, sessionId, takeOver)
     if typeof(stored.SchemaVersion) == "number" and stored.SchemaVersion > SCHEMA_VERSION then
         return "TooNew", nil
     end
-    if holdsUnknownContent(stored.Progress) then
+    if holdsUnknownContent(stored.Progress, if typeof(stored.SchemaVersion) == "number" then stored.SchemaVersion else SCHEMA_VERSION) then
         return "TooNew", nil
     end
 

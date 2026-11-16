@@ -1,6 +1,8 @@
 -- A player's Spin Wheel day (SpinService), saved in PlayerData as
---   Spin = { Day = <the UTC day>, Used = <spins taken that day>, Extra = <spins won that day>, Pending = <a spin still turning> }
--- A record of an earlier day means today's spins are all left (its extras are gone with it). Pending is the reward a spin
+--   Spin = { Day = <the UTC day>, Used = <free and won spins taken that day>, Extra = <spins won that day>,
+--            Bought = <spins bought with Robux, not yet used>, Pending = <a spin still turning> }
+-- A record of an earlier day means today's spins are all left (its extras are gone with it). Bought spins (ProductService,
+-- save schema 21) never run out: a spin takes today's free and won ones first (Used), and only then a bought one. Pending is the reward a spin
 -- rolled, saved the moment it is rolled and paid when the wheel stops: a player who leaves while it turns is paid on their
 -- next join, so leaving can't lose it, and nothing can pay it twice.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -43,6 +45,7 @@ function SpinLedger.sanitize(raw)
         Day = whole(raw.Day, 1e7),
         Used = whole(raw.Used, MAX_USED),
         Extra = whole(raw.Extra, config.MaxExtra),
+        Bought = whole(raw.Bought, config.MaxBought),
         Pending = sanitizePending(raw.Pending),
     }
 end
@@ -73,13 +76,54 @@ function SpinLedger.spinsLeft(player)
     return if data then SpinRules.spinsLeft(data) else 0
 end
 
+-- Takes one spin: today's free or won one if any is left, else a bought one. False when none is left.
+function SpinLedger.take(player)
+    local data = SpinLedger.today(player)
+    if not data then
+        return false
+    end
+    if SpinRules.freeLeft(data) > 0 then
+        data.Used += 1
+    elseif data.Bought > 0 then
+        data.Bought -= 1
+    else
+        return false
+    end
+    return true
+end
+
+-- Whether `count` more bought spins fit under GameConfig.SpinWheel.MaxBought.
+function SpinLedger.canAddBought(player, count)
+    local data = state[player]
+    return data ~= nil and data.Bought + count <= config.MaxBought
+end
+
+-- Adds bought spins (a negative count takes them back, never below none). Returns whether it was done.
+function SpinLedger.addBought(player, count)
+    local data = state[player]
+    if not data or (count > 0 and not SpinLedger.canAddBought(player, count)) then
+        return false
+    end
+    data.Bought = math.max(0, data.Bought + count)
+    SpinLedger.publish(player)
+    return true
+end
+
+-- The player's attributes: "SpinsLeft" (every spin they can take now) and "SpinsBought" (the bought ones among them).
+function SpinLedger.publish(player)
+    if state[player] then
+        player:SetAttribute("SpinsLeft", SpinLedger.spinsLeft(player))
+        player:SetAttribute("SpinsBought", state[player].Bought)
+    end
+end
+
 -- A copy for saving (nil until the player is set up).
 function SpinLedger.exportData(player)
     local data = state[player]
     if not data then
         return nil
     end
-    return { Day = data.Day, Used = data.Used, Extra = data.Extra, Pending = data.Pending and table.clone(data.Pending) }
+    return { Day = data.Day, Used = data.Used, Extra = data.Extra, Bought = data.Bought, Pending = data.Pending and table.clone(data.Pending) }
 end
 
 function SpinLedger.removePlayer(player)

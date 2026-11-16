@@ -6,8 +6,12 @@
 -- SpinEvent, client to server: "Spin".
 -- Server to client: "Open" (the wheel's prompt was used), "Refused" text, "Spun" { Segment, SpinsLeft } (the spinner),
 --   "Turn" { From, To, Start, Seconds, Segment, UserId } (everyone: the world wheel's turn), "Won" { Segment, Kind, Text, Late }
---   (the spinner, once paid), "Jackpot" name (everyone).
--- Attributes: the player's "SpinsLeft"; the wheel model's "Rest" (degrees it rests at) and "TurningUntil" (server time).
+--   (the spinner, once paid), "Jackpot" name (everyone), "Bought" { Spins } (the buyer, from ProductService, once a purchase of
+--   spins is saved).
+-- Spins bought with Robux (GameConfig.SpinWheel.SpinProducts) are paid by ProductService into SpinLedger; a spin takes them only
+-- after the day's free and won ones (SpinLedger.take).
+-- Attributes: the player's "SpinsLeft" (bought ones included) and "SpinsBought" (SpinLedger.publish); the wheel model's "Rest"
+-- (degrees it rests at) and "TurningUntil" (server time).
 local Players = game:GetService("Players")
 local PolicyService = game:GetService("PolicyService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -38,9 +42,7 @@ local wheel = nil -- the wheel's model, once it's found
 local turningUntil = 0 -- os.clock() the wheel is free again
 
 local function publish(player)
-    if SpinLedger.isSetUp(player) then
-        player:SetAttribute("SpinsLeft", SpinLedger.spinsLeft(player))
-    end
+    SpinLedger.publish(player)
 end
 
 local function refuse(player, text)
@@ -136,7 +138,8 @@ function actions.Spin(player)
         return
     end
     if SpinRules.spinsLeft(data) <= 0 then
-        refuse(player, "No spins left today. New spins in " .. untilReset() .. ".")
+        refuse(player, "No spins left. New free spins in " .. untilReset()
+            .. (if SpinRules.restricted(player) then "." else ", or buy more at the wheel."))
         return
     end
     if not nearWheel(player) then
@@ -150,7 +153,7 @@ function actions.Spin(player)
 
     local index = SpinRules.roll(random)
     local info = SpinRules.describe(index, Ranks.getPlayerRankName(player), player)
-    data.Used += 1
+    SpinLedger.take(player) -- (a free or won spin first, then a bought one)
     data.Pending = { Segment = index, Day = data.Day, Kind = info.Kind, Stones = info.Stones, EggId = info.EggId }
     publish(player)
     PlayerData.saveSoon(player)
@@ -199,7 +202,7 @@ task.spawn(function()
 end)
 
 -- Whether paid random items are restricted where the player is (SpinRules.restricted). Asked before they can spin; if Roblox can't
--- answer after a few tries, the safe answer: restricted (the jackpot then pays stones).
+-- answer after a few tries, the safe answer: restricted (the jackpot then pays stones, and the wheel offers no spins for Robux).
 local function checkPolicy(player)
     for try = 1, 3 do
         local ok, info = pcall(PolicyService.GetPolicyInfoForPlayerAsync, PolicyService, player)

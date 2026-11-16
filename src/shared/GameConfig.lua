@@ -685,6 +685,16 @@ local GameConfig = {
     SpinWheel = {
         DailySpins = 3,
         MaxExtra = 20,        -- extra spins a day can hold (won ones)
+        -- Spins bought with Robux (the owner, 2026-11-16: "if player already used up all his/her daily spins, they can still
+        -- purchase spin using robux"; 1 for 5, 5 for 20). Developer products (ProductService pays them, once each). Bought spins
+        -- never run out at the daily reset; a spin uses the day's free ones first, then won extras, then bought ones. A paid
+        -- spin is a paid random item: where those are restricted (PolicyService) they aren't offered, and the wheel's odds are
+        -- shown beside the buttons before anyone buys.
+        MaxBought = 999,      -- bought spins a player can hold
+        SpinProducts = {
+            { Spins = 1, ProductId = 3732104097, Price = 5 },
+            { Spins = 5, ProductId = 3732104157, Price = 20 },
+        },
         Seconds = 6,          -- how long the wheel turns: the reward is paid when it stops
         Reach = 22,           -- studs from the wheel's prompt a spin may be asked from
         Segments = {

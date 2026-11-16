@@ -1085,7 +1085,8 @@ local function dressPiece(template, data, owner, at, parent, weldTo)
         piece.Color = colour
     end
     piece.Transparency = if material == "Glass" then 0.35 else 0
-    piece.CastShadow = material ~= "Glow" and material ~= "Glass"
+    -- (a face's eyes, lashes, mouth and blush lie on the head: they cast no shadow anyone could see; performance pass, 2026-11-17)
+    piece.CastShadow = material ~= "Glow" and material ~= "Glass" and material ~= "Face"
     piece.CanTouch = false
     if weldTo then
         piece.Anchored = false
@@ -1124,6 +1125,11 @@ function WorldBuilder.buildNpc(npc, rootCFrame, data)
             local bodyPart = rig:FindFirstChild(data.Pieces[base] or "")
             assert(bodyPart, template.Name .. " rides no body part")
             dressPiece(template, data, npc, rootCFrame, rig, bodyPart)
+        end
+    end
+    for _, part in rig:GetDescendants() do
+        if part:IsA("BasePart") then
+            part.CanTouch = false -- (nothing listens for an NPC being touched: only lava does, WorldService)
         end
     end
     local humanoid = rig:FindFirstChildOfClass("Humanoid")
@@ -1408,6 +1414,7 @@ local function bridgePart(name, size, cframe, parent, color, material)
     p.TopSurface, p.BottomSurface = Enum.SurfaceType.Smooth, Enum.SurfaceType.Smooth
     p.Color = color
     p.Material = material or Enum.Material.SmoothPlastic
+    p.CanTouch = false -- (nothing listens for a bridge being touched: the server finds players on it by querying its zones)
     p.Parent = parent
     return p
 end

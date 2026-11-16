@@ -2,7 +2,9 @@
 --   SpinRules.Segments              the segments, clockwise from the top (GameConfig.SpinWheel.Segments)
 --   SpinRules.today()               the day a spin counts for: the daily reward's UTC day (RewardRules.today)
 --   SpinRules.secondsToReset(now)   seconds until the next day's spins (now: the server's time, os.time() or GetServerTimeNow)
---   SpinRules.spinsLeft(record)     what a player's day record { Day, Used, Extra } leaves today
+--   SpinRules.spinsLeft(record)     what a player's record { Day, Used, Extra, Bought } leaves: today's free and won spins
+--                                    left, plus the bought ones (which never run out)
+--   SpinRules.freeLeft(record)      today's free and won spins left alone (a spin takes these before a bought one)
 --   SpinRules.roll(random)          a segment's index, by weight (random: a Random; the server's own)
 --   SpinRules.stones(index, rankName, player)  what a Stones segment pays a player of this rank (with their passes' daily-stones
 --                                    bonus: VIP's +50%, the owner 2026-11-17; player nil: without it)
@@ -44,12 +46,16 @@ function SpinRules.secondsToReset(now)
     return math.max(0, (math.floor(now / 86400) + 1) * 86400 - now)
 end
 
--- A day record from an earlier day leaves today's full spins (its extras are gone with it).
-function SpinRules.spinsLeft(record)
+-- A day record from an earlier day leaves today's full spins (its extras are gone with it); bought spins stay.
+function SpinRules.freeLeft(record)
     if not record or record.Day ~= SpinRules.today() then
         return config.DailySpins
     end
     return math.max(0, config.DailySpins + (record.Extra or 0) - (record.Used or 0))
+end
+
+function SpinRules.spinsLeft(record)
+    return SpinRules.freeLeft(record) + (if record then record.Bought or 0 else 0)
 end
 
 function SpinRules.roll(random)
