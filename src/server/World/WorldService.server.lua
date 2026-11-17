@@ -3,20 +3,23 @@
 -- SpawnLocation); a player without a pen (a seventh, or before their pen is given) spawns at Yggdrasil's "IslandSpawn" on the
 -- Arrival Plaza. Every other island has a "Checkpoint" part; a player who falls far below the island they last stood on returns
 -- to its checkpoint (on the hub: to their own pad). A player below a bridge's RankId
--- (FloatingIslands.Bridges) who is past its Qi barrier, or on the island it leads to, is put back in
--- front of the barrier. (Yggdrasil's named spawn slots went with the hub's rebuild of 2026-11-12;
+-- (FloatingIslands.Bridges) who is past its Qi barrier, or on the island it leads to (at any height: a flyer too), is put back
+-- in front of the barrier and told why (the "LockedOutNotice" attribute; BridgeBarriers.client shows it). The barrier itself
+-- (BridgeBarriers.client) only stops feet: this is the rule. (Yggdrasil's named spawn slots went with the hub's rebuild of 2026-11-12;
 -- their code was removed 2026-11-13.) On the stepping stones up to the Blossom Sanctuary (its Approach), a fall returns the
 -- player to the last platform they stood on (or the hub's end of the climb, or the island's landing), not to their pen.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local WorldConfig = require(script.Parent:WaitForChild("WorldConfig"))
 local MovementGuard = require(script.Parent.Parent:WaitForChild("Security"):WaitForChild("MovementGuard"))
 
 local islandsFolder = workspace:WaitForChild(WorldConfig.FolderName)
 local lastIsland = {}
+local lockedOutCount = {} -- [player] = how many times they were put back at a gate (sayLockedOut)
 
 -- ---------- spawning ----------
 local startIsland = islandsFolder:WaitForChild(WorldConfig.StartIsland)
@@ -231,38 +234,65 @@ Players.PlayerRemoving:Connect(function(player)
     lastIsland[player] = nil
     lastBurn[player] = nil
     spawnedAt[player] = nil
+    lockedOutCount[player] = nil
 end)
 for _, player in Players:GetPlayers() do
     setupPlayer(player)
 end
 
+-- Tells a player put back at a gate why (BridgeBarriers.client shows it): "<count>|<words>", so the same gate twice still
+-- changes the attribute.
+local function sayLockedOut(player, entry)
+    local rank = GameConfig.Ranks[entry.Index]
+    local place = entry.Model:GetAttribute("Destination") or entry.Island
+    lockedOutCount[player] = (lockedOutCount[player] or 0) + 1
+    player:SetAttribute("LockedOutNotice", string.format("%d|Locked. Reach %s to go to %s.", lockedOutCount[player], rank.Name, tostring(place)))
+end
+
+local function checkPlayer(player)
+    local character = player.Character
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not (rootPart and humanoid and humanoid.Health > 0) then
+        return
+    end
+    local blocked = trespass(player, rootPart.Position)
+    if blocked and blocked.ReturnTo then
+        local barrier = blocked.Model:FindFirstChild("Gate") and blocked.Model.Gate:FindFirstChild("QiBarrier")
+        local facing = if barrier then (barrier.Position - blocked.ReturnTo) * Vector3.new(1, 0, 1) else Vector3.zero
+        rootPart.AssemblyLinearVelocity = Vector3.zero
+        MovementGuard.reset(player, blocked.ReturnTo)
+        character:PivotTo(if facing.Magnitude > 0.1 then CFrame.lookAt(blocked.ReturnTo, blocked.ReturnTo - facing) else CFrame.new(blocked.ReturnTo))
+        setIsland(player, WorldConfig.StartIsland)
+        sayLockedOut(player, blocked)
+        return
+    end
+    if routeFall(player, character, rootPart, humanoid) then
+        return
+    end
+    if humanoid.FloorMaterial ~= Enum.Material.Air then
+        setIsland(player, islandAt(rootPart.Position) or lastIsland[player] or WorldConfig.StartIsland)
+    end
+    local islandName = lastIsland[player] or WorldConfig.StartIsland
+    local island = WorldConfig.Islands[islandName]
+    local fellFar = rootPart.Position.Y < island.Centre.Y - WorldConfig.Safety.FallDepth
+    if fellFar and player:GetAttribute("IsFlying") ~= true then
+        returnToCheckpoint(player, character, islandName)
+    end
+end
+
+-- Every player is checked on their own: one player's error (a character half-built, a player leaving mid-check) is logged
+-- and skipped, and never stops the gates and the fall safety for the rest of the server's life, as an error in this loop
+-- once would have.
+local lastWarned = 0
 while true do
     task.wait(WorldConfig.Safety.CheckInterval)
 
     for _, player in Players:GetPlayers() do
-        local character = player.Character
-        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        if rootPart and humanoid and humanoid.Health > 0 then
-            local blocked = trespass(player, rootPart.Position)
-            if blocked and blocked.ReturnTo then
-                rootPart.AssemblyLinearVelocity = Vector3.zero
-                MovementGuard.reset(player, blocked.ReturnTo)
-                character:PivotTo(CFrame.lookAt(blocked.ReturnTo, blocked.ReturnTo - (blocked.Model.Gate.QiBarrier.Position - blocked.ReturnTo) * Vector3.new(1, 0, 1)))
-                setIsland(player, WorldConfig.StartIsland)
-                continue
-            end
-            if routeFall(player, character, rootPart, humanoid) then
-                continue
-            end
-            if humanoid.FloorMaterial ~= Enum.Material.Air then
-                setIsland(player, islandAt(rootPart.Position) or lastIsland[player])
-            end
-            local island = WorldConfig.Islands[lastIsland[player]]
-            local fellFar = rootPart.Position.Y < island.Centre.Y - WorldConfig.Safety.FallDepth
-            if fellFar and player:GetAttribute("IsFlying") ~= true then
-                returnToCheckpoint(player, character, lastIsland[player])
-            end
+        local ok, err = pcall(checkPlayer, player)
+        if not ok and os.clock() - lastWarned > 30 then
+            lastWarned = os.clock()
+            warn("WorldService: check failed for " .. player.Name .. ": " .. tostring(err))
         end
     end
 end

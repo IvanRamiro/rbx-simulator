@@ -4,7 +4,10 @@
 -- match the color of entrance with their realm level"; the part was built with its theme's Glow).
 -- From then on it lets them through (collision off for this player only) and the wall is gone: one
 -- player can see a sealed gate where another walks straight through. WorldService still returns
--- anyone below the rank who gets onto the bridge some other way.
+-- anyone below the rank who gets onto the bridge or its island some other way (round the gate, over it, in flight), and
+-- says why through the player's "LockedOutNotice" attribute, shown here.
+-- With streaming a barrier can leave and come back: each arrival is set up again, reusing its wall and words if they are
+-- still on it, so it is never drawn twice nor left without them.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiTheme"))
+local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
 
 local player = Players.LocalPlayer
 local WALL_TRANSPARENCY = 0.68
@@ -102,7 +106,14 @@ local function add(part)
     if not (rank and part:IsA("BasePart")) or barriers[part] then
         return
     end
-    local entry = { Index = Ranks.getIndex(rank.Name), Wall = buildWall(part), Label = buildLabel(part, rank), Light = part:FindFirstChildOfClass("PointLight") }
+    local wall = part:FindFirstChild("QiWall")
+    local label = part:FindFirstChild("QiWallLabel")
+    local entry = {
+        Index = Ranks.getIndex(rank.Name),
+        Wall = if wall and wall:IsA("Beam") then wall else buildWall(part),
+        Label = if label and label:IsA("BillboardGui") then label else buildLabel(part, rank),
+        Light = part:FindFirstChildOfClass("PointLight"),
+    }
     barriers[part] = entry
     refresh(part, entry)
 end
@@ -114,6 +125,16 @@ end)
 for _, part in CollectionService:GetTagged(GameConfig.BridgeBarrierTag) do
     add(part)
 end
+
+-- put back at a gate by the server (WorldService): say why
+local lockedOutMessage = Toast.new("LockedOut", Color3.new(1, 1, 1), 4)
+player:GetAttributeChangedSignal("LockedOutNotice"):Connect(function()
+    local notice = player:GetAttribute("LockedOutNotice")
+    local words = typeof(notice) == "string" and string.match(notice, "^%d+|(.+)$")
+    if words then
+        lockedOutMessage:show(words, "Warning")
+    end
+end)
 
 local leaderstats = player:WaitForChild("leaderstats")
 local rank = leaderstats:WaitForChild("Rank")
