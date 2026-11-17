@@ -109,7 +109,8 @@ local function show(player)
     local pets = PetInventory.penPets(player) or {}
     local entries = {}
     for _, pet in pets do
-        table.insert(entries, pet.PetId .. ":" .. pet.Size .. ":" .. pet.Level)
+        -- "PetId:Size:Level", and ":Mutation" when it has one (PenController)
+        table.insert(entries, pet.PetId .. ":" .. pet.Size .. ":" .. pet.Level .. (if pet.Mutation then ":" .. pet.Mutation else ""))
     end
     pasture.config:SetAttribute("Level", PetInventory.penLevel(player) or 1)
     pasture.config:SetAttribute("Pets", table.concat(entries, ","))

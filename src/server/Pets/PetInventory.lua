@@ -1,4 +1,4 @@
--- Each player's pets on the server: their owned pets (InstanceId, PetId, Size, Level, Locked), which are equipped and which
+-- Each player's pets on the server: their owned pets (InstanceId, PetId, Size, Mutation, Level, Locked), which are equipped and which
 -- stand in their pen, and the Qi bonus they give. Loaded from and exported to PlayerData; published to the client as attributes
 -- and PetInventoryUpdatedEvent.
 local HttpService = game:GetService("HttpService")
@@ -31,22 +31,31 @@ local function findOwnedPet(data, instanceId)
     return nil
 end
 
+-- Whether a pet of this rarity, size and mutation arrives locked (so a quick tap can never sell or fuse it away): the rarities in
+-- GameConfig.PetFusion.AutoLock, any Colossal, and the grand mutations (Rainbow and up: PetRules.Mutations' Grand).
+function PetInventory.hatchesLocked(rarity, size, mutation)
+    return GameConfig.PetFusion.AutoLock[rarity] == true or PetRules.size(size) == "Colossal"
+        or PetRules.mutationInfo(mutation).Grand == true
+end
+
 local function penIndex(data, instanceId)
     return table.find(data.pen, instanceId)
 end
 
 -- `paid`: it came from Robux (a paid egg: EggInventory), so it is a paid item wherever it goes (Paid, save schema 24; the Auction
 -- House keeps it from players whose region doesn't allow trading paid items). It stays paid through fusing, the pen and auctions.
-local function addPet(data, petId, size, paid)
+-- `mutation`: its hatch mutation (PetRules.Mutations; nil: none), saved as Mutation (save schema 26).
+local function addPet(data, petId, size, paid, mutation)
     local definition = GameConfig.Pets[petId]
     local instanceId = HttpService:GenerateGUID(false)
     table.insert(data.ownedPets, {
         InstanceId = instanceId,
         PetId = petId,
         Level = 1,
-        Locked = GameConfig.PetFusion.AutoLock[definition.Rarity] == true,
+        Locked = PetInventory.hatchesLocked(definition.Rarity, size, mutation),
         Size = PetRules.size(size),
-        Worth = PetRules.sizeInfo(size).Value,
+        Mutation = PetRules.mutation(mutation),
+        Worth = PetRules.copyValue(size, mutation),
         Paid = if paid == true then true else nil,
     })
     return instanceId
@@ -74,6 +83,7 @@ function PetInventory.setupPlayer(player, savedProgress)
                 Level = PetRules.level(pet),
                 Locked = pet.Locked == true,
                 Size = PetRules.size(pet),
+                Mutation = PetRules.mutation(pet),
                 Worth = PetRules.worth(pet),
                 Paid = if pet.Paid == true then true else nil,
             })
@@ -119,7 +129,7 @@ function PetInventory.setupPlayer(player, savedProgress)
 
     -- whatever they hold is in the book, including every pet from before the Codex existed
     for _, pet in data.ownedPets do
-        Codex.discover(player, pet.PetId)
+        Codex.discover(player, pet.PetId, pet.Mutation)
     end
 end
 
@@ -153,15 +163,15 @@ function PetInventory.isFull(player)
     return data == nil or #data.ownedPets >= GameConfig.MaxOwnedPets
 end
 
--- Gives a new pet (size: its hatch size; nil, a bought or given pet: Normal; paid: it came from Robux). True and its InstanceId, or
--- false when full.
-function PetInventory.grantPet(player, petId, size, paid)
+-- Gives a new pet (size: its hatch size; nil, a bought or given pet: Normal; paid: it came from Robux; mutation: its hatch mutation,
+-- nil for none). True and its InstanceId, or false when full.
+function PetInventory.grantPet(player, petId, size, paid, mutation)
     if PetInventory.isFull(player) or not GameConfig.Pets[petId] then
         return false
     end
 
-    local instanceId = addPet(playerData[player], petId, size, paid)
-    Codex.discover(player, petId)
+    local instanceId = addPet(playerData[player], petId, size, paid, mutation)
+    Codex.discover(player, petId, PetRules.mutation(mutation))
     return true, instanceId
 end
 
@@ -250,7 +260,7 @@ function PetInventory.raisePen(player, fromLevel)
     return true
 end
 
--- The pen's beasts, in order, as { PetId, Size, Level }.
+-- The pen's beasts, in order, as { PetId, Size, Level, Mutation }.
 function PetInventory.penPets(player)
     local data = playerData[player]
     if not data then
@@ -260,7 +270,7 @@ function PetInventory.penPets(player)
     for _, instanceId in data.pen do
         local pet = findOwnedPet(data, instanceId)
         if pet then
-            table.insert(shown, { PetId = pet.PetId, Size = PetRules.size(pet), Level = PetRules.level(pet) })
+            table.insert(shown, { PetId = pet.PetId, Size = PetRules.size(pet), Level = PetRules.level(pet), Mutation = PetRules.mutation(pet) })
         end
     end
     return shown
@@ -291,8 +301,9 @@ function PetInventory.get(player, instanceId)
     return nil
 end
 
--- Fuses a spare copy into a pet: returns ok, a message to show, and on success { InstanceId, PetId, Level, Size, Grew }.
--- The fused pet keeps the larger size of the two (a Giant copy is never lost by fusing it), and nothing else about it changes.
+-- Fuses a spare copy into a pet: returns ok, a message to show, and on success { InstanceId, PetId, Level, Size, Mutation, Grew,
+-- Mutated }. The fused pet keeps the larger size of the two (a Giant copy is never lost by fusing it) and the rarer mutation (a
+-- Void copy is never lost either), and nothing else about it changes.
 -- The server picks the copy (PetRules.findMaterial): never a locked or equipped one, and a Secret one only when confirmed.
 function PetInventory.fuse(player, targetId, confirmSecret)
     local data = playerData[player]
@@ -327,9 +338,21 @@ function PetInventory.fuse(player, targetId, confirmSecret)
     local size = PetRules.bigger(record.Size, material.Size)
     local grew = size ~= PetRules.size(record.Size)
     record.Size = size
-    local qi = PetRules.qiBonus(record.PetId, record.Level, record.Size)
-    return true, definition.DisplayName .. " reached Level " .. record.Level .. (if grew then " and became " .. size else "") .. "! +" .. qi .. "% Qi",
-        { InstanceId = targetId, PetId = record.PetId, Level = record.Level, Size = record.Size, Grew = grew }
+    local mutation = PetRules.better(record.Mutation, material.Mutation)
+    local mutated = mutation ~= PetRules.mutation(record.Mutation)
+    record.Mutation = mutation
+    local qi = PetRules.qiBonus(record.PetId, record.Level, record.Size, record.Mutation)
+    local became = {}
+    if grew then
+        table.insert(became, size)
+    end
+    if mutated then
+        table.insert(became, mutation)
+    end
+    return true, definition.DisplayName .. " reached Level " .. record.Level .. (if #became > 0 then " and became " .. table.concat(became, " ") else "")
+        .. "! +" .. qi .. "% Qi",
+        { InstanceId = targetId, PetId = record.PetId, Level = record.Level, Size = record.Size, Mutation = record.Mutation, Grew = grew,
+            Mutated = mutated }
 end
 
 -- Takes a pet out of the inventory (unequipping it and emptying its pen first); its PetId, or nil when it isn't theirs.
@@ -352,7 +375,8 @@ function PetInventory.take(player, instanceId)
     return nil
 end
 
--- The Auction House (server/Auction): takes a free pet out whole, its full record ({ InstanceId, PetId, Level, Locked, Size, Worth }),
+-- The Auction House (server/Auction): takes a free pet out whole, its full record ({ InstanceId, PetId, Level, Locked, Size, Mutation,
+-- Worth, Paid }),
 -- or nil when it isn't theirs or isn't free (locked, equipped or in the pen: the player frees it first).
 function PetInventory.takeRecord(player, instanceId)
     local data = playerData[player]
@@ -365,18 +389,24 @@ function PetInventory.takeRecord(player, instanceId)
                 return nil
             end
             table.remove(data.ownedPets, index)
-            return { InstanceId = pet.InstanceId, PetId = pet.PetId, Level = pet.Level, Locked = false, Size = pet.Size, Worth = pet.Worth,
-                Paid = pet.Paid }
+            return { InstanceId = pet.InstanceId, PetId = pet.PetId, Level = pet.Level, Locked = false, Size = pet.Size,
+                Mutation = pet.Mutation, Worth = pet.Worth, Paid = pet.Paid }
         end
     end
     return nil
 end
 
--- Puts a pet record back or gives one won at the Auction House: its level, size and worth kept (a new InstanceId if the player
--- somehow holds that one already). A rarity that hatches locked arrives locked. True, or false when the inventory is full.
+-- Puts a pet record back or gives one won at the Auction House: its level, size, mutation and worth kept (a new InstanceId if the
+-- player somehow holds that one already). A rarity that hatches locked arrives locked. True, or false when the inventory is full,
+-- or when the record holds a size or mutation this server doesn't know (newer content, from a newer server during a release's
+-- rollout): it waits, in the mailbox, for a server that knows it, rather than arriving stripped.
 function PetInventory.restore(player, record)
     local data = playerData[player]
     if not data or typeof(record) ~= "table" or not GameConfig.Pets[record.PetId] or #data.ownedPets >= GameConfig.MaxOwnedPets then
+        return false
+    end
+    if (typeof(record.Size) == "string" and not PetRules.Sizes[record.Size])
+        or (typeof(record.Mutation) == "string" and not PetRules.Mutations[record.Mutation]) then
         return false
     end
     local instanceId = record.InstanceId
@@ -385,10 +415,11 @@ function PetInventory.restore(player, record)
     end
     local rarity = GameConfig.Pets[record.PetId].Rarity
     local pet = { InstanceId = instanceId, PetId = record.PetId, Level = PetRules.level(record), Size = PetRules.size(record),
-        Locked = GameConfig.PetFusion.AutoLock[rarity] == true, Paid = if record.Paid == true then true else nil }
-    pet.Worth = PetRules.worth({ Level = pet.Level, Size = pet.Size, Worth = record.Worth })
+        Mutation = PetRules.mutation(record), Locked = PetInventory.hatchesLocked(rarity, record.Size, record.Mutation),
+        Paid = if record.Paid == true then true else nil }
+    pet.Worth = PetRules.worth({ Level = pet.Level, Size = pet.Size, Mutation = pet.Mutation, Worth = record.Worth })
     table.insert(data.ownedPets, pet)
-    Codex.discover(player, record.PetId)
+    Codex.discover(player, record.PetId, pet.Mutation)
     return true
 end
 
@@ -402,7 +433,7 @@ function PetInventory.getQiBonusPercent(player)
     for _, instanceId in data.equipped do
         local pet = findOwnedPet(data, instanceId)
         if pet then
-            totalPercent += PetRules.qiBonus(pet.PetId, pet.Level, pet.Size)
+            totalPercent += PetRules.qiBonus(pet.PetId, pet.Level, pet.Size, pet.Mutation)
         end
     end
 
@@ -417,8 +448,8 @@ function PetInventory.exportData(player)
 
     local pets = {}
     for _, pet in data.ownedPets do
-        table.insert(pets, { InstanceId = pet.InstanceId, PetId = pet.PetId, Level = pet.Level, Locked = pet.Locked, Size = pet.Size, Worth = pet.Worth,
-            Paid = pet.Paid })
+        table.insert(pets, { InstanceId = pet.InstanceId, PetId = pet.PetId, Level = pet.Level, Locked = pet.Locked, Size = pet.Size,
+            Mutation = pet.Mutation, Worth = pet.Worth, Paid = pet.Paid })
     end
 
     return {
@@ -444,6 +475,7 @@ function PetInventory.getSnapshot(player)
             Level = pet.Level,
             Locked = pet.Locked,
             Size = pet.Size,
+            Mutation = pet.Mutation,
             Worth = pet.Worth,
             InPen = penIndex(data, pet.InstanceId) ~= nil,
             Paid = pet.Paid == true,
@@ -479,8 +511,8 @@ for eggId, egg in GameConfig.Eggs do
 end
 
 -- Sends the player their inventory (PetInventoryUpdatedEvent) and sets the attributes every client
--- reads: "EquippedPetIds" (comma-separated PetIds) and "EquippedPets" (the same pets as "PetId:Size", in the same order: what
--- PetCompanionController builds, so every client shows each pet at its size).
+-- reads: "EquippedPetIds" (comma-separated PetIds) and "EquippedPets" (the same pets as "PetId:Size" or "PetId:Size:Mutation", in
+-- the same order: what PetCompanionController builds, so every client shows each pet at its size, with its mutation's look).
 function PetInventory.publish(player)
     local snapshot = PetInventory.getSnapshot(player)
     RemoteEvents.PetInventoryUpdatedEvent:FireClient(player, snapshot)
@@ -494,7 +526,8 @@ function PetInventory.publish(player)
             local pet = findOwnedPet(data, instanceId)
             if pet then
                 table.insert(equippedPetIds, pet.PetId)
-                table.insert(equippedPets, pet.PetId .. ":" .. PetRules.size(pet))
+                local mutation = PetRules.mutation(pet)
+                table.insert(equippedPets, pet.PetId .. ":" .. PetRules.size(pet) .. (if mutation then ":" .. mutation else ""))
             end
         end
     end

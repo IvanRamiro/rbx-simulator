@@ -355,7 +355,7 @@ local function mineReply(player, state)
     local selling, bidding = {}, {}
     for _, entry in ledger.Out do
         local shown = { K = entry.Kind, P = entry.Item.PetId, W = entry.Item.WeaponId, R = entry.Rarity, S = entry.Item.Size,
-            Lv = entry.Item.Level, E = entry.Item.Element, N = entry.Show and entry.Show.Name, Pr = entry.StartBid, B = 0 }
+            M = entry.Item.Mutation, Lv = entry.Item.Level, E = entry.Item.Element, N = entry.Show and entry.Show.Name, Pr = entry.StartBid, B = 0 }
         shown.Status = "Getting ready"
         table.insert(selling, shown)
     end
@@ -403,7 +403,7 @@ local function sellable(player, state)
             isCreatorPet = creatorPet(player, pet.PetId) })
         local low, high = AuctionRules.startRange("Pet", pet)
         table.insert(items, { Kind = "Pet", InstanceId = pet.InstanceId, PetId = pet.PetId, Level = PetRules.level(pet),
-            Size = PetRules.size(pet), Worth = PetRules.worth(pet), Why = why, Value = AuctionRules.value("Pet", pet), Low = low,
+            Size = PetRules.size(pet), Mutation = PetRules.mutation(pet), Worth = PetRules.worth(pet), Why = why, Value = AuctionRules.value("Pet", pet), Low = low,
             High = high, Rarity = AuctionRules.rarity("Pet", pet) })
     end
     for _, weapon in weapons and weapons.Weapons or {} do

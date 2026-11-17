@@ -18,6 +18,7 @@ local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Portraits = require(UI:WaitForChild("Portraits"))
 local PetPreload = require(script.Parent:WaitForChild("PetPreload"))
+local MutationLook = require(script.Parent:WaitForChild("MutationLook"))
 local HatchCeremony = require(script.Parent:WaitForChild("HatchCeremony"))
 local PenPicker = require(script.Parent:WaitForChild("PenPicker"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
@@ -115,19 +116,22 @@ local function createPetCard(pet, layoutOrder, equippedCount)
     local size = PetRules.size(pet)
     local sizeInfo = PetRules.sizeInfo(size)
     local big = sizeInfo.Order > PetRules.Sizes.Normal.Order
+    local mutation = PetRules.mutation(pet)
+    local mutationColor = mutation and PetRules.Mutations[mutation].Color
     local card = UiKit.boldCard(UiKit.card({ Name = "PetCard", LayoutOrder = layoutOrder, Parent = petList }), rarityColor)
-    if big then
-        -- a Large or Giant pet: a faint gold light rising from the card's foot, and its portrait's well ringed in gold
+    if big or mutation then
+        -- a Large, Giant or Colossal pet: a faint light of its size's colour rising from the card's foot, and its portrait's well ringed
+        -- in it; a mutated one's light and ring are its mutation's colour
         local glow = Instance.new("Frame")
         glow.Name = "SizeGlow"
         glow.BorderSizePixel = 0
-        glow.BackgroundColor3 = sizeInfo.Color
+        glow.BackgroundColor3 = mutationColor or sizeInfo.Color
         glow.Size = UDim2.fromScale(1, 1)
         glow.Parent = card -- (first in: the card's contents draw over it)
         UiKit.corner(glow, UiTheme.Radius.Card)
         local fade = Instance.new("UIGradient")
         fade.Rotation = -90
-        local strength = if size == "Giant" then 0.72 else 0.84 -- (transparency at the foot)
+        local strength = if sizeInfo.Order >= PetRules.Sizes.Giant.Order or mutation then 0.72 else 0.84 -- (transparency at the foot)
         fade.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, strength), NumberSequenceKeypoint.new(0.55, 0.97),
             NumberSequenceKeypoint.new(1, 1) })
         fade.Parent = glow
@@ -144,8 +148,10 @@ local function createPetCard(pet, layoutOrder, equippedCount)
     well.Size = UDim2.fromOffset(PORTRAIT, PORTRAIT)
     well.Parent = card
     UiKit.corner(well, UiTheme.Radius.Chip + 2)
-    UiKit.stroke(well, if big then sizeInfo.Color else rarityColor, if big then 0.15 else 0.55, if size == "Giant" then 2 else 1)
+    UiKit.stroke(well, mutationColor or (if big then sizeInfo.Color else rarityColor), if big or mutation then 0.15 else 0.55,
+        if sizeInfo.Order >= PetRules.Sizes.Giant.Order or mutation then 2 else 1)
     local picture = takePortrait(pet.PetId)
+    MutationLook.portrait(picture, mutation) -- (tinted, with its glints; a pooled portrait's old tint is cleared)
     picture.Name = "Portrait"
     picture:SetAttribute("PetId", pet.PetId)
     picture.Position = UDim2.fromOffset(PAD, PAD)
@@ -162,7 +168,7 @@ local function createPetCard(pet, layoutOrder, equippedCount)
     info.Parent = card
     UiKit.list(info, { Padding = UDim.new(0, 4) })
     UiKit.boldLabel({
-        Name = "PetName", TextSize = 15, Text = definition.DisplayName, TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y,
+        Name = "PetName", TextSize = 15, Text = PetRules.displayName(pet.PetId, mutation), TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y,
         Size = UDim2.new(1, 0, 0, 0), LayoutOrder = 1, Parent = info,
     })
     -- the lock: gold while it's on, faint while it's off
@@ -187,29 +193,49 @@ local function createPetCard(pet, layoutOrder, equippedCount)
     tags.Size = UDim2.new(1, 0, 0, 18)
     tags.LayoutOrder = 2
     tags.Parent = info
-    UiKit.list(tags, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), VerticalAlignment = Enum.VerticalAlignment.Center })
-    if fresh[pet.InstanceId] then
+    local tagRow = UiKit.list(tags, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4),
+        VerticalAlignment = Enum.VerticalAlignment.Center })
+    if fresh[pet.InstanceId] then -- (on the portrait's corner: the tags row holds rarity, size and mutation, and must fit them all)
         local new = UiKit.tag("New", C.Highlight)
-        new.LayoutOrder = -1
-        new.Parent = tags
+        new.Name = "NewTag"
+        new.BackgroundTransparency = 0.25
+        new.BackgroundColor3 = C.Well
+        new.Position = UDim2.fromOffset(PAD - 4, PAD - 6)
+        new.ZIndex = picture.ZIndex + 2
+        new.Parent = card
     end
-    UiKit.tag(definition.Rarity, rarityColor).Parent = tags
+    local rarityTag = UiKit.tag(definition.Rarity, rarityColor)
+    rarityTag.Parent = tags
     if size ~= "Normal" then -- (Normal is the usual: no pill)
         local sizeTag = UiKit.tag(size, sizeInfo.Color)
         sizeTag.Name = "SizeTag"
         sizeTag.LayoutOrder = 1
         sizeTag.Parent = tags
     end
-    if level > 1 then
-        local levelTag = UiKit.tag("Lv " .. level, C.AccentBright)
-        levelTag.LayoutOrder = 2
-        levelTag.Parent = tags
+    local mutationTag = MutationLook.badge(mutation)
+    if mutationTag then
+        mutationTag.LayoutOrder = 1
+        mutationTag.Parent = tags
+        -- a long rarity, size and mutation together (LEGENDARY COLOSSAL CELESTIAL) can't fit the row on a narrow card: the rarity's pill
+        -- steps aside (the card's edge is the rarity's colour already), never the size or the mutation
+        local function fit()
+            if rarityTag.Parent and tags.AbsoluteSize.X > 0 then
+                rarityTag.Visible = true
+                if tagRow.AbsoluteContentSize.X > tags.AbsoluteSize.X + 1 then
+                    rarityTag.Visible = false
+                end
+            end
+        end
+        tags:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+        task.defer(fit)
     end
 
     UiKit.boldLabel({
         Name = "Qi", TextSize = 15, TextColor3 = C.Highlight, RichText = true,
         -- (and, for one roaming in a pen, which: equipping it takes it out)
-        Text = "+" .. PetRules.qiBonus(pet.PetId, level, size) .. "% Qi"
+        -- (its level here, not in the tags: a Colossal Celestial's tags fill the row)
+        Text = "+" .. PetRules.qiBonus(pet.PetId, level, size, mutation) .. "% Qi"
+            .. (if level > 1 then '  <font color="#' .. C.AccentBright:ToHex() .. '">Lv ' .. level .. "</font>" else "")
             .. (if pet.InPen then '  <font color="#' .. C.Sky:ToHex() .. '">IN PEN</font>' else ""),
         Size = UDim2.new(1, 0, 0, 18), LayoutOrder = 3, Parent = info,
     })
@@ -302,7 +328,7 @@ local function renderInventory(snapshot)
         local definition = GameConfig.Pets[pet.PetId]
         if pet.Equipped and definition then
             equippedCount += 1
-            bonusPercent += PetRules.qiBonus(pet.PetId, PetRules.level(pet), pet.Size)
+            bonusPercent += PetRules.qiBonus(pet.PetId, PetRules.level(pet), pet.Size, pet.Mutation)
         end
     end
     bonusPercent += snapshot.CodexQiPercent or 0
@@ -363,7 +389,15 @@ function drawList(snapshot, equippedCount)
         if ra ~= rb then
             return ra > rb
         end
-        return (da and da.DisplayName or a.PetId) < (db and db.DisplayName or b.PetId)
+        if (da and da.DisplayName) ~= (db and db.DisplayName) then
+            return (da and da.DisplayName or a.PetId) < (db and db.DisplayName or b.PetId)
+        end
+        -- (copies of one beast: the rarer mutation, then the bigger, first)
+        local ma, mb = PetRules.mutationInfo(a).Order, PetRules.mutationInfo(b).Order
+        if ma ~= mb then
+            return ma > mb
+        end
+        return PetRules.sizeInfo(a).Order > PetRules.sizeInfo(b).Order
     end)
     for index, pet in pets do
         createPetCard(pet, index, equippedCount)

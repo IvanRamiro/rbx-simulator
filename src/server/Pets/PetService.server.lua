@@ -86,7 +86,7 @@ local function altarParts()
 end
 
 -- (its attributes let everyone else near hear it break: HatcheryController)
-local function stageEgg(altar, eggId, player, petId)
+local function stageEgg(altar, eggId, player, petId, size, mutation)
     local cradle = altar:FindFirstChild("Cradle")
     if not cradle then
         return nil
@@ -105,6 +105,8 @@ local function stageEgg(altar, eggId, player, petId)
     model:SetAttribute("HatcherId", player.UserId)
     model:SetAttribute("BreakAt", workspace:GetServerTimeNow() + HATCH_STAGE)
     model:SetAttribute("Rarity", pet and pet.Rarity or "Common")
+    model:SetAttribute("Size", size) -- (a Colossal or a grand mutation is told to the whole server too: HatcheryController)
+    model:SetAttribute("Mutation", mutation)
     model.Parent = altar
     task.delay(HATCH_STAGE + 0.4, function()
         model:Destroy()
@@ -159,9 +161,11 @@ local function onHatchRequest(player, eggId)
     local petId, chance = rollEggPet(egg, player)
     -- its size, rolled apart from the beast at PetRules.Sizes' chances (no luck: the Luck pass changes which beast, not its size)
     local size = PetRules.rollSize(random)
+    -- and its mutation, a third roll apart from both (PetRules.Mutations; nil for most: no luck touches it either)
+    local mutation = PetRules.rollMutation(random)
     local isNew = not Codex.isFound(player, petId)
     -- a pet from a paid egg (the Exclusive Egg, or an egg won on a bought spin) is a paid item for good (PetInventory: Paid)
-    if not PetInventory.grantPet(player, petId, size, paidEgg or egg.Exclusive == true) then
+    if not PetInventory.grantPet(player, petId, size, paidEgg or egg.Exclusive == true, mutation) then
         EggInventory.grant(player, eggId, paidEgg)
         return
     end
@@ -175,14 +179,18 @@ local function onHatchRequest(player, eggId)
     if size ~= "Normal" then
         Analytics.event(player, "PetSizeHatched", 1, size, petId)
     end
-    RecordBook.hatched(player, eggId, petId, size) -- (the Hall of Records: the rarest hatches, the firsts, the Chronicle)
+    if mutation then
+        Analytics.event(player, "PetMutationHatched", 1, mutation, petId)
+    end
+    RecordBook.hatched(player, eggId, petId, size, mutation) -- (the Hall of Records: the rarest hatches, the firsts, the Chronicle)
     RemoteEvents.EggHatchResultEvent:FireClient(player, {
         EggId = eggId,
         PetId = petId,
         ChancePercent = chance,
         Size = size,
+        Mutation = mutation,
         IsNew = isNew,
-        Staged = stageEgg(altar, eggId, player, petId),
+        Staged = stageEgg(altar, eggId, player, petId, size, mutation),
         BreakAt = workspace:GetServerTimeNow() + HATCH_STAGE, -- server time: the client breaks it on time, however late this arrives
     })
 end

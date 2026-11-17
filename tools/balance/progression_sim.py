@@ -15,7 +15,8 @@ PetRules, Bridges and EggStands, run with --root) against the game now (current)
 Every game number is read from the Luau files (luau_table.py parses them; nothing is copied by hand):
   src/shared/GameConfig.lua   ranks, realm multipliers, pets, eggs, passes, guardians, weapons, combat, Qinggong, stones,
                               relics, quests, daily rewards, offline Qi, Spin Wheel, Codex, fusion, Tribulation, the Training Ground
-  src/shared/PetRules.lua     hatch sizes (Qi and value per size)
+  src/shared/PetRules.lua     hatch sizes and mutations (Qi and value per size and per mutation; an older version without
+                              mutations reads as none)
   src/worldbuild/Placements/Bridges.lua   bridge paths (how far an egg is carried) and the rank each bridge opens at
 The formulas mirror the code, with the source named at each one:
   meditation   QiService.awardCultivationQi: floor(10 * realmMult * passMult * (100 + pets% + codex% + Training Ground%) / 100) per second
@@ -24,7 +25,8 @@ The formulas mirror the code, with the source named at each one:
   offline      RewardService.grantOffline: 0.2 of the time away (at most 8 h) at grantAtRate
   relic        DiscoveryService: QiReward * passMult (no realm multiplier, no pets)
   passMult     PassRules.qiMultiplier: the highest Qi Boost tier owned (never stacked) * VIP 1.1
-  pets         PetInventory.getQiBonusPercent: sum over equipped pets of PetRules.qiBonus (base * (1 + 0.1 (level-1)) * size Qi)
+  pets         PetInventory.getQiBonusPercent: sum over equipped pets of PetRules.qiBonus (base * (1 + 0.1 (level-1)) * size Qi
+               * mutation Qi); a fusion keeps the larger size and the rarer mutation
                + Codex milestones' QiPercent; 3 slots, 6 with the +3 Pet Slots pass
   ranks        RankService: Qi is never spent; a new realm needs its Heavenly Tribulation survived
 
@@ -51,6 +53,10 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
 
 # ------------------------------------------------------------------------------------------------ reading the game
 def load_game():
+    def has(path, marker):
+        with open(os.path.join(ROOT, path), encoding="utf-8") as handle:
+            return marker in handle.read()
+
     def read(path, marker):
         with open(os.path.join(ROOT, path), encoding="utf-8") as handle:
             return read_table(handle.read(), marker)
@@ -58,6 +64,8 @@ def load_game():
     game = {
         "cfg": read("src/shared/GameConfig.lua", "local GameConfig ="),
         "sizes": read("src/shared/PetRules.lua", "PetRules.Sizes ="),
+        "mutations": read("src/shared/PetRules.lua", "PetRules.Mutations =") if has("src/shared/PetRules.lua", "PetRules.Mutations =")
+        else {},
         "bridges": read("src/worldbuild/Placements/Bridges.lua", "return")["Bridges"],
     }
     # the egg stands' respawn rule (EggStands.respawn): "own" since 2026-11-16 (a stand brings back its own egg), before it the
@@ -94,6 +102,10 @@ class Rules:
         cfg = self.cfg = game["cfg"]
         self.sizes = game["sizes"]
         self.size_order = sorted(self.sizes, key=lambda name: self.sizes[name]["Order"])
+        # hatch mutations (PetRules.Mutations): None is no mutation
+        self.mutations = game.get("mutations") or {}
+        self.mutation_order = sorted(self.mutations, key=lambda name: self.mutations[name]["Order"])
+        self.NO_MUTATION = {"Order": 0, "Value": 1, "Qi": 1}
         self.ranks = cfg["Ranks"]
         self.rank_index = {rank["Id"]: i for i, rank in enumerate(self.ranks)}  # 0-based here
         self.realms = []
@@ -184,9 +196,13 @@ class Rules:
         base = math.floor(self.stones_cfg["PetValue"][pet["Rarity"]] * self.stones_cfg["RealmFactor"] ** (realm - 1))
         return math.floor(base * worth + 1e-6)
 
-    def qi_bonus(self, pet_id, level, size):  # PetRules.qiBonus
+    def mutation(self, name):
+        return self.mutations.get(name) if name else self.NO_MUTATION
+
+    def qi_bonus(self, pet_id, level, size, mutation=None):  # PetRules.qiBonus
         fusion = self.cfg["PetFusion"]
-        return round(self.pets[pet_id]["QiBonus"] * (1 + fusion["QiPerLevel"] * (level - 1)) * self.sizes[size]["Qi"])
+        return round(self.pets[pet_id]["QiBonus"] * (1 + fusion["QiPerLevel"] * (level - 1)) * self.sizes[size]["Qi"]
+                     * self.mutation(mutation)["Qi"])
 
     RARITY = {"Common": 1, "Uncommon": 2, "Rare": 3, "Epic": 4, "Legendary": 5, "Mythical": 6, "Secret": 7, "Divine": 8}
 
@@ -366,7 +382,7 @@ class Player:
         self.idx = 0
         self.stones = 0
         self.t = 0.0             # play seconds
-        self.pets = []           # dicts: id, level, size, worth
+        self.pets = []           # dicts: id, level, size, mutation, worth
         self.codex = set()
         self.claimed = set()
         self.codex_pct = 0
@@ -409,9 +425,18 @@ class Player:
         self.refresh()
 
     # -- pets
-    def add_pet(self, pet_id, size):
-        self.pets.append({"id": pet_id, "level": 1, "size": size, "worth": self.R.sizes[size]["Value"]})
+    def add_pet(self, pet_id, size, mutation=None):
+        self.pets.append({"id": pet_id, "level": 1, "size": size, "mutation": mutation,
+                          "worth": self.R.sizes[size]["Value"] * self.R.mutation(mutation)["Value"]})
         self.codex.add(pet_id)
+
+    def roll_mutation(self):  # PetRules.rollMutation
+        roll = self.rng.random() * 100
+        for name in self.R.mutation_order:
+            roll -= self.R.mutations[name]["Chance"]
+            if roll < 0:
+                return name
+        return None
 
     def roll_size(self):
         roll = self.rng.random() * 100
@@ -430,11 +455,12 @@ class Player:
             if roll < 0:
                 pet_id = pid
                 break
-        self.add_pet(pet_id, self.roll_size())
+        size = self.roll_size()
+        self.add_pet(pet_id, size, self.roll_mutation() if self.R.mutations else None)
         self.hatches += 1
 
     def bonus_of(self, pet):
-        return self.R.qi_bonus(pet["id"], pet["level"], pet["size"])
+        return self.R.qi_bonus(pet["id"], pet["level"], pet["size"], pet.get("mutation"))
 
     def refresh(self):
         """Fuse, equip the best, sell spares, claim Codex milestones."""
@@ -454,6 +480,8 @@ class Player:
                         target["worth"] += material["worth"]
                         if R.sizes[material["size"]]["Order"] > R.sizes[target["size"]]["Order"]:
                             target["size"] = material["size"]
+                        if R.mutation(material.get("mutation"))["Order"] > R.mutation(target.get("mutation"))["Order"]:
+                            target["mutation"] = material.get("mutation")
                         self.pets.remove(material)
         self.pets.sort(key=self.bonus_of, reverse=True)
         self.pet_pct = sum(self.bonus_of(p) for p in self.pets[: self.slots])

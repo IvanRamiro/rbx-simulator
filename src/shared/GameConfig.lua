@@ -162,6 +162,8 @@ local GameConfig = {
         StartCeiling = 20,          -- the highest starting bid, in sell values
         -- the highest bid allowed, in sell values: rare beasts may fetch a lot, but junk can't carry a fortune between accounts
         PriceCap = { Common = 10, Uncommon = 10, Rare = 15, Epic = 20, Legendary = 30, Mythical = 50, Secret = 100, Divine = 100, Weapon = 5 },
+        -- and times these for a big pet (2026-11-17: a Colossal is 1 in 250), and times its mutation's Cap (PetRules.Mutations)
+        SizeCap = { Large = 1.2, Giant = 1.5, Colossal = 2 },
         MinRaise = 0.05,            -- a new bid beats the top bid by at least this share (and at least 1 stone)
         SnipeWindow = 60,           -- seconds: a bid this close to the end...
         SnipeExtend = 60,           -- ...moves the end to this many seconds after it

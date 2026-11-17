@@ -1,7 +1,7 @@
 -- The Hall of Records' rules on stored data, with no services in them (RecordsService runs them inside UpdateAsync, so every
 -- server agrees): reading a stored Firsts or Rarest record safely, and merging new claims into it.
 --   Firsts  { [first id] = { u = userId, n = name then, t = unix time } }: a first is set once; a claim never replaces one.
---   Rarest  { { id, u, n, p = petId, s = size, e = eggId, o = odds (0-1), t }, ... }: the rarest hatches, rarest first, capped.
+--   Rarest  { { id, u, n, p = petId, s = size, m = mutation (or nil), e = eggId, o = odds (0-1), t }, ... }: the rarest hatches, rarest first, capped.
 local RecordsCore = {}
 
 local function isEntry(e)
@@ -66,7 +66,9 @@ function RecordsCore.sanitizeRarest(raw, keep)
         if isHatch(e) and not seen[e.id] then
             seen[e.id] = true
             table.insert(out, { id = string.sub(e.id, 1, 40), u = math.floor(e.u), n = cleanName(e.n), p = e.p,
-                s = if typeof(e.s) == "string" then e.s else "Normal", e = if typeof(e.e) == "string" then e.e else "", o = e.o,
+                s = if typeof(e.s) == "string" then e.s else "Normal",
+                m = if typeof(e.m) == "string" and #e.m <= 32 then e.m else nil, -- (its mutation, kept as stored: 2026-11-17)
+                e = if typeof(e.e) == "string" then e.e else "", o = e.o,
                 t = math.floor(e.t) })
         end
     end

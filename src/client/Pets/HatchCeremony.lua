@@ -29,6 +29,13 @@
 --              gold ring and burst at the egg, the camera pulls back a little.
 --   Giant      the egg strains, swelling and throbbing; the card holds a trembling beat, then the beast grows past the card, a
 --              GIANT! stamp slams on, a gold shockwave and flash, a heavy shake, and the camera pulls well back to take it in.
+--   Colossal   (2026-11-17) the egg strains longest; a longer trembling beat with the rays racing, then the beast grows far past the
+--              card (380 px), a coral COLOSSAL! stamp, a double shockwave and flash, the heaviest shake, a deeper slam, the camera
+--              pulls back furthest.
+-- The mutation beat (PetRules.Mutations, rolled by the server apart from the size), after the size's: a flash of its colour, its
+-- stamp (GOLDEN!, VOID!) slammed on the card's lower corner, its tag, the beast's name taking it ("Golden Moonfox"), the portrait
+-- tinted (MutationLook); Rainbow and up a grander sound and the card's rays in its colour. Colour only, no particles (the owner,
+-- 2026-11-17: "just a color glow depends on the mutation").
 -- A tap moves on a beat (during the reel it lands it; during the held breath it breaks the egg; on the card it closes it). The
 -- player's Reduced Effects setting drops the shake, the flashes and most particles; a phone (Quality.Low) thins the particles.
 --   HatchCeremony.play(result)   result: the server's EggHatchResultEvent (EggId, PetId, ChancePercent, Size, IsNew, Staged, BreakAt)
@@ -56,6 +63,7 @@ local Sfx = require(Client:WaitForChild("Audio"):WaitForChild("Sfx"))
 local LOW = require(Client:WaitForChild("Quality")).Low
 local CodexState = require(script.Parent:WaitForChild("CodexState"))
 local PetPreload = require(script.Parent:WaitForChild("PetPreload"))
+local MutationLook = require(script.Parent:WaitForChild("MutationLook"))
 
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
@@ -108,6 +116,7 @@ local SIZE_BEATS = {
     Normal = { Swell = 0, Pull = 0, Ease = 3 },
     Large = { Swell = 0.1, Pull = 0.55, Ease = 2.2 },
     Giant = { Swell = 0.24, Pull = 1, Ease = 0.6 },
+    Colossal = { Swell = 0.34, Pull = 1.35, Ease = 0.45 },
 }
 
 local active = nil -- the playing cinematic: { finish = function(instant) }
@@ -299,7 +308,7 @@ local function revealHold(result)
     local definition = GameConfig.Pets[result.PetId]
     local tier = tierOf(definition and definition.Rarity)
     local base = if result.IsNew ~= true and tier.Dup then tier.Dup else tier.Reveal
-    return base + PetRules.sizeInfo(result.Size).RevealHold
+    return base + PetRules.sizeInfo(result.Size).RevealHold + PetRules.mutationInfo(result.Mutation).Hold
 end
 
 function HatchCeremony.afterBreak(result)
@@ -1013,7 +1022,8 @@ local function play(result)
         end
         tag(rarity, color, 1)
         tag(string.format("%.3g%% chance", tonumber(result.ChancePercent) or 0), C.AccentBright, 3)
-        tag("+" .. tostring(PetRules.qiBonus(result.PetId, 1, size)) .. "% Qi", C.Sky, 4)
+        local mutation = PetRules.mutation(result.Mutation)
+        tag("+" .. tostring(PetRules.qiBonus(result.PetId, 1, size, mutation)) .. "% Qi", C.Sky, 4)
         UiKit.label({ Name = "Verdict", Font = "Strong", TextSize = 14, TextXAlignment = Enum.TextXAlignment.Center,
             Text = if result.IsNew then "NEW! Added to your Codex" else "You have this one: fuse it or sell it",
             TextColor3 = if result.IsNew then C.Highlight else C.Muted, AnchorPoint = Vector2.new(0.5, 0),
@@ -1112,20 +1122,21 @@ local function play(result)
                     end)
                 end
             end)
-        elseif size == "Large" or size == "Giant" then
-            local giant = size == "Giant"
+        elseif sizeInfo.Order >= PetRules.Sizes.Large.Order then
+            local colossal = size == "Colossal"
+            local giant = sizeInfo.Order >= PetRules.Sizes.Giant.Order -- (a Colossal has every beat a Giant has, and more)
             local gold = sizeInfo.Color
-            local wait = if giant then 0.75 else 0.3 -- the held beat before it shows how big it is
+            local wait = if colossal then 1.1 elseif giant then 0.75 else 0.3 -- the held beat before it shows how big it is
             local trembling = giant
             if giant then
-                Sfx.play("EggRumble", nil, 1.15)
+                Sfx.play("EggRumble", nil, if colossal then 0.9 else 1.15)
                 local shake = RunService.RenderStepped:Connect(function()
                     if trembling then
-                        local k = 2.5
+                        local k = if colossal then 4 else 2.5
                         portrait.Position = UDim2.new(0.5, (math.random() - 0.5) * k, 0, 118 + (math.random() - 0.5) * k)
                     end
                 end)
-                rayTurn = 108 -- the rays quicken
+                rayTurn = if colossal then 160 else 108 -- the rays quicken
                 table.insert(connections, shake)
             end
             task.delay(wait, function()
@@ -1137,7 +1148,9 @@ local function play(result)
                 if giant then -- the beast grows to its full size, out past the card's edges (since 2026-11-17 a Giant is colossal in the world)
                     portrait.Position = UDim2.new(0.5, 0, 0, 118)
                     portrait.Size = UDim2.fromOffset(190, 190)
-                    tween(portrait, 0.6, { Size = UDim2.fromOffset(330, 330), Position = UDim2.new(0.5, 0, 0, 108) }, Enum.EasingStyle.Back)
+                    local grown = if colossal then 380 else 330
+                    tween(portrait, if colossal then 0.75 else 0.6, { Size = UDim2.fromOffset(grown, grown), Position = UDim2.new(0.5, 0, 0, 104) },
+                        Enum.EasingStyle.Back)
                 else -- a heavy one drops onto the card and lands with a bounce
                     portrait.Position = UDim2.new(0.5, 0, 0, 118 - 70)
                     tween(portrait, 0.45, { Position = UDim2.new(0.5, 0, 0, 118), Size = UDim2.fromOffset(236, 236) }, Enum.EasingStyle.Bounce)
@@ -1154,16 +1167,17 @@ local function play(result)
                     tween(cardEdge, 0.3, { Color = gold, Thickness = if giant then 4 else 3 })
                 end
                 -- the stamp, slammed onto the card's top corner (clear of a banner over the card)
-                local stamp = UiKit.label({ Name = "SizeStamp", Font = "Title", TextSize = if giant then 40 else 28,
-                    Text = if giant then "GIANT!" else "LARGE", TextColor3 = gold, TextXAlignment = Enum.TextXAlignment.Center,
-                    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, if giant then -54 else -44, 0, if giant then 30 else 26),
-                    Size = UDim2.fromOffset(if giant then 170 else 130, 50), Rotation = 12, ZIndex = 31, Parent = card })
+                local stamp = UiKit.label({ Name = "SizeStamp", Font = "Title", TextSize = if colossal then 42 elseif giant then 40 else 28,
+                    Text = string.upper(size) .. (if giant then "!" else ""), TextColor3 = gold, TextXAlignment = Enum.TextXAlignment.Center,
+                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    Position = UDim2.new(1, if colossal then -70 elseif giant then -54 else -44, 0, if giant then 30 else 26),
+                    Size = UDim2.fromOffset(if colossal then 220 elseif giant then 170 else 130, 50), Rotation = 12, ZIndex = 31, Parent = card })
                 local stampEdge = Instance.new("UIStroke")
                 stampEdge.Color = Color3.fromRGB(40, 22, 4)
                 stampEdge.Thickness = if giant then 4 else 3
                 stampEdge.Parent = stamp
                 local slam = Instance.new("UIScale")
-                slam.Scale = if giant then 2.6 else 1.8
+                slam.Scale = if colossal then 3.2 elseif giant then 2.6 else 1.8
                 slam.Parent = stamp
                 tween(slam, if giant then 0.32 else 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
                 tag(size, gold, 2)
@@ -1178,17 +1192,26 @@ local function play(result)
                 ring.Parent = card
                 UiKit.corner(ring, 999)
                 local ringEdge = UiKit.stroke(ring, gold, 0, if giant then 6 else 4)
-                tween(ring, if giant then 0.8 else 0.5, { Size = UDim2.fromOffset(if giant then 720 else 380, if giant then 720 else 380) })
+                local across = if colossal then 900 elseif giant then 720 else 380
+                tween(ring, if giant then 0.8 else 0.5, { Size = UDim2.fromOffset(across, across) })
                 tween(ringEdge, if giant then 0.7 else 0.5, { Transparency = 1, Thickness = 1 })
-                Sfx.play(if giant then "SizeGiant" else "SizeLarge")
+                Sfx.play(if giant then "SizeGiant" else "SizeLarge", nil, if colossal then 0.82 else nil)
                 Sfx.after(if giant then 0.05 else 0.3, "SizeLand") -- (a Large's thud on its landing bounce)
                 -- in the world: gold light round the egg, a shake, and the camera pulls back to take it in
                 if at then
-                    sizeBurst(fx, at, gold, if giant then 1 else 0.45, cut)
+                    sizeBurst(fx, at, gold, if colossal then 1.5 elseif giant then 1 else 0.45, cut)
+                    if colossal then -- a second shockwave behind the first
+                        task.delay(0.22, function()
+                            if not done then
+                                sizeBurst(fx, at, gold:Lerp(Color3.new(1, 1, 1), 0.3), 1.1, cut * 0.6)
+                            end
+                        end)
+                    end
                 end
                 pull, pullAt = sizeBeat.Pull * (if calm then 0.5 else 1), os.clock()
                 if not calm then
-                    shakeUntil, shakeSize = os.clock() + (if giant then 0.5 else 0.25), if giant then 0.45 else 0.2
+                    shakeUntil, shakeSize = os.clock() + (if colossal then 0.75 elseif giant then 0.5 else 0.25),
+                        if colossal then 0.65 elseif giant then 0.45 else 0.2
                     if giant then
                         local flash = Instance.new("Frame")
                         flash.BorderSizePixel = 0
@@ -1198,6 +1221,79 @@ local function play(result)
                         flash.ZIndex = 11 -- (under the card: the card stays readable through it)
                         flash.Parent = gui
                         tween(flash, 0.5, { BackgroundTransparency = 1 })
+                    end
+                end
+            end)
+        end
+        -- ---------- the mutation reveal (after the size's: a Colossal Celestial plays both, one after the other) ----------
+        local mutationInfo = mutation and PetRules.Mutations[mutation]
+        if mutationInfo then
+            local afterSize = if size == "Colossal" then 1.95 elseif size == "Giant" then 1.45 elseif size == "Large" then 0.8
+                elseif size == "Small" then 0.55 else 0.2
+            local tint = mutationInfo.Color
+            local grand = mutationInfo.Grand == true
+            task.delay(afterSize, function()
+                if done then
+                    return
+                end
+                MutationLook.portrait(portrait, mutation) -- (the beast takes its colour)
+                local nameLabel = card:FindFirstChild("PetName")
+                if nameLabel then
+                    nameLabel.Text = PetRules.displayName(result.PetId, mutation)
+                    nameLabel.TextColor3 = tint:Lerp(Color3.new(1, 1, 1), 0.25)
+                end
+                local badge = MutationLook.badge(mutation)
+                badge.LayoutOrder = 2
+                badge.ZIndex = 16
+                badge.Parent = tags
+                UiFx.pop(badge, 1.5, 0.35)
+                -- its stamp, slammed on the card's left side (the size's stamp holds the upper right, the name the foot)
+                local stamp = UiKit.label({ Name = "MutationStamp", Font = "Title", TextSize = if grand then 36 else 30,
+                    Text = mutationInfo.Stamp, TextColor3 = tint, TextXAlignment = Enum.TextXAlignment.Center,
+                    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 62, 0, 150), Size = UDim2.fromOffset(200, 46),
+                    Rotation = -10, ZIndex = 31, Parent = card }) -- (clear of the name under the beast and the size's stamp)
+                local stampEdge = Instance.new("UIStroke")
+                stampEdge.Color = Color3.fromRGB(14, 10, 30)
+                stampEdge.Thickness = if grand then 4 else 3
+                stampEdge.Parent = stamp
+                if mutation == "Rainbow" then
+                    stamp.TextColor3 = Color3.new(1, 1, 1)
+                    local gradient = Instance.new("UIGradient")
+                    gradient.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 90)),
+                        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 210, 70)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(110, 255, 120)),
+                        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(80, 200, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 110, 255)) })
+                    gradient.Parent = stamp
+                end
+                local slam = Instance.new("UIScale")
+                slam.Scale = if grand then 2.6 else 2
+                slam.Parent = stamp
+                tween(slam, 0.28, { Scale = 1 }, Enum.EasingStyle.Back)
+                Sfx.play(if grand then "MutationGrand" else "MutationStamp")
+                -- a flash of its colour over the screen, under the card (colour only: no particles, the owner's word)
+                if not calm then
+                    local flash = Instance.new("Frame")
+                    flash.Name = "MutationFlash"
+                    flash.BorderSizePixel = 0
+                    flash.BackgroundColor3 = tint
+                    flash.BackgroundTransparency = if grand then 0.3 else 0.5
+                    flash.Size = UDim2.fromScale(1, 1)
+                    flash.ZIndex = 11
+                    flash.Parent = gui
+                    tween(flash, if grand then 0.7 else 0.45, { BackgroundTransparency = 1 })
+                    if grand then
+                        shakeUntil, shakeSize = os.clock() + 0.35, 0.3
+                    end
+                end
+                if grand then -- the card's rays take its colour
+                    for _, fan in { rays, counter } do
+                        for _, ray in if fan then fan:GetChildren() else {} do
+                            if ray:IsA("Frame") then
+                                tween(ray, 0.35, { BackgroundColor3 = tint })
+                            end
+                        end
+                    end
+                    if cardEdge then
+                        tween(cardEdge, 0.3, { Color = tint })
                     end
                 end
             end)

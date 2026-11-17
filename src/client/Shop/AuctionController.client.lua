@@ -25,6 +25,7 @@ local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Toast = require(UI:WaitForChild("Toast"))
 local Portraits = require(UI:WaitForChild("Portraits"))
+local MutationLook = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("MutationLook"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
@@ -80,8 +81,8 @@ end
 local function nameOf(entry)
     local kind = entry.K or entry.Kind
     if kind == "Pet" then
-        local pet = GameConfig.Pets[entry.P or entry.PetId]
-        return pet and pet.DisplayName or "Pet"
+        local petId = entry.P or entry.PetId
+        return if GameConfig.Pets[petId] then PetRules.displayName(petId, entry.M or entry.Mutation) else "Pet"
     end
     local name = entry.N or entry.Name
     if typeof(name) == "string" and name ~= "" then
@@ -100,14 +101,15 @@ local function colourOf(entry)
     return if element then element.Color:Lerp(Color3.new(1, 1, 1), 0.2) else C.AccentBright
 end
 
--- the line under the name: a pet's rarity, size and level; a weapon's realm and element
+-- the line under the name: a pet's rarity, size, mutation and level; a weapon's realm and element
 local function detailOf(entry)
     local kind = entry.K or entry.Kind
     if kind == "Pet" then
         local size = PetRules.size(entry.S or entry.Size)
         local level = PetRules.level({ Level = entry.Lv or entry.Level })
+        local mutation = PetRules.mutation(entry.M or entry.Mutation)
         return (entry.R or entry.Rarity or "") .. (if size ~= "Normal" then "  ·  " .. size else "")
-            .. (if level > 1 then "  ·  Level " .. level else "")
+            .. (if mutation then "  ·  " .. mutation else "") .. (if level > 1 then "  ·  Level " .. level else "")
     end
     local weapon = Shop.weapon(entry.W or entry.WeaponId)
     local element = Shop.element(entry.E or entry.Element)
@@ -117,7 +119,9 @@ end
 local function portrait(entry, size)
     local kind = entry.K or entry.Kind
     if kind == "Pet" then
-        return Portraits.pet(entry.P or entry.PetId, size)
+        local frame = Portraits.pet(entry.P or entry.PetId, size)
+        MutationLook.portrait(frame, entry.M or entry.Mutation) -- (tinted, with its glints)
+        return frame
     end
     local element = Shop.element(entry.E or entry.Element)
     return Portraits.weapon(entry.W or entry.WeaponId, element and element.Color, size)

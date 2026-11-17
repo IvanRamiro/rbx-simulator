@@ -25,6 +25,7 @@ local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local WorldMarkers = require(UI:WaitForChild("WorldMarkers"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
+local MutationLook = require(script.Parent:WaitForChild("MutationLook"))
 
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
@@ -170,8 +171,9 @@ local function petRow(pet, order, inPen, full)
     local definition = GameConfig.Pets[pet.PetId]
     local row = UiKit.card({ Name = "Pet", LayoutOrder = order, Size = UDim2.new(1, 0, 0, ROW_H), Parent = list })
     local picture = portrait(pet.PetId, 52, row)
+    MutationLook.portrait(picture, pet.Mutation) -- (a pooled portrait's old tint is cleared)
     picture.Position = UDim2.fromOffset(6, 6)
-    UiKit.boldLabel({ Name = "PetName", TextSize = 14, Text = definition.DisplayName, TextTruncate = Enum.TextTruncate.AtEnd,
+    UiKit.boldLabel({ Name = "PetName", TextSize = 14, Text = PetRules.displayName(pet.PetId, pet.Mutation), TextTruncate = Enum.TextTruncate.AtEnd,
         TextColor3 = C.Text, Position = UDim2.fromOffset(68, 10), Size = UDim2.new(1, -(68 + 150), 0, 18), Parent = row })
     local tags = Instance.new("Frame")
     tags.Name = "Tags"
@@ -189,6 +191,11 @@ local function petRow(pet, order, inPen, full)
     local size = PetRules.size(pet)
     if size ~= "Normal" then
         tag(size, PetRules.sizeInfo(size).Color, 2)
+    end
+    local badge = MutationLook.badge(pet.Mutation)
+    if badge then
+        badge.LayoutOrder = 2
+        badge.Parent = tags
     end
     if PetRules.level(pet) > 1 then
         tag("Lv " .. PetRules.level(pet), C.AccentBright, 3)

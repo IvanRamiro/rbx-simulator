@@ -31,7 +31,7 @@ local function shortText(text)
     return if typeof(text) == "string" and #text <= 120 then text else nil
 end
 
--- an item record as it left the inventory: a pet { InstanceId, PetId, Level, Size, Worth, Locked, Paid } or a weapon
+-- an item record as it left the inventory: a pet { InstanceId, PetId, Level, Size, Mutation, Worth, Locked, Paid } or a weapon
 -- { InstanceId, WeaponId, Element, Name }; nil if it isn't one
 function AuctionLedger.sanitizeItem(kind, item)
     if typeof(item) ~= "table" or not isId(item.InstanceId) then
@@ -41,6 +41,8 @@ function AuctionLedger.sanitizeItem(kind, item)
         return {
             InstanceId = item.InstanceId, PetId = item.PetId, Level = tonumber(item.Level) or 1,
             Size = if typeof(item.Size) == "string" then item.Size else "Normal", Worth = tonumber(item.Worth), Locked = false,
+            -- (kept as saved, like Size: one this server doesn't know is newer content, and PlayerData refuses that save first)
+            Mutation = if typeof(item.Mutation) == "string" and #item.Mutation <= 32 then item.Mutation else nil,
             Paid = if item.Paid == true then true else nil,
         }
     elseif kind == "Weapon" and Shop.weapon(item.WeaponId) then
@@ -119,6 +121,20 @@ function AuctionLedger.itemIds(raw)
         end
     end
     return pets, weapons
+end
+
+-- Every pet record in a raw journal's Out (PlayerData checks their sizes and mutations: newer content).
+function AuctionLedger.petItems(raw)
+    local items = {}
+    if typeof(raw) == "table" and typeof(raw.Out) == "table" then
+        for _, entry in raw.Out do
+            local item = typeof(entry) == "table" and entry.Item
+            if typeof(item) == "table" and typeof(item.PetId) == "string" then
+                table.insert(items, item)
+            end
+        end
+    end
+    return items
 end
 
 function AuctionLedger.setupPlayer(player, progress)

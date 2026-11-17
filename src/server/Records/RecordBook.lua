@@ -8,7 +8,7 @@ local RecordBook = {}
 local MAX_SECONDS = 50 * 365 * 86400
 local MAX_EGGS = 10000000
 
-RecordBook.Hatched = Instance.new("BindableEvent") -- (player, eggId, petId, size)
+RecordBook.Hatched = Instance.new("BindableEvent") -- (player, eggId, petId, size, mutation)
 
 local state = {} -- [player] = { seconds = saved play time, since = os.clock() at join, eggs = eggs secured }
 
@@ -80,8 +80,8 @@ function RecordBook.exportData(player)
 end
 
 -- a hatch at the Hatching Altar (PetService), for the Rarest Beasts, the Firsts and the Chronicle
-function RecordBook.hatched(player, eggId, petId, size)
-    RecordBook.Hatched:Fire(player, eggId, petId, size)
+function RecordBook.hatched(player, eggId, petId, size, mutation)
+    RecordBook.Hatched:Fire(player, eggId, petId, size, mutation)
 end
 
 return RecordBook

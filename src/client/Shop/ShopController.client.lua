@@ -20,6 +20,7 @@ local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Toast = require(UI:WaitForChild("Toast"))
 local Portraits = require(UI:WaitForChild("Portraits"))
+local MutationLook = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("MutationLook"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
@@ -415,9 +416,12 @@ local function renderBuySell(contents)
         local info = GameConfig.Pets[pet.PetId]
         if info then
             local level = PetRules.level(pet)
-            sellRow(nextOrder(), Portraits.pet(pet.PetId, 44), info.DisplayName,
+            local mutation = PetRules.mutation(pet)
+            local picture = Portraits.pet(pet.PetId, 44)
+            MutationLook.portrait(picture, mutation)
+            sellRow(nextOrder(), picture, PetRules.displayName(pet.PetId, mutation),
                 info.Rarity .. (if PetRules.size(pet) ~= "Normal" then "  ·  " .. PetRules.size(pet) else "")
-                    .. (if level > 1 then "  ·  Level " .. level else ""),
+                    .. (if mutation then "  ·  " .. mutation else "") .. (if level > 1 then "  ·  Level " .. level else ""),
                 GameConfig.PetRarityColors[info.Rarity] or C.Text, Shop.petValue(pet.PetId, PetRules.worth(pet)),
                 if pet.Locked or pet.Equipped then nil else function()
                     sellPet(pet, info)

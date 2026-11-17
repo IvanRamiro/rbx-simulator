@@ -92,7 +92,7 @@ end
 function AuctionCore.summary(record)
     local item = record.Item or {}
     return {
-        Id = record.Id, K = record.Kind, P = item.PetId, W = item.WeaponId, R = record.Rarity, S = item.Size, Lv = item.Level,
+        Id = record.Id, K = record.Kind, P = item.PetId, W = item.WeaponId, R = record.Rarity, S = item.Size, M = item.Mutation, Lv = item.Level,
         E = item.Element, N = record.Show and record.Show.Name, Sn = record.SellerName, Su = record.Seller,
         Pr = if record.High then record.High.Amount else record.StartBid, St = record.StartBid, B = record.Bids or 0,
         End = record.Ends, Hb = record.High and record.High.UserId, Paid = record.Paid == true, Cr = record.Created,

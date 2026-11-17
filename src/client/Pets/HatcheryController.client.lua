@@ -14,6 +14,7 @@ local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
+local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local UI = script.Parent.Parent:WaitForChild("UI")
@@ -390,11 +391,18 @@ workspace.DescendantAdded:Connect(function(egg)
     local untilBreak = math.max(0, breakAt - workspace:GetServerTimeNow())
     Sfx.after(untilBreak, if GRAND[rarity] then "HatchNearbyGrand" else "HatchNearby", at)
     local hatcher = Players:GetPlayerByUserId(egg:GetAttribute("HatcherId") or 0)
-    if ANNOUNCED[rarity] and hatcher then
+    -- (and since 2026-11-17 any Colossal, and the grand mutations: Rainbow, Celestial and Void; the hatch's size and mutation ride on
+    -- the staged egg: PetService)
+    local size, mutation = egg:GetAttribute("Size"), PetRules.mutation(egg:GetAttribute("Mutation"))
+    local grandMutation = mutation and PetRules.Mutations[mutation].Grand == true
+    if (ANNOUNCED[rarity] or size == "Colossal" or grandMutation) and hatcher then
+        local words = (if size == "Colossal" then "COLOSSAL " else "") .. (if mutation then string.upper(mutation) .. " " else "")
+            .. string.upper(rarity or "")
+        local color = if grandMutation then PetRules.Mutations[mutation].Color
+            elseif size == "Colossal" then PetRules.Sizes.Colossal.Color else GameConfig.PetRarityColors[rarity]
         task.delay(untilBreak, function()
             if hatcher.Parent then
-                news:show(hatcher.DisplayName .. " just hatched a " .. string.upper(rarity) .. " beast!", "Info",
-                    GameConfig.PetRarityColors[rarity])
+                news:show(hatcher.DisplayName .. " just hatched a " .. words .. " beast!", "Info", color)
             end
         end)
     end

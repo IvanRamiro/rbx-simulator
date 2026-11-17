@@ -1,20 +1,24 @@
 -- What makes a big pet feel heavy, shared by the pets beside their owners (PetCompanionController) and the pens (PenController):
--- a soft shadow on the ground under a Large or Giant one, dust and a low thud at a Giant walker's footfalls and landings, and a
+-- a soft shadow on the ground under a Large, Giant or Colossal one, dust and a low thud at a Giant or Colossal walker's footfalls
+-- and landings (a Colossal's deeper and wider: its dust scales with its footprint, its thud is pitched down), and a
 -- fade when the camera comes inside a pet (a Giant beside its owner is wider than the camera's distance, so turning the camera
 -- would put it inside the beast). No camera shake, for anyone. Cheap: one shadow part per big pet, two emitters per Giant walker,
 -- and nothing for Small and Normal pets.
 --
 --   PetHeft.measure(model)            its footprint as built, in its root's frame: { half = Vector3 (half the box), offset = Vector3
 --                                     (the box's middle from the root), parts = { BasePart } }
---   PetHeft.shadow(model, half)       a shadow under it (its PetSize Large or Giant), parented to the model; nil otherwise
+--   PetHeft.shadow(model, half)       a shadow under it (its PetSize Large or bigger), parented to the model; nil otherwise
 --   PetHeft.placeShadow(shadow, ground, lift, heading)  where it lies (a CFrame for BulkMoveTo) on the ground at `ground` (a
 --                                     Vector3), turned by `heading` (a rotation), fainter the higher (`lift`, studs) its feet are off the
 --                                     ground; a nil ground hides it (and returns nil)
---   PetHeft.dust(model, rootPart, half)  the footfall dust of a Giant walker (an Attachment with its emitters), or nil
+--   PetHeft.dust(model, rootPart, half)  the footfall dust of a Giant or Colossal walker (an Attachment with its emitters), or nil
 --   PetHeft.step(dust, ground, heavy) one footfall at `ground`: a ring of dust and a thud; heavy (a landing): a wider ring, more dust
 --   PetHeft.fade(pet, eye, dt)        fades a pet (a record with model, cframe, foot = measure's result) while the camera at `eye` is
 --                                     inside it, and back when it leaves
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 
 local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
@@ -50,8 +54,7 @@ function PetHeft.measure(model)
 end
 
 function PetHeft.shadow(model, half)
-    local size = model:GetAttribute("PetSize")
-    if size ~= "Large" and size ~= "Giant" then
+    if PetRules.sizeInfo(model:GetAttribute("PetSize")).Order < PetRules.Sizes.Large.Order then
         return nil
     end
     local part = Instance.new("Part")
@@ -93,12 +96,13 @@ function PetHeft.placeShadow(shadow, ground, lift, heading)
 end
 
 function PetHeft.dust(model, rootPart, half)
-    if model:GetAttribute("PetSize") ~= "Giant" or not rootPart then
+    if PetRules.sizeInfo(model:GetAttribute("PetSize")).Order < PetRules.Sizes.Giant.Order or not rootPart then
         return nil
     end
     local reach = math.max(half.X, half.Z)
     local holder = Instance.new("Attachment")
     holder.Name = "HeftDust"
+    holder:SetAttribute("Pitch", if model:GetAttribute("PetSize") == "Colossal" then 0.8 else 1) -- (a Colossal's thud, deeper)
     holder.Parent = rootPart
     local ring = Instance.new("ParticleEmitter")
     ring.Name = "Ring"
@@ -147,7 +151,7 @@ function PetHeft.step(dust, ground, heavy)
     if puff and not reduced() then
         puff:Emit(if heavy then 8 elseif Quality.Low then 2 else 4)
     end
-    Sfx.play(if heavy then "GiantLand" else "GiantStep", ground)
+    Sfx.play(if heavy then "GiantLand" else "GiantStep", ground, dust:GetAttribute("Pitch"))
 end
 
 function PetHeft.fade(pet, eye, dt)

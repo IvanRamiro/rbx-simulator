@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local PetRig = require(script.Parent:WaitForChild("PetRig"))
+local MutationLook = require(script.Parent:WaitForChild("MutationLook"))
 
 local meshFolder = ReplicatedStorage:WaitForChild("PetMeshes", 10)
 -- the folder, looked for again while it's missing (it can replicate after the 10 s wait on a slow join)
@@ -303,10 +304,11 @@ for _, petId in { "EmberWyrm", "LunarHopper", "VoltFox", "GoldenKirin", "NineTai
     PetModels.Walkers[petId] = true
 end
 
--- The pet's model and its root. size: its hatch size ("Small", "Normal", "Large", "Giant"; nil: Normal), scaling the whole rig by
--- PetRules.scaleFor (its size's Scale, held between the size's MinLength and MaxLength for this species). The model carries its
--- size and that factor as the attributes PetSize and SizeScale.
-function PetModels.build(petId, size, displayScale)
+-- The pet's model and its root. size: its hatch size ("Small", "Normal", "Large", "Giant", "Colossal"; nil: Normal), scaling the
+-- whole rig by PetRules.scaleFor (its size's Scale, held between the size's MinLength and MaxLength for this species). The model
+-- carries its size and that factor as the attributes PetSize and SizeScale. mutation: its hatch mutation (nil: none), dressed by
+-- MutationLook with `look` ({ own, priority, quiet }: MutationLook.dress); the model then carries PetMutation.
+function PetModels.build(petId, size, displayScale, mutation, look)
     local design = PetModels.Pets[petId]
     if not design then
         return nil
@@ -342,6 +344,9 @@ function PetModels.build(petId, size, displayScale)
             if light:IsA("Light") and light.Range > PetRig.LIGHT_REACH then
                 light.Range = PetRig.LIGHT_REACH
             end
+        end
+        if mutation then
+            MutationLook.dress(model, mutation, rigs[model], look)
         end
         return model, rootPart
     end

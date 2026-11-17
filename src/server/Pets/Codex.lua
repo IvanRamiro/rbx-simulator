@@ -1,5 +1,6 @@
 -- A player's Spirit Beast Codex, saved in PlayerData as Codex: every beast they have ever owned (Found), the
--- rewards they have taken (Claimed), and the realm each reward was earned in (Earned: { [rewardId] = realm index }). An entry
+-- rewards they have taken (Claimed), the realm each reward was earned in (Earned: { [rewardId] = realm index }) and the
+-- mutations found on each beast (Mutations: { [petId] = { mutationId, ... } }, save schema 26: PetRules.Mutations). An entry
 -- is never lost: selling or fusing the pet leaves it in the book.
 --
 -- A reward's stones are a weapon's share of the realm it was EARNED in (release audit, 2026-11-12: paid at the claim's realm,
@@ -10,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CodexRules = require(ReplicatedStorage:WaitForChild("CodexRules"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 
 local Codex = {}
@@ -17,7 +19,8 @@ local Codex = {}
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 
-local state = {} -- [player] = { found = { [petId] = true }, claimed = { [rewardId] = true }, earned = { [rewardId] = realm } }
+local state = {} -- [player] = { found = { [petId] = true }, claimed = { [rewardId] = true }, earned = { [rewardId] = realm },
+                 --              mutations = { [petId] = { [mutationId] = true } } }
 
 -- The player's realm now, or nil while their rank isn't loaded (then nothing is recorded: it pays at the claim's realm).
 local function realmNow(player)
@@ -66,12 +69,55 @@ function Codex.sanitize(raw)
             end
         end
     end
-    return { Found = found, Claimed = claimed, Earned = earned }
+    -- (a mutation this server doesn't know is never dropped from a newer save: PlayerData refuses that save as too new first)
+    local mutations = {}
+    if typeof(raw.Mutations) == "table" then
+        for petId, list in raw.Mutations do
+            if typeof(petId) == "string" and GameConfig.Pets[petId] and typeof(list) == "table" then
+                local kept = {}
+                for _, id in list do
+                    if PetRules.mutation(id) and not table.find(kept, id) then
+                        table.insert(kept, id)
+                    end
+                end
+                if #kept > 0 then
+                    table.sort(kept, function(a, b)
+                        return PetRules.Mutations[a].Order < PetRules.Mutations[b].Order
+                    end)
+                    mutations[petId] = kept
+                end
+            end
+        end
+    end
+    return { Found = found, Claimed = claimed, Earned = earned, Mutations = mutations }
+end
+
+-- Every mutation id in a raw Codex (PlayerData refuses a save holding one this server doesn't know: newer content).
+function Codex.mutationIds(raw)
+    local ids = {}
+    if typeof(raw) == "table" and typeof(raw.Mutations) == "table" then
+        for _, list in raw.Mutations do
+            if typeof(list) == "table" then
+                for _, id in list do
+                    if typeof(id) == "string" then
+                        table.insert(ids, id)
+                    end
+                end
+            end
+        end
+    end
+    return ids
 end
 
 function Codex.setupPlayer(player, progress)
     local saved = Codex.sanitize(progress and progress.Codex)
-    local data = { found = {}, claimed = {}, earned = table.clone(saved.Earned) }
+    local data = { found = {}, claimed = {}, earned = table.clone(saved.Earned), mutations = {} }
+    for petId, list in saved.Mutations do
+        data.mutations[petId] = {}
+        for _, id in list do
+            data.mutations[petId][id] = true
+        end
+    end
     for _, petId in saved.Found do
         data.found[petId] = true
     end
@@ -95,10 +141,18 @@ function Codex.isFound(player, petId)
     return data ~= nil and data.found[petId] == true
 end
 
--- True when this is a new entry.
-function Codex.discover(player, petId)
+-- True when this is a new entry. `mutation`: the copy's mutation (nil: none), entered on the beast's page.
+function Codex.discover(player, petId, mutation)
     local data = state[player]
-    if not data or not GameConfig.Pets[petId] or data.found[petId] then
+    if not data or not GameConfig.Pets[petId] then
+        return false
+    end
+    mutation = PetRules.mutation(mutation)
+    if mutation then
+        data.mutations[petId] = data.mutations[petId] or {}
+        data.mutations[petId][mutation] = true
+    end
+    if data.found[petId] then
         return false
     end
     data.found[petId] = true
@@ -139,7 +193,19 @@ function Codex.exportData(player)
     if not data then
         return nil
     end
-    return { Found = sorted(data.found), Claimed = sorted(data.claimed), Earned = table.clone(data.earned) }
+    local mutations = {}
+    for petId, set in data.mutations do
+        local list = {}
+        for _, id in PetRules.MutationOrder do
+            if set[id] then
+                table.insert(list, id)
+            end
+        end
+        if #list > 0 then
+            mutations[petId] = list
+        end
+    end
+    return { Found = sorted(data.found), Claimed = sorted(data.claimed), Earned = table.clone(data.earned), Mutations = mutations }
 end
 
 -- owned: { [petId] = { Count, Level } }, what they hold now, for the book's pages

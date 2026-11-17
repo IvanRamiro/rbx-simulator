@@ -79,11 +79,13 @@ local function getRankNumber(player)
     return Ranks.getIndex(Ranks.getPlayerRankName(player))
 end
 
--- `hidden`: its owner is culled (far away), so it waits out of the world like their other pets. `key` is "PetId:Size". `own`: the
--- local player's (another player's big pet on a phone gives up its shadow and dust).
+-- `hidden`: its owner is culled (far away), so it waits out of the world like their other pets. `key` is "PetId:Size" or
+-- "PetId:Size:Mutation". `own`: the local player's (another player's big pet on a phone gives up its shadow and dust, and a mutated
+-- one its mutation's emitters and outline: MutationLook).
 local function buildPet(key, rootPart, hidden, own)
-    local petId, size = string.match(key, "^([^:]+):?(.*)$")
-    local model, petRoot = PetModels.build(petId, size)
+    local petId, size, mutation = string.match(key, "^([^:]+):?([^:]*):?(.*)$")
+    local model, petRoot = PetModels.build(petId, size, nil, if mutation ~= "" then mutation else nil,
+        { own = own, priority = if own then 3 else 1 })
     if not model then
         return nil
     end
@@ -111,7 +113,7 @@ local function buildPet(key, rootPart, hidden, own)
     return pet
 end
 
--- Keeps a player's pets matching their EquippedPets ("PetId:Size", ...): pets still equipped stay where they are,
+-- Keeps a player's pets matching their EquippedPets ("PetId:Size[:Mutation]", ...): pets still equipped stay where they are,
 -- new ones appear at the player's side, unequipped ones go. A new character starts them all again.
 local function syncPets(player, entry)
     local character = player.Character

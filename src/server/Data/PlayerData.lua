@@ -32,7 +32,7 @@ local AuctionLedger = require(script.Parent.Parent:WaitForChild("Auction"):WaitF
 local RecordBook = require(script.Parent.Parent:WaitForChild("Records"):WaitForChild("RecordBook"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 25
+local SCHEMA_VERSION = 26
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -109,7 +109,10 @@ end
 -- Auction House keeps it from players who may not trade paid items), MIGRATIONS[23] below. The bump matters: an older server
 -- would drop both, and a paid pet would come out of it tradable anywhere;
 -- version 25 added Records (play time and eggs carried home, for the Hall of Records: RecordBook), MIGRATIONS[24] below. The bump
--- matters: an older server would drop both counts.
+-- matters: an older server would drop both counts;
+-- version 26 added a pet's Mutation (rolled at hatching: PetRules.Mutations), the Colossal size and Codex.Mutations (the mutations
+-- found on each beast), MIGRATIONS[25] below. The bump matters most of all (the game was live): an older server would read a
+-- Colossal as Normal and drop every mutation, and the next save would make that for good; it refuses the save instead (TooNew).
 
 -- A save from before weapons gets the starter weapon, once. A new player is given it by
 -- WeaponInventory; nobody else is, or selling it and rejoining would mint Spirit Stones.
@@ -193,6 +196,22 @@ end
 -- Version 25 added the Hall of Records' counts (RecordBook): an older save has neither kept, so both start at none (sanitizeProgress).
 MIGRATIONS[24] = function(progress)
     progress.Records = nil
+    return progress
+end
+
+-- Version 26 added pet mutations and the Colossal size (PetRules): an older save's pets have no mutation and none is Colossal, and
+-- its Codex has found none (sanitizeProgress then reads them so). A stray Mutation in an older save could only be garbage: dropped.
+MIGRATIONS[25] = function(progress)
+    if typeof(progress.Pets) == "table" then
+        for _, pet in progress.Pets do
+            if typeof(pet) == "table" then
+                pet.Mutation = nil
+            end
+        end
+    end
+    if typeof(progress.Codex) == "table" then
+        progress.Codex.Mutations = nil
+    end
     return progress
 end
 
@@ -286,6 +305,7 @@ local function sanitizeProgress(raw)
                 table.insert(progress.Pets, {
                     InstanceId = pet.InstanceId, PetId = pet.PetId, Level = PetRules.level(pet), Locked = pet.Locked == true,
                     Size = PetRules.size(pet),
+                    Mutation = PetRules.mutation(pet),
                     Worth = PetRules.worth(pet),
                     Paid = if pet.Paid == true then true else nil,
                 })
@@ -473,6 +493,18 @@ local function migratedPetId(petId, version)
     return petId
 end
 
+-- From version 26 (the first with mutations and Colossal) a size or mutation this server doesn't know is newer content too: a
+-- string Size not in PetRules.Sizes, a string Mutation not in PetRules.Mutations. Older saves can't hold either, so there a stray
+-- string is garbage and sanitizing reads it as Normal, or none, as it always did.
+local TRAITS_FROM = 26
+local function unknownTraits(item, version)
+    if version < TRAITS_FROM or typeof(item) ~= "table" then
+        return false
+    end
+    return (typeof(item.Size) == "string" and PetRules.Sizes[item.Size] == nil)
+        or (typeof(item.Mutation) == "string" and PetRules.Mutations[item.Mutation] == nil)
+end
+
 local function holdsUnknownContent(progress, version)
     if typeof(progress) ~= "table" then
         return false
@@ -480,6 +512,21 @@ local function holdsUnknownContent(progress, version)
     if typeof(progress.Pets) == "table" then
         for _, pet in progress.Pets do
             if typeof(pet) == "table" and typeof(pet.PetId) == "string" and GameConfig.Pets[migratedPetId(pet.PetId, version)] == nil then
+                return true
+            end
+            if unknownTraits(pet, version) then
+                return true
+            end
+        end
+    end
+    if version >= TRAITS_FROM then
+        for _, id in Codex.mutationIds(progress.Codex) do
+            if PetRules.Mutations[id] == nil then
+                return true
+            end
+        end
+        for _, item in AuctionLedger.petItems(progress.Auction) do
+            if unknownTraits(item, version) then
                 return true
             end
         end

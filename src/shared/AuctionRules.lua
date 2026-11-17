@@ -1,5 +1,5 @@
 -- The Auction House's rules (GameConfig.AuctionHouse), shared so the server's checks and the client's window never disagree on a
--- fee, a floor or a raise. Items are tables: a pet { PetId, Level, Size, Worth } or a weapon { WeaponId, Element, Name }.
+-- fee, a floor or a raise. Items are tables: a pet { PetId, Level, Size, Mutation, Worth } or a weapon { WeaponId, Element, Name }.
 --
 --   AuctionRules.Config                     GameConfig.AuctionHouse
 --   AuctionRules.isPaidPet(petId)           whether this kind of pet comes from a Robux egg (an Exclusive egg's pool): always paid
@@ -8,7 +8,7 @@
 --   AuctionRules.value(kind, item)          its sell value (what Buy & Sell pays for it)
 --   AuctionRules.rarity(kind, item)         a pet's rarity, or "Weapon"
 --   AuctionRules.rarityRank(rarity)         1 (Common) .. 8 (Divine); a weapon 0: for sorting by rarity
---   AuctionRules.priceCap(kind, item)       the highest bid allowed
+--   AuctionRules.priceCap(kind, item)       the highest bid allowed (a big or mutated pet's is higher: SizeCap, PetRules.Mutations' Cap)
 --   AuctionRules.startRange(kind, item)     the lowest and highest starting bid
 --   AuctionRules.listingFee(startBid)       what listing costs (kept even if nothing sells)
 --   AuctionRules.saleTax(price)             what is taken from the seller's price
@@ -77,8 +77,12 @@ function AuctionRules.rarityRank(rarity)
     return table.find(RARITIES, rarity) or 0
 end
 
+-- (a Colossal or a Void is far rarer than its sell value says: its cap rises by its size's and its mutation's multiplier, 2026-11-17)
 function AuctionRules.priceCap(kind, item)
     local multiple = CONFIG.PriceCap[AuctionRules.rarity(kind, item)] or CONFIG.PriceCap.Common
+    if kind == "Pet" and typeof(item) == "table" then
+        multiple *= (CONFIG.SizeCap[PetRules.size(item)] or 1) * PetRules.mutationInfo(item).Cap
+    end
     return math.max(10, math.floor(AuctionRules.value(kind, item) * multiple))
 end
 
@@ -151,8 +155,7 @@ end
 
 function AuctionRules.itemName(kind, item)
     if kind == "Pet" then
-        local pet = GameConfig.Pets[item.PetId]
-        return pet and pet.DisplayName or "Pet"
+        return if GameConfig.Pets[item.PetId] then PetRules.displayName(item.PetId, item.Mutation) else "Pet"
     end
     if typeof(item.Name) == "string" and item.Name ~= "" then
         return item.Name

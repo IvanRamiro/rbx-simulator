@@ -44,8 +44,9 @@ PenLayout.MaxDisplay = 28   -- the widest a beast is ever shown in a pen, across
                             -- without touching the fence); the pen's own room caps it first below level 7. Since 2026-11-17 a Giant
                             -- is 2.4 to 5 times its Normal size (PetRules.Sizes), 30 to 50 across: it fills its pen at every level,
                             -- shown as large as the pen lets it turn
-PenLayout.ParkAt = { Large = 1.4, Giant = 2 } -- a Large or Giant shown smaller than this many times its Normal size so it can turn
-                            -- stands still instead, as large as fits facing the gate (parkScale): in a small pen a Giant still fills it
+PenLayout.ParkAt = { Large = 1.4, Giant = 2, Colossal = 3 } -- a Large, Giant or Colossal shown smaller than this many times its
+                            -- Normal size so it can turn stands still instead, as large as fits facing the gate (parkScale): in a small
+                            -- pen a Giant still fills it, and a Colossal (30 to 54 studs long) is parked in nearly every pen
 PenLayout.ParkDepth = 0.8   -- the share of the pen's depth a parked beast may take (the front stays free for the others)
 PenLayout.Hip = 3.9         -- how high a Normal beast's root rides over the ground (as beside its owner: PetCompanionController)
 PenLayout.Front = -32       -- where the front fence's line is, in the pasture's frame (Z)

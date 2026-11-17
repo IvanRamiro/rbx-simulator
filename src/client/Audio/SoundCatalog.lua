@@ -240,6 +240,11 @@ local catalog = {
     SizeLand = { Id = "9113480917", Volume = 0.7, Pitch = 0.8, Group = "Interface" },
     SizeSmall = { Id = "9116405867", Volume = 0.5, Pitch = 1.35, Group = "Interface", With = { { "SizeSmallPing", 0.06 } } },
     SizeSmallPing = { Id = "9126076118", Volume = 0.45, Notes = { 1.5, 1.68 }, Group = "Interface" },
+    -- the mutation stamps (2026-11-17; a Colossal's is SizeGiant pitched down): a glassy tone over a bright thud; Rainbow and up, the
+    -- choir and a ding over the reward stinger (the sounds already in the game, layered anew)
+    MutationStamp = { Id = "9126073644", Volume = 0.85, Pitch = 1.25, Group = "Interface", With = { { "SizeLarge", 0 }, { "RevealDing", 0.1 } } },
+    MutationGrand = { Id = "9116384485", Volume = 0.6, Start = 0.1, Pitch = 1.1, Length = 2.2, Fade = 0.6, Group = "Interface", Key = true,
+        Duck = { 0.4, 2.5 }, Moment = 2, With = { { "RevealChoir", 0 }, { "RevealDing", 0.15 }, { "RevealDust", 0.3 } } },
     -- another player's hatch at the Sanctum, as anyone near hears it: the crack and a chime, quieter (a grand one with the thud)
     HatchNearby = { Id = "9113959343", Volume = 1, Start = 0.12, Near = 12, Reach = 80, With = { "CrackShatterNear", { "HatchNearbyChime", 0.05 } } },
     CrackShatterNear = { Id = "9114591872", Volume = 1.3, Length = 0.7, Near = 12, Reach = 80 },

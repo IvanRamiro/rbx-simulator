@@ -187,7 +187,7 @@ local function publishAll()
         if #cards >= RecordsConfig.Rarest.Show then
             break
         end
-        table.insert(cards, { u = e.u, d = (nameOf(e.u, e.n)), p = e.p, s = e.s, o = e.o, t = e.t })
+        table.insert(cards, { u = e.u, d = (nameOf(e.u, e.n)), p = e.p, s = e.s, m = e.m, o = e.o, t = e.t })
     end
     publish("Rarest", { rows = cards })
     local lines = {}
@@ -407,7 +407,7 @@ local function sawRank(player, rankName, fromJoin)
     end
 end
 
-local function onHatched(player, eggId, petId, size)
+local function onHatched(player, eggId, petId, size, mutation)
     local pet = GameConfig.Pets[petId]
     if not pet or player.Parent ~= Players then
         return
@@ -418,15 +418,17 @@ local function onHatched(player, eggId, petId, size)
         return
     end
     claimFirst(player, "Beast_" .. petId)
-    local odds = RecordsConfig.hatchOdds(eggId, petId, size)
+    local odds = RecordsConfig.hatchOdds(eggId, petId, size, mutation)
     if odds and PlayerData.canSave(player)
         and RecordsCore.qualifies(rarest, odds, RecordsConfig.Rarest.Keep, RecordsConfig.Rarest.MostLikely) then
         table.insert(pendingRarest, { id = HttpService:GenerateGUID(false), u = player.UserId, n = player.DisplayName, p = petId,
-            s = size, e = eggId, o = odds, t = os.time() })
+            s = size, m = mutation, e = eggId, o = odds, t = os.time() })
     end
     local order = PassRules.RarityOrder[pet.Rarity] or 1
-    if RecordsConfig.Feed.Rarities[pet.Rarity] or (size == "Giant" and order >= PassRules.RarityOrder[RecordsConfig.Feed.GiantFrom]) then
-        addFeat({ k = "Hatch", u = player.UserId, n = player.DisplayName, p = petId, s = size, o = odds })
+    local rules = RecordsConfig.Feed
+    if rules.Rarities[pet.Rarity] or (size == "Giant" and order >= PassRules.RarityOrder[rules.GiantFrom]) or rules.Sizes[size]
+        or (mutation and rules.Mutations[mutation]) or (odds and odds < rules.RarerThan) then
+        addFeat({ k = "Hatch", u = player.UserId, n = player.DisplayName, p = petId, s = size, m = mutation, o = odds })
     end
 end
 RecordBook.Hatched.Event:Connect(onHatched)

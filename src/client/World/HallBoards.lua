@@ -340,6 +340,9 @@ local function drawRarest(root, data, ctx)
         Portraits = Portraits or require(UI:WaitForChild("Portraits"))
         local ok, view = pcall(Portraits.pet, row.p, 128)
         if ok and view then
+            if row.m then -- (a mutated beast's portrait takes its colour)
+                require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("MutationLook")).portrait(view, row.m)
+            end
             for _, child in view:GetChildren() do
                 if child:IsA("UICorner") or child:IsA("UIStroke") then
                     child:Destroy()
@@ -354,9 +357,13 @@ local function drawRarest(root, data, ctx)
             view.Parent = bay
         end
         local size = if PetRules.Sizes[row.s] then row.s else "Normal"
-        local kind = string.upper((if size ~= "Normal" then size .. " " else "") .. (if pet then pet.Rarity else ""))
+        local mutation = PetRules.mutation(row.m)
+        local kind = string.upper((if size ~= "Normal" then size .. " " else "") .. (if mutation then mutation .. " " else "")
+            .. (if pet then pet.Rarity else ""))
+        local kindColor = if mutation then PetRules.Mutations[mutation].Color
+            elseif PetRules.Sizes[size].Order >= PetRules.Sizes.Giant.Order then PetRules.Sizes[size].Color else C.Pale
         text(bay, { Text = "<b>" .. index .. ". " .. safe(if pet then pet.DisplayName else row.p, 26) .. "</b>\n"
-            .. sized(paint(kind, if size == "Giant" then PetRules.Sizes.Giant.Color else C.Pale), B * 0.095) .. "\n"
+            .. sized(paint(kind, kindColor), B * 0.095) .. "\n"
             .. sized(paint("<b>" .. RecordsConfig.oneIn(row.o) .. "</b>", C.Sand), B * 0.15),
             Px = B * 0.105, Font = F.Heavy, TextColor3 = tone, LineHeight = 1.0, TextWrapped = true,
             Position = UDim2.fromScale(0.45, 0.05), Size = UDim2.fromScale(0.54, 0.56), TextYAlignment = Enum.TextYAlignment.Top })
@@ -427,7 +434,7 @@ local function feedWords(row)
     local who = "<b>" .. name(row, 18) .. "</b>"
     if row.k == "Hatch" then
         local pet = GameConfig.Pets[row.p]
-        local size = if row.s == "Giant" or row.s == "Large" then string.upper(row.s) .. " " else ""
+        local size = RecordsConfig.traitWords(row.s, row.m) -- ("COLOSSAL VOID ", "GIANT ", "")
         local odds = if typeof(row.o) == "number" then " (" .. RecordsConfig.oneIn(row.o) .. ")" else ""
         local noun = size .. safe(if pet then pet.DisplayName else "beast")
         local article = if string.find(noun, "^[AEIOUaeiou]") then " an " else " a " -- ("a Astral Whale" read wrong)

@@ -23,6 +23,7 @@ local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local CodexState = require(script.Parent:WaitForChild("CodexState"))
 local PetPreload = require(script.Parent:WaitForChild("PetPreload"))
+local MutationLook = require(script.Parent:WaitForChild("MutationLook"))
 local SpecialPreview = require(script.Parent:WaitForChild("SpecialPreview"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
@@ -422,6 +423,32 @@ local function renderEntry(petId)
             Text = info.Theme .. "  ·  +" .. info.QiBonus .. "% Qi"
                 .. (if have and have.Level > 1 then "  ·  Your best: Level " .. have.Level .. " (+" .. PetRules.qiBonus(petId, have.Level) .. "%)" else "") })
         line({ TextSize = 13, Text = lore.Lore or "" })
+        -- the mutations found on this beast, lit; the rest dim (PetRules.Mutations, rarest last)
+        local found = CodexState.mutations[petId] or {}
+        local count = 0
+        for _ in found do
+            count += 1
+        end
+        heading("Mutations found: " .. count .. " of " .. #PetRules.MutationOrder)
+        order += 1
+        local badges = Instance.new("Frame")
+        badges.Name = "Mutations"
+        badges.BackgroundTransparency = 1
+        badges.LayoutOrder = order
+        badges.AutomaticSize = Enum.AutomaticSize.Y
+        badges.Size = UDim2.new(1, 0, 0, 0)
+        badges.Parent = text
+        local layout = UiKit.list(badges, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4) })
+        layout.Wraps = true
+        for index, id in PetRules.MutationOrder do
+            local badge = if found[id] then MutationLook.badge(id) else UiKit.tag(id, C.Muted)
+            badge.LayoutOrder = index
+            if not found[id] then
+                badge.TextTransparency = 0.45
+                badge.BackgroundTransparency = 0.92
+            end
+            badge.Parent = badges
+        end
     else
         line({ TextSize = 13, TextColor3 = C.Muted, Text = "This page is blank. Hatch this beast to fill it in." })
     end

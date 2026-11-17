@@ -95,6 +95,10 @@ local function nameTag(model, root, pet, height)
     if size ~= "Normal" then
         table.insert(words, string.format('<font color="#%s">%s</font>', PetRules.sizeInfo(size).Color:ToHex(), string.upper(size)))
     end
+    if pet.Mutation then
+        table.insert(words, string.format('<font color="#%s">%s</font>', PetRules.Mutations[pet.Mutation].Color:ToHex(),
+            string.upper(pet.Mutation)))
+    end
     if (pet.Level or 1) > 1 then
         table.insert(words, '<font color="#FFEEC4">LV ' .. pet.Level .. "</font>")
     end
@@ -111,9 +115,11 @@ local function buildBeast(pet, level, penFrame, owner, others, floor)
         return nil
     end
     local key = pet.PetId .. ":" .. pet.Size
+    -- (a mutated one is dressed as it's built: MutationLook; a pen's beasts keep their outlines after the pets beside their owners)
+    local look = { own = owner == player, priority = if owner == player then 2 else 0 }
     local model, root
     if not acrossOf[key] then
-        model, root = PetModels.build(pet.PetId, pet.Size)
+        model, root = PetModels.build(pet.PetId, pet.Size, nil, pet.Mutation, look)
         if not model then
             return nil
         end
@@ -137,7 +143,7 @@ local function buildBeast(pet, level, penFrame, owner, others, floor)
         if model then
             model:Destroy()
         end
-        model, root = PetModels.build(pet.PetId, pet.Size, display)
+        model, root = PetModels.build(pet.PetId, pet.Size, display, pet.Mutation, look)
         if not model then
             return nil
         end
@@ -268,9 +274,11 @@ local pastures = {} -- [Configuration] = { frame, level, owner, fence, beasts = 
 local function parsePets(text)
     local out = {}
     for _, entry in string.split(if typeof(text) == "string" then text else "", ",") do
-        local petId, size, level = string.match(entry, "^([^:]+):([^:]*):?(%d*)$")
+        -- ("PetId:Size:Level", and ":Mutation" when it has one: PenService)
+        local petId, size, level, mutation = string.match(entry, "^([^:]+):([^:]*):?(%d*):?(.*)$")
         if petId and GameConfig.Pets[petId] and #out < PenLayout.MostSlots then
-            table.insert(out, { PetId = petId, Size = PetRules.size(size), Level = tonumber(level) or 1, key = entry })
+            table.insert(out, { PetId = petId, Size = PetRules.size(size), Level = tonumber(level) or 1, Mutation = PetRules.mutation(mutation),
+                key = entry })
         end
     end
     return out

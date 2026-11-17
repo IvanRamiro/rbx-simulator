@@ -40,6 +40,9 @@ RecordsConfig.Feed = {
     FromRealm = 3,             -- reaching realm 3 (Spirit Core) or higher is a feat
     Rarities = { Mythical = true, Secret = true, Divine = true }, -- a hatch of these is a feat
     GiantFrom = "Legendary",   -- and a Giant of this rarity or higher
+    Sizes = { Colossal = true }, -- and any beast of these sizes (2026-11-17)
+    Mutations = { Rainbow = true, Celestial = true, Void = true }, -- and any beast with these mutations (PetRules.Mutations)
+    RarerThan = 1 / 20000,     -- and any hatch rarer than this (beast x size x mutation: a Colossal Golden Legendary, say)
 }
 
 -- ---------- the Firsts: each set once, for good ----------
@@ -100,24 +103,39 @@ RecordsConfig.FirstById = byId
 
 -- ---------- the odds of a hatch ----------
 -- How likely one egg was to give exactly this: the beast's chance in that egg's own pool (before any luck: luck changes the
--- player's odds, not how rare the beast is), times the size's chance when it is Large or Giant. nil if the egg doesn't hold it.
+-- player's odds, not how rare the beast is), times the size's chance when it is Large or bigger, times its mutation's chance when it
+-- has one (three independent rolls). nil if the egg doesn't hold it.
 local SIZE_ODDS = {}
 for name, info in PetRules.Sizes do
     if info.Order >= PetRules.Sizes.Large.Order then
         SIZE_ODDS[name] = info.Chance / 100
     end
 end
-function RecordsConfig.hatchOdds(eggId, petId, size)
+function RecordsConfig.hatchOdds(eggId, petId, size, mutation)
     local egg = GameConfig.Eggs[eggId]
     if not egg then
         return nil
     end
+    local mutated = PetRules.mutation(mutation)
     for _, entry in egg.Pool do
         if entry.PetId == petId then
-            return entry.HatchChance / 100 * (SIZE_ODDS[size] or 1)
+            return entry.HatchChance / 100 * (SIZE_ODDS[size] or 1) * (if mutated then PetRules.Mutations[mutated].Chance / 100 else 1)
         end
     end
     return nil
+end
+
+-- "COLOSSAL VOID ", "GIANT ", "" (Large and up, then the mutation: how a record names a hatch)
+function RecordsConfig.traitWords(size, mutation)
+    local words = {}
+    if typeof(size) == "string" and PetRules.Sizes[size] and PetRules.Sizes[size].Order >= PetRules.Sizes.Large.Order then
+        table.insert(words, string.upper(size))
+    end
+    local mutated = PetRules.mutation(mutation)
+    if mutated then
+        table.insert(words, string.upper(mutated))
+    end
+    return if #words > 0 then table.concat(words, " ") .. " " else ""
 end
 
 -- ---------- words ----------
