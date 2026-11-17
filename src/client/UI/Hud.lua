@@ -804,7 +804,11 @@ local function stepAside()
     Hud.Quest.Visible = not open
     Hud.Dock.Visible = not open
     Hud.Banner.Visible = not open -- (its pieces showed round a window's edge: the Merchant's line beside the Hatching Sanctum)
+    -- on a phone no window clears the left column (the profile and the menu): each lay over part of the menu's tiles (the
+    -- Hatching Sanctum's, beside the altar, over three of them). There the column steps aside too while one is open.
+    Hud.Status.Visible = not (open and Hud.isCompact())
 end
+Hud.CompactChanged:Connect(stepAside)
 local WINDOW_MARGIN = 24
 local switching = false -- a window opening closes the one before it: that close is silent (the opening has its own sound)
 local SLIDE = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
