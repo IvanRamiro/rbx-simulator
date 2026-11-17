@@ -77,7 +77,7 @@ A new player is walked through the loop by the quests, one at a time in the [ QU
 7. Hatch it at the Hatching Altar.
 
 
-Then the path on, so a player always has a next goal (steps 8 to 23): buy a weapon; the Root of the Island's relic; cross to Jade Grove; secure a Mantis Sage egg; Qi Awakener; cross to Ember Peak; secure an Ember Xuanwu egg; forge a weapon; Foundation Initiate (sword flight); Soul Awakening; cross to Moonlit Isle; secure a Tiangou egg; Divine Initiate; cross to Origin Abyss; secure a Pangu egg; Eternal Origin. **Append only:** a save holds its step number.
+Then the path on, so a player always has a next goal (steps 8 to 23): buy a weapon; the Root of the Island's relic; cross to Jade Grove; secure a Mantis Sage egg; Qi Awakener; cross to Ember Peak; secure an Ember Xuanwu egg; forge a weapon; Foundation Initiate; Soul Awakening; cross to Moonlit Isle; secure a Tiangou egg; Divine Initiate; cross to Origin Abyss; secure a Pangu egg; Eternal Origin. **Append only:** a save holds its step number.
 
 - **The way there (November 5, 2026):** a quest with a `Way` in `GameConfig.Quests` shows an arrow that turns with the camera, the place and the distance in studs. It rests within 25 studs of the place, and while a stolen egg's own way home is showing.
 - **The server decides** (`server/Quests`): it checks the current quest against the player's Qi, rank, pets, weapons, relics, island and carried egg, and the air leaps, guardian strikes and secured eggs it sees. The step is saved (`Quest`, save version 9).
@@ -192,7 +192,7 @@ The islands were first linked by floating stepping stones tuned to each rank's l
 
 Decided by the owner:
 - stamina fuels only dashes and sword flight;
-- sword flight unlocks at Foundation Initiate;
+- sword flight unlocks at Lesser Immortal, the first rank of Realm 6, the Immortal Realm, on every device (the owner, November 17, 2026: "ensure that flight is locked for all platforms until the player reaches Realm 6"; it was Foundation Initiate before);
 - Qi barriers still hold for flyers.
 
 - **Stamina:** one bar under the air-leap pips.
@@ -205,7 +205,8 @@ Decided by the owner:
   - **Controls:** move with the camera (look up or down to climb or dive), hold jump to rise and Ctrl, C or L2 to sink. Still, it hovers.
   - **Cost:** 8 stamina per second moving, 4 hovering; take-off needs 25. It lands itself when stamina runs out.
   - **Stance:** upright on the blade, one foot forward, a hand raised in a sword gesture; moving, it sinks lower and leans into the speed.
-  - **On the server:** `FlightService` checks the rank, puts the sword under the feet in `Workspace.FlyingSwords` and caps a flight at a full bar spent hovering.
+  - **On the server:** `FlightService` checks the rank on every take-off request (`Ranks.canFly`), whatever the device: G, gamepad Y and the touch Sword button send the same request. It puts the sword under the feet in `Workspace.FlyingSwords` and caps a flight at a full bar spent hovering. `QinggongFlightSpeed` is 0 below the unlock rank (`Ranks.getFlightSpeed`), whatever the Qinggong level's FlightSpeed holds.
+  - **Locked:** below the unlock rank G or gamepad Y says "Sword flight is locked. Reach Lesser Immortal (Immortal Realm) to fly." and the touch Sword button stays hidden; the rank-up that unlocks it says "Sword flight unlocked!" with the key (or SWORD) to press.
   - **The barriers still hold:** WorldService returns anyone below a bridge's rank who reaches it or its island, at any height.
   - **Relics too:** a flyer can reach the Void Shard early but can't claim it, because the claim is rank-checked.
 - **The flying sword** (`tools/blender/weapons/flying_sword.py`, 8.3 studs long): **a blade whose cutting edge is Qi**, an original design whose identity is in its shape, readable from above while it is ridden.
@@ -213,6 +214,8 @@ Decided by the owner:
   - **The hilt** is gold and white like the owner's Murim robes: broad flame-tongue wings swept back round a white-jade disc in a gold rim, a white silk grip bound in gold cord, and a gold flame finial.
   - **In flight:** a soft wake trails the blade and a white silk ribbon edged in the realm's colour streams from the pommel.
   - **Why it was redesigned:** the first version was a plain steel jian. The owner called it generic: its outline was the default sword, its details sat at the hilt under the rider, and they lived in the texture.
+
+Flight speed is the sword's speed once flight is unlocked (Lesser Immortal flies at Perfect Foundation's 56).
 
 | Rank | Stamina | Dash speed | Flight speed |
 |---|---|---|---|
@@ -751,9 +754,9 @@ Six floating islands built from original Blender work: terrain tops, sculpted un
 - Yggdrasil replaced the Starting Island, which carried over its Root of the Island and its underside's strata. Its Qi Spring and kit pieces came too and went with the hub's rebuild (November 12, 2026); `WorldKit.Yggdrasil` now holds the celestial city's pieces.
 
 **Bridges:**
-- Paths in `layout.py` (`BRIDGES`; `--write` generates `src/worldbuild/Placements/Bridges.lua`), built by `WorldBuilder.buildBridges()` into `FloatingIslands.Bridges`. They fan out from Yggdrasil's north rim as on the owner's map, each one straight span from Yggdrasil's ground to just inside its island's gate (no landings: the owner's call). Level, with a gentle arch (at most about 6°): Jade 191 studs, Ember 314, Moonlit 461, Origin 649, about 8, 12, 16 and 20 seconds to run at each unlock rank's speed (24 to 32 studs/s); the sword flies the last two in about 10.
+- Paths in `layout.py` (`BRIDGES`; `--write` generates `src/worldbuild/Placements/Bridges.lua`), built by `WorldBuilder.buildBridges()` into `FloatingIslands.Bridges`. They fan out from Yggdrasil's north rim as on the owner's map, each one straight span from Yggdrasil's ground to just inside its island's gate (no landings: the owner's call). Level, with a gentle arch (at most about 6°): Jade 191 studs, Ember 314, Moonlit 461, Origin 649, about 8, 12, 16 and 20 seconds to run at each unlock rank's speed (24 to 32 studs/s); the sword (from Lesser Immortal) flies Origin's in about 11.
 - A deck 40 studs wide (doubled twice at the owner's request; room to ride the sword along it) with rails. Both ends are carried onto their islands by a solid abutment.
-- At each bridge's start a gate holds a **Qi barrier** (tagged `QiBarrier`, with the destination's `RankId`): solid until the player reaches that rank, then open to them (`BridgeBarriers.client`). While sealed, each player sees a plain wall of transparent light in that gate's own colour with "Sealed / Reach <rank> to pass" (the owner: "just match the color of entrance with their realm level"; a swirling texture was tried and read as water); once they qualify the wall is gone for them. A player below the rank found on the bridge past the gate, or on the island it leads to, is put back in front of the gate (`WorldService`).
+- At each bridge's start a gate holds a **Qi barrier** (tagged `QiBarrier`, with the destination's `RankId`): solid until the player reaches that rank, then open to them (`BridgeBarriers.client`). While sealed, each player sees a plain wall of transparent light in that gate's own colour with "Sealed / Reach <rank> to pass" (the owner: "just match the color of entrance with their realm level"; a swirling texture was tried and read as water); once they qualify the wall is gone for them. A player below the rank found on the bridge past the gate, or on the island it leads to (at any height, so flight too), is put back in front of the gate (`WorldService`) and told why ("Locked. Reach <rank> to go to <island>.", through the player's `LockedOutNotice` attribute). The wall only stops feet; the server's check is the rule. Each player is checked on their own, so an error with one player can never stop the gates and the fall safety for the rest (November 17, 2026). The Blossom Sanctuary has no gate: open to every rank.
 - Each bridge wears its island's kit, modelled in Blender (`tools/blender/world/bridge_kits.py` → `assets/world/Bridges/<Theme>Bridge.fbx`, piece offsets in `Placements/BridgeKits.lua`), laid by `buildBridges` over the walkable blockout:
   - **Beginner Isle:** plain stone deck.
   - **Jade Grove:** plank deck with lattice rails, carved jade posts, vines.
@@ -1001,7 +1004,7 @@ Securing a stolen egg pays a burst of Qi worth `EggTheft.SecureQiMinutes` (5) mi
 
 The server decides every hit; the client only sends "strike" and shows it.
 
-- **Weapon by rank:** the Qi Palm below `SwordFlight.UnlockRank`, the flying sword from it.
+- **Weapon:** the one equipped (bought at the Blacksmith), or the Qi Palm with none.
   - Palm: 10 damage, range 9, arc 75°, cooldown 0.45 s.
   - Sword: 16 damage, range 12, arc 80°, cooldown 0.55 s.
   - Damage grows 12% per rank (`GameConfig.Combat.RankPowerStep`).

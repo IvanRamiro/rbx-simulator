@@ -62,6 +62,17 @@ function Ranks.getQinggong(rankName)
     return current, nil
 end
 
+-- Whether a rank may ride the flying sword (GameConfig.SwordFlight.UnlockRank), and its flight speed: 0 below the unlock rank,
+-- whatever its Qinggong level holds. The one rule every device follows: the server grants QinggongFlightSpeed from it and
+-- FlightService refuses a take-off below it; keys, gamepad and the touch Sword button only ask.
+function Ranks.canFly(rankName)
+    return Ranks.isAtLeast(rankName, GameConfig.SwordFlight.UnlockRank)
+end
+
+function Ranks.getFlightSpeed(rankName)
+    return if Ranks.canFly(rankName) then Ranks.getQinggong(rankName).FlightSpeed else 0
+end
+
 -- The rank name in a player's leaderstats, or "" before their data has loaded.
 function Ranks.getPlayerRankName(player)
     local leaderstats = player:FindFirstChild("leaderstats")
@@ -119,6 +130,10 @@ for _, level in GameConfig.Qinggong.Levels do
     end
     previousQinggongLevel = level
 end
+
+local flightRank = Ranks.getRankById(GameConfig.SwordFlight.UnlockRank)
+assert(flightRank, "GameConfig.SwordFlight.UnlockRank is an unknown rank: " .. tostring(GameConfig.SwordFlight.UnlockRank))
+assert(Ranks.getFlightSpeed(flightRank.Name) > 0, "The Qinggong level at SwordFlight.UnlockRank needs a FlightSpeed")
 
 for index = 2, #GameConfig.Ranks do
     assert(

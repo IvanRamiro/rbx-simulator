@@ -30,7 +30,8 @@ local GameConfig = {
         -- Stamina fuels only dashes and sword flight; it refills after RegenDelay, faster on the ground.
         Stamina = { RegenGround = 32, RegenAir = 14, RegenDelay = 0.6 },
         Dash = { Cost = 25, Duration = 0.2, Cooldown = 0.45 },
-        -- Per rank. DashSpeed is studs/s while dashing; FlightSpeed is 0 before SwordFlight unlocks.
+        -- Per rank. DashSpeed is studs/s while dashing; FlightSpeed is the sword's speed once SwordFlight.UnlockRank is reached
+        -- (Ranks.getFlightSpeed: 0 below it, whatever the level says).
         Levels = {
             { RankId = "QiInitiate", AirLeaps = 1, RunSpeed = 22, Stamina = 100, DashSpeed = 70, FlightSpeed = 0 },
             { RankId = "QiGatherer", AirLeaps = 2, RunSpeed = 24, Stamina = 110, DashSpeed = 74, FlightSpeed = 0 },
@@ -383,11 +384,13 @@ local GameConfig = {
         },
     },
 
-    -- Sword flight (src/server/Qinggong/FlightService), from UnlockRank. Drains stamina (Cost per
-    -- second while moving, HoverCost while still) and needs MinStamina to take off. Qi barriers
-    -- still hold: flight never reaches an island above the rider's rank.
+    -- Sword flight (src/server/Qinggong/FlightService), from UnlockRank on every device (keyboard, gamepad and touch alike:
+    -- the server refuses a take-off below it). The owner, 2026-11-17: "flight is locked for all platforms until the player
+    -- reaches Realm 6" (the Immortal Realm; it was Foundation Initiate before). Drains stamina (Cost per second while moving,
+    -- HoverCost while still) and needs MinStamina to take off. Qi barriers still hold: flight never reaches an island above the
+    -- rider's rank.
     SwordFlight = {
-        UnlockRank = "FoundationInitiate",
+        UnlockRank = "LesserImmortal",
         Cost = 8,
         HoverCost = 4,
         MinStamina = 25,
@@ -651,8 +654,9 @@ local GameConfig = {
         { Id = "Forge", Kind = "Forge", Reward = 100, Title = "Forge a Weapon",
             Way = { "the Blacksmith", 233, -172 },
             Text = "Eggs you bring home and relics unlock elements. At the Blacksmith, give a weapon an element and a name." },
-        { Id = "Flight", Kind = "Rank", Goal = "FoundationInitiate", Reward = 150, Title = "Sword Flight",
-            Text = "Reach Foundation Initiate to fly through the air on your sword." },
+        -- (Id "Flight" kept: saves hold the step. Sword flight now comes at Lesser Immortal, so this step is the new realm.)
+        { Id = "Flight", Kind = "Rank", Goal = "FoundationInitiate", Reward = 150, Title = "The Foundation Realm",
+            Text = "Reach Foundation Initiate. You run faster and get one more air leap." },
         { Id = "MoonGate", Kind = "Rank", Goal = "SoulAwakening", Reward = 800, Title = "The Moonlit Gate",
             Text = "Cultivate, and bring eggs home for lots of Qi. At Soul Awakening, the bridge to Moonlit Isle opens." },
         { Id = "MoonBridge", Kind = "Visit", Goal = "MoonlitIsle", Reward = 300, Title = "The Moonlit Isle",

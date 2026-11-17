@@ -2,7 +2,8 @@
 -- them: never more than two big ones beside the jump button, and the small lotus (Meditate: the owner, 2026-11-16, "a small
 -- round meditate button" for touch screens; a keyboard presses E instead).
 --   Near something to fight, or the weapon in hand:  Strike and Dash, and Meditate
---   Otherwise:                Sword (once it can be ridden) and Dash, and Meditate
+--   Otherwise:                Sword (once it can be ridden: from SwordFlight.UnlockRank, the same rule as G and gamepad Y,
+--                             which the server enforces) and Dash, and Meditate
 --   Riding the sword:         Sword, to land
 --   Cultivating:              Meditate alone, to stand up (the player is sitting down)
 -- Strike and Sword share the larger place beside the jump button, Dash has the one above it, Meditate the small one over the
@@ -19,6 +20,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local HudMetrics = require(script.Parent:WaitForChild("HudMetrics"))
 local UiKit = require(script.Parent:WaitForChild("UiKit"))
 
@@ -92,7 +94,7 @@ local function refresh()
     local cultivating = player:GetAttribute("IsCultivating") == true
     -- (a drawn weapon is a wish to fight: on a keyboard a click swings it anywhere, so a touch screen gets Strike too)
     local fighting = nearSomethingToStrike() or player:GetAttribute("WeaponDrawn") == true
-    local canRide = (player:GetAttribute("QinggongFlightSpeed") or 0) > 0
+    local canRide = (player:GetAttribute("QinggongFlightSpeed") or 0) > 0 and Ranks.canFly(Ranks.getPlayerRankName(player))
     local show = {
         Strike = fighting and not flying and not cultivating,
         Sword = (flying or (canRide and not fighting)) and not cultivating,

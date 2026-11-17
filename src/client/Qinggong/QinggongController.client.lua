@@ -10,7 +10,9 @@
 --          facing), on the ground or in the air.
 --   Sword  G / gamepad Y / the touch Sword button: take off on the flying sword or land. While
 --          flying, move with the camera (look up or down to climb or dive), hold jump to rise and
---          Ctrl, C or gamepad L2 to sink; still, the sword hovers.
+--          Ctrl, C or gamepad L2 to sink; still, the sword hovers. Every way in asks the server the same
+--          way (FlightEvent), and below SwordFlight.UnlockRank the server refuses: here G and gamepad Y
+--          say what it needs, and the touch Sword button stays hidden until then (TouchActions).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -18,6 +20,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
+local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local Hud = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
@@ -306,9 +309,26 @@ local function isDescendKey(input)
 end
 local descendHeld = false
 
+-- below the unlock rank a key press says what flight needs (at most every few seconds); the server refuses it anyway
+local flightMessage = Toast.new("FlightMessage", Color3.new(1, 1, 1), 4)
+local flightRank = Ranks.getRankById(GameConfig.SwordFlight.UnlockRank)
+local flightLockNoted = -math.huge
+local function sayFlightLocked()
+    if os.clock() - flightLockNoted < 4 then
+        return
+    end
+    flightLockNoted = os.clock()
+    Sfx.play("Error")
+    flightMessage:show(string.format("Sword flight is locked. Reach %s (%s) to fly.", flightRank.Name, flightRank.Realm), "Warning")
+end
+
 local function requestFlight()
     if player:GetAttribute("IsFlying") == true then
         RemoteEvents.FlightEvent:FireServer(false)
+        return
+    end
+    if not Ranks.canFly(Ranks.getPlayerRankName(player)) then
+        sayFlightLocked()
         return
     end
     if (player:GetAttribute("QinggongFlightSpeed") or 0) <= 0 or stamina < GameConfig.SwordFlight.MinStamina then
@@ -595,7 +615,17 @@ TouchActions.add("Dash", "Dash", dash)
 TouchActions.add("Sword", "Sword", requestFlight)
 task.spawn(function()
     local rankValue = player:WaitForChild("leaderstats"):WaitForChild("Rank")
-    rankValue.Changed:Connect(updateHud)
+    local couldFly = Ranks.canFly(rankValue.Value)
+    rankValue.Changed:Connect(function()
+        updateHud()
+        -- the rank-up that unlocks the sword says so once (not the first value on joining: that is no rank-up)
+        local canFly = Ranks.canFly(rankValue.Value)
+        if canFly and not couldFly then
+            local how = if UiKit.usingTouch() then "tap SWORD" elseif UserInputService.GamepadEnabled then "press Y" else "press G"
+            flightMessage:show("Sword flight unlocked! " .. string.upper(string.sub(how, 1, 1)) .. string.sub(how, 2) .. " to fly.", "Success")
+        end
+        couldFly = canFly
+    end)
     updateHud()
 end)
 updateHud()

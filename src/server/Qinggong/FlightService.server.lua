@@ -1,8 +1,9 @@
 -- Sword flight (GameConfig.SwordFlight): the server decides who may fly and mounts the sword; the
 -- client flies the character (it owns its physics) and spends the stamina.
 --
--- Remote: FlightEvent (client -> server) true to take off, false to land. Take-off needs
--- SwordFlight.UnlockRank, a living character, no cultivation and no carried egg, at most once per
+-- Remote: FlightEvent (client -> server) true to take off, false to land. G, gamepad Y and the touch Sword button all
+-- send the same request, and this is the only check that counts: take-off needs SwordFlight.UnlockRank (Ranks.canFly,
+-- checked on every request, whatever the device), a living character, no cultivation and no carried egg, at most once per
 -- TOGGLE_COOLDOWN; it sets the "IsFlying" attribute. WorldService barriers still apply while flying.
 --
 -- The server keeps its own count of each rider's stamina, generous to them: a flight drains it at
@@ -153,7 +154,7 @@ local function canFly(player)
         and player:GetAttribute("IsCultivating") ~= true
         and player:GetAttribute("CarryingEgg") == nil -- a guardian's egg is carried on foot
         and player:GetAttribute("InTribulation") ~= true -- a tribulation is faced on foot
-        and Ranks.isAtLeast(Ranks.getPlayerRankName(player), config.UnlockRank)
+        and Ranks.canFly(Ranks.getPlayerRankName(player))
         and (player:GetAttribute("QinggongFlightSpeed") or 0) > 0
 end
 

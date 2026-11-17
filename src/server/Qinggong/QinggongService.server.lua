@@ -1,6 +1,6 @@
 -- Grants each player their rank's Qinggong level as attributes: "QinggongAirLeaps",
--- "QinggongRunSpeed", "QinggongMaxStamina", "QinggongDashSpeed" and "QinggongFlightSpeed" (0 before
--- sword flight unlocks). Sets WalkSpeed, except while meditating, when the client holds it at 0 and
+-- "QinggongRunSpeed", "QinggongMaxStamina", "QinggongDashSpeed" and "QinggongFlightSpeed" (0 below
+-- SwordFlight.UnlockRank: Ranks.getFlightSpeed). Sets WalkSpeed, except while meditating, when the client holds it at 0 and
 -- restores the run speed afterwards (MeditationStillness).
 --
 -- Also relays each player's Qinggong effects to everyone else. They are cosmetic, so the server
@@ -22,7 +22,7 @@ local function applyLevel(player, rankValue)
     player:SetAttribute("QinggongRunSpeed", level.RunSpeed)
     player:SetAttribute("QinggongMaxStamina", level.Stamina)
     player:SetAttribute("QinggongDashSpeed", level.DashSpeed)
-    player:SetAttribute("QinggongFlightSpeed", level.FlightSpeed)
+    player:SetAttribute("QinggongFlightSpeed", Ranks.getFlightSpeed(rankValue.Value))
 
     local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if humanoid and player:GetAttribute("IsCultivating") ~= true then

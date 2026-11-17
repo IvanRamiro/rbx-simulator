@@ -47,8 +47,10 @@ local THROW_TIME = 1.5  -- MovementGuard.allow: seconds a throw's studs widen th
 
 local states = {} -- [player] = { position, budget, suspectUntil, extra, trail, movedAt, ... }
 
+-- their Qinggong level, and how fast their rank lets them fly (0 below SwordFlight.UnlockRank, whatever the level holds)
 local function levelOf(player)
-    return (Ranks.getQinggong(Ranks.getPlayerRankName(player)))
+    local rankName = Ranks.getPlayerRankName(player)
+    return (Ranks.getQinggong(rankName)), Ranks.getFlightSpeed(rankName)
 end
 
 -- the studs a second they can keep up
@@ -74,12 +76,12 @@ end
 
 -- The fastest they ever move, studs a second, across and up, whatever they're doing now (a flight just ended keeps its
 -- speed for a moment): a dash, a glide, a leap's push or sword flight; a leap, a jump or a flight climbing as it goes.
-local function topSpeeds(level, humanoid)
+local function topSpeeds(level, humanoid, flightSpeed)
     local q = GameConfig.Qinggong
-    local across = math.max(level.DashSpeed, level.RunSpeed * q.GlideSpeedFactor, q.LeapForwardSpeed, level.FlightSpeed)
+    local across = math.max(level.DashSpeed, level.RunSpeed * q.GlideSpeedFactor, q.LeapForwardSpeed, flightSpeed)
     local jump = if humanoid and humanoid.UseJumpPower then humanoid.JumpPower
         elseif humanoid then math.sqrt(2 * workspace.Gravity * humanoid.JumpHeight) else 0
-    local up = math.max(q.LeapUpSpeed, jump, if level.FlightSpeed > 0 then level.FlightSpeed + GameConfig.SwordFlight.ClimbSpeed else 0)
+    local up = math.max(q.LeapUpSpeed, jump, if flightSpeed > 0 then flightSpeed + GameConfig.SwordFlight.ClimbSpeed else 0)
     return across * SPEED_SLACK, up * SPEED_SLACK
 end
 
@@ -137,8 +139,8 @@ local function observe(player, state)
             state.resetTo = nil -- never got there: what they moved is measured from where they were put
         end
     end
-    local level = levelOf(player)
-    local across, up = topSpeeds(level, character:FindFirstChildOfClass("Humanoid"))
+    local level, flightSpeed = levelOf(player)
+    local across, up = topSpeeds(level, character:FindFirstChildOfClass("Humanoid"), flightSpeed)
     -- the oldest places first, keeping the newest one even when it's old (they stood still)
     while #trail > 1 and clock - trail[1].at > TRAIL_SECONDS do
         table.remove(trail, 1)
