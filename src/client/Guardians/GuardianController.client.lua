@@ -161,20 +161,15 @@ local takeHow = UiKit.label({
 })
 
 local TAKE_MARK_ABOVE = Vector3.new(0, 7.5, 0)
+local INFO_MARK_ABOVE = Vector3.new(0, 5.5, 0) -- a NEEDS or BACK IN word: just over the egg's top (it has no chevron)
 local TAKE_REFRESH = 0.5
 local takeMarks = {} -- [stand] = its mark, drawn on the screen over the stand
 local TAKE_MARK_SLACK = 40 -- pixels it may sit below its proper place, over the egg's own height
 local TAKE_MARK_GAP = 6 -- pixels it keeps from a guardian's bar or sign
 local takeRefreshAt = 0
 local takeStands = {}
+local markStands = {} -- every stand with a mark: the TAKE ones (takeStands) and the others near the player
 local wasAbleToTake = false
-
-local function clearTakeMarks()
-    for _, mark in takeMarks do
-        mark:Destroy()
-    end
-    table.clear(takeMarks)
-end
 
 local takeLayer = Instance.new("Frame") -- under everything else on the HUD: the marks are drawn on the screen, following the stands
 takeLayer.Name = "TakeEggMarks"
@@ -183,22 +178,31 @@ takeLayer.Size = UDim2.fromScale(1, 1)
 takeLayer.ZIndex = -1
 takeLayer.Parent = Hud.Banner.Parent
 
-local function markStand(stand)
+-- A stand's mark: TAKE in gold with a bobbing chevron over an egg this player can take now; or, near the stands, a quieter word
+-- over the others: what an egg their rank can't carry yet needs ("NEEDS QI ADEPT"), and when their own egg is back on an emptied
+-- stand ("BACK IN 2:31"). Each island's three eggs need three ranks (GameConfig.Eggs), so a newcomer can carry only the first: all
+-- three looked alike, and holding F on the other two seemed broken (beta, 2026-11-17).
+local INFO_GREY = Color3.fromRGB(205, 214, 230)
+local function markStand(stand, kind)
     local mark = Instance.new("Frame")
     mark.Name = "TakeEggMark"
     mark.BackgroundTransparency = 1
     mark.AnchorPoint = Vector2.new(0.5, 1)
-    mark.Size = UDim2.fromOffset(84, 58)
+    mark.Size = if kind == "take" then UDim2.fromOffset(84, 58) else UDim2.fromOffset(160, 26)
     mark.Visible = false
+    mark:SetAttribute("Kind", kind)
     local word = UiKit.label({ -- (the heavy face of every mark over the world: WorldMarkers)
-        Name = "Word", Font = "Heavy", Text = "TAKE", TextSize = 22, TextColor3 = WEAK_GOLD, TextStrokeTransparency = 0.2,
+        Name = "Word", Font = "Heavy", Text = "TAKE", TextSize = if kind == "take" then 22 else 16,
+        TextColor3 = if kind == "take" then WEAK_GOLD else INFO_GREY, TextStrokeTransparency = 0.2,
         TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 26), Parent = mark,
     })
     word.ZIndex = 1
-    UiKit.label({
-        Name = "Chevron", Font = "Heavy", Text = "v", TextSize = 28, TextColor3 = WEAK_GOLD, TextStrokeTransparency = 0.2,
-        TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 26), Parent = mark,
-    })
+    if kind == "take" then
+        UiKit.label({
+            Name = "Chevron", Font = "Heavy", Text = "v", TextSize = 28, TextColor3 = WEAK_GOLD, TextStrokeTransparency = 0.2,
+            TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 26), Parent = mark,
+        })
+    end
     mark.Parent = takeLayer
     takeMarks[stand] = mark
 end
@@ -212,10 +216,11 @@ local function placeTakeMarks(camera, now)
         end
     end
     local boxes = GuardianBars.screenBoxes(camera)
-    for _, entry in takeStands do
+    local placed = {} -- the words shown so far, { left, right, top, bottom }: a quieter word that would cross one waits
+    for _, entry in markStands do
         local mark = takeMarks[entry.stand]
         if mark then
-            local point, inFront = camera:WorldToScreenPoint(entry.pedestal.Position + TAKE_MARK_ABOVE)
+            local point, inFront = camera:WorldToScreenPoint(entry.pedestal.Position + (if entry.kind == "take" then TAKE_MARK_ABOVE else INFO_MARK_ABOVE))
             local size = mark.AbsoluteSize
             -- it never climbs behind the panels at the top of the screen (the Banner's: this panel, the tutorial, the Merchant's
             -- line; and a notification under them): it stops just under them
@@ -238,10 +243,66 @@ local function placeTakeMarks(camera, now)
             end
             -- and it goes once it would be more than a little under its proper place (the egg itself is up there, when
             -- the panel has it)
-            mark.Visible = inFront and point.Z > 0 and fits
+            local visible = inFront and point.Z > 0 and fits and not entry.blocked
+            local half = math.max(mark.Word.TextBounds.X, size.X * 0.5) / 2 + 4
+            local box = { point.X - half, point.X + half, y - size.Y, y }
+            if visible and entry.kind ~= "take" then
+                for _, other in placed do
+                    if box[1] < other[2] and box[2] > other[1] and box[3] < other[4] and box[4] > other[3] then
+                        visible = false
+                        break
+                    end
+                end
+            end
+            if visible then
+                table.insert(placed, box)
+            end
+            mark.Visible = visible
             mark.Position = UDim2.fromOffset(point.X, y)
-            mark.Chevron.Position = UDim2.fromOffset(0, 24 + 4 * math.sin(now * 5))
+            local chevron = mark:FindFirstChild("Chevron")
+            if chevron then
+                chevron.Position = UDim2.fromOffset(0, 24 + 4 * math.sin(now * 5))
+            end
+            if entry.backAt then
+                local left = math.max(0, math.ceil(entry.backAt - Workspace:GetServerTimeNow()))
+                mark.Word.Text = string.format("BACK IN %d:%02d", left // 60, left % 60)
+            end
         end
+    end
+end
+
+local function canCarry(rankName, eggId)
+    local egg = GameConfig.Eggs[eggId or ""]
+    return egg ~= nil and rankName ~= "" and Ranks.isAtLeast(rankName, egg.RequiredRank)
+end
+
+local function eachStand(fn)
+    local islands = Workspace:FindFirstChild("FloatingIslands")
+    for _, island in if islands then islands:GetChildren() else {} do
+        local folder = island:FindFirstChild("EggStands")
+        for _, stand in if folder then folder:GetChildren() else {} do
+            local pedestal = stand:FindFirstChild("Pedestal")
+            local prompt = pedestal and pedestal:FindFirstChildWhichIsA("ProximityPrompt")
+            if prompt then
+                fn(stand, pedestal, prompt)
+            end
+        end
+    end
+end
+
+-- A stand's prompt as this player sees it: "Take" (hold) on an egg their rank can carry; on one it can't, what it needs
+-- ("Needs Qi Adept") and a tap, which brings the server's answer naming the egg here they can take (PetController). The server
+-- still decides (Guardian:takeFromStand); this only says it before the player tries.
+local function stylePrompt(stand, prompt, rankName)
+    local eggId = stand:GetAttribute("EggId")
+    local locked = eggId ~= nil and not canCarry(rankName, eggId)
+    local action = if locked then "Needs " .. Ranks.getRankById(GameConfig.Eggs[eggId].RequiredRank).Name else "Take"
+    if prompt.ActionText ~= action then
+        prompt.ActionText = action
+    end
+    local hold = if locked then 0 else 0.5 -- (EggStands' hold)
+    if prompt.HoldDuration ~= hold then
+        prompt.HoldDuration = hold
     end
 end
 
@@ -263,32 +324,125 @@ local function findTakeStands(config)
     return stands
 end
 
+local INFO_RANGE = 60 -- studs from a stand within which its NEEDS or BACK IN word shows
+
+-- the stands near the player with a word for them: an egg their rank can't carry yet, or their own egg's stand standing empty
+local function findInfoStands(root, rankName, taking)
+    local found = {}
+    if not root or player:GetAttribute("CarryingEgg") then
+        return found
+    end
+    eachStand(function(stand, pedestal)
+        if taking[stand] or (pedestal.Position - root.Position).Magnitude > INFO_RANGE then
+            return
+        end
+        local eggId = stand:GetAttribute("EggId")
+        local backAt = stand:GetAttribute("EggBackAt")
+        if eggId and not canCarry(rankName, eggId) then
+            local needs = Ranks.getRankById(GameConfig.Eggs[eggId].RequiredRank).Name
+            table.insert(found, { stand = stand, pedestal = pedestal, kind = "locked", text = "NEEDS " .. string.upper(needs) })
+        elseif not eggId and typeof(backAt) == "number" and canCarry(rankName, stand.Name) then
+            table.insert(found, { stand = stand, pedestal = pedestal, kind = "back", text = "", backAt = backAt })
+        end
+    end)
+    -- a word only over an egg in sight: drawn on the screen, the word of a stand behind the guardian sat over the next stand's egg
+    local camera = Workspace.CurrentCamera
+    if camera then
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = { player.Character }
+        for _, entry in found do
+            local from = camera.CFrame.Position
+            local to = entry.pedestal.Position + INFO_MARK_ABOVE * 0.6
+            local hit = Workspace:Raycast(from, to - from, params)
+            entry.blocked = hit ~= nil and not hit.Instance:IsDescendantOf(entry.stand)
+        end
+    end
+    -- the nearest first: where two words would cross, the nearer stand's shows
+    table.sort(found, function(a, b)
+        return (a.pedestal.Position - root.Position).Magnitude < (b.pedestal.Position - root.Position).Magnitude
+    end)
+    return found
+end
+
+local function refreshMarks(entries)
+    local keep = {}
+    for _, entry in entries do
+        keep[entry.stand] = true
+        local mark = takeMarks[entry.stand]
+        if mark and mark:GetAttribute("Kind") ~= entry.kind then
+            mark:Destroy()
+            mark = nil
+        end
+        if not mark then
+            markStand(entry.stand, entry.kind)
+        end
+        if entry.kind == "locked" then
+            takeMarks[entry.stand].Word.Text = entry.text
+        end
+    end
+    for stand, mark in takeMarks do
+        if not keep[stand] then
+            mark:Destroy()
+            takeMarks[stand] = nil
+        end
+    end
+end
+
+-- Which of the island's eggs this player can carry, and when it is back on its stand ("" when none of them is theirs yet).
+local function ownEggNews(config)
+    local rankName = Ranks.getPlayerRankName(player)
+    local soonest, soonestAt = nil, math.huge
+    local islands = Workspace:FindFirstChild("FloatingIslands")
+    local island = islands and islands:FindFirstChild(config.Island)
+    local folder = island and island:FindFirstChild("EggStands")
+    for _, eggId in config.Eggs do
+        local stand = folder and folder:FindFirstChild(eggId)
+        local backAt = stand and stand:GetAttribute("EggBackAt")
+        if canCarry(rankName, eggId) and typeof(backAt) == "number" and backAt < soonestAt then
+            soonest, soonestAt = eggId, backAt
+        end
+    end
+    if not soonest then
+        return ""
+    end
+    local left = math.max(1, math.ceil(soonestAt - Workspace:GetServerTimeNow()))
+    return "The " .. GameConfig.Eggs[soonest].DisplayName .. " is back on its stand in " .. string.format("%d:%02d", left // 60, left % 60) .. "."
+end
+
 local function updateTakeIndicator()
     local id = player:GetAttribute("CanTakeEgg")
     local config = id and GameConfig.Guardians[id]
-    if not config or player:GetAttribute("CarryingEgg") then
-        takePanel.Visible = false
-        wasAbleToTake = false
-        clearTakeMarks()
-        return
-    end
+    local carrying = player:GetAttribute("CarryingEgg") ~= nil
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    local camera = Workspace.CurrentCamera
     local now = os.clock()
     if now >= takeRefreshAt then
         takeRefreshAt = now + TAKE_REFRESH
-        takeStands = findTakeStands(config)
-        local keep = {}
+        local rankName = Ranks.getPlayerRankName(player)
+        eachStand(function(stand, _, prompt)
+            stylePrompt(stand, prompt, rankName)
+        end)
+        takeStands = if config and not carrying then findTakeStands(config) else {}
+        local taking = {}
+        markStands = {}
         for _, entry in takeStands do
-            keep[entry.stand] = true
-            if not takeMarks[entry.stand] then
-                markStand(entry.stand)
-            end
+            entry.kind = "take"
+            taking[entry.stand] = true
+            table.insert(markStands, entry)
         end
-        for stand, mark in takeMarks do
-            if not keep[stand] then
-                mark:Destroy()
-                takeMarks[stand] = nil
-            end
+        for _, entry in findInfoStands(root, rankName, taking) do
+            table.insert(markStands, entry)
         end
+        refreshMarks(markStands)
+    end
+    if camera then
+        placeTakeMarks(camera, now)
+    end
+    if not config or carrying then
+        takePanel.Visible = false
+        wasAbleToTake = false
+        return
     end
     if #takeStands == 0 then -- nothing here their rank can carry
         takePanel.Visible = false
@@ -302,12 +456,9 @@ local function updateTakeIndicator()
         UiFx.flash(takePanel, WEAK_GOLD)
     end
 
-    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    local camera = Workspace.CurrentCamera
     if not (root and camera) then
         return
     end
-    placeTakeMarks(camera, now)
     local nearest, nearestDistance = nil, math.huge
     for _, entry in takeStands do
         local distance = (entry.pedestal.Position - root.Position).Magnitude
@@ -580,7 +731,13 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
         end
     elseif action == "Weaken" then
         if isNear(model, NEAR_DISTANCE) then
-            message:show((config.Called or "The " .. config.DisplayName) .. " " .. config.WeakenedHint, "Info")
+            local who = config.Called or "The " .. config.DisplayName
+            -- told to take an egg only when one on its stands is theirs to carry: else which egg is theirs, and when it's back
+            if #findTakeStands(config) > 0 or player:GetAttribute("CarryingEgg") then
+                message:show(who .. " " .. config.WeakenedHint, "Info")
+            else
+                message:show(who .. " is weak, but no egg on its stands is for your rank right now. " .. ownEggNews(config), "Info")
+            end
         end
     elseif action == "Steal" and style then
         GuardianFx.steal((...), style)

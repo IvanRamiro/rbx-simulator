@@ -10,11 +10,15 @@
 -- a Model per stand (named after the egg it was built with: its slot's name, which stays) with a
 -- Pedestal, a GlowRing, the egg's body "Egg" and its "<EggId>_Glow_<hex>" pieces, and the EggRest
 -- attribute (the egg's resting point, facing the stand's front).
+-- Each egg needs its rank to be carried (GameConfig.Eggs[..].RequiredRank): an island's three eggs need three ranks, so a newcomer
+-- can take only its first one. An emptied stand says when its egg is back (the stand's EggBackAt attribute, a server time), so a
+-- client can tell its player when the egg for their rank returns (GuardianController).
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local EggModel = require(script.Parent:WaitForChild("EggModel"))
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
 
@@ -88,6 +92,7 @@ local function show(slot, eggId)
     end
     slot.eggId = eggId
     slot.stand:SetAttribute("EggId", eggId)
+    slot.stand:SetAttribute("EggBackAt", nil)
     setPrompt(slot)
 end
 
@@ -171,6 +176,45 @@ function EggStands.nextEggAt(island)
     return soonest
 end
 
+-- Whether a player of `rankName` can carry the egg `eggId`.
+function EggStands.canCarry(rankName, eggId)
+    local egg = GameConfig.Eggs[eggId or ""]
+    return egg ~= nil and rankName ~= "" and Ranks.isAtLeast(rankName, egg.RequiredRank)
+end
+
+-- Whether any of the island's stands holds an egg a player of `rankName` can carry right now.
+function EggStands.anyEggFor(island, rankName)
+    for slot in slotsOf[island] or {} do
+        if slot.eggId ~= nil and EggStands.canCarry(rankName, slot.eggId) then
+            return true
+        end
+    end
+    return false
+end
+
+-- The egg on the island a player of `rankName` could take instead of a locked one, and how many seconds until it is on its stand
+-- (0: it is there now); nil when none of the island's eggs is theirs to carry. The best egg on a stand wins, else the soonest back.
+function EggStands.eggInsteadFor(island, rankName)
+    local best, bestRank, soonest, soonestAt = nil, -1, nil, math.huge
+    for slot in slotsOf[island] or {} do
+        if slot.eggId ~= nil and EggStands.canCarry(rankName, slot.eggId) then
+            local index = Ranks.getIndex(Ranks.getRankById(GameConfig.Eggs[slot.eggId].RequiredRank).Name) or 0
+            if index > bestRank then
+                best, bestRank = slot.eggId, index
+            end
+        elseif slot.eggId == nil and slot.respawnAt and EggStands.canCarry(rankName, slot.home) and slot.respawnAt < soonestAt then
+            soonest, soonestAt = slot.home, slot.respawnAt
+        end
+    end
+    if best then
+        return best, 0
+    end
+    if soonest then
+        return soonest, math.max(1, math.ceil(soonestAt - os.clock()))
+    end
+    return nil, nil
+end
+
 -- What to do when a player asks to take a stand's egg: function(player, slot).
 function EggStands.setTakeHandler(handler)
     onTake = handler
@@ -187,6 +231,7 @@ function EggStands.take(slot)
     if slot.respawn then
         task.cancel(slot.respawn)
         slot.respawn, slot.respawnAt = nil, nil
+        slot.stand:SetAttribute("EggBackAt", nil)
     end
     clear(slot)
     return eggId
@@ -209,6 +254,7 @@ function EggStands.respawn(slot, eggIds)
         task.cancel(slot.respawn)
     end
     slot.respawnAt = os.clock() + GameConfig.EggTheft.RespawnTime
+    slot.stand:SetAttribute("EggBackAt", workspace:GetServerTimeNow() + GameConfig.EggTheft.RespawnTime)
     slot.respawn = task.delay(GameConfig.EggTheft.RespawnTime, function()
         slot.respawn, slot.respawnAt = nil, nil
         if slot.eggId == nil and slot.stand.Parent then

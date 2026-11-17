@@ -439,7 +439,16 @@ local function onHatchResult(result)
     if result.Reason == "Locked" then
         showMessage(eggName .. " needs " .. tostring(result.RequiredRank) .. " to hatch.", "Warning")
     elseif result.Reason == "TakeLocked" then
-        showMessage(eggName .. " needs " .. tostring(result.RequiredRank) .. ": you can't carry it yet.", "Warning")
+        -- and which egg here is theirs: each island's three eggs need three ranks, and a newcomer can only carry the first
+        local instead = GameConfig.Eggs[result.Instead or ""]
+        local text = "You need to be " .. tostring(result.RequiredRank) .. " to carry the " .. eggName .. "."
+        if instead and typeof(result.BackIn) == "number" and result.BackIn > 0 then
+            text ..= " You can take the " .. instead.DisplayName .. ": it comes back to its stand in "
+                .. string.format("%d:%02d", result.BackIn // 60, result.BackIn % 60) .. "."
+        elseif instead then
+            text ..= " You can take the " .. instead.DisplayName .. "."
+        end
+        showMessage(text, "Warning")
     elseif result.Reason == "Guarded" then
         local who = result.Called or ("the " .. tostring(result.Guardian))
         local text = if result.Busy then "Someone is already carrying an egg away. Wait for " .. who .. " to calm down."

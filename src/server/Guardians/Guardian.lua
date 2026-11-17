@@ -376,6 +376,9 @@ end
 
 -- A player asks to take the egg from one of its stands (EggStands): only while it is weakened, one
 -- theft at a time, an egg their rank can hatch. Taking it enrages the guardian.
+-- The rank comes first: an egg their rank can't carry is refused as such whatever the fight's state, with the island's egg they
+-- can take instead (and when it's back on its stand), so nobody fights a guardian for an egg that was never theirs (beta,
+-- 2026-11-17: "three egg options, but they can only collect the first egg").
 function Guardian:takeFromStand(player, slot)
     local root = rootOf(player)
     local eggId = slot.eggId
@@ -388,6 +391,13 @@ function Guardian:takeFromStand(player, slot)
     end
     if not (root and eggId) or player:GetAttribute("IsFlying") == true or player:GetAttribute("CarryingEgg")
         or not EggStands.within(slot, root.Position) or MovementGuard.isSuspect(player) then
+        return
+    end
+    local rankName = Ranks.getPlayerRankName(player)
+    if not EggStands.canCarry(rankName, eggId) then
+        local instead, backIn = EggStands.eggInsteadFor(self.config.Island, rankName)
+        RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "TakeLocked",
+            RequiredRank = Ranks.getRankById(GameConfig.Eggs[eggId].RequiredRank).Name, Instead = instead, BackIn = backIn })
         return
     end
     if self.state ~= "Weakened" or self.egg.state ~= "Available" then
@@ -405,11 +415,6 @@ function Guardian:takeFromStand(player, slot)
     if os.clock() < (self.retakeAfter[player] or 0) then
         RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "Retake",
             Seconds = math.ceil(self.retakeAfter[player] - os.clock()) })
-        return
-    end
-    local required = GameConfig.Eggs[eggId].RequiredRank
-    if not Ranks.isAtLeast(Ranks.getPlayerRankName(player), required) then
-        RemoteEvents.EggHatchResultEvent:FireClient(player, { EggId = eggId, Reason = "TakeLocked", RequiredRank = Ranks.getRankById(required).Name })
         return
     end
     local position = slot.rest.Position
@@ -861,12 +866,13 @@ function Guardian:updateTakers(now)
     self:publishCooldown() -- (a stand's egg coming back early or late moves it)
     local id = self.model:GetAttribute("GuardianId")
     -- (and an egg on a stand to take: after a few thefts every stand can stand empty while it respawns, and players were sent to
-    -- empty stands, release audit 2026-11-12)
+    -- empty stands, release audit 2026-11-12; and one their rank can carry: with theirs gone, the panel sent a newcomer to stands
+    -- holding only eggs for later ranks, beta 2026-11-17)
     local open = self.state == "Weakened" and self.egg.state == "Available" and EggStands.anyEgg(self.config.Island)
     local need = self.config.MaxHealth * (1 - self.config.WeakenedAt) * GameConfig.EggTheft.TakeShare
     for _, player in Players:GetPlayers() do
         local can = open and (self.damageBy[player] or 0) >= need and now >= (self.retakeAfter[player] or 0)
-            and not player:GetAttribute("CarryingEgg")
+            and not player:GetAttribute("CarryingEgg") and EggStands.anyEggFor(self.config.Island, Ranks.getPlayerRankName(player))
         if can then
             player:SetAttribute("CanTakeEgg", id)
         elseif player:GetAttribute("CanTakeEgg") == id then
