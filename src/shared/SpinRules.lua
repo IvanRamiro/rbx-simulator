@@ -96,25 +96,25 @@ function SpinRules.fallbackStones(rankName, player)
 end
 
 -- the ordinary eggs (not the Robux one), each with its rank's place
-local marketEggs = {}
+local ordinaryEggs = {}
 for eggId, egg in GameConfig.Eggs do
     local rank = not egg.Exclusive and Ranks.getRankById(egg.RequiredRank)
     if rank then
-        table.insert(marketEggs, { Id = eggId, Index = Ranks.getIndex(rank.Name) or 1 })
+        table.insert(ordinaryEggs, { Id = eggId, Index = Ranks.getIndex(rank.Name) or 1 })
     end
 end
-table.sort(marketEggs, function(a, b)
+table.sort(ordinaryEggs, function(a, b)
     return a.Index > b.Index or (a.Index == b.Index and a.Id < b.Id)
 end)
 
 function SpinRules.bestEgg(rankName)
     local index = rankIndex(rankName)
-    for _, entry in marketEggs do
+    for _, entry in ordinaryEggs do
         if entry.Index <= index then
             return entry.Id
         end
     end
-    return marketEggs[#marketEggs].Id
+    return ordinaryEggs[#ordinaryEggs].Id
 end
 
 -- Where Roblox restricts paid random items (PolicyService: some countries treat paying for a random prize like gambling), the

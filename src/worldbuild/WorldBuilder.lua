@@ -337,10 +337,7 @@ WorldBuilder.Collision = {
     { Prefix = "SI_CradleFloor", Fidelity = Enum.CollisionFidelity.Box },
     { Prefix = "SI_StoneLantern", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "SI_EggPedestal", Fidelity = Enum.CollisionFidelity.Hull },
-    { Prefix = "SI_Waystone", Fidelity = Enum.CollisionFidelity.Hull },
-    { Prefix = "SI_LotusStone", Fidelity = Enum.CollisionFidelity.Hull },
     { Prefix = "SI_MossRock", Fidelity = Enum.CollisionFidelity.Hull },
-    -- Yggdrasil: the Hatching Altar's dais must be walkable, under its arching roots
     -- the outer islands' landmarks: you walk in and through them
     { Prefix = "JG_Hermitage", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
     { Prefix = "MI_MoonGate", Fidelity = Enum.CollisionFidelity.PreciseConvexDecomposition },
@@ -457,15 +454,12 @@ WorldBuilder.Collision = {
 }
 
 -- Surface overrides per mesh-name prefix: glowing inlays are Neon (saturated colours, since
--- Neon blooms pale colours to white) and the spring surface is tinted glass. Pieces without
--- collision use Box fidelity so they cost nothing to the physics engine.
+-- Neon blooms pale colours to white). Pieces without collision use Box fidelity so they cost
+-- nothing to the physics engine.
 local GLOW = { Material = Enum.Material.Neon, CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance = {
-    SI_QiCompassGlow = table.clone(GLOW),
     SI_LanternLight = table.clone(GLOW),
     SI_EggGlowRing = table.clone(GLOW),
-    SI_WaystoneGlow = table.clone(GLOW),
-    SI_SpringWater = { Material = Enum.Material.Glass, Transparency = 0.3, CanCollide = false, CastShadow = false },
     SI_FlowersWhite = { CanCollide = false },
     SI_FlowersWarm = { CanCollide = false },
     SI_FlowersViolet = { CanCollide = false },
@@ -589,9 +583,7 @@ WorldBuilder.Appearance.BS_ShrineLantern__Glow = { Color = Color3.fromRGB(255, 2
 WorldBuilder.Appearance.EP_ArenaGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 78, 14), CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance.EP_PylonFire = { Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 120, 20), Transparency = 0.35, CanCollide = false, CastShadow = false }
 WorldBuilder.Appearance.OA_ArenaGlow = { Material = Enum.Material.Neon, Color = Color3.fromRGB(115, 40, 255), CanCollide = false, CastShadow = false }
-WorldBuilder.Appearance.SI_QiCompassGlow.Color = Color3.fromRGB(40, 210, 235)
 WorldBuilder.Appearance.SI_LanternLight.Color = Color3.fromRGB(255, 150, 60)
-WorldBuilder.Appearance.SI_SpringWater.Color = Color3.fromRGB(40, 165, 180)
 WorldBuilder.Appearance.JG_JadeLanternLight.Color = Color3.fromRGB(255, 175, 80) -- warm, so the forest isn't washed green
 WorldBuilder.Appearance.JG_MushroomCaps.Color = Color3.fromRGB(30, 230, 200)
 WorldBuilder.Appearance.JG_HollowWater.Color = Color3.fromRGB(35, 160, 130)
@@ -2046,8 +2038,8 @@ WorldBuilder.LanternLight = Color3.fromRGB(255, 130, 70) -- warm: a red light ti
 
 -- What goes on each of a shop's effect points (Placements.<island>.Shops.<Shop>.Fx).
 local SHOP_FX = {
-    -- flames licking up inside the dragon's jaws (kept short so they stay under its upper jaw) and
-    -- sparks spat out of its mouth toward the anvil (a part's Back face is its +Z, the shop's front)
+    -- flames licking up in the hearth's mouth (kept short so they stay under its slate hood) and
+    -- sparks spat out of it toward the anvil (a part's Back face is its +Z, the shop's front)
     Forge = function(part)
         part.Size = Vector3.new(3.6, 0.6, 2)
         addEmitterPreset(part, "Flames")
@@ -2057,7 +2049,7 @@ local SHOP_FX = {
         flames.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.3), NumberSequenceKeypoint.new(1, 0.1) })
         addEmitterPreset(part, "EmberSparks")
         part:FindFirstChild("EmberSparks").EmissionDirection = Enum.NormalId.Back
-        addLight(part, WorldBuilder.ForgeLight, 16, 0.9) -- any brighter floods the pale dragon orange
+        addLight(part, WorldBuilder.ForgeLight, 16, 0.9) -- any brighter floods the pale hall orange
     end,
     Smoke = function(part)
         part.Size = Vector3.new(2.4, 0.4, 2.4)

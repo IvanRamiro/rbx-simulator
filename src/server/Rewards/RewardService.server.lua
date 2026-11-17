@@ -74,7 +74,7 @@ local function setupPlayer(player)
     end
     publish(player)
     ready[player] = true
-    -- offline Qi counts the Qi passes: wait (a little) for GamePassService to have asked Roblox which they own, or a Qi Surge
+    -- offline Qi counts the Qi passes: wait (a little) for GamePassService to have asked Roblox which they own, or a Qi pass
     -- owner could be paid at 1x (release audit, 2026-11-12)
     local passDeadline = os.clock() + 10
     while not player:GetAttribute("PassesChecked") and player.Parent == Players and os.clock() < passDeadline do

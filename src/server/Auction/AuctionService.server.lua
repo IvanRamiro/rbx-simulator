@@ -528,7 +528,7 @@ function actions.List(player, state, request)
             else "That item can't be put up right now.")
     end
     local name = AuctionRules.itemName(kind, info.Item)
-    result(player, true, if status == "Live"
+    return result(player, true, if status == "Live"
         then "Your " .. name .. " is up for auction! Listing fee: " .. NumberFormat.compact(info.Fee) .. " Spirit Stones."
         else "Your " .. name .. " is being put up. It will show in a moment.", { Action = "List", ListingId = idOrWhy })
 end
@@ -561,12 +561,12 @@ function actions.Bid(player, state, listingId, amount)
         return result(player, false, "You need more Spirit Stones.")
     elseif outcome == "Accepted" then
         local extended = after and after.Ends > record.Ends
-        result(player, true, "You have the top bid on the " .. name .. ": " .. NumberFormat.compact(amount) .. " Spirit Stones."
+        return result(player, true, "You have the top bid on the " .. name .. ": " .. NumberFormat.compact(amount) .. " Spirit Stones."
             .. (if extended then " The auction now ends a minute later." else ""), { Action = "Bid", ListingId = listingId })
     elseif outcome == "Refused" then
-        result(player, false, AuctionChecks.refusalText(refusal, after) .. " Your stones are back.", { Action = "Bid", ListingId = listingId })
+        return result(player, false, AuctionChecks.refusalText(refusal, after) .. " Your stones are back.", { Action = "Bid", ListingId = listingId })
     else
-        result(player, true, "Your bid is being checked. You'll see it in a moment.", { Action = "Bid", ListingId = listingId })
+        return result(player, true, "Your bid is being checked. You'll see it in a moment.", { Action = "Bid", ListingId = listingId })
     end
 end
 
@@ -585,7 +585,7 @@ function actions.Cancel(player, state, listingId)
             else "That isn't one of your auctions.")
     end
     claimNow(player, state)
-    result(player, true, "Auction cancelled. Your item is back (the listing fee is kept).", { Action = "Cancel", ListingId = listingId })
+    return result(player, true, "Auction cancelled. Your item is back (the listing fee is kept).", { Action = "Cancel", ListingId = listingId })
 end
 
 local reads = {}
@@ -621,7 +621,7 @@ local function sendDetail(player, state, listingId, record)
         can, why = false, AuctionChecks.PaidText
     end
     shown.CanBid, shown.WhyNot = can, why
-    Event:FireClient(player, "Detail", shown)
+    return Event:FireClient(player, "Detail", shown)
 end
 
 function reads.Detail(player, state, listingId)
@@ -638,7 +638,7 @@ function reads.Detail(player, state, listingId)
     if not ok then
         return Event:FireClient(player, "Busy", "The Auction House is busy. Try again in a moment.")
     end
-    sendDetail(player, state, listingId, record)
+    return sendDetail(player, state, listingId, record)
 end
 
 function reads.Mine(player, state)
@@ -707,6 +707,7 @@ Event.OnServerEvent:Connect(function(player, action, ...)
             end)
         end
     end
+    return
 end)
 
 -- ---------- the prompt: the Market's, which now opens the Auction House ----------

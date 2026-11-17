@@ -51,7 +51,7 @@ local function onRelicTriggered(player, relicId, crystal, maxDistance)
         return
     end
 
-    -- (the Qi passes multiply it as they do every Qi reward: Qi Surge promises it, release audit 2026-11-12)
+    -- (the Qi passes multiply it as they do every Qi reward: the Store promises it, release audit 2026-11-12)
     local qiReward = math.floor(relic.QiReward * PassRules.qiMultiplier(player))
     qi.Value += qiReward
     local stones = Shop.relicStones(relic)
