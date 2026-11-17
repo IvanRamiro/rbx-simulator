@@ -429,7 +429,9 @@ local function feedWords(row)
         local pet = GameConfig.Pets[row.p]
         local size = if row.s == "Giant" or row.s == "Large" then string.upper(row.s) .. " " else ""
         local odds = if typeof(row.o) == "number" then " (" .. RecordsConfig.oneIn(row.o) .. ")" else ""
-        return who .. " hatched a " .. size .. safe(if pet then pet.DisplayName else "beast") .. odds
+        local noun = size .. safe(if pet then pet.DisplayName else "beast")
+        local article = if string.find(noun, "^[AEIOUaeiou]") then " an " else " a " -- ("a Astral Whale" read wrong)
+        return who .. " hatched" .. article .. noun .. odds
     elseif row.k == "Realm" then
         local realm = safe(row.r)
         return who .. " reached the " .. realm .. (if string.find(realm, "Realm") then "" else " realm")
