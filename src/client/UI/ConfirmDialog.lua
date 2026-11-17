@@ -1,6 +1,7 @@
 -- The last question before something that can't be undone: a dimmed screen, a panel, and a button that only
 -- wakes after a few seconds, so nothing is lost to a quick tap or a double click.
---   ConfirmDialog.show({ Title, Text, Picture, ConfirmText, Seconds, OnConfirm })
+--   ConfirmDialog.show({ Title, Text, Picture, ConfirmText, Seconds, OnConfirm, CancelText, ConfirmTone })
+-- CancelText (default "KEEP IT") and ConfirmTone (a UiKit button tone, default "Danger") suit a choice that isn't a loss (a gift).
 -- Picture (optional) is a GuiObject of up to 72 px, such as a portrait. Only one shows at a time.
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
@@ -117,6 +118,8 @@ function ConfirmDialog.show(props)
     title.Text = props.Title or "CONFIRM"
     message.Text = props.Text or ""
     confirmText = props.ConfirmText or "CONFIRM"
+    cancelButton.Text = props.CancelText or "KEEP IT"
+    confirmButton:SetAttribute("Tone", props.ConfirmTone or "Danger")
     onConfirm = props.OnConfirm
     readyAt = os.clock() + seconds
     if props.Picture then
