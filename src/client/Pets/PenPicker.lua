@@ -34,6 +34,7 @@ local RARITY_ORDER = { Divine = 8, Secret = 7, Mythical = 6, Legendary = 5, Epic
 local ROW_H = 64
 local BUTTON = UiTheme.Height.Button
 local CARD_H = 104
+local LIST_MIN = 140 -- the list's least height beside the card (a heading and about two rows)
 
 local snapshot = nil
 local window -- (made on first open)
@@ -141,6 +142,19 @@ local function build()
     end)
     local LIST_TOP = TOP + CARD_H + UiTheme.Space.M
     list = UiKit.scroll({ Name = "Pets", Position = UDim2.fromOffset(0, LIST_TOP), Size = UDim2.new(1, 0, 1, -LIST_TOP), Parent = body })
+    -- on a short screen (a phone held sideways) the window is too short for the card and a list under it: the list had 8 px
+    -- and no beast could be added. There the card goes into the list, first, and scrolls with the beasts.
+    local function fitList()
+        local bodyHeight = window.Frame.Size.Y.Offset + body.Size.Y.Offset
+        local inList = bodyHeight - LIST_TOP < LIST_MIN
+        card.Parent = if inList then list else body
+        card.LayoutOrder = 0
+        card.Position = if inList then UDim2.new() else UDim2.fromOffset(0, TOP)
+        list.Position = UDim2.fromOffset(0, if inList then TOP else LIST_TOP)
+        list.Size = UDim2.new(1, 0, 1, -(if inList then TOP else LIST_TOP))
+    end
+    window.Frame:GetPropertyChangedSignal("Size"):Connect(fitList)
+    fitList()
     player:GetAttributeChangedSignal("SpiritStones"):Connect(function()
         render()
     end)
@@ -205,7 +219,7 @@ function render()
     end
     keepPortraits(list)
     for _, child in list:GetChildren() do
-        if child:IsA("GuiObject") then
+        if child:IsA("GuiObject") and child ~= card then
             child:Destroy()
         end
     end
