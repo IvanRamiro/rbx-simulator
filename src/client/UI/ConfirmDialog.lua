@@ -2,6 +2,7 @@
 -- wakes after a few seconds, so nothing is lost to a quick tap or a double click.
 --   ConfirmDialog.show({ Title, Text, Picture, ConfirmText, Seconds, OnConfirm })
 -- Picture (optional) is a GuiObject of up to 72 px, such as a portrait. Only one shows at a time.
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 
 local UI = script.Parent
@@ -47,6 +48,9 @@ local panelScale = Instance.new("UIScale")
 panelScale.Parent = panel
 local function rescale()
     panelScale.Scale = HudMetrics.windowScale()
+    -- in the middle of the room under Roblox's top bar: centred on the whole screen, a phone held sideways put its title
+    -- band under the top bar, beside Roblox's own buttons
+    panel.Position = UDim2.new(0.5, 0, 0.5, GuiService:GetGuiInset().Y / 2)
 end
 HudMetrics.Changed:Connect(rescale)
 rescale()
@@ -106,6 +110,7 @@ local ConfirmDialog = {}
 
 function ConfirmDialog.show(props)
     hide()
+    rescale() -- (the top bar's height is known by now)
     showing += 1
     local this = showing
     local seconds = props.Seconds or 3
