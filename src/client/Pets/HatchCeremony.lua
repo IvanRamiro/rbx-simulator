@@ -1134,13 +1134,13 @@ local function play(result)
                 end
                 trembling = false
                 rayTurn = if giant then 30 else 18
-                if giant then -- the beast grows to its full size, past the card's middle
+                if giant then -- the beast grows to its full size, out past the card's edges (since 2026-11-17 a Giant is colossal in the world)
                     portrait.Position = UDim2.new(0.5, 0, 0, 118)
                     portrait.Size = UDim2.fromOffset(190, 190)
-                    tween(portrait, 0.55, { Size = UDim2.fromOffset(262, 262) }, Enum.EasingStyle.Back)
+                    tween(portrait, 0.6, { Size = UDim2.fromOffset(330, 330), Position = UDim2.new(0.5, 0, 0, 108) }, Enum.EasingStyle.Back)
                 else -- a heavy one drops onto the card and lands with a bounce
                     portrait.Position = UDim2.new(0.5, 0, 0, 118 - 70)
-                    tween(portrait, 0.45, { Position = UDim2.new(0.5, 0, 0, 118), Size = UDim2.fromOffset(214, 214) }, Enum.EasingStyle.Bounce)
+                    tween(portrait, 0.45, { Position = UDim2.new(0.5, 0, 0, 118), Size = UDim2.fromOffset(236, 236) }, Enum.EasingStyle.Bounce)
                 end
                 -- the rays and the card's edge turn gold
                 for _, fan in { rays, counter } do
@@ -1178,7 +1178,7 @@ local function play(result)
                 ring.Parent = card
                 UiKit.corner(ring, 999)
                 local ringEdge = UiKit.stroke(ring, gold, 0, if giant then 6 else 4)
-                tween(ring, if giant then 0.7 else 0.5, { Size = UDim2.fromOffset(if giant then 560 else 380, if giant then 560 else 380) })
+                tween(ring, if giant then 0.8 else 0.5, { Size = UDim2.fromOffset(if giant then 720 else 380, if giant then 720 else 380) })
                 tween(ringEdge, if giant then 0.7 else 0.5, { Transparency = 1, Thickness = 1 })
                 Sfx.play(if giant then "SizeGiant" else "SizeLarge")
                 Sfx.after(if giant then 0.05 else 0.3, "SizeLand") -- (a Large's thud on its landing bounce)

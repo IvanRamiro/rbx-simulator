@@ -252,6 +252,10 @@ local catalog = {
     PetSummon = { Id = "9116405867", Volume = 0.6, Pitch = { 1.05, 1.2 }, Near = 10, Reach = 60, Max = 3, With = { { "SummonPing", 0.05 } } },
     SummonPing = { Id = "9126076118", Volume = 0.4, Notes = { 1, 1.125, 1.25 }, Near = 10, Reach = 60, Max = 3 },
     PetDismiss = { Id = "9116406643", Volume = 0.8, Pitch = { 1.1, 1.2 }, Near = 10, Reach = 60, Max = 3 },
+    -- a Giant walker's footfall, low and soft (StealThud's body thud, slowed): heard near it, never loud; and its landing when its
+    -- owner comes down from the air (SizeLand's thud, deeper)
+    GiantStep = { Id = "9116385087", Volume = 0.3, Pitch = { 0.5, 0.6 }, Near = 14, Reach = 70, Gap = 0.12, Max = 3 },
+    GiantLand = { Id = "9113480917", Volume = 0.55, Pitch = { 0.55, 0.62 }, Near = 16, Reach = 90, Gap = 0.3, Max = 2 },
     -- a fusion: a humming swell (240 x 0.8 = 192), a glassy tone and the shimmer falling away
     PetFuse = { Id = "9116393976", Volume = 0.8, Group = "Interface", With = { { "FuseTone", 0.28 }, { "FuseTail", 0.45 } } },
     FuseTone = { Id = "9126073644", Volume = 1, Pitch = 1.12, Group = "Interface" },

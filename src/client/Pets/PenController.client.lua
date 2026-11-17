@@ -20,6 +20,7 @@ local PetRig = require(script.Parent:WaitForChild("PetRig"))
 local PetPreload = require(script.Parent:WaitForChild("PetPreload"))
 local PenFence = require(script.Parent:WaitForChild("PenFence"))
 local PenPicker = require(script.Parent:WaitForChild("PenPicker"))
+local PetHeft = require(script.Parent:WaitForChild("PetHeft"))
 local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 local UI = script.Parent.Parent:WaitForChild("UI")
@@ -54,6 +55,7 @@ end
 
 -- ---------- one beast ----------
 local acrossOf = {} -- ["PetId:Size"] = its footprint's diagonal at its size, unscaled (studs): what it needs to turn on the spot
+local footOf = {}   -- ["PetId:Size"] = its footprint at its size, unscaled: Vector2 (across, nose to tail)
 
 -- its name, rarity and size over it, sized in studs (a sign over it, not a screen label): far ones shrink, so a full pen seen down
 -- its length doesn't pile its names on top of each other
@@ -117,8 +119,20 @@ local function buildBeast(pet, level, penFrame, owner, others, floor)
         end
         local _, size = model:GetBoundingBox()
         acrossOf[key] = math.sqrt(size.X * size.X + size.Z * size.Z)
+        footOf[key] = Vector2.new(size.X, size.Z)
     end
     local display = PenLayout.displayScale(level, acrossOf[key])
+    -- a big one shrunk too far to turn in this pen stands still instead, facing the gate at the back of the pen, as large as fits
+    -- there (PenLayout.parkScale): a Giant in a small pen still fills it, and never pokes through the fence
+    local parked = false
+    local full = PetRules.scaleFor(pet.Size, PetModels.normalLength(pet.PetId))
+    local least = PenLayout.ParkAt[PetRules.size(pet.Size)]
+    if least and display * full < least then
+        local park = PenLayout.parkScale(level, footOf[key])
+        if park > display then
+            display, parked = park, true
+        end
+    end
     if not model or display < 1 then
         if model then
             model:Destroy()
@@ -131,6 +145,9 @@ local function buildBeast(pet, level, penFrame, owner, others, floor)
     local scale = model:GetAttribute("SizeScale") or 1
     local radius = acrossOf[key] * display / 2
     local half = PenLayout.roamHalf(level, radius)
+    if parked then
+        radius = math.max(footOf[key].X, footOf[key].Y) * display / 2
+    end
     -- where it starts: the clearest of a few spots, away from the beasts already shown (so they don't start in a heap)
     local spot, bestGap = nil, -math.huge
     for _ = 1, 8 do
@@ -144,9 +161,12 @@ local function buildBeast(pet, level, penFrame, owner, others, floor)
             spot, bestGap = try, gap
         end
     end
+    if parked then
+        spot = Vector3.new(0, 0, PenLayout.parkZ(level, footOf[key].Y * display))
+    end
     local at = penFrame * spot
     local y = (floor or groundAt(at, penFrame.Y)) + PenLayout.Hip * scale
-    local start = CFrame.new(at.X, y, at.Z) * CFrame.Angles(0, math.random() * math.pi * 2, 0)
+    local start = CFrame.new(at.X, y, at.Z) * (if parked then penFrame.Rotation else CFrame.Angles(0, math.random() * math.pi * 2, 0))
     model:PivotTo(start)
     model.Parent = container
     local rig = PetModels.getRig(model)
@@ -155,10 +175,16 @@ local function buildBeast(pet, level, penFrame, owner, others, floor)
     end
     local _, box = model:GetBoundingBox()
     nameTag(model, root, pet, box.Y / 2)
+    -- a big one's shadow on the deck, and a Giant walker's footfalls (PetHeft); another player's on a phone goes without
+    local foot = PetHeft.measure(model)
+    local heft = owner == player or not Quality.Low
+    local shadow = if heft then PetHeft.shadow(model, foot.half) else nil
+    local dust = if heft and PetModels.Walkers[pet.PetId] then PetHeft.dust(model, root, foot.half) else nil
     return {
+        foot = foot, shadow = shadow, dust = dust, stepLeft = 0, stepSide = 1,
         model = model, root = root, rig = rig, penFrame = penFrame, half = half, radius = radius, scale = scale,
         unit = if rig then rig.unit else PetModels.SIZE * scale,
-        cframe = start, height = y, targetHeight = y, floor = floor,
+        cframe = start, height = y, targetHeight = y, floor = floor, parked = parked,
         state = "idle", stateUntil = os.clock() + math.random() * IDLE[2],
         target = nil, speed = 0, beat = math.random(0, 1), poseTime = 0,
     }
@@ -166,6 +192,10 @@ end
 
 -- one step of its wander: idle, turn toward its next spot (stepping on the spot), walk there
 local function wander(beast, others, dt, now)
+    if beast.parked then -- (it stands where it was put: PenLayout.parkScale)
+        beast.speed += (0 - beast.speed) * math.min(1, dt * 8)
+        return
+    end
     local position = beast.cframe.Position
     local look = beast.cframe.LookVector
     local yaw = math.atan2(-look.X, -look.Z)
@@ -424,9 +454,29 @@ RunService.Heartbeat:Connect(function(dt)
             if distance > ANIMATE_REACH then
                 continue -- (it rests where it is: nothing moves or poses out here)
             end
+            local before = beast.cframe.Position
             wander(beast, live, dt, now)
             table.insert(parts, beast.root)
             table.insert(cframes, beast.cframe)
+            PetHeft.fade(beast, eye, dt)
+            if beast.shadow or beast.dust then
+                local ground = beast.height - PenLayout.Hip * beast.scale -- (the deck, or the ground under it)
+                local middle = beast.cframe * CFrame.new(beast.foot.offset)
+                if beast.shadow then
+                    table.insert(parts, beast.shadow)
+                    table.insert(cframes, PetHeft.placeShadow(beast.shadow, Vector3.new(middle.X, ground, middle.Z), 0, beast.cframe.Rotation))
+                end
+                local step = beast.cframe.Position - before
+                beast.stepLeft -= Vector2.new(step.X, step.Z).Magnitude
+                if beast.dust and beast.stepLeft <= 0 then
+                    beast.stepLeft = 0.4 * 2 * math.max(beast.foot.half.X, beast.foot.half.Z)
+                    beast.stepSide = -beast.stepSide
+                    if distance <= VOICE_REACH then
+                        local fall = middle * CFrame.new(beast.stepSide * beast.foot.half.X * 0.45, 0, -beast.foot.half.Z * 0.25)
+                        PetHeft.step(beast.dust, Vector3.new(fall.X, ground, fall.Z), false)
+                    end
+                end
+            end
             if beast.rig then
                 beast.poseTime += dt
                 beast.beat = (beast.beat + 1) % 2

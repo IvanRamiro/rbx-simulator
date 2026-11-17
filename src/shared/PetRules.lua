@@ -8,6 +8,8 @@
 --   PetRules.refusal(reason)              what to tell the player about a findMaterial reason
 --   PetRules.size(pet)                    its size name ("Small", "Normal", "Large", "Giant"); anything unknown is "Normal"
 --   PetRules.sizeInfo(size)               that size's entry of PetRules.Sizes
+--   PetRules.scaleFor(size, length)       how many times its Normal size a pet of that size is shown, for a species `length` studs
+--                                         long (its longest side) at Normal (nil: the size's plain Scale)
 --   PetRules.rollSize(random)             a size for a fresh hatch, at PetRules.Sizes' chances (the server rolls it)
 --   PetRules.bigger(a, b)                 the larger of two sizes (a fusion keeps it)
 --   PetRules.worth(pet)                   what its copies are worth together, in Normal copies (Shop.petValue: its sell value)
@@ -33,11 +35,18 @@ local RULES = GameConfig.PetFusion
 -- it to sell its pets pay (1.044). The Values are lowered to average 1.018 a hatch: at most 0.966 of a Merchant egg's price and
 -- 0.72 of an egg's reference price (Shop.marketEggPrice). The Merchant's pets are always Normal, so its MinPetMarkup holds. Re-check if any of these change.
 -- Color: the size's colour in the windows (its pill, the hatch reveal's badge).
+-- How big a size is shown (the owner, 2026-11-17: "the size of our pet is really small despite getting large pet / so I want you to
+-- make something really huge or colossal"; at 1.35 and 1.8 a Giant Dawn Phoenix spanned 13 studs beside a 5-stud player): Scale,
+-- times its Normal size; MinLength and MaxLength, the least and the most studs its longest side may span whatever the species (a tiny
+-- Aqua Wisp still towers, a Divine drake doesn't fill the island); Least, the smallest Scale those may bring it to. Visual only: the
+-- economy reads Value and Qi, never these.
 PetRules.Sizes = {
     Small = { Order = 1, Scale = 0.75, Chance = 25, Value = 0.8, Qi = 0.9, RevealHold = 0, Color = Color3.fromRGB(150, 226, 255) },
     Normal = { Order = 2, Scale = 1, Chance = 57, Value = 1, Qi = 1, RevealHold = 0, Color = Color3.fromRGB(172, 170, 204) },
-    Large = { Order = 3, Scale = 1.35, Chance = 14, Value = 1.2, Qi = 1.15, RevealHold = 0.7, Color = Color3.fromRGB(255, 226, 140) },
-    Giant = { Order = 4, Scale = 1.8, Chance = 4, Value = 2, Qi = 1.4, RevealHold = 1.8, Color = Color3.fromRGB(255, 184, 48) },
+    Large = { Order = 3, Scale = 1.9, MinLength = 10, MaxLength = 24, Least = 1.5, Chance = 14, Value = 1.2, Qi = 1.15, RevealHold = 0.7,
+        Color = Color3.fromRGB(255, 226, 140) },
+    Giant = { Order = 4, Scale = 3.4, MinLength = 18, MaxLength = 36, Least = 2.4, Chance = 4, Value = 2, Qi = 1.4, RevealHold = 1.8,
+        Color = Color3.fromRGB(255, 184, 48) },
 }
 PetRules.SizeOrder = { "Small", "Normal", "Large", "Giant" }
 do
@@ -55,6 +64,20 @@ end
 
 function PetRules.sizeInfo(size)
     return PetRules.Sizes[PetRules.size(size)]
+end
+
+function PetRules.scaleFor(size, length)
+    local info = PetRules.sizeInfo(size)
+    local scale = info.Scale
+    if type(length) == "number" and length > 0 then
+        if info.MinLength then
+            scale = math.max(scale, info.MinLength / length)
+        end
+        if info.MaxLength then
+            scale = math.min(scale, info.MaxLength / length)
+        end
+    end
+    return math.max(scale, info.Least or 0)
 end
 
 function PetRules.rollSize(random)

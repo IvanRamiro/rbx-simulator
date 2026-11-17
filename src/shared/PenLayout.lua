@@ -15,6 +15,9 @@
 --                                   Vector2 (X, Z)
 --   PenLayout.displayScale(n, across) the extra scale a beast `across` studs over its footprint's diagonal (as built at its size) is
 --                                   shown at in a level-n pen: 1, or less so it can still turn in it
+--   PenLayout.parkScale(n, foot)    the extra scale a big beast standing still (parked) is shown at: its footprint `foot` (Vector2:
+--                                   across, nose to tail, as built) facing the gate within the pen's width and ParkDepth of its depth
+--   PenLayout.parkZ(n, length)      where a parked beast `length` studs long stands (Z in the pen's frame): against the back fence
 local PenLayout = {}
 
 -- Slots: beasts it holds. Width (X) and Depth (Z): studs inside the fence. Realm: whose weapon price buys this level (Shop.penPrice;
@@ -37,9 +40,13 @@ PenLayout.Fence = 1         -- a fence's thickness
 PenLayout.Gate = 6          -- the gate's opening, in the front fence's middle
 PenLayout.FenceHeight = 3.2
 PenLayout.Margin = 1.2      -- studs a beast keeps from the fence
-PenLayout.MaxDisplay = 15   -- the widest a beast is ever shown in a pen, across its footprint's diagonal (so it can turn on the spot
-                            -- without touching the fence): most beasts, Giants included, are smaller; a Giant Eclipse Dreadwing, 38
-                            -- across at its size, is shown at 15
+PenLayout.MaxDisplay = 28   -- the widest a beast is ever shown in a pen, across its footprint's diagonal (so it can turn on the spot
+                            -- without touching the fence); the pen's own room caps it first below level 7. Since 2026-11-17 a Giant
+                            -- is 2.4 to 5 times its Normal size (PetRules.Sizes), 30 to 50 across: it fills its pen at every level,
+                            -- shown as large as the pen lets it turn
+PenLayout.ParkAt = { Large = 1.4, Giant = 2 } -- a Large or Giant shown smaller than this many times its Normal size so it can turn
+                            -- stands still instead, as large as fits facing the gate (parkScale): in a small pen a Giant still fills it
+PenLayout.ParkDepth = 0.8   -- the share of the pen's depth a parked beast may take (the front stays free for the others)
 PenLayout.Hip = 3.9         -- how high a Normal beast's root rides over the ground (as beside its owner: PetCompanionController)
 PenLayout.Front = -32       -- where the front fence's line is, in the pasture's frame (Z)
 PenLayout.Ring = { Width = 50, Depth = 70, Band = 4 } -- the paving ring's centre line round the pasture, and how wide it is
@@ -68,6 +75,17 @@ function PenLayout.displayScale(n, across)
     local entry = PenLayout.level(n)
     local cap = math.min(PenLayout.MaxDisplay, math.min(entry.Width, entry.Depth) - 2 * PenLayout.Margin - 2)
     return if across > cap then cap / across else 1
+end
+
+function PenLayout.parkScale(n, foot)
+    local entry = PenLayout.level(n)
+    local width, depth = entry.Width - 2 * PenLayout.Margin, (entry.Depth - 2 * PenLayout.Margin) * PenLayout.ParkDepth
+    return math.min(1, width / math.max(foot.X, 0.1), depth / math.max(foot.Y, 0.1))
+end
+
+function PenLayout.parkZ(n, length)
+    local entry = PenLayout.level(n)
+    return math.max(0, entry.Depth / 2 - PenLayout.Margin - length / 2)
 end
 
 for n, entry in PenLayout.Levels do

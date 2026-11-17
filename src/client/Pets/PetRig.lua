@@ -12,6 +12,7 @@ local PetRig = {}
 -- (kept on the module, not as locals: the main chunk sits at Luau's 200-local limit)
 PetRig.Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 PetRig.PetSounds = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("PetSounds"))
+PetRig.LIGHT_REACH = 26 -- studs: the farthest a pet's light reaches, whatever its size (PetRig.update holds big pets' lights to it)
 PetRig.VOICE_EVERY = { 9, 18 } -- seconds between a pet's calls while it idles in the world (PetSounds)
 PetRig.Quality = require(script.Parent.Parent:WaitForChild("Quality")) -- the phone tier: other players' pets drop their lights
 
@@ -10028,6 +10029,17 @@ function PetRig.update(rig, deltaTime, state)
         for _, d in rig.model:GetDescendants() do
             if d:IsA("PointLight") or d:IsA("SpotLight") then
                 d.Enabled = false
+            end
+        end
+    end
+
+    -- a big pet's lights scale with it, but none reaches past PetRig.LIGHT_REACH (a Giant Dawn Phoenix's reached 50 studs and
+    -- washed the ground round its owner in its colour); its lights made as it animates are caught here, now and then
+    if (rig.model:GetAttribute("SizeScale") or 1) > 1 and s.time >= (s.nextReachSweep or 0) then
+        s.nextReachSweep = s.time + 2
+        for _, d in rig.model:GetDescendants() do
+            if d:IsA("Light") and d.Range > PetRig.LIGHT_REACH then
+                d.Range = PetRig.LIGHT_REACH
             end
         end
     end

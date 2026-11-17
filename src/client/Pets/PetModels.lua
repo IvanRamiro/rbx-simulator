@@ -269,8 +269,43 @@ end
 
 local warnedMissing = {} -- [petId] = true once its missing model has been reported
 
+-- Its longest side at Normal size, in studs (what PetRules.scaleFor sizes a Large or Giant from), or nil while its model is missing.
+local lengths = {}
+function PetModels.normalLength(petId)
+    if lengths[petId] then
+        return lengths[petId]
+    end
+    local design = PetModels.Pets[petId]
+    if not design then
+        return nil
+    end
+    local look = MESH_LOOKS[petId]
+    local length = look and look.Length
+    if not length then
+        local imported = meshes() and meshFolder:FindFirstChild(petId, true)
+        if not (imported and imported:IsA("Model")) then
+            return nil
+        end
+        local _, box = imported:GetBoundingBox()
+        length = math.max(box.X, box.Y, box.Z)
+    end
+    lengths[petId] = length * design.Scale * PetModels.SIZE
+    return lengths[petId]
+end
+
+-- Pets that walk on the ground on legs (a big one's footfalls thud and raise dust: PetHeft); the others float, fly, swim or glide.
+PetModels.Walkers = {}
+for _, petId in { "EmberWyrm", "LunarHopper", "VoltFox", "GoldenKirin", "NineTailMoonfox", "Crysalith", "MossGolem", "JadeSpiritPanda",
+    "JadeAntlerDeer", "MagmaCub", "StormhornKirin", "CrystalBeetle", "PrismArmadillo", "JadeWyrmTurtle", "MoonfangTiger",
+    "ThousandEyedGuardian", "WorldrootColossus", "GoldenManeLion", "DreadfangCerberus", "StarfallFox", "CelestialSnowLeopard",
+    "CometStag", "EclipseCat", "TimekeeperTortoise", "RuneSphinx", "HeavenbreakerApe", "ThousandYearDreamEater", "SunscaleDragon",
+    "ThunderclawDrake", "BonefireDragon", "EclipseDreadwing" } do
+    PetModels.Walkers[petId] = true
+end
+
 -- The pet's model and its root. size: its hatch size ("Small", "Normal", "Large", "Giant"; nil: Normal), scaling the whole rig by
--- PetRules.Sizes' Scale. The model carries its size and that factor as the attributes PetSize and SizeScale.
+-- PetRules.scaleFor (its size's Scale, held between the size's MinLength and MaxLength for this species). The model carries its
+-- size and that factor as the attributes PetSize and SizeScale.
 function PetModels.build(petId, size, displayScale)
     local design = PetModels.Pets[petId]
     if not design then
@@ -278,7 +313,7 @@ function PetModels.build(petId, size, displayScale)
     end
     size = PetRules.size(size)
     -- displayScale: an extra factor a display may apply on top (a pen caps a huge pet to fit it); nil is 1
-    local factor = PetRules.sizeInfo(size).Scale * (displayScale or 1)
+    local factor = PetRules.scaleFor(size, PetModels.normalLength(petId)) * (displayScale or 1)
 
     local model = Instance.new("Model")
     model.Name = petId
@@ -300,6 +335,14 @@ function PetModels.build(petId, size, displayScale)
     local imported = meshes() and meshFolder:FindFirstChild(petId, true)
     if imported and imported:IsA("Model") then
         addImported(model, rootPart, imported, design, petId, factor)
+        -- a big pet's lights scale with it (PetRig), but past PetRig.LIGHT_REACH a Giant's glow washed the ground round its owner
+        -- in its colour (a Giant Dawn Phoenix's reached 50 studs and turned the hub's blue paving pink); the ones it makes as it
+        -- animates are held to it by PetRig.update
+        for _, light in model:GetDescendants() do
+            if light:IsA("Light") and light.Range > PetRig.LIGHT_REACH then
+                light.Range = PetRig.LIGHT_REACH
+            end
+        end
         return model, rootPart
     end
 
