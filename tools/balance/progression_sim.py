@@ -975,7 +975,7 @@ def main():
     parser.add_argument("--mults", help="the proposal's realm 4-12 multipliers, comma-separated (default PROPOSAL's)")
     parser.add_argument("--stands", choices=["own", "code"], help="the proposal's stand rule (default PROPOSAL's)")
     parser.add_argument("--compare", nargs=2, metavar=("BEFORE", "AFTER"),
-                        help="only write output/compare.md from two earlier runs' .csv files (e.g. before_2026-11-16 current)")
+                        help="only write output/compare.md from two earlier runs' .csv files (e.g. before current)")
     parser.add_argument("--station", choices=sorted(["none"] + list(STATIONS)), default="none",
                         help="where the cultivating bonus is, for the trips to it (see STATIONS); none: no trips (the old assumption)")
     parser.add_argument("--no-market", action="store_true",
