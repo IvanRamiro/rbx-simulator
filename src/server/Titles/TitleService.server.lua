@@ -1,6 +1,6 @@
 -- Gives out titles (shared/TitleRules) as a player earns them, and takes their choice of which to wear from their Titles
--- window. Earned on joining: Developer (GameConfig.Titles.DeveloperUserIds) and Beta Tester (joining before
--- GameConfig.Titles.BetaEndsAt). Earned as they go (looked at every few seconds): the title of every realm they have
+-- window. Earned on joining: Developer (GameConfig.Titles.DeveloperUserIds) and Beta Tester (joining while GameConfig.Beta
+-- is Active; saved like any earned title, so it is given once and kept after the beta ends). Earned as they go (looked at every few seconds): the title of every realm they have
 -- reached, the beast collector titles and Keeper of Secrets (their Spirit Beast Codex), Relic Seeker (every relic found).
 -- Earned at the moment: a guardian's title, for carrying an egg of its home (Guardian.lua's "Secure" moment).
 local Players = game:GetService("Players")
@@ -24,13 +24,13 @@ local THROTTLE = 0.2
 
 local lastRequest = {}
 
-local joining = {} -- [player] = how many titles they qualified for as they joined (announced once, together)
+local joining = {} -- [player] = the titles they qualified for as they joined (announced once, together)
 
 -- Gives a title; tells them when it is new (their window's badge and a notice) and saves it.
 local function award(player, id)
     if TitleBook.earn(player, id) then
         if joining[player] then
-            joining[player] += 1
+            table.insert(joining[player], id)
         else
             RemoteEvents.TitleEvent:FireClient(player, "Earned", id)
             TitleBook.publish(player)
@@ -90,17 +90,17 @@ local function setupPlayer(player)
         return
     end
     TitleBook.setupPlayer(player, if isNewPlayer then nil else progress)
-    joining[player] = 0
-    local betaEnds = GameConfig.Titles.BetaEndsAt
-    if betaEnds == nil or os.time() < betaEnds then
-        award(player, "BetaTester")
+    joining[player] = {}
+    local beta = GameConfig.Beta
+    if beta and beta.Active == true and typeof(beta.TitleId) == "string" and TitleRules.ById[beta.TitleId] then
+        award(player, beta.TitleId)
     end
     check(player)
     local found = joining[player]
     joining[player] = nil
     TitleBook.publish(player)
-    if found > 0 then
-        RemoteEvents.TitleEvent:FireClient(player, "EarnedOnJoin", found)
+    if #found > 0 then
+        RemoteEvents.TitleEvent:FireClient(player, "EarnedOnJoin", #found, found)
     end
 end
 

@@ -1,7 +1,7 @@
 -- The HUD's regions, laid out from the owner's reference (2026-11-04). Every controller puts its pieces
 -- into a region, in its LayoutOrder, instead of placing them by pixel, so they line up and never overlap:
 --   Status    top left, one column: the player's profile, then the Rail
---   Rail      the menu down the left: Shop, Pets, Codex, Robes, Quests, Titles, Settings (on a phone, icons in a row under the profile),
+--   Rail      the menu down the left: Shop, Pets, Codex, Robes, Quests, Titles, Settings, Feedback (on a phone, icons in a row under the profile),
 --             under its MENU toggle, which slides it away and back (M, a gamepad's d-pad left; saved in the player's settings)
 --   Currency  top centre, in the row beside Roblox's own buttons: Qi, Spirit Stones, Relics, sharing one slim strip
 --   TopRight  top right, in that row: small round buttons (Rewards)

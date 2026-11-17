@@ -796,13 +796,30 @@ local GameConfig = {
     },
 
     -- Titles (shared/TitleRules: what each is). DeveloperUserIds: who wears Developer (the game's creators). ContentCreatorUserIds:
-    -- who wears Content Creator (add a creator's Roblox UserId; taken off the list, they lose it on their next join). BetaEndsAt: the
-    -- launch, as a Unix time in seconds (UTC): everyone who plays before it earns Beta Tester and keeps it for good; nil
-    -- while the beta runs (everyone who plays now earns it). Set it before the launch.
+    -- who wears Content Creator (add a creator's Roblox UserId; taken off the list, they lose it on their next join). Beta Tester
+    -- follows Beta, below.
     Titles = {
         DeveloperUserIds = { 4993575280 },
         ContentCreatorUserIds = {},
-        BetaEndsAt = 1794758400, -- the launch: Monday 2026-11-16 00:00 in the owner's time (UTC+8), 2026-11-15 16:00 UTC. Move it if the launch moves
+    },
+
+    -- The public beta (opened 2026-11-17). While Active, everyone who joins earns the TitleId title (TitleService), saved with
+    -- their other titles, once. Turn Active off when the beta ends: nobody earns it after that, and those who already have it
+    -- keep it for good.
+    Beta = {
+        Active = true,
+        TitleId = "BetaTester",
+    },
+
+    -- The Feedback window (client/UI/FeedbackController, server/Feedback/FeedbackService): what a player may send, and how often.
+    -- Kept in the "BetaFeedback" DataStore (read it with tools/roblox/read_feedback.lua).
+    Feedback = {
+        Categories = { "Bug", "Idea", "Other" },
+        MinLength = 10,       -- characters, after trimming spaces
+        MaxLength = 800,
+        PerWindow = 3,        -- at most this many ...
+        WindowSeconds = 600,  -- ... in any 10 minutes
+        PerDay = 15,          -- and this many a day (UTC), kept in a small DataStore so rejoining doesn't reset it
     },
 
     StarterPetIds = { "AquaWisp" },

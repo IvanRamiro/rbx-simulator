@@ -19,7 +19,7 @@ local STEP = 0.1
 local toggleButton = Hud.railButton("SettingsButton", UiTheme.Icons.Settings, "Settings", 6)
 local isDeveloper = table.find(GameConfig.Titles.DeveloperUserIds, player.UserId) ~= nil
 local window = Hud.window({
-    Name = "SettingsWindow", Title = "SETTINGS", Size = Vector2.new(420, if isDeveloper then 460 else 376), AnchorPoint = Vector2.new(0.5, 0.5),
+    Name = "SettingsWindow", Title = "SETTINGS", Size = Vector2.new(420, if isDeveloper then 544 else 460), AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.fromScale(0.5, 0.5),
 })
 -- the rows, one card each, in a list that scrolls on a short screen
@@ -157,6 +157,18 @@ if isDeveloper then
     end)
     renderPerf()
 end
+
+-- feedback: opens the Feedback window (FeedbackController), which takes this one's place; the way in on every screen (on the
+-- narrowest phones the Feedback tile has no room in the menu's row)
+local feedback = switchRow("Feedback", "FEEDBACK", "Found a bug or have an idea? Tell us.", 5)
+feedback.Text = "OPEN"
+feedback.Activated:Connect(function()
+    local controller = script.Parent:FindFirstChild("FeedbackController")
+    local open = controller and controller:FindFirstChild("Open")
+    if open then
+        open:Fire()
+    end
+end)
 
 window.link(toggleButton)
 toggleButton.Activated:Connect(function()

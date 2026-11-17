@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local TitleRules = require(ReplicatedStorage:WaitForChild("TitleRules"))
 local Hud = require(script.Parent:WaitForChild("Hud"))
@@ -328,7 +329,7 @@ end
 player:GetAttributeChangedSignal("Title"):Connect(render)
 
 local notice = Toast.new("TitleMessage", C.Highlight, 4)
-RemoteEvents.TitleEvent.OnClientEvent:Connect(function(kind, data)
+RemoteEvents.TitleEvent.OnClientEvent:Connect(function(kind, data, ids)
     if kind == "State" then
         book = data
         earnedSet = {}
@@ -341,7 +342,15 @@ RemoteEvents.TitleEvent.OnClientEvent:Connect(function(kind, data)
             unseen += data
             setBadge(tostring(unseen), "Highlight")
         end
-        notice:show(if data == 1 then "New title: open Titles to wear it." else data .. " new titles: open Titles to wear them.", "Reward")
+        -- the beta's title (GameConfig.Beta) is named: every tester gets it on their first join in the beta (a new player's
+        -- first realm title comes with it; the badge counts them all)
+        local beta = GameConfig.Beta and GameConfig.Beta.TitleId
+        local betaEntry = beta and typeof(ids) == "table" and table.find(ids, beta) and TitleRules.ById[beta]
+        if betaEntry then
+            notice:show("You earned the " .. betaEntry.Text .. " title! Wear it in Titles.", "Reward", betaEntry.Color)
+        else
+            notice:show(if data == 1 then "New title: open Titles to wear it." else data .. " new titles: open Titles to wear them.", "Reward")
+        end
         Sfx.play("Notify")
     elseif kind == "Earned" then
         local entry = TitleRules.ById[data]

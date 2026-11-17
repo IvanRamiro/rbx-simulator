@@ -1372,7 +1372,7 @@ The owner asked for titles ("BETA TESTER, DEVELOPER, AND THE 12 REALMS TITLES et
 |---|---|---|
 | Special | Developer | The game's creators (`GameConfig.Titles.DeveloperUserIds`); its row shows only to them |
 | Special | Content Creator | Given: their UserId in `GameConfig.Titles.ContentCreatorUserIds` (the owner, November 9, 2026); off the list, they lose it on their next join |
-| Special | Beta Tester | Playing before the launch (`GameConfig.Titles.BetaEndsAt`, a Unix time; while it is nil the beta runs and everyone earns it). **Set it before the launch.** |
+| Special | Beta Tester | Joining while the public beta runs (`GameConfig.Beta`: `Active = true`, `TitleId = "BetaTester"`; opened November 17, 2026). Given once on join, saved with the other earned titles, announced "You earned the Beta Tester title! Wear it in Titles." **Set `Active = false` when the beta ends:** nobody earns it after that, and everyone who has it keeps it. It doesn't replace a title a player chose to wear; on AUTO it shows unless they have Developer, Content Creator or VIP |
 | Realms | the Awakened, Bedrock Disciple, Core Forger, Soul-Tempered, Cloud Strider, the Deathless, Heaven's Chosen, Starborn, Void-Touched, Keeper of the Dao, the Primeval, the Eternal | Reaching each of the twelve realms in turn (Qi Awakening to Eternal Transcendence), in the realm's colour; from the Divine Realm up a light runs across them |
 | Guardians | Pride Thief, Bamboo Shadow, Ashwalker, Moon-Saver, Pangu's Rival | Carrying an egg home from the Stone Lion, the Mantis Sage, the Ember Xuanwu, Tiangou, Pangu (they are robbed, never beaten). Counted from now on: eggs secured before titles existed aren't recorded |
 | Collection | Beast Seeker, Beast Tamer, Beast Master, Keeper of the Codex | 10, 25, 45 and every beast (63) in the Spirit Beast Codex |
@@ -1443,8 +1443,22 @@ The game had no audio. Every sound comes from Roblox's licensed libraries only: 
 
 ### Settings and analytics (November 4, 2026)
 
-- **Settings** (the Settings button on the rail; `client/UI/SettingsController`, `server/Data/Settings`, saved as `Settings`, save version 10): Music and Sound volume, and Reduced Effects, which hides other players' auras and turns off screen flashes and camera shake on that player's own client.
+- **Settings** (the Settings button on the rail; `client/UI/SettingsController`, `server/Data/Settings`, saved as `Settings`, save version 10): Music and Sound volume, and Reduced Effects, which hides other players' auras and turns off screen flashes and camera shake on that player's own client. A FEEDBACK row opens the Feedback window (Beta feedback, below).
 - **Analytics** (`server/Analytics/Analytics`, for the Creator Dashboard): the quest path as an onboarding funnel; every Spirit Stone in and out, by cause and item (through `Wallet`); and the moments RankUp, EggTaken, EggDropped, EggSecured, EggHatched and QuestsSkipped, each by guardian, egg or rank. Studio only prints these: real data needs a live server.
+
+### Beta feedback (November 17, 2026)
+
+For the public beta (the owner: "yes please"): players send feedback from inside the game.
+
+- **How:** the **Feedback** tile on the menu (a speech bubble drawn in the menu icons' colours, no uploaded picture), or **Settings > FEEDBACK > OPEN** on every screen. On the narrowest phones (under about 675 px wide, e.g. 666x354) one more tile would run into the quest column, so the tile steps out of the row there and Settings is the way in. The window: BUG / IDEA / OTHER, a box ("Tell us what happened or what you'd like…", 10 to 800 characters, counted as they type; it scrolls and follows the end), SEND. Sent: "Thanks! Your feedback was sent.", the window clears and closes. Refused: a plain warning, and what they wrote stays. On a touch screen the window rises to the top while they type.
+- **Sent with it** (the client gathers, the server checks and cuts down): device (Touch, Gamepad or Keyboard), screen size, the phone tier (`Quality.Low`), the last 5 error lines on their device (200 characters each). **The server adds** UserId, name and display name, rank and realm, island, position (rounded), `game.PlaceVersion`, JobId, the server time (Unix seconds and ISO) and minutes into their session.
+- **Limits** (`GameConfig.Feedback`): 3 in any 10 minutes (in memory), 15 a day (UTC; a small per-player DataStore counter, so rejoining doesn't reset it). One in flight at a time per player.
+- **Stored** (`server/Feedback/FeedbackService`): DataStore **BetaFeedback**, key `F_<server time in ms>_<userId>`, one table per report (Version 1); OrderedDataStore **BetaFeedbackIndex**, the same key with its time in Unix seconds as the value, to list newest first; DataStore **BetaFeedbackCount**, key `U_<userId>`, `{ Day, Count }`. Saved with the player's UserId attached (for data-removal requests). Budget-checked (keeping 10 requests a minute for player saves), up to 3 tries. In Studio every name takes the StudioTestSave prefix, so tests never touch the real reports. Feedback is never shown to other players, so it isn't run through the chat filter, and its text is used for nothing else.
+- **Reading it in Studio:** `tools/roblox/read_feedback.lua`, pasted into the Command Bar in Edit (Game Settings > Security > Enable Studio Access to API Services on). `LIVE = true` (the default) reads the real stores; `LIVE = false` reads the Studio test stores. `COUNT` (up to 100) and `ONLY` ("Bug", "Idea", "Other") narrow it. Read-only.
+- **Reading it from outside the game (Open Cloud, read-only):** checked November 17, 2026: refused (403), as these read scopes are not granted yet; once they are (read only), these calls work:
+  - newest first: `GET /cloud/v2/universes/10773593185/ordered-data-stores/BetaFeedbackIndex/scopes/global/entries?maxPageSize=100&orderBy=value%20desc` (scope `universe.ordered-data-store.scope.entry:read`): each entry's `id` is a report's key;
+  - one report: `GET /cloud/v2/universes/10773593185/data-stores/BetaFeedback/entries/<key>` (scope `universe-datastores.objects:read`): its `value` is the report's table;
+  - every key, oldest first (keys of the same length sort by time): `GET /cloud/v2/universes/10773593185/data-stores/BetaFeedback/entries?maxPageSize=100` (scope `universe-datastores.objects:list`).
 
 ### Rewards (November 4, 2026)
 
