@@ -16,7 +16,8 @@
 --   PetRules.worth(pet)                   what its copies are worth together, in Normal copies (Shop.petValue: its sell value)
 --   PetRules.mutation(pet)                its mutation's id (PetRules.Mutations), or nil for none or one this server doesn't know
 --   PetRules.mutationInfo(mutation)       that mutation's entry (none: Value, Qi and Cap 1, Order 0)
---   PetRules.rollMutation(random)         a mutation for a fresh hatch, or nil (the server rolls it)
+--   PetRules.mutationChance(name, luck)   that mutation's chance in percent with that luck (the Luck pass doubles the Grand ones)
+--   PetRules.rollMutation(random, luck)   a mutation for a fresh hatch, or nil (the server rolls it)
 --   PetRules.better(a, b)                 the rarer of two mutations (a fusion keeps it)
 --   PetRules.copyValue(size, mutation)    a fresh copy's worth: its size's Value times its mutation's
 --   PetRules.displayName(petId, mutation) "Golden Moonfox"
@@ -70,7 +71,11 @@ end
 
 -- Hatch mutations (the owner, 2026-11-17: "SO LET'S ALSO ADD PET MUTATION, SO THERE PET WILL LOOK COOLER", then "let's combine
 -- other roblox mutation + our own original set of mutation"; vault: Pet Mutations Design 2026-11-17). Rolled on the server at
--- every hatch apart from the beast and its size (no luck, no egg or realm changes it), saved on the pet as Mutation (nil: none).
+-- every hatch apart from the beast and its size (no egg or realm changes it), saved on the pet as Mutation (nil: none). The Luck
+-- pass (the owner, 2026-11-17: "luck pass improve the chance for odds") makes the three Grand mutations (Rainbow, Celestial, Void)
+-- luck times likelier, taken from "none"; the six others stay. Not all nine: doubled, a hatch would average 1.038 in mutation
+-- Values and a Merchant egg, bought with the Luck pass, would sell back for 1.011 of its price (a profit); with the Grand ones
+-- doubled it is 1.024 and about 0.997. An Exclusive egg takes no luck here either (PetService).
 -- Six classic kinds (our own looks: client Pets/MutationLook) and three of our own at the top. Chance: percent of all hatches.
 -- Value: what a copy of it is worth, times its size's Value (it goes into Worth at the hatch, so fusing makes no stones). Qi: its Qi
 -- bonus multiplier, times its size's. Cap: the Auction House's price cap multiplier (AuctionRules.priceCap). Hold: seconds more
@@ -114,10 +119,18 @@ function PetRules.mutationInfo(mutation)
     return if id then PetRules.Mutations[id] else NO_MUTATION
 end
 
-function PetRules.rollMutation(random)
+function PetRules.mutationChance(name, luck)
+    local info = PetRules.Mutations[name]
+    if not info then
+        return 0
+    end
+    return if info.Grand and type(luck) == "number" and luck > 1 then info.Chance * luck else info.Chance
+end
+
+function PetRules.rollMutation(random, luck)
     local roll = (if random then random:NextNumber() else math.random()) * 100
     for _, name in PetRules.MutationOrder do
-        roll -= PetRules.Mutations[name].Chance
+        roll -= PetRules.mutationChance(name, luck)
         if roll < 0 then
             return name
         end

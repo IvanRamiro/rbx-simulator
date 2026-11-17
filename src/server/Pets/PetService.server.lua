@@ -161,8 +161,9 @@ local function onHatchRequest(player, eggId)
     local petId, chance = rollEggPet(egg, player)
     -- its size, rolled apart from the beast at PetRules.Sizes' chances (no luck: the Luck pass changes which beast, not its size)
     local size = PetRules.rollSize(random)
-    -- and its mutation, a third roll apart from both (PetRules.Mutations; nil for most: no luck touches it either)
-    local mutation = PetRules.rollMutation(random)
+    -- and its mutation, a third roll apart from both (PetRules.Mutations; nil for most). The Luck pass makes the Grand ones likelier
+    -- (PetRules.mutationChance); an Exclusive egg takes no luck, as with its beasts
+    local mutation = PetRules.rollMutation(random, if egg.Exclusive then 1 else PassRules.luck(player))
     local isNew = not Codex.isFound(player, petId)
     -- a pet from a paid egg (the Exclusive Egg, or an egg won on a bought spin) is a paid item for good (PetInventory: Paid)
     if not PetInventory.grantPet(player, petId, size, paidEgg or egg.Exclusive == true, mutation) then

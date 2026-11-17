@@ -1051,7 +1051,7 @@ local GameConfig = {
     -- struck through only while the live price is lower, so it never claims a saving that isn't real.
     GamePasses = {
         { Id = "Luck", Name = "Lucky Cultivator", GamePassId = 2082626429, Price = 99, Headline = "2x LUCK!", WasPrice = 149, Icon = "rbxassetid://129170449479441",
-            Text = "2x luck: rare beasts hatch twice as often (see ODDS).", Luck = 2 }, -- (shortened: the longer text was cut off in its card, UI audit 2026-11-11)
+            Text = "Rare beasts and rare mutations hatch twice as often.", Luck = 2 }, -- (shortened: the longer text was cut off in its card, UI audit 2026-11-11)
         { Id = "PetSlots", Name = "+3 Pet Slots", GamePassId = 2081480484, Price = 199, Headline = "+3 BEASTS!", WasPrice = 249, Icon = "rbxassetid://90769324952400",
             Text = "Equip 6 beasts at once instead of 3.", ExtraSlots = 3 },
         { Id = "VIP", Name = "VIP", GamePassId = 2083352447, Price = 249, Headline = "VIP PERKS!", WasPrice = 299, Icon = "rbxassetid://97387314672491",

@@ -282,7 +282,7 @@ Every hatch rolls a size on the server, apart from the beast (the Luck pass does
 
 ### Pet mutations (November 17, 2026)
 
-The owner: "CHECK EXISTING ROBLOX PET MUTATION, SO LET'S ALSO ADD PET MUTATION, SO THERE PET WILL LOOK COOLER", then "No, let's combine other roblox mutation + our own original set of mutation". Every hatch rolls a mutation on the server, apart from the beast and the size (a third roll: no luck, egg or realm changes it), for every egg including the Exclusive Egg (`shared/PetRules.Mutations`); about 1 hatch in 11 gets one. Six classic kinds players already know, with our own looks, and three of our own at the top:
+The owner: "CHECK EXISTING ROBLOX PET MUTATION, SO LET'S ALSO ADD PET MUTATION, SO THERE PET WILL LOOK COOLER", then "No, let's combine other roblox mutation + our own original set of mutation". Every hatch rolls a mutation on the server, apart from the beast and the size (a third roll: no egg or realm changes it), for every egg including the Exclusive Egg (`shared/PetRules.Mutations`); about 1 hatch in 11 gets one. The Luck pass (the owner, 2026-11-17: "luck pass improve the chance for odds") doubles the three rarest, Rainbow, Celestial and Void, on every egg but the Exclusive Egg; the six others stay, because doubling all nine would let a Luck owner sell a Merchant egg's pet for more than the egg cost. Fusing keeps the better mutation and the bigger size, and Shiny stays subtle (both confirmed by the owner, 2026-11-17). Six classic kinds players already know, with our own looks, and three of our own at the top:
 
 | Mutation | Chance | Qi bonus | Sell value | Auction cap | How it looks (colour and glow only) |
 |---|---|---|---|---|---|

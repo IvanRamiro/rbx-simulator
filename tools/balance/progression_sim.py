@@ -430,10 +430,11 @@ class Player:
                           "worth": self.R.sizes[size]["Value"] * self.R.mutation(mutation)["Value"]})
         self.codex.add(pet_id)
 
-    def roll_mutation(self):  # PetRules.rollMutation
+    def roll_mutation(self, luck=1):  # PetRules.rollMutation (the Luck pass: the Grand ones luck times likelier)
         roll = self.rng.random() * 100
         for name in self.R.mutation_order:
-            roll -= self.R.mutations[name]["Chance"]
+            info = self.R.mutations[name]
+            roll -= info["Chance"] * (luck if info.get("Grand") and luck > 1 else 1)
             if roll < 0:
                 return name
         return None
@@ -456,7 +457,7 @@ class Player:
                 pet_id = pid
                 break
         size = self.roll_size()
-        self.add_pet(pet_id, size, self.roll_mutation() if self.R.mutations else None)
+        self.add_pet(pet_id, size, self.roll_mutation(self.luck if luck_applies else 1) if self.R.mutations else None)
         self.hatches += 1
 
     def bonus_of(self, pet):
