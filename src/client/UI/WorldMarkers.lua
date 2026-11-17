@@ -69,6 +69,44 @@ function WorldMarkers.drop(marker)
     end
 end
 
+local ARROW_ROOM = 34 -- px (at the HUD's scale) the arrow takes beyond the words, on the place's side
+
+-- Whether a box on the screen (in the screen's own pixels) lies on the left column (the profile and the menu) or the quest panel.
+local function hudPanelAt(x0, y0, x1, y1, inset)
+    for _, piece in { Hud.Status, Hud.Quest } do
+        if piece and piece.Visible and piece.AbsoluteSize.Y > 1 then
+            local position, size = piece.AbsolutePosition, piece.AbsoluteSize
+            local top = position.Y + inset
+            if x1 > position.X and x0 < position.X + size.X and y1 > top and y0 < top + size.Y then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- An arrow on its own (no words): moved sideways out from under the left column and the quest panel, into the gap between them.
+local function arrowClear(at, scale, inset, view)
+    local half = 18 * scale
+    local x = math.clamp(at.X, half, view.X - half)
+    local arrowY = at.Y -- (alone, the arrow sits in the frame's middle)
+    local status, quest = Hud.Status, Hud.Quest
+    local function besideVertically(piece)
+        if not (piece and piece.Visible and piece.AbsoluteSize.Y > 1) then
+            return false
+        end
+        local top = piece.AbsolutePosition.Y + inset
+        return arrowY + half > top and arrowY - half < top + piece.AbsoluteSize.Y
+    end
+    if besideVertically(status) then
+        x = math.max(x, status.AbsolutePosition.X + status.AbsoluteSize.X + half)
+    end
+    if besideVertically(quest) then
+        x = math.min(x, quest.AbsolutePosition.X - half)
+    end
+    return Vector2.new(x, at.Y)
+end
+
 local function placeMarkers()
     local camera = Workspace.CurrentCamera
     if not camera then
@@ -97,6 +135,7 @@ local function placeMarkers()
         local x, y = point.X, point.Y
         local inside = point.Z > 0 and x >= margin and x <= view.X - margin and y >= margin and y <= view.Y - margin
         if inside or not marker.edge then
+            marker.label.Visible = true
             marker.frame.Visible = point.Z > 0
             marker.frame.Position = UDim2.fromOffset(x, y)
             marker.arrow.Rotation = 0
@@ -138,9 +177,14 @@ local function placeMarkers()
         local reachY = if toward.Y < 0 then (centre.Y - top) / -toward.Y else (bottom - centre.Y) / math.max(toward.Y, 1e-3)
         local at = centre + toward * math.max(0, math.min(reachX, reachY))
         -- the words are wider than the marker's frame: at a side edge the centre comes in by half their width, so they stay
-        -- on the screen (2026-11-12: "THE GREAT ROOT  398 stud" ran off the right edge)
+        -- on the screen (2026-11-12: "THE GREAT ROOT  398 stud" ran off the right edge); the arrow beyond them too (on a phone it
+        -- stood past the right edge, out of sight)
+        local direction = toward.Unit
         local halfText = marker.label.TextBounds.X / 2 + 6 * scale
-        at = Vector2.new(math.clamp(at.X, math.max(left, halfText), math.max(view.X - halfText, math.max(left, halfText))), at.Y)
+        local arrowRoom = ARROW_ROOM * scale
+        local lowX = math.max(left, halfText + math.max(0, -direction.X) * arrowRoom)
+        local highX = math.max(view.X - halfText - math.max(0, direction.X) * arrowRoom, lowX)
+        at = Vector2.new(math.clamp(at.X, lowX, highX), at.Y)
         -- and below the quest panel at the top right, which it lay on (2026-11-12)
         local quest = Hud.Quest
         if quest and quest.Visible and quest.AbsoluteSize.Y > 1 then
@@ -150,14 +194,24 @@ local function placeMarkers()
                 at = Vector2.new(at.X, math.min(questBottom + 30 * scale, math.max(bottom, centre.Y + 1)))
             end
         end
+        -- a phone held sideways has no room for the words between the left column, the quest panel and the inventory bar: they
+        -- went half behind the menu or the air leaps (2026-11-17). There only the arrow shows, in the gap beside the panels
+        -- (the quest panel and the notice that sent the player already name the place and its distance).
+        local wordsTop = at.Y - 22 * scale
+        local clash = hudPanelAt(at.X - halfText, wordsTop, at.X + halfText, wordsTop + 26 * scale, inset)
+        marker.label.Visible = not clash
         marker.frame.Visible = true
-        marker.frame.Position = UDim2.fromOffset(at.X, at.Y)
         -- the arrow leans out of the label toward the place ("v" points down: rotation 0 is downward)
-        local direction = toward.Unit
         marker.arrow.Rotation = math.deg(math.atan2(-direction.X, direction.Y))
-        -- just outside the words, on the place's side, so it never covers them
-        local halfWords = marker.label.TextBounds.X / 2 / scale + 16 -- (in the marker's own units: TextBounds is on the screen, after its scale)
-        marker.arrow.Position = UDim2.new(0.5, direction.X * halfWords, 0, 13 + direction.Y * 26)
+        if clash then
+            at = arrowClear(at, scale, inset, view)
+            marker.arrow.Position = UDim2.new(0.5, 0, 0, 22)
+        else
+            -- just outside the words, on the place's side, so it never covers them
+            local halfWords = marker.label.TextBounds.X / 2 / scale + 16 -- (in the marker's own units: TextBounds is on the screen, after its scale)
+            marker.arrow.Position = UDim2.new(0.5, direction.X * halfWords, 0, 13 + direction.Y * 26)
+        end
+        marker.frame.Position = UDim2.fromOffset(at.X, at.Y)
     end
 end
 
