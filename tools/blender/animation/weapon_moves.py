@@ -79,42 +79,46 @@ def spear_thrust():
     lead = {"pelvis": 0.015, "chest": 0.008, "feet": 0.025}
 
     clip.pose(0.0, guard)
-    # coiled: the weight sinks back onto the rear leg, the shaft draws straight back along its line
+    # the dip: the weight settles a touch before it loads (anticipation of the anticipation)
+    clip.pose(0.05, edit(guard, pelvis_pos=guard["pelvis_pos"] + V((0.0, -0.07, 0.1)), wp=guard["wp"] + V((0.0, -0.03, 0.18))), lead)
+    # coiled: the weight sinks back onto the rear leg, the shaft draws straight back along its line, and it is held there, loaded
     coil = edit(guard,
-        pelvis_pos=V((0.05, -0.74, 0.42)), pelvis_rot=R.ry(-74), chest_rot=R.ry(-84), head_rot=R.ry(14) @ R.rx(-3),
-        wp=guard["wp"] + V((0.08, -0.12, 0.92)), wr=R.aim(d(0.0, 0.05, -1)),
-        Right_foot=foot(0.5, 1.42, -70), Left_foot=foot(-0.12, -1.28, -30))
-    clip.pose(0.11, coil, lead)
-    clip.pose(0.15, edit(coil, wp=coil["wp"] + V((0, 0, 0.1)), pelvis_pos=coil["pelvis_pos"] + V((0, -0.03, 0.07))), lead)
-    # driving: the front foot is already flying, the hips go first
+        pelvis_pos=V((0.05, -0.78, 0.5)), pelvis_rot=R.ry(-78), chest_rot=R.ry(-90), head_rot=R.ry(14) @ R.rx(-3),
+        wp=guard["wp"] + V((0.08, -0.14, 1.12)), wr=R.aim(d(0.0, 0.06, -1)),
+        Right_foot=foot(0.5, 1.5, -72), Left_foot=foot(-0.12, -1.28, -30))
+    clip.pose(0.13, coil, lead)
+    # still gathering: the shaft a little farther back and the hips a little lower, the way a spring is pressed before it goes
+    clip.pose(0.185, edit(coil, wp=coil["wp"] + V((0, 0.0, 0.16)), pelvis_pos=coil["pelvis_pos"] + V((0, -0.05, 0.1))), lead)
+    # driving: the front foot is already flying, the hips go first (three frames to the reach)
     drive = edit(coil,
-        pelvis_pos=V((-0.02, -0.62, -0.5)), pelvis_rot=R.ry(-52), chest_rot=R.ry(-68), head_rot=R.ry(4) @ R.rx(-2),
+        pelvis_pos=V((-0.02, -0.64, -0.55)), pelvis_rot=R.ry(-54), chest_rot=R.ry(-70), head_rot=R.ry(4) @ R.rx(-2),
         wp=V((0.55, -0.42, -0.95)), wr=R.aim(d(-0.01, 0.0, -1)),
-        Left_foot=foot(-0.14, -2.1, -25, lift=0.3, pitch=10), Right_foot=foot(0.45, 0.72, -60))
-    clip.pose(0.185, drive, lead)
-    # the reach: hips square, the back leg straightening, the shaft level and the whole body behind it
+        Left_foot=foot(-0.14, -2.1, -25, lift=0.3, pitch=10), Right_foot=foot(0.45, 0.72, -62))
+    clip.pose(0.208, drive, lead)
+    # the reach, past where it will rest: the tip is thrown a hand farther than the body can hold, and settles back
     reach = edit(coil,
         pelvis_pos=V((-0.05, -0.56, -1.3)), pelvis_rot=R.ry(-48), chest_rot=R.ry(-64) @ R.rx(-4), head_rot=R.rx(-5),
         wp=V((0.05, -0.3, -1.85)), wr=R.aim(d(-0.012, 0.0, -1)),
         Left_foot=foot(-0.16, -2.85, -18), Right_foot=foot(0.42, 0.2, -68),
         Right_knee=V(knee_f), Left_knee=V((0.05, 0.3, -0.5)))
-    clip.pose(0.215, reach, lead)
+    clip.pose(0.238, edit(reach, wp=reach["wp"] + V((0, 0.0, -0.16)), pelvis_pos=reach["pelvis_pos"] + V((0, 0.0, -0.1))), lead)
+    clip.pose(0.268, reach, lead)
     # it hangs there: the body sinks into the blow, the shaft still humming from the stop
     hold1 = edit(reach, pelvis_pos=reach["pelvis_pos"] + V((0, -0.05, -0.06)), wp=reach["wp"] + V((0, -0.03, -0.07)), wr=R.aim(d(-0.012, 0.022, -1)))
-    clip.pose(0.245, hold1)
-    clip.pose(0.275, edit(hold1, wr=R.aim(d(-0.012, -0.014, -1))))
-    clip.pose(0.305, edit(hold1, wr=R.aim(d(-0.012, 0.009, -1))))
+    clip.pose(0.30, hold1)
+    clip.pose(0.33, edit(hold1, wr=R.aim(d(-0.012, -0.014, -1))))
+    clip.pose(0.36, edit(hold1, wr=R.aim(d(-0.012, 0.009, -1))))
     hold2 = edit(hold1, wr=R.aim(d(-0.012, 0.0, -1)), pelvis_pos=reach["pelvis_pos"] + V((0, -0.03, -0.03)))
-    clip.pose(0.40, hold2)
+    clip.pose(0.44, hold2)
     # the pull back: the shaft first, then the body, the feet stepping home one after the other
     back = edit(hold2,
         pelvis_pos=V((0.0, -0.8, -0.55)), pelvis_rot=R.ry(-52), chest_rot=R.ry(-60), head_rot=R.ry(10) @ R.rx(-3),
         wp=V((0.6, -0.3, -0.9)), wr=R.aim(d(0.1, -0.12, -1)),
         Left_foot=foot(-0.18, -2.1, -22), Right_foot=foot(0.5, 0.9, -72, lift=0.22, pitch=-12))
-    clip.pose(0.52, back)
-    clip.pose(0.66, edit(low, Left_foot=foot(-0.2, -1.75, -22, lift=0.12), Right_knee=V(knee_f), Left_knee=V((0.05, 0.3, -0.5))))
+    clip.pose(0.56, back)
+    clip.pose(0.70, edit(low, Left_foot=foot(-0.2, -1.75, -22, lift=0.12), Right_knee=V(knee_f), Left_knee=V((0.05, 0.3, -0.5))))
     clip.pose(0.85, edit(low, Right_knee=V(knee_f), Left_knee=V((0.05, 0.3, -0.5))))
-    return clip, 0.85, R.rel_between(guard["left_rel"], low["left_rel"], 0.5, 0.68), {"Hit": 0.2, "Swing": (0.16, 0.235)}
+    return clip, 0.85, R.rel_between(guard["left_rel"], low["left_rel"], 0.5, 0.7), {"Hit": 0.226, "Swing": (0.185, 0.262)}
 
 
 def spun(base, delta, pivot=V((0, -0.3, 0))):
@@ -244,20 +248,26 @@ def sword_c():
     start = sword_key(ready, (1.42, 0.95, -0.65), d(0.78, 0.55, 0.05), (-0.5, 0.8, 0.0), pelvis_y=-0.12, pelvis_z=-0.42, yaw=-26, chest=-38, head=-8, pitch=2,
         lhand=(-1.25, -0.5, 0.7), rf=(0.62, -1.15, -14), lf=(-0.62, 0.4, 3), pole=(0.95, 0.3, 0.15))
     clip.pose(0.0, start)
-    clip.pose(0.13, sword_key(ready, (0.55, 1.75, 0.2), d(0.1, 0.55, 0.83), (0, 0.8, -0.6), pelvis_y=0.3, pelvis_z=0.15, yaw=-12, chest=-14, head=-2, pitch=10,
+    # it gathers: down onto the legs, the blade drawn back low behind the right hip (the weight a heavy blow needs before it can rise)
+    clip.pose(0.06, sword_key(ready, (1.3, 0.55, 0.3), d(0.6, 0.35, 0.72), (0, 0.8, -0.6), pelvis_y=-0.22, pelvis_z=0.2, yaw=-20, chest=-28, head=-6, pitch=4,
+        lhand=(-1.0, 0.1, -0.5), rf=(0.62, -0.9, -10), lf=(-0.62, 0.7, 6), pole=(0.95, 0.4, 0.1)), lead)
+    # then up: rising onto the toes, the blade swung high behind the head
+    clip.pose(0.17, sword_key(ready, (0.55, 1.75, 0.2), d(0.1, 0.55, 0.83), (0, 0.8, -0.6), pelvis_y=0.3, pelvis_z=0.15, yaw=-12, chest=-14, head=-2, pitch=10,
         lhand=(-0.8, 0.55, -0.65), rf=(0.62, -0.7, -8, 0.12), lf=(-0.62, 0.8, 8), pole=(1.0, 0.6, 0.0)), lead)
-    clip.pose(0.175, sword_key(ready, (0.5, 1.88, -0.05), d(0.08, 0.92, 0.38), (0, 0.4, -0.9), pelvis_y=0.34, pelvis_z=0.12, yaw=-10, chest=-12, head=-2, pitch=12,
-        lhand=(-0.75, 0.6, -0.75), rf=(0.62, -0.7, -8, 0.18), lf=(-0.62, 0.8, 8), pole=(1.0, 0.6, 0.0)), lead)
-    clip.pose(0.215, sword_key(ready, (0.42, 1.2, -1.3), d(0.02, 0.66, -0.75), (0, 0.75, 0.66), pelvis_y=-0.08, pelvis_z=-0.5, yaw=-4, chest=-4, head=0, pitch=0,
+    # the top: arched back, held for an instant: the poised moment the blow is read from
+    clip.pose(0.235, sword_key(ready, (0.5, 1.9, -0.1), d(0.08, 0.94, 0.33), (0, 0.4, -0.9), pelvis_y=0.38, pelvis_z=0.14, yaw=-10, chest=-12, head=-2, pitch=16,
+        lhand=(-0.75, 0.62, -0.78), rf=(0.62, -0.7, -8, 0.2), lf=(-0.62, 0.8, 8), pole=(1.0, 0.6, 0.0)), lead)
+    clip.pose(0.265, sword_key(ready, (0.42, 1.2, -1.3), d(0.02, 0.66, -0.75), (0, 0.75, 0.66), pelvis_y=-0.08, pelvis_z=-0.5, yaw=-4, chest=-4, head=0, pitch=0,
         lhand=(-1.1, -0.05, -0.2), rf=(0.62, -1.4, -5, 0.22), lf=(-0.62, 0.6, 8), pole=(0.9, 0.1, 0.1)), lead)
-    clip.pose(0.25, sword_key(ready, (0.2, -0.45, -1.72), d(-0.02, -0.5, -0.86), (0, 0.86, -0.5), pelvis_y=-0.72, pelvis_z=-0.95, yaw=2, chest=2, head=0, pitch=-14,
-        lhand=(-1.3, -0.6, 0.55), rf=(0.62, -1.9, -2), lf=(-0.62, 0.35, 10), pole=(0.8, -0.5, 0.2)), lead)
-    clip.pose(0.33, sword_key(ready, (0.15, -0.72, -1.6), d(-0.03, -0.62, -0.78), (0, 0.78, -0.62), pelvis_y=-0.82, pelvis_z=-1.0, yaw=3, chest=3, head=0, pitch=-17,
-        lhand=(-1.35, -0.75, 0.6), rf=(0.62, -1.9, -2), lf=(-0.62, 0.35, 10), pole=(0.8, -0.5, 0.2)))
-    clip.pose(0.44, sword_key(ready, (0.2, -0.65, -1.55), d(-0.03, -0.55, -0.83), (0, 0.8, -0.55), pelvis_y=-0.72, pelvis_z=-0.9, yaw=3, chest=3, head=0, pitch=-13,
+    # the blow: everything down on one line, the lead foot stamping
+    clip.pose(0.30, sword_key(ready, (0.2, -0.5, -1.74), d(-0.02, -0.52, -0.85), (0, 0.86, -0.5), pelvis_y=-0.78, pelvis_z=-1.0, yaw=2, chest=2, head=0, pitch=-15,
+        lhand=(-1.3, -0.6, 0.55), rf=(0.62, -1.95, -2), lf=(-0.62, 0.35, 10), pole=(0.8, -0.5, 0.2)), lead)
+    clip.pose(0.38, sword_key(ready, (0.15, -0.74, -1.6), d(-0.03, -0.62, -0.78), (0, 0.78, -0.62), pelvis_y=-0.84, pelvis_z=-1.02, yaw=3, chest=3, head=0, pitch=-17,
+        lhand=(-1.35, -0.75, 0.6), rf=(0.62, -1.95, -2), lf=(-0.62, 0.35, 10), pole=(0.8, -0.5, 0.2)))
+    clip.pose(0.48, sword_key(ready, (0.2, -0.65, -1.55), d(-0.03, -0.55, -0.83), (0, 0.8, -0.55), pelvis_y=-0.72, pelvis_z=-0.9, yaw=3, chest=3, head=0, pitch=-13,
         lhand=(-1.35, -0.7, 0.55), rf=(0.62, -1.75, -2), lf=(-0.62, 0.42, 10), pole=(0.8, -0.5, 0.2)))
     clip.pose(0.62, ready)
-    return clip, 0.62, None, {"Hit": 0.235, "Swing": (0.18, 0.28)}
+    return clip, 0.62, None, {"Hit": 0.285, "Swing": (0.235, 0.32)}
 
 
 # ---------- bare hands ----------
@@ -307,12 +317,16 @@ def punch(side):
 
     guard = pose((0, -0.38, 0), 0, 0, -6, (0.5, 0.42, -0.78), (0.5, 0.45, -0.72))
     clip.pose(0.0, guard)
-    clip.pose(0.055, pose((0, -0.44, 0.1), -14, -24, -6, (0.74, 0.28, -0.22), (0.45, 0.46, -0.85)), lead)
-    clip.pose(0.11, pose((0, -0.5, -0.38), 20, 38, -10, (0.16, 0.5, -2.62), (0.68, 0.25, -0.12), step=True), lead)
-    clip.pose(0.165, pose((0, -0.52, -0.42), 22, 40, -11, (0.14, 0.48, -2.68), (0.68, 0.24, -0.1), step=True))
-    clip.pose(0.25, pose((0, -0.46, -0.2), 8, 14, -8, (0.42, 0.45, -1.5), (0.56, 0.36, -0.5), step=True))
+    # the load: the hips and shoulder wind back, the fist drawn in beside the ribs, the weight sinking onto the back foot
+    clip.pose(0.045, pose((0, -0.42, 0.08), -10, -18, -6, (0.7, 0.3, -0.35), (0.46, 0.46, -0.82)), lead)
+    clip.pose(0.085, pose((0, -0.46, 0.14), -18, -32, -6, (0.78, 0.26, -0.12), (0.45, 0.46, -0.88)), lead)
+    # the drive: the hips go first, the shoulder after, the fist last; the step lands with the blow
+    clip.pose(0.115, pose((0, -0.5, -0.3), 12, 24, -9, (0.3, 0.46, -1.9), (0.62, 0.3, -0.25), step=True), lead)
+    clip.pose(0.135, pose((0, -0.52, -0.42), 22, 40, -11, (0.14, 0.48, -2.68), (0.68, 0.24, -0.1), step=True), lead)
+    clip.pose(0.185, pose((0, -0.52, -0.43), 22, 41, -11, (0.14, 0.48, -2.7), (0.68, 0.24, -0.1), step=True))
+    clip.pose(0.27, pose((0, -0.46, -0.2), 8, 14, -8, (0.42, 0.45, -1.5), (0.56, 0.36, -0.5), step=True))
     clip.pose(0.4, guard)
-    return clip, 0.4, None, {"Hit": 0.1}
+    return clip, 0.4, None, {"Hit": 0.13}
 
 
 def punch_right():
