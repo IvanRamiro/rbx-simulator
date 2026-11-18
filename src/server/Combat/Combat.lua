@@ -13,6 +13,7 @@ local ServerStorage = game:GetService("ServerStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local TitleRules = require(ReplicatedStorage:WaitForChild("TitleRules"))
 local WeaponInventory = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("WeaponInventory"))
 
 local Combat = {}
@@ -40,7 +41,7 @@ end
 
 function Combat.powerOf(player)
     local index = Ranks.getIndex(Ranks.getPlayerRankName(player)) or 1
-    return 1 + (index - 1) * GameConfig.Combat.RankPowerStep
+    return (1 + (index - 1) * GameConfig.Combat.RankPowerStep) * TitleRules.multiplier(player, "Attack") -- (their worn title's bonus)
 end
 
 return Combat

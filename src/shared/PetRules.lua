@@ -16,8 +16,8 @@
 --   PetRules.worth(pet)                   what its copies are worth together, in Normal copies (Shop.petValue: its sell value)
 --   PetRules.mutation(pet)                its mutation's id (PetRules.Mutations), or nil for none or one this server doesn't know
 --   PetRules.mutationInfo(mutation)       that mutation's entry (none: Value, Qi and Cap 1, Order 0)
---   PetRules.mutationChance(name, luck)   that mutation's chance in percent with that luck (the Luck pass doubles the Grand ones)
---   PetRules.rollMutation(random, luck)   a mutation for a fresh hatch, or nil (the server rolls it)
+--   PetRules.mutationChance(name, luck, boost)  that mutation's chance in percent with that luck (the Luck pass doubles the Grand ones) and boost (a title's)
+--   PetRules.rollMutation(random, luck, boost)   a mutation for a fresh hatch, or nil (the server rolls it)
 --   PetRules.better(a, b)                 the rarer of two mutations (a fusion keeps it)
 --   PetRules.copyValue(size, mutation)    a fresh copy's worth: its size's Value times its mutation's
 --   PetRules.displayName(petId, mutation) "Golden Moonfox"
@@ -119,18 +119,19 @@ function PetRules.mutationInfo(mutation)
     return if id then PetRules.Mutations[id] else NO_MUTATION
 end
 
-function PetRules.mutationChance(name, luck)
+function PetRules.mutationChance(name, luck, boost)
     local info = PetRules.Mutations[name]
     if not info then
         return 0
     end
-    return if info.Grand and type(luck) == "number" and luck > 1 then info.Chance * luck else info.Chance
+    local chance = if info.Grand and type(luck) == "number" and luck > 1 then info.Chance * luck else info.Chance
+    return if type(boost) == "number" and boost > 1 then chance * boost else chance -- (boost: their worn title's Mutation bonus)
 end
 
-function PetRules.rollMutation(random, luck)
+function PetRules.rollMutation(random, luck, boost)
     local roll = (if random then random:NextNumber() else math.random()) * 100
     for _, name in PetRules.MutationOrder do
-        roll -= PetRules.mutationChance(name, luck)
+        roll -= PetRules.mutationChance(name, luck, boost)
         if roll < 0 then
             return name
         end

@@ -145,6 +145,47 @@ for order, entry in TitleRules.List do
     entry.Font = FONTS[entry.Id] or { "Merriweather", 700 }
 end
 
+-- What a worn title gives (the owner, 2026-11-18: "ADDITIONAL BONUS ON TITLES: ATTACK BOOST, QI BOOST, MUTATION BOOST, LUCK BOOST,
+-- SPIRIT STONE BOOST"): one bonus each, only while it is the one they show, so the choice matters. Kind: "Attack" (their strikes'
+-- damage), "Qi" (every Qi they earn), "Mutation" (every mutation's chance on a hatch), "Luck" (their luck: rare beasts and the
+-- Grand mutations, with the Luck pass's), "Stones" (the Spirit Stones of a daily reward and a spin: not a pet's sale, so no loop).
+-- Percent: kept small. The realms give Qi, climbing with them; each guardian's thief title, Attack; the collector titles, Luck
+-- and Mutation; Keeper of Secrets, Mutation; Relic Seeker and Beta Tester, Stones. Developer, Content Creator and VIP give none
+-- (VIP has its own pass perks). Mutation stays at 8% or less: with it and the Luck pass, a Merchant egg's pet still sells back for
+-- under its price (about 0.999; re-check with tools/balance/progression_sim.py before raising any of these).
+TitleRules.BonusKinds = {
+    Attack = { Name = "Attack" },
+    Qi = { Name = "Qi" },
+    Mutation = { Name = "Mutation chance" },
+    Luck = { Name = "Luck" },
+    Stones = { Name = "Spirit Stones" },
+}
+local BONUSES = {
+    Realm1 = { "Qi", 1 }, Realm2 = { "Qi", 1 }, Realm3 = { "Qi", 2 }, Realm4 = { "Qi", 2 }, Realm5 = { "Qi", 3 }, Realm6 = { "Qi", 3 },
+    Realm7 = { "Qi", 4 }, Realm8 = { "Qi", 4 }, Realm9 = { "Qi", 5 }, Realm10 = { "Qi", 5 }, Realm11 = { "Qi", 6 }, Realm12 = { "Qi", 6 },
+    PrideThief = { "Attack", 3 }, BambooShadow = { "Attack", 4 }, Ashwalker = { "Attack", 5 }, MoonSaver = { "Attack", 6 },
+    PangusRival = { "Attack", 8 },
+    BeastSeeker = { "Luck", 2 }, BeastTamer = { "Mutation", 4 }, BeastMaster = { "Luck", 6 }, CodexKeeper = { "Mutation", 8 },
+    SecretKeeper = { "Mutation", 6 }, RelicSeeker = { "Stones", 15 }, BetaTester = { "Stones", 5 },
+}
+for id, bonus in BONUSES do
+    assert(TitleRules.ById[id] and TitleRules.BonusKinds[bonus[1]], "TitleRules: a bonus for an unknown title or kind: " .. id)
+    TitleRules.ById[id].Bonus = { Kind = bonus[1], Percent = bonus[2] }
+end
+
+-- "+3% Qi", or nil for a title with no bonus
+function TitleRules.bonusText(entry)
+    local bonus = entry and entry.Bonus
+    return if bonus then "+" .. bonus.Percent .. "% " .. TitleRules.BonusKinds[bonus.Kind].Name else nil
+end
+
+-- the multiplier of that kind from the title the player shows now (their "Title" attribute, set by the server: TitleBook), 1 if none
+function TitleRules.multiplier(player, kind)
+    local entry = player and TitleRules.ById[player:GetAttribute("Title") or ""]
+    local bonus = entry and entry.Bonus
+    return if bonus and bonus.Kind == kind then 1 + bonus.Percent / 100 else 1
+end
+
 -- What a player wearing "Auto" (their choice until they pick one) shows: Developer, else Content Creator, else VIP, else
 -- Beta Tester, else their highest realm's title. earned: { [id] = true }
 function TitleRules.autoPick(earned)

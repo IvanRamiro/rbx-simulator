@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CodexRules = require(ReplicatedStorage:WaitForChild("CodexRules"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local PassRules = require(ReplicatedStorage:WaitForChild("PassRules"))
+local TitleRules = require(ReplicatedStorage:WaitForChild("TitleRules"))
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
@@ -163,7 +164,7 @@ local function onHatchRequest(player, eggId)
     local size = PetRules.rollSize(random)
     -- and its mutation, a third roll apart from both (PetRules.Mutations; nil for most). The Luck pass makes the Grand ones likelier
     -- (PetRules.mutationChance); an Exclusive egg takes no luck, as with its beasts
-    local mutation = PetRules.rollMutation(random, if egg.Exclusive then 1 else PassRules.luck(player))
+    local mutation = PetRules.rollMutation(random, if egg.Exclusive then 1 else PassRules.luck(player), TitleRules.multiplier(player, "Mutation"))
     local isNew = not Codex.isFound(player, petId)
     -- a pet from a paid egg (the Exclusive Egg, or an egg won on a bought spin) is a paid item for good (PetInventory: Paid)
     if not PetInventory.grantPet(player, petId, size, paidEgg or egg.Exclusive == true, mutation) then

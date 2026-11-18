@@ -275,11 +275,14 @@ local catalog = {
     PenTail = { Id = "9116418035", Volume = 1.3, Start = 0.65, Length = 1.4, Fade = 0.5, Near = 20, Reach = 140 },
 
     -- ---------- rewards and purchases (flat: the player's own) ----------
-    -- a reward claimed (daily, codes, the Codex, Qi earned away): coins, a bright bell-tone ding, the shimmer falling away
-    RewardClaim = { Id = "9125445146", Volume = 0.9, Group = "Interface", Duck = { 0.7, 1.5 }, Defer = true,
-        With = { { "RewardDing", 0.12 }, { "RewardTail", 0.35 } } },                                     -- coins 147 x 0.9 = 132
-    RewardDing = { Id = "9126072453", Volume = 0.75, Start = 0.25, Group = "Interface" },               -- 219 x 0.75 = 164
-    RewardTail = { Id = "9116418035", Volume = 1.4, Start = 0.7, Length = 1.6, Fade = 0.5, Group = "Interface" },
+    -- a reward claimed (daily, codes, the Codex, Qi earned away): a short rising harp, a soft glassy bell-tone and the shimmer falling
+    -- away. The owner, 2026-11-18, on the old one (a coin pour and a hard ding): "ABSOLUTELY TERRIBLE", so the coins are gone; the
+    -- harp and the glassy tone are sounds the game already uses (RevealHarp, SizeTone), set lower. Not heard by the one who wrote it:
+    -- change these numbers if it is still wrong.
+    RewardClaim = { Id = "1840525370", Volume = 1.3, Start = 0.3, Pitch = 1.12, Length = 1.2, Fade = 0.4, Group = "Interface", Duck = { 0.7, 1.5 },
+        Defer = true, With = { { "RewardDing", 0.28 }, { "RewardTail", 0.5 } } },                       -- harp 90 x 1.3 = 117
+    RewardDing = { Id = "9126073644", Volume = 0.95, Pitch = 1.33, Group = "Interface" },               -- glassy tone 128 x 0.95 = 122
+    RewardTail = { Id = "9116418035", Volume = 0.9, Start = 0.7, Length = 1.4, Fade = 0.5, Group = "Interface" },
     -- a quest step done: the short rising harp and the ding at its top
     QuestComplete = { Id = "1840525370", Volume = 1.9, Start = 0.3, Pitch = 1.26, Length = 1.5, Fade = 0.4, Group = "Interface", Defer = true,
         With = { { "RewardDing", 0.7 } } },                                                               -- 90 x 1.9 = 171

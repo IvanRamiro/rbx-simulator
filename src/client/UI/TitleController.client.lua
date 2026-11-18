@@ -276,7 +276,7 @@ for _, group in TitleRules.Groups do
         local title = UiKit.label({ Name = "Text", Font = "Title", TextSize = 18, Text = entry.Text, Position = UDim2.fromOffset(18, 9),
             Size = UDim2.new(1, -(18 + textRight), 0, 22), TextTruncate = Enum.TextTruncate.AtEnd, Parent = card })
         title.FontFace = fontOf(entry)
-        local how = UiKit.label({ Name = "How", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = entry.How, TextWrapped = true,
+        local how = UiKit.label({ Name = "How", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, Text = entry.How .. (if entry.Bonus then "  Worn: " .. TitleRules.bonusText(entry) .. "." else ""), TextWrapped = true,
             TextYAlignment = Enum.TextYAlignment.Top, Position = UDim2.fromOffset(18, 33), Size = UDim2.new(1, -(18 + textRight), 0, 30), Parent = card })
         local button = UiKit.button({ Name = "Wear", TextSize = 13, AnchorPoint = Vector2.new(1, 0.5),
             Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(BUTTON, UiTheme.Height.Button), Parent = card })
@@ -312,7 +312,8 @@ render = function()
     -- the Developer row only for those who have it: nobody else can earn it
     rows.Developer.card.Visible = earnedSet.Developer == true
     local total = #TitleRules.List - (if earnedSet.Developer then 0 else 1)
-    count.Text = string.format("%d of %d earned", earnedCount, total)
+    local shownBonus = TitleRules.bonusText(TitleRules.ById[player:GetAttribute("Title") or ""])
+    count.Text = string.format("%d of %d earned", earnedCount, total) .. (if shownBonus then "  ·  " .. shownBonus else "")
     local shown = TitleRules.ById[player:GetAttribute("Title") or ""]
     if shown then
         showing.Text = shown.Text

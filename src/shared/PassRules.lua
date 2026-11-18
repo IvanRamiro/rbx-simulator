@@ -7,16 +7,17 @@
 --   PassRules.ForSale                  the passes the Store shows and sells (all but the Retired ones)
 --   PassRules.qiTier(player)           the highest Qi pass tier they own (2, 4; 1 with none), never over GameConfig.MaxQiTier: tiers
 --                                      never stack, and a Retired 8x or 16x pass counts as the cap
---   PassRules.qiMultiplier(player, withoutTimed)  their Qi pass tier times every other pass's Qi multiplier (VIP's +10%) times the
+--   PassRules.qiMultiplier(player, withoutTimed)  their Qi pass tier times every other pass's Qi multiplier (VIP's +10%) times their worn title's Qi bonus times the
 --                                      timed boost while it runs (withoutTimed leaves it out); 1 with none
 --   PassRules.boostSecondsLeft(player), boostMultiplier(player)   the timed boost: seconds left, and its multiplier now (1 when off)
---   PassRules.luck(player)             how many times likelier their rare hatches are (1 with no luck)
+--   PassRules.luck(player)             how many times likelier their rare hatches are (1 with no luck): the Luck pass's times their worn title's Luck bonus
 --   PassRules.maxEquipped(player)      how many beasts they can equip; PassRules.MostEquipped: the most anyone can
 --   PassRules.dailyStones(player, n)   a daily reward's Spirit Stones with their passes' bonus
 --   PassRules.luckyPool(pool, luck)    an egg's pool with luck applied: a new list of { PetId, HatchChance }, adding to 100
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local TitleRules = require(ReplicatedStorage:WaitForChild("TitleRules"))
 
 local PassRules = {}
 
@@ -77,11 +78,11 @@ end
 
 -- withoutTimed: leave the timed boost out (offline Qi: its clock doesn't run while the player is away)
 function PassRules.qiMultiplier(player, withoutTimed)
-    return PassRules.qiTier(player) * product(player, "QiMultiplier", 1) * (if withoutTimed then 1 else PassRules.boostMultiplier(player))
+    return PassRules.qiTier(player) * product(player, "QiMultiplier", 1) * TitleRules.multiplier(player, "Qi") * (if withoutTimed then 1 else PassRules.boostMultiplier(player))
 end
 
 function PassRules.luck(player)
-    return product(player, "Luck", 1)
+    return product(player, "Luck", 1) * TitleRules.multiplier(player, "Luck")
 end
 
 function PassRules.maxEquipped(player)
@@ -95,7 +96,7 @@ function PassRules.maxEquipped(player)
 end
 
 function PassRules.dailyStones(player, stones)
-    return math.floor(stones * product(player, "DailyStones", 1) + 0.5)
+    return math.floor(stones * product(player, "DailyStones", 1) * TitleRules.multiplier(player, "Stones") + 0.5)
 end
 
 function PassRules.luckyPool(pool, luck)
