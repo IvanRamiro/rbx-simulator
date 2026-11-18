@@ -31,6 +31,8 @@ Rig.Poses = Clips.Poses
 Rig.Gallop = { 14, 22 } -- walking below the first, running past the second
 Rig.LeapAction = "TitanLeap"
 Rig.Look = { Joint = "Head", Share = 0.7, Body = "Chest", BodyShare = 0.3, Limit = 45 }
+-- a blow taken (GuardianReact): the chest takes it, the head follows a beat later; a titan, so it shows less of any blow
+Rig.Hit = { Body = "Hips", Joints = { Chest = { 1, 0 }, Neck = { 0.6, 0.02 }, Head = { 0.9, 0.04 } }, Scale = 0.75 }
 
 -- a titan's slow hips and chest, the head trailing them, the free arm loose; the axe arm stays quick (its blows are timed to the
 -- effects); the hangings and beard lag behind everything

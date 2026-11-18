@@ -53,6 +53,8 @@ Rig.Poses = {
 Rig.Gallop = { 21, 25 } -- one gait or the other: halfway between the two (their legs lead differently) no foot is ever down, and they skate
 Rig.LeapAction = "MoonLeap"
 Rig.Look = { Joint = "Head", Share = 0.55, Body = "Neck2", BodyShare = 0.35, Limit = 50 }
+-- a blow taken (GuardianReact): the chest takes it, the neck and head follow a beat later; the hips are shoved
+Rig.Hit = { Body = "Hips", Joints = { Chest = { 1, 0 }, Neck2 = { 0.7, 0.02 }, Head = { 1, 0.04 } }, Scale = 1 }
 
 local LIMB = { Freq = 14, Damping = 0.8, Drag = 0 }
 Rig.Springs = {

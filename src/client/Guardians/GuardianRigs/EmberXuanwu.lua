@@ -54,6 +54,8 @@ Rig.Poses = {
 }
 Rig.LeapAction = "Charge"
 Rig.Look = { Joint = "Head", Share = 0.7, Body = "Neck", BodyShare = 0.3, Limit = 35 }
+-- a blow taken (GuardianReact): the shell barely moves, the neck and the serpent's head show it. The heaviest of the beasts but one
+Rig.Hit = { Body = "Body", Joints = { Body = { 0.5, 0 }, Neck = { 0.8, 0.02 }, Head = { 1, 0.04 }, SerpentNeck = { 1, 0.03 }, SerpentHead = { 1, 0.06 } }, Scale = 0.9 }
 -- springs (GuardianAnim): a slow, massive shell that rocks a long time after it stops, the
 -- tortoise's head lagging it, and the serpent a heavy loose coil that sways behind every turn
 Rig.Springs = {

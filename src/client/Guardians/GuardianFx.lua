@@ -6,6 +6,8 @@
 -- chaos), Qi = Color3, QiCore = Color3 }.
 --
 --   shake(origin, strength, time)              the camera jolts, fading with distance from origin
+--   kick(origin, pitch, yaw, time)             the camera is knocked once, by pitch degrees up and yaw degrees left (a blow landing:
+--                                              a nod along the way it travelled), and settles back over `time`
 --   puff(cframe, style, count, speed, spread, size, life)
 --                                              debris thrown out from a point (spread: degrees from
 --                                              its up axis, or a Vector2 for a low, wide fan), dust
@@ -21,6 +23,9 @@
 --                                              ground, all round (arc >= 180) or within arc degrees of
 --                                              facing
 --   telegraph(position, time, style)           debris stirring and embers rising where a leap lands
+--   cone(model, range, arc, windUp)            the ground a sweep will hit, drawn while it winds up: a wedge of the guardian's reach and
+--                                              half-angle (it turns with the guardian), filling in toward the blow, flashing as it lands
+--   ring(model, radius, windUp)                the ground a wave that rolls all round will cross: a disc growing to its radius
 --   steal / drop / secure (position, style)    the egg taken, dropped, secured
 --   beacon(eggModel)                           a pillar of light over a dropped egg, until removed
 local Debris = game:GetService("Debris")
@@ -140,6 +145,7 @@ end
 -- The shake turns the camera after the camera scripts have placed it. They read the camera's look
 -- back the next frame, so each frame's turn is undone before they run, or the aim would drift.
 local shaking = {}
+local kicks = {}
 local lastShake = nil
 RunService:BindToRenderStep("GuardianShakeUndo", Enum.RenderPriority.Camera.Value - 1, function()
     local camera = Workspace.CurrentCamera
@@ -150,11 +156,23 @@ RunService:BindToRenderStep("GuardianShakeUndo", Enum.RenderPriority.Camera.Valu
 end)
 RunService:BindToRenderStep("GuardianShake", Enum.RenderPriority.Camera.Value + 1, function()
     local camera = Workspace.CurrentCamera
-    if not camera or #shaking == 0 then
+    if not camera or (#shaking == 0 and #kicks == 0) then
         return
     end
     local now = os.clock()
     local amount = 0
+    local pitch, yaw = 0, 0
+    for i = #kicks, 1, -1 do
+        local k = kicks[i]
+        local t = now - k.start
+        if t >= k.time then
+            table.remove(kicks, i)
+        else
+            local c = math.min(t / 0.015, 1) * (1 - t / k.time) ^ 2
+            pitch += k.pitch * c
+            yaw += k.yaw * c
+        end
+    end
     for i = #shaking, 1, -1 do
         local s = shaking[i]
         local t = (now - s.start) / s.time
@@ -164,9 +182,10 @@ RunService:BindToRenderStep("GuardianShake", Enum.RenderPriority.Camera.Value + 
             amount += s.strength * (1 - t) ^ 2
         end
     end
-    if amount > 0 then
+    if amount > 0 or pitch ~= 0 or yaw ~= 0 then
         local a = math.rad(amount)
-        lastShake = CFrame.Angles(a * math.noise(now * 18, 1), a * math.noise(now * 18, 2), a * 0.5 * math.noise(now * 18, 3))
+        lastShake = CFrame.Angles(a * math.noise(now * 18, 1) + math.rad(pitch), a * math.noise(now * 18, 2) + math.rad(yaw),
+            a * 0.5 * math.noise(now * 18, 3))
         camera.CFrame *= lastShake
     end
 end)
@@ -180,6 +199,21 @@ function GuardianFx.shake(origin, strength, time)
     local falloff = math.clamp(1 - (distance - 20) / 90, 0, 1)
     if falloff > 0 then
         table.insert(shaking, { start = os.clock(), time = time, strength = strength * falloff })
+    end
+end
+
+function GuardianFx.kick(origin, pitch, yaw, time)
+    local camera = Workspace.CurrentCamera
+    if not camera or Players.LocalPlayer:GetAttribute("SettingReducedEffects") == true then
+        return
+    end
+    local distance = (camera.CFrame.Position - origin).Magnitude
+    local falloff = math.clamp(1 - (distance - 20) / 90, 0, 1)
+    if falloff > 0 then
+        if #kicks >= 6 then
+            table.remove(kicks, 1)
+        end
+        table.insert(kicks, { start = os.clock(), time = time, pitch = pitch * falloff, yaw = yaw * falloff })
     end
 end
 
@@ -327,6 +361,142 @@ function GuardianFx.telegraph(position, time, style)
         stir.Enabled = false
         embers.Enabled = false
     end)
+end
+
+-- ---------- what an attack will hit ----------
+local DANGER = Color3.fromRGB(255, 72, 36)
+local GROUND_LIFT = 0.18
+
+local function groundPiece(size, shape)
+    local part = Instance.new("Part")
+    part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = true, false, false, false, false
+    part.Material = Enum.Material.Neon
+    part.Color = DANGER
+    part.Transparency = 1
+    part.Size = size
+    if shape then
+        part.Shape = shape
+    end
+    return part
+end
+
+-- The ground under a guardian: its pivot is its ground (GuardianAnim), a little lifted so the light clears the turf.
+local function groundOf(model)
+    local pivot = model:GetPivot()
+    return Vector3.new(pivot.X, pivot.Y + GROUND_LIFT, pivot.Z)
+end
+
+local function facingOf(model)
+    local look = model:GetPivot().LookVector * Vector3.new(1, 0, 1)
+    return if look.Magnitude > 1e-3 then look.Unit else Vector3.new(0, 0, -1)
+end
+
+-- One flat triangle (a, b, c) laid from two wedges, into `parent`. A triangle's longest side is split by the foot of its
+-- opposite corner's height: each wedge is the right triangle on one side of that foot.
+local function triangle(a, b, c, parent, thickness, color)
+    local ab, ac, bc = b - a, c - a, c - b
+    local abd, acd, bcd = ab:Dot(ab), ac:Dot(ac), bc:Dot(bc)
+    if abd > acd and abd > bcd then
+        c, a = a, c
+    elseif acd > bcd and acd > abd then
+        a, b = b, a
+    end
+    ab, ac, bc = b - a, c - a, c - b
+    local right = ac:Cross(ab).Unit
+    local up = bc:Cross(right).Unit
+    local back = bc.Unit
+    local height = math.abs(ab:Dot(up))
+    local pieces = {}
+    for i, spec in { { (a + b) / 2, ab, right, back }, { (a + c) / 2, ac, -right, -back } } do
+        local wedge = Instance.new("WedgePart")
+        wedge.Anchored, wedge.CanCollide, wedge.CanQuery, wedge.CanTouch, wedge.CastShadow = true, false, false, false, false
+        wedge.Material = Enum.Material.Neon
+        wedge.Color = color
+        wedge.Transparency = 1
+        wedge.Size = Vector3.new(thickness, math.max(height, 0.05), math.max(math.abs(spec[2]:Dot(back)), 0.05))
+        wedge.CFrame = CFrame.fromMatrix(spec[1], spec[3], up, spec[4])
+        wedge.Parent = parent
+        pieces[i] = wedge
+    end
+    return pieces
+end
+
+-- Fades a ground marking in over the wind-up, flashes it at the blow and fades it out: `parts` are the marking's pieces.
+local function fillAndFlash(parts, windUp, from, to)
+    local TweenService = game:GetService("TweenService")
+    for _, part in parts do
+        part.Transparency = from
+        TweenService:Create(part, TweenInfo.new(windUp, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = to }):Play()
+        task.delay(windUp, function()
+            if part.Parent then
+                part.Transparency = 0.25
+                TweenService:Create(part, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = 1 }):Play()
+            end
+        end)
+    end
+end
+
+function GuardianFx.cone(model, range, arc, windUp)
+    local root = model.PrimaryPart
+    if not (root and near(root.Position)) then
+        return
+    end
+    local holder = Instance.new("Model")
+    holder.Name = "SweepWarning"
+    local parts = {}
+    -- the wedge in the guardian's frame: its apex at the origin, ahead along -Z, half-angle `arc` each way
+    local slices = math.max(2, math.ceil(arc * 2 / 22))
+    local apex = Vector3.zero
+    for i = 1, slices do
+        local a0 = math.rad(-arc + 2 * arc * (i - 1) / slices)
+        local a1 = math.rad(-arc + 2 * arc * i / slices)
+        local p0 = Vector3.new(math.sin(a0) * range, 0, -math.cos(a0) * range)
+        local p1 = Vector3.new(math.sin(a1) * range, 0, -math.cos(a1) * range)
+        for _, piece in triangle(apex, p0, p1, holder, 0.1, DANGER) do
+            table.insert(parts, piece)
+        end
+    end
+    local frame = CFrame.lookAt(groundOf(model), groundOf(model) + facingOf(model))
+    holder:PivotTo(frame)
+    holder.Parent = fxFolder
+    fillAndFlash(parts, windUp, 0.9, 0.62)
+    -- it turns with the guardian until the blow, where the server judges the sweep
+    local connection
+    connection = RunService.Heartbeat:Connect(function()
+        if not (holder.Parent and model.Parent) then
+            connection:Disconnect()
+            return
+        end
+        local ground = groundOf(model)
+        holder:PivotTo(CFrame.lookAt(ground, ground + facingOf(model)))
+    end)
+    task.delay(windUp, function()
+        connection:Disconnect()
+    end)
+    Debris:AddItem(holder, windUp + 0.4)
+end
+
+function GuardianFx.ring(model, radius, windUp)
+    local root = model.PrimaryPart
+    if not (root and near(root.Position)) then
+        return
+    end
+    local TweenService = game:GetService("TweenService")
+    -- a Cylinder's axis is its X: laid on its side it is a flat disc
+    local disc = groundPiece(Vector3.new(0.1, 4, 4), Enum.PartType.Cylinder)
+    local ground = groundOf(model)
+    disc.CFrame = CFrame.new(ground) * CFrame.Angles(0, 0, math.pi / 2)
+    disc.Parent = fxFolder
+    disc.Transparency = 0.88
+    TweenService:Create(disc, TweenInfo.new(windUp, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        { Size = Vector3.new(0.1, radius * 2, radius * 2), Transparency = 0.78 }):Play()
+    task.delay(windUp, function()
+        if disc.Parent then
+            disc.Transparency = 0.4
+            TweenService:Create(disc, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = 1 }):Play()
+        end
+    end)
+    Debris:AddItem(disc, windUp + 0.5)
 end
 
 -- ---------- the egg ----------

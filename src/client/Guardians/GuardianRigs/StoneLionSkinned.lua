@@ -36,6 +36,8 @@ Rig.Poses = Clips.Poses
 Rig.Gallop = { 14, 19 } -- walking below the first, galloping past the second
 Rig.LeapAction = "Pounce"
 Rig.Look = { Joint = "Head", Share = 0.6, Body = "Neck2", BodyShare = 0.3, Limit = 45 }
+-- a blow taken (GuardianReact): the chest takes it, the neck and head follow a beat later; the hips are shoved
+Rig.Hit = { Body = "Hips", Joints = { Chest = { 1, 0 }, Neck1 = { 0.7, 0.02 }, Head = { 1, 0.04 }, ManeChest = { 1.2, 0.03 } }, Scale = 1 }
 
 -- the body and legs follow closely, so the paws stay planted under them; the neck and head trail a little; the mane's weight lags and swings,
 -- and the tail is a rope, every joint later and looser than the last

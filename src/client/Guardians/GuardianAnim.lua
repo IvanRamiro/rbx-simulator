@@ -455,16 +455,18 @@ function GuardianAnim:action(name, length)
     return t, action.args
 end
 
--- A fast shake on a joint this frame, past its spring (call from rig.actions).
-function GuardianAnim:tremor(joint, pitch, yaw, roll)
+-- A fast shake on a joint this frame, past its spring (call from rig.actions). lift and shift (studs, up and back) move the joint too.
+function GuardianAnim:tremor(joint, pitch, yaw, roll, lift, shift)
     local t = self.tremors[joint]
     if not t then
-        t = { 0, 0, 0 }
+        t = { 0, 0, 0, 0, 0 }
         self.tremors[joint] = t
     end
     t[1] += pitch or 0
     t[2] += yaw or 0
     t[3] += roll or 0
+    t[4] += lift or 0
+    t[5] += shift or 0
 end
 
 -- How open the eyes are for blinking this frame: 1, or nearly shut at the middle of a blink. A blink
@@ -571,10 +573,13 @@ function GuardianAnim:update(dt)
     end
 
     rig.actions(self, pose, now)
+    if self.reaction then
+        self.reaction(self, now) -- a blow taken (GuardianReact): a tremor on its joints
+    end
 
     self:follow(pose, dt, snap)
     for joint, t in self.tremors do
-        add(pose, joint, t[1], t[2], t[3])
+        add(pose, joint, t[1], t[2], t[3], t[4], t[5])
     end
     table.clear(self.tremors)
     self:plantFeet(pose, dt)

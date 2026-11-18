@@ -22,6 +22,7 @@ local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local GuardianAnim = require(script.Parent:WaitForChild("GuardianAnim"))
 local GuardianFx = require(script.Parent:WaitForChild("GuardianFx"))
 local GuardianBars = require(script.Parent:WaitForChild("GuardianBars"))
+local GuardianReact = require(script.Parent:WaitForChild("GuardianReact"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 local Toast = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Toast"))
 local Hud = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Hud"))
@@ -45,27 +46,27 @@ local WEAK_GOLD = Color3.fromRGB(255, 200, 70)
 local VOICES = {
     StoneLion = {
         Awaken = { Start = "LionAwaken" }, Weaken = { Start = "LionWeaken" },
-        Slam = { Hit = "LionSlam" }, Roar = { Hit = "LionRoar", Lead = -0.5 },
+        Slam = { Start = "LionReady", Hit = "LionSlam" }, Roar = { Hit = "LionRoar", Lead = -0.5 },
         Pounce = { Hit = "GuardianLeap" }, Land = { Start = "LionLand" },
     },
     MantisSage = {
         Awaken = { Start = "MantisAwaken" }, Weaken = { Start = "MantisWeaken" },
-        Scythe = { Hit = "MantisScythe", Lead = -0.1 }, BladeWave = { Hit = "MantisBladeWave", Lead = -0.2 },
+        Scythe = { Start = "MantisReady", Hit = "MantisScythe", Lead = -0.1 }, BladeWave = { Hit = "MantisBladeWave", Lead = -0.2 },
         Leap = { Hit = "GuardianLeap" }, Land = { Start = "MantisLand" },
     },
     EmberXuanwu = {
         Awaken = { Start = "XuanwuAwaken" }, Weaken = { Start = "XuanwuWeaken" },
-        SerpentLash = { Hit = "XuanwuLash", Lead = -0.15 }, Quake = { Hit = "XuanwuQuake" },
+        SerpentLash = { Start = "XuanwuReady", Hit = "XuanwuLash", Lead = -0.15 }, Quake = { Start = "QuakeGather", Hit = "XuanwuQuake" },
         Charge = { Hit = "GuardianLeap" }, Land = { Start = "XuanwuLand" },
     },
     Tiangou = {
         Awaken = { Start = "TiangouAwaken" }, Weaken = { Start = "TiangouWeaken" },
-        Bite = { Hit = "TiangouBite" }, EclipseHowl = { Hit = "TiangouHowl", Lead = -0.8 },
+        Bite = { Start = "TiangouReady", Hit = "TiangouBite" }, EclipseHowl = { Hit = "TiangouHowl", Lead = -0.8 },
         MoonLeap = { Hit = "GuardianLeap" }, Land = { Start = "TiangouLand" },
     },
     Pangu = {
         Awaken = { Start = "PanguAwaken" }, Weaken = { Start = "PanguWeaken" },
-        AxeCleave = { Hit = "PanguCleave", Lead = -0.7 }, SkySplitter = { Hit = "PanguSplit", Lead = -0.2 },
+        AxeCleave = { Start = "PanguReady", Hit = "PanguCleave", Lead = -0.7 }, SkySplitter = { Start = "PanguReady", Hit = "PanguSplit", Lead = -0.2 },
         ChaosNova = { Hit = "PanguNova", Lead = -0.45 }, TitanLeap = { Hit = "GuardianLeap" },
         Land = { Start = "PanguLand" },
     },
@@ -92,6 +93,24 @@ local function voice(model, action, ...)
 end
 
 local anims = {} -- [model] = GuardianAnim
+
+-- The ground an attack will hit, drawn while it winds up (GuardianFx): a sweep's wedge, a wave's reach. A leap marks its own landing (Rig.Fx).
+local function markGround(model, config, action, windUp)
+    local spec = config and config.Attacks and config.Attacks[action]
+    if not spec or typeof(windUp) ~= "number" then
+        return
+    end
+    if spec.Kind == "Sweep" then
+        GuardianFx.cone(model, spec.Range, spec.Arc, windUp)
+    elseif spec.Kind == "Wave" then
+        local arc = spec.Arc or 180
+        if arc >= 180 then
+            GuardianFx.ring(model, spec.Radius, windUp)
+        else
+            GuardianFx.cone(model, spec.Radius, arc, windUp)
+        end
+    end
+end
 
 local function guardianModel(guardianId)
     for _, model in CollectionService:GetTagged(GameConfig.GuardianTag) do
@@ -650,11 +669,13 @@ local function track(model)
         local anim = GuardianAnim.new(model, rig)
         if anim and model:IsDescendantOf(Workspace) then
             anims[model] = anim
+            GuardianReact.bind(model, anim, rig) -- (it shows the blows the player lands: CombatFx)
         end
     end)
 end
 CollectionService:GetInstanceAddedSignal(GameConfig.GuardianTag):Connect(track)
 CollectionService:GetInstanceRemovedSignal(GameConfig.GuardianTag):Connect(function(model)
+    GuardianReact.unbind(model)
     anims[model] = nil
     rigs[model] = nil
     GuardianBars.remove(model)
@@ -711,6 +732,7 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
             fx(model, ...)
         end
         voice(model, action, ...)
+        markGround(model, config, action, ...)
     elseif EGG_SOUNDS[action] and not (action == "Secure" and os.clock() - securedAt < 1.5) then
         local egg = eggsFolder:FindFirstChild(model.Name .. "_Egg")
         local at = if typeof((...)) == "Vector3" then (...) else egg and egg.PrimaryPart

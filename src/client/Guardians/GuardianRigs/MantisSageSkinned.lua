@@ -37,6 +37,8 @@ Rig.Poses = Clips.Poses
 Rig.Gallop = { 15, 21 } -- walking below the first, running past the second
 Rig.LeapAction = "Leap"
 Rig.Look = { Joint = "Head", Share = 0.85, Body = "Pro2", BodyShare = 0.15, Limit = 65 }
+-- a blow taken (GuardianReact): the thorax takes it, the head follows a beat later; the hips are shoved. A light body: it shows it most
+Rig.Hit = { Body = "Hips", Joints = { Pro1 = { 1, 0 }, Pro2 = { 0.7, 0.02 }, Head = { 1, 0.04 } }, Scale = 1.1 }
 
 -- the body and legs follow closely so the feet stay planted; the prothorax trails like a stalk; the head snaps; the forelegs are very quick, as a mantis's are;
 -- the robe, the beard, the antennae and the tassel lag behind everything

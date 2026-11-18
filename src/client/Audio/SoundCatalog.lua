@@ -47,6 +47,7 @@ local catalog = {
     LionRoar = guardian({ Id = "9120030751", Volume = 3.2, Pitch = 0.9 }),                               -- a roar with thunder in it
     LionLand = guardian({ Id = { "9114362615", "9114362918" }, Volume = 3, Pitch = 0.85, With = "RockDebris" }),
     LionWeaken = guardian({ Id = "9125628981", Volume = 2.2, Pitch = 0.8 }),
+    LionReady = guardian({ Id = "9113973164", Volume = 0.37, Pitch = 0.62, Length = 0.55, Fade = 0.2 }),      -- a low growl as the paw lifts (a wind-up's first sound; measured 405 x 0.37 = 150, the cues sit near the player's swings, under the blows)
     RockDebris = guardian({ Id = "9118587494", Volume = 1.2, Pitch = 0.8, Start = 0.2 }),
 
     -- ---------- the Bamboo Mantis Sage ----------
@@ -54,6 +55,7 @@ local catalog = {
     BladeRing = guardian({ Id = "9116689911", Volume = 2.5, Pitch = 0.6 }),
     MantisScythe = guardian({ Id = { "9119699577", "9119699897", "9126014082" }, Volume = 2.5, Pitch = { 0.75, 0.85 } }),
     MantisBladeWave = guardian({ Id = "9114159981", Volume = 3, Pitch = 0.9 }),
+    MantisReady = guardian({ Id = "9116689911", Volume = 1.1, Pitch = 0.95, Length = 0.45, Fade = 0.15 }),     -- the scythes ring as they rise
     MantisLand = guardian({ Id = "9113470014", Volume = 0.8, Pitch = 0.8, Start = 0.5, Length = 0.6 }),
     MantisWeaken = guardian({ Id = "9119577515", Volume = 5, Pitch = 0.8 }),                             -- bamboo stalks snapping
 
@@ -64,6 +66,8 @@ local catalog = {
     SerpentHiss = guardian({ Id = "9120049675", Volume = 4, Pitch = 0.9 }),
     XuanwuQuake = guardian({ Id = "9114362918", Volume = 3, Pitch = 0.75, With = "QuakeRumble" }),
     QuakeRumble = guardian({ Id = "9113222322", Volume = 2.4, Length = 3.5 }),
+    XuanwuReady = guardian({ Id = "9120049675", Volume = 1.8, Pitch = 1, Length = 0.7, Fade = 0.2 }),         -- a hiss as the serpent rears
+    QuakeGather = guardian({ Id = "9113222322", Volume = 1.1, Pitch = 1.15, Length = 1, Fade = 0.3 }),       -- the ground starts to grumble
     XuanwuLand = guardian({ Id = "9119037589", Volume = 0.9, Pitch = 0.75, With = "FlameBurst" }),
     FlameBurst = guardian({ Id = "9114463208", Volume = 1.6 }),
     XuanwuWeaken = guardian({ Id = "9116308360", Volume = 1.2, Pitch = 0.65 }),
@@ -73,6 +77,7 @@ local catalog = {
     TiangouHowl = guardian({ Id = "9120790553", Volume = 0.75, Pitch = 0.8, Start = 0.9, Length = 3.6 }),
     TiangouBite = guardian({ Id = "9120048719", Volume = 0.75, Pitch = 1.1, Start = 0.2, Length = 0.7, With = "JawCrunch" }),
     JawCrunch = guardian({ Id = "9113660664", Volume = 1.4, Pitch = 0.7 }),
+    TiangouReady = guardian({ Id = "9120790529", Volume = 0.26, Pitch = 1, Length = 0.45, Fade = 0.15 }),      -- a growl as the jaws open
     TiangouLand = guardian({ Id = "9113470020", Volume = 0.8, Pitch = 0.8, Start = 0.6, Length = 0.5 }),
     TiangouWeaken = guardian({ Id = "9113954502", Volume = 6, Pitch = 0.85 }),                         -- lonely howls, echoing
 
@@ -82,6 +87,7 @@ local catalog = {
     PanguSplit = guardian({ Id = "9116282875", Volume = 1, Start = 1.3, Length = 2.8 }),              -- lightning tears the sky
     PanguNova = guardian({ Id = "9120703628", Volume = 0.9, Pitch = 0.85, Start = 1.6, Length = 1.8, With = "NovaBoom" }),
     NovaBoom = guardian({ Id = "9114362615", Volume = 2.5, Pitch = 0.7 }),
+    PanguReady = guardian({ Id = "9114630281", Volume = 0.67, Pitch = 0.95, Length = 0.6, Fade = 0.2 }),         -- a titan's groan as the weapon lifts
     PanguLand = guardian({ Id = "9113220677", Volume = 2, Pitch = 0.8, Length = 2.5, With = "LionSlam" }),
     PanguWeaken = guardian({ Id = "9114628113", Volume = 1.7, Pitch = 0.8 }),
 
@@ -153,6 +159,10 @@ local catalog = {
     BladeHit = { Id = { "9119746598", "9119746751" }, Volume = 0.37, Pitch = { 0.95, 1.08 }, Length = 0.6, Near = 15, Reach = 150, Max = 4 },
     SpearHit = { Id = { "9113449585", "9113449244", "9113449377" }, Volume = 0.55, Pitch = { 0.75, 0.85 }, Near = 15, Reach = 150, Max = 4 },
     PalmHit = { Id = { "9113565281", "9113576289" }, Volume = 1.0, Pitch = { 0.95, 1.08 }, Near = 15, Reach = 150, Max = 4, With = "QiImpact" },
+    -- the weight under a heavy blow (a sword's finisher, a spear's thrust, a critical strike): the fist's thud, two octaves of body lower and cut short,
+    -- played with the blow's own sound (CombatFx.landHit). A new layer from files already in the game (measured muted in Play, 2026-11-18: 291 and 264 at
+    -- pitch 0.63 x 0.45 = 131 and 119, a layer under the blade's 183, the spear's 141 and the fist's 213)
+    HeavyThump = { Id = { "9113565281", "9113576289" }, Volume = 0.45, Pitch = { 0.58, 0.68 }, Length = 0.4, Fade = 0.12, Near = 15, Reach = 150, Max = 2 },
     CritHit = { Id = "9113133466", Volume = 1.3, Pitch = { 1.0, 1.1 }, Near = 15, Reach = 150, Max = 2 },
     Knockback = { Id = "9113502359", Volume = 1, Pitch = { 0.92, 1.05 }, Gap = 0.15, Key = true },     -- the player is struck (Body Hits 4: 201)
     Dash = { Id = "9119467121", Volume = 1.8, Pitch = { 1, 1.1 }, Start = 0.3, Reach = 90, Max = 3 },
