@@ -22,6 +22,10 @@
 -- flame, Frost flying ice shards and cold mist, Wood tumbling leaves, Earth thrown rock and a ring
 -- of dust, Wind whipping streaks and a gust ring, Void dark smoke with sparks of violet.
 --
+-- Every realm weapon wears its own aura on the steel of its blade or spearhead (WeaponAura, WeaponAuraStyles): at full strength
+-- while it is drawn, quiet while it rides on the back, flaring as a blow lands, tinted by a forged element, thinned and then
+-- switched off with distance (tend) and on a phone.
+--
 -- Otherwise colours follow the striker's realm (QinggongFx.palette). Other players' strikes arrive through
 -- CombatEvent and are skipped beyond MAX_DISTANCE.
 local Debris = game:GetService("Debris")
@@ -39,6 +43,7 @@ local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx
 local GuardianFx = require(script.Parent.Parent:WaitForChild("Guardians"):WaitForChild("GuardianFx"))
 local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
 local DamageNumbers = require(script.Parent:WaitForChild("DamageNumbers"))
+local WeaponAura = require(script.Parent:WaitForChild("WeaponAura"))
 
 local numberSequence = AuraKit.numberSequence
 local colorSequence = AuraKit.colorSequence
@@ -388,6 +393,9 @@ local function putAway(player)
     local entry = held[player]
     if entry then
         held[player] = nil
+        if entry.aura then
+            entry.aura:destroy()
+        end
         entry.model:Destroy()
     end
 end
@@ -421,7 +429,7 @@ end
 
 -- the weapon in this player's hand, drawing it if it isn't there. spec: the trail's two weapon-space
 -- points, its lifetime, whether it faces the camera, and its transparency
-local function hold(player, kind, source, flying, tint, spec, p)
+local function hold(player, kind, source, flying, tint, spec, p, element)
     local character = player.Character
     local hand = character and (character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm"))
     local gripPoint = hand and hand:FindFirstChild("RightGripAttachment")
@@ -454,6 +462,12 @@ local function hold(player, kind, source, flying, tint, spec, p)
     edge.Enabled = false
     entry = { kind = kind, model = model, trail = trail, edge = edge, hand = hand, source = source, weaponId = player:GetAttribute("WeaponId"),
         untilTime = os.clock() + HOLD_TIME }
+    if not flying then -- (the flying sword has no profile: it keeps its own glow)
+        entry.aura = WeaponAura.attach(body, parts[body], source.Name, { mine = player == Players.LocalPlayer, mode = "drawn", element = element })
+        if entry.aura then -- (at once, so a strike that draws the weapon flares it too; tend refines this by distance)
+            entry.aura:setDetail(if player == Players.LocalPlayer then 2 else 1)
+        end
+    end
     held[player] = entry
     watchHeld()
     return entry
@@ -466,6 +480,9 @@ local function afterWindUp(player, entry, windUp, duration, root, effect)
             local swing = {}
             entry.swing, entry.swingEnds = swing, os.clock() + duration
             entry.trail.Enabled, entry.edge.Enabled = true, true
+            if entry.aura then
+                entry.aura:strike(duration + 0.2)
+            end
             task.spawn(function()
                 while entry.swing == swing and os.clock() < entry.swingEnds do
                     task.wait()
@@ -536,7 +553,7 @@ local function sword(player, p, root, step, strike)
     strike.palette = p
     local slash = SLASHES[step]
     local entry = hold(player, "Sword", source, flying, if flying then swordGlow(player) else element and element.Color,
-        holdSpec("Sword", source), p)
+        holdSpec("Sword", source), p, element)
     local clip, scale = slash.Clip, CombatFx.TimeScale
     if entry then -- the finisher's light hangs in the air longer
         entry.trail.Lifetime, entry.edge.Lifetime = if slash.Finisher then 0.32 else 0.22, if slash.Finisher then 0.36 else 0.26
@@ -569,7 +586,7 @@ local function spear(player, p, root, step, strike)
     p = strikePalette(p, element)
     strike.palette = p
     local glow = if element then element.Color else swordGlow(player)
-    local entry = hold(player, "Spear", source, false, element and element.Color, holdSpec("Spear", source, glow), p)
+    local entry = hold(player, "Spear", source, false, element and element.Color, holdSpec("Spear", source, glow), p, element)
     local scale = CombatFx.TimeScale
     if step == 2 then
         local clip = SPEAR_SLASH.Clip
@@ -887,12 +904,15 @@ local function unsheathe(player)
     local entry = sheathed[player]
     if entry then
         sheathed[player] = nil
+        if entry.aura then
+            entry.aura:destroy()
+        end
         entry.model:Destroy()
     end
 end
 
 -- the weapon across the back, welded to the torso
-local function sheathe(torso, source, kind, tint)
+local function sheathe(torso, source, kind, tint, element, mine)
     local model, parts = weaponModel(source, tint, false)
     local spec = SHEATH[kind]
     -- the weapon's length along its own Z (the point is -Z), from its parts: its Hilt and Tip mark the blade, not the whole
@@ -914,14 +934,15 @@ local function sheathe(torso, source, kind, tint)
         weld.C0 = origin * offset
         weld.Parent = part
     end
-    return model
+    local body = model:FindFirstChild("Body")
+    return model, body and WeaponAura.attach(body, parts[body], source.Name, { mine = mine, mode = "sheathed", element = element })
 end
 
 local function draw(player, source, kind)
     local _, element = elementOf(player, source, false)
     local p = strikePalette(QinggongFx.palette(player), element)
     local glow = if kind == "Spear" then (if element then element.Color else swordGlow(player)) else nil
-    hold(player, kind, source, false, element and element.Color, holdSpec(kind, source, glow), p)
+    hold(player, kind, source, false, element and element.Color, holdSpec(kind, source, glow), p, element)
 end
 
 local function tend()
@@ -947,7 +968,26 @@ local function tend()
         end
         if wanted and not entry then
             local info = typeof(element) == "string" and GameConfig.Forge.Elements[element]
-            sheathed[player] = { model = sheathe(torso, source, kind, info and info.Color), source = source, element = element, torso = torso }
+            local model, aura = sheathe(torso, source, kind, info and info.Color, info or nil, player == Players.LocalPlayer)
+            entry = { model = model, aura = aura, source = source, element = element, torso = torso }
+            sheathed[player] = entry
+        end
+        -- the aura's strength by distance: your own at full; others' thinned, then off (a phone sooner), and thinner still with
+        -- Reduced Effects
+        local far = camera and root and (camera.CFrame.Position - root.Position).Magnitude or math.huge
+        local mine = player == Players.LocalPlayer
+        local near, mid = if Quality.Low then 35 else 55, if Quality.Low then 70 else 110
+        local capped = Players.LocalPlayer:GetAttribute("SettingReducedEffects") == true
+        local heldEntry = held[player]
+        local detail = if mine then 2 elseif far <= near then 2 elseif far <= mid then 1 else 0
+        if capped and not mine then
+            detail = math.min(detail, 1)
+        end
+        if heldEntry and heldEntry.aura then
+            heldEntry.aura:setDetail(if heldEntry.hand:IsDescendantOf(Workspace) then detail else 0)
+        end
+        if entry and entry.aura then
+            entry.aura:setDetail(math.min(detail, 1) * (if far <= (if Quality.Low then 30 else 45) or mine then 1 else 0))
         end
     end
 end
