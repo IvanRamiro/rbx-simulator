@@ -7,6 +7,7 @@
 --     options  { mine = bool, mode = "drawn" | "sheathed", element = GameConfig.Forge.Elements entry or nil }
 --   aura:setDetail(level)   2 everything, 1 edge light and one thin emitter, 0 off (the caller picks it by distance)
 --   aura:setMode(mode)      "drawn" at full strength, "sheathed" a quiet version
+--   aura:charge(seconds)    the blade gathers light for a moment (a blow's wind-up)
 --   aura:strike(seconds)    the blade flares for a moment (a blow)
 --   aura:destroy()
 --
@@ -660,6 +661,23 @@ function Aura:setMode(mode)
     end
     self.mode = mode
     self:refresh()
+end
+
+-- a blow's wind-up: the blade gathers light for `seconds` (the flare of the blow itself, strike, follows and takes over)
+function Aura:charge(seconds)
+    if self.dead or self.detail < 1 then
+        return
+    end
+    self.strikeId += 1
+    local mine = self.strikeId
+    self.boost = math.max(self.boost, 1.5)
+    self:refresh()
+    task.delay(seconds, function()
+        if not self.dead and self.strikeId == mine then
+            self.boost = 1
+            self:refresh()
+        end
+    end)
 end
 
 -- a blow: the blade flares for `seconds`

@@ -9,6 +9,7 @@
 -- to draw it into the hand or put it back across the back. With no weapon the slot is empty and says where to buy one.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
@@ -36,7 +37,14 @@ local function strikeKind()
     return weapon.Kind, GameConfig.WeaponKinds[weapon.Kind].Cooldown
 end
 
-local function strike()
+-- Input feel: a press up to BUFFER seconds before the cooldown ends still counts, and fires the moment it ends; holding the button (mouse,
+-- gamepad R2, the touch button) strikes again at each cooldown. The cooldown itself stays the server's (CombatService): this only stops a
+-- press that came a hair early from being thrown away. A press longer before it is dropped, as before.
+local BUFFER = 0.12
+local waiting = false -- a buffered press is waiting for the cooldown
+local holding = nil   -- what is held: "Mouse", "Gamepad" or "Touch"
+
+local function strike(repeating)
     local character = player.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     if not humanoid or humanoid.Health <= 0 or player:GetAttribute("IsCultivating") == true
@@ -46,6 +54,13 @@ local function strike()
     local now = os.clock()
     local kind, cooldown = strikeKind()
     if now < readyAt then
+        if not repeating and not waiting and readyAt - now <= BUFFER then
+            waiting = true
+            task.delay(readyAt - now + 0.002, function()
+                waiting = false
+                strike(true)
+            end)
+        end
         return
     end
     readyAt = now + cooldown
@@ -115,14 +130,41 @@ for _, name in { "WeaponId", "WeaponElement", "WeaponDrawn" } do
 end
 refreshSlot()
 
+-- while a strike button is held, the next strike comes at each cooldown; letting go (or the window losing focus) stops it
+RunService.Heartbeat:Connect(function()
+    if holding == "Mouse" and not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+        holding = nil
+    elseif holding == "Gamepad" and not UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonR2) then
+        holding = nil
+    elseif holding == "Touch" and #UserInputService:GetTouches() == 0 then
+        holding = nil
+    end
+    if holding then
+        strike(true)
+    end
+end)
+UserInputService.WindowFocusReleased:Connect(function()
+    holding = nil
+end)
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then
         return
     end
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.KeyCode == Enum.KeyCode.ButtonR2 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        holding = "Mouse"
+        strike()
+    elseif input.KeyCode == Enum.KeyCode.ButtonR2 then
+        holding = "Gamepad"
         strike()
     elseif DRAW_KEYS[input.KeyCode] then
         toggleDrawn()
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and holding == "Mouse"
+        or input.KeyCode == Enum.KeyCode.ButtonR2 and holding == "Gamepad" then
+        holding = nil
     end
 end)
 
@@ -141,7 +183,23 @@ RemoteEvents.CombatEvent.OnClientEvent:Connect(function(source, kind, position, 
             critical = critical == true,
             target = if typeof(target) == "Instance" and target:IsA("Model") then target else nil,
         })
+    elseif source == player then
+        CombatFx.missed(player) -- (a blow shown from our own look at it, before this answer, is dropped)
     end
 end)
 
-TouchActions.add("Strike", "Strike", strike)
+-- the touch button strikes as the finger lands and keeps striking while it stays down (so a tap's release does nothing more)
+local strikeButton = TouchActions.add("Strike", "Strike", function() end)
+if strikeButton then
+    strikeButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            holding = "Touch"
+            strike()
+        end
+    end)
+    strikeButton.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch and holding == "Touch" then
+            holding = nil
+        end
+    end)
+end
