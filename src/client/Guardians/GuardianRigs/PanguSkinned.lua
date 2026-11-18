@@ -175,12 +175,42 @@ function Rig.actions(anim, pose, now)
         })
     end
 
-    -- faltering: he reels, then goes down to his knee (the pose)
+    -- faltering: the blow he cannot take: the head snaps back, the chest reels, the weight lurches, then his knee gives and he drops, a stop on the
+    -- thud, the cloak flying up and settling (the kneeling pose is the state)
     t = anim:action("Weaken", 1.6)
     if t then
+        keyed(pose, t, {
+            { 0, {} },
+            { 0.16, { Hips = { -3, 0, 0, 0.1 }, Chest = { 8 }, Neck = { 6 }, Head = { 18 }, Jaw = { -22 } }, "snap" },
+            { 0.6, { Hips = { 2, 0, 3, -1.0 }, Chest = { -10 }, Neck = { -6 }, Head = { 6 } }, "inout" },
+            { 0.95, { Hips = { 3, 0, 4, -2.4 }, Chest = { -14 }, Neck = { -10 }, Head = { -4 } }, "in" },
+            { 1.6, {}, "back" },
+        })
         local reel = envelope(t, 0.15, 1.0, 0.5)
-        add(pose, "Chest", -10 * reel, 0, 6 * math.sin(t * 7) * reel)
-        add(pose, "Head", 12 * reel)
+        add(pose, "Chest", 0, 0, 5 * math.sin(t * 7) * reel)
+        anim:contact("Weaken", 0.95, 0.09)
+        local k = GuardianAnim.damped(t - 0.95, 2.0, 2.4)
+        for _, joint in { "MantleMid1", "LeftMantle1", "RightMantle1" } do
+            add(pose, joint, 14 * k)
+        end
+        add(pose, "Beard2", 12 * k)
+    end
+
+    -- it has seen the egg taken: the titan throws his head back and bellows, the chest swollen, the void in him flaring, then slams his weight
+    -- down onto his front foot
+    t = anim:action("Enrage", 1.5)
+    if t then
+        keyed(pose, t, {
+            { 0, {} },
+            { 0.2, { Hips = { -2, 0, 0, 0.3 }, Chest = { 13 }, Neck = { 8 }, Head = { 20 }, Jaw = { -30 } }, "snap" },
+            { 0.95, { Hips = { -2, 0, 0, 0.3 }, Chest = { 11 }, Neck = { 7 }, Head = { 18 }, Jaw = { -28 } }, "linear" },
+            { 1.12, { Hips = { 3, 0, 0, -1.5 }, Chest = { -12 }, Neck = { -8 }, Head = { -4 }, Jaw = { -6 } }, "in" },
+            { 1.5, {}, "back" },
+        })
+        local roar = envelope(t - 0.2, 0.1, 0.75, 0.2)
+        anim:tremor("Head", 2.2 * roar * math.sin(t * 40), 1.4 * roar * math.sin(t * 31))
+        anim:tremor("Chest", 1.0 * roar * math.sin(t * 36), 0, 0.7 * roar * math.sin(t * 29))
+        anim:contact("Enrage", 1.12, 0.08)
     end
 
     -- oldest first, so the newest move is laid over the last and a blow that starts during another's recovery is seen
@@ -206,6 +236,22 @@ function Rig.actions(anim, pose, now)
                     local shake = envelope(t - w, 0.02, 0.35, 0.25)
                     anim:tremor("Chest", 1.6 * shake * math.sin(t * 48), 0, 0.8 * shake * math.sin(t * 37))
                 end
+                -- the blow lands: the titan stops for an instant on it (the heavier the blow, the longer), his weight drops through his legs, and his
+                -- cloak, loincloth and beard swing on past the stop
+                anim:contact(name, w, if name == "SkySplitter" then 0.12 elseif name == "ChaosNova" then 0.06 else 0.1)
+                local after = t - w
+                if name ~= "ChaosNova" then
+                    add(pose, "Hips", 0, 0, 0, -0.5 * envelope(after, 0.03, 0.4, 0.3))
+                end
+                local k = GuardianAnim.damped(after, 2.0, 2.2)
+                for _, joint in { "MantleMid1", "LeftMantle1", "RightMantle1", "LoinFront1", "LoinBack1" } do
+                    add(pose, joint, 12 * k)
+                end
+                for _, joint in { "MantleMid2", "LeftMantle2", "RightMantle2", "LoinFront2", "LoinBack2" } do
+                    add(pose, joint, 16 * k)
+                end
+                add(pose, "Beard1", 10 * k)
+                add(pose, "Beard2", 14 * k)
             end
         end
     end
@@ -221,10 +267,16 @@ function Rig.actions(anim, pose, now)
         end
     end
 
-    -- landing: the knees take it, deep, and he rises out of it
+    -- landing: the knees take it, deep, a stop on it, the cloak and beard flying on, and he rises out of it
     t = anim:action("Land", 0.9)
     if t then
         playMove(pose, "Land", t, smooth((0.9 - t) / 0.25))
+        anim:contact("Land", 0.05, 0.1)
+        local k = GuardianAnim.damped(t - 0.05, 2.0, 2.2)
+        for _, joint in { "MantleMid1", "LeftMantle1", "RightMantle1", "LoinFront1", "LoinBack1" } do
+            add(pose, joint, 14 * k)
+        end
+        add(pose, "Beard2", 14 * k)
     end
 end
 
@@ -316,8 +368,10 @@ Rig.Fx = {
             local pivot = model:GetPivot()
             GuardianFx.crescent(pivot * CLEAVE * CFrame.new(0, 6, 0), style, 26)
             GuardianFx.puff(pivot * CLEAVE, style, 22, 22, Vector2.new(90, 8), 4, 1.2)
+            GuardianFx.shockRing((pivot * CLEAVE).Position, style, 14, 0.5)
             GuardianFx.flash(pivot * CLEAVE, style, 14)
             GuardianFx.shake(pivot.Position, 2, 0.5)
+            GuardianFx.kick(pivot.Position, 1.0, 0, 0.3)
         end)
     end,
     SkySplitter = function(model, windUp, radius, speed, arc)
@@ -352,7 +406,30 @@ Rig.Fx = {
             GuardianFx.shake(from, 1.6, 0.5)
         end)
     end,
+    Weaken = function(model)
+        task.delay(0.95, function()
+            if model.Parent then
+                local pivot = model:GetPivot()
+                GuardianFx.shockRing(pivot.Position, style, 14, 0.5)
+                GuardianFx.puff(pivot * CFrame.new(0, 0.5, -4), style, 18, 18, Vector2.new(180, 6), 4, 1.2)
+                GuardianFx.shake(pivot.Position, 1.8, 0.6)
+            end
+        end)
+    end,
+    Enrage = function(model)
+        local pivot = model:GetPivot()
+        GuardianFx.flash(pivot * CFrame.new(0, 26, -2), style, 28)
+        task.delay(1.12, function()
+            if model.Parent then
+                local p = model:GetPivot()
+                GuardianFx.shockRing(p.Position, style, 18, 0.55)
+                GuardianFx.puff(p * CFrame.new(0, 0.5, -6), style, 24, 22, Vector2.new(180, 6), 4, 1.3)
+                GuardianFx.shake(p.Position, 2.2, 0.7)
+            end
+        end)
+    end,
     Land = function(model, position)
+        GuardianFx.shockRing(position, style, 22, 0.55)
         GuardianFx.puff(CFrame.new(position + Vector3.new(0, 0.5, 0)), style, 44, 36, Vector2.new(180, 6), 5, 1.6)
         GuardianFx.flash(CFrame.new(position + Vector3.new(0, 2, 0)), style, 20)
         GuardianFx.shake(position, 3.4, 0.9)

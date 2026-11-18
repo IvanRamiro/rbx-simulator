@@ -10,7 +10,7 @@ local GuardianAnim = require(script.Parent.Parent:WaitForChild("GuardianAnim"))
 local GuardianFx = require(script.Parent.Parent:WaitForChild("GuardianFx"))
 local Clips = require(script.Parent:WaitForChild("StoneLionClips"))
 
-local add, envelope, smooth = GuardianAnim.add, GuardianAnim.envelope, GuardianAnim.smooth
+local add, envelope, smooth, keyed = GuardianAnim.add, GuardianAnim.envelope, GuardianAnim.smooth, GuardianAnim.keyed
 
 local Rig = {}
 Rig.Skinned = true
@@ -259,6 +259,22 @@ function Rig.actions(anim, pose, now)
                     local shake = envelope(t - w, 0.02, 0.35, 0.25)
                     anim:tremor("Chest", 1.0 * shake * math.sin(t * 48), 0, 0.6 * shake * math.sin(t * 37))
                 end
+                if name == "Slam" then
+                    -- the paw lands: the whole lion stops for an instant on it, its weight drops through the legs, and what hangs off it (the
+                    -- mane, the tail) swings on past the stop
+                    anim:contact("Slam", w, 0.08)
+                    local after = t - w
+                    local drop = envelope(after, 0.03, 0.4, 0.3)
+                    add(pose, "Hips", 0, 0, 0, -0.55 * drop)
+                    local k = GuardianAnim.damped(after, 2.4, 2.6)
+                    add(pose, "ManeTop", 13 * k)
+                    add(pose, "LeftMane", 9 * k, 0, 8 * k)
+                    add(pose, "RightMane", 9 * k, 0, -8 * k)
+                    add(pose, "ManeChest", 16 * k)
+                    for i = 1, 6 do
+                        add(pose, "Tail" .. i, -3 * i * k, 5 * i * k)
+                    end
+                end
                 if name == "Roar" and t > w * 0.45 and t < w then
                     -- the chest swells, shaking, as the breath is drawn
                     local build = smooth((t - w * 0.45) / (w * 0.55))
@@ -284,10 +300,40 @@ function Rig.actions(anim, pose, now)
         end
     end
 
-    -- landing: the forelegs take it and fold, the hinds come through, it rises out of it
+    -- landing: the forelegs take it and fold, the hinds come through, it rises out of it; a stop on the landing, the mane flopping forward after it
     t = anim:action("Land", 1.2)
     if t then
         playMove(anim, pose, "Land", t, smooth((1.2 - t) / 0.25))
+        anim:contact("Land", 0.05, 0.09)
+        local k = GuardianAnim.damped(t - 0.05, 2.2, 2.3)
+        add(pose, "ManeTop", 16 * k)
+        add(pose, "LeftMane", 10 * k, 0, 8 * k)
+        add(pose, "RightMane", 10 * k, 0, -8 * k)
+        add(pose, "ManeChest", 14 * k)
+        for i = 1, 6 do
+            add(pose, "Tail" .. i, -3 * i * k, 0)
+        end
+    end
+
+    -- it has seen the egg taken: the stone drops onto its haunches, head low, the mane up, ears flat, jaws open in a growl that shakes it
+    -- from the chest out, the tail up and lashing; it holds, then rises out of it
+    t = anim:action("Enrage", 1.4)
+    if t then
+        local snarl = { Hips = { -2, 0, 0, -1.5, 1.6 }, Spine = { -2 }, Chest = { -6 }, Neck1 = { -18 }, Neck2 = { -6 }, Jaw = { -36 }, ManeTop = { -14 },
+            LeftMane = { -16 }, RightMane = { -16 }, Tail1 = { -26 }, Tail2 = { -12 }, Tail3 = { -8 }, Tail5 = { -22 }, Tail6 = { -26 }, LeftEar = { 40 }, RightEar = { 40 } }
+        keyed(pose, t, {
+            { 0, {} },
+            { 0.16, snarl, "snap" },
+            { 1.0, snarl, "linear" },
+            { 1.4, {}, "inout" },
+        })
+        local growl = envelope(t - 0.16, 0.1, 0.8, 0.25)
+        anim:tremor("Chest", 1.1 * growl * math.sin(t * 52), 0, 0.9 * growl * math.sin(t * 43))
+        anim:tremor("Head", 1.6 * growl * math.sin(t * 61), 1.1 * growl * math.sin(t * 47))
+        anim:tremor("Jaw", 3 * growl * math.sin(t * 37))
+        for i = 1, 6 do
+            anim:tremor("Tail" .. i, 0, 3 * i * growl * math.sin(t * 9 - i * 0.5))
+        end
     end
 end
 
@@ -373,8 +419,10 @@ Rig.Fx = {
             end
             local at = model:GetPivot() * SLAM_SPOT
             GuardianFx.puff(at, style, 22, 22, Vector2.new(80, 8), 3, 1)
+            GuardianFx.shockRing(at.Position, style, 11, 0.45)
             GuardianFx.flash(at, style, 10)
             GuardianFx.shake(at.Position, 1.6, 0.45)
+            GuardianFx.kick(at.Position, 0.8, 0, 0.3)
         end)
     end,
     Roar = function(model, windUp, radius, speed, arc)
@@ -392,7 +440,17 @@ Rig.Fx = {
     Pounce = function(model, windUp, air, _, to)
         GuardianFx.telegraph(to, windUp + air, style)
     end,
+    Enrage = function(model)
+        GuardianFx.shed(model:FindFirstChild("Skin"), style, 22)
+        GuardianFx.shake(model:GetPivot().Position, 1.0, 0.7)
+        task.delay(0.16, function()
+            if model.Parent then
+                GuardianFx.flash(model:GetPivot() * MOUTH, style, 12)
+            end
+        end)
+    end,
     Land = function(model, position)
+        GuardianFx.shockRing(position, style, 18, 0.5)
         GuardianFx.puff(CFrame.new(position + Vector3.new(0, 0.5, 0)), style, 36, 34, Vector2.new(180, 6), 4, 1.3)
         GuardianFx.shake(position, 3, 0.7)
     end,

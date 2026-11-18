@@ -17,6 +17,8 @@
 --   streaks(cframe, style, count, speed, spread)
 --                                              Qi streaks shot out along the cframe's look
 --   crescent(cframe, style, size)              a crescent of Qi light (a blade's cut) facing the camera
+--   shockRing(position, style, radius, life)   a ring of Qi light running out flat over the ground from a point, thinning as it goes:
+--                                              the instant a heavy body meets the ground
 --   embers(cframe, count, speed, spread, life) glowing embers flung up from a point, falling back
 --   wave(origin, facing, radius, speed, arc, style)
 --                                              a wall of debris with Qi streaks rolling out along the
@@ -46,6 +48,7 @@ local TEXTURES = {
     Streak = "rbxassetid://115312010132075",
     Slash = "rbxassetid://77516609955713",  -- QiSlash (tools/blender/vfx/combat_textures.py)
     Leaf = "rbxassetid://126547188247220",  -- BambooLeaf (combat_textures.py)
+    Shockwave = "rbxassetid://130173906719836", -- the ring of CombatFx's blows
 }
 local DUST = Color3.fromRGB(196, 190, 178)
 local DUST_DARK = Color3.fromRGB(142, 136, 126)
@@ -291,6 +294,20 @@ function GuardianFx.embers(cframe, count, speed, spread, life)
         Size = numberSequence({ { 0, 0.7 }, { 0.7, 0.45 }, { 1, 0 } }), Transparency = numberSequence({ { 0, 0 }, { 0.8, 0.2 }, { 1, 1 } }),
         Color = colorSequence({ { 0, EMBER }, { 1, RAGE } }), Brightness = 2.4,
     }):Emit(count)
+end
+
+function GuardianFx.shockRing(position, style, radius, life)
+    if not near(position) then
+        return
+    end
+    life = life or 0.45
+    -- a flat quad: a particle turned perpendicular to its velocity, and its velocity pointing up, lies on the ground
+    emitter(host(CFrame.new(position + Vector3.new(0, 0.35, 0)), life + 0.5), {
+        Texture = TEXTURES.Shockwave, Orientation = Enum.ParticleOrientation.VelocityPerpendicular, EmissionDirection = Enum.NormalId.Top,
+        Speed = NumberRange.new(0.4), SpreadAngle = Vector2.new(0, 0), Lifetime = NumberRange.new(life),
+        Size = numberSequence({ { 0, radius * 0.3 }, { 1, radius * 2 } }), Transparency = numberSequence({ { 0, 0.1 }, { 0.45, 0.4 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, style.QiCore }, { 1, style.Qi } }), Brightness = 1.8,
+    }):Emit(1)
 end
 
 function GuardianFx.wave(origin, facing, radius, speed, arc, style)

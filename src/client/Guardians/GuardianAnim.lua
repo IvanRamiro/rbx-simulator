@@ -24,6 +24,10 @@
 -- and sway over its feet instead of carrying them along. A leg lifts out of it as the gait swings
 -- it (anim:lift), in the air, or for a raised paw. Then rig.glow lights its glowing pieces.
 --
+-- A blow lands: anim:contact(name, at, hold) freezes the whole guardian for `hold` seconds when the move `name` reaches `at` seconds
+-- (once per play): the stop on the instant of contact that makes a blow feel heavy. Its moves then run on, so a move's end comes
+-- `hold` late and nothing the server decides is touched. self.clock() is the time (os.clock; a test can swap it for a stepped one).
+--
 -- Helpers for rigs: GuardianAnim.add(pose, joint, pitch, yaw, roll, lift, shift),
 -- GuardianAnim.envelope(t, rise, total, fall), GuardianAnim.smooth(x), GuardianAnim.keyed(pose, t,
 -- keys, scale), anim:action(name, length), anim:tremor(joint, pitch, yaw, roll), anim:lift(leg, amount).
@@ -64,6 +68,13 @@ local EASE = {
         return 1 - (1 - x) ^ 3
     end,
     inout = smooth,
+    snap = function(x) -- very fast, then still: a strike that is over almost at once
+        return 1 - (1 - x) ^ 5
+    end,
+    back = function(x) -- flies past its goal by about a fifth and comes back: weight that overshoots and settles
+        local c = 2.6
+        return 1 + (c + 1) * (x - 1) ^ 3 + c * (x - 1) ^ 2
+    end,
 }
 
 -- 0 -> 1 over `rise`, held, then 1 -> 0 over the last `fall` of `total`
@@ -72,6 +83,14 @@ function GuardianAnim.envelope(t, rise, total, fall)
         return 0
     end
     return math.min(smooth(t / rise), smooth((total - t) / fall))
+end
+
+-- a swing that dies away: 1 at t = 0, a cosine of `freq` cycles a second under exp(-decay * t). For what a blow leaves swinging (a tail, a mane)
+function GuardianAnim.damped(t, freq, decay)
+    if t < 0 then
+        return 0
+    end
+    return math.exp(-decay * t) * math.cos(2 * math.pi * freq * t)
 end
 
 local function add(pose, joint, pitch, yaw, roll, lift, shift)
@@ -121,6 +140,7 @@ function GuardianAnim.new(model, rig)
     local self = setmetatable({}, GuardianAnim)
     self.model = model
     self.rig = rig
+    self.clock = os.clock
     self.root = model.PrimaryPart
     self.joints = {}
     self.parents = {}
@@ -438,7 +458,7 @@ end
 
 -- A one-shot move (from the server's GuardianEvent).
 function GuardianAnim:play(action, ...)
-    self.actions[action] = { start = os.clock(), args = { ... } }
+    self.actions[action] = { start = self.clock(), args = { ... } }
 end
 
 -- The move's time and arguments while it's playing, else nil.
@@ -447,12 +467,28 @@ function GuardianAnim:action(name, length)
     if not action then
         return nil
     end
-    local t = os.clock() - action.start
+    local t = self.clock() - action.start
     if t > length then
         self.actions[name] = nil
         return nil
     end
     return t, action.args
+end
+
+-- Holds the whole guardian still for `seconds` (a blow landing). Every move waits with it.
+function GuardianAnim:freeze(seconds)
+    self.frozenUntil = math.max(self.frozenUntil or 0, self.clock() + seconds)
+end
+
+-- The hit-stop of a blow: once per play of the move `name`, the moment it has run `at` seconds, the guardian freezes for `hold` seconds.
+function GuardianAnim:contact(name, at, hold)
+    local action = self.actions[name]
+    if action and not action.contacted and self.clock() - action.start >= at then
+        action.contacted = true
+        if Players.LocalPlayer:GetAttribute("SettingReducedEffects") ~= true then
+            self:freeze(hold)
+        end
+    end
 end
 
 -- A fast shake on a joint this frame, past its spring (call from rig.actions). lift and shift (studs, up and back) move the joint too.
@@ -514,11 +550,22 @@ end
 function GuardianAnim:update(dt)
     local rig = self.rig
     local state = self.model:GetAttribute("State") or "Dormant"
-    local now = os.clock()
+    local now = self.clock()
     local follow = 1 - math.exp(-dt * 5)
 
     local snap = self.lastUpdate == nil or now - self.lastUpdate > SNAP_GAP
     self.lastUpdate = now
+    -- held still for a blow (contact): the pose stays as it was set and every move waits
+    if self.frozenUntil then
+        if now < self.frozenUntil and not snap then
+            for _, action in self.actions do
+                action.start += dt
+            end
+            self.lastPosition = self.root.Position
+            return
+        end
+        self.frozenUntil = nil
+    end
 
     local position = self.root.Position
     local speed = ((position - self.lastPosition) * Vector3.new(1, 0, 1)).Magnitude / math.max(dt, 1e-3)

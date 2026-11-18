@@ -215,113 +215,198 @@ local function legs(pose, front, back)
     end
 end
 
+-- ---------- its moves ----------
+-- Each is told as key poses (GuardianAnim.keyed): an opening that loads the body, a held pose, a strike that is over in a few frames
+-- (snap), a pause on contact (anim:contact), a long overshoot and a settle. The planted feet (Rig.Legs) keep its paws on the ground
+-- while the hips drop, lunge and rear over them, so the legs fold and stretch by themselves: what is told here is the body.
+-- Hips = { pitch, yaw, roll, lift, shift }: a negative pitch tips the front up, a negative shift moves the body forward over its paws.
+
+-- the hound gathered over its hind legs, head drawn back, ears flat: a bite, a pounce, a threat
+local LOAD = merged({ Hips = { 7, 0, 0, -2.3, 2.6 }, Spine = { -7 }, Chest = { -2 }, Neck1 = { 16 }, Neck2 = { 26 }, Head = { -26 }, Jaw = { -8 },
+    Tail1 = { -22 }, Tail2 = { -12 }, Tail3 = { -6 } }, both("Ear", { 52 }))
+-- the hound stretched flat over its paws at the end of a lunge
+local REACH = merged({ Hips = { -4, 0, 0, -2.2, -7 }, Spine = { 4 }, Chest = { -9 }, Neck1 = { -38 }, Neck2 = { -26 }, Head = { 10 }, Jaw = { -40 },
+    Tail1 = { 12 }, Tail2 = { 8 } }, both("Ear", { 52 }))
+
 function Rig.actions(anim, pose, now)
-    -- waking: the head comes up from sleep, the ears rise, it shakes off the sleep and howls once at the sky
+    -- waking: eyes open, the head lifts, one long howl at the sky (the eclipse flares with it), then the whole body shakes the sleep off
     local t = anim:action("Awaken", 2.0)
     if t then
         keyed(pose, t, {
             { 0, {} },
-            { 0.5, merged({ Hips = { 2, 0, 0, -0.4 }, Neck1 = { 26 }, Neck2 = { 12 }, Head = { -6 } }, both("Ear", { -34 })), "out" },
-            { 0.85, merged({ Hips = { -5, 0, 0, -0.9 }, Chest = { 8 }, Neck1 = { 38 }, Neck2 = { 30 }, Head = { 16 }, Jaw = { -34 }, Tail1 = { -14 } }, both("Ear", { -10 })), "out" },
-            { 1.4, merged({ Hips = { -4, 0, 0, -0.8 }, Chest = { 7 }, Neck1 = { 36 }, Neck2 = { 28 }, Head = { 14 }, Jaw = { -30 }, Tail1 = { -12 } }, both("Ear", { -6 })), "linear" },
-            { 2.0, {} },
+            { 0.45, merged({ Hips = { 1, 0, 0, -0.3 }, Neck1 = { 22 }, Neck2 = { 12 }, Head = { -4 }, Tail1 = { -6 } }, both("Ear", { -30 })), "out" },
+            { 0.8, merged({ Hips = { -7, 0, 0, -0.7 }, Spine = { 3 }, Chest = { 9 }, Neck1 = { 34 }, Neck2 = { 28 }, Head = { 16 }, Jaw = { -36 }, Tail1 = { -16 } }, both("Ear", { 0 })), "back" },
+            { 1.25, merged({ Hips = { -6, 0, 0, -0.6 }, Spine = { 3 }, Chest = { 8 }, Neck1 = { 32 }, Neck2 = { 26 }, Head = { 15 }, Jaw = { -32 }, Tail1 = { -14 } }, both("Ear", { 6 })), "linear" },
+            { 1.45, merged({ Hips = { 3, 0, 0, -0.8 }, Chest = { -3 }, Neck1 = { -6 } }, both("Ear", { 26 })), "inout" },
+            { 2.0, {}, "inout" },
         })
+        -- the shake: the spine twists one way and the other, fastest at first, the tail whipping after it
+        local shake = GuardianAnim.damped(t - 1.45, 3.4, 3.2) * (if t > 1.45 then 1 else 0)
+        add(pose, "Hips", 0, 7 * shake, 3 * shake)
+        add(pose, "Spine", 0, -10 * shake)
+        add(pose, "Chest", 0, 9 * shake)
+        add(pose, "Neck1", 0, -9 * shake)
+        add(pose, "Head", 0, 8 * shake)
+        for i = 1, 5 do
+            add(pose, "Tail" .. i, 0, 12 * shake * i)
+        end
+        add(pose, "LeftEar", 22 * math.abs(shake))
+        add(pose, "RightEar", 22 * math.abs(shake))
+        local cry = envelope(t - 0.7, 0.2, 0.7, 0.3)
+        anim:tremor("Head", 1.6 * cry * math.sin(t * 40), 1.0 * cry * math.sin(t * 31))
     end
 
-    -- faltering: it staggers, the weight lurching side to side through the whole spine, the forelegs buckling
+    -- it is hurt: the head snaps up, a yelp, the weight lurches onto the haunches; then the forelegs give and it settles low (its weakened pose)
     t = anim:action("Weaken", 1.9)
     if t then
-        local w = envelope(t, 0.2, 1.9, 0.6)
-        add(pose, "Hips", 2 * w, 0, 5 * math.sin(t * 7) * w, -1.2 * w)
-        add(pose, "Spine", 0, 0, -3 * math.sin(t * 7 - 0.3) * w)
-        add(pose, "Chest", -3 * w, 0, -3 * math.sin(t * 7 - 0.6) * w)
-        add(pose, "Neck1", -10 * w, 0, -5 * math.sin(t * 7 - 0.9) * w)
+        keyed(pose, t, {
+            { 0, {} },
+            { 0.14, merged({ Hips = { -5, 0, 0, -0.2, 1.2 }, Chest = { 7 }, Neck1 = { 26 }, Neck2 = { 16 }, Head = { 12 }, Jaw = { -30 }, Tail1 = { -12 } }, both("Ear", { 60 })), "snap" },
+            { 0.5, merged({ Hips = { 3, 0, 0, -2.0, 2.2 }, Spine = { -4 }, Chest = { -7 }, Neck1 = { 6 }, Neck2 = { 2 }, Jaw = { -14 }, Tail1 = { 20 } }, both("Ear", { 40 })), "inout" },
+            { 0.9, merged({ Hips = { 5, 0, 3, -2.8, 3.0 }, Spine = { -5 }, Chest = { -9 }, Neck1 = { -12 }, Neck2 = { -8 }, Head = { 6 }, Tail1 = { 26 } }, both("Ear", { 36 })), "inout" },
+            { 1.9, {}, "inout" },
+        })
+        local lurch = envelope(t, 0.1, 1.4, 0.5)
+        add(pose, "Hips", 0, 0, 4 * math.sin(t * 6) * lurch)
+        add(pose, "Chest", 0, 0, -3 * math.sin(t * 6 - 0.6) * lurch)
     end
 
-    -- the bite: it rears back, mouth opening, the whole spine coiled, then lunges over its planted paws and snaps shut
+    -- it has seen the egg taken: down on its haunches, head low, a growl through the whole body, the tail up
+    t = anim:action("Enrage", 1.3)
+    if t then
+        keyed(pose, t, {
+            { 0, {} },
+            { 0.16, merged(LOAD, { Jaw = { -26 }, Tail1 = { -30 } }), "snap" },
+            { 0.95, merged(LOAD, { Hips = { 8, 0, 0, -2.5, 2.8 }, Neck1 = { -34 }, Jaw = { -24 }, Tail1 = { -34 } }), "linear" },
+            { 1.3, {}, "inout" },
+        })
+        local growl = envelope(t - 0.16, 0.1, 0.8, 0.2)
+        anim:tremor("Chest", 0.9 * growl * math.sin(t * 52), 0, 0.8 * growl * math.sin(t * 43))
+        anim:tremor("Head", 1.4 * growl * math.sin(t * 61), 1.2 * growl * math.sin(t * 47))
+        anim:tremor("Jaw", 3 * growl * math.sin(t * 37))
+    end
+
+    -- the bite: it loads over its hind legs, head drawn back and ears flat, held trembling; it drives forward over its paws, the neck
+    -- throwing the head out and down, the jaws snapping shut at the blow (and the whole animal stops for an instant on it), then it
+    -- overshoots, the tail whipping after, and draws itself back
     local bite = anim.actions.Bite
     if bite then
         local w = bite.args[1] or 0.5
-        t = anim:action("Bite", w + 0.7)
+        t = anim:action("Bite", w + 1.1)
         if t then
+            local lead = 0.1 -- the spring-carried head arrives this late: the key is early, so the contact is at w
             keyed(pose, t, {
                 { 0, {} },
-                { w - 0.1, merged({ Hips = { 3, 0, 0, -0.5, 1.4 }, Spine = { 3 }, Chest = { 4 }, Neck1 = { 16 }, Neck2 = { 8 }, Head = { 6 }, Jaw = { -38 }, Tail1 = { -10 } }, both("Ear", { 36 })) },
-                { w + 0.02, merged({ Hips = { -4, 0, 0, -1.0, -2.8 }, Spine = { -3 }, Chest = { -5 }, Neck1 = { -28 }, Neck2 = { -10 }, Head = { 8 }, Jaw = { 4 }, Tail1 = { 8 } }, both("Ear", { 50 })), "in" },
-                { w + 0.25, merged({ Hips = { -3, 0, 0, -0.8, -2.2 }, Spine = { -2 }, Chest = { -4 }, Neck1 = { -22 }, Neck2 = { -8 }, Head = { 6 }, Jaw = { 0 } }, both("Ear", { 40 })), "out" },
-                { w + 0.7, {} },
+                { w * 0.5, LOAD, "out" },
+                { w - lead - 0.02, merged(LOAD, { Hips = { 8, 0, 0, -2.6, 3.2 }, Neck1 = { 20 }, Neck2 = { 30 }, Head = { -30 }, Jaw = { -30 } }), "linear" },
+                { w - lead, REACH, "snap" },
+                { w - lead + 0.08, merged(REACH, { Hips = { -6, 0, 0, -2.3, -8.2 }, Neck1 = { -42 }, Jaw = { 6 }, Tail1 = { 26 }, Tail2 = { 14 } }), "out" },
+                { w + 0.4, merged({ Hips = { -3, 0, 0, -0.9, -1.8 }, Spine = { 2 }, Chest = { 1 }, Neck1 = { -10 }, Jaw = { -2 }, Tail1 = { 4 } }, both("Ear", { 36 })), "inout" },
+                { w + 0.95, {}, "inout" },
             })
+            -- the forepaws leave the ground for the lunge and come down reaching
+            local reach = envelope(t - (w - 0.3), 0.22, 0.65, 0.3)
+            for _, side in SIDES do
+                add(pose, side .. "FrontUpper", 34 * reach)
+                add(pose, side .. "FrontLower", 8 * reach)
+                add(pose, side .. "FrontPaw", -26 * reach)
+                anim:lift(side .. "Front", reach)
+            end
+            anim:contact("Bite", w, 0.07)
+            -- the shock of the bite shudders the neck and head
+            local shock = envelope(t - w, 0.02, 0.4, 0.25)
+            anim:tremor("Neck2", 1.6 * shock * math.sin(t * 50))
+            anim:tremor("Head", 2.4 * shock * math.sin(t * 44))
         end
     end
 
-    -- the eclipse howl: it coils low, drawing breath; the chest rises; at the release it sits back and throws its head to the
-    -- sky, jaws wide, ears flat, holds the cry quivering, and lets it fade
+    -- the eclipse howl: it sinks over its haunches drawing breath, the chest swelling; at the release it rears onto its hind legs, the forelegs
+    -- drawn up, head thrown back, and holds the cry quivering, the whole body ringing with it; then it comes down
     local howl = anim.actions.EclipseHowl
     if howl then
         local w = howl.args[1] or 1.0
-        t = anim:action("EclipseHowl", w + 1.3)
+        t = anim:action("EclipseHowl", w + 1.5)
         if t then
+            local rear = envelope(t - (w - 0.15), 0.3, 1.1, 0.5)
             keyed(pose, t, {
                 { 0, {} },
-                { w * 0.3, merged({ Hips = { 3, 0, 0, -1.4 }, Chest = { -5 }, Neck1 = { -22 }, Neck2 = { -10 }, Head = { 4 }, Tail1 = { 16 }, Tail2 = { 8 } }, both("Ear", { 30 })), "out" },
-                { w - 0.12, merged({ Hips = { -4, 0, 0, -0.9 }, Chest = { 6 }, Neck1 = { 16 }, Neck2 = { 10 }, Jaw = { -14 }, Tail1 = { -6 } }, both("Ear", { 10 })) },
-                { w + 0.06, merged({ Hips = { -10, 0, 0, -1.4, 0.8 }, Spine = { 8 }, Chest = { 12 }, Neck1 = { 30 }, Neck2 = { 24 }, Head = { 16 }, Jaw = { -46 }, Tail1 = { -18 }, Tail2 = { -6 } }, both("Ear", { 34 })), "out" },
-                { w + 0.7, merged({ Hips = { -9, 0, 0, -1.3, 0.7 }, Spine = { 7 }, Chest = { 11 }, Neck1 = { 28 }, Neck2 = { 22 }, Head = { 15 }, Jaw = { -42 }, Tail1 = { -16 } }, both("Ear", { 30 })), "linear" },
-                { w + 1.3, {} },
+                { w * 0.45, merged(LOAD, { Neck1 = { -22 }, Jaw = { -2 } }), "inout" },
+                { w - 0.15, merged(LOAD, { Hips = { 9, 0, 0, -2.8, 3.2 }, Chest = { -7 }, Neck1 = { -12 }, Neck2 = { -4 }, Head = { 10 }, Jaw = { -10 } }), "inout" },
+                { w + 0.1, merged({ Hips = { -20, 0, 0, -0.2, 0.8 }, Spine = { 10 }, Chest = { 14 }, Neck1 = { 34 }, Neck2 = { 26 }, Head = { 18 }, Jaw = { -48 }, Tail1 = { -24 }, Tail2 = { -10 } }, both("Ear", { 30 })), "back" },
+                { w + 0.9, merged({ Hips = { -18, 0, 0, -0.3, 0.8 }, Spine = { 9 }, Chest = { 13 }, Neck1 = { 32 }, Neck2 = { 24 }, Head = { 16 }, Jaw = { -44 }, Tail1 = { -22 } }, both("Ear", { 34 })), "linear" },
+                { w + 1.5, {}, "inout" },
             })
+            -- the forelegs come up with the rear
+            for _, side in SIDES do
+                add(pose, side .. "FrontUpper", 34 * rear)
+                add(pose, side .. "FrontLower", 50 * rear)
+                add(pose, side .. "FrontPaw", -20 * rear)
+                anim:lift(side .. "Front", rear)
+            end
+            -- the breath swells the chest, then the cry rings through head and chest
             local build = smooth((t - w * 0.45) / (w * 0.55)) * (if t < w then 1 else 0)
-            anim:tremor("Chest", 0.6 * build * math.sin(t * 43), 0, 0.5 * build * math.sin(t * 37))
-            local burst = envelope(t - w, 0.05, 0.7, 0.3)
-            anim:tremor("Head", 3 * burst * math.sin(t * 40), 1.5 * burst * math.sin(t * 31))
-        end
-    end
-
-    -- the moon leap: a deep crouch (its planted paws fold under it), the spine gathered, then thrown open and stretched flat
-    -- through the air, tail streaming, and gathered again for the ground
-    local leap = anim.actions.MoonLeap
-    if leap then
-        local windUp, air = leap.args[1] or 0.55, leap.args[2] or 1.4
-        t = anim:action("MoonLeap", windUp + air + 0.1)
-        if t then
-            local crouch = envelope(t, windUp * 0.7, windUp + 0.12, 0.12)
-            add(pose, "Hips", 6 * crouch, 0, 0, -2.6 * crouch)
-            add(pose, "Spine", -5 * crouch)
-            add(pose, "Chest", -5 * crouch)
-            add(pose, "Neck1", -14 * crouch)
-            add(pose, "Tail1", -14 * crouch)
-            local u = (t - windUp) / air
-            if u >= 0 and u <= 1 then
-                local stretch = envelope(u, 0.12, 1, 0.22)
-                add(pose, "Hips", (-8 + 18 * u) * stretch)
-                add(pose, "Spine", (8 - 16 * u) * stretch)
-                add(pose, "Chest", (8 - 14 * u) * stretch)
-                legs(pose, 58 * stretch, -50 * stretch)
-                for _, side in SIDES do
-                    add(pose, side .. "FrontLower", 8 * stretch)
-                    add(pose, side .. "BackLower", 16 * stretch)
-                    add(pose, side .. "BackMeta", -10 * stretch)
-                end
-                add(pose, "Neck1", -22 * stretch)
-                add(pose, "Neck2", -8 * stretch)
-                add(pose, "Head", 24 * stretch)
-                add(pose, "Jaw", -24 * stretch * u)
-                add(pose, "LeftEar", 48 * stretch)
-                add(pose, "RightEar", 48 * stretch)
-                add(pose, "Tail1", -18 * stretch)
-                add(pose, "Tail2", -10 * stretch)
+            anim:tremor("Chest", 0.7 * build * math.sin(t * 43), 0, 0.6 * build * math.sin(t * 37))
+            local burst = envelope(t - w, 0.05, 0.9, 0.3)
+            anim:tremor("Head", 2.6 * burst * math.sin(t * 40), 1.6 * burst * math.sin(t * 31))
+            anim:tremor("Chest", 0.8 * burst * math.sin(t * 33), 0, 0.5 * burst * math.sin(t * 27))
+            for i = 1, 5 do
+                anim:tremor("Tail" .. i, 0, 2.2 * burst * i * math.sin(t * 18 - i * 0.6))
             end
         end
     end
 
-    -- landing: the shoulders take it, the spine folding, sinking deep over the paws, and it rebounds
-    t = anim:action("Land", 0.7)
+    -- the moon leap: a deep crouch over loaded hind legs, held, a drive that throws the body open and flat, trailing hind legs; over the top it
+    -- pitches nose-down, the forelegs reaching, the hind legs tucking, and gathers for the ground
+    local leap = anim.actions.MoonLeap
+    if leap then
+        local windUp, air = leap.args[1] or 0.55, leap.args[2] or 1.2
+        t = anim:action("MoonLeap", windUp + air + 0.1)
+        if t then
+            local crouch = envelope(t, windUp * 0.75, windUp + 0.1, 0.1)
+            add(pose, "Hips", 9 * crouch, 0, 0, -3.0 * crouch, 3.4 * crouch)
+            add(pose, "Spine", -8 * crouch)
+            add(pose, "Chest", -6 * crouch)
+            add(pose, "Neck1", -20 * crouch)
+            add(pose, "Head", 14 * crouch)
+            add(pose, "Tail1", -20 * crouch)
+            add(pose, "LeftEar", 50 * crouch)
+            add(pose, "RightEar", 50 * crouch)
+            anim:tremor("Chest", 0.6 * crouch * math.sin(t * 47), 0, 0.5 * crouch * math.sin(t * 39))
+            local u = (t - windUp) / air
+            if u >= 0 and u <= 1 then
+                local stretch = envelope(u, 0.1, 1, 0.2)
+                local over = smooth((u - 0.4) / 0.5) -- over the top: nose down
+                add(pose, "Hips", (-12 + 30 * over) * stretch)
+                add(pose, "Spine", (9 - 14 * over) * stretch)
+                add(pose, "Chest", (9 - 12 * over) * stretch)
+                legs(pose, (60 - 20 * over) * stretch, (-52 + 20 * over) * stretch)
+                for _, side in SIDES do
+                    add(pose, side .. "FrontLower", (6 + 10 * over) * stretch)
+                    add(pose, side .. "BackLower", (18 - 6 * over) * stretch)
+                    add(pose, side .. "BackMeta", -10 * stretch)
+                end
+                add(pose, "Neck1", (-26 + 30 * over) * stretch)
+                add(pose, "Neck2", (-10 + 8 * over) * stretch)
+                add(pose, "Head", (26 - 20 * over) * stretch)
+                add(pose, "Jaw", (-20 - 10 * over) * stretch)
+                add(pose, "LeftEar", 52 * stretch)
+                add(pose, "RightEar", 52 * stretch)
+                add(pose, "Tail1", (-22 + 30 * over) * stretch)
+                add(pose, "Tail2", (-12 + 16 * over) * stretch)
+            end
+        end
+    end
+
+    -- landing: the forelegs take it and the spine folds, the whole animal driven down over its paws; a stop on it; it rebounds and straightens
+    t = anim:action("Land", 0.9)
     if t then
         keyed(pose, t, {
             { 0, {} },
-            { 0.08, merged({ Hips = { 8, 0, 0, -2.6 }, Spine = { -5 }, Chest = { -8 }, Neck1 = { -14 }, Tail1 = { 18 }, Tail2 = { 10 } }, both("Ear", { 20 })), "out" },
-            { 0.3, { Hips = { -2, 0, 0, 0.1 }, Chest = { 2 }, Neck1 = { 4 } } },
-            { 0.7, {} },
+            { 0.07, merged({ Hips = { 9, 0, 0, -3.4, 0.8 }, Spine = { -8 }, Chest = { -11 }, Neck1 = { -16 }, Head = { 8 }, Tail1 = { 22 }, Tail2 = { 12 } }, both("Ear", { 34 })), "snap" },
+            { 0.3, { Hips = { -3, 0, 0, 0.15 }, Spine = { 2 }, Chest = { 3 }, Neck1 = { 6 }, Tail1 = { -10 } }, "back" },
+            { 0.9, {}, "inout" },
         })
+        anim:contact("Land", 0.05, 0.08)
     end
 end
 
@@ -400,7 +485,9 @@ Rig.Fx = {
             local pivot = model:GetPivot()
             GuardianFx.crescent(pivot * MOUTH, style, 14)
             GuardianFx.puff(pivot * BITE, style, 14, 16, 70, 3, 1)
+            GuardianFx.shockRing((pivot * BITE).Position, style, 9, 0.4)
             GuardianFx.shake(pivot.Position, 1.2, 0.35)
+            GuardianFx.kick(pivot.Position, 0.8, 0, 0.3)
         end)
     end,
     EclipseHowl = function(model, windUp, radius, speed, arc)
@@ -421,7 +508,14 @@ Rig.Fx = {
             GuardianFx.puff(CFrame.new(from + Vector3.new(0, 0.5, 0)), style, 22, 20, Vector2.new(180, 10), 3, 1.2)
         end)
     end,
+    Enrage = function(model)
+        local pivot = model:GetPivot()
+        GuardianFx.flash(pivot * ECLIPSE, style, 26)
+        GuardianFx.puff(pivot * CFrame.new(0, 0.5, -8), style, 12, 14, Vector2.new(180, 6), 3, 1)
+        GuardianFx.shake(pivot.Position, 0.9, 0.7)
+    end,
     Land = function(model, position)
+        GuardianFx.shockRing(position, style, 16, 0.5)
         GuardianFx.puff(CFrame.new(position + Vector3.new(0, 0.5, 0)), style, 34, 30, Vector2.new(180, 8), 4, 1.4)
         GuardianFx.flash(CFrame.new(position + Vector3.new(0, 2, 0)), style, 16)
         GuardianFx.shake(position, 2.6, 0.6)

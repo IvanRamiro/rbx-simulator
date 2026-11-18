@@ -747,6 +747,17 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
             end
         end
     end
+    if action == "Steal" then
+        -- it has seen the egg taken: its rage move (the state is Enraged already, and the poses are blending)
+        local anim = anims[model]
+        if anim then
+            anim:play("Enrage")
+        end
+        local fx = rig and rig.Fx.Enrage
+        if fx then
+            fx(model)
+        end
+    end
     if action == "Awaken" then
         if isNear(model, NEAR_DISTANCE) then
             message:show((config.Called or "The " .. config.DisplayName) .. " wakes up!", "Info")

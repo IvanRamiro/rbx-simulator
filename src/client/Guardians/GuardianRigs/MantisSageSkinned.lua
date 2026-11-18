@@ -10,7 +10,7 @@ local GuardianAnim = require(script.Parent.Parent:WaitForChild("GuardianAnim"))
 local GuardianFx = require(script.Parent.Parent:WaitForChild("GuardianFx"))
 local Clips = require(script.Parent:WaitForChild("MantisSageClips"))
 
-local add, envelope, smooth = GuardianAnim.add, GuardianAnim.envelope, GuardianAnim.smooth
+local add, envelope, smooth, keyed = GuardianAnim.add, GuardianAnim.envelope, GuardianAnim.smooth, GuardianAnim.keyed
 
 local Rig = {}
 Rig.Skinned = true
@@ -281,6 +281,20 @@ function Rig.actions(anim, pose, now)
                     local shake = envelope(t - w, 0.02, 0.3, 0.2)
                     anim:tremor("Pro1", 1.2 * shake * math.sin(t * 48), 0, 0.7 * shake * math.sin(t * 37))
                 end
+                -- the blades land: the whole mantis stops for an instant on the cut (a long blow stops a little longer), then what hangs off it
+                -- (the antennae, the beard, the tassel, the robe) whips on past the stop
+                anim:contact(name, w, if name == "BladeWave" then 0.08 else 0.06)
+                local k = GuardianAnim.damped(t - w, 3.0, 2.8)
+                add(pose, "LeftAnt1", -20 * k, 0, 5 * k)
+                add(pose, "RightAnt1", -20 * k, 0, -5 * k)
+                add(pose, "LeftAnt2", -14 * k)
+                add(pose, "RightAnt2", -14 * k)
+                add(pose, "Beard1", 10 * k)
+                add(pose, "Beard2", 14 * k)
+                add(pose, "Tassel", 12 * k)
+                add(pose, "RobeLeft1", 0, 0, 7 * k)
+                add(pose, "RobeRight1", 0, 0, -7 * k)
+                add(pose, "RobeMid1", 8 * k)
             end
         end
     end
@@ -297,10 +311,34 @@ function Rig.actions(anim, pose, now)
         end
     end
 
-    -- landing: it sinks deep on its legs, the robe flopping shut after it
+    -- landing: it sinks deep on its legs, the robe flopping shut after it; a stop on the landing, the antennae and robe whipping on
     t = anim:action("Land", 0.9)
     if t then
         playMove(anim, pose, "Land", t, smooth((0.9 - t) / 0.25))
+        anim:contact("Land", 0.05, 0.07)
+        local k = GuardianAnim.damped(t - 0.05, 3.0, 2.6)
+        add(pose, "LeftAnt1", -22 * k)
+        add(pose, "RightAnt1", -22 * k)
+        add(pose, "Beard2", 12 * k)
+        add(pose, "RobeMid1", 10 * k)
+    end
+
+    -- it has seen the egg taken: the threat display flung open: it rears up on its legs, the blades snapped wide and rattling, the antennae
+    -- flung out, the robe flared like wings beating, a head that snaps to look; it holds, then drops back to a watchful rock
+    t = anim:action("Enrage", 1.3)
+    if t then
+        keyed(pose, t, {
+            { 0, {} },
+            { 0.14, { Hips = { 0, 0, 0, 0.5, 0.2 }, Pro1 = { 12 }, Pro2 = { 7 }, Abd1 = { -6 }, Abd2 = { -5 }, Head = { -8 }, LeftAnt1 = { 34 }, RightAnt1 = { 34 } }, "snap" },
+            { 0.9, { Hips = { 0, 0, 0, 0.4, 0.2 }, Pro1 = { 10 }, Pro2 = { 6 }, Abd1 = { -5 }, Abd2 = { -4 }, Head = { -6 }, LeftAnt1 = { 28 }, RightAnt1 = { 28 } }, "linear" },
+            { 1.3, {}, "inout" },
+        })
+        local rattle = envelope(t - 0.14, 0.05, 0.8, 0.25)
+        anim:tremor("LeftTibia", 3.5 * rattle * math.sin(t * 61))
+        anim:tremor("RightTibia", 3.5 * rattle * math.sin(t * 57))
+        anim:tremor("LeftFemur", 1.5 * rattle * math.sin(t * 47))
+        anim:tremor("RightFemur", 1.5 * rattle * math.sin(t * 43))
+        wingBeat(anim, rattle, t)
     end
 end
 
@@ -373,7 +411,9 @@ Rig.Fx = {
             GuardianFx.crescent(pivot * CUT_LEFT, style, 14)
             GuardianFx.crescent(pivot * CUT_RIGHT, style, 14)
             GuardianFx.puff(pivot * CFrame.new(0, 2, (CUT_LEFT.Z + CUT_RIGHT.Z) / 2), style, 14, 16, 70, 3, 1.2)
+            GuardianFx.shockRing((pivot * CFrame.new(0, 0, (CUT_LEFT.Z + CUT_RIGHT.Z) / 2)).Position, style, 9, 0.4)
             GuardianFx.shake(pivot.Position, 1.3, 0.4)
+            GuardianFx.kick(pivot.Position, 0.7, 0, 0.28)
         end)
     end,
     BladeWave = function(model, windUp, radius, speed, arc)
@@ -394,7 +434,13 @@ Rig.Fx = {
             GuardianFx.puff(CFrame.new(from + Vector3.new(0, 0.5, 0)), style, 20, 18, Vector2.new(180, 10), 3, 1.2)
         end)
     end,
+    Enrage = function(model)
+        GuardianFx.shed(model:FindFirstChild("Robe"), style, 26)
+        GuardianFx.shake(model:GetPivot().Position, 0.9, 0.7)
+        GuardianFx.crescent(model:GetPivot() * CHEST, style, 18)
+    end,
     Land = function(model, position)
+        GuardianFx.shockRing(position, style, 14, 0.45)
         GuardianFx.puff(CFrame.new(position + Vector3.new(0, 0.5, 0)), style, 34, 30, Vector2.new(180, 8), 3, 1.4)
         GuardianFx.flash(CFrame.new(position + Vector3.new(0, 2, 0)), style, 16)
         GuardianFx.shake(position, 2.6, 0.6)

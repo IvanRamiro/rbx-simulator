@@ -63,8 +63,8 @@ Rig.Springs = {
     Neck = { Freq = 3.6, Damping = 0.5, Drag = 0.3 },
     Head = { Freq = 4.5, Damping = 0.5, Drag = 0.3 },
     Jaw = { Freq = 7, Damping = 0.45, Drag = 0 },
-    SerpentNeck = { Freq = 1.9, Damping = 0.35, Drag = 0.9 },
-    SerpentHead = { Freq = 2.5, Damping = 0.38, Drag = 0.7 },
+    SerpentNeck = { Freq = 3.4, Damping = 0.42, Drag = 0.9 },
+    SerpentHead = { Freq = 4.0, Damping = 0.42, Drag = 0.7 },
     Tail = { Freq = 3, Damping = 0.35, Drag = 0.8 },
 }
 Rig.Lean = { Joint = "Body", Accel = 0.08, Bank = 0.04, Max = 5 }
@@ -127,112 +127,181 @@ local function legs(pose, front, back)
     end
 end
 
+-- the forelegs off the ground by `amount` (0 to 1): up and folded, and let go of the floor
+local function raiseForelegs(anim, pose, amount, degrees)
+    for _, leg in LEGS do
+        if string.sub(leg[1], 1, 5) == "Front" then
+            add(pose, leg[1] .. "Upper", 0, 0, leg[2] * (degrees or 30) * amount)
+            add(pose, leg[1] .. "Lower", 0, 0, -leg[2] * (degrees or 30) * 0.7 * amount)
+            anim:lift(leg[1], amount)
+        end
+    end
+end
+
+-- ---------- its moves ----------
+-- Told as key poses (GuardianAnim.keyed). The shell is the mass: it dips and rears over its planted feet (Rig.Legs puts them back on the
+-- ground), and the serpent, one rigid arch hinged at the back of the coil, is the whip: it rises to its full height over the volcano and
+-- comes down on the ground ahead. Body = { pitch (+ tips the front up), yaw, roll, lift, shift (+ back) }.
 function Rig.actions(anim, pose, now)
-    -- waking: the volcano rumbles, the shell rises off its plastron, the head pushes out of the
-    -- shell with a roar, the serpent uncoiling up over the cone
+    -- waking: the volcano rumbles, the shell rises off its plastron shaking, the beak pushes out of the shell with a roar and the serpent
+    -- unwinds up over the cone and holds there, hissing; the shell settles back to its feet with a thud
     local t = anim:action("Awaken", 2.2)
     if t then
         local shake = envelope(t, 0.1, 0.8, 0.3)
         anim:tremor("Body", 0, 0.8 * shake * math.sin(t * 60), 0.8 * shake * math.sin(t * 47))
-        local rise = envelope(t - 0.5, 0.6, 1.7, 0.6)
-        add(pose, "Body", 3 * rise, 0, 0, 0.5 * rise)
-        add(pose, "Neck", 14 * rise)
-        add(pose, "Head", 10 * rise)
-        add(pose, "Jaw", -26 * envelope(t - 0.9, 0.25, 1.1, 0.4))
-        add(pose, "SerpentNeck", 14 * rise)
-        add(pose, "SerpentHead", 16 * envelope(t - 0.8, 0.3, 1.2, 0.5))
+        keyed(pose, t, {
+            { 0, {} },
+            { 0.7, { Body = { 5, 0, 0, 0.9, 0.6 }, Neck = { 12, 0, 0, 0, -1 }, Head = { 6 }, SerpentNeck = { 12 }, SerpentHead = { 6 } }, "out" },
+            { 1.15, { Body = { 11, 0, 0, 1.4, 1.2 }, Neck = { 20, 0, 0, 0, -1.4 }, Head = { 12 }, Jaw = { -34 }, SerpentNeck = { 34 }, SerpentHead = { 20 }, Tail = { 14 } }, "back" },
+            { 1.65, { Body = { 9, 0, 0, 1.0, 1.0 }, Neck = { 18 }, Head = { 10 }, Jaw = { -30 }, SerpentNeck = { 30 }, SerpentHead = { 16 }, Tail = { 10 } }, "linear" },
+            { 1.95, { Body = { -3, 0, 0, -0.7 }, Neck = { -4 }, SerpentNeck = { 8 } }, "in" },
+            { 2.2, {}, "back" },
+        })
+        raiseForelegs(anim, pose, envelope(t - 0.5, 0.4, 1.3, 0.25), 18)
+        local roar = envelope(t - 1.0, 0.1, 0.8, 0.3)
+        anim:tremor("Head", 1.8 * roar * math.sin(t * 41), 1.2 * roar * math.sin(t * 33))
+        anim:tremor("SerpentHead", 2 * roar * math.sin(t * 29), 3 * roar * math.sin(t * 23))
+        anim:contact("Awaken", 1.93, 0.07)
     end
 
-    -- faltering: the shell lurches and drops, the legs buckling
+    -- faltering: the blow it cannot take: the serpent whips up and screams, the shell lurches; then the legs give one after the other and the
+    -- shell sinks onto its plastron, the serpent's head falling to the ground; a thud, a stop on it
     t = anim:action("Weaken", 1.9)
     if t then
+        keyed(pose, t, {
+            { 0, {} },
+            { 0.18, { Body = { 5, 0, 5, 0.3 }, Neck = { 14 }, Head = { 6 }, Jaw = { -24 }, SerpentNeck = { 30 }, SerpentHead = { 14 }, Tail = { 12 } }, "snap" },
+            { 0.7, { Body = { -2, 0, -4, -0.8 }, Neck = { -8 }, SerpentNeck = { 6 }, SerpentHead = { -6 } }, "inout" },
+            { 1.15, { Body = { -4, 0, 3, -1.9 }, Neck = { -14 }, Head = { -8 }, Jaw = { -8 }, SerpentNeck = { -34 }, SerpentHead = { -12 }, Tail = { -10 } }, "in" },
+            { 1.9, {}, "back" },
+        })
         local w = envelope(t, 0.2, 1.9, 0.6)
-        add(pose, "Body", 0, 0, 4 * math.sin(t * 7) * w, -0.6 * w)
-        legs(pose, -8 * w, -6 * w)
-        add(pose, "Neck", -8 * w)
+        add(pose, "Body", 0, 0, 3 * math.sin(t * 7) * w)
+        legs(pose, -9 * smooth((t - 0.5) / 0.6) * w, -7 * smooth((t - 0.8) / 0.5) * w)
+        anim:contact("Weaken", 1.12, 0.09)
     end
 
-    -- the serpent's lash: a small dip, then it rears back over the volcano, and strikes down at the
-    -- ground before them (fastest as it lands), the shell rocking into it
+    -- it has seen the egg taken: it rears onto its hind legs and bellows, the serpent flung up flaring over the volcano, the shell hot;
+    -- then it comes down hard
+    t = anim:action("Enrage", 1.4)
+    if t then
+        keyed(pose, t, {
+            { 0, {} },
+            { 0.28, { Body = { -2, 0, 0, -0.9 }, Neck = { -8 }, SerpentNeck = { -6 } }, "out" },
+            { 0.6, { Body = { 17, 0, 0, 1.0, 0.8 }, Neck = { 22 }, Head = { 14 }, Jaw = { -34 }, SerpentNeck = { 42 }, SerpentHead = { 24 }, Tail = { 16 } }, "back" },
+            { 1.05, { Body = { 15, 0, 0, 0.9, 0.8 }, Neck = { 20 }, Head = { 12 }, Jaw = { -30 }, SerpentNeck = { 38 }, SerpentHead = { 20 }, Tail = { 14 } }, "linear" },
+            { 1.22, { Body = { -4, 0, 0, -1.2 }, Neck = { -6 }, SerpentNeck = { -10 } }, "in" },
+            { 1.4, {}, "back" },
+        })
+        raiseForelegs(anim, pose, envelope(t - 0.3, 0.3, 0.9, 0.18), 30)
+        local bellow = envelope(t - 0.6, 0.1, 0.5, 0.2)
+        anim:tremor("Head", 2 * bellow * math.sin(t * 44), 1.4 * bellow * math.sin(t * 35))
+        anim:tremor("Body", 0.7 * bellow * math.sin(t * 38), 0, 0.6 * bellow * math.sin(t * 31))
+        anim:contact("Enrage", 1.2, 0.07)
+    end
+
+    -- the serpent's lash: the shell sinks and shifts its weight back; the serpent rises over the volcano to its whole height, coils its head
+    -- back and holds, trembling; then it drops like a hammer onto the ground ahead, the shell lunging after it and pitching down; a stop on
+    -- contact; it overshoots, the arch whipping, and drags itself back up
     local lash = anim.actions.SerpentLash
     if lash then
         local w = lash.args[1] or 0.8
-        t = anim:action("SerpentLash", w + 0.9)
+        t = anim:action("SerpentLash", w + 1.0)
         if t then
+            local lead = 0.09 -- the serpent's springs carry it in this late
             keyed(pose, t, {
                 { 0, {} },
-                { w * 0.35, { Body = { 0, 0, 0, -0.3 }, SerpentNeck = { -8 }, SerpentHead = { -6 } }, "out" },
-                { w - 0.1, { Body = { -2, 0, -2 }, Neck = { 4, 10 }, SerpentNeck = { 26, 8 }, SerpentHead = { 22 } } },
-                { w + 0.02, { Body = { -3, 0, 2, -0.6 }, Neck = { -2 }, SerpentNeck = { -48, -4 }, SerpentHead = { -24 } }, "in" },
-                { w + 0.3, { Body = { -2, 0, 1, -0.5 }, SerpentNeck = { -42 }, SerpentHead = { -20 } }, "out" },
-                { w + 0.9, {} },
+                { w * 0.3, { Body = { 1, 0, 0, -0.6, 1.2 }, Neck = { -4 }, SerpentNeck = { 12, -3 }, SerpentHead = { 8 } }, "out" },
+                { w - 0.2, { Body = { 5, 0, 0, -0.2, 2.2 }, Neck = { 6, 8 }, Head = { 4 }, SerpentNeck = { 44, 6 }, SerpentHead = { 30 }, Tail = { 10 } }, "inout" },
+                { w - lead - 0.02, { Body = { 6, 0, 0, -0.3, 2.6 }, Neck = { 6, 10 }, SerpentNeck = { 48, 7 }, SerpentHead = { 34 }, Tail = { 12 } }, "linear" },
+                { w - lead, { Body = { -7, 0, 2, -1.7, -5.5 }, Neck = { -10, -4 }, Head = { -4 }, Jaw = { -12 }, SerpentNeck = { -62, -6, 0, 0, -5 }, SerpentHead = { -36 }, Tail = { -12 } }, "snap" },
+                { w - lead + 0.1, { Body = { -8, 0, 2, -1.9, -6.2 }, Neck = { -12, -4 }, SerpentNeck = { -68, -6, 0, 0, -6 }, SerpentHead = { -40 }, Tail = { -14 } }, "out" },
+                { w + 0.55, { Body = { -3, 0, 1, -0.9, -2 }, Neck = { -4 }, SerpentNeck = { -30 }, SerpentHead = { -14 } }, "inout" },
+                { w + 1.0, {}, "inout" },
             })
+            -- the wind-up shudders at its height
+            local quiver = envelope(t - (w - 0.3), 0.08, 0.2, 0.06)
+            anim:tremor("SerpentNeck", 1.6 * quiver * math.sin(t * 58), 1.2 * quiver * math.sin(t * 47))
+            anim:tremor("SerpentHead", 2.6 * quiver * math.sin(t * 66))
+            anim:contact("SerpentLash", w, 0.08)
+            local shock = envelope(t - w, 0.02, 0.5, 0.3)
+            anim:tremor("Body", 1.2 * shock * math.sin(t * 40), 0, 0.9 * shock * math.sin(t * 33))
+            anim:tremor("SerpentHead", 3 * shock * math.sin(t * 36))
         end
     end
 
-    -- the quake: it hunkers down; the front rears, the forelegs lifting off the ground; at the
-    -- release they stamp down (fastest as they land) and the shell slams after them, shuddering
+    -- the quake: it hunkers; the front rears off the ground, the forelegs high; at the release the whole shell slams down (a stop on it) and
+    -- bounces on its legs, the serpent whipping up and over with the shock, the volcano shuddering
     local quake = anim.actions.Quake
     if quake then
         local w = quake.args[1] or 1.3
-        t = anim:action("Quake", w + 1.0)
+        t = anim:action("Quake", w + 1.3)
         if t then
+            local lead = 0.08
             keyed(pose, t, {
                 { 0, {} },
-                { w * 0.3, { Body = { -3, 0, 0, -0.8 }, Neck = { -10 }, Head = { -6 }, SerpentNeck = { -8 } }, "out" },
-                { w - 0.18, { Body = { 16 }, Neck = { 14 }, Head = { 8 }, Jaw = { -26 }, SerpentNeck = { 16 }, SerpentHead = { 10 }, Tail = { -8 } } },
-                { w, { Body = { -5, 0, 0, -1.2 }, Neck = { -12 }, Head = { -8 }, Jaw = { -10 }, SerpentNeck = { -14 }, SerpentHead = { -10 } }, "in" },
-                { w + 0.3, { Body = { -4, 0, 0, -1.0 }, Neck = { -10 }, Jaw = { -8 }, SerpentNeck = { -10 } }, "out" },
-                { w + 1.0, {} },
+                { w * 0.28, { Body = { -4, 0, 0, -1.0, 0.6 }, Neck = { -12 }, Head = { -6 }, SerpentNeck = { -10 }, Tail = { -6 } }, "out" },
+                { w - 0.26, { Body = { 22, 0, 0, 1.2, 2.0 }, Neck = { 18 }, Head = { 10 }, Jaw = { -30 }, SerpentNeck = { 36 }, SerpentHead = { 20 }, Tail = { 16 } }, "inout" },
+                { w - lead - 0.02, { Body = { 23, 0, 0, 1.3, 2.1 }, Neck = { 20 }, Head = { 10 }, Jaw = { -32 }, SerpentNeck = { 38 }, SerpentHead = { 22 }, Tail = { 16 } }, "linear" },
+                { w - lead, { Body = { -8, 0, 0, -1.8, -1.2 }, Neck = { -16 }, Head = { -10 }, Jaw = { -8 }, SerpentNeck = { -18 }, SerpentHead = { -12 }, Tail = { -14 } }, "snap" },
+                { w - lead + 0.16, { Body = { 3, 0, 0, 0.3 }, Neck = { 4 }, SerpentNeck = { 26 }, SerpentHead = { 8 } }, "out" },
+                { w + 0.5, { Body = { -2, 0, 0, -0.5 }, Neck = { -3 }, SerpentNeck = { 4 } }, "inout" },
+                { w + 1.3, {}, "inout" },
             })
             -- the forelegs lift with the rear and come down with the stamp
-            local up = if t < w * 0.3 then 0 elseif t < w - 0.18 then smooth((t - w * 0.3) / (w * 0.7 - 0.18))
-                elseif t < w then 1 - ((t - w + 0.18) / 0.18) ^ 2 else 0
-            for _, leg in LEGS do
-                if string.sub(leg[1], 1, 5) == "Front" then
-                    add(pose, leg[1] .. "Upper", 0, 0, leg[2] * 30 * up)
-                    add(pose, leg[1] .. "Lower", 0, 0, -leg[2] * 20 * up)
-                    anim:lift(leg[1], up)
-                end
-            end
-            anim:tremor("Body", 1.2 * envelope(t - w, 0.02, 0.45, 0.3) * math.sin(t * 48), 0, 0.9 * envelope(t - w, 0.02, 0.45, 0.3) * math.sin(t * 37))
+            local up = if t < w - lead then smooth((t - w * 0.28) / (w * 0.72 - 0.26)) else 0
+            raiseForelegs(anim, pose, up, 34)
+            anim:contact("Quake", w, 0.1)
+            local shock = envelope(t - w, 0.02, 0.6, 0.35)
+            anim:tremor("Body", 1.5 * shock * math.sin(t * 46), 0, 1.0 * shock * math.sin(t * 37), 0.25 * shock * math.sin(t * 30))
+            -- the build-up trembles the whole shell
+            local build = smooth((t - w * 0.4) / (w * 0.5)) * (if t < w then 1 else 0)
+            anim:tremor("Body", 0.5 * build * math.sin(t * 52), 0, 0.5 * build * math.sin(t * 43))
         end
     end
 
-    -- the charge: it hunkers down, head drawn in, then lunges, legs flung out
+    -- the charge: it hunkers, head drawn in, the legs digging; then the shell drives forward low and heavy, nose down, legs scrambling, the
+    -- serpent streaming behind it; it ends braced for the landing
     local charge = anim.actions.Charge
     if charge then
         local windUp, air = charge.args[1] or 0.9, charge.args[2] or 1
         t = anim:action("Charge", windUp + air + 0.1)
         if t then
-            local crouch = envelope(t, windUp * 0.7, windUp + 0.12, 0.12)
-            add(pose, "Body", -2 * crouch, 0, 0, -0.8 * crouch)
-            add(pose, "Neck", -8 * crouch, 0, 0, 0, 1.4 * crouch)
-            add(pose, "SerpentNeck", -10 * crouch)
+            local crouch = envelope(t, windUp * 0.75, windUp + 0.1, 0.12)
+            add(pose, "Body", -3 * crouch, 0, 0, -1.4 * crouch, 1.8 * crouch)
+            add(pose, "Neck", -10 * crouch, 0, 0, 0, 2 * crouch)
+            add(pose, "SerpentNeck", 16 * crouch)
+            add(pose, "SerpentHead", 12 * crouch)
+            add(pose, "Tail", 12 * crouch)
+            anim:tremor("Body", 0.7 * crouch * math.sin(t * 49), 0, 0.6 * crouch * math.sin(t * 41))
             local u = (t - windUp) / air
             if u >= 0 and u <= 1 then
-                local stretch = envelope(u, 0.12, 1, 0.25)
-                add(pose, "Body", (4 - 9 * u) * stretch)
-                add(pose, "Neck", 10 * stretch)
-                add(pose, "Jaw", -22 * stretch)
+                local stretch = envelope(u, 0.1, 1, 0.25)
+                add(pose, "Body", (-9 + 6 * u) * stretch, 0, 0, 0.2 * stretch)
+                add(pose, "Neck", 12 * stretch)
+                add(pose, "Head", -6 * stretch)
+                add(pose, "Jaw", -24 * stretch)
                 for _, leg in LEGS do
                     local isFront = string.sub(leg[1], 1, 5) == "Front"
-                    add(pose, leg[1] .. "Upper", 0, leg[2] * (if isFront then 22 else -22) * stretch, leg[2] * 8 * stretch)
+                    add(pose, leg[1] .. "Upper", 0, leg[2] * (if isFront then 24 else -24) * stretch, leg[2] * 10 * stretch)
                 end
-                add(pose, "SerpentNeck", 12 * stretch)
+                add(pose, "SerpentNeck", 22 * stretch)
+                add(pose, "SerpentHead", 16 * stretch)
+                add(pose, "Tail", 18 * stretch)
             end
         end
     end
 
-    -- landing: the shell slams down onto its legs and rocks
-    t = anim:action("Land", 0.8)
+    -- landing: the shell slams down onto its legs, a stop on it, and rocks
+    t = anim:action("Land", 0.9)
     if t then
         keyed(pose, t, {
             { 0, {} },
-            { 0.08, { Body = { -4, 0, 0, -1.4 }, Neck = { -8 }, SerpentNeck = { -10 } }, "out" },
-            { 0.35, { Body = { 2, 0, 0, 0.1 }, Neck = { 3 } } },
-            { 0.8, {} },
+            { 0.08, { Body = { -5, 0, 0, -1.9 }, Neck = { -10 }, Head = { -4 }, SerpentNeck = { -18 }, SerpentHead = { -8 }, Tail = { -8 } }, "snap" },
+            { 0.38, { Body = { 3, 0, 0, 0.2 }, Neck = { 4 }, SerpentNeck = { 20 } }, "back" },
+            { 0.9, {}, "inout" },
         })
+        anim:contact("Land", 0.06, 0.09)
     end
 end
 
@@ -334,7 +403,7 @@ end
 -- ---------- its effects (GuardianController calls Rig.Fx[action](model, ...)) ----------
 local style = Rig.Style
 local CRATER = CFrame.new(0, 23.6, 1.5)          -- the volcano's mouth (xuanwu-local)
-local STRIKE = CFrame.new(-5, 0.6, -27)          -- where the serpent's head comes down
+local STRIKE = CFrame.new(-5, 0.6, -23)          -- where the serpent's head comes down
 local MOUTH = CFrame.new(0, 10, -27)             -- the beak
 
 local function erupt(model, count)
@@ -366,7 +435,9 @@ Rig.Fx = {
             GuardianFx.flash(at, style, 12)
             GuardianFx.puff(at, style, 18, 20, Vector2.new(80, 8), 3, 1.1)
             GuardianFx.embers(at, 18, 24, 50, 1.1)
-            GuardianFx.shake(at.Position, 1.6, 0.45)
+            GuardianFx.shockRing(at.Position, style, 12, 0.45)
+            GuardianFx.shake(at.Position, 1.8, 0.5)
+            GuardianFx.kick(at.Position, 0.9, 0, 0.3)
         end)
     end,
     Quake = function(model, windUp, radius, speed, arc)
@@ -377,7 +448,9 @@ Rig.Fx = {
             local pivot = model:GetPivot()
             GuardianFx.wave(pivot.Position, pivot.LookVector, radius, speed, arc or 180, style)
             GuardianFx.puff(pivot * CFrame.new(0, 0.5, -12), style, 30, 26, Vector2.new(180, 6), 5, 1.4)
+            GuardianFx.shockRing(pivot.Position, style, 22, 0.6)
             GuardianFx.shake(pivot.Position, 3, 1.1)
+            GuardianFx.kick(pivot.Position, 1.4, 0, 0.4)
             erupt(model, 40)
         end)
     end,
@@ -391,7 +464,22 @@ Rig.Fx = {
             GuardianFx.flash(model:GetPivot() * MOUTH, style, 10)
         end)
     end,
+    Enrage = function(model)
+        task.delay(0.6, function()
+            if model.Parent then
+                erupt(model, 30)
+                GuardianFx.shake(model:GetPivot().Position, 1.6, 0.8)
+            end
+        end)
+        task.delay(1.2, function()
+            if model.Parent then
+                GuardianFx.shockRing(model:GetPivot().Position, style, 16, 0.5)
+                GuardianFx.puff(model:GetPivot() * CFrame.new(0, 0.5, -12), style, 20, 20, Vector2.new(180, 6), 4, 1.2)
+            end
+        end)
+    end,
     Land = function(model, position)
+        GuardianFx.shockRing(position, style, 20, 0.55)
         GuardianFx.puff(CFrame.new(position + Vector3.new(0, 0.5, 0)), style, 40, 34, Vector2.new(180, 6), 5, 1.5)
         GuardianFx.embers(CFrame.new(position + Vector3.new(0, 1, 0)), 24, 26, 70, 1.2)
         GuardianFx.flash(CFrame.new(position + Vector3.new(0, 2, 0)), style, 18)

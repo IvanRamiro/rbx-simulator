@@ -27,7 +27,7 @@ local GRADES = {
 }
 local ARMOURED = 0.3
 local MAX_KICKS = 4
-local WAKE_TIME = { Awaken = 2.8, Weaken = 1.7, SitDown = 1.5, Land = 1.2 }
+local WAKE_TIME = { Awaken = 2.8, Weaken = 1.9, Enrage = 1.5, SitDown = 1.5, Land = 1.2 }
 
 -- [model] = { anim, rig, kicks }
 local bound = setmetatable({}, { __mode = "k" })
