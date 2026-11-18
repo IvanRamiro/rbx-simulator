@@ -238,6 +238,33 @@ window.InputBegan:Connect(function(input)
     end
 end)
 
+-- A big moment (the breakthrough's cinematic, with the HUD put away) holds every notification until it is over: they are kept and
+-- shown one after another then, the way they would have been.
+local heldUntil = 0
+local kept = {} -- { sender, text, kind, color }
+local flushing = false
+local function flush()
+    if flushing then
+        return
+    end
+    flushing = true
+    task.spawn(function()
+        while os.clock() < heldUntil do
+            task.wait(heldUntil - os.clock() + 0.02)
+        end
+        flushing = false
+        local list = kept
+        kept = {}
+        for _, entry in list do
+            entry[1]:show(entry[2], entry[3], entry[4])
+        end
+    end)
+end
+
+function Toast.hold(seconds)
+    heldUntil = math.max(heldUntil, os.clock() + seconds)
+end
+
 function Toast.new(_name, _color, seconds)
     return setmetatable({ seconds = seconds or 4 }, Toast)
 end
@@ -249,6 +276,18 @@ function Toast:show(text, kind, color)
     kind = if KINDS[kind] then kind else "Info"
     text = tostring(text or "")
     if text == "" then
+        return
+    end
+    if os.clock() < heldUntil then
+        for _, entry in kept do
+            if entry[2] == text and entry[3] == kind then
+                return
+            end
+        end
+        if #kept < QUEUE_MAX + 2 then
+            table.insert(kept, { self, text, kind, color })
+        end
+        flush()
         return
     end
     -- the same again: counted on the one showing, never shown or queued twice

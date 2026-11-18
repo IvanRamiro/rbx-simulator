@@ -184,8 +184,8 @@ local catalog = {
     QiTick = { Id = "9126076030", Volume = 0.28, Notes = { 1, 1.125, 1.25, 1.5, 1.667, 2 }, Gap = 2.3, Max = 1 },
     -- the breakthrough is ready: a bright bell-tone ding (91 x 1.8 = 164)
     BreakthroughReady = { Id = "9126073011", Volume = 1.8, Group = "Interface", Gap = 1, Defer = true },
-    -- the breakthrough itself, by kind (AuraStyles.getBreakthrough), with its visual: a step (1.6 s), a realm's fifth level
-    -- (2.4 s), a new realm (3 s, after the Tribulation, an angelic vocal over it). No gong.
+    -- the breakthrough as others near it hear it, by kind (BreakthroughStyles.gradeOf), with its visual: a step, a realm's fifth level,
+    -- a new realm (after the Tribulation, an angelic vocal over it). No gong. (The breaker's own are the Bt entries below.)
     BreakthroughStep = { Id = "9116385087", Volume = 0.6, Near = 20, Reach = 200, With = { { "BreakthroughHarpShort", 0.05 } } },
     BreakthroughHarpShort = { Id = "1840525370", Volume = 1.8, Start = 0.3, Pitch = 1.26, Length = 1.3, Fade = 0.4, Near = 20, Reach = 200 },
     BreakthroughMilestone = { Id = "9116384485", Volume = 0.55, Start = 0.1, Length = 2.4, Fade = 0.6, Near = 20, Reach = 200,
@@ -196,6 +196,24 @@ local catalog = {
     BreakthroughTail = { Id = "9116418035", Volume = 1.7, Start = 0.65, Length = 1.8, Fade = 0.6, Near = 20, Reach = 220 },
     -- APM "Heavenly sting": an angelic vocal reveal, 269 at its peak 1 s in (x 0.7 = 188), cut at 3.6 s
     BreakthroughChoir = { Id = "1839901317", Volume = 0.7, Length = 3.6, Fade = 0.8, Near = 25, Reach = 220 },
+    -- the breakthrough as the one breaking through hears it (BreakthroughShow; flat, the interface's group; every file is one the game
+    -- already uses, at the level it is used at, layered anew): a drawn breath (the hatch's hush), a humming swell whose pitch the
+    -- show raises through the gather, a low thud for each beat of the realm's own signature, and the break by grade: a step is the
+    -- glowing thud and a short harp; a fifth level adds the stinger, a deep thud, the harp, the ding and the tail; a new realm the
+    -- air rush, the choir and the fairy dust; the apex the deeper impact under all of it
+    BtBreath = { Id = "9118158081", Volume = 1.4, Group = "Interface", Length = 1.1, Fade = 0.25 },
+    BtRise = { Id = "9116393976", Volume = 0.6, Group = "Interface" },
+    BtBeat = { Id = "9116385087", Volume = 0.5, Pitch = 0.6, Group = "Interface", Gap = 0.1, Max = 3 },
+    BtThump = { Id = "9113480917", Volume = 0.85, Pitch = 0.55, Group = "Interface" },
+    BtBreakStep = { Id = "9116385087", Volume = 0.7, Group = "Interface", Key = true, With = { { "RevealHarpShort", 0.05 }, { "RewardTail", 0.3 } } },
+    BtBreakMilestone = { Id = "9116384485", Volume = 0.62, Start = 0.1, Length = 2.5, Fade = 0.6, Group = "Interface", Key = true, Moment = 3,
+        With = { { "BtThump", 0 }, { "RevealHarp", 0.05 }, { "RevealTail", 0.7 }, { "RevealDing", 0.9 } } },
+    BtBreakRealm = { Id = "9116384485", Volume = 0.65, Start = 0.1, Length = 2.6, Fade = 0.6, Group = "Interface", Key = true, Moment = 4,
+        With = { { "BtThump", 0 }, { "HatchPillar", 0.05 }, { "RevealHarp", 0.1 }, { "RevealChoir", 0 }, { "RevealDing", 0.8 }, { "RevealTail", 0.9 },
+            { "RevealDust", 1 } } },
+    BtBreakApex = { Id = "9116384485", Volume = 0.65, Start = 0.1, Length = 2.6, Fade = 0.6, Group = "Interface", Key = true, Moment = 5,
+        With = { { "RevealDeep", 0 }, { "BtThump", 0 }, { "HatchPillar", 0.05 }, { "RevealHarp", 0.1 }, { "RevealChoir", 0 }, { "RevealDing", 0.8 },
+            { "RevealTail", 0.9 }, { "RevealDust", 1 }, { "RevealChoir", 1.6 } } },
 
     -- ---------- hatching ----------
     -- the build: an ice-like crackle of the shell (Ice Crackle Large Block Cracks 1: 478 x 0.3 = 143), and for the hatcher a
