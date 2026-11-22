@@ -483,6 +483,37 @@ def ellipsoid(c=(0, 0, 0), r=(1, 1, 1), seg=10, rings=6, noise=0.0, seed=0, flat
     return g
 
 
+def dome(c, r, hem, seg=10, rings=4, noise=0.0, seed=0, yaw=0.0, freq=1.0):
+    """The upper part of a lumpy ellipsoid down to the height `hem` (relative to its centre c), closed by a flat fan: a blanket thrown over a rock."""
+    g = Geo()
+    phi_h = math.acos(max(-1.0, min(1.0, hem / r[1])))
+    grid = []
+    for k in range(rings + 1):
+        phi = phi_h * k / rings
+        ring = []
+        for i in range(seg if k > 0 else 1):
+            th = TAU * i / seg
+            x, y, z = math.sin(phi) * math.cos(th), math.cos(phi), math.sin(phi) * math.sin(th)
+            w = 1.0 + (noise * fbm3(x * freq * 1.7 + seed, y * freq * 1.7, z * freq * 1.7 - seed, seed, 2) if noise else 0.0)
+            p = (x * r[0] * w, y * r[1] * w if k < rings else hem, z * r[2] * w)
+            xs, zs = p[0] * math.cos(yaw) + p[2] * math.sin(yaw), -p[0] * math.sin(yaw) + p[2] * math.cos(yaw)
+            ring.append((c[0] + xs, c[1] + p[1], c[2] + zs))
+        grid.append(ring)
+    for k in range(rings):
+        a, b = grid[k], grid[k + 1]
+        for i in range(seg):
+            j = (i + 1) % seg
+            if k == 0:
+                g.face(a[0], b[j], b[i])
+            else:
+                g.face(a[i], a[j], b[j], b[i])
+    last = grid[-1]
+    centre = (c[0], c[1] + hem, c[2])
+    for i in range(seg):
+        g.face(last[i], last[(i + 1) % seg], centre)
+    return g
+
+
 def lathe(profile, seg=10, c=(0, 0, 0), mod=None, phase=0.0):
     """Surface of revolution about +Y. profile: [(radius, y), ...] from the bottom up; radius 0 at an end closes it to a point, otherwise the end
     is capped flat. mod(theta, k) multiplies ring k's radius at angle theta."""
