@@ -2,19 +2,20 @@
 
     blender -b --factory-startup --python tools/blender/weapons/secret_orthodox.py -- clay|export|review|all
 
-Idea: the calm of a mountain sect. A straight, double-edged longsword of white-silver steel; down its middle a bar of azure
-light (the "Glow" piece, Neon, saturated azure: Neon whitens pale colours) framed by two silver rails so it reads as a lit
-fuller. Its guard is two mountain peaks: a faceted silver cross-bar whose ends rise forward and a little inward into peaks, snow-
-white at the summit and blue-silver below, a sapphire (a domed rounded rectangle, never a round or an almond) set in the lower
-flank of each. The grip is white pebbled ray-skin wrapped in azure silk in the Japanese diamond (hishi) wrap, silver collars at
-both ends. The pommel is a small silver peak with a ring under its tip; from the ring hangs a norigae (the Korean ornament): an
-azure cord, a knot of three crossing cord bands, a short cord, a white jade pendant cut as a small peak, a silver cap and a short
+Idea: the calm of a mountain sect. A straight, double-edged longsword of white-silver steel (brushed flats, a wavy temper line down
+each side, polished bevels); down its middle a bar of azure light (the "Glow" piece, Neon, saturated azure: Neon whitens pale
+colours) framed by two silver rails so it reads as a lit fuller. Its guard is two mountains: each side a plate cut to a skyline,
+two smaller plates stacked on it (ridge behind ridge, like a tsuba), silver with snow-white summits, a sapphire (a domed rounded
+rectangle, never a round or an almond) in a bezel on the middle terrace, and a thin line of the same azure light traced along
+the skyline. The grip is white pebbled ray-skin wrapped in azure silk in the Japanese diamond (hishi) wrap, silver collars at both
+ends. The pommel is a small silver peak with a ring under its tip; from the ring hangs a norigae (the Korean ornament): an azure
+cord, a knot of three crossing cord bands, a short cord, a white jade pendant cut as a small peak, a silver cap and a short
 tassel of azure and white silk.
 
 Parts and contacts (Roblox studs from the grip, point toward -Z):
   blade       z -0.9 to -5.1, runs into the guard's centre block (overlap), habaki collar at its foot;
-  guard       centre block z -0.76 to -1.10, cross-bar through it, a peak and a shoulder peak each side rising from the bar's end;
-  gems        on the peaks' flanks, set in bezels that sit on the faces;
+  guard       centre block z -0.76 to -1.10; each side three stacked plates (z -0.80 to -2.08, out to 1.14), their inner edge inside the block;
+  gems        on the middle terrace, in bezels that sit on the plate;
   grip        z -0.80 (inside the block) to 0.84, fuchi collar at the block's back, kashira collar at the pommel's foot;
   pommel      z 0.80 to 1.12, the ring's front edge overlaps its tip, the cord starts inside the ring;
   norigae     cord, knot, cord, jade (a ring of cord round its neck), cap, tassel threads rooted in the cap.

@@ -2,27 +2,27 @@
 
     blender -b --factory-startup --python tools/blender/weapons/secret_demonic.py -- clay|export|review|all
 
-Idea: overwhelming and feared. A black saber that bites out of a beast's jaws, a ridge of hooked spines down its back and an
-ember burning in its steel.
+Idea: overwhelming and feared. A black saber that bites out of a beast's jaws, a ridge of hooked spines down its back and an ember
+in its steel.
 - The blade is curved, single-edged black iron: it bows toward +X, the spine on the inside of the curve and the edge on the outside,
   a clip point at the tip. Crimson veins run through the iron (painted into the colour map); an ember-orange bar of light (the
   "Glow" piece, Neon, saturated orange-red) lies in the fuller beside the spine. Nine jagged spines, hooked back toward the hilt
   and uneven in size, serrate the back.
-- The guard is a beast's head biting the blade's root: an iron skull block, a snout whose upper jaw rests on the blade and whose
-  lower jaw lies under it (the blade is clamped between them), two long steel fangs hanging from the upper jaw and two shorter
-  ones rising from the lower, small teeth along both gums, a crimson mouth, a crest of three spines, swept cheek spines and two
-  curved steel tusks sweeping out and forward as the cross-guard. An animal, not a skull: a muzzle, lips, a mouth, no eyes and no
-  sockets anywhere.
-- The grip is iron wrapped in ragged crimson cloth, and three torn rags hang from the pommel's ring; the pommel is a short iron
-  cap with three claws.
+- The guard is a maw round the blade's root: a skull ring behind, then an upper and a lower jaw shell with an open mouth between
+  them, lined in crimson, the blade lying in the mouth clear of both; a row of steel fangs on each jaw (the upper hanging over the
+  blade's top flat, the lower rising under its bottom flat, the longest at the middle, every tip a hair clear of the steel); a
+  crest of three spines and swept spines on the cup; two curved steel tusks sweeping out and forward as the cross-guard. An
+  animal's teeth: no brows, no nose, no eyes, no sockets (a head with brows and a nose reads as a face from above).
+- The grip is iron wrapped in two layers of ragged crimson cloth, and three torn rags hang from the pommel's ring; the pommel is a
+  short iron cap with three claws.
 
 Parts and contacts (studs from the grip, point toward -Z; the hand closes on z -0.4..0.4):
-  head        skull block z -0.60 to -1.15, upper jaw z -1.05 to -1.64 (its underside 0.008 below the blade's top: it presses on it),
-              lower jaw z -1.10 to -1.45 (likewise from below), tusks rooted inside the skull;
-  blade       from z -0.95 (inside the skull) along its curve to the tip at (0.52, -5.25), runs through the jaws;
-  grip        z -0.75 (inside the skull) to 0.86, cloth wound on it;
+  maw         skull ring z -0.58 to -1.0 (the blade runs through its wall: contact), jaws z -0.9 to -1.67, fangs to -2.2, tusks rooted
+              in the cup's sides;
+  blade       from z -0.95 (inside the skull ring) along its curve to the tip at (0.56, -5.45); the jaws do not touch it;
+  grip        z -0.75 (inside the skull ring) to 0.86, cloth wound on it;
   pommel      z 0.82 to 1.12, ring at 1.17, rags tied to the ring.
-The head's rear face (z -0.60) stands clear of the fist (-0.40) and the pommel (0.82) of its back (0.40).
+The maw's back (z -0.58) stands clear of the fist (-0.40) and the pommel (0.82) of its back (0.40).
 
 Authored in the realm weapons' convention (see weapon_kit.py).
 """
