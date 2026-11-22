@@ -81,14 +81,20 @@ MOUNTAINS = [
 MASSIF = [(0.0, 188.0, 200.0, 112.0), (0.0, 254.0, 104.0, 80.0)]
 FOOTHILL = 22.0       # how far over the plaza the ground behind the pads has risen by z 230
 
-# hidden paths of the Unorthodox side (each a list of (x, z, h) knots, 3 studs half-wide) and the lookouts they end at (x, z, h, radius)
+# hidden paths of the Unorthodox side: each a list of (x, z, h) knots (h None: the ground's own height there, plus a stud), 3 studs half-wide;
+# the lookouts they end at (x, z, radius); and two ravines cut into the hillside (middle x, z, half width x, half length z, depth), each crossed
+# by a rope bridge between the two paths that end at its rims
 PATHS = [
-    [(-26.0, 155.0, 24.0), (-40.0, 178.0, 25.0), (-56.0, 198.0, 26.0), (-72.0, 214.0, 26.0)],
-    [(26.0, 155.0, 24.0), (40.0, 178.0, 25.0), (56.0, 198.0, 26.0), (72.0, 214.0, 26.0)],
-    [(-44.0, 306.0, 36.0), (-72.0, 296.0, 42.0), (-88.0, 280.0, 47.0), (-96.0, 262.0, 50.0)],
-    [(44.0, 306.0, 36.0), (72.0, 296.0, 42.0), (88.0, 280.0, 47.0), (96.0, 262.0, 50.0)],
+    [(-26.0, 155.0, 24.0), (-40.0, 178.0, None), (-56.0, 198.0, None), (-72.0, 214.0, None)],
+    [(26.0, 155.0, 24.0), (40.0, 178.0, None), (56.0, 198.0, None), (72.0, 214.0, None)],
+    [(-40.0, 308.0, None), (-50.0, 304.0, None)],
+    [(-74.0, 296.0, None), (-86.0, 284.0, None), (-92.0, 270.0, None)],
+    [(40.0, 308.0, None), (50.0, 304.0, None)],
+    [(74.0, 296.0, None), (86.0, 284.0, None), (92.0, 270.0, None)],
 ]
-NOOKS = [(-72.0, 214.0, 26.0, 6.5), (72.0, 214.0, 26.0, 6.5), (-96.0, 262.0, 50.0, 6.5), (96.0, 262.0, 50.0, 6.5)]
+NOOKS = [(-72.0, 214.0, 6.5), (72.0, 214.0, 6.5), (-92.0, 270.0, 6.5), (92.0, 270.0, 6.5)]
+RAVINES = [(-62.0, 300.0, 10.0, 15.0, 14.0), (62.0, 300.0, 10.0, 15.0, 14.0)]
+ROPE_BRIDGES = [((-51.0, 303.0), (-73.0, 297.5)), ((51.0, 303.0), (73.0, 297.5))]   # (x, z) of the two rims
 PATH_HALF = 3.0
 
 MATERIALS = ["Limestone", "Grass", "Pavement", "Ground", "Mud", "LeafyGrass", "Rock", "Slate", "Asphalt", "Basalt", "CrackedLava", "Sandstone"]
@@ -215,23 +221,67 @@ def corridor_half(kind):
     return STAIR_HALF + 2.0 if kind == "flight" else LANDING_HALF
 
 
+def base_height(x, z):
+    """The ground's own height before the stairs, pads and paths: the foothill or the mountain, smoothed over a few studs."""
+    total = 0.0
+    for dx, dz in ((0, 0), (5, 0), (-5, 0), (0, 5), (0, -5)):
+        mh, mz = mountain_height(x + dx, z + dz)
+        total += max(foothill(x + dx, z + dz), mh)
+    return total / 5.0
+
+
+def ravine_mask(x, z):
+    m = 0.0
+    for cx, cz, hx, hz, depth in RAVINES:
+        mx = 1.0 - smoothstep(hx - 2.0, hx + 1.0, abs(x - cx))
+        mz = 1.0 - smoothstep(hz - 2.0, hz + 1.0, abs(z - cz))
+        m = max(m, mx * mz)
+    return m
+
+
+_HEIGHTS = {}
+
+
+def knot_height(knot):
+    x, z, h = knot
+    if h is not None:
+        return h
+    key = (x, z)
+    if key not in _HEIGHTS:
+        _HEIGHTS[key] = base_height(x, z) + 1.0
+    return _HEIGHTS[key]
+
+
+def path_segments():
+    if "segs" not in _HEIGHTS:
+        segs = []
+        for knots in PATHS:
+            for k0, k1 in zip(knots, knots[1:]):
+                x0, z0, h0, x1, z1, h1 = k0[0], k0[1], knot_height(k0), k1[0], k1[1], knot_height(k1)
+                segs.append((x0, z0, h0, x1, z1, h1, min(x0, x1) - 8, max(x0, x1) + 8, min(z0, z1) - 8, max(z0, z1) + 8))
+        _HEIGHTS["segs"] = segs
+    return _HEIGHTS["segs"]
+
+
 def path_state(x, z):
     """(mask, height) of the hidden paths and their lookouts at a point: mask 1 on a path (or a lookout), falling to 0 over 4 studs."""
     best_mask, best_h = 0.0, 0.0
-    for knots in PATHS:
-        for (x0, z0, h0), (x1, z1, h1) in zip(knots, knots[1:]):
-            vx, vz = x1 - x0, z1 - z0
-            L2 = vx * vx + vz * vz
-            t = max(0.0, min(1.0, ((x - x0) * vx + (z - z0) * vz) / L2))
-            d = math.hypot(x - (x0 + vx * t), z - (z0 + vz * t))
-            m = 1.0 - smoothstep(PATH_HALF, PATH_HALF + 4.0, d)
-            if m > best_mask:
-                best_mask, best_h = m, lerp(h0, h1, t)
-    for nx, nz, nh, nr in NOOKS:
-        d = math.hypot(x - nx, z - nz)
-        m = 1.0 - smoothstep(nr, nr + 4.0, d)
+    for x0, z0, h0, x1, z1, h1, bx0, bx1, bz0, bz1 in path_segments():
+        if x < bx0 or x > bx1 or z < bz0 or z > bz1:
+            continue
+        vx, vz = x1 - x0, z1 - z0
+        L2 = vx * vx + vz * vz
+        t = max(0.0, min(1.0, ((x - x0) * vx + (z - z0) * vz) / L2))
+        d = math.hypot(x - (x0 + vx * t), z - (z0 + vz * t))
+        m = 1.0 - smoothstep(PATH_HALF, PATH_HALF + 4.0, d)
         if m > best_mask:
-            best_mask, best_h = m, nh
+            best_mask, best_h = m, lerp(h0, h1, t)
+    for nx, nz, nr in NOOKS:
+        if abs(x - nx) > nr + 5 or abs(z - nz) > nr + 5:
+            continue
+        m = 1.0 - smoothstep(nr, nr + 4.0, math.hypot(x - nx, z - nz))
+        if m > best_mask:
+            best_mask, best_h = m, knot_height((nx, nz, None))
     return best_mask, best_h
 
 
@@ -274,6 +324,10 @@ def ground(x, z):
         if m > 0:
             h = lerp(h if h is not None else foothill(x, z), HQ[q]["pad_h"], m)
             detail["pad"] = (q, rho, m)
+    rm = ravine_mask(x, z)               # the ravines
+    if rm > 0 and f["massif"] > 0 and h is not None:
+        h -= rm * max(r[4] for r in RAVINES)
+        detail["ravine"] = rm
     pm, ph = path_state(x, z)            # the hidden paths
     if pm > 0 and f["massif"] > 0:
         h = ph if h is None else lerp(h, ph, pm)
@@ -488,7 +542,7 @@ def free_spot(x, z, pad_margin):
             return None
     if path_state(x, z)[0] > 0.02:
         return None
-    for nx, nz, nh, nr in NOOKS:
+    for nx, nz, nr in NOOKS:
         if math.hypot(x - nx, z - nz) < nr + 8:
             return None
     return h, d
@@ -583,7 +637,7 @@ def report():
                 worst = max(worst, abs(ground_h(px + math.cos(math.radians(k)) * rr, pz + math.sin(math.radians(k)) * rr) - HQ[q]["pad_h"]))
         level[q] = round(worst, 2)
     voxels = sum(max(1, int(math.ceil((h - b) / 4.0))) for h, b in zip(H, B) if h is not None)
-    walk = max([math.hypot(*pad_centre(q)) + HQ[q]["flat"] for q in ORDER] + [math.hypot(nx, nz) for nx, nz, nh, nr in NOOKS])
+    walk = max([math.hypot(*pad_centre(q)) + HQ[q]["flat"] for q in ORDER] + [math.hypot(nx, nz) for nx, nz, nr in NOOKS])
     return {
         "grid": {"origin": (ox, oz), "size": n, "cells": cells},
         "area_sq_studs": cells * CELL * CELL, "blossom_sq_studs": 175728, "origin_abyss_disc_sq_studs": round(math.pi * 165 ** 2),
@@ -710,11 +764,15 @@ def write_placements(path):
         L.append("        },")
     L.append("    },")
     L.append("    Nooks = { -- the Unorthodox side's hidden lookouts, each at the end of a hidden path")
-    L.append("        " + ", ".join(v3(n[0], n[2], n[1]) for n in NOOKS) + ",")
+    L.append("        " + ", ".join(v3(n[0], knot_height((n[0], n[1], None)), n[1]) for n in NOOKS) + ",")
     L.append("    },")
     L.append("    Paths = { -- those paths, as knots")
     for knots in PATHS:
-        L.append("        { " + ", ".join(v3(k[0], k[2], k[1]) for k in knots) + " },")
+        L.append("        { " + ", ".join(v3(k[0], knot_height(k), k[1]) for k in knots) + " },")
+    L.append("    },")
+    L.append("    RopeBridges = { -- rope and timber bridges across the Unorthodox side's ravines: the two rims")
+    for a_, b_ in ROPE_BRIDGES:
+        L.append("        { From = %s, To = %s }," % (v3(a_[0], knot_height((a_[0], a_[1], None)), a_[1]), v3(b_[0], knot_height((b_[0], b_[1], None)), b_[1])))
     L.append("    },")
     L.append("    Dress = { -- trees and rocks, each at the ground's own height: position, yaw")
     for key in ("TreesO", "TreesU", "RocksD"):
@@ -785,7 +843,7 @@ def sketch(path):
         for q in a["Pads"][f]["Trial"].values():
             for p in (q if isinstance(q, list) else [q]):
                 disc(*p, 1.6, FC[f])
-    for nx, nz, nh, nr in NOOKS:
+    for nx, nz, nr in NOOKS:
         disc(nx, nz, 3.0, (255, 255, 120))
     for fl in placed()["Falls"]:
         disc(fl["Lip"][0], fl["Lip"][1], 2.5, (120, 200, 255))

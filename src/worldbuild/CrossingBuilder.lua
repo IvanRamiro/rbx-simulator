@@ -397,6 +397,17 @@ local function unorthodoxGate(m, f, k)
     end
 end
 
+-- a lit crimson brazier standing on `base` (the middle of its foot): a basalt stand, an iron bowl, a flame and one light
+local function brazier(m, base)
+    column(m, "BrazierStand", 1.5, 2.2, base, { Material = Enum.Material.Basalt, Color = rgb(36, 34, 42), Solid = true })
+    local bowl = column(m, "BrazierBowl", 3.2, 1.0, base * CFrame.new(0, 2.2, 0), { Material = Enum.Material.Metal, Color = DEMONIC.Iron, Solid = true })
+    local fire = Instance.new("Fire")
+    fire.Size, fire.Heat = 5.5, 6
+    fire.Color, fire.SecondaryColor = rgb(255, 70, 46), rgb(255, 160, 50)
+    fire.Parent = bowl
+    WorldBuilder.addLight(bowl, rgb(255, 60, 40), 22, 0.9)
+end
+
 local function demonicGate(m, f, k)
     local h = 8.2 * k
     -- two black fangs, stepped to a point and leaning toward each other, on basalt feet
@@ -412,14 +423,7 @@ local function demonicGate(m, f, k)
         end
         part(m, "Fangtip", Vector3.new(0.5, 2.4, 0.5), lean * CFrame.new(0, y + 1.0, 0), { Material = Enum.Material.Basalt, Color = DEMONIC.Iron })
         -- a brazier at its foot, lit crimson
-        local bowlAt = f * CFrame.new(side * h, 0, -4.4)
-        column(m, "BrazierStand", 1.5, 2.2, bowlAt, { Material = Enum.Material.Basalt, Color = rgb(36, 34, 42), Solid = true })
-        local bowl = column(m, "BrazierBowl", 3.2, 1.0, bowlAt * CFrame.new(0, 2.2, 0), { Material = Enum.Material.Metal, Color = DEMONIC.Iron, Solid = true })
-        local fire = Instance.new("Fire")
-        fire.Size, fire.Heat = 5.5, 6
-        fire.Color, fire.SecondaryColor = rgb(255, 70, 46), rgb(255, 160, 50)
-        fire.Parent = bowl
-        WorldBuilder.addLight(bowl, rgb(255, 60, 40), 22, 0.9)
+        brazier(m, f * CFrame.new(side * h, 0, -4.4))
     end
     -- a crimson cloth slung between the fangs, sagging in the middle
     local w = h * 0.68
@@ -459,7 +463,7 @@ local STAIR_LOOK = {
     Unorthodox = { Step = { Material = Enum.Material.Slate, Color = rgb(58, 80, 72), Solid = true },
         Wall = { Material = Enum.Material.Wood, Color = rgb(64, 58, 44), Solid = true }, Cap = plastic(UNORTHODOX.Copper) },
     Demonic = { Step = { Material = Enum.Material.Basalt, Color = rgb(42, 40, 48), Solid = true },
-        Wall = { Material = Enum.Material.Basalt, Color = rgb(30, 28, 34), Solid = true }, Cap = plastic(DEMONIC.Crimson) },
+        Wall = { Material = Enum.Material.Basalt, Color = rgb(30, 28, 34), Solid = true }, Cap = { Material = Enum.Material.Neon, Color = rgb(196, 20, 30), Shadow = false } },
 }
 
 local function buildStairs(root)
@@ -530,7 +534,13 @@ local function buildStairs(root)
         if landing then
             local flagModel = model(stairs, "Flags_" .. faction)
             local s = (landing[2] + landing[3]) / 2
-            flags(flagModel, at(localPoint(s, 0, landing[4]), pad.FrontYaw), faction, st.LandingWidth / 2 - 4)
+            local lf = at(localPoint(s, 0, landing[4]), pad.FrontYaw)
+            flags(flagModel, lf, faction, st.LandingWidth / 2 - 4)
+            if faction == "Demonic" then -- the ominous red light: two braziers where the flight breaks
+                for _, side_ in { -1, 1 } do
+                    brazier(flagModel, lf * CFrame.new(side_ * 13, 0, 0))
+                end
+            end
         end
     end
 end
@@ -692,6 +702,46 @@ local function buildPads(root)
     end
 end
 
+-- ---------- the Unorthodox side's rope and timber bridges ----------
+local ROPE = { Material = Enum.Material.Fabric, Color = rgb(150, 124, 86), Shadow = false }
+
+local function buildRopeBridges(root)
+    local bridges = folder(root, "RopeBridges")
+    for index, br in P.RopeBridges do
+        local m = model(bridges, "RopeBridge" .. index)
+        local aw, bw = at(br.From, 0).Position, at(br.To, 0).Position
+        local length = (bw - aw).Magnitude
+        local dir = (bw - aw).Unit
+        local side = dir:Cross(Vector3.yAxis).Unit
+        local count = math.max(4, math.floor(length / 2))
+        local function sagAt(t)
+            return -2.4 * 4 * t * (1 - t)
+        end
+        for i = 0, count - 1 do
+            local t = (i + 0.5) / count
+            local pos = aw:Lerp(bw, t) + Vector3.new(0, sagAt(t) - 0.25, 0)
+            part(m, "Plank", Vector3.new(5.2, 0.4, length / count * 0.82), CFrame.lookAt(pos, pos + dir), { Material = Enum.Material.WoodPlanks, Color = rgb(112, 92, 66), Solid = true })
+        end
+        for _, u in { -2.5, 2.5 } do -- a rope each side, hung from posts, a little over a stud above the planks
+            local previous
+            for i = 0, 6 do
+                local t = i / 6
+                local point = aw:Lerp(bw, t) + side * u + Vector3.new(0, sagAt(t) + 3.0, 0)
+                if previous then
+                    local len = (point - previous).Magnitude
+                    local rope = part(m, "Rope", Vector3.new(len, 0.35, 0.35), CFrame.lookAt((point + previous) / 2, point) * CFrame.Angles(0, math.pi / 2, 0), ROPE)
+                    rope.Shape = Enum.PartType.Cylinder
+                end
+                previous = point
+            end
+            for _, end_ in { aw, bw } do -- (a post at each end of each rope)
+                local base = CFrame.new(end_ + side * u + Vector3.new(0, -0.6, 0))
+                column(m, "Post", 0.9, 4.6, base, { Material = Enum.Material.Wood, Color = rgb(70, 58, 44), Solid = true })
+            end
+        end
+    end
+end
+
 -- ---------- where a fall returns to ----------
 local ROUTE_DEPTH = 100 -- the zones reach this far under the ground: a falling player brushes the cliffs under the island on the way down, and must still count as
                         -- "on the route" (a player who last stood outside every zone is only returned by the 110-stud rule, which lets them fall twice as far)
@@ -766,6 +816,12 @@ local function buildApproach(root)
     for _, nook in P.Nooks do
         route(Vector3.new(20, 0, 20), at(nook, 0))
     end
+    for _, br in P.RopeBridges do
+        local mid = (br.From + br.To) / 2
+        local len = (Vector3.new(br.To.X, 0, br.To.Z) - Vector3.new(br.From.X, 0, br.From.Z)).Magnitude
+        local yaw = math.atan2(-(br.To.X - br.From.X), -(br.To.Z - br.From.Z))
+        route(Vector3.new(10, 0, len + 6), at(Vector3.new(mid.X, math.min(br.From.Y, br.To.Y) - 3, mid.Z), yaw), 0, math.abs(br.To.Y - br.From.Y) + 6)
+    end
     do
         local landing = P.Stairs.Unorthodox
         for _, tier in landing.Tiers do
@@ -818,7 +874,7 @@ local function buildDress(root)
     -- the blood moon: a big Neon ball far behind the Demonic mountains, tied to the island (a part in its model: it lights nothing, and it
     -- touches neither the sky nor Lighting for anyone)
     local moon = P.Moon
-    local ball_ = ball(dress, "BloodMoon", moon.Radius * 2, at(moon.Position, 0), { Material = Enum.Material.Neon, Color = rgb(112, 4, 12), Shadow = false })
+    ball(dress, "BloodMoon", moon.Radius * 2, at(moon.Position, 0), { Material = Enum.Material.Neon, Color = rgb(112, 4, 12), Shadow = false })
     counts.Moon = 1
     return counts
 end
@@ -966,6 +1022,7 @@ function CrossingBuilder.build()
     buildPlaza(root)
     buildGate(root)
     buildStairs(root)
+    buildRopeBridges(root)
     buildReps(root)
     buildPads(root)
     local zones = buildApproach(root)
