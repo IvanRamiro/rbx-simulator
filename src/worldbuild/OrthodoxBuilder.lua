@@ -197,7 +197,7 @@ local function removeSuperseded(root, frame)
     local removed = 0
     if stairs then
         for _, name in H.Remove.Stairs do
-            local old = stairs:FindFirstChild(name)
+            local old = stairs:FindFirstChild(name, true) -- (the gate stands in Stairs_Orthodox, one folder down)
             if old then
                 old:Destroy()
                 removed += 1
@@ -224,6 +224,48 @@ local function removeSuperseded(root, frame)
     return removed, trees
 end
 
+-- Terrain Grass grows blades over a stud tall through any floor laid on it (measured 2026-11-16): under the hall's footprint every Grass voxel becomes
+-- Pavement (level, bladeless), its occupancy untouched (each column is read and written back alone, so a neighbour is never rewritten and a second
+-- run changes nothing). Returns how many voxels changed.
+function OrthodoxBuilder.paveGround(frame)
+    frame = frame or padFrame()
+    local terrain = workspace.Terrain
+    -- the hall's footprint, and the top of the stair that climbs to it (a strip along the pad's front, 22 studs either side of its axis)
+    local rects = { { H.Footprint.XHalf, H.Footprint.ZFrom, H.Footprint.ZTo }, { 22, -112, H.Footprint.ZFrom } }
+    local y0 = math.floor((frame.Position.Y - 16) / 4) * 4
+    local layers = 8 -- 32 studs of ground and what lies just under it
+    local changed = 0
+    for _, rect in rects do
+        local half, zFrom, zTo = rect[1], rect[2], rect[3]
+        local minX, maxX, minZ, maxZ = math.huge, -math.huge, math.huge, -math.huge
+        for _, c in { Vector3.new(-half, 0, zFrom), Vector3.new(half, 0, zFrom), Vector3.new(-half, 0, zTo), Vector3.new(half, 0, zTo) } do
+            local w = frame:PointToWorldSpace(c)
+            minX, maxX, minZ, maxZ = math.min(minX, w.X), math.max(maxX, w.X), math.min(minZ, w.Z), math.max(maxZ, w.Z)
+        end
+        for gx = math.floor(minX / 4) * 4, math.ceil(maxX / 4) * 4 - 4, 4 do
+            for gz = math.floor(minZ / 4) * 4, math.ceil(maxZ / 4) * 4 - 4, 4 do
+                local lp = frame:PointToObjectSpace(Vector3.new(gx + 2, frame.Position.Y, gz + 2))
+                if math.abs(lp.X) <= half and lp.Z >= zFrom and lp.Z <= zTo then
+                    local region = Region3.new(Vector3.new(gx, y0, gz), Vector3.new(gx + 4, y0 + layers * 4, gz + 4))
+                    local mats, occ = terrain:ReadVoxels(region, 4)
+                    local dirty = false
+                    for k = 1, layers do
+                        if mats[1][k][1] == Enum.Material.Grass and occ[1][k][1] > 0 then
+                            mats[1][k][1] = Enum.Material.Pavement
+                            dirty = true
+                            changed += 1
+                        end
+                    end
+                    if dirty then
+                        terrain:WriteVoxels(region, 4, mats, occ)
+                    end
+                end
+            end
+        end
+    end
+    return changed
+end
+
 function OrthodoxBuilder.build()
     if not WorldBuilder.hasTemplate(ISLAND, "Orthodox_HallBody") then
         return { Skipped = "the hall's kit is not stored yet (import the four FBX files and run storeKit on each): nothing built, the first foundation is untouched" }
@@ -236,6 +278,7 @@ function OrthodoxBuilder.build()
     end
     local frame = padFrame()
     local removed, replanted = removeSuperseded(root, frame)
+    local paved = OrthodoxBuilder.paveGround(frame)
     local hall = folder(pad, "Hall")
     local placed, missing, lights = buildKit(hall, frame)
     local boxes = buildColliders(hall, frame)
@@ -246,7 +289,7 @@ function OrthodoxBuilder.build()
     if #missing > 0 then
         warn("OrthodoxBuilder: not in the kit yet (import and store these FBX files first), left out: " .. table.concat(missing, ", "))
     end
-    return { Placed = placed, Missing = missing, Lights = lights, Colliders = boxes, Falls = falls, Trees = trees, FirstFoundationParts = removed, TreesReplaced = replanted }
+    return { Placed = placed, Missing = missing, Lights = lights, Colliders = boxes, Falls = falls, Trees = trees, FirstFoundationParts = removed, TreesReplaced = replanted, GrassPaved = paved }
 end
 
 function OrthodoxBuilder.check()
