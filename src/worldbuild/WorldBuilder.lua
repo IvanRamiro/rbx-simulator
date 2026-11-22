@@ -1102,16 +1102,53 @@ function WorldBuilder.seatImport(island, model, anchorName, child)
     return #folder:GetChildren()
 end
 
+-- Every map's own templates (the owner, 2026-11-22: "every map must have its own dedicated asset collection"; none shared): one folder per map in
+-- ServerStorage.WorldAssets, named as the owner asked. A kit is addressed by its key (an island's name, or a Murim territory's): the one place that
+-- knows where it lives. WorldBuilder.assetPath(key) lists the folders, WorldBuilder.kitFolder(key, create) finds (or makes) it. Templates are
+-- build-time only: the placed copies are saved in the place, and nothing here is replicated to players.
+local KIT_PATHS = {
+    Yggdrasil = { "YggdrasilAssets" },
+    BeginnerIsle = { "BeginnerIslandAssets" },
+    JadeGrove = { "JadeGroveAssets" },
+    EmberPeak = { "EmberPeakAssets" },
+    MoonlitIsle = { "MoonlitIsleAssets" },
+    OriginAbyss = { "OriginAbyssAssets" },
+    BlossomSanctuary = { "BlossomSanctuaryAssets" },
+    Dawnspire = { "MurimAssets", "DawnspireAssets" },
+    Windrift = { "MurimAssets", "WindriftAssets" },
+    Nightfall = { "MurimAssets", "NightfallAssets" },
+    HubNpcs = { "NpcAssets" }, -- people, not environment
+}
+
+function WorldBuilder.assetPath(key)
+    return assert(KIT_PATHS[key], "no asset folder for " .. tostring(key))
+end
+
+function WorldBuilder.kitFolder(key, create)
+    local folder = ServerStorage:FindFirstChild("WorldAssets")
+    if not folder and create then
+        folder = Instance.new("Folder")
+        folder.Name = "WorldAssets"
+        folder.Parent = ServerStorage
+    end
+    for _, name in WorldBuilder.assetPath(key) do
+        local nextFolder = folder and folder:FindFirstChild(name)
+        if not nextFolder and create then
+            nextFolder = Instance.new("Folder")
+            nextFolder.Name = name
+            nextFolder.Parent = folder
+        end
+        folder = nextFolder
+    end
+    return folder
+end
+local kitFolder = WorldBuilder.kitFolder
+
 -- Moves the meshes of an imported kit model (exported at the Blender origin) into
--- ServerStorage.WorldKit.<island> as templates, each CFrame relative to its authored origin.
+-- ServerStorage.WorldAssets.<its map's folder> (kitFolder) as templates, each CFrame relative to its authored origin.
 -- The origin is the anchor cube when the export has one, otherwise the model pivot.
 function WorldBuilder.storeKit(island, model, anchorName)
-    local kit = ServerStorage:FindFirstChild("WorldKit") or Instance.new("Folder")
-    kit.Name = "WorldKit"
-    kit.Parent = ServerStorage
-    local folder = kit:FindFirstChild(island) or Instance.new("Folder")
-    folder.Name = island
-    folder.Parent = kit
+    local folder = kitFolder(island, true)
     local anchor = anchorName and model:FindFirstChild(anchorName)
     local origin = if anchor then anchor.CFrame else model:GetPivot()
     if anchor then
@@ -1139,7 +1176,7 @@ end
 
 -- A piece's templates: the one named `name`, or its material parts (<name>__Marble, <name>__Gold, ...).
 local function templates(island, name)
-    local folder = ServerStorage.WorldKit[island]
+    local folder = kitFolder(island)
     local part = folder:FindFirstChild(name)
     if part then
         return { part }
@@ -1196,7 +1233,7 @@ function WorldBuilder.storeUpgrades(model)
         if part:IsA("MeshPart") then
             local where = UPGRADE_ISLANDS[string.sub(part.Name, 1, 2)]
             assert(where, "no island for the piece " .. part.Name)
-            local folder = ServerStorage.WorldKit[where.Island]
+            local folder = kitFolder(where.Island)
             local old = folder:FindFirstChild(part.Name)
             if old then
                 old:Destroy()
@@ -1215,7 +1252,7 @@ function WorldBuilder.storeUpgrades(model)
     end
     model:Destroy()
     for _, where in UPGRADE_ISLANDS do
-        WorldBuilder.applyCollision(ServerStorage.WorldKit[where.Island])
+        WorldBuilder.applyCollision(kitFolder(where.Island))
     end
     return stored
 end
@@ -1223,7 +1260,7 @@ end
 -- Points templates that were exported with the same atlas at one uploaded copy of it, so the
 -- texture is loaded once (each FBX import uploads its own copy).
 function WorldBuilder.shareTexture(island, sourceName, names)
-    local folder = ServerStorage.WorldKit[island]
+    local folder = kitFolder(island)
     local textureId = template(island, sourceName).TextureID
     for _, name in names do
         local part = folder:FindFirstChild(name)
@@ -1342,7 +1379,7 @@ end
 
 -- ---------- the hub's people (tools/blender/npcs/hub_npcs.py; the owner approved them 2026-11-12) ----------
 -- Each NPC is Roblox's default R15 body, its part colours its base clothes, dressed in pieces stored from assets/npcs/HubNpcs.fbx
--- (WB.storeKit("HubNpcs", <import>, "NPC_Anchor")): ServerStorage.WorldKit.HubNpcs.<Npc>_<Piece>__<Material>, each welded to the
+-- (WB.storeKit("HubNpcs", <import>, "NPC_Anchor")): ServerStorage.WorldAssets.NpcAssets.<Npc>_<Piece>__<Material>, each welded to the
 -- body part Placements/HubNpcs.lua names, in the colour and Roblox material it gives. The stock painted face is cleared: each has
 -- its own, modelled. Their root is anchored; NpcService plays their idle. Tagged "HubNpc".
 --   WB.buildHubNpcs("Yggdrasil")       the Blacksmith's, the Auction House's and Buy & Sell's keepers and the Guide (who talks:
@@ -1396,7 +1433,7 @@ function WorldBuilder.buildNpc(npc, rootCFrame, data)
     rig.Head.TextureID = "" -- the stock face: each NPC wears its own
     rig:PivotTo(rootCFrame)
     rig.HumanoidRootPart.Anchored = true
-    local kit = ServerStorage.WorldKit.HubNpcs
+    local kit = kitFolder("HubNpcs")
     for _, template in kit:GetChildren() do
         local base = splitName(template.Name)
         if template:IsA("MeshPart") and string.sub(base, 1, #npc + 1) == npc .. "_" then
@@ -1456,7 +1493,7 @@ function WorldBuilder.buildMerchantTemplate(island)
     local camp = Instance.new("Model")
     camp.Name = "Camp"
     camp.Parent = model
-    for _, template in ServerStorage.WorldKit.HubNpcs:GetChildren() do
+    for _, template in kitFolder("HubNpcs"):GetChildren() do
         if template:IsA("MeshPart") and string.sub(template.Name, 1, 5) == "Camp_" then
             local piece = dressPiece(template, data, "Camp", frame, camp, nil)
             piece.CanCollide = string.find(template.Name, "Crates") ~= nil or string.find(template.Name, "Chest_") ~= nil
@@ -1882,7 +1919,7 @@ local function dressBridge(model, themeName)
     end
     local gate = model:FindFirstChild("Gate")
     local barrier = gate and (gate:FindFirstChild("QiBarrier") or gate:FindFirstChild("GateAnchor")) -- (an open bridge has an anchor, no barrier)
-    local hubKit = ServerStorage:FindFirstChild("WorldKit") and ServerStorage.WorldKit:FindFirstChild("Yggdrasil")
+    local hubKit = kitFolder("Yggdrasil")
     local hubGate = hubKit and (hubKit:FindFirstChild("HB_BridgeGate__Marble") ~= nil)
     if barrier and hubGate then
         -- the hub's side: the celestial city's gate (hub_celestial.bridge_gate; the islands' own gates there were Chinese,
@@ -2026,8 +2063,7 @@ end
 
 -- Whether the island's kit holds a template of this name (one part, or its material parts).
 local function hasTemplate(island, name)
-    local kit = ServerStorage:FindFirstChild("WorldKit")
-    local folder = kit and kit:FindFirstChild(island)
+    local folder = kitFolder(island)
     if not folder then
         return false
     end
@@ -2132,7 +2168,7 @@ end
 function WorldBuilder.storeHallOfRecords(hallImport, pavingImport)
     local stored = 0
     if pavingImport then
-        local kit = ServerStorage.WorldKit.Yggdrasil
+        local kit = kitFolder("Yggdrasil", true)
         for _, part in kit:GetChildren() do
             local base = splitName(part.Name)
             if base == "HB_Avenues" or base == "HB_Plazas" or base == "HB_PavingRunes" then

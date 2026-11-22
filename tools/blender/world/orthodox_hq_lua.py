@@ -35,7 +35,7 @@ def write(data):
     A("-- Read by OrthodoxBuilder. Every position is in the PAD'S FRAME: origin at the Orthodox pad's centre (Placements/MurimCrossing.lua Pads.Orthodox.Centre)")
     A("-- lifted by FloorLift (the court's floor is 0.5 over the pad's ground), turned by the pad's FrontYaw, so y = 0 is the court's floor and the front (-Z) faces")
     A("-- the plaza. Yaw: CFrame.Angles(0, Yaw, 0) in that frame. The kit is the FBX files in assets/world/MurimCrossing/Orthodox (Orthodox_<Piece>__<Material>,")
-    A("-- anchor OH_Anchor), stored by WorldBuilder.storeKit(\"MurimCrossing\", import, \"OH_Anchor\"). Every visual piece is CanCollide/CanQuery/CanTouch false with Box")
+    A("-- anchor OH_Anchor), stored by WorldBuilder.storeKit(\"Dawnspire\", import, \"OH_Anchor\"). Every visual piece is CanCollide/CanQuery/CanTouch false with Box")
     A("-- fidelity: all walking and bumping is the Colliders (invisible Plastic boxes, one material so they cost one batch).")
     A("return {")
     A("    Pad = \"Orthodox\",")
@@ -76,7 +76,7 @@ def write(data):
     for f in data["falls"]:
         A("        { Zone = \"%s\", Lip = %s, From = %s }," % (f["zone"], v3(f["lip"]), v3(f["frm"])))
     A("    },")
-    A("    Trees = { -- the Blossom Sanctuary's trees (WorldKit.BlossomSanctuary), position and yaw")
+    A("    Trees = { -- the Blossom Sanctuary's trees (WorldAssets.BlossomSanctuaryAssets), position and yaw")
     for i, t in enumerate(data["trees"]):
         A("        { Position = %s, Yaw = %.3f, Scale = %.2f }," % (v3(t), (i * 1.9) % 6.28, 1.15 + 0.1 * (i % 3)))
     A("    },")

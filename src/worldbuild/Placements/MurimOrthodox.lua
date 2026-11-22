@@ -255,7 +255,7 @@ return {
         { Zone = "mound", Lip = Vector3.new(-38.500, 6.000, -11.600), From = Vector3.new(-38.500, 6.200, -8.600) },
         { Zone = "mound", Lip = Vector3.new(38.500, 6.000, -11.600), From = Vector3.new(38.500, 6.200, -8.600) },
     },
-    Trees = { -- the Blossom Sanctuary's trees (WorldKit.BlossomSanctuary), position and yaw
+    Trees = { -- the Blossom Sanctuary's trees (WorldAssets.BlossomSanctuaryAssets), position and yaw
         { Position = Vector3.new(-36.000, -0.300, -36.000), Yaw = 0.000, Scale = 1.15 },
         { Position = Vector3.new(36.000, -0.300, -36.000), Yaw = 1.900, Scale = 1.25 },
         { Position = Vector3.new(-38.000, -0.300, -24.500), Yaw = 3.800, Scale = 1.35 },

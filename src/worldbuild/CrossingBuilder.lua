@@ -567,7 +567,7 @@ local function wear(rig, bodyName, name, size, offset, look)
     return p
 end
 
--- The faces the hub's people already have (assets/npcs/HubNpcs.fbx, stored in WorldKit.HubNpcs): each representative wears the eyes, brows
+-- The faces the hub's people already have (assets/npcs/HubNpcs.fbx, stored in WorldAssets.NpcAssets): each representative wears the eyes, brows
 -- and mouth of one of them (the hub's kit is reused, not remade; their hair, beards and robes are plain parts for now). Where the kit
 -- isn't stored, the stock face stays.
 local FACES = {
@@ -577,7 +577,7 @@ local FACES = {
 }
 
 local function wearFace(rig, spec, hairColour)
-    local kit = ServerStorage:FindFirstChild("WorldKit") and ServerStorage.WorldKit:FindFirstChild("HubNpcs")
+    local kit = WorldBuilder.kitFolder("HubNpcs")
     if not kit then
         return 0
     end

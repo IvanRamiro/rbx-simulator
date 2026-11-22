@@ -4,7 +4,7 @@
 --   local OB = require(game.ServerStorage.WorldBuild.OrthodoxBuilder:Clone())
 --   -- once per import (File > Import 3D, Edit mode, one file at a time, into Workspace, nothing renamed): Orthodox_Structure, Orthodox_Roofs,
 --   -- Orthodox_Modules, Orthodox_Props. Each import is a Model in Workspace; then
---   OB.storeKit(workspace.Orthodox_Structure)   -- moves its meshes into ServerStorage.WorldKit.MurimCrossing as templates (WorldBuilder.storeKit)
+--   OB.storeKit(workspace.Orthodox_Structure)   -- moves its meshes into ServerStorage.WorldAssets.MurimAssets.DawnspireAssets as templates (WorldBuilder.storeKit)
 --   OB.build()                                  -- Workspace.FloatingIslands.MurimCrossing.OrthodoxPad.Hall (replaces what it built before)
 --   OB.check()                                  -- a report: parts, lights, colliders, what is missing
 --
@@ -12,7 +12,7 @@
 --   Hall/Kit          every MeshPart of the hall (one Model per placement), its material and colour from the placements' Looks (no texture), never colliding
 --   Hall/Colliders    invisible Plastic boxes: the floors, steps, walls, columns, rails, the rock mounds (one material: one batch)
 --   Hall/Spots        markers: VaultSpot (tag FactionVaultSpot), MasterSpot (tag FactionMasterSpot), the court's centre, the door, the inner court
---   Hall/Falls        four waterfalls (WorldBuilder.buildWaterfall), Hall/Trees the Blossom Sanctuary's trees (WorldKit.BlossomSanctuary, reused)
+--   Hall/Falls        four waterfalls (WorldBuilder.buildWaterfall), Hall/Trees the Blossom Sanctuary's trees (WorldAssets.BlossomSanctuaryAssets, reused: to be replaced by Dawnspire's own cherry trees, the owner 2026-11-22)
 --   Hall/Lights       the lanterns marked Light carry a PointLight each (four in the whole hall)
 -- It also removes what the first foundation built on this stair's top that the hall replaces (Stairs.Gate_Orthodox, Stairs.Flags_Orthodox) and the first
 -- foundation's blossom trees standing inside the hall's footprint (it places the rest again, as CrossingBuilder.buildDress does). It never touches the other
@@ -28,6 +28,7 @@ local H = require(WorldBuild:WaitForChild("Placements"):WaitForChild("MurimOrtho
 local OrthodoxBuilder = {}
 
 local ISLAND = "MurimCrossing"
+local KIT = "Dawnspire" -- its templates: ServerStorage.WorldAssets.MurimAssets.DawnspireAssets (WorldBuilder.kitFolder)
 local BLOSSOM = { "BS_TreeElder", "BS_TreeWeeping", "BS_TreeLeaning", "BS_TreeTwin", "BS_TreeYoung", "BS_TreeGnarled" }
 
 local function folder(parent, name)
@@ -43,9 +44,9 @@ local function padFrame()
     return WorldBuilder.islandFrame(ISLAND) * CFrame.new(pad.Centre + Vector3.new(0, H.FloorLift, 0)) * CFrame.Angles(0, pad.FrontYaw, 0)
 end
 
--- Moves an import's meshes into ServerStorage.WorldKit.MurimCrossing (templates, each relative to the import's anchor cube OH_Anchor).
+-- Moves an import's meshes into ServerStorage.WorldAssets.MurimAssets.DawnspireAssets (templates, each relative to the import's anchor cube OH_Anchor).
 function OrthodoxBuilder.storeKit(model)
-    return WorldBuilder.storeKit(ISLAND, model, "OH_Anchor")
+    return WorldBuilder.storeKit(KIT, model, "OH_Anchor")
 end
 
 local function applyLook(part, suffix)
@@ -66,7 +67,7 @@ local function placePiece(parent, name, index, entry, frame)
     holder.Name = string.format("%s_%d", name, index)
     holder.Parent = parent
     local at = frame * CFrame.new(entry.Position) * CFrame.Angles(0, entry.Yaw, 0)
-    WorldBuilder.placeTemplate(ISLAND, name, at, holder, entry.Scale)
+    WorldBuilder.placeTemplate(KIT, name, at, holder, entry.Scale)
     for _, part in holder:GetChildren() do
         if part:IsA("MeshPart") then
             local _, suffix = WorldBuilder.splitName(part.Name)
@@ -93,7 +94,7 @@ local function buildKit(hall, frame)
     end
     table.sort(names)
     for _, name in names do
-        if not WorldBuilder.hasTemplate(ISLAND, name) then
+        if not WorldBuilder.hasTemplate(KIT, name) then
             table.insert(missing, name)
             continue
         end
@@ -267,7 +268,7 @@ function OrthodoxBuilder.paveGround(frame)
 end
 
 function OrthodoxBuilder.build()
-    if not WorldBuilder.hasTemplate(ISLAND, "Orthodox_HallBody") then
+    if not WorldBuilder.hasTemplate(KIT, "Orthodox_HallBody") then
         return { Skipped = "the hall's kit is not stored yet (import the four FBX files and run storeKit on each): nothing built, the first foundation is untouched" }
     end
     local root = WorldBuilder.islandFolder(ISLAND)
