@@ -862,7 +862,7 @@ Six floating islands built from original Blender work: terrain tops, sculpted un
 - The Hidden (Wandering) Merchant's spot beside the tree, on the opposite side from the Leaderboard.
 When this is built, the pens built in November 2026 (one upgradable pen per player, placed for now on six open meadow spots) move to the ring, and each spawn slot is tied to its pen.
 
-**As built (November 15, 2026; plan and review in `renders/hub_redesign/`: LAYOUT_PLAN.md, phase2_review.png, phase3/).** The owner's
+**As built (November 15, 2026; the plan and import steps are in the vault: "Hub Redesign Layout Plan 2026-11-15" and "Hub Redesign Phase 3 Import 2026-11-15"; the review pictures were deleted on 2026-11-22).** The owner's
 answers: the shops on the far side, "like the reference"; each player spawns facing their own pen; the Market, Blacksmith, Buy & Sell,
 Leaderboard and the Merchant's dais modelled new, the Hatching Sanctum and the Qi Spring moved as they are on new plinths (the spring was removed on November 16, 2026: below).
 
