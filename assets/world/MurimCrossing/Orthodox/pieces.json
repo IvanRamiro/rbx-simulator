@@ -1,0 +1,470 @@
+{
+ "frame": "pad frame: origin at the pad's centre (+0.5 up), y = 0 the court floor, front is -Z; every piece at its own origin; anchor OH_Anchor",
+ "files": {
+  "Structure": {
+   "fbx": "assets/world/MurimCrossing/Orthodox/Orthodox_Structure.fbx",
+   "objects": [
+    "Orthodox_Balustrades__Gold",
+    "Orthodox_Balustrades__Marble",
+    "Orthodox_Court__Azure",
+    "Orthodox_Court__GoldFlat",
+    "Orthodox_Court__Granite",
+    "Orthodox_Court__Marble",
+    "Orthodox_HallBody__Azure",
+    "Orthodox_HallBody__Gold",
+    "Orthodox_HallBody__Granite",
+    "Orthodox_HallBody__Marble",
+    "Orthodox_HallBody__Plaster",
+    "Orthodox_HallInterior__GoldFlat",
+    "Orthodox_HallInterior__Granite",
+    "Orthodox_HallInterior__Marble",
+    "Orthodox_Rock__Stone",
+    "Orthodox_VaultDoor__Azure",
+    "Orthodox_VaultDoor__AzureGlow",
+    "Orthodox_VaultDoor__Gold",
+    "Orthodox_VaultDoor__Marble",
+    "Orthodox_Woldae__Gold",
+    "Orthodox_Woldae__GoldFlat",
+    "Orthodox_Woldae__Granite",
+    "Orthodox_Woldae__Marble"
+   ],
+   "tris": 22678,
+   "verify": "ok"
+  },
+  "Roofs": {
+   "fbx": "assets/world/MurimCrossing/Orthodox/Orthodox_Roofs.fbx",
+   "objects": [
+    "Orthodox_HallRoof1__Azure",
+    "Orthodox_HallRoof1__Gold",
+    "Orthodox_HallRoof1__Tile",
+    "Orthodox_HallTier2__Azure",
+    "Orthodox_HallTier2__Gold",
+    "Orthodox_HallTier2__Marble",
+    "Orthodox_HallTier2__Plaster",
+    "Orthodox_HallTier2__Tile",
+    "Orthodox_HallTier3__Azure",
+    "Orthodox_HallTier3__Gold",
+    "Orthodox_HallTier3__Marble",
+    "Orthodox_HallTier3__Plaster",
+    "Orthodox_HallTier3__Tile",
+    "Orthodox_HallTier4__Azure",
+    "Orthodox_HallTier4__Gold",
+    "Orthodox_HallTier4__Marble",
+    "Orthodox_HallTier4__Plaster",
+    "Orthodox_HallTier4__Tile",
+    "Orthodox_HallTier5__Azure",
+    "Orthodox_HallTier5__Gold",
+    "Orthodox_HallTier5__Marble",
+    "Orthodox_HallTier5__Plaster",
+    "Orthodox_HallTier5__Tile"
+   ],
+   "tris": 27848,
+   "verify": "ok"
+  },
+  "Modules": {
+   "fbx": "assets/world/MurimCrossing/Orthodox/Orthodox_Modules.fbx",
+   "objects": [
+    "Orthodox_GatePavilion__Azure",
+    "Orthodox_GatePavilion__Gold",
+    "Orthodox_GatePavilion__Granite",
+    "Orthodox_GatePavilion__Marble",
+    "Orthodox_GatePavilion__Plaster",
+    "Orthodox_GatePavilion__Tile",
+    "Orthodox_Tower__Azure",
+    "Orthodox_Tower__Gold",
+    "Orthodox_Tower__Granite",
+    "Orthodox_Tower__Marble",
+    "Orthodox_Tower__Plaster",
+    "Orthodox_Tower__Tile"
+   ],
+   "tris": 11754,
+   "verify": "ok"
+  },
+  "Props": {
+   "fbx": "assets/world/MurimCrossing/Orthodox/Orthodox_Props.fbx",
+   "objects": [
+    "Orthodox_Banner__Gold",
+    "Orthodox_Banner__SilkBlue",
+    "Orthodox_Banner__SilkWhite",
+    "Orthodox_Basin__Granite",
+    "Orthodox_Basin__Marble",
+    "Orthodox_Basin__Pool",
+    "Orthodox_Flag__Gold",
+    "Orthodox_Flag__SilkBlue",
+    "Orthodox_Flag__SilkWhite",
+    "Orthodox_Lantern__AzureGlow",
+    "Orthodox_Lantern__Gold",
+    "Orthodox_Lantern__Granite",
+    "Orthodox_Lantern__Marble",
+    "Orthodox_Lantern__Tile",
+    "Orthodox_Spire__AzureGlow",
+    "Orthodox_Spire__Crystal",
+    "Orthodox_Spire__Gold"
+   ],
+   "tris": 3978,
+   "verify": "ok"
+  }
+ },
+ "pieces": {
+  "Orthodox_Court": {
+   "min": [
+    -24.01,
+    -6.0,
+    -54.01
+   ],
+   "max": [
+    24.01,
+    0.19,
+    -28.0
+   ],
+   "tris": 640,
+   "materials": {
+    "Azure": 72,
+    "GoldFlat": 368,
+    "Granite": 190,
+    "Marble": 10
+   }
+  },
+  "Orthodox_Woldae": {
+   "min": [
+    -42.35,
+    -8.0,
+    -31.05
+   ],
+   "max": [
+    42.35,
+    10.05,
+    38.35
+   ],
+   "tris": 1674,
+   "materials": {
+    "Gold": 1224,
+    "GoldFlat": 120,
+    "Granite": 30,
+    "Marble": 300
+   }
+  },
+  "Orthodox_Balustrades": {
+   "min": [
+    -41.76,
+    2.99,
+    -28.4
+   ],
+   "max": [
+    41.76,
+    12.22,
+    38.4
+   ],
+   "tris": 4786,
+   "materials": {
+    "Gold": 2088,
+    "Marble": 2698
+   }
+  },
+  "Orthodox_HallBody": {
+   "min": [
+    -31.11,
+    8.85,
+    -17.22
+   ],
+   "max": [
+    31.11,
+    22.2,
+    15.11
+   ],
+   "tris": 12546,
+   "materials": {
+    "Azure": 6408,
+    "Gold": 2442,
+    "Granite": 1088,
+    "Marble": 2112,
+    "Plaster": 496
+   }
+  },
+  "Orthodox_HallInterior": {
+   "min": [
+    -3.2,
+    9.0,
+    -3.5
+   ],
+   "max": [
+    3.2,
+    10.05,
+    7.2
+   ],
+   "tris": 428,
+   "materials": {
+    "GoldFlat": 408,
+    "Granite": 10,
+    "Marble": 10
+   }
+  },
+  "Orthodox_HallRoof1": {
+   "min": [
+    -36.69,
+    20.63,
+    -19.7
+   ],
+   "max": [
+    36.69,
+    26.82,
+    19.7
+   ],
+   "tris": 6532,
+   "materials": {
+    "Azure": 784,
+    "Gold": 360,
+    "Tile": 5388
+   }
+  },
+  "Orthodox_HallTier2": {
+   "min": [
+    -28.66,
+    26.4,
+    -15.75
+   ],
+   "max": [
+    28.66,
+    36.24,
+    15.75
+   ],
+   "tris": 9276,
+   "materials": {
+    "Azure": 2336,
+    "Gold": 1320,
+    "Marble": 768,
+    "Plaster": 736,
+    "Tile": 4116
+   }
+  },
+  "Orthodox_HallTier3": {
+   "min": [
+    -22.13,
+    35.73,
+    -12.34
+   ],
+   "max": [
+    22.13,
+    44.57,
+    12.34
+   ],
+   "tris": 4924,
+   "materials": {
+    "Azure": 1184,
+    "Gold": 288,
+    "Marble": 768,
+    "Plaster": 192,
+    "Tile": 2492
+   }
+  },
+  "Orthodox_HallTier4": {
+   "min": [
+    -17.12,
+    44.16,
+    -10.37
+   ],
+   "max": [
+    17.12,
+    52.09,
+    10.37
+   ],
+   "tris": 4024,
+   "materials": {
+    "Azure": 912,
+    "Gold": 240,
+    "Marble": 576,
+    "Plaster": 144,
+    "Tile": 2152
+   }
+  },
+  "Orthodox_HallTier5": {
+   "min": [
+    -12.62,
+    51.67,
+    -8.39
+   ],
+   "max": [
+    12.62,
+    63.3,
+    8.39
+   ],
+   "tris": 3092,
+   "materials": {
+    "Azure": 640,
+    "Gold": 300,
+    "Marble": 384,
+    "Plaster": 96,
+    "Tile": 1672
+   }
+  },
+  "Orthodox_Rock": {
+   "min": [
+    -57.32,
+    -8.0,
+    -38.76
+   ],
+   "max": [
+    57.32,
+    6.0,
+    38.63
+   ],
+   "tris": 1848,
+   "materials": {
+    "Stone": 1848
+   }
+  },
+  "Orthodox_VaultDoor": {
+   "min": [
+    -4.3,
+    0.0,
+    -1.5
+   ],
+   "max": [
+    4.3,
+    10.0,
+    0.05
+   ],
+   "tris": 756,
+   "materials": {
+    "Azure": 240,
+    "AzureGlow": 96,
+    "Gold": 388,
+    "Marble": 32
+   }
+  },
+  "Orthodox_Tower": {
+   "min": [
+    -11.03,
+    -0.8,
+    -11.03
+   ],
+   "max": [
+    11.03,
+    35.0,
+    11.03
+   ],
+   "tris": 7528,
+   "materials": {
+    "Azure": 2496,
+    "Gold": 1136,
+    "Granite": 40,
+    "Marble": 960,
+    "Plaster": 560,
+    "Tile": 2336
+   }
+  },
+  "Orthodox_GatePavilion": {
+   "min": [
+    -9.62,
+    -7.0,
+    -9.62
+   ],
+   "max": [
+    9.62,
+    20.47,
+    9.62
+   ],
+   "tris": 4226,
+   "materials": {
+    "Azure": 1008,
+    "Gold": 692,
+    "Granite": 8,
+    "Marble": 670,
+    "Plaster": 48,
+    "Tile": 1800
+   }
+  },
+  "Orthodox_Lantern": {
+   "min": [
+    -1.94,
+    0.0,
+    -1.94
+   ],
+   "max": [
+    1.94,
+    9.4,
+    1.94
+   ],
+   "tris": 306,
+   "materials": {
+    "AzureGlow": 32,
+    "Gold": 78,
+    "Granite": 10,
+    "Marble": 138,
+    "Tile": 48
+   }
+  },
+  "Orthodox_Banner": {
+   "min": [
+    -4.7,
+    -12.8,
+    -0.2
+   ],
+   "max": [
+    4.7,
+    0.3,
+    0.4
+   ],
+   "tris": 864,
+   "materials": {
+    "Gold": 196,
+    "SilkBlue": 216,
+    "SilkWhite": 452
+   }
+  },
+  "Orthodox_Flag": {
+   "min": [
+    -3.45,
+    0.0,
+    -0.75
+   ],
+   "max": [
+    3.45,
+    26.5,
+    0.7
+   ],
+   "tris": 944,
+   "materials": {
+    "Gold": 276,
+    "SilkBlue": 216,
+    "SilkWhite": 452
+   }
+  },
+  "Orthodox_Spire": {
+   "min": [
+    -9.34,
+    -0.34,
+    -2.4
+   ],
+   "max": [
+    9.34,
+    18.34,
+    2.4
+   ],
+   "tris": 1800,
+   "materials": {
+    "AzureGlow": 24,
+    "Crystal": 48,
+    "Gold": 1728
+   }
+  },
+  "Orthodox_Basin": {
+   "min": [
+    -3.2,
+    0.0,
+    -1.8
+   ],
+   "max": [
+    3.2,
+    1.0,
+    1.8
+   ],
+   "tris": 64,
+   "materials": {
+    "Granite": 10,
+    "Marble": 44,
+    "Pool": 10
+   }
+  }
+ }
+}
