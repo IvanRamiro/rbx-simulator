@@ -29,7 +29,9 @@ return {
     Spear11 = { Color = "rbxassetid://134577159657984", Normal = "rbxassetid://127941738031283", Roughness = "rbxassetid://135729892378698", Metalness = "rbxassetid://127031228999225" },
     Spear12 = { Color = "rbxassetid://139864992549625", Normal = "rbxassetid://123007275019516", Roughness = "rbxassetid://115422653501703", Metalness = "rbxassetid://104235130424519" },
     -- the factions' secret swords (tools/blender/weapons/sword_*.py; the owner approved each design and its maps before upload)
-    SecretOrthodox = { Color = "rbxassetid://71647921541583", Normal = "rbxassetid://80590282883945", Roughness = "rbxassetid://127639651082906", Metalness = "rbxassetid://92401106149270" },
+    -- The Dawnspire Regent's four maps are a second set of uploads (each one corner pixel changed from the files first uploaded): the first set
+    -- rendered flat grey in Play on any mesh, though each map loaded alone and every smaller mix of them rendered; a fresh set of ids fixed it.
+    SecretOrthodox = { Color = "rbxassetid://84355833881718", Normal = "rbxassetid://74762736293139", Roughness = "rbxassetid://95158956148951", Metalness = "rbxassetid://128413863046362" },
     SecretDemonic = { Color = "rbxassetid://92093309821854", Normal = "rbxassetid://96624139243868", Roughness = "rbxassetid://117106672607824", Metalness = "rbxassetid://132261761436879" },
     SecretUnorthodox = { Color = "rbxassetid://99554064464323", Normal = "rbxassetid://88175191481499", Roughness = "rbxassetid://130581139846235", Metalness = "rbxassetid://111718674620573" },
 }
