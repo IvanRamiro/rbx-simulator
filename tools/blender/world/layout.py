@@ -14,6 +14,9 @@ Jade ~200 studs (Qi Gatherer, 24 studs/s), Ember ~320 (Qi Awakener, 26), Moonlit
 Initiate, 28; the sword flies it in ~10 s), Origin ~650 (Divine Initiate, 32). The islands sit on
 their old bearings from Yggdrasil, moved out until their bridges measure that.
 
+Murim Crossing (2026-11-22) stands south-south-west of Yggdrasil on an open bridge (no rank: nothing stops anyone), 247 studs from the
+hub's rim; its shape, terrain and anchors are in murim_layout.py, which reads its centre, turn and arrival from here.
+
     python3 tools/blender/world/layout.py            # print the layout, check the bridges
     python3 tools/blender/world/layout.py --write    # also write src/worldbuild/Placements/Bridges.lua
 """
@@ -33,6 +36,10 @@ ISLANDS = {
     # hub, bridge, Lion Gate and the lion stand in one straight line: not a whole number of quarter
     # turns, so its terrain is written already turned (worldlib.export_heightfield, baked_turn).
     "BeginnerIsle": {"centre": (-480, 200, 24), "radius": 140, "turns": 2.13292},
+    # Murim Crossing (the owner's faction map, 2026-11-22; murim_layout.py has its shape): south-south-west of the hub, open to every
+    # rank. A trefoil whose three plateaus reach about 300 studs from its centre (radius is that reach, for the bridge checks). Turned
+    # (not by quarter turns: its terrain is written already turned) so that its entry faces the hub and the bridge runs straight.
+    "MurimCrossing": {"centre": (-232, 200, 532), "radius": 300, "turns": 0.26179},
 }
 
 # Each island's arrival, where its bridge lands (island-local, before turning): just inside its gate
@@ -43,6 +50,7 @@ ARRIVALS = {
     "MoonlitIsle": (-27.0, 0.0, 118.2),    # since the island doubled (2026-11-02): its old bridge end
     "OriginAbyss": (-85.8, 0.0, 122.8),    # since the island doubled (2026-11-02): its old bridge end
     "BeginnerIsle": (-114.1, 0.0, 30.2),   # on the line from the hub to the island's centre
+    "MurimCrossing": (0.0, 0.0, -88.0),    # the end of its entry spur, facing the hub (8 studs of abutment, then the island's ground)
 }
 HUB_EXIT_RADIUS = 245    # bridges leave Yggdrasil's ground this far from its centre
 
@@ -88,6 +96,8 @@ ROUTES = {
     "MoonlitRoute": {"island": "MoonlitIsle", "theme": "Moon", "rank": "SoulAwakening"},
     "OriginRoute": {"island": "OriginAbyss", "theme": "Origin", "rank": "DivineInitiate"},
     "BeginnerRoute": {"island": "BeginnerIsle", "theme": "Lion", "rank": "QiInitiate"},
+    # open to every rank (the owner, 2026-11-22): no Qi barrier and no RankId, the hub's celestial gate over a marble and gold deck
+    "MurimRoute": {"island": "MurimCrossing", "theme": "Murim", "rank": None},
 }
 
 
@@ -181,7 +191,8 @@ def write_bridges(path=None):
              "-- centre line (its top surface).",
              "return {", f"    DeckWidth = {DECK_WIDTH},", "    Bridges = {"]
     for name, b in BRIDGES.items():
-        lines.append(f'        {name} = {{ Theme = "{b["theme"]}", RankId = "{b["rank"]}", Nodes = {{')
+        rank = f' RankId = "{b["rank"]}",' if b["rank"] else ""   # an open bridge (Murim Crossing) has no rank: no barrier, no zones
+        lines.append(f'        {name} = {{ Theme = "{b["theme"]}",{rank} Nodes = {{')
         for x, y, z in bridge_nodes(name):
             lines.append(f"            {{ Position = Vector3.new({x:.2f}, {y:.2f}, {z:.2f}) }},")
         lines.append("        } },")
