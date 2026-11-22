@@ -1,0 +1,1507 @@
+{
+ "frame": "each piece at its own origin, y = 0 the ground it stands on (feet sink below), front is -Z, Roblox studs; anchor cube DS_Anchor (1 stud) at the origin; Roblox material and colour per material suffix in `looks`; collision boxes are invisible Plastic colliders in the piece frame",
+ "looks": {
+  "Bark": {
+   "Material": "Wood",
+   "Color": [
+    100,
+    90,
+    98
+   ]
+  },
+  "BarkPale": {
+   "Material": "Wood",
+   "Color": [
+    140,
+    132,
+    138
+   ]
+  },
+  "Blossom": {
+   "Material": "SmoothPlastic",
+   "Color": [
+    248,
+    231,
+    238
+   ]
+  },
+  "BlossomBlush": {
+   "Material": "SmoothPlastic",
+   "Color": [
+    240,
+    199,
+    214
+   ]
+  },
+  "Stone": {
+   "Material": "Limestone",
+   "Color": [
+    224,
+    220,
+    210
+   ]
+  },
+  "Plinth": {
+   "Material": "Marble",
+   "Color": [
+    238,
+    236,
+    232
+   ]
+  },
+  "PlinthBase": {
+   "Material": "Granite",
+   "Color": [
+    176,
+    176,
+    184
+   ]
+  },
+  "Gold": {
+   "Material": "Metal",
+   "Color": [
+    255,
+    172,
+    48
+   ]
+  },
+  "SilkWhite": {
+   "Material": "Fabric",
+   "Color": [
+    240,
+    242,
+    250
+   ],
+   "CastShadow": false
+  },
+  "SilkBlue": {
+   "Material": "Fabric",
+   "Color": [
+    28,
+    62,
+    170
+   ],
+   "CastShadow": false
+  },
+  "Soil": {
+   "Material": "Slate",
+   "Color": [
+    62,
+    54,
+    58
+   ]
+  },
+  "Prop": {
+   "Material": "WoodPlanks",
+   "Color": [
+    150,
+    126,
+    104
+   ]
+  },
+  "AzaleaLeaf": {
+   "Material": "LeafyGrass",
+   "Color": [
+    58,
+    112,
+    88
+   ]
+  },
+  "AzaleaBloom": {
+   "Material": "SmoothPlastic",
+   "Color": [
+    250,
+    228,
+    238
+   ]
+  },
+  "PeonyWhite": {
+   "Material": "SmoothPlastic",
+   "Color": [
+    250,
+    247,
+    247
+   ]
+  },
+  "PeonyBlush": {
+   "Material": "SmoothPlastic",
+   "Color": [
+    242,
+    202,
+    218
+   ]
+  },
+  "Leaf": {
+   "Material": "LeafyGrass",
+   "Color": [
+    66,
+    122,
+    96
+   ]
+  },
+  "Needle": {
+   "Material": "LeafyGrass",
+   "Color": [
+    44,
+    94,
+    86
+   ]
+  },
+  "LotusPetal": {
+   "Material": "SmoothPlastic",
+   "Color": [
+    246,
+    228,
+    238
+   ]
+  },
+  "LotusPad": {
+   "Material": "LeafyGrass",
+   "Color": [
+    62,
+    118,
+    90
+   ]
+  },
+  "Water": {
+   "Material": "Glass",
+   "Color": [
+    110,
+    190,
+    230
+   ],
+   "Transparency": 0.5,
+   "CastShadow": false
+  },
+  "IrisWhite": {
+   "Material": "SmoothPlastic",
+   "Color": [
+    248,
+    248,
+    253
+   ]
+  },
+  "IrisLeaf": {
+   "Material": "LeafyGrass",
+   "Color": [
+    84,
+    138,
+    108
+   ]
+  },
+  "PetalWhite": {
+   "Material": "SmoothPlastic",
+   "Color": [
+    252,
+    248,
+    250
+   ],
+   "CastShadow": false
+  },
+  "PetalPink": {
+   "Material": "SmoothPlastic",
+   "Color": [
+    242,
+    204,
+    218
+   ],
+   "CastShadow": false
+  },
+  "Gravel": {
+   "Material": "Limestone",
+   "Color": [
+    214,
+    210,
+    198
+   ],
+   "CastShadow": false
+  },
+  "Moss": {
+   "Material": "LeafyGrass",
+   "Color": [
+    86,
+    142,
+    100
+   ]
+  }
+ },
+ "files": {
+  "Trees": {
+   "fbx": "assets/world/MurimCrossing/Dawnspire/Dawnspire_Trees.fbx",
+   "objects": 55,
+   "tris": 23342,
+   "verify": "ok"
+  },
+  "Plants": {
+   "fbx": "assets/world/MurimCrossing/Dawnspire/Dawnspire_Plants.fbx",
+   "objects": 37,
+   "tris": 4508,
+   "verify": "ok"
+  },
+  "Rocks": {
+   "fbx": "assets/world/MurimCrossing/Dawnspire/Dawnspire_Rocks.fbx",
+   "objects": 8,
+   "tris": 4746,
+   "verify": "ok"
+  }
+ },
+ "pieces": {
+  "Dawnspire_Trees_TierTreeA": {
+   "family": "Trees",
+   "piece": "TierTreeA",
+   "variant": "A",
+   "tris": 2264,
+   "materials": {
+    "Bark": 1124,
+    "Blossom": 700,
+    "BlossomBlush": 440
+   },
+   "bounds_min": [
+    -7.5,
+    -0.51,
+    -9.12
+   ],
+   "bounds_max": [
+    8.6,
+    18.74,
+    8.97
+   ],
+   "radius": 2.37,
+   "crown_radius": 9.55,
+   "height": 18.74,
+   "collision": [
+    {
+     "x0": -0.95,
+     "x1": 0.95,
+     "y0": 0.0,
+     "y1": 5.2,
+     "z0": -0.95,
+     "z1": 0.95
+    }
+   ],
+   "use": "terrace and garden court focal tree: stands alone on a lawn or terrace corner, 8 studs of crown radius (lay a 10 stud keep-out)",
+   "fbx": "Dawnspire_Trees.fbx",
+   "objects": [
+    "Dawnspire_Trees_TierTreeA__Bark",
+    "Dawnspire_Trees_TierTreeA__Blossom",
+    "Dawnspire_Trees_TierTreeA__BlossomBlush"
+   ]
+  },
+  "Dawnspire_Trees_TierTreeB": {
+   "family": "Trees",
+   "piece": "TierTreeB",
+   "variant": "B",
+   "tris": 1524,
+   "materials": {
+    "Bark": 824,
+    "Blossom": 432,
+    "BlossomBlush": 268
+   },
+   "bounds_min": [
+    -10.2,
+    -0.58,
+    -5.0
+   ],
+   "bounds_max": [
+    8.9,
+    14.83,
+    7.72
+   ],
+   "radius": 2.37,
+   "crown_radius": 10.2,
+   "height": 14.83,
+   "collision": [
+    {
+     "x0": -0.95,
+     "x1": 0.95,
+     "y0": 0.0,
+     "y1": 5.2,
+     "z0": -0.95,
+     "z1": 0.95
+    }
+   ],
+   "use": "terrace and garden court focal tree: stands alone on a lawn or terrace corner, 8 studs of crown radius (lay a 10 stud keep-out)",
+   "fbx": "Dawnspire_Trees.fbx",
+   "objects": [
+    "Dawnspire_Trees_TierTreeB__Bark",
+    "Dawnspire_Trees_TierTreeB__Blossom",
+    "Dawnspire_Trees_TierTreeB__BlossomBlush"
+   ]
+  },
+  "Dawnspire_Trees_PlinthTreeA": {
+   "family": "Trees",
+   "piece": "PlinthTreeA",
+   "variant": "A",
+   "tris": 1762,
+   "materials": {
+    "Bark": 476,
+    "Blossom": 436,
+    "BlossomBlush": 268,
+    "Gold": 96,
+    "Plinth": 106,
+    "PlinthBase": 10,
+    "Soil": 10,
+    "Stone": 360
+   },
+   "bounds_min": [
+    -3.43,
+    -0.4,
+    -2.85
+   ],
+   "bounds_max": [
+    3.61,
+    9.52,
+    2.85
+   ],
+   "radius": 4.03,
+   "crown_radius": 4.03,
+   "height": 9.52,
+   "collision": [
+    {
+     "x0": -2.8,
+     "x1": 2.8,
+     "y0": 0.0,
+     "y1": 2.0,
+     "z0": -2.8,
+     "z1": 2.8
+    }
+   ],
+   "use": "a prized specimen on its own plinth: on a court side, beside a pavilion or a path end; the plinth is the foot (set it on level paving)",
+   "fbx": "Dawnspire_Trees.fbx",
+   "objects": [
+    "Dawnspire_Trees_PlinthTreeA__Bark",
+    "Dawnspire_Trees_PlinthTreeA__Blossom",
+    "Dawnspire_Trees_PlinthTreeA__BlossomBlush",
+    "Dawnspire_Trees_PlinthTreeA__Gold",
+    "Dawnspire_Trees_PlinthTreeA__Plinth",
+    "Dawnspire_Trees_PlinthTreeA__PlinthBase",
+    "Dawnspire_Trees_PlinthTreeA__Soil",
+    "Dawnspire_Trees_PlinthTreeA__Stone"
+   ]
+  },
+  "Dawnspire_Trees_PlinthTreeB": {
+   "family": "Trees",
+   "piece": "PlinthTreeB",
+   "variant": "B",
+   "tris": 1992,
+   "materials": {
+    "Bark": 600,
+    "Blossom": 478,
+    "BlossomBlush": 290,
+    "Gold": 72,
+    "Plinth": 228,
+    "PlinthBase": 72,
+    "Soil": 72,
+    "Stone": 180
+   },
+   "bounds_min": [
+    -5.84,
+    -0.4,
+    -2.66
+   ],
+   "bounds_max": [
+    9.07,
+    9.37,
+    2.38
+   ],
+   "radius": 2.2,
+   "crown_radius": 9.07,
+   "height": 9.37,
+   "collision": [
+    {
+     "x0": -2.0,
+     "x1": 2.0,
+     "y0": 0.0,
+     "y1": 3.2,
+     "z0": -2.0,
+     "z1": 2.0
+    }
+   ],
+   "use": "a prized specimen on its own plinth: on a court side, beside a pavilion or a path end; the plinth is the foot (set it on level paving)",
+   "fbx": "Dawnspire_Trees.fbx",
+   "objects": [
+    "Dawnspire_Trees_PlinthTreeB__Bark",
+    "Dawnspire_Trees_PlinthTreeB__Blossom",
+    "Dawnspire_Trees_PlinthTreeB__BlossomBlush",
+    "Dawnspire_Trees_PlinthTreeB__Gold",
+    "Dawnspire_Trees_PlinthTreeB__Plinth",
+    "Dawnspire_Trees_PlinthTreeB__PlinthBase",
+    "Dawnspire_Trees_PlinthTreeB__Soil",
+    "Dawnspire_Trees_PlinthTreeB__Stone"
+   ]
+  },
+  "Dawnspire_Trees_ArchTreeA": {
+   "family": "Trees",
+   "piece": "ArchTreeA",
+   "variant": "A",
+   "tris": 2032,
+   "materials": {
+    "Bark": 1248,
+    "Blossom": 486,
+    "BlossomBlush": 298
+   },
+   "bounds_min": [
+    -8.74,
+    -0.46,
+    -4.28
+   ],
+   "bounds_max": [
+    8.74,
+    14.07,
+    3.69
+   ],
+   "radius": 7.97,
+   "crown_radius": 8.93,
+   "height": 14.07,
+   "collision": [
+    {
+     "x0": -6.75,
+     "x1": -5.050000000000001,
+     "y0": 0.0,
+     "y1": 4.0,
+     "z0": -0.85,
+     "z1": 0.85
+    },
+    {
+     "x0": 5.050000000000001,
+     "x1": 6.75,
+     "y0": 0.0,
+     "y1": 4.0,
+     "z0": -0.85,
+     "z1": 0.85
+    }
+   ],
+   "use": "straddles a stair or a path (the path runs along the piece's z axis, clear width 10 / 14 studs between the trunk feet): one per stair, bridge head or gate",
+   "fbx": "Dawnspire_Trees.fbx",
+   "objects": [
+    "Dawnspire_Trees_ArchTreeA__Bark",
+    "Dawnspire_Trees_ArchTreeA__Blossom",
+    "Dawnspire_Trees_ArchTreeA__BlossomBlush"
+   ]
+  },
+  "Dawnspire_Trees_ArchTreeB": {
+   "family": "Trees",
+   "piece": "ArchTreeB",
+   "variant": "B",
+   "tris": 2724,
+   "materials": {
+    "Bark": 1500,
+    "Blossom": 758,
+    "BlossomBlush": 466
+   },
+   "bounds_min": [
+    -12.85,
+    -0.56,
+    -2.75
+   ],
+   "bounds_max": [
+    12.85,
+    13.4,
+    2.75
+   ],
+   "radius": 10.24,
+   "crown_radius": 12.86,
+   "height": 13.4,
+   "collision": [
+    {
+     "x0": -8.85,
+     "x1": -7.15,
+     "y0": 0.0,
+     "y1": 4.0,
+     "z0": -0.85,
+     "z1": 0.85
+    },
+    {
+     "x0": 7.15,
+     "x1": 8.85,
+     "y0": 0.0,
+     "y1": 4.0,
+     "z0": -0.85,
+     "z1": 0.85
+    }
+   ],
+   "use": "straddles a stair or a path (the path runs along the piece's z axis, clear width 10 / 14 studs between the trunk feet): one per stair, bridge head or gate",
+   "fbx": "Dawnspire_Trees.fbx",
+   "objects": [
+    "Dawnspire_Trees_ArchTreeB__Bark",
+    "Dawnspire_Trees_ArchTreeB__Blossom",
+    "Dawnspire_Trees_ArchTreeB__BlossomBlush"
+   ]
+  },
+  "Dawnspire_Trees_BasinTreeA": {
+   "family": "Trees",
+   "piece": "BasinTreeA",
+   "variant": "A",
+   "tris": 2760,
+   "materials": {
+    "Bark": 1148,
+    "Blossom": 684,
+    "BlossomBlush": 424,
+    "Gold": 84,
+    "Plinth": 336,
+    "Soil": 84
+   },
+   "bounds_min": [
+    -2.99,
+    -0.2,
+    -3.11
+   ],
+   "bounds_max": [
+    2.71,
+    9.55,
+    2.76
+   ],
+   "radius": 1.75,
+   "crown_radius": 3.55,
+   "height": 9.55,
+   "collision": [
+    {
+     "x0": -1.6,
+     "x1": 1.6,
+     "y0": 0.0,
+     "y1": 2.0,
+     "z0": -1.6,
+     "z1": 1.6
+    }
+   ],
+   "use": "a potted weeping tree for a court corner, terrace edge or beside a door; the basin sits on level paving",
+   "fbx": "Dawnspire_Trees.fbx",
+   "objects": [
+    "Dawnspire_Trees_BasinTreeA__Bark",
+    "Dawnspire_Trees_BasinTreeA__Blossom",
+    "Dawnspire_Trees_BasinTreeA__BlossomBlush",
+    "Dawnspire_Trees_BasinTreeA__Gold",
+    "Dawnspire_Trees_BasinTreeA__Plinth",
+    "Dawnspire_Trees_BasinTreeA__Soil"
+   ]
+  },
+  "Dawnspire_Trees_BasinTreeB": {
+   "family": "Trees",
+   "piece": "BasinTreeB",
+   "variant": "B",
+   "tris": 2486,
+   "materials": {
+    "Bark": 1018,
+    "Blossom": 594,
+    "BlossomBlush": 370,
+    "Gold": 84,
+    "Plinth": 336,
+    "Soil": 84
+   },
+   "bounds_min": [
+    -1.85,
+    -0.2,
+    -4.03
+   ],
+   "bounds_max": [
+    4.95,
+    9.02,
+    2.23
+   ],
+   "radius": 1.75,
+   "crown_radius": 5.2,
+   "height": 9.02,
+   "collision": [
+    {
+     "x0": -1.6,
+     "x1": 1.6,
+     "y0": 0.0,
+     "y1": 2.0,
+     "z0": -1.6,
+     "z1": 1.6
+    }
+   ],
+   "use": "a potted weeping tree for a court corner, terrace edge or beside a door; the basin sits on level paving",
+   "fbx": "Dawnspire_Trees.fbx",
+   "objects": [
+    "Dawnspire_Trees_BasinTreeB__Bark",
+    "Dawnspire_Trees_BasinTreeB__Blossom",
+    "Dawnspire_Trees_BasinTreeB__BlossomBlush",
+    "Dawnspire_Trees_BasinTreeB__Gold",
+    "Dawnspire_Trees_BasinTreeB__Plinth",
+    "Dawnspire_Trees_BasinTreeB__Soil"
+   ]
+  },
+  "Dawnspire_Trees_BoundTreeA": {
+   "family": "Trees",
+   "piece": "BoundTreeA",
+   "variant": "A",
+   "tris": 2994,
+   "materials": {
+    "Bark": 1005,
+    "BarkPale": 47,
+    "Blossom": 886,
+    "BlossomBlush": 542,
+    "Gold": 48,
+    "Prop": 110,
+    "SilkBlue": 116,
+    "SilkWhite": 240
+   },
+   "bounds_min": [
+    -9.13,
+    -1.31,
+    -9.36
+   ],
+   "bounds_max": [
+    9.19,
+    13.9,
+    6.45
+   ],
+   "radius": 4.55,
+   "crown_radius": 10.51,
+   "height": 13.9,
+   "collision": [
+    {
+     "x0": -1.5,
+     "x1": 1.5,
+     "y0": 0.0,
+     "y1": 4.2,
+     "z0": -1.5,
+     "z1": 1.5
+    }
+   ],
+   "use": "THE focal tree of the territory (the residence court or the main garden's heart): at most one or two; the prop and the silk ribbons are part of it",
+   "fbx": "Dawnspire_Trees.fbx",
+   "objects": [
+    "Dawnspire_Trees_BoundTreeA__Bark",
+    "Dawnspire_Trees_BoundTreeA__BarkPale",
+    "Dawnspire_Trees_BoundTreeA__Blossom",
+    "Dawnspire_Trees_BoundTreeA__BlossomBlush",
+    "Dawnspire_Trees_BoundTreeA__Gold",
+    "Dawnspire_Trees_BoundTreeA__Prop",
+    "Dawnspire_Trees_BoundTreeA__SilkBlue",
+    "Dawnspire_Trees_BoundTreeA__SilkWhite"
+   ]
+  },
+  "Dawnspire_Trees_BoundTreeB": {
+   "family": "Trees",
+   "piece": "BoundTreeB",
+   "variant": "B",
+   "tris": 2804,
+   "materials": {
+    "Bark": 1007,
+    "BarkPale": 45,
+    "Blossom": 886,
+    "BlossomBlush": 542,
+    "Gold": 48,
+    "SilkBlue": 36,
+    "SilkWhite": 240
+   },
+   "bounds_min": [
+    -9.39,
+    -1.24,
+    -9.29
+   ],
+   "bounds_max": [
+    8.62,
+    13.16,
+    6.09
+   ],
+   "radius": 4.37,
+   "crown_radius": 10.4,
+   "height": 13.16,
+   "collision": [
+    {
+     "x0": -1.5,
+     "x1": 1.5,
+     "y0": 0.0,
+     "y1": 4.2,
+     "z0": -1.5,
+     "z1": 1.5
+    }
+   ],
+   "use": "THE focal tree of the territory (the residence court or the main garden's heart): at most one or two; the prop and the silk ribbons are part of it",
+   "fbx": "Dawnspire_Trees.fbx",
+   "objects": [
+    "Dawnspire_Trees_BoundTreeB__Bark",
+    "Dawnspire_Trees_BoundTreeB__BarkPale",
+    "Dawnspire_Trees_BoundTreeB__Blossom",
+    "Dawnspire_Trees_BoundTreeB__BlossomBlush",
+    "Dawnspire_Trees_BoundTreeB__Gold",
+    "Dawnspire_Trees_BoundTreeB__SilkBlue",
+    "Dawnspire_Trees_BoundTreeB__SilkWhite"
+   ]
+  },
+  "Dawnspire_Rocks_ScholarA": {
+   "family": "Rocks",
+   "piece": "ScholarA",
+   "variant": "A",
+   "tris": 1008,
+   "materials": {
+    "Stone": 1008
+   },
+   "bounds_min": [
+    -3.84,
+    -0.69,
+    -2.94
+   ],
+   "bounds_max": [
+    3.84,
+    8.66,
+    2.94
+   ],
+   "radius": 3.95,
+   "crown_radius": 3.95,
+   "height": 8.66,
+   "collision": [
+    {
+     "x0": -2.69,
+     "x1": 2.78,
+     "y0": 0.0,
+     "y1": 4.33,
+     "z0": -1.98,
+     "z1": 1.7
+    },
+    {
+     "x0": -1.08,
+     "x1": 1.1,
+     "y0": 4.33,
+     "y1": 6.24,
+     "z0": -0.8,
+     "z1": 0.11
+    }
+   ],
+   "use": "a scholar's rock for gardens, court corners and pond edges (perforated; the hole runs along z)",
+   "fbx": "Dawnspire_Rocks.fbx",
+   "objects": [
+    "Dawnspire_Rocks_ScholarA__Stone"
+   ]
+  },
+  "Dawnspire_Rocks_ScholarB": {
+   "family": "Rocks",
+   "piece": "ScholarB",
+   "variant": "B",
+   "tris": 1058,
+   "materials": {
+    "Stone": 1058
+   },
+   "bounds_min": [
+    -2.72,
+    -0.68,
+    -2.56
+   ],
+   "bounds_max": [
+    2.72,
+    9.21,
+    2.56
+   ],
+   "radius": 3.03,
+   "crown_radius": 3.03,
+   "height": 9.21,
+   "collision": [
+    {
+     "x0": -1.99,
+     "x1": 1.8,
+     "y0": 0.0,
+     "y1": 4.6,
+     "z0": -1.5,
+     "z1": 1.57
+    },
+    {
+     "x0": -0.6,
+     "x1": 0.07,
+     "y0": 4.6,
+     "y1": 6.63,
+     "z0": -0.35,
+     "z1": 0.23
+    }
+   ],
+   "use": "a fluted pillar rock for terrace edges and stair heads",
+   "fbx": "Dawnspire_Rocks.fbx",
+   "objects": [
+    "Dawnspire_Rocks_ScholarB__Stone"
+   ]
+  },
+  "Dawnspire_Rocks_ScholarC": {
+   "family": "Rocks",
+   "piece": "ScholarC",
+   "variant": "C",
+   "tris": 850,
+   "materials": {
+    "Stone": 850
+   },
+   "bounds_min": [
+    -4.0,
+    -0.82,
+    -2.76
+   ],
+   "bounds_max": [
+    4.0,
+    7.22,
+    2.76
+   ],
+   "radius": 4.0,
+   "crown_radius": 4.0,
+   "height": 7.22,
+   "collision": [
+    {
+     "x0": -2.84,
+     "x1": 2.88,
+     "y0": 0.0,
+     "y1": 3.61,
+     "z0": -1.81,
+     "z1": 1.33
+    },
+    {
+     "x0": -1.61,
+     "x1": 0.92,
+     "y0": 3.61,
+     "y1": 5.2,
+     "z0": -0.96,
+     "z1": 0.42
+    }
+   ],
+   "use": "a pair-of-peaks rock for the pond and the garden's rear",
+   "fbx": "Dawnspire_Rocks.fbx",
+   "objects": [
+    "Dawnspire_Rocks_ScholarC__Stone"
+   ]
+  },
+  "Dawnspire_Rocks_ScholarD": {
+   "family": "Rocks",
+   "piece": "ScholarD",
+   "variant": "",
+   "tris": 658,
+   "materials": {
+    "Stone": 658
+   },
+   "bounds_min": [
+    -4.7,
+    -0.46,
+    -2.17
+   ],
+   "bounds_max": [
+    4.69,
+    3.91,
+    2.82
+   ],
+   "radius": 4.73,
+   "crown_radius": 4.73,
+   "height": 3.91,
+   "collision": [
+    {
+     "x0": -3.52,
+     "x1": 3.51,
+     "y0": 0.0,
+     "y1": 3.32,
+     "z0": 0.2,
+     "z1": 2.32
+    },
+    {
+     "x0": -4.1,
+     "x1": -1.6,
+     "y0": 0.0,
+     "y1": 2.4,
+     "z0": -0.9,
+     "z1": 0.9
+    },
+    {
+     "x0": 1.6,
+     "x1": 4.09,
+     "y0": 0.0,
+     "y1": 2.4,
+     "z0": -0.9,
+     "z1": 0.9
+    }
+   ],
+   "use": "a low grotto rock for the water's edge (the cave mouth faces -z)",
+   "fbx": "Dawnspire_Rocks.fbx",
+   "objects": [
+    "Dawnspire_Rocks_ScholarD__Stone"
+   ]
+  },
+  "Dawnspire_Rocks_ScholarE": {
+   "family": "Rocks",
+   "piece": "ScholarE",
+   "variant": "",
+   "tris": 1028,
+   "materials": {
+    "Stone": 1028
+   },
+   "bounds_min": [
+    -4.53,
+    -1.11,
+    -2.06
+   ],
+   "bounds_max": [
+    5.31,
+    8.02,
+    2.06
+   ],
+   "radius": 5.33,
+   "crown_radius": 5.33,
+   "height": 8.02,
+   "collision": [
+    {
+     "x0": -4.18,
+     "x1": -1.25,
+     "y0": 0.0,
+     "y1": 3.0,
+     "z0": -1.7,
+     "z1": 1.76
+    },
+    {
+     "x0": 1.51,
+     "x1": 4.96,
+     "y0": 0.0,
+     "y1": 3.0,
+     "z0": -1.76,
+     "z1": 1.65
+    }
+   ],
+   "use": "a leaning rock arch: a garden gateway over a path, or a pond feature (the opening runs along z)",
+   "fbx": "Dawnspire_Rocks.fbx",
+   "objects": [
+    "Dawnspire_Rocks_ScholarE__Stone"
+   ]
+  },
+  "Dawnspire_Rocks_SteppingStoneA": {
+   "family": "Rocks",
+   "piece": "SteppingStoneA",
+   "variant": "A",
+   "tris": 48,
+   "materials": {
+    "Stone": 48
+   },
+   "bounds_min": [
+    -1.58,
+    -0.3,
+    -1.34
+   ],
+   "bounds_max": [
+    1.56,
+    0.47,
+    1.35
+   ],
+   "radius": 1.58,
+   "crown_radius": 1.58,
+   "height": 0.47,
+   "collision": [],
+   "use": "lawn and moss stepping stones: lay in a line, 4.5 studs apart, yaw randomly, sunk so the top is 0.2 over the ground",
+   "fbx": "Dawnspire_Rocks.fbx",
+   "objects": [
+    "Dawnspire_Rocks_SteppingStoneA__Stone"
+   ]
+  },
+  "Dawnspire_Rocks_SteppingStoneB": {
+   "family": "Rocks",
+   "piece": "SteppingStoneB",
+   "variant": "B",
+   "tris": 48,
+   "materials": {
+    "Stone": 48
+   },
+   "bounds_min": [
+    -1.46,
+    -0.3,
+    -1.32
+   ],
+   "bounds_max": [
+    1.45,
+    0.37,
+    1.39
+   ],
+   "radius": 1.46,
+   "crown_radius": 1.46,
+   "height": 0.37,
+   "collision": [],
+   "use": "lawn and moss stepping stones: lay in a line, 4.5 studs apart, yaw randomly, sunk so the top is 0.2 over the ground",
+   "fbx": "Dawnspire_Rocks.fbx",
+   "objects": [
+    "Dawnspire_Rocks_SteppingStoneB__Stone"
+   ]
+  },
+  "Dawnspire_Rocks_SteppingStoneC": {
+   "family": "Rocks",
+   "piece": "SteppingStoneC",
+   "variant": "C",
+   "tris": 48,
+   "materials": {
+    "Stone": 48
+   },
+   "bounds_min": [
+    -1.69,
+    -0.3,
+    -1.06
+   ],
+   "bounds_max": [
+    1.48,
+    0.46,
+    1.23
+   ],
+   "radius": 1.69,
+   "crown_radius": 1.69,
+   "height": 0.46,
+   "collision": [],
+   "use": "lawn and moss stepping stones: lay in a line, 4.5 studs apart, yaw randomly, sunk so the top is 0.2 over the ground",
+   "fbx": "Dawnspire_Rocks.fbx",
+   "objects": [
+    "Dawnspire_Rocks_SteppingStoneC__Stone"
+   ]
+  },
+  "Dawnspire_Plants_AzaleaHedge6": {
+   "family": "Plants",
+   "piece": "AzaleaHedge6",
+   "variant": "",
+   "tris": 280,
+   "materials": {
+    "AzaleaBloom": 112,
+    "AzaleaLeaf": 168
+   },
+   "bounds_min": [
+    -3.0,
+    -0.06,
+    -1.16
+   ],
+   "bounds_max": [
+    3.0,
+    2.64,
+    1.16
+   ],
+   "radius": 3.15,
+   "crown_radius": 3.16,
+   "height": 2.64,
+   "collision": [],
+   "use": "a 6 stud clipped hedge: chain end to end along a path or round a lawn",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_AzaleaHedge6__AzaleaBloom",
+    "Dawnspire_Plants_AzaleaHedge6__AzaleaLeaf"
+   ]
+  },
+  "Dawnspire_Plants_AzaleaHedgeEnd": {
+   "family": "Plants",
+   "piece": "AzaleaHedgeEnd",
+   "variant": "",
+   "tris": 224,
+   "materials": {
+    "AzaleaBloom": 56,
+    "AzaleaLeaf": 168
+   },
+   "bounds_min": [
+    0.0,
+    -0.06,
+    -1.16
+   ],
+   "bounds_max": [
+    3.0,
+    2.62,
+    1.15
+   ],
+   "radius": 3.0,
+   "crown_radius": 3.0,
+   "height": 2.62,
+   "collision": [],
+   "use": "closes a chain of hedge modules with a rounded end",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_AzaleaHedgeEnd__AzaleaBloom",
+    "Dawnspire_Plants_AzaleaHedgeEnd__AzaleaLeaf"
+   ]
+  },
+  "Dawnspire_Plants_AzaleaHedgeCorner": {
+   "family": "Plants",
+   "piece": "AzaleaHedgeCorner",
+   "variant": "",
+   "tris": 280,
+   "materials": {
+    "AzaleaBloom": 112,
+    "AzaleaLeaf": 168
+   },
+   "bounds_min": [
+    -1.15,
+    -0.06,
+    -1.13
+   ],
+   "bounds_max": [
+    3.4,
+    2.66,
+    3.4
+   ],
+   "radius": 3.54,
+   "crown_radius": 3.54,
+   "height": 2.66,
+   "collision": [],
+   "use": "an L-shaped corner (two 3.4 stud arms) for a hedge that turns",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_AzaleaHedgeCorner__AzaleaBloom",
+    "Dawnspire_Plants_AzaleaHedgeCorner__AzaleaLeaf"
+   ]
+  },
+  "Dawnspire_Plants_PeonyBed": {
+   "family": "Plants",
+   "piece": "PeonyBed",
+   "variant": "",
+   "tris": 452,
+   "materials": {
+    "Gold": 36,
+    "Leaf": 150,
+    "PeonyBlush": 96,
+    "PeonyWhite": 120,
+    "Plinth": 40,
+    "Soil": 10
+   },
+   "bounds_min": [
+    -2.5,
+    -0.2,
+    -1.6
+   ],
+   "bounds_max": [
+    2.5,
+    1.94,
+    1.6
+   ],
+   "radius": 2.97,
+   "crown_radius": 2.97,
+   "height": 1.94,
+   "collision": [],
+   "use": "a kerbed peony bed on a court or a lawn edge",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_PeonyBed__Gold",
+    "Dawnspire_Plants_PeonyBed__Leaf",
+    "Dawnspire_Plants_PeonyBed__PeonyBlush",
+    "Dawnspire_Plants_PeonyBed__PeonyWhite",
+    "Dawnspire_Plants_PeonyBed__Plinth",
+    "Dawnspire_Plants_PeonyBed__Soil"
+   ]
+  },
+  "Dawnspire_Plants_DwarfPine": {
+   "family": "Plants",
+   "piece": "DwarfPine",
+   "variant": "",
+   "tris": 460,
+   "materials": {
+    "Bark": 168,
+    "Needle": 212,
+    "Stone": 80
+   },
+   "bounds_min": [
+    -2.56,
+    -0.21,
+    -1.2
+   ],
+   "bounds_max": [
+    2.34,
+    3.58,
+    1.32
+   ],
+   "radius": 1.72,
+   "crown_radius": 2.57,
+   "height": 3.58,
+   "collision": [],
+   "use": "an ornamental dwarf pine for terraces, beside rocks and on plinth corners",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_DwarfPine__Bark",
+    "Dawnspire_Plants_DwarfPine__Needle",
+    "Dawnspire_Plants_DwarfPine__Stone"
+   ]
+  },
+  "Dawnspire_Plants_LotusBasin": {
+   "family": "Plants",
+   "piece": "LotusBasin",
+   "variant": "",
+   "tris": 580,
+   "materials": {
+    "Gold": 24,
+    "LotusPad": 128,
+    "LotusPetal": 176,
+    "Plinth": 240,
+    "Water": 12
+   },
+   "bounds_min": [
+    -2.6,
+    -0.3,
+    -2.6
+   ],
+   "bounds_max": [
+    2.6,
+    1.64,
+    2.6
+   ],
+   "radius": 2.6,
+   "crown_radius": 2.6,
+   "height": 1.64,
+   "collision": [],
+   "use": "a lotus basin for a court or the tea terrace (the Water sheet is Glass)",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_LotusBasin__Gold",
+    "Dawnspire_Plants_LotusBasin__LotusPad",
+    "Dawnspire_Plants_LotusBasin__LotusPetal",
+    "Dawnspire_Plants_LotusBasin__Plinth",
+    "Dawnspire_Plants_LotusBasin__Water"
+   ]
+  },
+  "Dawnspire_Plants_WhiteIris": {
+   "family": "Plants",
+   "piece": "WhiteIris",
+   "variant": "",
+   "tris": 594,
+   "materials": {
+    "Gold": 36,
+    "IrisLeaf": 414,
+    "IrisWhite": 144
+   },
+   "bounds_min": [
+    -1.04,
+    -0.15,
+    -1.35
+   ],
+   "bounds_max": [
+    1.01,
+    3.37,
+    1.18
+   ],
+   "radius": 0.33,
+   "crown_radius": 1.35,
+   "height": 3.37,
+   "collision": [],
+   "use": "a white iris clump at the water's edge, at the foot of a rock and beside steps",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_WhiteIris__Gold",
+    "Dawnspire_Plants_WhiteIris__IrisLeaf",
+    "Dawnspire_Plants_WhiteIris__IrisWhite"
+   ]
+  },
+  "Dawnspire_Plants_ClippedShrub": {
+   "family": "Plants",
+   "piece": "ClippedShrub",
+   "variant": "",
+   "tris": 184,
+   "materials": {
+    "AzaleaBloom": 64,
+    "AzaleaLeaf": 120
+   },
+   "bounds_min": [
+    -1.63,
+    0.47,
+    -1.41
+   ],
+   "bounds_max": [
+    1.67,
+    2.19,
+    1.44
+   ],
+   "radius": 1.83,
+   "crown_radius": 1.83,
+   "height": 2.19,
+   "collision": [],
+   "use": "a clipped round shrub with white blooms: in pairs by doors and at path forks",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_ClippedShrub__AzaleaBloom",
+    "Dawnspire_Plants_ClippedShrub__AzaleaLeaf"
+   ]
+  },
+  "Dawnspire_Plants_PetalDriftA": {
+   "family": "Plants",
+   "piece": "PetalDriftA",
+   "variant": "A",
+   "tris": 140,
+   "materials": {
+    "PetalPink": 78,
+    "PetalWhite": 62
+   },
+   "bounds_min": [
+    -3.79,
+    0.02,
+    -3.29
+   ],
+   "bounds_max": [
+    3.29,
+    0.13,
+    3.6
+   ],
+   "radius": 3.79,
+   "crown_radius": 3.79,
+   "height": 0.13,
+   "collision": [],
+   "use": "a patch of fallen petals on the ground under a cherry tree (no collision; lay on the terrain, y 0.06; sink 0.02)",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_PetalDriftA__PetalPink",
+    "Dawnspire_Plants_PetalDriftA__PetalWhite"
+   ]
+  },
+  "Dawnspire_Plants_PetalDriftB": {
+   "family": "Plants",
+   "piece": "PetalDriftB",
+   "variant": "B",
+   "tris": 160,
+   "materials": {
+    "PetalPink": 86,
+    "PetalWhite": 74
+   },
+   "bounds_min": [
+    -4.05,
+    0.02,
+    -4.45
+   ],
+   "bounds_max": [
+    4.21,
+    0.13,
+    4.05
+   ],
+   "radius": 4.68,
+   "crown_radius": 4.68,
+   "height": 0.13,
+   "collision": [],
+   "use": "a patch of fallen petals on the ground under a cherry tree (no collision; lay on the terrain, y 0.06; sink 0.02)",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_PetalDriftB__PetalPink",
+    "Dawnspire_Plants_PetalDriftB__PetalWhite"
+   ]
+  },
+  "Dawnspire_Plants_PetalDriftC": {
+   "family": "Plants",
+   "piece": "PetalDriftC",
+   "variant": "C",
+   "tris": 188,
+   "materials": {
+    "PetalPink": 94,
+    "PetalWhite": 94
+   },
+   "bounds_min": [
+    -5.29,
+    0.02,
+    -5.57
+   ],
+   "bounds_max": [
+    5.57,
+    0.13,
+    5.01
+   ],
+   "radius": 5.57,
+   "crown_radius": 5.57,
+   "height": 0.13,
+   "collision": [],
+   "use": "a patch of fallen petals on the ground under a cherry tree (no collision; lay on the terrain, y 0.06; sink 0.02)",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_PetalDriftC__PetalPink",
+    "Dawnspire_Plants_PetalDriftC__PetalWhite"
+   ]
+  },
+  "Dawnspire_Plants_GravelRakeRect": {
+   "family": "Plants",
+   "piece": "GravelRakeRect",
+   "variant": "",
+   "tris": 366,
+   "materials": {
+    "Gravel": 346,
+    "Stone": 20
+   },
+   "bounds_min": [
+    -3.0,
+    -0.06,
+    -2.0
+   ],
+   "bounds_max": [
+    3.0,
+    0.49,
+    2.0
+   ],
+   "radius": 3.61,
+   "crown_radius": 3.61,
+   "height": 0.49,
+   "collision": [],
+   "use": "a raked gravel garden patch (rectangle or round) with its stone, on a court or a terrace floor",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_GravelRakeRect__Gravel",
+    "Dawnspire_Plants_GravelRakeRect__Stone"
+   ]
+  },
+  "Dawnspire_Plants_GravelRakeRound": {
+   "family": "Plants",
+   "piece": "GravelRakeRound",
+   "variant": "",
+   "tris": 380,
+   "materials": {
+    "Gravel": 300,
+    "Stone": 80
+   },
+   "bounds_min": [
+    -3.0,
+    -0.1,
+    -3.0
+   ],
+   "bounds_max": [
+    3.0,
+    0.53,
+    3.0
+   ],
+   "radius": 3.0,
+   "crown_radius": 3.0,
+   "height": 0.53,
+   "collision": [],
+   "use": "a raked gravel garden patch (rectangle or round) with its stone, on a court or a terrace floor",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_GravelRakeRound__Gravel",
+    "Dawnspire_Plants_GravelRakeRound__Stone"
+   ]
+  },
+  "Dawnspire_Plants_MossTuftA": {
+   "family": "Plants",
+   "piece": "MossTuftA",
+   "variant": "A",
+   "tris": 100,
+   "materials": {
+    "Moss": 100
+   },
+   "bounds_min": [
+    -0.76,
+    0.01,
+    -0.8
+   ],
+   "bounds_max": [
+    0.65,
+    0.26,
+    0.81
+   ],
+   "radius": 0.95,
+   "crown_radius": 0.95,
+   "height": 0.26,
+   "collision": [],
+   "use": "a moss tuft at the foot of rocks, in stair joints and at the lawn's edge",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_MossTuftA__Moss"
+   ]
+  },
+  "Dawnspire_Plants_MossTuftB": {
+   "family": "Plants",
+   "piece": "MossTuftB",
+   "variant": "B",
+   "tris": 120,
+   "materials": {
+    "Moss": 120
+   },
+   "bounds_min": [
+    -0.79,
+    0.01,
+    -0.87
+   ],
+   "bounds_max": [
+    0.73,
+    0.25,
+    0.83
+   ],
+   "radius": 0.92,
+   "crown_radius": 0.92,
+   "height": 0.25,
+   "collision": [],
+   "use": "a moss tuft at the foot of rocks, in stair joints and at the lawn's edge",
+   "fbx": "Dawnspire_Plants.fbx",
+   "objects": [
+    "Dawnspire_Plants_MossTuftB__Moss"
+   ]
+  }
+ }
+}
