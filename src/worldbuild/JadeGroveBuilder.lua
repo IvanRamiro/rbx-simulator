@@ -246,7 +246,9 @@ local function quiet(part)
     part.CanQuery = false
     part.CanTouch = false
     part.Massless = true
-    part.CollisionFidelity = Enum.CollisionFidelity.Box
+    if part:IsA("MeshPart") then -- (the water's plain Parts have no CollisionFidelity)
+        part.CollisionFidelity = Enum.CollisionFidelity.Box
+    end
 end
 
 local function folderOf(root, name)

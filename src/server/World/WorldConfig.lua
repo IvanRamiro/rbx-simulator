@@ -9,7 +9,8 @@ local WorldConfig = {
         -- Radius: the guardians' safe zone (an egg is secured inside Radius - 8). Reach: how far its ground runs (the Merchants'
         -- Terrace, the hub's redesign 2026-11-15, reaches 385 from the centre), for WorldService's islandAt
         Yggdrasil = { Centre = Vector3.new(0, 200, 0), Radius = 250, Reach = 400 },
-        JadeGrove = { Centre = Vector3.new(-384, 200, -448), Radius = 160, Turns = 0 }, -- doubled 2026-11-02
+        -- (the expanded ground runs to 241 from the centre, 2026-11-22: tools/blender/world/jade; the default Reach, Radius * 1.3, was 208)
+        JadeGrove = { Centre = Vector3.new(-384, 200, -448), Radius = 160, Reach = 250, Turns = 0 }, -- doubled 2026-11-02
         EmberPeak = { Centre = Vector3.new(-128, 200, -696), Radius = 150, Turns = 0 }, -- doubled 2026-11-02
         MoonlitIsle = { Centre = Vector3.new(192, 200, -804), Radius = 125, Turns = 0 }, -- doubled 2026-11-02
         OriginAbyss = { Centre = Vector3.new(596, 200, -856), Radius = 165, Turns = 0 }, -- doubled 2026-11-02
