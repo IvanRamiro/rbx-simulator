@@ -1095,12 +1095,12 @@ local GameConfig = {
                 Color = Color3.fromRGB(226, 52, 48), Deep = Color3.fromRGB(70, 6, 12),
                 Motto = "Strength is the only law.",
                 OutfitId = "DemonicRobes", TitleId = "DemonicBlade",
-                Weapon = { Id = "SecretDemonic", Name = "Bloodmoon Saber", Kind = "Sword" },
+                Weapon = { Id = "SecretDemonic", Name = "Nightfall Talon", Kind = "Sword" }, -- (the owner approved the redesign on 2026-11-22)
                 Trial = { Name = "Trial of Strength", Text = "Defeat every dummy the arena sends before the time runs out." },
                 Pages = {
                     { Title = "WHO WE ARE", Text = "The Demonic Faction believes strength is the only law. Others fear it, and it does not mind. Nightfall Citadel is a black fortress where only the strong are heard." },
                     { Title = "HOW WE FIGHT", Text = "They fight hard and fast and give no ground. Their trial tests your strength: beat everything the arena sends." },
-                    { Title = "WHAT YOU GET", Text = "The Demonic Robes, black and red. A seat in Nightfall Citadel. And in time, the chance to earn the Bloodmoon Saber." },
+                    { Title = "WHAT YOU GET", Text = "The Demonic Robes, black and red. A seat in Nightfall Citadel. And in time, the chance to earn the Nightfall Talon." },
                 },
             },
         },
