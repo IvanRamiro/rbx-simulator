@@ -124,8 +124,8 @@ return {
             { Position = Vector3.new(-107.00, 16.00, -132.00), Yaw = 0.0000, Seed = 0 },
         },
         JG_Moss_Curtain_M1 = { -- Vegetation
-            { Position = Vector3.new(-86.13, 12.30, -116.62), Yaw = -2.0219, Seed = 0 },
-            { Position = Vector3.new(-93.97, 12.30, -100.42), Yaw = -2.0219, Seed = 0 },
+            { Position = Vector3.new(-85.32, 12.10, -116.23), Yaw = -2.0219, Seed = 0 },
+            { Position = Vector3.new(-93.16, 12.10, -100.03), Yaw = -2.0219, Seed = 0 },
         },
         JG_Moss_Mat_M1 = { -- Vegetation
             { Position = Vector3.new(93.57, 1.73, -3.08), Yaw = 4.9260, Scale = 1.222, Seed = 767174 },
@@ -965,7 +965,7 @@ return {
     },
     LightColor = { 255, 196, 128 }, -- warm, so the forest is not washed green
     Falls = { -- WorldBuilder.buildWaterfall(parent, lip, from): Drop = how far the water falls (a short fall is shortened after it is built)
-        { Name = "HighFalls", Lip = Vector3.new(-90.95, 13.30, -108.96), From = Vector3.new(-93.65, 13.30, -110.27), Drop = 13.1 },
+        { Name = "HighFalls", Lip = Vector3.new(-90.14, 13.10, -108.57), From = Vector3.new(-92.84, 13.10, -109.87), Drop = 12.9 },
         { Name = "Cascade1", Lip = Vector3.new(-125.08, -8.10, -52.92), From = Vector3.new(-123.31, -8.10, -54.69), Drop = 2.4 },
         { Name = "Cascade2", Lip = Vector3.new(-121.55, -5.70, -56.45), From = Vector3.new(-119.78, -5.70, -58.22), Drop = 2.4 },
         { Name = "Cascade3", Lip = Vector3.new(-118.01, -3.30, -59.99), From = Vector3.new(-116.24, -3.30, -61.76), Drop = 2.4 },
