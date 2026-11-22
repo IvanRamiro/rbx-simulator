@@ -1,0 +1,938 @@
+{
+ "frame": "pad frame: origin at the Orthodox pad's centre (+0.5 up); every piece at its own origin, front -Z; anchor DS_Anchor",
+ "files": {
+  "Buildings": {
+   "fbx": "assets/world/MurimCrossing/Dawnspire/Dawnspire_Buildings.fbx",
+   "objects": [
+    "Dawnspire_Buildings_Corridor__Azure",
+    "Dawnspire_Buildings_Corridor__Gold",
+    "Dawnspire_Buildings_Corridor__Granite",
+    "Dawnspire_Buildings_Corridor__Marble",
+    "Dawnspire_Buildings_Corridor__Tile",
+    "Dawnspire_Buildings_ExhibitionHall__Azure",
+    "Dawnspire_Buildings_ExhibitionHall__Gold",
+    "Dawnspire_Buildings_ExhibitionHall__Granite",
+    "Dawnspire_Buildings_ExhibitionHall__Marble",
+    "Dawnspire_Buildings_ExhibitionHall__Plaster",
+    "Dawnspire_Buildings_ExhibitionHall__Tile",
+    "Dawnspire_Buildings_House__Azure",
+    "Dawnspire_Buildings_House__Gold",
+    "Dawnspire_Buildings_House__Granite",
+    "Dawnspire_Buildings_House__Marble",
+    "Dawnspire_Buildings_House__Plaster",
+    "Dawnspire_Buildings_House__Tile",
+    "Dawnspire_Buildings_RoundPavilion__Azure",
+    "Dawnspire_Buildings_RoundPavilion__Gold",
+    "Dawnspire_Buildings_RoundPavilion__Granite",
+    "Dawnspire_Buildings_RoundPavilion__Marble",
+    "Dawnspire_Buildings_RoundPavilion__Tile",
+    "Dawnspire_Buildings_TeaPavilion__Azure",
+    "Dawnspire_Buildings_TeaPavilion__Gold",
+    "Dawnspire_Buildings_TeaPavilion__Granite",
+    "Dawnspire_Buildings_TeaPavilion__Marble",
+    "Dawnspire_Buildings_TeaPavilion__Tile",
+    "Dawnspire_Buildings_Tower__Azure",
+    "Dawnspire_Buildings_Tower__Gold",
+    "Dawnspire_Buildings_Tower__Granite",
+    "Dawnspire_Buildings_Tower__Marble",
+    "Dawnspire_Buildings_Tower__Plaster",
+    "Dawnspire_Buildings_Tower__Tile",
+    "Dawnspire_Buildings_Wing__Azure",
+    "Dawnspire_Buildings_Wing__Gold",
+    "Dawnspire_Buildings_Wing__Granite",
+    "Dawnspire_Buildings_Wing__Marble",
+    "Dawnspire_Buildings_Wing__Plaster",
+    "Dawnspire_Buildings_Wing__Tile",
+    "Dawnspire_Buildings_YardGate__Azure",
+    "Dawnspire_Buildings_YardGate__Gold",
+    "Dawnspire_Buildings_YardGate__Granite",
+    "Dawnspire_Buildings_YardGate__Marble",
+    "Dawnspire_Buildings_YardGate__Plaster",
+    "Dawnspire_Buildings_YardGate__Tile"
+   ],
+   "tris": 37796,
+   "verify": "ok"
+  },
+  "Courts": {
+   "fbx": "assets/world/MurimCrossing/Dawnspire/Dawnspire_Courts.fbx",
+   "objects": [
+    "Dawnspire_Courts_BridgeFront__Gold",
+    "Dawnspire_Courts_BridgeFront__Marble",
+    "Dawnspire_Courts_BridgeGarden__Gold",
+    "Dawnspire_Courts_BridgeGarden__Marble",
+    "Dawnspire_Courts_Causeway__Gold",
+    "Dawnspire_Courts_Causeway__Granite",
+    "Dawnspire_Courts_Causeway__Marble",
+    "Dawnspire_Courts_FloorForecourt__Granite",
+    "Dawnspire_Courts_FloorForecourt__Marble",
+    "Dawnspire_Courts_FloorResidence__GoldFlat",
+    "Dawnspire_Courts_FloorResidence__Granite",
+    "Dawnspire_Courts_FloorResidence__Marble",
+    "Dawnspire_Courts_FloorTea__Granite",
+    "Dawnspire_Courts_FloorTea__Marble",
+    "Dawnspire_Courts_FloorYard__GoldFlat",
+    "Dawnspire_Courts_FloorYard__Granite",
+    "Dawnspire_Courts_FloorYard__Marble",
+    "Dawnspire_Courts_Landing__Gold",
+    "Dawnspire_Courts_Landing__Marble",
+    "Dawnspire_Courts_Rail8__Gold",
+    "Dawnspire_Courts_Rail8__Granite",
+    "Dawnspire_Courts_Rail8__Marble",
+    "Dawnspire_Courts_RearStair__Gold",
+    "Dawnspire_Courts_RearStair__Marble",
+    "Dawnspire_Courts_RearStair__Pool",
+    "Dawnspire_Courts_ScreenClouds__Gold",
+    "Dawnspire_Courts_ScreenClouds__Granite",
+    "Dawnspire_Courts_ScreenClouds__Marble",
+    "Dawnspire_Courts_ScreenClouds__Plaster",
+    "Dawnspire_Courts_ScreenClouds__Tile",
+    "Dawnspire_Courts_ScreenWaves__Gold",
+    "Dawnspire_Courts_ScreenWaves__Granite",
+    "Dawnspire_Courts_ScreenWaves__Marble",
+    "Dawnspire_Courts_ScreenWaves__Plaster",
+    "Dawnspire_Courts_ScreenWaves__Tile",
+    "Dawnspire_Courts_Stage__Gold",
+    "Dawnspire_Courts_Stage__GoldFlat",
+    "Dawnspire_Courts_Stage__Granite",
+    "Dawnspire_Courts_Stage__Marble",
+    "Dawnspire_Courts_Stair4__Gold",
+    "Dawnspire_Courts_Stair4__Marble",
+    "Dawnspire_Courts_Stair5__Gold",
+    "Dawnspire_Courts_Stair5__Marble",
+    "Dawnspire_Courts_TeaPond__Granite",
+    "Dawnspire_Courts_TeaPond__Marble",
+    "Dawnspire_Courts_TeaPond__Pool",
+    "Dawnspire_Courts_WallGate24__Azure",
+    "Dawnspire_Courts_WallGate24__Gold",
+    "Dawnspire_Courts_WallGate24__Granite",
+    "Dawnspire_Courts_WallGate24__Marble",
+    "Dawnspire_Courts_WallGate24__Plaster",
+    "Dawnspire_Courts_WallGate24__Tile",
+    "Dawnspire_Courts_WallMoon12__Gold",
+    "Dawnspire_Courts_WallMoon12__Granite",
+    "Dawnspire_Courts_WallMoon12__Marble",
+    "Dawnspire_Courts_WallMoon12__Plaster",
+    "Dawnspire_Courts_WallMoon12__Tile",
+    "Dawnspire_Courts_WallPlain12__Gold",
+    "Dawnspire_Courts_WallPlain12__Granite",
+    "Dawnspire_Courts_WallPlain12__Marble",
+    "Dawnspire_Courts_WallPlain12__Plaster",
+    "Dawnspire_Courts_WallPlain12__Tile",
+    "Dawnspire_Courts_WallPlain6__Gold",
+    "Dawnspire_Courts_WallPlain6__Granite",
+    "Dawnspire_Courts_WallPlain6__Marble",
+    "Dawnspire_Courts_WallPlain6__Plaster",
+    "Dawnspire_Courts_WallPlain6__Tile",
+    "Dawnspire_Courts_WallWindow12__Azure",
+    "Dawnspire_Courts_WallWindow12__Gold",
+    "Dawnspire_Courts_WallWindow12__Granite",
+    "Dawnspire_Courts_WallWindow12__Marble",
+    "Dawnspire_Courts_WallWindow12__Plaster",
+    "Dawnspire_Courts_WallWindow12__Tile"
+   ],
+   "tris": 15348,
+   "verify": "ok"
+  },
+  "Props": {
+   "fbx": "assets/world/MurimCrossing/Dawnspire/Dawnspire_Props.fbx",
+   "objects": [
+    "Dawnspire_Props_Bench__Gold",
+    "Dawnspire_Props_Bench__Granite",
+    "Dawnspire_Props_Bench__Marble",
+    "Dawnspire_Props_Burner__Gold",
+    "Dawnspire_Props_Burner__Granite",
+    "Dawnspire_Props_ExhBay__Gold",
+    "Dawnspire_Props_ExhBay__Granite",
+    "Dawnspire_Props_ExhBay__Marble",
+    "Dawnspire_Props_ExhBay__Timber",
+    "Dawnspire_Props_LanternLow__AzureGlow",
+    "Dawnspire_Props_LanternLow__Gold",
+    "Dawnspire_Props_LanternLow__Granite",
+    "Dawnspire_Props_LanternLow__Marble",
+    "Dawnspire_Props_LanternLow__Tile",
+    "Dawnspire_Props_LanternPillar__AzureGlow",
+    "Dawnspire_Props_LanternPillar__Gold",
+    "Dawnspire_Props_LanternPillar__Granite",
+    "Dawnspire_Props_LanternPillar__Marble",
+    "Dawnspire_Props_LanternPillar__Tile",
+    "Dawnspire_Props_PlumPosts__Gold",
+    "Dawnspire_Props_PlumPosts__Granite",
+    "Dawnspire_Props_PlumPosts__Timber",
+    "Dawnspire_Props_Post__Gold",
+    "Dawnspire_Props_Post__Granite",
+    "Dawnspire_Props_Post__SilkWhite",
+    "Dawnspire_Props_Post__Timber",
+    "Dawnspire_Props_Rack__Gold",
+    "Dawnspire_Props_Rack__Timber",
+    "Dawnspire_Props_RegentPlinth__Case",
+    "Dawnspire_Props_RegentPlinth__Gold",
+    "Dawnspire_Props_RegentPlinth__Granite",
+    "Dawnspire_Props_RegentPlinth__Marble",
+    "Dawnspire_Props_TeaTable__Gold",
+    "Dawnspire_Props_TeaTable__Granite",
+    "Dawnspire_Props_TeaTable__Marble",
+    "Dawnspire_Props_Weights__Granite",
+    "Dawnspire_Props_Weights__Marble"
+   ],
+   "tris": 4572,
+   "verify": "ok"
+  }
+ },
+ "pieces": {
+  "Dawnspire_Courts_Causeway": {
+   "min": [
+    -36.05,
+    1.5,
+    33.8
+   ],
+   "max": [
+    36.05,
+    11.9,
+    40.84
+   ],
+   "tris": 126,
+   "materials": {
+    "Gold": 56,
+    "Granite": 20,
+    "Marble": 50
+   }
+  },
+  "Dawnspire_Courts_WallPlain12": {
+   "min": [
+    -6.06,
+    -1.5,
+    -0.75
+   ],
+   "max": [
+    6.06,
+    5.95,
+    0.7
+   ],
+   "tris": 154,
+   "materials": {
+    "Gold": 48,
+    "Granite": 10,
+    "Marble": 20,
+    "Plaster": 12,
+    "Tile": 64
+   }
+  },
+  "Dawnspire_Courts_WallGate24": {
+   "min": [
+    -12.06,
+    -1.5,
+    -3.98
+   ],
+   "max": [
+    12.06,
+    13.32,
+    3.98
+   ],
+   "tris": 1224,
+   "materials": {
+    "Azure": 12,
+    "Gold": 336,
+    "Granite": 40,
+    "Marble": 60,
+    "Plaster": 24,
+    "Tile": 752
+   }
+  },
+  "Dawnspire_Props_LanternPillar": {
+   "min": [
+    -1.0,
+    0.0,
+    -1.0
+   ],
+   "max": [
+    1.0,
+    7.84,
+    1.0
+   ],
+   "tris": 270,
+   "materials": {
+    "AzureGlow": 32,
+    "Gold": 78,
+    "Granite": 10,
+    "Marble": 138,
+    "Tile": 12
+   }
+  },
+  "Dawnspire_Buildings_RoundPavilion": {
+   "min": [
+    -7.95,
+    -3.0,
+    -7.95
+   ],
+   "max": [
+    7.95,
+    14.6,
+    7.95
+   ],
+   "tris": 2588,
+   "materials": {
+    "Azure": 324,
+    "Gold": 536,
+    "Granite": 36,
+    "Marble": 540,
+    "Tile": 1152
+   }
+  },
+  "Dawnspire_Courts_RearStair": {
+   "min": [
+    -12.3,
+    -1.0,
+    -0.04
+   ],
+   "max": [
+    12.3,
+    19.9,
+    33.03
+   ],
+   "tris": 2238,
+   "materials": {
+    "Gold": 564,
+    "Marble": 1302,
+    "Pool": 372
+   }
+  },
+  "Dawnspire_Props_LanternLow": {
+   "min": [
+    -1.15,
+    0.0,
+    -1.09
+   ],
+   "max": [
+    1.15,
+    3.65,
+    1.09
+   ],
+   "tris": 318,
+   "materials": {
+    "AzureGlow": 40,
+    "Gold": 18,
+    "Granite": 60,
+    "Marble": 130,
+    "Tile": 70
+   }
+  },
+  "Dawnspire_Courts_BridgeGarden": {
+   "min": [
+    -12.05,
+    -5.08,
+    -4.95
+   ],
+   "max": [
+    12.05,
+    9.6,
+    4.95
+   ],
+   "tris": 1588,
+   "materials": {
+    "Gold": 916,
+    "Marble": 672
+   }
+  },
+  "Dawnspire_Courts_Landing": {
+   "min": [
+    -2.54,
+    -2.5,
+    -4.54
+   ],
+   "max": [
+    2.54,
+    0.0,
+    4.54
+   ],
+   "tris": 22,
+   "materials": {
+    "Gold": 12,
+    "Marble": 10
+   }
+  },
+  "Dawnspire_Courts_FloorResidence": {
+   "min": [
+    -30.0,
+    -3.0,
+    -14.0
+   ],
+   "max": [
+    30.0,
+    0.05,
+    18.5
+   ],
+   "tris": 860,
+   "materials": {
+    "GoldFlat": 640,
+    "Granite": 210,
+    "Marble": 10
+   }
+  },
+  "Dawnspire_Buildings_House": {
+   "min": [
+    -28.11,
+    -3.0,
+    -14.45
+   ],
+   "max": [
+    28.11,
+    16.97,
+    14.45
+   ],
+   "tris": 8208,
+   "materials": {
+    "Azure": 2454,
+    "Gold": 1464,
+    "Granite": 10,
+    "Marble": 1150,
+    "Plaster": 506,
+    "Tile": 2624
+   }
+  },
+  "Dawnspire_Buildings_Wing": {
+   "min": [
+    -14.26,
+    -3.0,
+    -10.02
+   ],
+   "max": [
+    14.26,
+    14.35,
+    10.02
+   ],
+   "tris": 3398,
+   "materials": {
+    "Azure": 1168,
+    "Gold": 648,
+    "Granite": 10,
+    "Marble": 394,
+    "Plaster": 322,
+    "Tile": 856
+   }
+  },
+  "Dawnspire_Courts_WallWindow12": {
+   "min": [
+    -6.06,
+    -1.5,
+    -0.75
+   ],
+   "max": [
+    6.06,
+    5.95,
+    0.7
+   ],
+   "tris": 530,
+   "materials": {
+    "Azure": 48,
+    "Gold": 36,
+    "Granite": 10,
+    "Marble": 132,
+    "Plaster": 240,
+    "Tile": 64
+   }
+  },
+  "Dawnspire_Courts_WallMoon12": {
+   "min": [
+    -6.06,
+    -1.5,
+    -0.85
+   ],
+   "max": [
+    6.06,
+    8.55,
+    0.83
+   ],
+   "tris": 972,
+   "materials": {
+    "Gold": 356,
+    "Granite": 10,
+    "Marble": 350,
+    "Plaster": 192,
+    "Tile": 64
+   }
+  },
+  "Dawnspire_Courts_ScreenClouds": {
+   "min": [
+    -7.7,
+    -1.5,
+    -1.6
+   ],
+   "max": [
+    7.7,
+    8.2,
+    1.6
+   ],
+   "tris": 1446,
+   "materials": {
+    "Gold": 1294,
+    "Granite": 10,
+    "Marble": 106,
+    "Plaster": 12,
+    "Tile": 24
+   }
+  },
+  "Dawnspire_Courts_FloorTea": {
+   "min": [
+    -18.0,
+    -3.0,
+    -15.0
+   ],
+   "max": [
+    18.0,
+    0.04,
+    15.0
+   ],
+   "tris": 160,
+   "materials": {
+    "Granite": 150,
+    "Marble": 10
+   }
+  },
+  "Dawnspire_Buildings_TeaPavilion": {
+   "min": [
+    -12.34,
+    -3.0,
+    -10.71
+   ],
+   "max": [
+    12.34,
+    16.68,
+    10.71
+   ],
+   "tris": 3358,
+   "materials": {
+    "Azure": 570,
+    "Gold": 836,
+    "Granite": 18,
+    "Marble": 458,
+    "Tile": 1476
+   }
+  },
+  "Dawnspire_Buildings_Corridor": {
+   "min": [
+    -4.49,
+    -2.0,
+    -5.19
+   ],
+   "max": [
+    4.49,
+    8.12,
+    5.19
+   ],
+   "tris": 1174,
+   "materials": {
+    "Azure": 216,
+    "Gold": 108,
+    "Granite": 10,
+    "Marble": 308,
+    "Tile": 532
+   }
+  },
+  "Dawnspire_Courts_TeaPond": {
+   "min": [
+    -7.2,
+    -1.5,
+    -4.2
+   ],
+   "max": [
+    7.2,
+    0.95,
+    4.2
+   ],
+   "tris": 64,
+   "materials": {
+    "Granite": 22,
+    "Marble": 40,
+    "Pool": 2
+   }
+  },
+  "Dawnspire_Props_TeaTable": {
+   "min": [
+    -2.88,
+    0.0,
+    -2.84
+   ],
+   "max": [
+    2.88,
+    1.66,
+    2.84
+   ],
+   "tris": 882,
+   "materials": {
+    "Gold": 324,
+    "Granite": 72,
+    "Marble": 486
+   }
+  },
+  "Dawnspire_Props_Bench": {
+   "min": [
+    -2.5,
+    0.0,
+    -0.7
+   ],
+   "max": [
+    2.5,
+    1.36,
+    0.7
+   ],
+   "tris": 82,
+   "materials": {
+    "Gold": 12,
+    "Granite": 20,
+    "Marble": 50
+   }
+  },
+  "Dawnspire_Courts_BridgeFront": {
+   "min": [
+    -14.05,
+    -5.08,
+    -4.95
+   ],
+   "max": [
+    14.05,
+    9.6,
+    4.95
+   ],
+   "tris": 1508,
+   "materials": {
+    "Gold": 856,
+    "Marble": 652
+   }
+  },
+  "Dawnspire_Courts_Stair4": {
+   "min": [
+    -6.86,
+    -1.0,
+    -0.04
+   ],
+   "max": [
+    6.86,
+    5.9,
+    6.03
+   ],
+   "tris": 240,
+   "materials": {
+    "Gold": 120,
+    "Marble": 120
+   }
+  },
+  "Dawnspire_Courts_FloorYard": {
+   "min": [
+    -28.0,
+    -3.0,
+    -30.25
+   ],
+   "max": [
+    28.0,
+    0.05,
+    30.25
+   ],
+   "tris": 920,
+   "materials": {
+    "GoldFlat": 640,
+    "Granite": 270,
+    "Marble": 10
+   }
+  },
+  "Dawnspire_Buildings_YardGate": {
+   "min": [
+    -14.62,
+    -3.0,
+    -7.89
+   ],
+   "max": [
+    14.62,
+    17.08,
+    7.89
+   ],
+   "tris": 3492,
+   "materials": {
+    "Azure": 1416,
+    "Gold": 396,
+    "Granite": 90,
+    "Marble": 394,
+    "Plaster": 208,
+    "Tile": 988
+   }
+  },
+  "Dawnspire_Courts_WallPlain6": {
+   "min": [
+    -3.06,
+    -1.5,
+    -0.75
+   ],
+   "max": [
+    3.06,
+    5.95,
+    0.7
+   ],
+   "tris": 134,
+   "materials": {
+    "Gold": 48,
+    "Granite": 10,
+    "Marble": 20,
+    "Plaster": 12,
+    "Tile": 44
+   }
+  },
+  "Dawnspire_Buildings_Tower": {
+   "min": [
+    -10.8,
+    -3.0,
+    -10.8
+   ],
+   "max": [
+    10.8,
+    31.13,
+    10.8
+   ],
+   "tris": 6872,
+   "materials": {
+    "Azure": 1456,
+    "Gold": 1112,
+    "Granite": 24,
+    "Marble": 1104,
+    "Plaster": 184,
+    "Tile": 2992
+   }
+  },
+  "Dawnspire_Courts_Stage": {
+   "min": [
+    -8.4,
+    -2.0,
+    -11.25
+   ],
+   "max": [
+    8.4,
+    6.4,
+    8.4
+   ],
+   "tris": 632,
+   "materials": {
+    "Gold": 180,
+    "GoldFlat": 360,
+    "Granite": 10,
+    "Marble": 82
+   }
+  },
+  "Dawnspire_Props_Rack": {
+   "min": [
+    -2.7,
+    0.0,
+    -0.7
+   ],
+   "max": [
+    2.7,
+    5.4,
+    0.7
+   ],
+   "tris": 434,
+   "materials": {
+    "Gold": 200,
+    "Timber": 234
+   }
+  },
+  "Dawnspire_Props_Post": {
+   "min": [
+    -1.0,
+    0.0,
+    -0.95
+   ],
+   "max": [
+    1.0,
+    5.6,
+    0.95
+   ],
+   "tris": 308,
+   "materials": {
+    "Gold": 56,
+    "Granite": 60,
+    "SilkWhite": 144,
+    "Timber": 48
+   }
+  },
+  "Dawnspire_Props_PlumPosts": {
+   "min": [
+    -4.94,
+    0.0,
+    -4.94
+   ],
+   "max": [
+    4.94,
+    2.92,
+    4.94
+   ],
+   "tris": 1224,
+   "materials": {
+    "Gold": 360,
+    "Granite": 432,
+    "Timber": 432
+   }
+  },
+  "Dawnspire_Props_Weights": {
+   "min": [
+    -2.2,
+    0.08,
+    -1.02
+   ],
+   "max": [
+    2.2,
+    2.12,
+    1.02
+   ],
+   "tris": 88,
+   "materials": {
+    "Granite": 64,
+    "Marble": 24
+   }
+  },
+  "Dawnspire_Courts_Stair5": {
+   "min": [
+    -6.86,
+    -1.0,
+    -0.04
+   ],
+   "max": [
+    6.86,
+    6.9,
+    7.53
+   ],
+   "tris": 300,
+   "materials": {
+    "Gold": 150,
+    "Marble": 150
+   }
+  },
+  "Dawnspire_Courts_FloorForecourt": {
+   "min": [
+    -26.0,
+    -3.0,
+    -12.5
+   ],
+   "max": [
+    26.0,
+    0.04,
+    12.5
+   ],
+   "tris": 180,
+   "materials": {
+    "Granite": 170,
+    "Marble": 10
+   }
+  },
+  "Dawnspire_Buildings_ExhibitionHall": {
+   "min": [
+    -24.0,
+    -3.0,
+    -13.44
+   ],
+   "max": [
+    24.0,
+    19.44,
+    12.75
+   ],
+   "tris": 8706,
+   "materials": {
+    "Azure": 2614,
+    "Gold": 1886,
+    "Granite": 858,
+    "Marble": 980,
+    "Plaster": 400,
+    "Tile": 1968
+   }
+  },
+  "Dawnspire_Props_ExhBay": {
+   "min": [
+    -2.6,
+    0.0,
+    -1.9
+   ],
+   "max": [
+    2.6,
+    6.2,
+    -0.0
+   ],
+   "tris": 192,
+   "materials": {
+    "Gold": 60,
+    "Granite": 10,
+    "Marble": 42,
+    "Timber": 80
+   }
+  },
+  "Dawnspire_Props_RegentPlinth": {
+   "min": [
+    -9.3,
+    -1.0,
+    -2.9
+   ],
+   "max": [
+    9.3,
+    5.4,
+    2.9
+   ],
+   "tris": 228,
+   "materials": {
+    "Case": 12,
+    "Gold": 176,
+    "Granite": 10,
+    "Marble": 30
+   }
+  },
+  "Dawnspire_Courts_ScreenWaves": {
+   "min": [
+    -7.7,
+    -1.5,
+    -1.6
+   ],
+   "max": [
+    7.7,
+    8.2,
+    1.6
+   ],
+   "tris": 1978,
+   "materials": {
+    "Gold": 1826,
+    "Granite": 10,
+    "Marble": 106,
+    "Plaster": 12,
+    "Tile": 24
+   }
+  },
+  "Dawnspire_Props_Burner": {
+   "min": [
+    -1.9,
+    0.0,
+    -1.9
+   ],
+   "max": [
+    1.9,
+    4.2,
+    1.9
+   ],
+   "tris": 546,
+   "materials": {
+    "Gold": 474,
+    "Granite": 72
+   }
+  },
+  "Dawnspire_Courts_Rail8": {
+   "min": [
+    -4.55,
+    -1.2,
+    -0.65
+   ],
+   "max": [
+    4.55,
+    2.45,
+    0.65
+   ],
+   "tris": 72,
+   "materials": {
+    "Gold": 32,
+    "Granite": 10,
+    "Marble": 30
+   }
+  }
+ }
+}

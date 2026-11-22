@@ -28,7 +28,7 @@
     "Orthodox_Woldae__Granite",
     "Orthodox_Woldae__Marble"
    ],
-   "tris": 22678,
+   "tris": 22680,
    "verify": "ok"
   },
   "Roofs": {
@@ -155,9 +155,9 @@
     12.22,
     38.4
    ],
-   "tris": 4786,
+   "tris": 4788,
    "materials": {
-    "Gold": 2088,
+    "Gold": 2090,
     "Marble": 2698
    }
   },

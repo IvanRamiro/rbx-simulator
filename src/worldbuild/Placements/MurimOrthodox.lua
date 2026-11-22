@@ -2,7 +2,7 @@
 -- Read by OrthodoxBuilder. Every position is in the PAD'S FRAME: origin at the Orthodox pad's centre (Placements/MurimCrossing.lua Pads.Orthodox.Centre)
 -- lifted by FloorLift (the court's floor is 0.5 over the pad's ground), turned by the pad's FrontYaw, so y = 0 is the court's floor and the front (-Z) faces
 -- the plaza. Yaw: CFrame.Angles(0, Yaw, 0) in that frame. The kit is the FBX files in assets/world/MurimCrossing/Orthodox (Orthodox_<Piece>__<Material>,
--- anchor OH_Anchor), stored by WorldBuilder.storeKit("MurimCrossing", import, "OH_Anchor"). Every visual piece is CanCollide/CanQuery/CanTouch false with Box
+-- anchor OH_Anchor), stored by WorldBuilder.storeKit("Dawnspire", import, "OH_Anchor"). Every visual piece is CanCollide/CanQuery/CanTouch false with Box
 -- fidelity: all walking and bumping is the Colliders (invisible Plastic boxes, one material so they cost one batch).
 return {
     Pad = "Orthodox",
@@ -180,7 +180,8 @@ return {
         { Name = "Parapet", Position = Vector3.new(-33.200, 9.900, 10.000), Size = Vector3.new(0.800, 1.800, 47.700) },
         { Name = "Balustrade", Position = Vector3.new(21.200, 10.300, -13.850), Size = Vector3.new(24.000, 2.600, 0.900) },
         { Name = "Parapet", Position = Vector3.new(33.200, 9.900, 10.000), Size = Vector3.new(0.800, 1.800, 47.700) },
-        { Name = "Parapet", Position = Vector3.new(0.000, 9.900, 33.850), Size = Vector3.new(66.400, 1.800, 0.800) },
+        { Name = "Parapet", Position = Vector3.new(-20.350, 9.900, 33.850), Size = Vector3.new(25.700, 1.800, 0.800) },
+        { Name = "Parapet", Position = Vector3.new(20.350, 9.900, 33.850), Size = Vector3.new(25.700, 1.800, 0.800) },
         { Name = "Mound", Position = Vector3.new(-46.000, -1.000, 0.000), Size = Vector3.new(16.000, 14.000, 26.000) },
         { Name = "TowerBody", Position = Vector3.new(-45.000, 10.500, 0.000), Size = Vector3.new(13.000, 9.000, 13.000) },
         { Name = "GardenRock", Position = Vector3.new(-48.000, -2.400, -31.000), Size = Vector3.new(10.000, 11.200, 10.000) },
@@ -254,14 +255,6 @@ return {
         { Zone = "stair", Lip = Vector3.new(16.000, 5.000, -21.500), From = Vector3.new(16.000, 5.400, -19.500) },
         { Zone = "mound", Lip = Vector3.new(-38.500, 6.000, -11.600), From = Vector3.new(-38.500, 6.200, -8.600) },
         { Zone = "mound", Lip = Vector3.new(38.500, 6.000, -11.600), From = Vector3.new(38.500, 6.200, -8.600) },
-    },
-    Trees = { -- the Blossom Sanctuary's trees (WorldAssets.BlossomSanctuaryAssets), position and yaw
-        { Position = Vector3.new(-36.000, -0.300, -36.000), Yaw = 0.000, Scale = 1.15 },
-        { Position = Vector3.new(36.000, -0.300, -36.000), Yaw = 1.900, Scale = 1.25 },
-        { Position = Vector3.new(-38.000, -0.300, -24.500), Yaw = 3.800, Scale = 1.35 },
-        { Position = Vector3.new(38.000, -0.300, -24.500), Yaw = 5.700, Scale = 1.15 },
-        { Position = Vector3.new(-19.000, 9.000, 27.000), Yaw = 1.320, Scale = 1.25 },
-        { Position = Vector3.new(19.000, 9.000, 27.000), Yaw = 3.220, Scale = 1.35 },
     },
     Glow = { Spire = "Orthodox_Spire__AzureGlow", Lantern = "Orthodox_Lantern__AzureGlow" }, -- the only Neon pieces
 }

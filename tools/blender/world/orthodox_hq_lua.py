@@ -76,10 +76,6 @@ def write(data):
     for f in data["falls"]:
         A("        { Zone = \"%s\", Lip = %s, From = %s }," % (f["zone"], v3(f["lip"]), v3(f["frm"])))
     A("    },")
-    A("    Trees = { -- the Blossom Sanctuary's trees (WorldAssets.BlossomSanctuaryAssets), position and yaw")
-    for i, t in enumerate(data["trees"]):
-        A("        { Position = %s, Yaw = %.3f, Scale = %.2f }," % (v3(t), (i * 1.9) % 6.28, 1.15 + 0.1 * (i % 3)))
-    A("    },")
     A("    Glow = { Spire = \"Orthodox_Spire__AzureGlow\", Lantern = \"Orthodox_Lantern__AzureGlow\" }, -- the only Neon pieces")
     A("}")
     with open(PATH, "w") as f:

@@ -34,6 +34,7 @@ HB1 = 2.2               # the hall's bracket height
 HALL_A, HALL_D = 28.0, 12.0
 WALL_Z_FRONT, WALL_Z_REAR = -4.0, 12.0
 STAIR_HALF = 8.0
+REAR_GAP = 7.5            # the inner court's rear gate: tier C's rear parapet is open between x = -7.5 and 7.5 (Dawnspire's causeway to the rear garden, 2026-11-22)
 TOWER_AT = (45.0, 6.0, 0.0)
 PAVILION_FRONT = (25.0, 1.0, -42.0)
 PAVILION_REAR = (0.0, 10.0, 29.0)
@@ -167,7 +168,11 @@ def balustrade_runs(P, st=ST):
             # the front's corner post and the side runs: x = +-(x1 - 0.8) from z0 + 0.15 to z1 - 0.15
             xx = sx * (x1 - 0.8)
             _parapet(P, xx, z0 + 0.15, xx, z1 - 0.15, y1, st)
-        _parapet(P, -(x1 - 0.8), z1 - 0.15, x1 - 0.8, z1 - 0.15, y1, st, gap=({"A": 0.0, "B": 0.0, "C": 0.0}[name]))
+        if name == "C":
+            _parapet(P, -(x1 - 0.8), z1 - 0.15, -REAR_GAP, z1 - 0.15, y1, st)
+            _parapet(P, REAR_GAP, z1 - 0.15, x1 - 0.8, z1 - 0.15, y1, st)
+        else:
+            _parapet(P, -(x1 - 0.8), z1 - 0.15, x1 - 0.8, z1 - 0.15, y1, st)
         # the part of the front between the carved run and the corner (a short parapet), none needed: the carved run reaches the corner
     return fronts
 
@@ -620,7 +625,11 @@ def build_all():
             C(_box_c(xa, xb, y1, y1 + 2.6, zc - 0.45, zc + 0.45, "Balustrade"))
             xx = sx * (x1 - 0.8)
             C(_box_c(xx - 0.4, xx + 0.4, y1, y1 + 1.8, z0 + 0.15, z1 - 0.15, "Parapet"))
-        C(_box_c(-(x1 - 0.8), x1 - 0.8, y1, y1 + 1.8, z1 - 0.15 - 0.4, z1 - 0.15 + 0.4, "Parapet"))
+        if name == "C":
+            C(_box_c(-(x1 - 0.8), -REAR_GAP, y1, y1 + 1.8, z1 - 0.15 - 0.4, z1 - 0.15 + 0.4, "Parapet"))
+            C(_box_c(REAR_GAP, x1 - 0.8, y1, y1 + 1.8, z1 - 0.15 - 0.4, z1 - 0.15 + 0.4, "Parapet"))
+        else:
+            C(_box_c(-(x1 - 0.8), x1 - 0.8, y1, y1 + 1.8, z1 - 0.15 - 0.4, z1 - 0.15 + 0.4, "Parapet"))
     # rock mounds and towers (not enterable)
     for sx in (-1, 1):
         C(_box_c(*sorted((sx * 38.0, sx * 54.0)), -8.0, TOWER_AT[1], -13.0, 13.0, "Mound"))
@@ -658,7 +667,7 @@ def build_all():
     marks["SpireGlow"] = dict(pos=(0.0, apex + 1.2 + 15.0 * 0.52, 0.0), yaw=0.0, note="the crystal's middle (the halo rings centre on it)")
     falls = [dict(lip=(sx * 16.0, 5.0, -21.5), frm=(sx * 16.0, 5.4, -19.5), zone="stair") for sx in (-1, 1)]
     falls += [dict(lip=(sx * 38.5, 6.0, -11.6), frm=(sx * 38.5, 6.2, -8.6), zone="mound") for sx in (-1, 1)]
-    trees = [(sx * 36.0, -0.3, -36.0) for sx in (-1, 1)] + [(sx * 38.0, -0.3, -24.5) for sx in (-1, 1)] + [(sx * 19.0, 9.0, 27.0) for sx in (-1, 1)]
+    trees = []      # (the first foundation's Blossom Sanctuary trees stood here: gone; Dawnspire plants its own, see dawnspire.py)
     return dict(pieces=pieces, placements=place, colliders=coll, marks=marks, falls=falls, trees=trees, stack=info, roof1=(ye1, yt1), tower=tinfo,
                 pavilion=pinfo, apex=apex)
 

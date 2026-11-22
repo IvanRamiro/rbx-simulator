@@ -17,8 +17,8 @@
 --   <Faction>Pad   empty markers for each headquarters (centre, gate, main hall, vault, trial points): nothing is built on the pads yet
 --   Approach       the route zones and checks WorldService uses to bring back a player who falls (bridge, spur, plaza, stairs, pads, hidden paths)
 --   Checkpoint     where a fall from the island lands (the plaza, facing the oath stone)
---   Dress          blossom trees (the Blossom Sanctuary's kit) on the Orthodox side, forest trees (the Jade Grove's) on the Unorthodox, basalt
---                  and shards (the Ember Peak's) on the Demonic, three waterfalls (WorldBuilder.buildWaterfall), and the blood moon
+--   Dress          forest trees (the Jade Grove's) on the Unorthodox side, basalt and shards (the Ember Peak's) on the Demonic, one waterfall
+--                  (WorldBuilder.buildWaterfall) and the blood moon (the Orthodox side's own trees and falls are Dawnspire's: DawnspireBuilder)
 --   HubApron       the hub's end of the bridge: a marble apron (cobblestone under it, so no grass grows through) and a pair of crystal lamps
 -- No Chinese forms anywhere (no paifang, red lacquer or lanterns, dragon or ridge beasts, lettering): Korean hanok and gate forms, plain
 -- timber and stone, Japanese-style paper lanterns, and shapes of its own.
@@ -839,10 +839,9 @@ local function buildApproach(root)
 end
 
 -- ---------- the mountains' dressing: trees, rocks, waterfalls, the moon ----------
--- Everything here is reused: the Blossom Sanctuary's six blossom trees on the Orthodox side, the Jade Grove's trees on the Unorthodox, the Ember
--- Peak's basalt clusters and shards on the Demonic, the place's own waterfall (WorldBuilder.buildWaterfall). A piece whose kit isn't stored
--- is left out (the build still runs).
-local BLOSSOM = { "BS_TreeElder", "BS_TreeWeeping", "BS_TreeLeaning", "BS_TreeTwin", "BS_TreeYoung", "BS_TreeGnarled" }
+-- Reused for now (the Unorthodox and Demonic territories get their own libraries later): the Jade Grove's trees on the Unorthodox side, the Ember
+-- Peak's basalt clusters and shards on the Demonic, the place's own waterfall (WorldBuilder.buildWaterfall). The Orthodox side's borrowed Blossom Sanctuary
+-- trees are gone (2026-11-22): Dawnspire plants its own (DawnspireBuilder). A piece whose kit isn't stored is left out (the build still runs).
 local JADE = { "JG_AncientTreeA", "JG_AncientTreeB", "JG_BambooClump", "JG_AncientTreeB", "JG_AncientTreeA", "JG_Fern", "JG_BambooClump" }
 local EMBER = { "EP_BasaltClusterA", "EP_BasaltClusterB", "EP_ObsidianShard", "EP_BasaltStep", "EP_PetrifiedTreeA", "EP_ObsidianShard", "EP_PetrifiedTreeB", "EP_BasaltClusterA" }
 
@@ -862,7 +861,6 @@ end
 local function buildDress(root)
     local dress = folder(root, "Dress")
     local counts = {}
-    counts.Blossom = place(folder(dress, "Blossom"), "BlossomSanctuary", BLOSSOM, P.Dress.TreesO, 1.1, 1.5, 0.4)
     counts.Jade = place(folder(dress, "Forest"), "JadeGrove", JADE, P.Dress.TreesU, 0.9, 1.35, 0.3)
     counts.Ember = place(folder(dress, "Basalt"), "EmberPeak", EMBER, P.Dress.RocksD, 1.8, 3.0, 0.5)
     -- waterfalls: where a mesa's rim faces the plaza
@@ -1032,6 +1030,10 @@ function CrossingBuilder.build()
     local okHall, hall = pcall(function()
         return require(WorldBuild:WaitForChild("OrthodoxBuilder"):Clone()).build()
     end)
+    -- Dawnspire's territory (DawnspireBuilder): rebuilt here too, for the same reason (it does nothing until its kit is stored)
+    local okTerritory, territory = pcall(function()
+        return require(WorldBuild:WaitForChild("DawnspireBuilder"):Clone()).build()
+    end)
     WorldBuilder.applyCollision(root)
     local parts = 0
     for _, d in root:GetDescendants() do
@@ -1039,8 +1041,8 @@ function CrossingBuilder.build()
             parts += 1
         end
     end
-    return { Parts = parts, Zones = zones, ApronVoxels = cobbled, Lamps = lamps, Blossom = dress.Blossom, Forest = dress.Jade, Basalt = dress.Ember, Falls = dress.Falls,
-        Hall = if okHall then hall else tostring(hall) }
+    return { Parts = parts, Zones = zones, ApronVoxels = cobbled, Lamps = lamps, Forest = dress.Jade, Basalt = dress.Ember, Falls = dress.Falls,
+        Hall = if okHall then hall else tostring(hall), Territory = if okTerritory then territory else tostring(territory) }
 end
 
 return CrossingBuilder

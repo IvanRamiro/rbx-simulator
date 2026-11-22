@@ -323,7 +323,10 @@ def export():
     data = O.build_all()
     os.makedirs(OUT, exist_ok=True)
     report = {}
+    only = os.environ.get("HQ_ONLY")          # e.g. HQ_ONLY=Structure re-exports one file
     for group, names in GROUPS.items():
+        if only and group != only:
+            continue
         B.clear_scene()
         coll = bpy.data.collections.new("exp")
         bpy.context.scene.collection.children.link(coll)
@@ -345,6 +348,10 @@ def export():
     for n, piece in data["pieces"].items():
         lo, hi = piece.bounds()
         boxes[n] = {"min": [round(v, 2) for v in lo], "max": [round(v, 2) for v in hi], "tris": piece.tris(), "materials": piece.stats()}
+    if only and os.path.exists(os.path.join(OUT, "pieces.json")):        # (a one-file re-export keeps the other files' entries)
+        old = json.load(open(os.path.join(OUT, "pieces.json")))["files"]
+        old.update(report)
+        report = old
     with open(os.path.join(OUT, "pieces.json"), "w") as f:
         json.dump({"frame": "pad frame: origin at the pad's centre (+0.5 up), y = 0 the court floor, front is -Z; every piece at its own origin; anchor OH_Anchor",
                    "files": report, "pieces": boxes}, f, indent=1)

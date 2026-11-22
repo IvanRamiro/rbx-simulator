@@ -12,11 +12,10 @@
 --   Hall/Kit          every MeshPart of the hall (one Model per placement), its material and colour from the placements' Looks (no texture), never colliding
 --   Hall/Colliders    invisible Plastic boxes: the floors, steps, walls, columns, rails, the rock mounds (one material: one batch)
 --   Hall/Spots        markers: VaultSpot (tag FactionVaultSpot), MasterSpot (tag FactionMasterSpot), the court's centre, the door, the inner court
---   Hall/Falls        four waterfalls (WorldBuilder.buildWaterfall), Hall/Trees the Blossom Sanctuary's trees (WorldAssets.BlossomSanctuaryAssets, reused: to be replaced by Dawnspire's own cherry trees, the owner 2026-11-22)
+--   Hall/Falls        four waterfalls (WorldBuilder.buildWaterfall); the hall's trees are Dawnspire's own now (DawnspireBuilder), the Blossom Sanctuary's are gone
 --   Hall/Lights       the lanterns marked Light carry a PointLight each (four in the whole hall)
--- It also removes what the first foundation built on this stair's top that the hall replaces (Stairs.Gate_Orthodox, Stairs.Flags_Orthodox) and the first
--- foundation's blossom trees standing inside the hall's footprint (it places the rest again, as CrossingBuilder.buildDress does). It never touches the other
--- two factions' parts.
+-- It also removes what the first foundation built on this stair's top that the hall replaces (Stairs.Gate_Orthodox, Stairs.Flags_Orthodox) and any Blossom Sanctuary
+-- trees an earlier build left (Dress.Blossom, Hall/Trees). It never touches the other two factions' parts.
 local CollectionService = game:GetService("CollectionService")
 local ServerStorage = game:GetService("ServerStorage")
 
@@ -29,7 +28,6 @@ local OrthodoxBuilder = {}
 
 local ISLAND = "MurimCrossing"
 local KIT = "Dawnspire" -- its templates: ServerStorage.WorldAssets.MurimAssets.DawnspireAssets (WorldBuilder.kitFolder)
-local BLOSSOM = { "BS_TreeElder", "BS_TreeWeeping", "BS_TreeLeaning", "BS_TreeTwin", "BS_TreeYoung", "BS_TreeGnarled" }
 
 local function folder(parent, name)
     local f = Instance.new("Folder")
@@ -157,19 +155,6 @@ local function buildFalls(hall, frame)
     return #H.Falls
 end
 
-local function buildTrees(hall, frame)
-    local trees = folder(hall, "Trees")
-    local placed = 0
-    for _, t in H.Trees do
-        local name = BLOSSOM[(placed % #BLOSSOM) + 1]
-        if WorldBuilder.hasTemplate("BlossomSanctuary", name) then
-            WorldBuilder.placeTemplate("BlossomSanctuary", name, frame * CFrame.new(t.Position) * CFrame.Angles(0, t.Yaw, 0), trees, t.Scale)
-            placed += 1
-        end
-    end
-    return placed
-end
-
 -- A name plaque over the hall's front, in Latin letters.
 local function buildSign(hall, frame)
     local post = WorldBuilder.marker("Sign", Vector3.new(1, 1, 1), frame * CFrame.new(0, 24.5, -19.2), hall)
@@ -191,8 +176,8 @@ local function buildSign(hall, frame)
     label.Parent = gui
 end
 
--- What the first foundation built here and this hall replaces: the old gate and flags on the stair's top, and the blossom trees inside the footprint
--- (the others are placed again exactly as CrossingBuilder.buildDress placed them: the same list, names and scale rule).
+-- What the first foundation built here and this hall replaces: the old gate and flags on the stair's top, and the Blossom Sanctuary's trees (the owner,
+-- 2026-11-22: no environment asset is shared between maps; Dawnspire plants its own cherry trees, DawnspireBuilder).
 local function removeSuperseded(root, frame)
     local stairs = root:FindFirstChild("Stairs")
     local removed = 0
@@ -207,22 +192,11 @@ local function removeSuperseded(root, frame)
     end
     local dress = root:FindFirstChild("Dress")
     local blossom = dress and dress:FindFirstChild("Blossom")
-    local trees = 0
-    if blossom and WorldBuilder.hasTemplate("BlossomSanctuary", BLOSSOM[1]) then
-        blossom:ClearAllChildren()
-        local island = WorldBuilder.islandFrame(ISLAND)
-        for index, entry in P.Dress.TreesO do
-            local local_ = frame:PointToObjectSpace(island:PointToWorldSpace(entry[1]))
-            if math.abs(local_.X) < H.Footprint.XHalf and local_.Z > H.Footprint.ZFrom and local_.Z < H.Footprint.ZTo then
-                continue
-            end
-            local name = BLOSSOM[(index - 1) % #BLOSSOM + 1]
-            local scale = 1.1 + (1.5 - 1.1) * (((index * 37) % 10) / 9)
-            WorldBuilder.placeTemplate("BlossomSanctuary", name, island * CFrame.new(entry[1] - Vector3.new(0, 0.4, 0)) * CFrame.Angles(0, entry[2], 0), blossom, scale)
-            trees += 1
-        end
+    if blossom then
+        blossom:Destroy()
+        removed += 1
     end
-    return removed, trees
+    return removed
 end
 
 -- Terrain Grass grows blades over a stud tall through any floor laid on it (measured 2026-11-16): under the hall's footprint every Grass voxel becomes
@@ -278,19 +252,18 @@ function OrthodoxBuilder.build()
         old:Destroy()
     end
     local frame = padFrame()
-    local removed, replanted = removeSuperseded(root, frame)
+    local removed = removeSuperseded(root, frame)
     local paved = OrthodoxBuilder.paveGround(frame)
     local hall = folder(pad, "Hall")
     local placed, missing, lights = buildKit(hall, frame)
     local boxes = buildColliders(hall, frame)
     buildSpots(hall, frame)
     local falls = buildFalls(hall, frame)
-    local trees = buildTrees(hall, frame)
     buildSign(hall, frame)
     if #missing > 0 then
         warn("OrthodoxBuilder: not in the kit yet (import and store these FBX files first), left out: " .. table.concat(missing, ", "))
     end
-    return { Placed = placed, Missing = missing, Lights = lights, Colliders = boxes, Falls = falls, Trees = trees, FirstFoundationParts = removed, TreesReplaced = replanted, GrassPaved = paved }
+    return { Placed = placed, Missing = missing, Lights = lights, Colliders = boxes, Falls = falls, FirstFoundationParts = removed, GrassPaved = paved }
 end
 
 function OrthodoxBuilder.check()
@@ -301,9 +274,8 @@ function OrthodoxBuilder.check()
         return "no Hall under " .. H.Pad .. "Pad: run build() first"
     end
     local meshes, lights, colliders, collides = 0, 0, 0, 0
-    local trees = hall:FindFirstChild("Trees")
     for _, d in hall:GetDescendants() do
-        if d:IsA("MeshPart") and not (trees and d:IsDescendantOf(trees)) then
+        if d:IsA("MeshPart") then
             meshes += 1
             if d.CanCollide or d.CanQuery or d.CanTouch then
                 collides += 1
@@ -314,7 +286,7 @@ function OrthodoxBuilder.check()
     end
     local boxes = hall:FindFirstChild("Colliders")
     colliders = boxes and #boxes:GetChildren() or 0
-    return string.format("%d MeshParts apart from the trees (%d that collide or answer queries: must be 0), %d PointLights (at most 4 in the hall), %d collision boxes", meshes, collides, lights, colliders)
+    return string.format("%d MeshParts (%d that collide or answer queries: must be 0), %d PointLights (at most 4 in the hall), %d collision boxes", meshes, collides, lights, colliders)
 end
 
 return OrthodoxBuilder
