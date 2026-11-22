@@ -594,7 +594,7 @@ def prism(poly, y0, y1, c=(0, 0, 0), yaw=0.0):
     return g
 
 
-def blade(base, direction, length, width, droop=0.0, thick=0.05, segs=4, mid=0.38, up=(0.0, 1.0, 0.0), keel=0.0, trough=0.0, base_w=0.14, sweep=0.0):
+def blade(base, direction, length, width, droop=0.0, thick=0.05, segs=4, mid=0.38, up=(0.0, 1.0, 0.0), keel=0.0, trough=0.0, base_w=0.14, sweep=0.0, width_fn=None):
     """A closed leaf blade: a lanceolate strip, widest at `mid` of its length and a point at its end, rising along `direction` and falling away
     (droop: how far the tip falls, as a fraction of the length), solid from both sides (two surfaces `thick` apart that meet at the tip).
     keel lifts the midrib, trough lifts the two edges (a shallow gutter); sweep curves the tip sideways (fraction of the length)."""
@@ -614,6 +614,8 @@ def blade(base, direction, length, width, droop=0.0, thick=0.05, segs=4, mid=0.3
         t = s / float(segs)
         T, N, B = fr[s]
         w = width * (base_w * (1 - t) + (1 - base_w) * math.sin(math.pi * (t ** a_exp)) if t < 1.0 else 0.0)
+        if width_fn is not None:
+            w = width * width_fn(t) if t < 1.0 else 0.0
         th = thick * (1.0 - t * t) if t < 1.0 else 0.0
         rt, rb = [], []
         for sg in (-1, 0, 1):
