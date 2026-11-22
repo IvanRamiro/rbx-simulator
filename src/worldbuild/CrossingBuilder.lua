@@ -1028,6 +1028,10 @@ function CrossingBuilder.build()
     local zones = buildApproach(root)
     local dress = buildDress(root)
     local cobbled, lamps = buildHubApron(root)
+    -- the Orthodox headquarters (OrthodoxBuilder): rebuilt here too, because the build above clears the island's folder (it does nothing until its kit is stored)
+    local okHall, hall = pcall(function()
+        return require(WorldBuild:WaitForChild("OrthodoxBuilder"):Clone()).build()
+    end)
     WorldBuilder.applyCollision(root)
     local parts = 0
     for _, d in root:GetDescendants() do
@@ -1035,7 +1039,8 @@ function CrossingBuilder.build()
             parts += 1
         end
     end
-    return { Parts = parts, Zones = zones, ApronVoxels = cobbled, Lamps = lamps, Blossom = dress.Blossom, Forest = dress.Jade, Basalt = dress.Ember, Falls = dress.Falls }
+    return { Parts = parts, Zones = zones, ApronVoxels = cobbled, Lamps = lamps, Blossom = dress.Blossom, Forest = dress.Jade, Basalt = dress.Ember, Falls = dress.Falls,
+        Hall = if okHall then hall else tostring(hall) }
 end
 
 return CrossingBuilder
