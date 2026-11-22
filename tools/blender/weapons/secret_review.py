@@ -212,8 +212,7 @@ def review(mod, compare=None):
     # close-ups of the working end: guard, grip, pommel
     lo, hi = L.bounds(mine)
     close = []
-    hilt = mod.hilt_tip()[0]
-    for v, c, span in (("front34", (0, 0, hilt[2] + 0.3), 3.2), ("top", (0, 0, 0.0), 3.4), ("back34", (0, 0, 0.5), 3.2), ("edge_r", (0, 0, 0.3), 3.4)):
+    for v, c, span in getattr(mod, "CLOSE", DEFAULT_CLOSE):
         close.append(L.shoot(mine, v, size=(520, 520), samples=56, ortho=False, centre=V((c[0], -c[2], c[1])), span=span))
     p2 = L.save_png(L.sheet(close, 4), os.path.join(REVIEW, wid + "_closeups.png"))
     # the hand
