@@ -243,4 +243,37 @@ function OutfitBuilder.setMaps(outfitId, maps)
     end
 end
 
+-- Stores a recoloured copy of a stored outfit as ServerStorage.Outfits.<variantId>: the same pieces, bones and fitting, only the
+-- colour maps swapped (colours: { <Piece> = "rbxassetid://..." }). The factions' robes (Placements/FactionOutfits):
+--   local OB = require(game.ServerStorage.WorldBuild.OutfitBuilder:Clone())
+--   OB.storeFactionRobes()
+function OutfitBuilder.storeVariant(baseId, variantId, colours)
+    local root = ServerStorage.Outfits
+    local base = assert(root:FindFirstChild(baseId), "no stored outfit " .. baseId)
+    local old = root:FindFirstChild(variantId)
+    if old then
+        old:Destroy()
+    end
+    local copy = base:Clone()
+    copy.Name = variantId
+    copy.Parent = root
+    local maps = {}
+    for piece, id in colours do
+        assert(copy:FindFirstChild(piece), variantId .. " has no piece " .. piece)
+        maps[piece] = { Color = id }
+    end
+    OutfitBuilder.setMaps(variantId, maps)
+    return #copy:GetChildren()
+end
+
+-- The three factions' robes from Placements/FactionOutfits; { <OutfitId> = its piece count }.
+function OutfitBuilder.storeFactionRobes()
+    local data = require(ServerStorage.WorldBuild.Placements.FactionOutfits:Clone())
+    local stored = {}
+    for variantId, colours in data.Variants do
+        stored[variantId] = OutfitBuilder.storeVariant(data.Base, variantId, colours)
+    end
+    return stored
+end
+
 return OutfitBuilder
