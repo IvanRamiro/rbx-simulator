@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local PetRig = {}
+PetRig.LegacyProfiles = {} -- a pet remade as a skinned one keeps its old jointed profile for the old model, until the new one is imported (isRigged picks)
 
 -- (kept on the module, not as locals: the main chunk sits at Luau's 200-local limit)
 PetRig.Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
@@ -6392,14 +6393,14 @@ PetRig.Profiles.ThousandYearDreamEater = {
     Animate = animateDreamEater,
 }
 
-PetRig.Profiles.EclipseDreadwing = {
+PetRig.LegacyProfiles.EclipseDreadwing = {
     Joints = { Body = "Root", Head = "Body", WingL = "Body", WingR = "Body", Tail = "Body" },
     Effects = { Pulse = "Body", Burst = "Body", Sparks = { "Head_Eye" }, Blast = "DevourStars", NovaLight = 2 },
     Colors = { Gold = Color3.fromRGB(190, 150, 255), Amber = Color3.fromRGB(40, 20, 70), Orange = Color3.fromRGB(150, 90, 255),
         Sun = Color3.fromRGB(240, 230, 255), Ivory = Color3.fromRGB(250, 245, 255) },
     Animate = animateWinged,
 }
-PetRig.Profiles.Crysalith = {
+PetRig.LegacyProfiles.Crysalith = {
     Sole = 1.375, -- template units from the middle of its box down to its hooves (the Blender model's box is 2.75 tall, hooves at its foot)
     Joints = {
         Body = "Root", Head = "Body", Antlers = "Head",
@@ -6415,6 +6416,36 @@ PetRig.Profiles.Crysalith = {
         Sun = Color3.fromRGB(235, 252, 255), Ivory = Color3.fromRGB(250, 255, 255) },
     Animate = animateCrysalith,
 }
+
+-- The same two beasts, remade as skinned rigs (Blender 2026-11-22, same look): the Dreadwing's wings are chains with fanning feathers, its neck and tail
+-- chains, its legs hang and trail; Crysalith walks on four solved legs over a four-bone spine, its antlers ring on springs, its tail drags (DreadwingMotion,
+-- CrysalithMotion). Until the owner imports the new meshes the old jointed ones above run (PetRig.isRigged).
+do
+    local DreadwingMotion = require(script.Parent:WaitForChild("DreadwingMotion"))
+    local CrysalithMotion = require(script.Parent:WaitForChild("CrysalithMotion"))
+    PetRig.Profiles.EclipseDreadwing = {
+        Skinned = true,
+        Bones = DreadwingMotion.BONES,
+        Points = DreadwingMotion.POINTS,
+        Effects = { Pulse = "Body", Burst = "Body", Sparks = { "Head" }, Blast = "DevourStars", NovaLight = 2 },
+        Colors = PetRig.LegacyProfiles.EclipseDreadwing.Colors,
+        Animate = DreadwingMotion.animate,
+    }
+    PetRig.Profiles.Crysalith = {
+        Skinned = true,
+        Bones = CrysalithMotion.BONES,
+        Points = CrysalithMotion.POINTS,
+        Effects = {
+            Pulse = "Antlers", Light = "Antlers", Motes = "Body", Burst = "Body",
+            Sparks = { "AntlerL2", "AntlerR2" }, Blast = "EternalFrost", NovaLight = 3,
+        },
+        LightScale = 0.5,
+        SeeThroughGlow = PetRig.LegacyProfiles.Crysalith.SeeThroughGlow,
+        Colors = PetRig.LegacyProfiles.Crysalith.Colors,
+        Animate = CrysalithMotion.animate,
+    }
+    PetRig.SkinnedProfiles = { EclipseDreadwing = PetRig.Profiles.EclipseDreadwing, Crysalith = PetRig.Profiles.Crysalith }
+end
 
 PetRig.Profiles.GravityImp = {
     Skinned = true,
@@ -6589,6 +6620,14 @@ PetRig.Profiles.GalaxyManta = {
 }
 
 function PetRig.isRigged(petId, template)
+    local legacy = PetRig.LegacyProfiles[petId]
+    if legacy then -- remade as a skinned pet: the old jointed profile for the old model, the new for the new
+        if template:FindFirstChildWhichIsA("Bone", true) then
+            PetRig.Profiles[petId] = PetRig.SkinnedProfiles[petId]
+        else
+            PetRig.Profiles[petId] = legacy
+        end
+    end
     local profile = PetRig.Profiles[petId]
     if not profile then
         return false
@@ -6951,6 +6990,13 @@ function PetRig.buildSkinned(model, rootPart, template, petId, turn, scale, leng
         end
         return up.CFrame * cframe
     end
+    -- where every bone rests, in the pet's own frame (metres' worth of studs: its rotation is the model's, its place the bone's head): what a solved
+    -- animation (PetMotion) measures its legs and spine from; and the ground-finder it shares
+    rig.restCF = {}
+    for name, bone in bones do
+        rig.restCF[name] = worldOf(bone)
+    end
+    rig.dropToGround = dropToGround
     for _, name in profile.Bones do
         local bone = bones[name]
         if bone then
@@ -9897,7 +9943,7 @@ function Blasts.EternalFrost(rig, fx)
     end
 end
 
--- Full Moon (the Nine-Tail Moonfox): its tails fan wide (animateNineTailMoonfox) and a light leaves every tail tip; the nine meet above
+-- Full Moon (the Nine-Tail Moonfox): its tails fan wide (MoonfoxMotion) and a light leaves every tail tip; the nine meet above
 -- its head and swell into a full moon, which flares once, rings the air with pale light and fades.
 function Blasts.FullMoon(rig, fx)
     local colors, u, neon = rig.profile.Colors, rig.unit, fx.neon
@@ -15815,148 +15861,16 @@ do
 end
 
 
--- The Nine-Tail Moonfox (skinned, Mythical, the Exclusive Egg; built in Blender from the owner's concept sheet 2026-11-13, nine fluffy
--- crescent tails approved by the owner): she trots after her owner, diagonal pairs together, each paw planted flat (the leg turns were solved
--- in Blender so the paws stay on the ground); her trunk bounces lightly twice a stride and rolls with it. She breathes, glances about (often
--- back at you), and now and then flicks one ear. Her tails sway on one beat with a wave running across the fan; trotting, they stream back
--- and swing with her stride; when her owner flies she tucks her legs under her and her tails stream behind. The special (Full Moon,
--- Blasts.FullMoon) fans the tails wide and lifts her head, and a light leaves every tail tip.
-local animateNineTailMoonfox
+-- The Nine-Tail Moonfox (skinned, Mythical, the Exclusive Egg; built in Blender from the owner's concept sheet 2026-11-13, nine fluffy crescent tails
+-- approved by the owner): her animation is in MoonfoxMotion (solved paws that stay planted at any speed and size, a gait that follows her speed, springs
+-- for her ears and nine tails, a head that stays level and leads her turns). The special (Full Moon, Blasts.FullMoon) fans the tails wide and lifts her
+-- head, and a light leaves every tail tip.
 do
-    local NF = {
-        FAR = 90, -- studs from the camera past which nobody can see it move: its bones rest
-        SOLE = 0.7942, -- metres from the middle of its box (the RootPart's cube counted) down to its paws (nine_tail_moonfox_gen.py)
-        TAILS = 9, -- nine brush tails, Tail<k>A..C under TailRoot, numbered left to right seen from behind (Tail1 her left, Tail5 the centre)
-        -- her trot: each leg's turns (upper, middle, lower) at sixteen steps through the cycle, solved in Blender so each paw slides back flat on
-        -- the ground and lifts as it swings forward (fit worst 0.0004 / 0.0002; no skin tears anywhere in the cycle); each paw turned back level
-        WALK_FRONT = { { 0.402, -0.337, -0.306 }, { 0.323, -0.271, -0.24 }, { 0.209, -0.163, -0.143 }, { 0.111, -0.08, -0.071 }, { 0.029, -0.019, -0.018 }, { -0.041, 0.026, 0.023 }, { -0.104, 0.058, 0.057 }, { -0.16, 0.081, 0.084 }, { -0.209, 0.096, 0.104 }, { -0.284, 0.155, 0.155 }, { -0.415, 0.373, 0.286 }, { -0.452, 0.505, 0.348 }, { -0.403, 0.546, 0.346 }, { -0.28, 0.488, 0.289 }, { -0.106, 0.33, 0.181 }, { 0.115, 0.065, 0.009 } },
-        WALK_HIND = { { 0.078, 0.218, -0.111 }, { 0.063, 0.152, -0.063 }, { 0.047, 0.097, -0.03 }, { 0.029, 0.05, -0.01 }, { 0.009, 0.012, -0.001 }, { -0.014, -0.016, -0.002 }, { -0.04, -0.034, -0.013 }, { -0.069, -0.042, -0.032 }, { -0.103, -0.039, -0.057 }, { -0.11, -0.086, -0.044 }, { 0.01, -0.34, 0.13 }, { 0.104, -0.502, 0.294 }, { 0.112, -0.509, 0.471 }, { 0.082, -0.372, 0.54 }, { 0.108, -0.218, 0.417 }, { 0.125, -0.032, 0.179 } },
-        WALK_LEAD = { FL = 0, BR = 0, FR = 0.5, BL = 0.5 }, -- a trot: diagonal pairs together
-        WALK_RATE = 1.5, -- cycles a second at a full trot
-        -- in the air: forelegs folded back under her chest, hind legs drawn up (checked in Blender: no tears; folded harder, the chest tore)
-        FLY = { Head = { 0.12, 0, 0 }, Hips = { 0.06, 0, 0 }, LegBL1 = { 0.6, 0, 0 }, LegBL2 = { -1.2, 0, 0 }, LegBL3 = { 0.5, 0, 0 }, LegBR1 = { 0.6, 0, 0 }, LegBR2 = { -1.2, 0, 0 }, LegBR3 = { 0.5, 0, 0 }, LegFL1 = { 0.45, 0, 0 }, LegFL2 = { -1.35, 0, 0 }, LegFL3 = { 0.45, 0, 0 }, LegFR1 = { 0.45, 0, 0 }, LegFR2 = { -1.35, 0, 0 }, LegFR3 = { 0.45, 0, 0 }, Neck = { -0.08, 0, 0 }, PawBL = { 0.1, 0, 0 }, PawBR = { 0.1, 0, 0 }, PawFL = { 0.45, 0, 0 }, PawFR = { 0.45, 0, 0 }, Tail1A = { -0.06, 0, 0 }, Tail1B = { -0.06, 0, 0 }, Tail1C = { -0.06, 0, 0 }, Tail2A = { -0.06, 0, 0 }, Tail2B = { -0.06, 0, 0 }, Tail2C = { -0.06, 0, 0 }, Tail3A = { -0.06, 0, 0 }, Tail3B = { -0.06, 0, 0 }, Tail3C = { -0.06, 0, 0 }, Tail4A = { -0.06, 0, 0 }, Tail4B = { -0.06, 0, 0 }, Tail4C = { -0.06, 0, 0 }, Tail5A = { -0.06, 0, 0 }, Tail5B = { -0.06, 0, 0 }, Tail5C = { -0.06, 0, 0 }, Tail6A = { -0.06, 0, 0 }, Tail6B = { -0.06, 0, 0 }, Tail6C = { -0.06, 0, 0 }, Tail7A = { -0.06, 0, 0 }, Tail7B = { -0.06, 0, 0 }, Tail7C = { -0.06, 0, 0 }, Tail8A = { -0.06, 0, 0 }, Tail8B = { -0.06, 0, 0 }, Tail8C = { -0.06, 0, 0 }, Tail9A = { -0.06, 0, 0 }, Tail9B = { -0.06, 0, 0 }, Tail9C = { -0.06, 0, 0 }, TailRoot = { -0.2, 0, 0 } },
-        FAN = 0.32, -- radians each outer tail swings out in the special, round her long axis (checked in Blender: no tail touches another)
-        SWAY_SEGMENT = { 0.3, 0.65, 1 }, -- each tail's sway grows toward its tip (Tail<k>A, B, C)
-        EAR_FLICK = { -0.45, 0.35, 0 }, -- an ear turned back toward a sound (EarL; EarR mirrors its yaw)
-        BONES = { "Hips", "Spine", "Chest", "Neck", "Head", "EarL", "EarR", "TailRoot" },
-    }
-    for _, key in { "FL", "FR", "BL", "BR" } do
-        for k = 1, 3 do
-            table.insert(NF.BONES, "Leg" .. key .. k)
-        end
-        table.insert(NF.BONES, "Paw" .. key)
-    end
-    NF.TAIL_SPREAD = {}
-    for k = 1, NF.TAILS do
-        for _, seg in { "A", "B", "C" } do
-            table.insert(NF.BONES, "Tail" .. k .. seg)
-        end
-        NF.TAIL_SPREAD[k] = ((NF.TAILS + 1) / 2 - k) / ((NF.TAILS - 1) / 2) -- 1 her left (Tail1) .. -1 her right (Tail9)
-    end
-
-    -- a leg's turns at g through its cycle (0..1), between the solved steps
-    function NF.walkAt(rows, g)
-        local n = #rows
-        local x = (g % 1) * n
-        local i = math.floor(x)
-        local w = x - i
-        local a, b = rows[i % n + 1], rows[(i + 1) % n + 1]
-        return { a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w, a[3] + (b[3] - a[3]) * w }
-    end
-
-    function animateNineTailMoonfox(rig, s, moving, fly, nova)
-        local m, u, t, dt = rig.motors, rig.meters, s.time, rig.deltaTime
-        local camera = workspace.CurrentCamera
-        if not camera or (camera.CFrame.Position - rig.rootPart.Position).Magnitude > NF.FAR then
-            return
-        end
-        local drop = dropToGround(rig, s, t, u, fly, NF.SOLE)
-        local onFoot = moving * (1 - fly)
-        local special = math.sin(math.min(nova * 1.4, 1) * math.pi / 2) -- the special: 0 to 1 and back
-        local want = {}
-
-        -- the trot: diagonal pairs, paws planted; the trunk bounces twice a stride and rolls with it, the head held level
-        s.stride = (s.stride or 0) + dt * NF.WALK_RATE * onFoot
-        for key, lead in NF.WALK_LEAD do
-            local rows = if string.sub(key, 1, 1) == "F" then NF.WALK_FRONT else NF.WALK_HIND
-            local a = NF.walkAt(rows, s.stride + lead)
-            addStance(want, {
-                ["Leg" .. key .. "1"] = { a[1], 0, 0 },
-                ["Leg" .. key .. "2"] = { a[2], 0, 0 },
-                ["Leg" .. key .. "3"] = { a[3], 0, 0 },
-                ["Paw" .. key] = { -(a[1] + a[2] + a[3]), 0, 0 },
-            }, onFoot)
-        end
-        local phase = 2 * math.pi * s.stride
-        local bounce = math.abs(math.sin(phase)) -- twice a cycle: each diagonal pair pushes off
-        addStance(want, { Chest = { 0, 0.04 * math.sin(phase), 0.025 * math.sin(phase) }, Hips = { 0, -0.035 * math.sin(phase), -0.02 * math.sin(phase) },
-            Neck = { -0.06, 0, 0 }, Head = { 0.05 - 0.03 * bounce, 0, 0 } }, onFoot)
-        addStance(want, NF.FLY, fly)
-
-        -- breathing
-        local breath = math.sin(t * 1.3)
-        addStance(want, { Chest = { 0.014 * breath, 0, 0 }, Spine = { 0.008 * breath, 0, 0 }, Neck = { -0.01 * breath, 0, 0 } }, 1)
-
-        -- a glance: now and then she looks about, often back at you; less while she trots
-        local toYou = rig.rootPart.CFrame:VectorToObjectSpace((camera.CFrame.Position - rig.rootPart.Position).Unit)
-        s.nextGaze = s.nextGaze or 0
-        if t >= s.nextGaze then
-            s.nextGaze = t + 2.5 + math.random() * 4
-            s.atYou = math.random() < 0.45
-            s.gazeYaw, s.gazePitch = (math.random() - 0.5) * 1.1, (math.random() - 0.5) * 0.25
-        end
-        local calm = (1 - 0.6 * math.max(moving, fly)) * (1 - special)
-        local wantYaw = (if s.atYou then math.clamp(math.atan2(-toYou.X, -toYou.Z), -0.75, 0.75) else s.gazeYaw) * calm
-        local wantPitch = (if s.atYou then math.clamp(toYou.Y * 0.5, -0.15, 0.3) else s.gazePitch) * calm
-        s.yaw = (s.yaw or 0) + (wantYaw - (s.yaw or 0)) * math.min(1, dt * 3)
-        s.pitch = (s.pitch or 0) + (wantPitch - (s.pitch or 0)) * math.min(1, dt * 3)
-        addStance(want, { Neck = { 0.12 * s.pitch, 0.35 * s.yaw, 0 }, Head = { 0.25 * s.pitch + 0.3 * special, 0.45 * s.yaw, 0.1 * s.yaw } }, 1)
-
-        -- ear flicks: one ear snaps back toward a sound and eases forward again
-        s.nextEar = s.nextEar or t + 2
-        if t >= s.nextEar then
-            s.nextEar = t + 2 + math.random() * 4
-            s.earAt, s.earSide = t, if math.random() < 0.5 then 1 else -1
-        end
-        local flick = if s.earAt then math.clamp((t - s.earAt) / 0.12, 0, 1) * (1 - smoothstep(0.25, 0.7, t - s.earAt)) else 0
-        local f = NF.EAR_FLICK
-        addStance(want, { [if (s.earSide or 1) > 0 then "EarL" else "EarR"] = { f[1], f[2] * (s.earSide or 1), f[3] } }, flick)
-        addStance(want, { EarL = { -0.12, 0.1, 0 }, EarR = { -0.12, -0.1, 0 } }, onFoot) -- laid back a little at a trot
-
-        -- the tails: each sways on its own beat, a wave running across the fan from her left to her right and down each tail to its tip;
-        -- trotting they swing with her stride and stream back; in the special they fan wide round her long axis and lift
-        local still = 1 - 0.5 * onFoot
-        addStance(want, { TailRoot = { 0.02 * math.sin(t * 0.8) - 0.08 * onFoot - 0.1 * special, 0.03 * math.sin(phase) * onFoot, 0 } }, 1)
-        for k = 1, NF.TAILS do
-            local spread = NF.TAIL_SPREAD[k]
-            for j, seg in { "A", "B", "C" } do
-                -- one beat for all, neighbours a quarter radian apart: tails side by side never swing against each other (checked in Blender at
-                -- the worst phase with these amplitudes: no tail touches another); the bundle at the root barely moves
-                local w = math.sin(t * 1.1 - k * 0.25 - j * 0.6)
-                local grow = NF.SWAY_SEGMENT[j]
-                addStance(want, { ["Tail" .. k .. seg] = {
-                    0.04 * grow * w * still + 0.06 * fly,
-                    0.08 * grow * w * still + 0.05 * grow * math.sin(phase - j * 0.6) * onFoot,
-                    if j == 1 then NF.FAN * spread * special else 0,
-                } }, 1)
-            end
-        end
-
-        local lift = -drop + 0.012 * bounce * onFoot * u
-        for _, name in NF.BONES do
-            local a = want[name] or Vector3.zero
-            pose(m[name], CFrame.new(0, if name == "Hips" then lift else 0, 0) * CFrame.Angles(a.X, a.Y, a.Z))
-        end
-    end
-
-    local points = { "Head" }
-    for k = 1, NF.TAILS do
-        table.insert(points, "Tail" .. k .. "_Tip") -- a bone at each tail's tip (no skin on it): where the special's lights leave from
-    end
+    local MoonfoxMotion = require(script.Parent:WaitForChild("MoonfoxMotion"))
     PetRig.Profiles.NineTailMoonfox = {
         Skinned = true,
-        Bones = NF.BONES,
-        Points = points,
+        Bones = MoonfoxMotion.BONES,
+        Points = MoonfoxMotion.POINTS,
         Effects = {
             Blast = "FullMoon", -- (its lights leave from the nine tip bones, Tail<k>_Tip)
             NovaLight = 2.5,
@@ -15968,7 +15882,7 @@ do
             Sun = Color3.fromRGB(235, 248, 255),
             Ivory = Color3.fromRGB(245, 250, 255),
         },
-        Animate = animateNineTailMoonfox,
+        Animate = MoonfoxMotion.animate,
     }
 end
 
