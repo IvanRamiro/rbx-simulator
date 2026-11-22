@@ -1082,7 +1082,7 @@ local GameConfig = {
                 Color = Color3.fromRGB(70, 200, 150), Deep = Color3.fromRGB(10, 70, 56),
                 Motto = "No master. No map. Only skill.",
                 OutfitId = "UnorthodoxRobes", TitleId = "UnorthodoxWanderer",
-                Weapon = { Id = "SecretUnorthodox", Name = "Stormhook Spear", Kind = "Spear" },
+                Weapon = { Id = "SecretUnorthodox", Name = "Stormhook Spear", Kind = "Sword" }, -- (the owner, 2026-11-22: all three are swords; the name follows the new design)
                 Trial = { Name = "Trial of Three Tokens", Text = "Find three tokens hidden around Windrift Hold before the time runs out. Nobody tells you the road." },
                 Pages = {
                     { Title = "WHO WE ARE", Text = "The Unorthodox Faction answers to no one. Its fighters come from rivers, markets and back roads, and they judge each other by skill, not by rank. Windrift Hold stands over a waterfall, and every road into it is open." },
