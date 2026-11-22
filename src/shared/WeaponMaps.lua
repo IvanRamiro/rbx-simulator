@@ -28,4 +28,6 @@ return {
     Spear10 = { Color = "rbxassetid://122381001629622", Normal = "rbxassetid://137540971988873", Roughness = "rbxassetid://84212514932253", Metalness = "rbxassetid://71552643321034" },
     Spear11 = { Color = "rbxassetid://134577159657984", Normal = "rbxassetid://127941738031283", Roughness = "rbxassetid://135729892378698", Metalness = "rbxassetid://127031228999225" },
     Spear12 = { Color = "rbxassetid://139864992549625", Normal = "rbxassetid://123007275019516", Roughness = "rbxassetid://115422653501703", Metalness = "rbxassetid://104235130424519" },
+    -- the factions' secret swords (tools/blender/weapons/sword_*.py; the owner approved each design and its maps before upload)
+    SecretUnorthodox = { Color = "rbxassetid://99554064464323", Normal = "rbxassetid://88175191481499", Roughness = "rbxassetid://130581139846235", Metalness = "rbxassetid://111718674620573" },
 }
