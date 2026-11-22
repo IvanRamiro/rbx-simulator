@@ -56,7 +56,7 @@ FILES = {
 def pieces_of(family):
     mod = importlib.import_module(FAMILIES[family][0])
     built = mod.build_all()
-    if ONLY and STAGE != "export":
+    if ONLY and STAGE not in ("export", "contact"):
         built = {k: v for k, v in built.items() if any(o in k for o in ONLY)}
     return built
 
