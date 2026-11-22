@@ -259,6 +259,45 @@ def strip(hi, pts, y_top, y_bot, half_w, mat=0):
         hi.facing([a[0], a[1], a[3], a[2]], [(0, 0), (1, 0), (1, 1), (0, 1)], (d.x, 0, d.z), mat)
 
 
+def revolve(hi, poly, n=28, mat=0, uv_scale=1.0, sx=1.0, sy=1.0, a0=0.0, a1=TAU):
+    """A solid of revolution round the z axis (Roblox space): `poly` the closed cross-section [(r, z)], any simple polygon
+    (a hollow cup, a bell, a collar); faces turned outward. sx, sy squash it into an ellipse (wide along X, flat along Y).
+    a0..a1 (radians) turn only part of the way round: the two cut ends are capped with the cross-section."""
+    m = len(poly)
+    full = a1 - a0 >= TAU - 1e-6
+    cols = n if full else n + 1
+    ccw = _area2([(r, z) for r, z in poly]) > 0
+
+    def pos(r, z, a):
+        return V((max(r, 0.004) * math.cos(a) * sx, max(r, 0.004) * math.sin(a) * sy, z))
+    ids = [[hi.v(pos(r, z, a0 + (a1 - a0) * j / n)) for j in range(cols)] for r, z in poly]
+    run = 0.0
+    for i in range(m):
+        i2 = (i + 1) % m
+        (r0, z0), (r1, z1) = poly[i], poly[i2]
+        dr, dz = r1 - r0, z1 - z0
+        ln = math.hypot(dr, dz)
+        if ln < 1e-9:
+            continue
+        nr, nz = (dz, -dr) if ccw else (-dz, dr)
+        if r0 < 0.005 and r1 < 0.005:
+            run += ln
+            continue
+        for j in range(n):
+            j2 = (j + 1) % cols
+            a = a0 + (a1 - a0) * (j + 0.5) / n
+            quad = [ids[i][j], ids[i][j2], ids[i2][j2], ids[i2][j]]
+            uv = [(j / n, run * uv_scale), ((j + 1) / n, run * uv_scale), ((j + 1) / n, (run + ln) * uv_scale), (j / n, (run + ln) * uv_scale)]
+            hi.facing(quad, uv, (nr * math.cos(a) / sx, nr * math.sin(a) / sy, nz), mat)
+        run += ln
+    if not full:
+        tris = ear_clip(list(poly))
+        for col, a, sign in ((0, a0, -1), (cols - 1, a1, 1)):
+            tangent = V((-math.sin(a) * sx, math.cos(a) * sy, 0.0)) * sign
+            for t in tris:
+                hi.facing([ids[t[0]][col], ids[t[1]][col], ids[t[2]][col]], [(0, 0), (1, 0), (0.5, 1)], tuple(tangent), mat)
+
+
 def spike(hi, base, tip, radius, sides=5, mat=0, curve=None, belly=0.0):
     """A thorn: round at `base`, sharp at `tip`; `curve` bends its middle sideways (a vector)."""
     b, t = V(base), V(tip)
@@ -391,6 +430,13 @@ def flat_shade(obj):
 
 
 # ---------- materials ----------
+def smooth(g, x, a, b):
+    """A shader value: 0 below a, 1 above b, smoothstep between (a and b may be any numbers: a colour ramp's stops cannot go
+    outside 0..1, so the value is rescaled first)."""
+    t = g.math("DIVIDE", g.math("SUBTRACT", x, float(a)), float(b - a), clamp=True)
+    return g.math("MULTIPLY", g.math("MULTIPLY", t, t), g.math("SUBTRACT", 3.0, g.math("MULTIPLY", t, 2.0)))
+
+
 def mat_pbr(name, dark, light, rough=0.5, metal=0.0, grain=0.0, scale=18.0, bump=0.0, ao=0.04):
     """A plain surface between two colours, with noise in colour and (grain) in roughness."""
     g = Hm._Graph(name)
@@ -580,10 +626,26 @@ def bake(weapon_id, hi_objects, low, size=1024, small=512, samples=16, extrusion
     return images
 
 
+def unwrap(obj):
+    """egg_bake's unwrap with the islands packed as boxes: the default packing tucks small islands into the holes of rings and
+    shells, and a texture whose shapes nest (an oval ring with two pale lobes and a line inside it) can be misread as anatomy. Boxes
+    keep every island a separate shape."""
+    view_layer = bpy.context.view_layer
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    view_layer.objects.active = obj
+    with B._ui_override(obj):
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.002)
+        bpy.ops.uv.pack_islands(margin=0.006, rotate=True, shape_method="AABB")
+        bpy.ops.object.mode_set(mode="OBJECT")
+
+
 def export(weapon_id, kind, source, hi, glow, root, hilt, tip, budget=4200, size=1024, small=512):
     """Bakes and writes the weapon: assets/weapons/<WeaponId>.fbx and its four maps, and the placements file
     (or SECRET_OUT_DIR / SECRET_PLACEMENTS_DIR). Returns weapon_kit.export's report."""
-    saved = (B.make_low, B.bake, B.K.join)
+    saved = (B.make_low, B.bake, B.K.join, B._unwrap)
     real_join = B.K.join
 
     def join(objects, name, coll):
@@ -591,11 +653,11 @@ def export(weapon_id, kind, source, hi, glow, root, hilt, tip, budget=4200, size
         if "_Glow_" in name:          # the Neon pieces carry no texture, but their UVs must lie in 0-1 for the gate
             B._unwrap(o)
         return o
-    B.make_low, B.bake, B.K.join = make_low, bake, join
+    B.make_low, B.bake, B.K.join, B._unwrap = make_low, bake, join, unwrap
     try:
         report = WK.export(weapon_id, kind, source, hi, glow, root, hilt, tip, budget=budget, size=size, small=small)
     finally:
-        B.make_low, B.bake, B.K.join = saved
+        B.make_low, B.bake, B.K.join, B._unwrap = saved
     scrub_paths(os.path.join(OUT_DIR, weapon_id + ".fbx"))
     lua = os.path.join(PLACEMENTS_DIR, weapon_id + ".lua")
     import re

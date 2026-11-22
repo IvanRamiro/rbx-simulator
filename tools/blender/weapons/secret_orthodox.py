@@ -51,8 +51,7 @@ def _u(g):
 
 
 def smooth(g, x, a, b):
-    """0 below a, 1 above b, smooth between."""
-    return g.bw(g.ramp(x, [(a, (0, 0, 0)), (b, (1, 1, 1))]))
+    return SK.smooth(g, x, a, b)
 
 
 def mat_blade(name="AzBladeSteel"):
