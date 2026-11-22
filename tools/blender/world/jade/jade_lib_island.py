@@ -33,13 +33,13 @@ GLADE, ELDER, HOLLOW, POOL, HERMITAGE, RUINS, RING_R = OLD.GLADE, OLD.ELDER, OLD
 # discs inside which nothing changes: (x, z, radius); free() rises from 0 to 1 over the next 14 studs
 PROTECT = [
     (0.0, 0.0, 76.0),                                  # the arena, its flagstone border and the path ring (level out to RING_R + 2 + 12)
-    (LANDING[0], LANDING[1], 44.0),                   # the arrival terrace, the Grove Gate, the bridge's landing and the checkpoint
+    (LANDING[0], LANDING[1], 38.0),                   # the arrival terrace (radius 13 + 7), the Grove Gate, the bridge's landing and the checkpoint
     (ARRIVAL[0], ARRIVAL[1], 30.0),
-    (HERMITAGE[0], HERMITAGE[1], 32.0),
-    (GLADE[0], GLADE[1], 36.0),
-    (ELDER[0], ELDER[1], 38.0),
-    (HOLLOW[0], HOLLOW[1], 32.0),
-    (RUINS[0], RUINS[1], 32.0),
+    (HERMITAGE[0], HERMITAGE[1], 28.0),               # each feature's own footprint (its flat or bowl and its soft edge) plus 6 (the 4-stud cell's sample window reaches 2 beyond a centre)
+    (GLADE[0], GLADE[1], 32.0),
+    (ELDER[0], ELDER[1], 32.0),
+    (HOLLOW[0], HOLLOW[1], 26.0),
+    (RUINS[0], RUINS[1], 30.0),
 ]
 
 
@@ -94,13 +94,13 @@ def _bump(d, centre, width):
 
 
 # (bearing, studs, width): nothing toward Ember Peak (north-east) or the bridge (south-east)
-GROWTH = [(-135, 58, 36), (180, 50, 30), (140, 44, 28), (104, 26, 22), (-88, 40, 26), (-112, 16, 20)]
+GROWTH = [(-135, 58, 36), (180, 50, 30), (135, 62, 30), (104, 34, 22), (-98, 40, 24), (-112, 16, 20)]
 
 
 def _east_keep(d):
-    """1 on the old rim's own side (bearings -60 .. +76), falling to 0 over 24 degrees."""
+    """1 on the old rim's own side (bearings -72 .. +76), falling to 0 over 28 and 24 degrees."""
     a = (d + 180) % 360 - 180
-    return smoothstep(-84, -60, a) * (1.0 - smoothstep(76, 100, a))
+    return smoothstep(-100, -72, a) * (1.0 - smoothstep(76, 100, a))
 
 
 def growth(theta):
@@ -132,14 +132,18 @@ SPRING = _fall_point(-PLATEAU_A * 0.45)
 STREAM_TOP = [SPRING, _fall_point(-PLATEAU_A * 0.1), FALLS_LIP]
 STREAM = [(POND[0] - 6.0, POND[1] + 7.0), (-98.0, -84.0), (-112.0, -66.0), (-130.0, -48.0), (-144.0, -28.0), (-152.0, -6.0), (-158.0, 16.0), (-164.0, 38.0), (-174.0, 58.0), (-196.0, 72.0), (-224.0, 82.0)]
 W_POOL = (-178.0, 62.0, 8.0)
-RIFT = [(-150.0, 124.0), (-120.0, 134.0), (-88.0, 146.0), (-54.0, 160.0)]
+RIFT = [(-156.0, 128.0), (-124.0, 130.0), (-92.0, 138.0), (-62.0, 152.0)]
 W_VALLEY = (-196.0, -30.0, 30.0)                       # the western valley: centre and radius of its bowl
 STONE_CIRCLE = (-196.0, -30.0)
 GLEN = (-14.0, -178.0, 22.0)
-CLEARING = (-86.0, 176.0, 22.0)
+CLEARING = (-92.0, 164.0, 22.0)
 
 # bank pads where the three forest bridges land: (x, z, radius, level)
 # the root bridge crosses the gorge at stream arc length 66, the log bridge at its waist, the rope bridge the Rift of Roots
+
+
+PADS = []          # (x, z, radius, level, soft): flat floors under structures and at bridge ends (jade_lib_sites fills it)
+USE_PADS = [True]
 
 
 def _gorge_width(t):
@@ -147,7 +151,7 @@ def _gorge_width(t):
 
 
 def _gorge_depth(t):
-    return 9.0 * smoothstep(0.05, 0.16, t) * (1.0 - smoothstep(0.76, 0.92, t))
+    return 9.0 * smoothstep(0.02, 0.075, t) * (1.0 - smoothstep(0.76, 0.92, t))
 
 
 def bridge_site(kind):
@@ -219,7 +223,7 @@ def features(x, z, h):
     h -= _carve(ds, gw, gd, 5.0)
     h -= 1.8 * (1.0 - smoothstep(2.5, 7.0, ds)) * smoothstep(0.02, 0.12, t)          # the stream's own bed
     wd = math.hypot(x - W_POOL[0], z - W_POOL[1])
-    h -= 3.4 * (1.0 - smoothstep(W_POOL[2] - 1.0, W_POOL[2] + 5.0, wd))
+    h -= 2.0 * (1.0 - smoothstep(W_POOL[2] - 1.0, W_POOL[2] + 5.0, wd))
     # --- the Rift of Roots (a dry chasm) ---
     dr, sr, tr = poly_nearest(x, z, RIFT)
     tr = sr / tr
@@ -237,6 +241,12 @@ def features(x, z, h):
     cd = math.hypot(x - CLEARING[0], z - CLEARING[1])
     w = 1 - smoothstep(CLEARING[2] * 0.6, CLEARING[2], cd)
     h = h * (1 - w) + 1.3 * w
+    h = max(h, -10.5)       # no bed deeper than this: the terrain shell is thin below it
+    if USE_PADS[0]:
+        for (px, pz, r, lev, soft) in PADS:
+            w = 1 - smoothstep(r, r + soft, math.hypot(x - px, z - pz))
+            if w > 0:
+                h = h * (1 - w) + lev * w
     return d0 + (h - d0) * f
 
 
@@ -290,7 +300,7 @@ def height(x, z):
     hs = [ground(x + dx, z + dz) for dx, dz in ((e, 0), (-e, 0), (0, e), (0, -e))]
     hs = [v if v is not None else h for v in hs]
     slope = math.hypot(hs[0] - hs[1], hs[2] - hs[3]) / (2 * e)
-    if OLD.path_distance(x, z) < 3.8:
+    if OLD.path_distance(x, z) < 3.8 or (TRAILS and free(x, z) > 0.0 and min(poly_nearest(x, z, t)[0] for t in TRAILS) < 3.0):
         mat = "Mud"
     elif slope > 0.75 or OLD.pool_distance(x, z) < 1.0:
         mat = "Sandstone"
@@ -306,6 +316,7 @@ def height(x, z):
     return h, mat
 
 
+TRAILS = []        # visible worn trails (Mud): lists of (x, z), set by jade_lib_sites
 MATERIALS = OLD.MATERIALS      # LeafyGrass, Mud, Sandstone: Jade's own, nothing new
 HALF = 236                      # the grid covers the island's centre +- this many studs
 CELL = 4

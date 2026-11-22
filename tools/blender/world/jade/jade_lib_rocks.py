@@ -61,7 +61,7 @@ def leaning_slab(name, seed, h=13.0, w=5.6, t=1.9, lean=0.24, chip=0.22, compani
     # a broken top: a wedge sheared off and lying against the foot, and a split running down the face
     for k, off in enumerate((-1.9, -0.2, 1.7)):
         hh = h * rnd.uniform(0.5, 0.8)
-        f = C.chunk((off, hh / 2 - 0.2, t / 2 + 0.1), (0.8, hh, 0.4), seed + 3 + k, 0.05, tilt=tilt)
+        f = C.chunk((off * w / 5.6, hh / 2 - 0.2, t / 2 + 0.1), (0.8, hh, 0.4), seed + 3 + k, 0.05, tilt=tilt)
         P.put(f, "RockPale" if k != 1 else "RockDark")
     # moss pockets high on the slab (a ledge where the weather lodged)
     P.put(C.chunk((0.3 + math.sin(lean) * h * 0.62, h * 0.62, t * 0.62), (w * 0.62, 0.5, 0.9), seed + 9, 0.12, tilt=tilt), "Moss")
@@ -213,6 +213,7 @@ def build_all():
     out["JG_Rock_MossBoulders_B2"] = boulders("JG_Rock_MossBoulders_B2", 217, [(0, 0, 3.0, 5.4, 2.8, 0.9, 0.36), (3.8, -1.2, 3.6, 3.4, 3.0, 0.2, 0.3), (-2.9, 3.1, 1.9, 1.9, 1.8, 1.4, 0.3), (0.8, 4.4, 1.3, 1.3, 1.2, 0.0, 0.26)])
     out["JG_Rock_LeaningSlab_L1"] = leaning_slab("JG_Rock_LeaningSlab_L1", 221, 13.0, 5.6, 1.9, 0.24, 0.22)
     out["JG_Rock_LeaningSlab_L2"] = leaning_slab("JG_Rock_LeaningSlab_L2", 231, 9.0, 4.4, 1.6, -0.3, 0.3)
+    out["JG_Rock_StandingSlab_L3"] = leaning_slab("JG_Rock_StandingSlab_L3", 243, 6.5, 3.0, 1.3, 0.06, 0.2, companion=False)
     out["JG_Rock_SplitStone_S1"] = split_stone("JG_Rock_SplitStone_S1", 241)
     out["JG_Rock_TerraceStep_T1"] = terrace("JG_Rock_TerraceStep_T1", 251)
     out["JG_Rock_RiverStones_R1"] = river_stones("JG_Rock_RiverStones_R1", 261, 7, 3.4)

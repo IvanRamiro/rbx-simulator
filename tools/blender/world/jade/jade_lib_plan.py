@@ -144,9 +144,137 @@ def OLD_R(a):
     return I.OLD.rim(a)
 
 
+def overlay_for(pl):
+    """SVG overlay for a finished Plan: the forest, the structures, ways, water, bridges, falls, lights and the hidden places."""
+    import jade_lib_forest as F
+    svg = []
+    # water
+    def water(i, j):
+        return False
+    for st in pl.water["streams"]:
+        svg.append(polyline([(p[0], p[1]) for p in st["pts"]], "#5fd0ff", st["width"] * 0.9, None, 0.85))
+    for d in pl.water["discs"]:
+        svg.append('<circle cx="%.1f" cy="%.1f" r="%.1f" fill="#5fd0ff" fill-opacity="0.8" stroke="#bff0ff" stroke-width="0.8"/>' % (d["x"], d["z"], d["r"]))
+    # rift
+    svg.append(polyline(I.RIFT, "#0a0f1e", 26, None, 0.35, "butt"))
+    # trails and hidden ways
+    for name, line in pl.paths["Trails"].items():
+        svg.append(polyline(line, "#c8a070", 3.0, None, 0.9))
+    for name, line in pl.paths["Hidden"].items():
+        svg.append(polyline(line, "#ffe8b0", 1.6, "1 4", 0.9))
+    # the forest
+    colours = {"Tree": "#0d3b2a", "Bamboo": "#d8e66a", "Rock": "#b9bcc0", "Plant": "#ff9ec0", "Mush": "#6af0d0", "Log": "#7a5a3c", "Moss": "#4f8a3c", "Vine": "#2f7d4a"}
+    for piece, lst in pl.place.items():
+        kind = piece.split("_")[1]
+        col = colours.get(kind)
+        if not col:
+            continue
+        r = {"Tree": 3.0, "Bamboo": 2.2, "Rock": 1.8, "Plant": 0.9, "Mush": 0.9, "Log": 1.2, "Moss": 0.7, "Vine": 1.0}[kind]
+        if piece == "JG_Tree_Guardian":
+            r = 9
+        for e in lst:
+            svg.append('<circle cx="%.1f" cy="%.1f" r="%.1f" fill="%s" fill-opacity="0.78"/>' % (e["x"], e["z"], r, col))
+    # structures
+    for piece, lst in pl.place.items():
+        kind = piece.split("_")[1]
+        if kind in ("Shrine", "Lookout", "Hidden", "Hermitage", "Gate", "Cliff"):
+            for e in lst:
+                svg.append('<rect x="%.1f" y="%.1f" width="9" height="9" fill="#ffd76a" stroke="#0a0f1e" stroke-width="1.2"/>' % (e["x"] - 4.5, e["z"] - 4.5))
+    # bridges
+    for name, b in pl.bridges.items():
+        svg.append(polyline([b["A"], b["B"]], "#e9c27a", 4.2, None, 1.0, "butt"))
+    # falls and lights
+    for f in pl.falls:
+        svg.append('<circle cx="%.1f" cy="%.1f" r="3.2" fill="#ffffff" stroke="#2a8fd0" stroke-width="1.4"/>' % (f["lip"][0], f["lip"][2]))
+    for l in pl.lights:
+        svg.append('<circle cx="%.1f" cy="%.1f" r="2.4" fill="#fff08a" stroke="#0a0f1e" stroke-width="0.8"/>' % (l["x"], l["z"]))
+    # hidden places and labels
+    for name, (x, y, z, note) in pl.spots.items():
+        svg.append('<polygon points="%.1f,%.1f %.1f,%.1f %.1f,%.1f %.1f,%.1f" fill="#ff5a5a" stroke="#fff" stroke-width="1"/>' % (x, z - 6, x + 6, z, x, z + 6, x - 6, z))
+        svg.append(label(x, z - 9, name, 6.2, "#ffffff", "700"))
+    for name, (x, z, t) in {"ARENA": (0, -2, "MANTIS ARENA"), "GATE": (I.GATE[0], I.GATE[1] - 6, "Grove Gate"), "GLADE": (I.GLADE[0], I.GLADE[1] - 20, "Bloom Glade"),
+                           "HERM": (I.HERMITAGE[0], I.HERMITAGE[1] - 16, "Hermitage"), "HOLLOW": (I.HOLLOW[0] - 4, I.HOLLOW[1] - 20, "Hollow"), "ELDER": (I.ELDER[0], I.ELDER[1] - 26, "Guardian Tree"),
+                           "RUINS": (I.RUINS[0], I.RUINS[1] + 24, "Ruin Court"), "PLATEAU": (I.PLATEAU_C[0] - 10, I.PLATEAU_C[1] - 6, "MISTFALL HEIGHTS"), "POND": (I.POND[0] + 16, I.POND[1] - 14, "Spirit Pond"),
+                           "RIFT": (-108, 114, "Rift of Roots"), "VAL": (I.W_VALLEY[0] - 6, I.W_VALLEY[1] + 40, "Western Valley"), "GLEN": (I.GLEN[0] + 26, I.GLEN[1] - 14, "Northern Glen"),
+                           "GORGE": (-134, 8, "Mosswater Gorge")}.items():
+        svg.append(label(x, z, t, 7.5 if name in ("ARENA", "PLATEAU") else 6.4, "#ffffff", "800"))
+    # legend
+    lx, lz = 100, -214
+    items = [("#0d3b2a", "trees"), ("#d8e66a", "bamboo"), ("#b9bcc0", "rocks"), ("#ff9ec0", "flowers and ferns"), ("#6af0d0", "glow-cap fungi")]
+    for k, (c, t) in enumerate(items):
+        svg.append('<circle cx="%d" cy="%d" r="3" fill="%s"/>' % (lx, lz + k * 10, c))
+        svg.append(label(lx + 8, lz + 2 + k * 10, t, 6, "#f4efe2", "500", "start"))
+    return {"svg": svg, "water": None}
+
+
+def section(out, pl, line, title, marks=(), ys=3.0, width=2200):
+    """A cross-section along line = ((x0, z0), (x1, z1)): the ground, the water, the structures' colliders crossing it, the bridges' decks. Height exaggerated by `ys`."""
+    (x0, z0), (x1, z1) = line
+    L = math.hypot(x1 - x0, z1 - z0)
+    n = int(L)
+    ux, uz = (x1 - x0) / L, (z1 - z0) / L
+    pts = []
+    for k in range(n + 1):
+        x, z = x0 + ux * k, z0 + uz * k
+        g = I.ground(x, z)
+        pts.append((k, g))
+    lo = min(g for _, g in pts if g is not None) - 4
+    hi = max(g for _, g in pts if g is not None) + 22
+    parts = ['<rect x="-20" y="%.1f" width="%d" height="%.1f" fill="#101a30"/>' % (-hi * ys - 10, n + 40, (hi - lo) * ys + 60)]
+    poly = [(k, -g * ys) for k, g in pts if g is not None]
+    parts.append('<polygon points="%s %d,%.1f %d,%.1f" fill="#3f7a3a" stroke="#9fd48a" stroke-width="0.8"/>' % (" ".join("%.1f,%.1f" % p for p in poly), poly[-1][0], -lo * ys, poly[0][0], -lo * ys))
+    # colliders crossing the line (their footprint's centre within 6 studs of it)
+    for c in pl.colliders:
+        dx, dz = c["x"] - x0, c["z"] - z0
+        along = dx * ux + dz * uz
+        across = -dx * uz + dz * ux
+        half = max(c["sx"], c["sz"]) / 2
+        if 0 <= along <= L and abs(across) < half:
+            parts.append('<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" fill="#e9c27a" fill-opacity="0.55" stroke="#ffd76a" stroke-width="0.5"/>' % (
+                along - (c["sx"] if c["kind"] == "cyl" else half * 2) / 2, -(c["y"] + c["sy"] / 2) * ys, half * 2 if c["kind"] != "cyl" else c["sx"], c["sy"] * ys))
+    for d in pl.water["discs"]:
+        dx, dz = d["x"] - x0, d["z"] - z0
+        along, across = dx * ux + dz * uz, -dx * uz + dz * ux
+        if abs(across) < d["r"] and 0 <= along <= L:
+            h = math.sqrt(d["r"] ** 2 - across ** 2)
+            parts.append('<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" fill="#5fd0ff" fill-opacity="0.8"/>' % (along - h, -d["y"] * ys, 2 * h, 3 * ys))
+    for name, at, hgt in marks:
+        parts.append('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="#fff" stroke-width="0.6" stroke-dasharray="2 2"/>' % (at, -hgt * ys, at, -hgt * ys - 14))
+        parts.append(label(at, -hgt * ys - 18, name, 7, "#ffffff", "700"))
+    parts.append(label(0, -hi * ys + 6, title + "  (height x%g, distance in studs; yellow = collision parts)" % ys, 8, "#ffffff", "800", "start"))
+    parts.append('<line x1="0" y1="%.1f" x2="50" y2="%.1f" stroke="#fff" stroke-width="2"/>' % (-lo * ys + 16, -lo * ys + 16))
+    parts.append(label(25, -lo * ys + 28, "50 studs", 7, "#fff"))
+    vb = (-20, -hi * ys - 10, n + 40, (hi - lo) * ys + 60)
+    render_svg(out, '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="%.1f %.1f %.1f %.1f" font-family="Helvetica Neue, Arial, sans-serif">%s</svg>' % (
+        width, int(width * vb[3] / vb[2]), vb[0], vb[1], vb[2], vb[3], "\n".join(parts)), vb[2], vb[3], width)
+
+
+def tint(cells):
+    return cells
+
+
 if __name__ == "__main__":
     what = sys.argv[1] if len(sys.argv) > 1 else "plan"
     out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(REPO, "renders", "jade_grove_library", "plan_draft.png")
-    if what == "plan":
+    if what == "final":
+        import jade_lib_forest as F
+        pl = F.build()
+        cells = plan(out, overlay_for(pl), "JADE GROVE - the expanded island (plan from the data)")
+        print("cells", len(cells), "area", len(cells) * 16, "ratio", round(len(cells) * 16 / 73664.0, 3))
+    elif what == "sections":
+        import jade_lib_forest as F
+        pl = F.build()
+        A = (I.PLATEAU_C[0] - I.DIR_F[0] * 36, I.PLATEAU_C[1] - I.DIR_F[1] * 36)
+        B = (I.PLATEAU_C[0] + I.DIR_F[0] * 100, I.PLATEAU_C[1] + I.DIR_F[1] * 100)
+        section(os.path.join(os.path.dirname(out), "section_high_falls.png"), pl, (A, B), "Cross-section: Mistfall Heights, the High Falls and grotto, the Spirit Pond", [
+            ("spring", 0, 14), ("falls lip", 36 * 0.8 + 36, 15), ("grotto cliff foot", 36 + 34, 0), ("Spirit Pond", 36 + 34 + 9, 0)])
+        b = pl.bridges["RootBridge"]
+        mx, mz = (b["A"][0] + b["B"][0]) / 2, (b["A"][1] + b["B"][1]) / 2
+        d = (b["B"][0] - b["A"][0], b["B"][1] - b["A"][1])
+        Ld = math.hypot(*d)
+        d = (d[0] / Ld, d[1] / Ld)
+        section(os.path.join(os.path.dirname(out), "section_root_bridge.png"), pl, ((mx - d[0] * 40, mz - d[1] * 40), (mx + d[0] * 40, mz + d[1] * 40)),
+                "Cross-section: the Mosswater Gorge and the living-root bridge (span 30)", [("root bridge deck", 40, b["level"])], ys=5.0, width=1800)
+    elif what == "plan":
         cells = plan(out)
         print("cells", len(cells), "area", len(cells) * 16, "ratio", round(len(cells) * 16 / 73664.0, 3))

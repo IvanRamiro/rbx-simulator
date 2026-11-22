@@ -126,6 +126,12 @@ def numbers(family):
 def export_file(stem):
     """All families of one FBX file into one FBX."""
     families = FILES[stem]
+    allp = []
+    for fam in families:
+        allp += list(importlib.import_module(FAMILIES[fam][0]).build_all().values())
+    ok, lines, _ = B.run_qa(allp)
+    if not ok:
+        raise SystemExit("QA failed: nothing exported for %s\n%s" % (stem, "\n".join(l for l in lines if "ERROR" in l)))
     B.clear_scene()
     coll = B.new_collection("exp")
     objs_all, expect, ok_all = [], {}, True
