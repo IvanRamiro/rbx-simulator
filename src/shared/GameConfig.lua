@@ -1069,12 +1069,12 @@ local GameConfig = {
                 Color = Color3.fromRGB(96, 168, 255), Deep = Color3.fromRGB(24, 58, 120),
                 Motto = "Keep your word. Protect the weak.",
                 OutfitId = "OrthodoxRobes", TitleId = "OrthodoxDisciple",
-                Weapon = { Id = "SecretOrthodox", Name = "Azure Oath Sword", Kind = "Sword" },
+                Weapon = { Id = "SecretOrthodox", Name = "Dawnspire Regent", Kind = "Sword" }, -- (the owner approved the redesign on 2026-11-22)
                 Trial = { Name = "Trial of Discipline", Text = "Pass five gates up the Dawnspire stair, in order, before the time runs out." },
                 Pages = {
                     { Title = "WHO WE ARE", Text = "The Orthodox Faction keeps the old rules. Its disciples train every day, keep their word and stand between the weak and danger. Their home is Dawnspire Hall, a white stone hall high above the clouds." },
                     { Title = "HOW WE FIGHT", Text = "They fight with clean, careful sword work. They never strike first and never strike a beaten foe. Their trial tests patience: you must follow the path in order." },
-                    { Title = "WHAT YOU GET", Text = "The Orthodox Robes, white and blue. A seat in Dawnspire Hall. And in time, the chance to earn the Azure Oath Sword." },
+                    { Title = "WHAT YOU GET", Text = "The Orthodox Robes, white and blue. A seat in Dawnspire Hall. And in time, the chance to earn the Dawnspire Regent." },
                 },
             },
             Unorthodox = {
