@@ -966,9 +966,9 @@ return {
     LightColor = { 255, 196, 128 }, -- warm, so the forest is not washed green
     Falls = { -- WorldBuilder.buildWaterfall(parent, lip, from): Drop = how far the water falls (a short fall is shortened after it is built)
         { Name = "HighFalls", Lip = Vector3.new(-90.95, 13.30, -108.96), From = Vector3.new(-93.65, 13.30, -110.27), Drop = 17.6 },
-        { Name = "Cascade1", Lip = Vector3.new(-103.71, 1.40, -76.66), From = Vector3.new(-105.25, 1.40, -74.68), Drop = 2.4 },
-        { Name = "Cascade2", Lip = Vector3.new(-100.64, 3.80, -80.60), From = Vector3.new(-102.18, 3.80, -78.63), Drop = 2.4 },
-        { Name = "Cascade3", Lip = Vector3.new(-97.57, 6.20, -84.55), From = Vector3.new(-99.11, 6.20, -82.58), Drop = 2.4 },
+        { Name = "Cascade1", Lip = Vector3.new(-103.71, 1.40, -76.66), From = Vector3.new(-102.18, 1.40, -78.63), Drop = 2.4 },
+        { Name = "Cascade2", Lip = Vector3.new(-100.64, 3.80, -80.60), From = Vector3.new(-99.11, 3.80, -82.58), Drop = 2.4 },
+        { Name = "Cascade3", Lip = Vector3.new(-97.57, 6.20, -84.55), From = Vector3.new(-96.04, 6.20, -86.52), Drop = 2.4 },
         { Name = "RimFall", Lip = Vector3.new(-210.48, -9.60, 77.17), From = Vector3.new(-207.66, -9.60, 76.16), Drop = 52.0 },
     },
     Water = {

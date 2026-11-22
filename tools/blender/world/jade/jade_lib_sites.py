@@ -220,7 +220,7 @@ def plan():
     ce = pl.add("JG_Cliff_Cascade_C1", cp[0], cp[1], yaw_front(cd[0], cd[1]), 1.0, y=lv)
     for k in (1, 2, 3):
         lp = pl.mark("JG_Cliff_Cascade_C1", "Lip%d" % k, ce)
-        pl.falls.append({"name": "Cascade%d" % k, "lip": lp, "frm": (lp[0] - cd[0] * 2.5 * 0 - (-cd[0]) * 2.5, lp[1], lp[2] - (-cd[1]) * 2.5), "drop": 2.4})
+        pl.falls.append({"name": "Cascade%d" % k, "lip": lp, "frm": (lp[0] - cd[0] * 2.5, lp[1], lp[2] - cd[1] * 2.5), "drop": 2.4})
     pl.sites.append(("cascade", cp[0], cp[1], 12.0))
     # the stream's water: ribbons between samples at the cummin level
     ys = water_levels()

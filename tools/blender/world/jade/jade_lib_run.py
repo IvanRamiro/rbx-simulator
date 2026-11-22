@@ -123,6 +123,26 @@ def numbers(family):
         print("%-30s %6d tris  size %5.1f x %5.1f x %5.1f  %s" % (name, p.tris(), hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2], p.stats()))
 
 
+def kitcheck(family):
+    """kit_check.py (grid 0.5, pivot bottom-centre) on every piece of a family; organic pieces are off-grid by nature, the modular ones (stairs, floors) are what it is for."""
+    if not B.KIT_DIR:
+        raise SystemExit("JL_KIT_DIR must name the folder of the environment-kits skill's kit_check.py")
+    sys.path.insert(0, B.KIT_DIR)
+    import kit_check as KC
+    lines = ["kit_check (grid 0.5, pivot bottom-centre, prefix JG_) per piece of %s; curved and organic pieces are off-grid by nature" % family, ""]
+    for name, piece in pieces_of(family).items():
+        B.clear_scene()
+        coll = B.new_collection("kc")
+        objs = B.piece_objects(piece, coll)
+        r = KC.run(objects=[o.name for o in objs], grid=0.5, pivot="bottom-center", texture=256, tol=0.001, prefix="JG_", fix=False)
+        errs = sum(len(i["errors"]) for i in r["pieces"].values())
+        warns = sum(len(i["warnings"]) for i in r["pieces"].values())
+        lines.append("%-34s %d meshes  errors %d  warnings %d" % (name, len(r["pieces"]), errs, warns))
+    with open(os.path.join(RENDERS, "kit_check_%s.txt" % family), "w") as f:
+        f.write("\n".join(lines) + "\n")
+    print("\n".join(lines[:6]))
+
+
 def export_file(stem):
     """All families of one FBX file into one FBX."""
     families = FILES[stem]
@@ -156,6 +176,8 @@ def export_file(stem):
 def main():
     if STAGE == "review":
         review(WHAT)
+    elif STAGE == "kitcheck":
+        kitcheck(WHAT)
     elif STAGE == "scene":
         scene(WHAT)
     elif STAGE == "contact":
