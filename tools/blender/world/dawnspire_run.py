@@ -282,7 +282,7 @@ def sheet(paths, out, cols=3):
 def silhouette():
     """Every building's black silhouette from the front at one height, in a row beside the hall's (no two the same)."""
     import numpy as np
-    B.setup_render((240, 300), samples=6)
+    B.setup_render((300, 300), samples=6)
     B.set_world((1.0, 1.0, 1.0), 1.0)
     B.set_sun(0.0, (-50, 0, 0))
     names = [("Hall", None)] + [("Buildings", n) for n in ("House", "Wing", "Tower", "TeaPavilion", "RoundPavilion", "YardGate", "ExhibitionHall", "Corridor")]
@@ -314,7 +314,7 @@ def silhouette():
         cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
         bpy.context.scene.collection.objects.link(cam)
         cam.data.type = "ORTHO"
-        cam.data.ortho_scale = max(hi[0] - lo[0], (hi[1] - lo[1]) * 0.8) * 1.1
+        cam.data.ortho_scale = max(hi[0] - lo[0], hi[1] - lo[1]) * 1.08
         cam.data.clip_end = 3000
         cam.location = (cx, 500.0 - cz, cy)             # the piece's front is -Z = Blender +Y: the camera stands there and looks back along -Y
         cam.rotation_euler = (math.pi / 2, 0.0, math.pi)

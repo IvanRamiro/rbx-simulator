@@ -217,7 +217,59 @@ def section(name, a, b, solids=None, y_lo=-6.0, y_hi=100.0, path=None):
     render_svg("\n".join(parts), path or os.path.join(OUT, "section_%s.png" % name.split()[0].lower()), W, H)
 
 
+def sections():
+    """Cross-sections drawn from the real terrain data with every building's mass: the axis (the plaza's side to the Master's terrace) and east-west through the
+    garden, the ravine and the exhibition terrace; and one through the tea terrace, the front bridge's gap and the court."""
+    import dawnspire as D
+    import orthodox_hq as O
+    P = D.build_all()
+    hall = O.build_all()
+    cols = {"house": "#ffb08a", "wing": "#ffb08a", "hall": "#ff9a8a", "gate": "#c8b6ff", "tower": "#c8b6ff", "pavilion": "#ffe08a", "corridor": "#ffe08a", "stage": "#c8b6ff",
+            "wall": "#e8e8e8", "screen": "#9fe8ff", "bridge": "#f2e6c8", "stair": "#ff9a5a"}
+
+    def boxes():
+        out = []
+        for p in P.placements:
+            col = cols.get(p["role"])
+            if not col:
+                continue
+            (lx, ly, lz), (hx, hy, hz) = P.pieces[p["piece"]].bounds()
+            c, s_ = math.cos(p["yaw"]), math.sin(p["yaw"])
+            xs = [p["x"] + x * c + z * s_ for x in (lx, hx) for z in (lz, hz)]
+            zs = [p["z"] - x * s_ + z * c for x in (lx, hx) for z in (lz, hz)]
+            out.append((p["name"], min(xs), max(xs), min(zs), max(zs), p["y"] + ly + 16.5, p["y"] + hy + 16.5, col))
+        # the hall's tiers, body, roofs
+        for tn, (x1, z0, z1, y0, y1) in O.TIERS.items():
+            out.append(("hall tier " + tn, -x1, x1, z0, z1, 16.5 + y0, 16.5 + y1, "#7fb2ff"))
+        out.append(("hall body", -29.0, 29.0, -13.0, 13.0, 25.5, 38.5, "#7fb2ff"))
+        ye1, yt1 = hall["roof1"]
+        out.append(("hall roofs", -34.0, 34.0, -18.0, 18.0, 16.5 + ye1, 16.5 + yt1, "#6a9cf0"))
+        for t in hall["stack"]:
+            out.append(("", -t["A"], t["A"], -t["D"], t["D"], 16.5 + t["eave"], 16.5 + t["top"], "#6a9cf0"))
+        for sx in (-1, 1):
+            out.append(("tower", sx * 45 - 6, sx * 45 + 6, -6, 6, 16.5 + 6.8, 16.5 + 38.0, "#7fb2ff"))
+        return out
+    bx = boxes()
+    # the axis, x = 0
+    sol = [(n, z0 + 70.0, z1 + 70.0, y0, y1, col) for (n, x0, x1, z0, z1, y0, y1, col) in bx if x0 <= 0.0 <= x1]
+    section("axial x=0: the plaza's side, the hall, the garden, the gorge stair, the Master's terrace", (0.0, -70.0), (0.0, 190.0), sol, 0.0, 110.0, os.path.join(OUT, "section_axial.png"))
+    # east-west through the garden, the ravine and the exhibition terrace (z = 68)
+    sol = [(n, 135.0 - x1, 135.0 - x0, y0, y1, col) for (n, x0, x1, z0, z1, y0, y1, col) in bx if z0 <= 68.0 <= z1]
+    section("east-west z=68: the exhibition terrace, the ravine and the garden bridge, the garden", (135.0, 68.0), (-55.0, 68.0), sol, 0.0, 70.0, os.path.join(OUT, "section_garden_bridge.png"))
+    # east-west through the tea terrace and the front bridge (z = -51)
+    sol = [(n, 135.0 - x1, 135.0 - x0, y0, y1, col) for (n, x0, x1, z0, z1, y0, y1, col) in bx if z0 <= -51.0 <= z1]
+    section("east-west z=-51: the tea terrace, the front bridge's gap, the hall's court", (135.0, -51.0), (-55.0, -51.0), sol, 0.0, 60.0, os.path.join(OUT, "section_front_bridge.png"))
+    # through the training yard and its tower (z = 32) and through the yard's length (x = 94)
+    sol = [(n, 135.0 - x1, 135.0 - x0, y0, y1, col) for (n, x0, x1, z0, z1, y0, y1, col) in bx if z0 <= 32.0 <= z1]
+    section("east-west z=32: the training yard, its tower and stage, the hall's east tower", (135.0, 32.0), (-55.0, 32.0), sol, 0.0, 70.0, os.path.join(OUT, "section_yard.png"))
+    sol = [(n, z0 + 40.0, z1 + 40.0, y0, y1, col) for (n, x0, x1, z0, z1, y0, y1, col) in bx if x0 <= 94.0 <= x1]
+    section("north-south x=94: the tea terrace, its stair, the yard, its stair, the exhibition terrace and hall", (94.0, -40.0), (94.0, 110.0), sol, 0.0, 70.0, os.path.join(OUT, "section_east_chain.png"))
+
+
 if __name__ == "__main__":
+    if "--sections" in sys.argv:
+        sections()
+        sys.exit(0)
     extra = None
     try:
         import dawnspire as D

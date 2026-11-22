@@ -2,7 +2,8 @@
 wrote before (git HEAD's src/worldbuild/Terrain/MurimCrossing.lua), cell by cell, in all four arrays (heights, surface material, underside depth, underside
 material), and lists where every difference is. Plain Python.
 
-    python3 tools/blender/world/dawnspire_terrain_diff.py            # writes renders/dawnspire/terrain_diff.txt
+    python3 tools/blender/world/dawnspire_terrain_diff.py [git-ref]   # writes renders/dawnspire/terrain_diff.txt
+    (the ref defaults to dfd6a0d^, the commit before Dawnspire's terrain: the data the plaza, the bridge and the other two sides were last written with)
 """
 import math
 import os
@@ -42,12 +43,13 @@ def grids(lua):
 
 
 def main():
-    old_lua = subprocess.run(["git", "show", "HEAD:src/worldbuild/Terrain/MurimCrossing.lua"], cwd=REPO, capture_output=True, text=True, check=True).stdout
+    ref = sys.argv[1] if len(sys.argv) > 1 else "dfd6a0d^"
+    old_lua = subprocess.run(["git", "show", ref + ":src/worldbuild/Terrain/MurimCrossing.lua"], cwd=REPO, capture_output=True, text=True, check=True).stdout
     new_lua = open(os.path.join(REPO, "src", "worldbuild", "Terrain", "MurimCrossing.lua")).read()
     a, b = grids(old_lua), grids(new_lua)
     lines = []
     say = lambda s="": (lines.append(s), print(s))
-    say("Terrain diff: git HEAD's src/worldbuild/Terrain/MurimCrossing.lua against the file now (the arrays are run-length strings, decoded here)")
+    say("Terrain diff: %s's src/worldbuild/Terrain/MurimCrossing.lua against the file now (the arrays are run-length strings, decoded here)" % ref)
     say("grid %dx%d, origin %s: same shape: %s" % (a["Size"], a["Size"], a["Origin"], (a["Size"], a["Origin"]) == (b["Size"], b["Origin"])))
     n = a["Size"]
     ox, oz = a["Origin"]
