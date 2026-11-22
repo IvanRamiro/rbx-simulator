@@ -1,12 +1,11 @@
--- Built by tools/blender/weapons/secret_unorthodox.py. Do not edit by hand.
+-- Built by tools/blender/weapons/sword_unorthodox.py. Do not edit by hand.
 -- SecretUnorthodox's pieces: centres as authored, in studs from the grip (where the hand holds it), its point
 -- toward -Z. Glow pieces are found by colour (Hex). Read by OutfitBuilder.storeWeapon.
 return {
-    Kind = "Spear",
-    Hilt = Vector3.new(0.000, 0.000, -4.120), -- where the head starts
-    Tip = Vector3.new(0.384, 0.000, -6.740),
+    Kind = "Sword",
+    Hilt = Vector3.new(0.072, 0.000, -1.310), -- where the blade starts
+    Tip = Vector3.new(-0.053, 0.000, -5.601),
     Pieces = {
-        Body = { Centre = Vector3.new(0.0822, -0.2809, -1.4266) },
-        Glow = { Centre = Vector3.new(0.2342, 0.0000, -5.3641), Hex = "ff7418" },
+        Body = { Centre = Vector3.new(-0.3591, 0.0000, -1.9805) },
     },
 }
