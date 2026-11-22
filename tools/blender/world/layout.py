@@ -14,7 +14,7 @@ Jade ~200 studs (Qi Gatherer, 24 studs/s), Ember ~320 (Qi Awakener, 26), Moonlit
 Initiate, 28; the sword flies it in ~10 s), Origin ~650 (Divine Initiate, 32). The islands sit on
 their old bearings from Yggdrasil, moved out until their bridges measure that.
 
-Murim Crossing (2026-11-22) stands south-south-west of Yggdrasil on an open bridge (no rank: nothing stops anyone), 247 studs from the
+Murim Crossing (2026-11-22) stands south-south-west of Yggdrasil on an open bridge (no rank: nothing stops anyone), 246 studs from the
 hub's rim; its shape, terrain and anchors are in murim_layout.py, which reads its centre, turn and arrival from here.
 
     python3 tools/blender/world/layout.py            # print the layout, check the bridges
@@ -37,9 +37,10 @@ ISLANDS = {
     # turns, so its terrain is written already turned (worldlib.export_heightfield, baked_turn).
     "BeginnerIsle": {"centre": (-480, 200, 24), "radius": 140, "turns": 2.13292},
     # Murim Crossing (the owner's faction map, 2026-11-22; murim_layout.py has its shape): south-south-west of the hub, open to every
-    # rank. A trefoil whose three plateaus reach about 300 studs from its centre (radius is that reach, for the bridge checks). Turned
-    # (not by quarter turns: its terrain is written already turned) so that its entry faces the hub and the bridge runs straight.
-    "MurimCrossing": {"centre": (-232, 200, 532), "radius": 300, "turns": 0.26179},
+    # rank. A big circular plaza (its centre is the island's) where the bridge lands, three headquarters on raised pads across it and
+    # mountains behind them; radius is its reach for the bridge checks. Turned (not by quarter turns: its terrain is written already
+    # turned) so that its entry faces the hub and the bridge runs straight.
+    "MurimCrossing": {"centre": (-244, 200, 564), "radius": 330, "turns": 0.25994},
 }
 
 # Each island's arrival, where its bridge lands (island-local, before turning): just inside its gate
@@ -50,7 +51,7 @@ ARRIVALS = {
     "MoonlitIsle": (-27.0, 0.0, 118.2),    # since the island doubled (2026-11-02): its old bridge end
     "OriginAbyss": (-85.8, 0.0, 122.8),    # since the island doubled (2026-11-02): its old bridge end
     "BeginnerIsle": (-114.1, 0.0, 30.2),   # on the line from the hub to the island's centre
-    "MurimCrossing": (0.0, 0.0, -88.0),    # the end of its entry spur, facing the hub (8 studs of abutment, then the island's ground)
+    "MurimCrossing": (0.0, 0.0, -124.0),   # the end of its entry spur, facing the hub (8 studs of abutment, then the island's ground)
 }
 HUB_EXIT_RADIUS = 245    # bridges leave Yggdrasil's ground this far from its centre
 

@@ -24,6 +24,10 @@
 --   WB.buildTerrain("BlossomSanctuary") (never clearTerrain: its square takes in a corner of the hub's rim), WB.buildApproach,
 --   WB.buildSanctuary, then, once its kit is stored, WB.placeKit and again WB.buildApproach and WB.buildSanctuary (the stones' caps
 --   and the koi come from the kit)
+--   Murim Crossing (the owner's faction map, 2026-11-22; tools/blender/world/murim_layout.py writes its terrain and placements, layout.py
+--   the bridge): WB.buildTerrain("MurimCrossing") (never clearTerrain; terrain all the way down, each plateau hanging in its own rock),
+--   WB.buildBridges("MurimRoute") (open to every rank: no barrier and no rank zones; it wears the Moon's stored deck kit under the hub's gate),
+--   then the standing parts from CrossingBuilder: local CB = require(game.ServerStorage.WorldBuild.CrossingBuilder:Clone()); CB.build()
 --   terrain colours (once, after any terrain build): WB.applyMaterialColors()
 --
 -- Bridges (assets/world/Bridges): WB.storeBridgeKit(<import>, theme), then WB.buildBridges().
@@ -89,12 +93,44 @@ WorldBuilder.TerrainSettings = {
     -- its Mud for the pond's bed); its rock underside is terrain too (Bottoms in its data), Rock with bands of Ground like strata
     BlossomSanctuary = { ShellDepth = 9, SubMaterial = "Ground", KeepThrough = { Rock = true, Grass = true, LeafyGrass = true, Mud = true },
         UndersideMaterial = "Rock", StrataMaterial = "Ground" },
+    -- Murim Crossing (tools/blender/world/murim_layout.py): Limestone/Grass/Pavement, LeafyGrass/Mud/Ground/Sandstone/Rock and Slate/Asphalt (plus
+    -- Basalt and CrackedLava on the Demonic mountains, where nothing is built), all already coloured for the other islands. Terrain all the way down, and each
+    -- side of the island hangs in its own rock: its data names the underside's and the strata's material per column (UndersideIndex).
+    -- Every surface material is kept through the second layer so a slope shows its own material, not Ground.
+    MurimCrossing = { ShellDepth = 9, SubMaterial = "Ground", UndersideMaterial = "Rock", StrataMaterial = "Ground",
+        KeepThrough = { Limestone = true, Grass = true, Pavement = true, Ground = true, Mud = true, LeafyGrass = true, Rock = true, Slate = true,
+            Asphalt = true, Basalt = true, CrackedLava = true, Sandstone = true } },
 }
 
 -- An island's terrain data, its grids turned by its quarter turns (Turns, layout.py) about its
 -- centre: the generator writes them unturned. Quarter turns map cells onto cells exactly.
+-- A grid array written as a run-length string (Murim Crossing's: the grid is mostly sky): values joined by commas, "~N" for N entries of
+-- `off` (false for heights and depths, 0 for material indices).
+local function expand(text, off)
+    local out, n = {}, 0
+    for token in string.gmatch(text, "[^,]+") do
+        if string.byte(token, 1) == 126 then
+            for _ = 1, tonumber(string.sub(token, 2)) do
+                n += 1
+                out[n] = off
+            end
+        else
+            n += 1
+            out[n] = tonumber(token)
+        end
+    end
+    return out
+end
+
 local function terrainData(island)
     local data = require(ServerStorage.WorldBuild.Terrain:FindFirstChild(island):Clone())
+    if type(data.Heights) == "string" then
+        data = table.clone(data)
+        data.Heights = expand(data.Heights, false)
+        data.MaterialIndex = expand(data.MaterialIndex, 0)
+        data.Bottoms = data.Bottoms and expand(data.Bottoms, false)
+        data.UndersideIndex = data.UndersideIndex and expand(data.UndersideIndex, 0)
+    end
     local turns = (data.Turns or 0) % 4
     if turns == 0 or data.BakedTurn then -- BakedTurn: the generator wrote the grid already turned
         return data
@@ -154,6 +190,19 @@ function WorldBuilder.clearTerrain(island)
     workspace.Terrain:FillBlock(CFrame.new((min + max) / 2), max - min, Enum.Material.Air)
 end
 
+-- Writes one column of a strip read with ReadVoxels back, alone: the island's own columns are written one by one, so no neighbour's column
+-- in its grid's square (a corner of the hub's rim) is ever written back, and a write that rounds a voxel can't creep into it.
+local function writeColumn(data, minY, layers, i, j, matGrid, occGrid, jj)
+    local origin = Vector3.new(data.Origin.X + (i - 1) * VOXEL, minY, data.Origin.Y + (j - 1) * VOXEL)
+    local region = Region3.new(origin, origin + Vector3.new(VOXEL, layers * VOXEL, VOXEL))
+    local m, o = { {} }, { {} }
+    for k = 1, layers do
+        m[1][k] = { matGrid[i][k][jj] }
+        o[1][k] = { occGrid[i][k][jj] }
+    end
+    workspace.Terrain:WriteVoxels(region, VOXEL, m, o)
+end
+
 -- An island whose data carries Bottoms (the Blossom Sanctuary) is terrain all the way down: each column runs from its ground to its
 -- own depth, the underside rock with a band of Ground every 28 studs, written in strips so Studio stays responsive. Only the
 -- island's own columns are written; the rest of its square (a corner of the hub's rim) stays as it is, so a rebuild is safe.
@@ -205,6 +254,10 @@ local function buildDeepTerrain(data, settings)
                         local keep = settings.KeepThrough[data.Materials[data.MaterialIndex[index]]]
                         local waterLevel = data.WaterLevels and data.WaterLevels[index]
                         local waterTop = waterLevel and data.Centre.Y + waterLevel
+                        -- (an island may give each column its own underside and strata: Murim Crossing's three plateaus hang in their own rock)
+                        local under = data.UndersideIndex and data.UndersideIndex[index] or 0
+                        local underHere = materials[under // 100] or underside
+                        local strataHere = materials[under % 100] or strata
                         for k = 1, layers do
                             local y0 = minY + (k - 1) * VOXEL
                             local material, occupancy = Enum.Material.Air, 0
@@ -218,10 +271,10 @@ local function buildDeepTerrain(data, settings)
                                     material = surface
                                 elseif depth < 10 then
                                     material = if keep then surface else subMaterial
-                                elseif strata and math.floor((y0 - data.Centre.Y) / VOXEL) % 7 == 3 then
-                                    material = strata
+                                elseif strataHere and math.floor((y0 - data.Centre.Y) / VOXEL) % 7 == 3 then
+                                    material = strataHere
                                 else
-                                    material = underside
+                                    material = underHere
                                 end
                                 occupancy = solid
                                 filled += 1
@@ -236,11 +289,80 @@ local function buildDeepTerrain(data, settings)
                     end
                 end
             end
-            workspace.Terrain:WriteVoxels(region, VOXEL, matGrid, occGrid)
+            for jj = 1, rows do
+                for i = 1, size do
+                    if data.Heights[(j0 + jj - 2) * size + i] then
+                        writeColumn(data, minY, layers, i, j0 + jj - 1, matGrid, occGrid, jj)
+                    end
+                end
+            end
             task.wait()
         end
     end
     return filled
+end
+
+-- Takes an island with deep terrain (Bottoms in its data) away: exactly the columns its data owns, from its lowest underside to its highest
+-- ground, every voxel to Air. The rest of the island's grid square (a corner of the hub's, a neighbour's) is read and written back as it
+-- is, so this is safe where clearTerrain is not. Run it with the data the terrain was built from, BEFORE writing a new layout over that data.
+function WorldBuilder.clearDeepTerrain(island)
+    local data = terrainData(island)
+    assert(data.Bottoms, island .. " has no deep terrain data")
+    local lowest, highest = 0, -math.huge
+    for index, h in data.Heights do
+        if h then
+            highest = math.max(highest, h, data.WaterLevels and data.WaterLevels[index] or -math.huge)
+            lowest = math.min(lowest, data.Bottoms[index] or -9)
+        end
+    end
+    local minY = math.floor((data.Centre.Y + lowest) / VOXEL) * VOXEL - VOXEL
+    local maxY = math.ceil((data.Centre.Y + highest) / VOXEL) * VOXEL + VOXEL
+    local layers = (maxY - minY) / VOXEL
+    local size = data.Size
+    local STRIP = 12
+    local cleared = 0
+    for j0 = 1, size, STRIP do
+        local rows = math.min(STRIP, size - j0 + 1)
+        local owned = false
+        for j = j0, j0 + rows - 1 do
+            for i = 1, size do
+                if data.Heights[(j - 1) * size + i] then
+                    owned = true
+                    break
+                end
+            end
+            if owned then
+                break
+            end
+        end
+        if owned then
+            local regionMin = Vector3.new(data.Origin.X, minY, data.Origin.Y + (j0 - 1) * VOXEL)
+            local region = Region3.new(regionMin, regionMin + Vector3.new(size * VOXEL, layers * VOXEL, rows * VOXEL))
+            local matGrid, occGrid = workspace.Terrain:ReadVoxels(region, VOXEL)
+            for jj = 1, rows do
+                for i = 1, size do
+                    if data.Heights[(j0 + jj - 2) * size + i] then
+                        for k = 1, layers do
+                            if occGrid[i][k][jj] > 0 then
+                                cleared += 1
+                            end
+                            matGrid[i][k][jj] = Enum.Material.Air
+                            occGrid[i][k][jj] = 0
+                        end
+                    end
+                end
+            end
+            for jj = 1, rows do
+                for i = 1, size do
+                    if data.Heights[(j0 + jj - 2) * size + i] then
+                        writeColumn(data, minY, layers, i, j0 + jj - 1, matGrid, occGrid, jj)
+                    end
+                end
+            end
+            task.wait()
+        end
+    end
+    return cleared
 end
 
 function WorldBuilder.buildTerrain(island)
@@ -1469,6 +1591,7 @@ WorldBuilder.Routes = {
     MoonlitRoute = { Island = "MoonlitIsle", Title = "Moonlit Isle" },
     BeginnerRoute = { Island = "BeginnerIsle", Title = "Beginner Isle" },
     OriginRoute = { Island = "OriginAbyss", Title = "Origin Abyss" },
+    MurimRoute = { Island = "MurimCrossing", Title = "Murim Crossing" },
 }
 
 -- An invisible anchored part that nothing touches: a panel to write on, or a marker.
@@ -1548,6 +1671,7 @@ end
 -- sits in the gate's frame (hub_celestial.BG_PLAQUE, just off its lapis face).
 WorldBuilder.GateNames = {
     BeginnerRoute = "Beginner Isle", JadeRoute = "Jade Grove", EmberRoute = "Ember Peak", MoonlitRoute = "Moonlit Isle", OriginRoute = "Origin Abyss",
+    MurimRoute = "Murim Crossing",
 }
 WorldBuilder.GatePlaque = { Centre = Vector3.new(0, 18.2, 1.63), Size = Vector2.new(12, 2) }
 
@@ -1557,6 +1681,10 @@ WorldBuilder.BridgeThemes = {
     Moon = { Deck = Color3.fromRGB(225, 225, 235), DeckMaterial = Enum.Material.Marble, Rail = Color3.fromRGB(215, 185, 110), Glow = Color3.fromRGB(120, 100, 255) },
     Lion = { Deck = Color3.fromRGB(176, 164, 142), DeckMaterial = Enum.Material.Slate, Rail = Color3.fromRGB(150, 40, 30), Glow = Color3.fromRGB(255, 170, 60) },
     Origin = { Deck = Color3.fromRGB(60, 58, 70), DeckMaterial = Enum.Material.Slate, Rail = Color3.fromRGB(40, 38, 50), Glow = Color3.fromRGB(175, 45, 255) },
+    -- Murim Crossing's bridge (open to every rank: no Qi barrier, no rank): the Moonlit Isle's marble deck with gold rails, which sits well
+    -- with the hub's own marble and gold and has nothing red or Chinese in it. Kit: which stored kit dresses it. Glow: the hub gate's crystal
+    -- (and the supports' glow) in a warm ivory, apart from the other bridges' colours.
+    Murim = { Kit = "Moon", Deck = Color3.fromRGB(225, 225, 235), DeckMaterial = Enum.Material.Marble, Rail = Color3.fromRGB(215, 185, 110), Glow = Color3.fromRGB(246, 226, 170) },
 }
 local BRIDGE = { Segment = 12, Thickness = 2, RailHeight = 3, RailWidth = 0.8, GateHeight = 14.4, GateInset = 5, ZoneHeight = 16,
     AbutmentLength = 8, AbutmentDepth = 7 }
@@ -1709,7 +1837,9 @@ end
 -- Dress a built bridge with its theme's kit, if the kit is stored: a deck section on every
 -- piece of deck, supports hanging under it, the gate. The blockout
 -- stays as the invisible collision. Returns the number of pieces placed.
-local function dressBridge(model, theme)
+local function dressBridge(model, themeName)
+    local themeInfo = WorldBuilder.BridgeThemes[themeName]
+    local theme = themeInfo and themeInfo.Kit or themeName -- (a theme may wear another's stored kit: Murim wears the Moon's)
     local kits = ServerStorage:FindFirstChild("BridgeKits")
     if not (kits and kits:FindFirstChild(theme)) then
         return 0
@@ -1751,7 +1881,7 @@ local function dressBridge(model, theme)
         run += length
     end
     local gate = model:FindFirstChild("Gate")
-    local barrier = gate and gate:FindFirstChild("QiBarrier")
+    local barrier = gate and (gate:FindFirstChild("QiBarrier") or gate:FindFirstChild("GateAnchor")) -- (an open bridge has an anchor, no barrier)
     local hubKit = ServerStorage:FindFirstChild("WorldKit") and ServerStorage.WorldKit:FindFirstChild("Yggdrasil")
     local hubGate = hubKit and (hubKit:FindFirstChild("HB_BridgeGate__Marble") ~= nil)
     if barrier and hubGate then
@@ -1759,7 +1889,6 @@ local function dressBridge(model, theme)
         -- the owner 2026-11-12), its crystals in the island's colour, the island's name hung under its arch. Its front (+Z)
         -- faces the hub: the barrier's frame looks out along the bridge.
         local base = barrier.CFrame * CFrame.new(0, -barrier.Size.Y / 2, 0)
-        local themeInfo = WorldBuilder.BridgeThemes[theme]
         for _, piece in { "HB_BridgeGate", "HB_BridgeGateGlow" } do
             for _, source in templates("Yggdrasil", piece) do
                 local p = source:Clone()
@@ -1772,6 +1901,13 @@ local function dressBridge(model, theme)
             end
         end
         local name = WorldBuilder.GateNames[model.Name]
+        if themeInfo and themeInfo.Kit then
+            for _, p in dressing:GetChildren() do
+                if p.Name == "SupportGlow" or p.Name == "DeckGlow" then
+                    p.Color = themeInfo.Glow -- (the borrowed kit's glow, in this bridge's colour)
+                end
+            end
+        end
         if name then
             local _, gui = textPanel("GateName", WorldBuilder.GatePlaque.Size, base * CFrame.new(WorldBuilder.GatePlaque.Centre), dressing, 50)
             steleLabel("Text", gui, UDim2.fromScale(0.96, 0.86), UDim2.fromScale(0.02, 0.07), Enum.TextXAlignment.Center,
@@ -1830,12 +1966,15 @@ function WorldBuilder.buildBridges(only)
         local model = Instance.new("Model")
         model.Name = route
         model:SetAttribute("Route", route)
-        model:SetAttribute("RankId", bridge.RankId)
+        model:SetAttribute("RankId", bridge.RankId) -- (nil on an open bridge: Murim Crossing's, with no barrier and no rank zones)
         model:SetAttribute("Destination", info.Title)
         model:SetAttribute("Island", info.Island) -- the island it leads to, closed below RankId too
+        local ranked = bridge.RankId ~= nil
         local zones = Instance.new("Folder")
         zones.Name = "Zones"
-        zones.Parent = model
+        if ranked then
+            zones.Parent = model
+        end
         local nodes = bridge.Nodes
         local zoneFrom = BRIDGE.GateInset + 2 -- the zones start just past the gate: before it is the free approach
         local run = 0
@@ -1846,7 +1985,7 @@ function WorldBuilder.buildBridges(only)
             local pieces = math.max(1, math.ceil(length / BRIDGE.Segment - 0.05))
             for k = 1, pieces do
                 local d0 = length * (k - 1) / pieces
-                deckPiece(model, theme, width, a:Lerp(b, (k - 1) / pieces), a:Lerp(b, k / pieces), run + d0 >= zoneFrom and zones or nil)
+                deckPiece(model, theme, width, a:Lerp(b, (k - 1) / pieces), a:Lerp(b, k / pieces), (ranked and run + d0 >= zoneFrom) and zones or nil)
             end
             run += length
         end
@@ -1862,15 +2001,21 @@ function WorldBuilder.buildBridges(only)
             bridgePart("Pillar", Vector3.new(1.6, BRIDGE.GateHeight, 1.6), frame * CFrame.new(side * (width / 2 + 0.8), BRIDGE.GateHeight / 2, 0), gate, theme.Rail, theme.DeckMaterial)
         end
         bridgePart("Lintel", Vector3.new(width + 4.4, 1.4, 2), frame * CFrame.new(0, BRIDGE.GateHeight + 0.7, 0), gate, theme.Rail, theme.DeckMaterial)
-        local barrier = bridgePart("QiBarrier", Vector3.new(width, BRIDGE.GateHeight, 0.5), frame * CFrame.new(0, BRIDGE.GateHeight / 2, 0), gate, theme.Glow, Enum.Material.ForceField)
-        barrier.Transparency = 0.2
-        barrier.CastShadow = false
-        barrier:SetAttribute("RankId", bridge.RankId)
-        barrier:SetAttribute("Route", route)
-        CollectionService:AddTag(barrier, GameConfig.BridgeBarrierTag)
-        local light = Instance.new("PointLight")
-        light.Color, light.Range, light.Brightness = theme.Glow, 12, 0.6
-        light.Parent = barrier
+        if ranked then
+            local barrier = bridgePart("QiBarrier", Vector3.new(width, BRIDGE.GateHeight, 0.5), frame * CFrame.new(0, BRIDGE.GateHeight / 2, 0), gate, theme.Glow, Enum.Material.ForceField)
+            barrier.Transparency = 0.2
+            barrier.CastShadow = false
+            barrier:SetAttribute("RankId", bridge.RankId)
+            barrier:SetAttribute("Route", route)
+            CollectionService:AddTag(barrier, GameConfig.BridgeBarrierTag)
+            local light = Instance.new("PointLight")
+            light.Color, light.Range, light.Brightness = theme.Glow, 12, 0.6
+            light.Parent = barrier
+        else
+            -- an open bridge: the same gate, with nothing across it. Only a place for the hub's gate to be set round (dressBridge)
+            local anchor = marker("GateAnchor", Vector3.new(width, BRIDGE.GateHeight, 0.5), frame * CFrame.new(0, BRIDGE.GateHeight / 2, 0), gate)
+            anchor.Material = Enum.Material.Plastic
+        end
         gate.Parent = model
         model:SetAttribute("ReturnTo", base - dir * 3 + Vector3.new(0, 3, 0))
         model:SetAttribute("KitPieces", dressBridge(model, bridge.Theme))
@@ -2881,5 +3026,13 @@ function WorldBuilder.buildRelic(island, relicId, localPosition)
     model.Parent = folder
     return model
 end
+
+-- What CrossingBuilder (Murim Crossing's court, gate, banners and people) borrows from here, so that nothing is made twice.
+WorldBuilder.placeTemplate = placeTemplate
+WorldBuilder.hasTemplate = hasTemplate
+WorldBuilder.marker = marker
+WorldBuilder.addLight = addLight
+WorldBuilder.dressPiece = dressPiece -- (a hub person's modelled face pieces, for the representatives)
+WorldBuilder.npcData = npcData
 
 return WorldBuilder

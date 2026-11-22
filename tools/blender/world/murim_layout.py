@@ -1,31 +1,28 @@
 """Murim Crossing (the owner's faction map, 2026-11-22): one source for the island's shape, its terrain, its anchors and the plan sketch.
-Plain Python (no Blender needed). Phase M1, the foundation: the ground, the court, three arms and three empty headquarters pads.
+Plain Python (no Blender needed). Phase M1, the foundation: the ground, the plaza, three stairways and three empty headquarters pads.
 
     python3 tools/blender/world/murim_layout.py            # check the layout, print its numbers
     python3 tools/blender/world/murim_layout.py --write    # also write src/worldbuild/Terrain/MurimCrossing.lua,
                                                            # src/worldbuild/Placements/MurimCrossing.lua and
                                                            # renders/murim_foundation/plan_topdown.png (local only)
 
-Coordinates are Roblox studs. The island's own frame ("local") has its origin at the Court's middle, local -Z pointing back at the hub
-(the side the bridge arrives on) and local +X toward the east-south-east. WorldBuilder.islandFrame turns local into world by the
-island's Turns (not a whole number of quarter turns, so the terrain grid is written already turned: BakedTurn), as the Blossom
-Sanctuary's. Where the island stands and its Turns are in layout.py (ISLANDS, ARRIVALS, ROUTES: the one source for every island and
-bridge); this file reads them.
+Coordinates are Roblox studs. The island's own frame ("local") has its origin at the Plaza's middle, local -Z pointing back at the hub (the
+side the bridge arrives on), local +Z away from it, and local +X to the LEFT of someone who has just arrived and looks across the plaza.
+WorldBuilder.islandFrame turns local into world by the island's Turns (not a whole number of quarter turns, so the terrain grid is written
+already turned: BakedTurn), as the Blossom Sanctuary's. Where the island stands and its Turns are in layout.py (ISLANDS, ARRIVALS, ROUTES:
+the one source for every island and bridge); this file reads them.
 
-The shape (a trefoil, the owner's brief): a round neutral Court of Banners at the middle (radius COURT_R), an entry spur toward the hub
-that carries the bridge in, and three arms at 120 degrees, each a causeway ARM_HALF * 2 wide leading to a headquarters plateau (a flat
-building pad with its own slopes and cliff edge). The bridge arrives between two arms, facing the Court, with the third arm straight
-ahead: Orthodox on the left (toward the Blossom Sanctuary), Demonic on the right, Unorthodox ahead, the one in the middle of the
-other two, as in the old tales. Each plateau keeps its own outline from afar (round and ordered; lopsided and ragged; a crown of fangs)
-and its own hanging underside (pale limestone; rock and earth; black slate), so the three read apart before anyone reaches them.
+The shape (the owner's picture, 2026-11-22, used as a LAYOUT reference only): the bridge from the hub lands at the front of a large circular
+PLAZA; across it, three headquarters stand side by side on raised pads, each reached by its own grand stairway rising from the plaza's far
+edge: ORTHODOX on the left, UNORTHODOX in the centre (further back, higher, on the mountain), DEMONIC on the right. The side pads stand 16
+studs over the plaza, the centre pad 36. Behind them rise tall rock mountains (rounded, cliff-sided mesas for the Orthodox and Unorthodox,
+sharp jagged spires for the Demonic), with room for waterfalls on the first two. The Unorthodox side has hidden paths to four lookouts.
 Terrain colours are global to the place, so the materials are ones whose colours are already set (WorldBuilder.MaterialColors).
 """
 import json
 import math
 import os
-import struct
 import sys
-import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
@@ -41,40 +38,76 @@ YAW = -TURNS * math.pi / 2           # the island's turn about its centre (World
 CELL = 4
 ARRIVAL = LAYOUT.ARRIVALS[ISLAND]    # where the bridge's last deck node lands (local)
 
-# ---------- the shape ----------
-COURT_R = 46.0        # the Court of Banners
-ARM_HALF = 13.0       # an arm is 26 studs wide, edge to edge (about 20 of them level: its edge slopes 3 studs)
-PAD_D = 205.0         # a pad's middle, from the Court's
-PAD_FLAT = 70.0       # every pad is level out to this radius from its middle (asserted below)
-PAD_LIP = 12.0        # the slope from the level pad down to its cliff edge
-PAD_DROP = 4.0
-COURT_LIP = 8.0
-COURT_DROP = 3.0
-ARM_LIP = 3.0
-ARM_DROP = 3.0
+# ---------- the plaza, the entry ----------
+PLAZA_R = 76.0
+PLAZA_LIP = 8.0
+PLAZA_DROP = 3.0
 SPUR_HALF = 26.0      # the entry spur that carries the bridge in (the bridge's deck is 40 wide)
-SPUR_FROM, SPUR_TO = -84.0, -38.0   # local Z: it starts under the bridge's abutment (8 long past the last node, ending at ABUTMENT_END)
-ABUTMENT_END = -80.0  # the abutment's top is the bridge's end level (Y 200); the ground under it is 0.6 lower, so no two tops share a plane
-GATE_Z = -64.0        # the island's own gate, on the spur
-IDENTITY = 60.0       # how far down an arm its faction's mark runs (its gate stands 18 studs in)
+SPUR_FROM, SPUR_TO = -120.0, -60.0   # local Z: it starts under the bridge's abutment (8 long past the last node, ending at ABUTMENT_END)
+ABUTMENT_END = -116.0 # the abutment's top is the bridge's end level (Y 200); the ground under it is 0.6 lower, so no two tops share a plane
+GATE_Z = -100.0       # the island's own gate, on the spur
+REP_S = 54.0          # how far along its stair's axis from the plaza's middle each representative stands (on the plaza)
+BANNER_S, BANNER_U = 62.0, 21.0      # a banner pole: along the stair's axis and to the side of it
 
 ORDER = ["Orthodox", "Unorthodox", "Demonic"]
-ANGLE = {"Orthodox": 120.0, "Unorthodox": 0.0, "Demonic": 240.0}    # degrees from local +Z (straight ahead) toward local +X
-MATERIALS = ["Limestone", "Grass", "Pavement", "Ground", "Mud", "LeafyGrass", "Rock", "Slate", "Asphalt", "Basalt", "CrackedLava"]
+ZONE = {"Orthodox": "O", "Unorthodox": "U", "Demonic": "D"}
+STEP_RISE = 1.0       # every step is a stud high
+STAIR_HALF = 16.0     # a stairway is 32 studs wide, a landing 52
+LANDING_HALF = 26.0
+UNDER_STEP = 1.8      # the terrain under a flight lies this far under the steps' line (the steps are solid boxes that stand in it)
+
+# the headquarters: the stair's bearing from local +Z (toward local +X), the pad's height over the plaza and its middle's distance along
+# the bearing, its radius (flat out to `flat`, then a slope), and the stair's tiers as (kind, from s, to s, from h, to h). A stair ends where the
+# pad's flat disc begins: pad_s - flat = the last tier's end.
+SIDE_TIERS = [("flight", 72.0, 96.0, 0.0, 6.0), ("landing", 96.0, 112.0, 6.0, 6.0), ("flight", 112.0, 152.0, 6.0, 16.0)]
+HQ = {
+    "Orthodox": {"angle": 38.0, "pad_h": 16.0, "pad_s": 206.0, "pad_r": 62.0, "flat": 54.0, "tiers": SIDE_TIERS},
+    "Unorthodox": {"angle": 0.0, "pad_h": 36.0, "pad_s": 250.0, "pad_r": 66.0, "flat": 58.0, "tiers": [
+        ("flight", 72.0, 102.0, 0.0, 12.0), ("landing", 102.0, 118.0, 12.0, 12.0), ("flight", 118.0, 148.0, 12.0, 24.0),
+        ("landing", 148.0, 162.0, 24.0, 24.0), ("flight", 162.0, 192.0, 24.0, 36.0)]},
+    "Demonic": {"angle": -38.0, "pad_h": 16.0, "pad_s": 206.0, "pad_r": 62.0, "flat": 54.0, "tiers": SIDE_TIERS},
+}
+PAD_SKIRT = 12.0      # the slope from a pad's flat disc down (or up) to the ground round it
+
+# the backdrop: zone, middle x, z, radius, height over the plaza, style. A "mesa" has a rounded top and cliff sides; a "spire" is sharp and
+# jagged. Each one's footprint is ground too.
+MOUNTAINS = [
+    ("O", 200.0, 292.0, 78.0, 70.0, "mesa"), ("O", 284.0, 204.0, 48.0, 54.0, "mesa"), ("O", 116.0, 320.0, 56.0, 58.0, "mesa"),
+    ("U", 0.0, 358.0, 88.0, 98.0, "mesa"), ("U", -102.0, 328.0, 50.0, 68.0, "mesa"), ("U", 102.0, 328.0, 50.0, 68.0, "mesa"),
+    ("D", -200.0, 292.0, 68.0, 86.0, "spire"), ("D", -284.0, 206.0, 44.0, 72.0, "spire"), ("D", -116.0, 320.0, 48.0, 78.0, "spire"),
+    ("D", -242.0, 324.0, 40.0, 104.0, "spire"),
+]
+# the massif the pads and the mountains stand on: ellipses (middle x, z, half width x, z)
+MASSIF = [(0.0, 188.0, 200.0, 112.0), (0.0, 254.0, 104.0, 80.0)]
+FOOTHILL = 22.0       # how far over the plaza the ground behind the pads has risen by z 230
+
+# hidden paths of the Unorthodox side (each a list of (x, z, h) knots, 3 studs half-wide) and the lookouts they end at (x, z, h, radius)
+PATHS = [
+    [(-26.0, 155.0, 24.0), (-40.0, 178.0, 25.0), (-56.0, 198.0, 26.0), (-72.0, 214.0, 26.0)],
+    [(26.0, 155.0, 24.0), (40.0, 178.0, 25.0), (56.0, 198.0, 26.0), (72.0, 214.0, 26.0)],
+    [(-44.0, 306.0, 36.0), (-72.0, 296.0, 42.0), (-88.0, 280.0, 47.0), (-96.0, 262.0, 50.0)],
+    [(44.0, 306.0, 36.0), (72.0, 296.0, 42.0), (88.0, 280.0, 47.0), (96.0, 262.0, 50.0)],
+]
+NOOKS = [(-72.0, 214.0, 26.0, 6.5), (72.0, 214.0, 26.0, 6.5), (-96.0, 262.0, 50.0, 6.5), (96.0, 262.0, 50.0, 6.5)]
+PATH_HALF = 3.0
+
+MATERIALS = ["Limestone", "Grass", "Pavement", "Ground", "Mud", "LeafyGrass", "Rock", "Slate", "Asphalt", "Basalt", "CrackedLava", "Sandstone"]
 MI = {m: i + 1 for i, m in enumerate(MATERIALS)}
-# what each hanging underside is made of: (rock, the strata bands). The Court, the arms and the spur hang plain rock.
-UNDERSIDE = {None: ("Rock", "Ground"), "Orthodox": ("Limestone", "Rock"), "Unorthodox": ("Rock", "Ground"), "Demonic": ("Slate", "Basalt")}
+# what each hanging underside is made of: (rock, the strata bands). The plaza and the spur hang plain rock.
+UNDERSIDE = {None: ("Rock", "Ground"), "O": ("Limestone", "Rock"), "U": ("Sandstone", "Rock"), "D": ("Slate", "Basalt")}
 DEEPEST = 100.0       # the underside never reaches the fall line (110 under the island's ground)
+
+vnoise, fbm, smoothstep, lerp = BL.vnoise, BL.fbm, BL.smoothstep, BL.lerp
 
 
 def direction(f):
-    a = math.radians(ANGLE[f])
+    a = math.radians(HQ[f]["angle"])
     return math.sin(a), math.cos(a)
 
 
 def pad_centre(f):
     dx, dz = direction(f)
-    return dx * PAD_D, dz * PAD_D
+    return dx * HQ[f]["pad_s"], dz * HQ[f]["pad_s"]
 
 
 def to_world(x, z):
@@ -88,200 +121,264 @@ def to_local(wx, wz):
     return dx * c - dz * s, dx * s + dz * c
 
 
-vnoise, fbm, smoothstep, lerp = BL.vnoise, BL.fbm, BL.smoothstep, BL.lerp
+def su(f, x, z):
+    """(s, u) of a point for a headquarters: along its stair's axis from the plaza's middle, and across it (positive toward +X)."""
+    a = math.radians(HQ[f]["angle"])
+    return x * math.sin(a) + z * math.cos(a), x * math.cos(a) - z * math.sin(a)
 
 
-def pad_polar(f, x, z):
-    """(rho, phi) round a pad's middle: phi 0 points away from the Court (the pad's back), +-pi toward it (where its arm arrives)."""
-    px, pz = pad_centre(f)
-    dx, dz = direction(f)
-    ox, oz = x - px, z - pz
-    along = ox * dx + oz * dz
-    across = ox * dz - oz * dx
-    return math.hypot(ox, oz), math.atan2(across, along)
+def tiers(f):
+    return HQ[f]["tiers"]
 
 
-def pad_edge(f, phi):
-    """The radius of a pad's outline at bearing phi: each faction's own shape."""
-    if f == "Orthodox":      # round and ordered: a circle that hardly wavers
-        return 88.0 + 1.6 * (fbm(math.cos(phi) * 2.0 + 11, math.sin(phi) * 2.0, 5) - 0.5)
-    if f == "Unorthodox":    # lopsided and rough, like a bank worn by the river: about 83 to 108
-        return 94.0 + 14.0 * (fbm(math.cos(phi) * 2.4 + 7, math.sin(phi) * 2.4 + 3, 9, 3) - 0.5) + 4.0 * math.cos(2.0 * (phi - 0.6))
-    # Demonic: a crown of nine fangs (sharp tips, rounded valleys), smooth where the arm comes in
-    u = (phi / (2 * math.pi)) * 9.0
-    tri = 1.0 - abs(2.0 * (u - math.floor(u)) - 1.0)
-    tooth = 84.0 + 17.0 * tri ** 1.6
-    return lerp(tooth, 86.0, smoothstep(2.35, 2.85, abs(phi)))
+def stair_line(f, s):
+    """The walking line of a stairway at distance s along its axis: 0 on the plaza, the flights' straight ramps, the landings' levels, the
+    pad's height beyond the last tier."""
+    t = tiers(f)
+    if s <= t[0][1]:
+        return 0.0
+    if s >= t[-1][2]:
+        return t[-1][4]
+    for kind, s0, s1, h0, h1 in t:
+        if s0 <= s <= s1:
+            return lerp(h0, h1, (s - s0) / (s1 - s0))
+    return 0.0
+
+
+def stair_kind(f, s):
+    for kind, s0, s1, h0, h1 in tiers(f):
+        if s0 <= s <= s1:
+            return kind
+    return "pad" if s > tiers(f)[-1][2] else "plaza"
+
+
+# ---------- the ground's height ----------
+def foothill(x, z):
+    """The slope behind the plaza the pads and mountains stand on: rising from nothing at z 50 to FOOTHILL by z 230."""
+    return FOOTHILL * smoothstep(50.0, 230.0, z) * (0.85 + 0.3 * fbm(x / 70.0, z / 70.0, 91)) + 3.0 * (fbm(x / 26.0, z / 26.0, 93) - 0.5)
+
+
+def mountain_height(x, z):
+    """(the tallest mountain's height at a point (0 off all of them), its zone)."""
+    best, zone = 0.0, None
+    for z_, cx, cz, R, H, style in MOUNTAINS:
+        warp = 0.1 * R * (fbm(x / 40.0 + 3, z / 40.0, 97) - 0.5)
+        d = math.hypot(x - cx, z - cz) + warp
+        t = 1.0 - d / R
+        if t <= 0:
+            continue
+        if style == "mesa":
+            v = H * smoothstep(0.10, 0.52, t) * (0.93 + 0.07 * fbm(x / 22.0, z / 22.0, 101)) + 0.12 * H * t
+        else:
+            ridge = 1.0 - abs(2.0 * fbm(x / 15.0, z / 15.0, 103) - 1.0)
+            v = H * (t ** 1.1) * (0.7 + 0.55 * ridge)
+        if v > best:
+            best, zone = v, z_
+    return best, zone
+
+
+def massif_inside(x, z):
+    """Inside distance (studs) of the ground behind the plaza: the massif's ellipses and every mountain's footprint."""
+    best = -1e9
+    for cx, cz, a, b in MASSIF:
+        best = max(best, (1.0 - math.hypot((x - cx) / a, (z - cz) / b)) * min(a, b))
+    for z_, cx, cz, R, H, style in MOUNTAINS:
+        best = max(best, R * 0.98 - math.hypot(x - cx, z - cz))
+    for q in ORDER:                      # every pad's flat disc and its slope are ground whatever the ellipses do
+        px, pz = pad_centre(q)
+        best = max(best, HQ[q]["flat"] + PAD_SKIRT * 0.75 - math.hypot(x - px, z - pz))
+    return best + 7.0 * (fbm(x / 42.0, z / 42.0, 105) - 0.5)
+
+
+def zone_of(x, z):
+    """O, U or D: whose side of the island a point is on (the middle band is the Unorthodox's)."""
+    if x > 78 + 10 * (fbm(x / 30.0, z / 30.0, 107) - 0.5):
+        return "O"
+    if x < -78 + 10 * (fbm(x / 30.0, z / 30.0, 109) - 0.5):
+        return "D"
+    return "U"
 
 
 def comp_fields(x, z):
-    """Inside distance (studs, > 0 inside) of each part of the island: court, spur, the arms, the pads. Hard maxima: the lips are
-    laid component by component so that a causeway stays level where it meets the Court or a pad."""
-    out = {"court": COURT_R - math.hypot(x, z) + 2.4 * (fbm(x / 22.0, z / 22.0, 31) - 0.5)}
-    if SPUR_FROM <= z <= SPUR_TO + 8:
-        out["spur"] = SPUR_HALF - abs(x)
-    else:
-        out["spur"] = -1.0
+    """Inside distance of each part of the island: the plaza, the spur, the massif, and each stair's corridor."""
+    out = {"plaza": PLAZA_R - math.hypot(x, z) + 1.6 * (fbm(x / 22.0, z / 22.0, 31) - 0.5)}
+    out["spur"] = (SPUR_HALF - abs(x)) if SPUR_FROM <= z <= SPUR_TO + 8 else -1.0
+    out["massif"] = massif_inside(x, z)
     for f in ORDER:
-        dx, dz = direction(f)
-        t = x * dx + z * dz
-        lat = abs(x * dz - z * dx)
-        out["arm_" + f] = (ARM_HALF - lat + 0.8 * (fbm(x / 14.0, z / 14.0, 41) - 0.5)) if -2.0 <= t <= PAD_D else -1.0
-        rho, phi = pad_polar(f, x, z)
-        out["pad_" + f] = pad_edge(f, phi) - rho + 1.4 * (fbm(x / 18.0, z / 18.0, 51) - 0.5)
+        s, u = su(f, x, z)
+        last = tiers(f)[-1][2]
+        out["stair_" + f] = (LANDING_HALF - abs(u)) if (tiers(f)[0][1] - 14.0 <= s <= last + 2.0) else -1.0
     return out
 
 
-def lip_height(c, e):
-    """Height over the island's ground (Y 200) of a column e studs inside its component."""
-    if e <= 0:
-        return None
-    if c == "court":
-        return -COURT_DROP * (1.0 - smoothstep(0.0, COURT_LIP, e))
-    if c == "spur":
-        return -ARM_DROP * (1.0 - smoothstep(0.0, ARM_LIP, e))
-    if c.startswith("arm_"):
-        return -ARM_DROP * (1.0 - smoothstep(0.0, ARM_LIP, e))
-    return -PAD_DROP * (1.0 - smoothstep(0.0, PAD_LIP, e))
+def corridor_half(kind):
+    return STAIR_HALF + 2.0 if kind == "flight" else LANDING_HALF
 
 
-def island_field(x, z):
-    return max(comp_fields(x, z).values())
+def path_state(x, z):
+    """(mask, height) of the hidden paths and their lookouts at a point: mask 1 on a path (or a lookout), falling to 0 over 4 studs."""
+    best_mask, best_h = 0.0, 0.0
+    for knots in PATHS:
+        for (x0, z0, h0), (x1, z1, h1) in zip(knots, knots[1:]):
+            vx, vz = x1 - x0, z1 - z0
+            L2 = vx * vx + vz * vz
+            t = max(0.0, min(1.0, ((x - x0) * vx + (z - z0) * vz) / L2))
+            d = math.hypot(x - (x0 + vx * t), z - (z0 + vz * t))
+            m = 1.0 - smoothstep(PATH_HALF, PATH_HALF + 4.0, d)
+            if m > best_mask:
+                best_mask, best_h = m, lerp(h0, h1, t)
+    for nx, nz, nh, nr in NOOKS:
+        d = math.hypot(x - nx, z - nz)
+        m = 1.0 - smoothstep(nr, nr + 4.0, d)
+        if m > best_mask:
+            best_mask, best_h = m, nh
+    return best_mask, best_h
 
 
-# ---------- the ground ----------
 def ground(x, z):
-    """(height over Y 200, surface material, underside owner, fields) or (None, None, None, None) off the island."""
-    fields = comp_fields(x, z)
+    """(height over Y 200, details) of the ground at a point, or (None, None) off the island: the plaza, the foothill and mountains, then
+    the stairways, the pads and the hidden paths laid over them."""
+    f = comp_fields(x, z)
+    if max(f.values()) <= 0:
+        return None, None
     h = None
-    for c, e in fields.items():
-        v = lip_height(c, e)
-        if v is not None and (h is None or v > h):
-            h = v
-    if h is None:
-        return None, None, None, None
-    if z < ABUTMENT_END + 1.0 and fields["spur"] > 0:
-        h = min(h, -0.6)
-    return h, surface(x, z, fields), underside_owner(fields), fields
+    if f["plaza"] > 0:
+        h = -PLAZA_DROP * (1.0 - smoothstep(0.0, PLAZA_LIP, f["plaza"]))
+    if f["spur"] > 0:
+        v = -3.0 * (1.0 - smoothstep(0.0, 3.0, f["spur"]))
+        h = v if h is None else max(h, v)
+    mh, mz = mountain_height(x, z)
+    if f["massif"] > 0:
+        # the massif's very edge falls away a little (the mountains keep their height up to their cliffs)
+        v = max(foothill(x, z), mh) - 2.5 * (1.0 - smoothstep(0.0, 6.0, f["massif"]))
+        h = v if h is None else max(h, v)
+    detail = {"fields": f, "zone": mz or zone_of(x, z), "mountain": mh}
+    for q in ORDER:                      # the stairways
+        s, u = su(q, x, z)
+        s0 = tiers(q)[0][1]
+        kind = stair_kind(q, s)
+        if kind in ("flight", "landing") or (kind == "plaza" and s > s0 - 14.0):
+            half = corridor_half("flight" if kind == "plaza" else kind)
+            m = 1.0 - smoothstep(half, half + 8.0, abs(u))
+            if kind == "plaza":
+                m *= smoothstep(s0 - 14.0, s0, s)
+            if m > 0:
+                line = stair_line(q, s) - (UNDER_STEP if kind == "flight" else 0.0)
+                h = line if h is None else lerp(h, line, m)
+                detail["stair"] = (q, kind, m)
+    for q in ORDER:                      # the pads
+        px, pz = pad_centre(q)
+        rho = math.hypot(x - px, z - pz) + 2.0 * (fbm(x / 18.0, z / 18.0, 51) - 0.5)
+        flat = HQ[q]["flat"]
+        m = 1.0 - smoothstep(flat, flat + PAD_SKIRT, rho)
+        if m > 0:
+            h = lerp(h if h is not None else foothill(x, z), HQ[q]["pad_h"], m)
+            detail["pad"] = (q, rho, m)
+    pm, ph = path_state(x, z)            # the hidden paths
+    if pm > 0 and f["massif"] > 0:
+        h = ph if h is None else lerp(h, ph, pm)
+        detail["path"] = pm
+    return h, detail
 
 
-def underside_owner(fields):
-    for f in ORDER:
-        if fields["pad_" + f] > 0:
-            return f
+def ground_h(x, z):
+    h, d = ground(x, z)
+    return 0.0 if h is None else h
+
+
+# ---------- surface materials ----------
+def surface(x, z, slope, d):
+    """The terrain material at a column: by what it is (path, pad, stair, plaza) or by whose side of the island it is and how steep."""
+    n = fbm(x / 11.0, z / 11.0, 71)
+    n2 = fbm(x / 6.0, z / 6.0, 73)
+    f = d["fields"]
+    zone = d["zone"]
+    if d.get("path", 0) > 0.5:
+        return "Mud" if n > 0.7 else "Ground"
+    if "pad" in d and d["pad"][2] > 0.5:
+        q, rho, m = d["pad"]
+        flat = HQ[q]["flat"]
+        if q == "Orthodox":
+            return "Limestone" if rho < flat - 8 else ("Grass" if rho < flat + 4 else "Rock")
+        if q == "Unorthodox":
+            if rho >= flat + 3:
+                return "Sandstone" if n > 0.5 else "LeafyGrass"
+            return "Mud" if n > 0.78 else ("Ground" if n > 0.64 else "LeafyGrass")
+        if n2 > 0.66 and rho > flat + 2:
+            return "CrackedLava"
+        return "Asphalt" if n > 0.62 else "Slate"
+    if "stair" in d and d["stair"][2] > 0.5:
+        q, kind, m = d["stair"]
+        if kind == "landing":
+            return {"Orthodox": "Pavement", "Unorthodox": "Ground", "Demonic": "Slate"}[q]
+        return {"Orthodox": "Limestone", "Unorthodox": "Rock", "Demonic": "Slate"}[q]
+    if f["plaza"] > 0:
+        r = math.hypot(x, z)
+        if f["plaza"] < 2.0:
+            return "Rock"
+        for q in ("Unorthodox", "Demonic"):     # a wedge of each of these factions' own ground in front of its stairs
+            s, u = su(q, x, z)
+            if s > 40 and abs(u) < 30 and r > 38:
+                if q == "Unorthodox":
+                    return "Mud" if n > 0.74 else "Ground"
+                return "Asphalt" if n > 0.66 else "Slate"
+        if r < 12.0 or 30.0 <= r < 33.0 or 52.0 <= r < 54.0:
+            return "Limestone"
+        return "Pavement"
+    if f["spur"] > 0 and f["massif"] <= 0:
+        return "Rock" if f["spur"] < 2.0 else ("Pavement" if abs(x) > 19.0 else "Limestone")
+    if zone == "O":                              # the massif and the mountains
+        if slope > 0.85:
+            return "Limestone" if n > 0.35 else "Rock"
+        return "Grass"
+    if zone == "U":
+        if slope > 0.8:
+            return "Sandstone" if n > 0.3 else "Rock"
+        return "LeafyGrass" if n > 0.28 else "Ground"
+    if slope > 1.5 and n2 > 0.72:
+        return "CrackedLava"                     # the jagged ridges glow in their cracks (nothing is built on them)
+    if slope > 0.7:
+        return "Basalt"
+    return "Asphalt" if n > 0.64 else "Slate"
+
+
+def bottom(x, z, d):
+    """How deep the rock underside reaches at this column (negative, over Y 200): a bowl under the plaza, a keel under the spur, a cone
+    under the massif and under every mountain, ridged by noise; never past DEEPEST."""
+    f = d["fields"]
+    depth = 6.0
+    r = math.hypot(x, z)
+    if f["plaza"] > -6:
+        depth = max(depth, 6.0 + 66.0 * max(0.0, 1.0 - (r / (PLAZA_R + 6)) ** 1.7))
+    if f["spur"] > -1:
+        depth = max(depth, 6.0 + 9.0 * max(0.0, 1.0 - (x / SPUR_HALF) ** 2))
+    for cx, cz, a, b in MASSIF:
+        q = math.hypot((x - cx) / a, (z - cz) / b)
+        if q < 1.08:
+            depth = max(depth, 8.0 + 78.0 * max(0.0, 1.0 - (q / 1.08) ** 1.25))
+    for z_, cx, cz, R, H, style in MOUNTAINS:
+        q = math.hypot(x - cx, z - cz) / R
+        if q < 1.0:
+            depth = max(depth, 8.0 + 70.0 * (1.0 - q ** 1.2))
+    e = max(0.0, max(f.values()))
+    depth += 9.0 * (fbm(x / 30.0, z / 30.0, 81) - 0.45) * smoothstep(0, 28, e)
+    return -max(6.0, min(DEEPEST, depth))
+
+
+def underside_owner(d):
+    f = d["fields"]
+    if f["massif"] > 0 or f["stair_Orthodox"] > 0 or f["stair_Unorthodox"] > 0 or f["stair_Demonic"] > 0:
+        return d["zone"]
     return None
 
 
-def wedge_weight(f, x, z, inner, outer):
-    """How far into a faction's mouth in the Court a point is (0 outside, 1 well inside), with a ragged edge."""
-    r = math.hypot(x, z)
-    if r < inner or r > outer + 1:
-        return 0.0
-    dx, dz = direction(f)
-    ang = math.degrees(math.atan2(x * dz - z * dx, x * dx + z * dz))     # 0 on the arm's axis
-    half = 23.0 + 9.0 * (fbm(x / 9.0, z / 9.0, 61) - 0.5)
-    return 1.0 - smoothstep(half - 5, half, abs(ang))
-
-
-def surface(x, z, fields):
-    r = math.hypot(x, z)
-    n = fbm(x / 11.0, z / 11.0, 71)       # patches of a second material
-    n2 = fbm(x / 6.0, z / 6.0, 73)
-    # a pad
-    for f in ORDER:
-        e = fields["pad_" + f]
-        if e > 0:
-            rho, phi = pad_polar(f, x, z)
-            if f == "Orthodox":
-                if e < 3.0:
-                    return "Rock"
-                return "Limestone" if rho < 63.0 else "Grass"
-            if f == "Unorthodox":
-                if e < 4.0:
-                    return "Rock"
-                if rho >= 62.0:
-                    return "Ground" if n > 0.66 else ("Rock" if e < PAD_LIP * 0.6 else "LeafyGrass")
-                px, pz = pad_centre(f)
-                dx, dz = direction(f)
-                across = abs((x - px) * dz - (z - pz) * dx)
-                along = (x - px) * dx + (z - pz) * dz
-                if across < 3.2 and along < 0:       # the dirt road from the arm to the middle
-                    return "Ground"
-                if n > 0.78:
-                    return "Mud"
-                return "Ground" if n > 0.67 else "LeafyGrass"
-            # Demonic
-            if e < 6.0 and n2 > 0.64:
-                return "CrackedLava"                 # glowing seams along the fangs (nothing is built out there)
-            if e < PAD_LIP:
-                return "Basalt" if e < 9.0 else "Slate"
-            return "Asphalt" if n > 0.62 else "Slate"
-    # the Court
-    if fields["court"] > 0:
-        if fields["court"] < 2.0:
-            return "Rock"
-        for f in ("Unorthodox", "Demonic"):
-            w = wedge_weight(f, x, z, 29.0, COURT_R)
-            if w > 0.5:
-                if f == "Unorthodox":
-                    return "Mud" if n > 0.72 else "Ground"
-                return "Asphalt" if n > 0.66 else "Slate"
-        if r < 11.0 or 28.0 <= r < 31.0:
-            return "Pavement"
-        return "Limestone"
-    # the spur
-    if fields["spur"] > 0:
-        if fields["spur"] < 2.0:
-            return "Rock"
-        return "Pavement" if abs(x) > 19.0 else "Limestone"
-    # the arms
-    for f in ORDER:
-        e = fields["arm_" + f]
-        if e > 0:
-            dx, dz = direction(f)
-            lat = abs(x * dz - z * dx)
-            if e < 2.0:
-                return "Rock"
-            if f == "Orthodox":
-                return "Limestone" if lat < 9.0 else "Grass"
-            if f == "Unorthodox":
-                if lat < 9.0:
-                    return "Mud" if n > 0.74 else "Ground"
-                return "LeafyGrass"
-            return "Slate" if lat < 9.0 else "Asphalt"
-    return "Rock"
-
-
-def bottom(x, z, fields):
-    """How deep the rock underside reaches at this column (negative, over Y 200): a cone under each pad, a bowl under the Court, a
-    keel under each arm and the spur, ridged by noise; never past DEEPEST."""
-    d = 6.0
-    r = math.hypot(x, z)
-    if fields["court"] > -6:
-        d = max(d, 6.0 + 62.0 * max(0.0, 1.0 - (r / (COURT_R + 4)) ** 1.7))
-    if fields["spur"] > -1:
-        d = max(d, 6.0 + 9.0 * max(0.0, 1.0 - (x / SPUR_HALF) ** 2))
-    for f in ORDER:
-        if fields["arm_" + f] > -1:
-            dx, dz = direction(f)
-            lat = abs(x * dz - z * dx)
-            d = max(d, 7.0 + 16.0 * max(0.0, 1.0 - (lat / ARM_HALF) ** 2))
-        rho, phi = pad_polar(f, x, z)
-        edge = pad_edge(f, phi)
-        if rho < edge + 4:
-            d = max(d, 8.0 + 84.0 * max(0.0, 1.0 - (rho / (edge + 4)) ** 1.35))
-    e = max(0.0, max(fields.values()))
-    d += 9.0 * (fbm(x / 30.0, z / 30.0, 81) - 0.45) * smoothstep(0, 28, e)
-    return -max(6.0, min(DEEPEST, d))
-
-
 # ---------- the grid ----------
+_CACHE = {}
+
+
 def grid():
-    pts = []
-    reach = PAD_D + 110.0
-    for k in range(72):
-        a = 2 * math.pi * k / 72
-        pts.append(to_world(math.cos(a) * reach, math.sin(a) * reach))
+    corners = [(-380.0, -140.0), (380.0, -140.0), (-380.0, 520.0), (380.0, 520.0)]
+    pts = [to_world(x, z) for x, z in corners]
     xs, zs = [p[0] for p in pts], [p[1] for p in pts]
     ox = math.floor(min(xs) / CELL) * CELL - CELL
     oz = math.floor(min(zs) / CELL) * CELL - CELL
@@ -290,33 +387,50 @@ def grid():
 
 
 def sample_grid():
+    if "grid" in _CACHE:
+        return _CACHE["grid"]
     ox, oz, n = grid()
-    H, M, B, U, S = [], [], [], [], []
+    H, D, X = [], [], []
     for j in range(n):
         for i in range(n):
             wx, wz = ox + (i + 0.5) * CELL, oz + (j + 0.5) * CELL
             x, z = to_local(wx, wz)
-            h, m, owner, fields = ground(x, z)
-            if h is None:
-                H.append(None); M.append(0); B.append(None); U.append(0); S.append(0)
+            h, d = ground(x, z)
+            H.append(h); D.append(d); X.append((x, z))
+    M, B, U = [], [], []
+    for j in range(n):
+        for i in range(n):
+            k = j * n + i
+            if H[k] is None:
+                M.append(0); B.append(None); U.append(0)
                 continue
-            H.append(h); M.append(MI[m]); B.append(bottom(x, z, fields))
-            rock, strata = UNDERSIDE[owner]
-            U.append(MI[rock]); S.append(MI[strata])
-    return ox, oz, n, H, M, B, U, S
+            slope = 0.0
+            if 0 < i < n - 1 and 0 < j < n - 1:
+                nb = [H[k + 1], H[k - 1], H[k + n], H[k - n]]
+                nb = [v if v is not None else H[k] - 20.0 for v in nb]    # beside the outline the ground drops away: steep
+                slope = max(abs(nb[0] - nb[1]), abs(nb[2] - nb[3])) / (2 * CELL)
+            x, z = X[k]
+            m = surface(x, z, slope, D[k])
+            M.append(MI[m]); B.append(bottom(x, z, D[k]))
+            rock, strata = UNDERSIDE[underside_owner(D[k])]
+            U.append(MI[rock] * 100 + MI[strata])
+    _CACHE["grid"] = (ox, oz, n, H, M, B, U)
+    return _CACHE["grid"]
 
 
 # ---------- anchors (everything a headquarters phase builds on) ----------
-def arm_point(f, t, lateral=0.0):
-    dx, dz = direction(f)
-    return dx * t + dz * lateral, dz * t - dx * lateral
+def axis_point(f, s, u=0.0):
+    """Local x, z of the point s along a stair's axis and u across it (toward +X)."""
+    a = math.radians(HQ[f]["angle"])
+    return s * math.sin(a) + u * math.cos(a), s * math.cos(a) - u * math.sin(a)
 
 
 def pad_point(f, along, across=0.0):
-    """A point on a pad: `along` studs from its middle toward its back (away from the Court), `across` studs to its right when
-    looking out from the Court."""
+    """A point on a pad: `along` studs from its middle toward its back (away from the plaza), `across` studs to its right when looking out
+    from the plaza."""
     px, pz = pad_centre(f)
-    dx, dz = direction(f)
+    a = math.radians(HQ[f]["angle"])
+    dx, dz = math.sin(a), math.cos(a)
     return px + dx * along + dz * across, pz + dz * along - dx * across
 
 
@@ -326,36 +440,103 @@ def yaw_facing(vx, vz):
 
 
 def anchors():
-    a = {"Court": {"Centre": (0.0, 0.0), "Radius": COURT_R, "OathStone": (0.0, 0.0), "OathYaw": 0.0},
+    a = {"Plaza": {"Centre": (0.0, 0.0), "Radius": PLAZA_R, "OathStone": (0.0, 0.0), "OathYaw": 0.0},
          "Gate": {"Position": (0.0, GATE_Z), "Yaw": 0.0}, "Arrival": ARRIVAL, "Spur": (SPUR_FROM, SPUR_TO, SPUR_HALF),
-         "Checkpoint": {"Position": (0.0, -24.0), "Yaw": math.pi}, "Arms": {}, "Pads": {}, "Reps": {}, "Banners": {}}
+         "Checkpoint": {"Position": (0.0, -30.0), "Yaw": math.pi}, "Stairs": {}, "Pads": {}, "Reps": {}, "Banners": {}}
     for f in ORDER:
         dx, dz = direction(f)
-        yaw_to_court = yaw_facing(-dx, -dz)
-        yaw_out = yaw_facing(dx, dz)
+        info = HQ[f]
+        yaw_to_plaza = yaw_facing(-dx, -dz)       # facing back down the stairs
+        yaw_out = yaw_facing(dx, dz)              # facing up them
         px, pz = pad_centre(f)
-        a["Arms"][f] = {"Axis": (dx, dz), "Half": ARM_HALF, "From": COURT_R, "To": PAD_D - PAD_FLAT + 2.0,
-                        "Centreline": [arm_point(f, t) for t in (COURT_R, COURT_R + IDENTITY, PAD_D - PAD_FLAT + 2.0)],
-                        "GateAt": COURT_R + 18.0, "IdentityTo": COURT_R + IDENTITY}
-        # a pad: its middle, its flat radius, its outline, which way it faces (toward the Court), the gate where its arm arrives,
-        # the main hall's spot (toward its back, facing the Court), the representative's spot (at the Court, in front of the
-        # arm), the vault's, and the trial's points
-        gate = pad_point(f, -PAD_FLAT + 2.0)
-        pad = {"Centre": (px, pz), "FlatRadius": PAD_FLAT, "EdgeRadius": {"Orthodox": 88.0, "Unorthodox": 94.0, "Demonic": 92.0}[f], "Front": (-dx, -dz), "FrontYaw": yaw_to_court,
-               "Gate": {"Position": gate, "Yaw": yaw_out},
-               "MainHall": {"Position": pad_point(f, 14.0), "Yaw": yaw_to_court},
-               "Vault": {"Position": pad_point(f, 34.0, 44.0), "Yaw": yaw_to_court},
-               "Checkpoint": {"Position": gate, "Yaw": yaw_out}}
-        if f == "Orthodox":      # five gates up the ceremonial stair, from the pad's front to the hall
-            pad["Trial"] = {"Gates": [pad_point(f, -62.0 + k * 11.5) for k in range(5)]}
-        elif f == "Unorthodox":  # places a token may be hidden: a ring round the hold (the trial picks three)
-            pad["Trial"] = {"TokenSpots": [pad_point(f, 54.0 * math.cos(math.radians(30 + 60 * k)), 54.0 * math.sin(math.radians(30 + 60 * k))) for k in range(6)]}
+        last = tiers(f)[-1]
+        a["Stairs"][f] = {"Axis": (dx, dz), "Tiers": tiers(f), "Width": 2 * STAIR_HALF, "LandingWidth": 2 * LANDING_HALF,
+                          "Top": axis_point(f, last[2]), "TopHeight": last[4], "Yaw": yaw_out}
+        pad = {"Centre": (px, pz), "Height": info["pad_h"], "FlatRadius": info["flat"], "EdgeRadius": info["flat"] + PAD_SKIRT,
+               "Front": (-dx, -dz), "FrontYaw": yaw_to_plaza,
+               "Gate": {"Position": axis_point(f, last[2] + 6.0), "Yaw": yaw_out},
+               "MainHall": {"Position": pad_point(f, 16.0), "Yaw": yaw_to_plaza},
+               "Vault": {"Position": pad_point(f, 22.0, 38.0), "Yaw": yaw_to_plaza},
+               "Checkpoint": {"Position": axis_point(f, last[2] + 6.0), "Yaw": yaw_out}}
+        if f == "Orthodox":      # five gates up the ceremonial stair, from the plaza's edge to the pad
+            pad["Trial"] = {"Gates": [axis_point(f, s) for s in (84.0, 104.0, 124.0, 138.0, 150.0)]}
+        elif f == "Unorthodox":  # places a token may be hidden: the four lookouts and two nooks on the pad's rim
+            pad["Trial"] = {"TokenSpots": [(n[0], n[1]) for n in NOOKS] + [pad_point(f, 52.0, 24.0), pad_point(f, 52.0, -24.0)]}
         else:                    # the arena's middle and the three places each wave comes from
-            pad["Trial"] = {"Arena": pad_point(f, -4.0), "Waves": [pad_point(f, -4.0 + 26.0 * math.cos(math.radians(90 + 120 * k)), 26.0 * math.sin(math.radians(90 + 120 * k))) for k in range(3)]}
+            pad["Trial"] = {"Arena": pad_point(f, -2.0), "Waves": [pad_point(f, -2.0 + 26.0 * math.cos(math.radians(90 + 120 * k)), 26.0 * math.sin(math.radians(90 + 120 * k))) for k in range(3)]}
         a["Pads"][f] = pad
-        a["Reps"][f] = {"Position": arm_point(f, 34.0), "Yaw": yaw_to_court}
-        a["Banners"][f] = {"Position": arm_point(f, 24.0), "Yaw": yaw_to_court}
+        a["Reps"][f] = {"Position": axis_point(f, REP_S), "Yaw": yaw_to_plaza}
+        a["Banners"][f] = {"Position": axis_point(f, BANNER_S, BANNER_U), "Yaw": 0.0}
     return a
+
+
+# ---------- placed things: trees and so on, each at the ground's own height ----------
+def free_spot(x, z, pad_margin):
+    """The ground (height, details) at a point if something may stand there: off the plaza, the spur, every stair, pad and path."""
+    h, d = ground(x, z)
+    if h is None:
+        return None
+    f = d["fields"]
+    if f["plaza"] > -6 or f["spur"] > 0:
+        return None
+    for q in ORDER:
+        s, u = su(q, x, z)
+        if tiers(q)[0][1] - 20 <= s <= tiers(q)[-1][2] + 6 and abs(u) < LANDING_HALF + 8:
+            return None
+        px, pz = pad_centre(q)
+        if math.hypot(x - px, z - pz) < HQ[q]["flat"] + pad_margin:
+            return None
+    if path_state(x, z)[0] > 0.02:
+        return None
+    for nx, nz, nh, nr in NOOKS:
+        if math.hypot(x - nx, z - nz) < nr + 8:
+            return None
+    return h, d
+
+
+def scatter(zone, count, spacing, seed, region, max_slope, pad_margin):
+    """Up to `count` places on `zone`'s ground inside region (x0, x1, z0, z1), at least `spacing` apart, on gentle ground: (x, z, h, yaw)."""
+    x0, x1, z0, z1 = region
+    out = []
+    for tries in range(1, 6000):
+        if len(out) >= count:
+            break
+        x = x0 + (x1 - x0) * BL._hash(tries, 3, seed)
+        z = z0 + (z1 - z0) * BL._hash(tries, 5, seed + 1)
+        got = free_spot(x, z, pad_margin)
+        if not got or got[1]["zone"] != zone:
+            continue
+        h = got[0]
+        if math.hypot(ground_h(x + 3, z) - ground_h(x - 3, z), ground_h(x, z + 3) - ground_h(x, z - 3)) / 6.0 > max_slope:
+            continue
+        if min([math.hypot(x - o[0], z - o[1]) for o in out] or [1e9]) < spacing:
+            continue
+        out.append((x, z, h, BL._hash(tries, 7, seed + 2) * 6.283))
+    return out
+
+
+def placed():
+    """Everything the builder places that depends on the ground's height."""
+    if "placed" in _CACHE:
+        return _CACHE["placed"]
+    trees_o = scatter("O", 24, 15.0, 211, (50.0, 330.0, 20.0, 330.0), 0.55, 4.0)
+    trees_u = scatter("U", 32, 12.0, 223, (-125.0, 125.0, 30.0, 400.0), 0.65, 4.0)
+    rocks_d = scatter("D", 20, 18.0, 233, (-330.0, -60.0, 40.0, 340.0), 0.9, -10.0)
+    falls = []
+    # waterfalls: where a mesa's rim faces the plaza: (zone, mesa index, bearing from its middle) -> lip and the point behind it
+    for zone, idx, bearing in (("O", 0, -150.0), ("O", 2, -125.0), ("U", 3, -90.0)):
+        z_, cx, cz, R, H, style = MOUNTAINS[idx]
+        ang = math.radians(bearing)
+        rr = 0.58
+        while rr > 0.36:
+            lx, lz = cx + math.cos(ang) * R * rr, cz + math.sin(ang) * R * rr
+            if ground_h(lx, lz) > H * 0.82:
+                break
+            rr -= 0.02
+        bx, bz = cx + math.cos(ang) * R * (rr - 0.1), cz + math.sin(ang) * R * (rr - 0.1)
+        falls.append({"Zone": zone, "Lip": (lx, lz, ground_h(lx, lz)), "From": (bx, bz, ground_h(bx, bz))})
+    _CACHE["placed"] = {"TreesO": trees_o, "TreesU": trees_u, "RocksD": rocks_d, "Falls": falls}
+    return _CACHE["placed"]
 
 
 # ---------- checks ----------
@@ -378,59 +559,70 @@ def blossom_boundary():
 
 
 def report():
-    ox, oz, n, H, M, B, U, S = sample_grid()
+    ox, oz, n, H, M, B, U = sample_grid()
     cells = sum(1 for v in H if v is not None)
-    area = cells * CELL * CELL
     mine = boundary_world(H, n, ox, oz)
     clear = {}
     for name, info in LAYOUT.ISLANDS.items():
         if name == ISLAND:
             continue
         cx, _, cz = info["centre"]
-        if name == "Yggdrasil":
-            r = 248.0
-        else:
-            r = float(info["radius"])
+        r = 248.0 if name == "Yggdrasil" else float(info["radius"])
         clear[name] = round(min(math.hypot(wx - cx, wz - cz) for wx, wz in mine) - r)
     bb = blossom_boundary()
-    best = 1e9
-    for wx, wz in mine:
-        for bx, bz in bb:
-            d = math.hypot(wx - bx, wz - bz)
-            if d < best:
-                best = d
-    clear["BlossomSanctuary"] = round(best)
-    hubx, hubz = 0.0, 0.0
-    # the flat pads: every pad is level out to PAD_FLAT, every arm to ARM_HALF - ARM_LIP, the Court to COURT_R - COURT_LIP
-    worst_pad = {}
-    for f in ORDER:
-        worst = 1e9
-        for k in range(360):
-            phi = math.radians(k)
-            worst = min(worst, pad_edge(f, phi) - PAD_LIP - 1.4)
-        worst_pad[f] = round(worst, 1)
+    clear["BlossomSanctuary"] = round(min(math.hypot(wx - bx, wz - bz) for wx, wz in mine[::2] for bx, bz in bb[::2]))
     lows = [b for b in B if b is not None]
+    highs = [h for h in H if h is not None]
     start, end = LAYOUT.BRIDGES["MurimRoute"]["start"], LAYOUT.BRIDGES["MurimRoute"]["end"]
+    level = {}
+    for q in ORDER:                      # how level each pad's flat disc is (sampled)
+        px, pz = pad_centre(q)
+        worst = 0.0
+        for k in range(0, 360, 10):
+            for rr in (0.0, 20.0, 40.0, HQ[q]["flat"] - 2.0):
+                worst = max(worst, abs(ground_h(px + math.cos(math.radians(k)) * rr, pz + math.sin(math.radians(k)) * rr) - HQ[q]["pad_h"]))
+        level[q] = round(worst, 2)
+    voxels = sum(max(1, int(math.ceil((h - b) / 4.0))) for h, b in zip(H, B) if h is not None)
+    walk = max([math.hypot(*pad_centre(q)) + HQ[q]["flat"] for q in ORDER] + [math.hypot(nx, nz) for nx, nz, nh, nr in NOOKS])
     return {
         "grid": {"origin": (ox, oz), "size": n, "cells": cells},
-        "area_sq_studs": area, "origin_abyss_disc_sq_studs": round(math.pi * 165 ** 2), "blossom_sq_studs": 175728,
-        "deepest_underside": min(lows), "turns": TURNS, "yaw_deg": round(math.degrees(YAW), 2),
-        "centre": CENTRE, "hub_to_centre": round(math.hypot(CENTRE[0], CENTRE[2])),
+        "area_sq_studs": cells * CELL * CELL, "blossom_sq_studs": 175728, "origin_abyss_disc_sq_studs": round(math.pi * 165 ** 2),
+        "highest_ground_over_plaza": round(max(highs), 1), "deepest_underside": round(min(lows), 1), "voxels": voxels,
+        "turns": TURNS, "yaw_deg": round(math.degrees(YAW), 2), "centre": CENTRE, "hub_to_centre": round(math.hypot(CENTRE[0], CENTRE[2])),
         "bridge": {"start": start, "end": end, "flat_length": round(LAYOUT.flat(start, end)), "nodes": len(LAYOUT.bridge_nodes("MurimRoute")) - 1},
-        "clearance_to_islands_ground_to_ground": clear, "flat_radius_guaranteed_by_outline": worst_pad,
-        "reach": round(max(math.hypot(*[v for v in to_local(wx, wz)]) for wx, wz in mine)),
+        "clearance_to_islands_ground_to_ground": clear, "pads_level_worst_deviation": level, "walkable_reach_from_plaza": round(walk),
     }
 
 
 # ---------- writing ----------
-def lua_num(v):
-    return "false" if v is None else ("%.2f" % v)
+def encode(values, off, fmt):
+    """A run-length string for the data module: values joined by commas, `~N` for N entries of `off` (the grid is mostly sky)."""
+    out, run = [], 0
+    for v in values:
+        if v == off:
+            run += 1
+            continue
+        if run:
+            out.append("~%d" % run)
+            run = 0
+        out.append(fmt % v)
+    if run:
+        out.append("~%d" % run)
+    return ",".join(out)
 
 
 def write_terrain(path):
-    ox, oz, n, H, M, B, U, S = sample_grid()
+    ox, oz, n, H, M, B, U = sample_grid()
+
+    def chunk(name, text, comment=None):
+        out = []
+        if comment:
+            out += ["    -- " + c for c in comment]
+        out.append('    %s = "%s",' % (name, text))
+        return out
     lines = [
         "-- Written by tools/blender/world/murim_layout.py (Murim Crossing, 2026-11-22). Do not edit by hand.",
+        "-- The arrays are run-length strings (WorldBuilder.terrainData expands them): values joined by commas, ~N for N empty columns.",
         "return {",
         '    Island = "%s",' % ISLAND,
         "    Centre = Vector3.new(%g, %g, %g)," % CENTRE,
@@ -441,78 +633,99 @@ def write_terrain(path):
         "    Size = %d," % n,
         "    Materials = { %s }," % ", ".join('"%s"' % m for m in MATERIALS),
     ]
-
-    def chunked(name, vals):
-        out = ["    %s = {" % name]
-        for k in range(0, len(vals), n):
-            out.append("        " + ", ".join(vals[k:k + n]) + ",")
-        out.append("    },")
-        return out
-    lines += chunked("Heights", [lua_num(v) for v in H])
-    lines += chunked("MaterialIndex", [str(v) for v in M])
-    lines.append("    -- how deep the rock underside reaches under each column (over Centre.Y), and what it is made of (a Materials index, and the")
-    lines.append("    -- strata bands' one): pale limestone under the Orthodox pad, rock and earth under the Unorthodox, black slate under the Demonic")
-    lines += chunked("Bottoms", [lua_num(v) for v in B])
-    lines += chunked("UndersideIndex", [str(v) for v in U])
-    lines += chunked("StrataIndex", [str(v) for v in S])
+    lines += chunk("Heights", encode(H, None, "%.1f"))
+    lines += chunk("MaterialIndex", encode(M, 0, "%d"))
+    lines += chunk("Bottoms", encode([None if v is None else round(v) for v in B], None, "%d"),
+                   ["how deep the rock underside reaches under each column (over Centre.Y)"])
+    lines += chunk("UndersideIndex", encode(U, 0, "%d"),
+                   ["what the underside is made of: rock * 100 + the strata bands' material (Materials indices): pale limestone under the Orthodox side,",
+                    "sandstone and rock under the Unorthodox, black slate and basalt under the Demonic"])
     lines += ["}", ""]
     with open(path, "w") as f:
         f.write("\n".join(lines))
     return n, sum(1 for h in H if h is not None)
 
 
-def v2(p, y=0.0):
-    return "Vector3.new(%.2f, %.2f, %.2f)" % (p[0], y, p[1])
+def v3(x, y, z):
+    return "Vector3.new(%.2f, %.2f, %.2f)" % (x, y, z)
+
+
+def p3(p, y):
+    return v3(p[0], y, p[1])
+
+
+def pg(p):
+    return v3(p[0], ground_h(p[0], p[1]), p[1])
 
 
 def write_placements(path):
     a = anchors()
+    pl = placed()
     L = ["-- Written by tools/blender/world/murim_layout.py (Murim Crossing, 2026-11-22). Do not edit by hand.",
-         "-- Island-local Roblox studs (local -Z faces the hub, +X is the Orthodox side), every Y 0 = the island's ground (world Y 200). Read by",
-         "-- CrossingBuilder (the court, the gate, the banners, the representatives, the zones) and, later, by each headquarters' build.",
-         "-- Yaw: CFrame.Angles(0, Yaw, 0) in the island's frame turns a model's front (-Z) the way it says. Pads: Front is the unit vector toward",
-         "-- the Court (a headquarters' main hall faces it), Gate the pad's entrance where its arm arrives, FlatRadius how far from Centre the",
-         "-- ground is exactly level; the pad's own materials are Limestone/Grass (Orthodox), LeafyGrass/Mud/Ground/Rock (Unorthodox) and",
-         "-- Slate/Asphalt (Demonic): never lay a floor on Grass (its blades come up through it) and keep Basalt/CrackedLava (they bump) to",
-         "-- ground nothing is built on.",
+         "-- Island-local Roblox studs (local -Z faces the hub, +X is the LEFT of whoever has just arrived: the Orthodox side), Y 0 = the plaza's ground",
+         "-- (world Y 200). Read by CrossingBuilder (the plaza, the gate, the stairs, the banners, the representatives, the zones, the dressing) and,",
+         "-- later, by each headquarters' build. Yaw: CFrame.Angles(0, Yaw, 0) in the island's frame turns a model's front (-Z) the way it says.",
+         "-- Pads: Height is the pad's level over the plaza, Front the unit vector toward the plaza (a headquarters' main hall faces it), Gate the pad's",
+         "-- entrance just past the stair's top, FlatRadius how far from Centre the ground is exactly level; the pad's own materials are",
+         "-- Limestone/Grass (Orthodox), LeafyGrass/Mud/Ground/Sandstone (Unorthodox) and Slate/Asphalt (Demonic): never lay a floor on Grass (its blades",
+         "-- come up through it) and keep Basalt/CrackedLava (they bump) to ground nothing is built on.",
          "return {",
-         "    Reach = %d," % round(report()["reach"] + 6),
-         "    Court = { Centre = %s, Radius = %.1f, OathStone = %s, OathYaw = %.4f }," % (v2(a["Court"]["Centre"]), COURT_R, v2(a["Court"]["OathStone"]), a["Court"]["OathYaw"]),
-         "    Gate = { Position = %s, Yaw = %.4f }, -- the island's own gate, across the end of the bridge" % (v2(a["Gate"]["Position"]), a["Gate"]["Yaw"]),
-         "    Arrival = %s, -- where the bridge's last deck node lands" % ("Vector3.new(%.2f, 0, %.2f)" % (ARRIVAL[0], ARRIVAL[2])),
+         "    Reach = 340, -- how far from the plaza's middle the walkable ground runs (the mountains behind it are scenery)",
+         "    Plaza = { Centre = %s, Radius = %.1f, OathStone = %s, OathYaw = %.4f }," % (p3(a["Plaza"]["Centre"], 0), PLAZA_R, p3(a["Plaza"]["OathStone"], 0), a["Plaza"]["OathYaw"]),
+         "    Gate = { Position = %s, Yaw = %.4f }, -- the island's own gate, across the end of the bridge" % (p3(a["Gate"]["Position"], 0), a["Gate"]["Yaw"]),
+         "    Arrival = %s, -- where the bridge's last deck node lands" % v3(ARRIVAL[0], 0, ARRIVAL[2]),
          "    Spur = { FromZ = %.1f, ToZ = %.1f, Half = %.1f }," % (SPUR_FROM, SPUR_TO, SPUR_HALF),
-         "    Checkpoint = { Position = %s, Yaw = %.4f }, -- where a fall from the island returns to: the Court, facing the oath stone" % (v2(a["Checkpoint"]["Position"]), a["Checkpoint"]["Yaw"]),
-         "    Order = { \"Orthodox\", \"Unorthodox\", \"Demonic\" },"]
-    L.append("    Arms = {")
+         "    Checkpoint = { Position = %s, Yaw = %.4f }, -- where a fall from the island returns to: the plaza, facing the oath stone" % (p3(a["Checkpoint"]["Position"], 0), a["Checkpoint"]["Yaw"]),
+         "    Order = { \"Orthodox\", \"Unorthodox\", \"Demonic\" },",
+         "    StepRise = %.1f, StairHalf = %.1f, LandingHalf = %.1f, UnderStep = %.1f," % (STEP_RISE, STAIR_HALF, LANDING_HALF, UNDER_STEP)]
+    L.append("    Stairs = { -- each headquarters' stairway: its axis (a unit vector from the plaza's middle), its tiers as { Kind, S0, S1, H0, H1 } (S along the axis)")
     for f in ORDER:
-        arm = a["Arms"][f]
-        L.append("        %s = { Axis = Vector3.new(%.4f, 0, %.4f), Half = %.1f, From = %.1f, To = %.1f, GateAt = %.1f, IdentityTo = %.1f, Centreline = { %s } }," % (
-            f, arm["Axis"][0], arm["Axis"][1], arm["Half"], arm["From"], arm["To"], arm["GateAt"], arm["IdentityTo"], ", ".join(v2(p) for p in arm["Centreline"])))
+        st = a["Stairs"][f]
+        tiers_lua = ", ".join('{ "%s", %.1f, %.1f, %.1f, %.1f }' % t for t in st["Tiers"])
+        L.append("        %s = { Axis = Vector3.new(%.4f, 0, %.4f), Yaw = %.4f, Width = %.1f, LandingWidth = %.1f, Top = %s, Tiers = { %s } }," % (
+            f, st["Axis"][0], st["Axis"][1], st["Yaw"], st["Width"], st["LandingWidth"], p3(st["Top"], st["TopHeight"]), tiers_lua))
     L.append("    },")
-    L.append("    Reps = { -- each faction's representative stands in the Court in front of its arm, facing the oath stone")
+    L.append("    Reps = { -- each faction's representative stands on the plaza in front of its stairs, facing the oath stone")
     for f in ORDER:
-        L.append("        %s = { Position = %s, Yaw = %.4f }," % (f, v2(a["Reps"][f]["Position"]), a["Reps"][f]["Yaw"]))
+        L.append("        %s = { Position = %s, Yaw = %.4f }," % (f, p3(a["Reps"][f]["Position"], 0), a["Reps"][f]["Yaw"]))
     L.append("    },")
-    L.append("    Banners = { -- a tall pole between the oath stone and each representative")
+    L.append("    Banners = { -- a tall pole at the foot of each stairway")
     for f in ORDER:
-        L.append("        %s = { Position = %s, Yaw = %.4f }," % (f, v2(a["Banners"][f]["Position"]), a["Banners"][f]["Yaw"]))
+        L.append("        %s = { Position = %s, Yaw = %.4f }," % (f, p3(a["Banners"][f]["Position"], 0), a["Banners"][f]["Yaw"]))
     L.append("    },")
     L.append("    Pads = {")
     for f in ORDER:
         p = a["Pads"][f]
+        h = p["Height"]
         L.append("        %s = {" % f)
-        L.append("            Centre = %s, FlatRadius = %.1f, EdgeRadius = %.1f," % (v2(p["Centre"]), p["FlatRadius"], p["EdgeRadius"]))
+        L.append("            Centre = %s, Height = %.1f, FlatRadius = %.1f, EdgeRadius = %.1f," % (p3(p["Centre"], h), h, p["FlatRadius"], p["EdgeRadius"]))
         L.append("            Front = Vector3.new(%.4f, 0, %.4f), FrontYaw = %.4f," % (p["Front"][0], p["Front"][1], p["FrontYaw"]))
         for key in ("Gate", "MainHall", "Vault", "Checkpoint"):
-            L.append("            %s = { Position = %s, Yaw = %.4f }," % (key, v2(p[key]["Position"]), p[key]["Yaw"]))
-        t = p["Trial"]
-        for key, val in t.items():
+            L.append("            %s = { Position = %s, Yaw = %.4f }," % (key, pg(p[key]["Position"]), p[key]["Yaw"]))
+        for key, val in p["Trial"].items():
             if isinstance(val, list):
-                L.append("            Trial%s = { %s }," % (key, ", ".join(v2(q) for q in val)))
+                L.append("            Trial%s = { %s }," % (key, ", ".join(pg(q) for q in val)))
             else:
-                L.append("            Trial%s = %s," % (key, v2(val)))
+                L.append("            Trial%s = %s," % (key, pg(val)))
         L.append("        },")
     L.append("    },")
+    L.append("    Nooks = { -- the Unorthodox side's hidden lookouts, each at the end of a hidden path")
+    L.append("        " + ", ".join(v3(n[0], n[2], n[1]) for n in NOOKS) + ",")
+    L.append("    },")
+    L.append("    Paths = { -- those paths, as knots")
+    for knots in PATHS:
+        L.append("        { " + ", ".join(v3(k[0], k[2], k[1]) for k in knots) + " },")
+    L.append("    },")
+    L.append("    Dress = { -- trees and rocks, each at the ground's own height: position, yaw")
+    for key in ("TreesO", "TreesU", "RocksD"):
+        L.append("        %s = { %s }," % (key, ", ".join("{ %s, %.3f }" % (v3(x, h, z), yaw) for x, z, h, yaw in pl[key])))
+    L.append("    },")
+    L.append("    Falls = { -- where a waterfall pours off a mesa's rim: the lip and the point behind it")
+    for fl in pl["Falls"]:
+        L.append('        { Zone = "%s", Lip = %s, From = %s },' % (fl["Zone"], v3(fl["Lip"][0], fl["Lip"][2], fl["Lip"][1]), v3(fl["From"][0], fl["From"][2], fl["From"][1])))
+    L.append("    },")
+    # the blood moon: far behind the Demonic side, high, tied to the island (a part in its model; it lights nothing)
+    L.append("    Moon = { Position = Vector3.new(-230.00, 330.00, 640.00), Radius = 70.0 }, -- behind and over the Demonic mountains")
     L += ["}", ""]
     with open(path, "w") as f:
         f.write("\n".join(L))
@@ -522,13 +735,13 @@ def write_placements(path):
 # ---------- the sketch ----------
 COL = {"Limestone": (214, 214, 226), "Grass": (104, 160, 86), "Pavement": (176, 180, 198), "Ground": (128, 100, 74), "Mud": (86, 68, 50),
        "LeafyGrass": (70, 122, 62), "Rock": (120, 122, 130), "Slate": (60, 58, 72), "Asphalt": (70, 64, 64), "Basalt": (44, 40, 42),
-       "CrackedLava": (255, 110, 40)}
+       "CrackedLava": (255, 110, 40), "Sandstone": (98, 124, 108)}
 
 
 def sketch(path):
-    S = 1.2
-    R = PAD_D + 120
-    X0, X1, Z0, Z1 = -R, R, -R - 60, R
+    ox, oz, n, H, M, B, U = sample_grid()
+    S = 1.0
+    X0, X1, Z0, Z1 = -380.0, 380.0, -150.0, 520.0
     w, h = int((X1 - X0) * S), int((Z1 - Z0) * S)
     px = bytearray(w * h * 3)
     sky = (34, 40, 56)
@@ -536,57 +749,61 @@ def sketch(path):
         z = Z1 - (j + 0.5) / S
         for i in range(w):
             x = X1 - (i + 0.5) / S               # seen from above: local -Z (the hub) at the bottom, +X on the left
-            hh, m, owner, fields = ground(x, z)
-            c = sky if hh is None else COL[m]
-            if hh is not None:
-                shade = 0.9 + 0.04 * hh
-                c = tuple(min(255, int(v * shade)) for v in c)
-            k = (j * w + i) * 3
-            px[k:k + 3] = bytes(c)
+            wx, wz = to_world(x, z)
+            ci, cj = int((wx - ox) // CELL), int((wz - oz) // CELL)
+            c = sky
+            if 0 <= ci < n and 0 <= cj < n and H[cj * n + ci] is not None:
+                k = cj * n + ci
+                shade = 0.62 + 0.0042 * H[k]
+                c = tuple(min(255, int(v * shade)) for v in COL[MATERIALS[M[k] - 1]])
+            kk = (j * w + i) * 3
+            px[kk:kk + 3] = bytes(c)
 
-    def put(x, z, c, a=1.0):
+    def put(x, z, c):
         i, j = int((X1 - x) * S), int((Z1 - z) * S)
         if 0 <= i < w and 0 <= j < h:
-            k = (j * w + i) * 3
-            for m in range(3):
-                px[k + m] = int(px[k + m] * (1 - a) + c[m] * a)
+            kk = (j * w + i) * 3
+            px[kk:kk + 3] = bytes(c)
 
-    def disc(x, z, r, c, a=1.0):
+    def disc(x, z, r, c):
         for dz in range(int(-r * S) - 1, int(r * S) + 2):
             for dx in range(int(-r * S) - 1, int(r * S) + 2):
                 if math.hypot(dx, dz) / S <= r:
-                    put(x + dx / S, z + dz / S, c, a)
-
-    # the bridge, the gate, the anchors, the representatives
-    for t in range(0, 90):
-        for s in range(-20, 21, 2):
-            put(s, ARRIVAL[2] - 90 + t, (236, 228, 210))
+                    put(x + dx / S, z + dz / S, c)
     FC = {"Orthodox": (96, 168, 255), "Unorthodox": (70, 200, 150), "Demonic": (226, 52, 48)}
     a = anchors()
-    disc(0, GATE_Z, 2.0, (255, 220, 120))
-    disc(0, 0, 3.0, (255, 255, 255))
+    disc(0, GATE_Z, 2.5, (255, 220, 120))
+    disc(0, 0, 3.5, (255, 255, 255))
+    for t in range(0, 70):
+        for s_ in range(-20, 21, 2):
+            put(s_, ARRIVAL[2] - 70 + t, (236, 228, 210))
     for f in ORDER:
-        disc(*a["Reps"][f]["Position"], 2.2, FC[f])
-        disc(*a["Banners"][f]["Position"], 1.6, FC[f])
-        disc(*a["Pads"][f]["Gate"]["Position"], 2.0, (255, 220, 120))
-        disc(*a["Pads"][f]["Centre"], 2.5, FC[f])
+        disc(*a["Reps"][f]["Position"], 3.0, FC[f])
+        disc(*a["Banners"][f]["Position"], 2.0, FC[f])
+        disc(*a["Pads"][f]["Gate"]["Position"], 2.5, (255, 220, 120))
+        disc(*a["Pads"][f]["Centre"], 3.0, FC[f])
         for q in a["Pads"][f]["Trial"].values():
             for p in (q if isinstance(q, list) else [q]):
-                disc(*p, 1.2, FC[f], 0.8)
+                disc(*p, 1.6, FC[f])
+    for nx, nz, nh, nr in NOOKS:
+        disc(nx, nz, 3.0, (255, 255, 120))
+    for fl in placed()["Falls"]:
+        disc(fl["Lip"][0], fl["Lip"][1], 2.5, (120, 200, 255))
     write_png(path, w, h, px)
     return w, h
 
 
 write_png = BL.write_png
 
+
 def verify(r):
     """The layout's rules, each printed as OK or BAD (a BAD ends the run with an error)."""
     rules = [
-        ("every plateau is level to at least %d studs" % PAD_FLAT, min(r["flat_radius_guaranteed_by_outline"].values()) >= PAD_FLAT),
+        ("every pad is level over its whole flat disc (within 0.1 stud)", max(r["pads_level_worst_deviation"].values()) <= 0.1),
         ("every other island is at least 100 studs of open sky away", min(r["clearance_to_islands_ground_to_ground"].values()) >= 100),
         ("the bridge is one span of 200 to 280 studs", 200 <= r["bridge"]["flat_length"] <= 280),
         ("the underside stays above the 110-stud fall line", r["deepest_underside"] > -105),
-        ("its ground is within 10% of Origin Abyss's", abs(r["area_sq_studs"] / r["origin_abyss_disc_sq_studs"] - 1.0) <= 0.10),
+        ("its ground is no bigger than the Blossom Sanctuary's", r["area_sq_studs"] <= r["blossom_sq_studs"]),
         ("the grid origin and the centre are whole 4-stud voxels", all(float(v) % CELL == 0 for v in (r["grid"]["origin"][0], r["grid"]["origin"][1], CENTRE[0], CENTRE[2]))),
     ]
     bad = 0

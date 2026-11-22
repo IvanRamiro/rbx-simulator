@@ -17,6 +17,11 @@ local WorldConfig = {
         -- the Training Ground's island (the owner, 2026-11-16), south-east of the hub, reached by stepping stones
         -- (tools/blender/world/blossom_layout.py: Turns faces its arrival at the hub)
         BlossomSanctuary = { Centre = Vector3.new(452, 200, 380), Radius = 170, Reach = 335, Turns = -0.55496 },
+        -- the three Murim factions' island (the owner, 2026-11-22), south-south-west of the hub on a bridge open to every rank: a big
+        -- circular plaza where the bridge lands, three headquarters on raised pads across it and mountains behind (the plaza's middle is the
+        -- island's centre; Reach covers the walkable ground, the mountains behind it are scenery; tools/blender/world/murim_layout.py: Turns
+        -- faces its entry at the hub)
+        MurimCrossing = { Centre = Vector3.new(-244, 200, 564), Radius = 170, Reach = 340, Turns = 0.25994 },
     },
 
     -- the Hall of Records (its boards and stores): shared/RecordsConfig
@@ -43,7 +48,7 @@ function WorldConfig.frame(islandName)
 end
 
 -- Each outer island's bridge (Placements.Bridges, layout.py), by island.
-local BRIDGE_ROUTES = { JadeGrove = "JadeRoute", EmberPeak = "EmberRoute", MoonlitIsle = "MoonlitRoute", OriginAbyss = "OriginRoute", BeginnerIsle = "BeginnerRoute" }
+local BRIDGE_ROUTES = { JadeGrove = "JadeRoute", EmberPeak = "EmberRoute", MoonlitIsle = "MoonlitRoute", OriginAbyss = "OriginRoute", BeginnerIsle = "BeginnerRoute", MurimCrossing = "MurimRoute" }
 
 -- Where an island's bridge lands on Yggdrasil (the first node of its deck), or nil: the way home for
 -- a guardian's thief.
