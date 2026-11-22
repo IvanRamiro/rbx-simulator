@@ -541,8 +541,18 @@ def lathe(profile, seg=10, c=(0, 0, 0), mod=None, phase=0.0):
     return g
 
 
-def box(c, size, yaw=0.0, tilt=None):
+_BOX_N = [0]
+
+
+def box(c, size, yaw=0.0, tilt=None, jit=True):
+    """An axis box. Its four side faces are nudged by a different few thousandths each time (the top and bottom stay exact), so two boxes that share
+    a plane never z-fight."""
     hx, hy, hz = size[0] / 2, size[1] / 2, size[2] / 2
+    if jit:
+        _BOX_N[0] += 1
+        k = _BOX_N[0]
+        hx += 0.0035 * (1 + k % 5)
+        hz += 0.0035 * (1 + (k * 3) % 5)
     pts = [(-hx, -hy, -hz), (hx, -hy, -hz), (hx, -hy, hz), (-hx, -hy, hz), (-hx, hy, -hz), (hx, hy, -hz), (hx, hy, hz), (-hx, hy, hz)]
     return _hexa(pts, c, yaw, tilt)
 
