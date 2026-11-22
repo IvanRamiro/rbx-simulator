@@ -197,7 +197,7 @@ def plan():
     e = pl.add("JG_Cliff_Grotto_G1", fx, fz, yawF, 1.0, y=foot_lv)
     lip = pl.mark("JG_Cliff_Grotto_G1", "Lip", e)
     base = pl.mark("JG_Cliff_Grotto_G1", "CurtainBase", e)
-    pl.falls.append({"name": "HighFalls", "lip": lip, "frm": (lip[0] - I.DIR_F[0] * 3.0, lip[1], lip[2] - I.DIR_F[1] * 3.0), "drop": lip[1] - (foot_lv - 3.8)})
+    pl.falls.append({"name": "HighFalls", "lip": lip, "frm": (lip[0] - I.DIR_F[0] * 3.0, lip[1], lip[2] - I.DIR_F[1] * 3.0), "drop": lip[1] - (I.ground(I.POND[0], I.POND[1]) + 2.6)})
     pl.spots["SpiritGrotto"] = (e["x"], foot_lv + 0.6, e["z"], "grotto floor behind the High Falls")
     pl.sites.append(("grotto cliff", fx, fz, 20.0))
     # the pond's discs and rim stones
@@ -214,7 +214,7 @@ def plan():
     pl.water["streams"].append({"name": "PlateauBrook", "pts": [(p[0], p[1], I.ground(p[0], p[1]) + 0.9 - 0.9) for p in I.STREAM_TOP], "width": 4.0})
     # the lip: the plateau brook's last point is the High Falls' lip (the grotto's own notch)
     # the weir cascade on the stream's first stretch
-    s0 = 26.0
+    s0 = 58.0         # where the stream's bed drops from -1.4 to -9.7 over 14 studs: the three ledges stand on that drop
     (cp, cd) = I.point_at(I.STREAM, s0)
     lv = snap(I.ground(*cp))
     ce = pl.add("JG_Cliff_Cascade_C1", cp[0], cp[1], yaw_front(cd[0], cd[1]), 1.0, y=lv)
