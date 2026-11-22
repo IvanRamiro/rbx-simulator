@@ -30,6 +30,7 @@ sys.path.insert(0, HERE)
 
 import blossom_layout as BL          # its noise, its footprint (the clearance check) and the shared sketch writer
 import layout as LAYOUT              # where every island stands
+import murim_dawnspire_terrain as DT  # Dawnspire's terraces on the Orthodox side (changes only its own region; DAWNSPIRE_TERRAIN=0 turns it off)
 
 ISLAND = "MurimCrossing"
 CENTRE = tuple(float(v) for v in LAYOUT.ISLANDS[ISLAND]["centre"])
@@ -286,6 +287,12 @@ def path_state(x, z):
 
 
 def ground(x, z):
+    """The ground (height over Y 200, details) with Dawnspire's terraces laid over the Orthodox side (murim_dawnspire_terrain)."""
+    h, d = _ground_base(x, z)
+    return DT.override(x, z, h, d)
+
+
+def _ground_base(x, z):
     """(height over Y 200, details) of the ground at a point, or (None, None) off the island: the plaza, the foothill and mountains, then
     the stairways, the pads and the hidden paths laid over them."""
     f = comp_fields(x, z)
@@ -342,6 +349,14 @@ def ground_h(x, z):
 
 # ---------- surface materials ----------
 def surface(x, z, slope, d):
+    """The terrain material at a column, with Dawnspire's (its terraces' own, and the hall's repaved footprint)."""
+    m = _surface_base(x, z, slope, d)
+    if "dawn" in d:
+        return DT.surface(x, z, slope, d, m)
+    return DT.hall_pave(x, z, m)
+
+
+def _surface_base(x, z, slope, d):
     """The terrain material at a column: by what it is (path, pad, stair, plaza) or by whose side of the island it is and how steep."""
     n = fbm(x / 11.0, z / 11.0, 71)
     n2 = fbm(x / 6.0, z / 6.0, 73)
@@ -397,6 +412,14 @@ def surface(x, z, slope, d):
 
 
 def bottom(x, z, d):
+    """How deep the rock underside reaches at this column (negative, over Y 200), with a cone of rock under every Dawnspire terrace."""
+    b = _bottom_base(x, z, d)
+    if "dawn" in d:
+        return -min(DEEPEST, max(-b, DT.bottom_depth(d)))
+    return b
+
+
+def _bottom_base(x, z, d):
     """How deep the rock underside reaches at this column (negative, over Y 200): a bowl under the plaza, a keel under the spur, a cone
     under the massif and under every mountain, ridged by noise; never past DEEPEST."""
     f = d["fields"]
@@ -421,6 +444,8 @@ def bottom(x, z, d):
 
 def underside_owner(d):
     f = d["fields"]
+    if "dawn" in d:                      # a Dawnspire terrace hangs in the Orthodox side's pale limestone
+        return "O"
     if f["massif"] > 0 or f["stair_Orthodox"] > 0 or f["stair_Unorthodox"] > 0 or f["stair_Demonic"] > 0:
         return d["zone"]
     return None
@@ -443,6 +468,9 @@ def grid():
 def sample_grid():
     if "grid" in _CACHE:
         return _CACHE["grid"]
+    if DT.ENABLED:
+        import dawnspire                 # (its buildings' footprints and walks: the terrain under them is Pavement)
+        dawnspire.register_pavement()
     ox, oz, n = grid()
     H, D, X = [], [], []
     for j in range(n):
@@ -573,12 +601,13 @@ def placed():
     """Everything the builder places that depends on the ground's height."""
     if "placed" in _CACHE:
         return _CACHE["placed"]
-    trees_o = scatter("O", 24, 15.0, 211, (50.0, 330.0, 20.0, 330.0), 0.55, 4.0)
+    # (Dawnspire plants its own cherry trees: the first foundation's borrowed Blossom Sanctuary trees on the Orthodox side are gone)
+    trees_o = [] if DT.ENABLED else scatter("O", 24, 15.0, 211, (50.0, 330.0, 20.0, 330.0), 0.55, 4.0)
     trees_u = scatter("U", 32, 12.0, 223, (-125.0, 125.0, 30.0, 400.0), 0.65, 4.0)
     rocks_d = scatter("D", 20, 18.0, 233, (-330.0, -60.0, 40.0, 340.0), 0.9, -10.0)
     falls = []
     # waterfalls: where a mesa's rim faces the plaza: (zone, mesa index, bearing from its middle) -> lip and the point behind it
-    for zone, idx, bearing in (("O", 0, -150.0), ("O", 2, -125.0), ("U", 3, -90.0)):
+    for zone, idx, bearing in ((("O", 0, -150.0), ("O", 2, -125.0), ("U", 3, -90.0)) if not DT.ENABLED else (("U", 3, -90.0),)):
         z_, cx, cz, R, H, style = MOUNTAINS[idx]
         ang = math.radians(bearing)
         rr = 0.58
@@ -634,7 +663,10 @@ def report():
         worst = 0.0
         for k in range(0, 360, 10):
             for rr in (0.0, 20.0, 40.0, HQ[q]["flat"] - 2.0):
-                worst = max(worst, abs(ground_h(px + math.cos(math.radians(k)) * rr, pz + math.sin(math.radians(k)) * rr) - HQ[q]["pad_h"]))
+                h_, d_ = ground(px + math.cos(math.radians(k)) * rr, pz + math.sin(math.radians(k)) * rr)
+                if d_ and "dawn" in d_:          # (Dawnspire's terraces rise behind the hall on purpose: the pad is level where they did not change it)
+                    continue
+                worst = max(worst, abs((0.0 if h_ is None else h_) - HQ[q]["pad_h"]))
         level[q] = round(worst, 2)
     voxels = sum(max(1, int(math.ceil((h - b) / 4.0))) for h, b in zip(H, B) if h is not None)
     walk = max([math.hypot(*pad_centre(q)) + HQ[q]["flat"] for q in ORDER] + [math.hypot(nx, nz) for nx, nz, nr in NOOKS])
@@ -861,7 +893,7 @@ def verify(r):
         ("every other island is at least 100 studs of open sky away", min(r["clearance_to_islands_ground_to_ground"].values()) >= 100),
         ("the bridge is one span of 200 to 280 studs", 200 <= r["bridge"]["flat_length"] <= 280),
         ("the underside stays above the 110-stud fall line", r["deepest_underside"] > -105),
-        ("its ground is no bigger than the Blossom Sanctuary's", r["area_sq_studs"] <= r["blossom_sq_studs"]),
+        ("its ground is no bigger than 1.25 times the Blossom Sanctuary's (Dawnspire's terraces, the owner's expansion of 2026-11-22, grew it from 0.98)", r["area_sq_studs"] <= 1.25 * r["blossom_sq_studs"]),
         ("the grid origin and the centre are whole 4-stud voxels", all(float(v) % CELL == 0 for v in (r["grid"]["origin"][0], r["grid"]["origin"][1], CENTRE[0], CENTRE[2]))),
     ]
     bad = 0

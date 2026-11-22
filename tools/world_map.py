@@ -441,4 +441,5 @@ def main():
     render(os.path.join(os.path.dirname(OUT), "murim_crossing_top_view.png"), *murim_detail())
 
 
-main()
+if __name__ == "__main__":
+    main()
