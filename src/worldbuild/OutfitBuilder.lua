@@ -34,7 +34,13 @@ end
 -- and how far the worst piece is off under it.
 local function fit(found, placements)
     local best
-    for _, turn in { 0, math.pi } do
+    -- A one-piece import (the factions' swords) has nothing to tell a turn from none: any shift fits both exactly, and the first was
+    -- taken, leaving the weapon held blade down. The importer always turns a model half round (x and z flip), so it is the half turn.
+    local count = 0
+    for _ in found do
+        count += 1
+    end
+    for _, turn in (if count == 1 then { math.pi } else { 0, math.pi }) do
         local rotation = CFrame.Angles(0, turn, 0)
         local sumAuthored, sumImported, n = Vector3.zero, Vector3.zero, 0
         for piece, part in found do
