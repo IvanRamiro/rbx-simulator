@@ -1,6 +1,6 @@
 """Starting Island: the welcoming grassy cultivation island that was the hub until Yggdrasil
 replaced it (2026-11-01). Kept as the ground and the Qi Spring that the Starting Island's kit
-(start_props, start_nature, start_meshes) was authored on: Yggdrasil places that kit, and carries
+(start_props, start_meshes) was authored on: Yggdrasil places that kit, and carries
 the spring over whole (ygg_island.SPRING_OFFSET, SPRING_YAW, from_start).
 
 Authored in island-local Roblox studs (x east, z south, y up, ground ~0 = world Y 200).

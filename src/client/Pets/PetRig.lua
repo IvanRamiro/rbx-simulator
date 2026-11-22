@@ -8,7 +8,6 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local PetRig = {}
-PetRig.LegacyProfiles = {} -- a pet remade as a skinned one keeps its old jointed profile for the old model, until the new one is imported (isRigged picks)
 
 -- (kept on the module, not as locals: the main chunk sits at Luau's 200-local limit)
 PetRig.Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
@@ -6330,47 +6329,6 @@ PetRig.Profiles.WorldrootColossus = {
         Sun = Color3.fromRGB(210, 255, 200), Ivory = Color3.fromRGB(240, 255, 235) },
     Animate = animateBrute,
 }
--- The Exclusive Egg's own beasts (the owner, 2026-11-13).
---
--- The Eclipse Dreadwing, "Devourer of Stars" (Divine): a four-legged raven-drake griffin (modelled in Blender, 2026-11-13) that hovers by
--- its owner on slow, heavy wingbeats (animateWinged; its legs are part of the Body). Its eclipse is no part of the model: it appears only in
--- the special, Devour the Stars (Blasts.DevourStars): wings wide, head thrown up, a black eclipse opens above its back and swallows starlight.
-
--- Crysalith, "The Eternal Frost" (Secret; hand-modelled in Blender 2026-11-16): a heavy frost-draconic guardian with crystal antlers, slate
--- armour and crystal growths, that walks after its owner with slow, stately strides, head high; it
--- looks about now and then, its antlers sway a little behind the head's turn and the frozen light in them breathes (Effects.Pulse). Flying,
--- its legs fold. The special, Eternal Frost (Blasts.EternalFrost): it lifts its head and antlers to the sky, a ring of frost spreads over the
--- ground and ice shards rise round it.
-local function animateCrysalith(rig, s, moving, fly, nova)
-    local m, u, t, dt = rig.motors, rig.unit, s.time, rig.deltaTime
-    local drop = dropToGround(rig, s, t, u, fly, rig.profile.Sole)
-    s.stride = (s.stride or 0) + dt * (1.5 + 6.5 * moving)
-    local stride = s.stride
-    local breathe = math.sin(t * 1.2)
-    local lift = math.sin(math.min(nova * 1.4, 1) * math.pi / 2) -- the special: 0 to 1 and back
-    pose(m.Body, CFrame.new(0, -drop + (0.02 * breathe + 0.04 * math.abs(math.sin(stride)) * moving + 0.05 * math.sin(t * 2) * fly) * u, 0)
-        * CFrame.Angles(0.015 * breathe - 0.06 * fly - 0.08 * lift, 0, 0.02 * math.sin(stride) * moving))
-    s.nextGlance = s.nextGlance or 0
-    if t >= s.nextGlance then
-        s.nextGlance = t + 3 + math.random() * 4
-        s.glance = (math.random() - 0.5) * 0.7
-    end
-    local calm = (1 - 0.7 * moving) * (1 - lift)
-    s.yaw = (s.yaw or 0) + ((s.glance or 0) * calm - (s.yaw or 0)) * math.min(1, dt * 2)
-    s.yawLag = (s.yawLag or 0) + (s.yaw - (s.yawLag or 0)) * math.min(1, dt * 1.5) -- the antlers follow the head a beat late
-    pose(m.Head, CFrame.Angles(0.03 * math.sin(t * 0.9) + 0.04 * math.sin(stride * 2) * moving - 0.08 * fly + 0.45 * lift, s.yaw, 0))
-    if m.Antlers then
-        pose(m.Antlers, CFrame.Angles(0.02 * math.sin(t * 0.9 + 0.6), (s.yawLag - s.yaw) * 0.6, 0.02 * math.sin(t * 0.7)))
-    end
-    for name, lead in { LegFL = 0, LegBR = 0, LegFR = math.pi, LegBL = math.pi } do
-        local front = string.sub(name, 4, 4) == "F"
-        pose(m[name], CFrame.Angles(0.42 * math.sin(stride + lead) * moving + (if front then -0.8 else 0.7) * fly, 0, 0))
-    end
-    if m.Tail then
-        pose(m.Tail, CFrame.Angles(0.1 * math.sin(t * 1.7) + 0.2 * moving, 0.15 * math.sin(t * 1.1), 0))
-    end
-end
-
 PetRig.Profiles.PrismaticPhoenix = {
     Joints = { Body = "Root", Head = "Body", WingL = "Body", WingR = "Body", Tail = "Body" },
     Effects = { Pulse = "Body", Burst = "Body", Blast = "PrismBloom", NovaLight = 2.5 },
@@ -6393,33 +6351,9 @@ PetRig.Profiles.ThousandYearDreamEater = {
     Animate = animateDreamEater,
 }
 
-PetRig.LegacyProfiles.EclipseDreadwing = {
-    Joints = { Body = "Root", Head = "Body", WingL = "Body", WingR = "Body", Tail = "Body" },
-    Effects = { Pulse = "Body", Burst = "Body", Sparks = { "Head_Eye" }, Blast = "DevourStars", NovaLight = 2 },
-    Colors = { Gold = Color3.fromRGB(190, 150, 255), Amber = Color3.fromRGB(40, 20, 70), Orange = Color3.fromRGB(150, 90, 255),
-        Sun = Color3.fromRGB(240, 230, 255), Ivory = Color3.fromRGB(250, 245, 255) },
-    Animate = animateWinged,
-}
-PetRig.LegacyProfiles.Crysalith = {
-    Sole = 1.375, -- template units from the middle of its box down to its hooves (the Blender model's box is 2.75 tall, hooves at its foot)
-    Joints = {
-        Body = "Root", Head = "Body", Antlers = "Head",
-        LegFL = "Body", LegFR = "Body", LegBL = "Body", LegBR = "Body", Tail = "Body",
-    },
-    Effects = {
-        Pulse = "Antlers", Light = "Antlers", Motes = "Body", Burst = "Body",
-        Sparks = { "Antlers_TipL", "Antlers_TipR" }, Blast = "EternalFrost", NovaLight = 3,
-    },
-    LightScale = 0.5,
-    SeeThroughGlow = { ["5fe3ff"] = 0.7 }, -- the frozen light over its antlers
-    Colors = { Gold = Color3.fromRGB(150, 235, 255), Amber = Color3.fromRGB(40, 90, 140), Orange = Color3.fromRGB(90, 200, 255),
-        Sun = Color3.fromRGB(235, 252, 255), Ivory = Color3.fromRGB(250, 255, 255) },
-    Animate = animateCrysalith,
-}
-
--- The same two beasts, remade as skinned rigs (Blender 2026-11-22, same look): the Dreadwing's wings are chains with fanning feathers, its neck and tail
--- chains, its legs hang and trail; Crysalith walks on four solved legs over a four-bone spine, its antlers ring on springs, its tail drags (DreadwingMotion,
--- CrysalithMotion). Until the owner imports the new meshes the old jointed ones above run (PetRig.isRigged).
+-- The Exclusive Egg's beasts (the owner, 2026-11-13), skinned rigs since 2026-11-22 (Blender, tools/blender/pets): the Dreadwing's wings are chains with
+-- fanning feathers, its neck and tail chains, its legs hang and trail; Crysalith walks on four solved legs over a four-bone spine, its antlers ring on
+-- springs, its tail drags (DreadwingMotion, CrysalithMotion). Their eclipse and frost appear only in the specials (Blasts.DevourStars, Blasts.EternalFrost).
 do
     local DreadwingMotion = require(script.Parent:WaitForChild("DreadwingMotion"))
     local CrysalithMotion = require(script.Parent:WaitForChild("CrysalithMotion"))
@@ -6428,7 +6362,8 @@ do
         Bones = DreadwingMotion.BONES,
         Points = DreadwingMotion.POINTS,
         Effects = { Pulse = "Body", Burst = "Body", Sparks = { "Head" }, Blast = "DevourStars", NovaLight = 2 },
-        Colors = PetRig.LegacyProfiles.EclipseDreadwing.Colors,
+        Colors = { Gold = Color3.fromRGB(190, 150, 255), Amber = Color3.fromRGB(40, 20, 70), Orange = Color3.fromRGB(150, 90, 255),
+            Sun = Color3.fromRGB(240, 230, 255), Ivory = Color3.fromRGB(250, 245, 255) },
         Animate = DreadwingMotion.animate,
     }
     PetRig.Profiles.Crysalith = {
@@ -6440,11 +6375,11 @@ do
             Sparks = { "AntlerL2", "AntlerR2" }, Blast = "EternalFrost", NovaLight = 3,
         },
         LightScale = 0.5,
-        SeeThroughGlow = PetRig.LegacyProfiles.Crysalith.SeeThroughGlow,
-        Colors = PetRig.LegacyProfiles.Crysalith.Colors,
+        SeeThroughGlow = { ["5fe3ff"] = 0.7 }, -- the frozen light over its antlers
+        Colors = { Gold = Color3.fromRGB(150, 235, 255), Amber = Color3.fromRGB(40, 90, 140), Orange = Color3.fromRGB(90, 200, 255),
+            Sun = Color3.fromRGB(235, 252, 255), Ivory = Color3.fromRGB(250, 255, 255) },
         Animate = CrysalithMotion.animate,
     }
-    PetRig.SkinnedProfiles = { EclipseDreadwing = PetRig.Profiles.EclipseDreadwing, Crysalith = PetRig.Profiles.Crysalith }
 end
 
 PetRig.Profiles.GravityImp = {
@@ -6620,14 +6555,6 @@ PetRig.Profiles.GalaxyManta = {
 }
 
 function PetRig.isRigged(petId, template)
-    local legacy = PetRig.LegacyProfiles[petId]
-    if legacy then -- remade as a skinned pet: the old jointed profile for the old model, the new for the new
-        if template:FindFirstChildWhichIsA("Bone", true) then
-            PetRig.Profiles[petId] = PetRig.SkinnedProfiles[petId]
-        else
-            PetRig.Profiles[petId] = legacy
-        end
-    end
     local profile = PetRig.Profiles[petId]
     if not profile then
         return false

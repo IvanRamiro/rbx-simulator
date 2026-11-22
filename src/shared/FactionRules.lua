@@ -9,7 +9,6 @@
 --                  "Passed" (the vault is open), "Done" (they hold the faction's weapon), else nil
 --   FactionTrialEnds   the server time the running trial ends (workspace:GetServerTimeNow())
 -- There is no way to leave or change a faction: nothing here, on the server or on the client, writes one over another.
-local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
@@ -82,17 +81,6 @@ end
 
 function FactionRules.ready(player)
     return player:GetAttribute("FactionReady") == true
-end
-
--- A faction's representatives in the world (every model tagged RepTag with that Faction attribute).
-function FactionRules.reps(factionId)
-    local found = {}
-    for _, model in CollectionService:GetTagged(FactionRules.RepTag) do
-        if model:GetAttribute("Faction") == factionId and model:IsDescendantOf(workspace) then
-            table.insert(found, model)
-        end
-    end
-    return found
 end
 
 return FactionRules
