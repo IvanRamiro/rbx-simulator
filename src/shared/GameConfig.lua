@@ -1040,6 +1040,72 @@ local GameConfig = {
             OwnerUserIds = { 4993575280 },
             GamePassId = 0,
         },
+        -- The three factions' robes (Faction below): the Murim Robes in each faction's colours (tools/outfits/faction_recolor.py).
+        -- A faction's robe belongs to its members and nobody else, so it is as permanent as the pledge (OutfitService reads the
+        -- player's Faction).
+        OrthodoxRobes = { DisplayName = "Orthodox Robes", Faction = "Orthodox", Base = "Murim" },
+        UnorthodoxRobes = { DisplayName = "Unorthodox Robes", Faction = "Unorthodox", Base = "Murim" },
+        DemonicRobes = { DisplayName = "Demonic Robes", Faction = "Demonic", Base = "Murim" },
+    },
+
+    -- The three Murim factions (the owner, 2026-11-22; shared/FactionRules, server/Factions, client/Factions). Joining is for good: the
+    -- pledge is a set-once record in its own DataStore (Store, key "U_<UserId>"; in Studio the name starts with the StudioTestSave
+    -- name, or "Studio"), never in the save, so no save version changes and nothing can undo it. A member gets their faction's robes,
+    -- a title (no bonus) and, after a trial at the TrialRealm, one secret weapon (Weapon): a bound weapon, never sold, never auctioned.
+    -- The weapon's damage is the WeaponTier realm's weapon times WeaponBonus (so it is a prize, and the realm ladder still stands).
+    -- Joining needs JoinRealm; anyone may walk in and read. The factions are equal in power: no faction gives Qi, luck or damage.
+    Faction = {
+        Store = "FactionPledges",
+        KeyPrefix = "U_",
+        JoinRealm = "Qi Foundation",
+        TrialRealm = "Immortal Realm",
+        RepRange = 22, -- studs from a faction's representative, to ask to join or to start the trial
+        WeaponTier = 6,
+        WeaponBonus = 1.1,
+        Order = { "Orthodox", "Unorthodox", "Demonic" },
+        Factions = {
+            Orthodox = {
+                DisplayName = "Orthodox Faction", Short = "Orthodox", Hq = "Dawnspire Hall", Master = "Master Hwa Rin",
+                Color = Color3.fromRGB(96, 168, 255), Deep = Color3.fromRGB(24, 58, 120),
+                Motto = "Keep your word. Protect the weak.",
+                OutfitId = "OrthodoxRobes", TitleId = "OrthodoxDisciple",
+                Weapon = { Id = "SecretOrthodox", Name = "Azure Oath Sword", Kind = "Sword" },
+                Trial = { Name = "Trial of Discipline", Text = "Pass five gates up the Dawnspire stair, in order, before the time runs out." },
+                Pages = {
+                    { Title = "WHO WE ARE", Text = "The Orthodox Faction keeps the old rules. Its disciples train every day, keep their word and stand between the weak and danger. Their home is Dawnspire Hall, a white stone hall high above the clouds." },
+                    { Title = "HOW WE FIGHT", Text = "They fight with clean, careful sword work. They never strike first and never strike a beaten foe. Their trial tests patience: you must follow the path in order." },
+                    { Title = "WHAT YOU GET", Text = "The Orthodox Robes, white and blue. A seat in Dawnspire Hall. And in time, the chance to earn the Azure Oath Sword." },
+                },
+            },
+            Unorthodox = {
+                DisplayName = "Unorthodox Faction", Short = "Unorthodox", Hq = "Windrift Hold", Master = "Elder Kang Dal",
+                Color = Color3.fromRGB(70, 200, 150), Deep = Color3.fromRGB(10, 70, 56),
+                Motto = "No master. No map. Only skill.",
+                OutfitId = "UnorthodoxRobes", TitleId = "UnorthodoxWanderer",
+                Weapon = { Id = "SecretUnorthodox", Name = "Stormhook Spear", Kind = "Spear" },
+                Trial = { Name = "Trial of Three Tokens", Text = "Find three tokens hidden around Windrift Hold before the time runs out. Nobody tells you the road." },
+                Pages = {
+                    { Title = "WHO WE ARE", Text = "The Unorthodox Faction answers to no one. Its fighters come from rivers, markets and back roads, and they judge each other by skill, not by rank. Windrift Hold stands over a waterfall, and every road into it is open." },
+                    { Title = "HOW WE FIGHT", Text = "They fight in odd, quick ways and use whatever is at hand. Their trial tests your wits: you have to find your own way." },
+                    { Title = "WHAT YOU GET", Text = "The Unorthodox Robes, teal and linen. A place at Windrift Hold. And in time, the chance to earn the Stormhook Spear." },
+                },
+            },
+            Demonic = {
+                DisplayName = "Demonic Faction", Short = "Demonic", Hq = "Nightfall Citadel", Master = "Lord Mu Yeong",
+                Color = Color3.fromRGB(226, 52, 48), Deep = Color3.fromRGB(70, 6, 12),
+                Motto = "Strength is the only law.",
+                OutfitId = "DemonicRobes", TitleId = "DemonicBlade",
+                Weapon = { Id = "SecretDemonic", Name = "Bloodmoon Saber", Kind = "Sword" },
+                Trial = { Name = "Trial of Strength", Text = "Defeat every dummy the arena sends before the time runs out." },
+                Pages = {
+                    { Title = "WHO WE ARE", Text = "The Demonic Faction believes strength is the only law. Others fear it, and it does not mind. Nightfall Citadel is a black fortress where only the strong are heard." },
+                    { Title = "HOW WE FIGHT", Text = "They fight hard and fast and give no ground. Their trial tests your strength: beat everything the arena sends." },
+                    { Title = "WHAT YOU GET", Text = "The Demonic Robes, black and red. A seat in Nightfall Citadel. And in time, the chance to earn the Bloodmoon Saber." },
+                },
+            },
+        },
+        Equal = "All three factions are equally strong. Pick the one that feels like you.",
+        Forever = "This choice is forever. You can never leave your faction or join another.",
     },
 
     -- The Store's game passes (the owner, November 10, 2026), in the order it shows them (shared/PassRules applies them). Created on

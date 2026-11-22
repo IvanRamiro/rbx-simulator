@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AuctionRules = require(ReplicatedStorage:WaitForChild("AuctionRules"))
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
+local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 
 local CONFIG = AuctionRules.Config
 
@@ -54,6 +55,9 @@ function AuctionChecks.item(f)
         local weapon = f.weapon
         if not weapon then
             return "That weapon isn't yours."
+        end
+        if Shop.isBound(weapon.WeaponId) then
+            return "A faction's secret weapon is yours for good. It can't be sold."
         end
         if weapon.InstanceId == f.equippedWeapon then
             return "Unequip this weapon first."

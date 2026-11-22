@@ -64,6 +64,11 @@ local function check(player)
     for index = 1, realm do
         award(player, "Realm" .. index)
     end
+    -- a member's faction title, for good (the pledge is read a moment after joining: FactionBook)
+    local factionInfo = GameConfig.Faction.Factions[player:GetAttribute("Faction") or ""]
+    if factionInfo then
+        award(player, factionInfo.TitleId)
+    end
     local count, secret = beastsFound(player)
     for _, entry in TitleRules.CollectorTitles do
         if count >= entry.Count then

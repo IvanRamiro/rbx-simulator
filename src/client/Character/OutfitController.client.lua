@@ -44,7 +44,10 @@ button.Activated:Connect(function()
     if #outfits == 0 then
         return
     end
-    RemoteEvents.OutfitEvent:FireServer(if player:GetAttribute("OutfitId") then "" else outfits[1])
+    -- off -> the first outfit -> the next ... -> off (a member who also owns the Murim Robes has two)
+    local index = table.find(outfits, player:GetAttribute("OutfitId"))
+    local nextOutfit = if not index then outfits[1] elseif index < #outfits then outfits[index + 1] else ""
+    RemoteEvents.OutfitEvent:FireServer(nextOutfit)
 end)
 player:GetAttributeChangedSignal("OwnedOutfits"):Connect(refreshButton)
 player:GetAttributeChangedSignal("OutfitId"):Connect(refreshButton)

@@ -151,6 +151,9 @@ function actions.Forge(player, instanceId, spec)
     if not record then
         return false, "That weapon isn't yours."
     end
+    if Shop.isBound(record.WeaponId) then
+        return false, "A faction's secret weapon already carries its own power. It can't be forged."
+    end
     local element = typeof(spec) == "table" and spec.Element
     local info = Shop.element(element)
     if not info then
@@ -235,6 +238,10 @@ end
 function actions.SellWeapon(player, instanceId)
     if not nearShop(player, "BuySell") then
         return false, "Visit Buy & Sell to sell weapons."
+    end
+    local owned = typeof(instanceId) == "string" and WeaponInventory.get(player, instanceId)
+    if owned and Shop.isBound(owned.WeaponId) then
+        return false, "A faction's secret weapon is yours for good. It can't be sold."
     end
     local record = WeaponInventory.take(player, instanceId)
     if not record then

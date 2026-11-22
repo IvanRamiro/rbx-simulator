@@ -63,8 +63,37 @@ for tier, info in GameConfig.WeaponTiers do
     end
 end
 
+-- The factions' secret weapons (GameConfig.Faction): not for sale anywhere, and Bound to the faction member who earned them (never
+-- sold, forged or auctioned). Their power is the trial realm's weapon of their kind, times WeaponBonus. Every system that reads
+-- Shop.weapon accepts them, so owning, wielding, striking and saving need nothing of their own.
+do
+    local faction = GameConfig.Faction
+    local tier = GameConfig.WeaponTiers[faction.WeaponTier]
+    assert(tier and Shop.realmIndex(tier.Realm) == faction.WeaponTier, "GameConfig.Faction.WeaponTier is not a weapon tier")
+    for factionId, info in faction.Factions do
+        local kind = info.Weapon.Kind
+        byId[info.Weapon.Id] = {
+            Id = info.Weapon.Id,
+            Kind = kind,
+            Tier = faction.WeaponTier,
+            Name = info.Weapon.Name,
+            Realm = tier.Realm,
+            Price = 0,
+            Damage = tier.Damage * GameConfig.WeaponKinds[kind].DamageScale * faction.WeaponBonus,
+            Faction = factionId,
+            Bound = true,
+        }
+    end
+end
+
 function Shop.weapon(id)
     return if typeof(id) == "string" then byId[id] else nil
+end
+
+-- a weapon that can't be sold, forged or auctioned (a faction's secret weapon)
+function Shop.isBound(id)
+    local weapon = if typeof(id) == "string" then byId[id] else nil
+    return weapon ~= nil and weapon.Bound == true
 end
 
 function Shop.forgePrice(id)
@@ -79,7 +108,7 @@ end
 
 function Shop.weaponRefund(id, element)
     local weapon = byId[id]
-    if not weapon then
+    if not weapon or weapon.Bound then
         return 0
     end
     local paid = weapon.Price + (if Shop.element(element) then Shop.forgePrice(id) else 0)

@@ -20,6 +20,7 @@ TitleRules.Groups = {
     { Id = "Realm", Name = "REALMS" },
     { Id = "Guardian", Name = "GUARDIANS" },
     { Id = "Collection", Name = "COLLECTION" },
+    { Id = "Faction", Name = "FACTION" },
 }
 
 -- The twelve realms' titles, in the realms' order: each an epithet of its own (not the realm's or a rank's name), in the
@@ -105,6 +106,16 @@ add({ Id = "SecretKeeper", Group = "Collection", Text = "Keeper of Secrets", Col
 add({ Id = "RelicSeeker", Group = "Collection", Text = "Relic Seeker", Color = rgb(244, 196, 116),
     How = "Find every relic on the islands." })
 
+-- The factions' titles (GameConfig.Faction): given to a member for good (TitleService reads their Faction). No bonus: the factions are
+-- equal in power. Each in its faction's colour.
+local FACTION_TITLES = { Orthodox = "Orthodox Disciple", Unorthodox = "Unorthodox Wanderer", Demonic = "Demonic Blade" }
+for _, factionId in GameConfig.Faction.Order do
+    local info = GameConfig.Faction.Factions[factionId]
+    add({ Id = info.TitleId, Group = "Faction", Text = FACTION_TITLES[factionId], Color = info.Color,
+        Shimmer = info.Color:Lerp(Color3.new(1, 1, 1), 0.55), Faction = factionId,
+        How = "Join the " .. info.DisplayName .. " at " .. info.Hq .. ". Only its members wear it." })
+end
+
 -- Each title's lettering (Roblox's own font families: { family, weight, "Italic" }), chosen for what it means: Developer
 -- engineered and sharp, Content Creator a bold thumbnail face, Beta Tester futuristic; the realms climbing from brush
 -- calligraphy through stone, forged metal and refined book type to Roman inscription, ornate blackletter and the far-future
@@ -138,6 +149,9 @@ local FONTS = {
     CodexKeeper = { "AccanthisADFStd", 400 },
     SecretKeeper = { "GrenzeGotisch", 700 },
     RelicSeeker = { "SpecialElite", 400 },
+    OrthodoxDisciple = { "RomanAntique", 400 },  -- a stone-cut hand: disciplined
+    UnorthodoxWanderer = { "Fondamento", 400, "Italic" }, -- a free brush hand
+    DemonicBlade = { "GrenzeGotisch", 700 },     -- blackletter
 }
 
 for order, entry in TitleRules.List do

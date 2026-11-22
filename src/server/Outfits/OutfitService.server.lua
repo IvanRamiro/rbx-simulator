@@ -32,12 +32,26 @@ local HIDDEN_TYPES = {
 
 local lastRequest = {}
 local ownership = {}
+local pledgeWaitUntil = setmetatable({}, { __mode = "k" }) -- [player] = when to stop waiting for their pledge to be read
 
 -- Whether the player owns the outfit, and whether that answer is certain (a game pass check can fail).
 local function ownsOutfit(player, outfitId)
     local config = GameConfig.Outfits[outfitId]
     if not config then
         return false, true
+    end
+    if config.Faction then
+        -- a faction's robes belong to its members: the pledge (FactionBook) is read a moment after the save, so wait for it. If it
+        -- never comes (the store can't answer) the answer isn't certain, and a saved choice of the robes is kept.
+        local deadline = pledgeWaitUntil[player] or os.clock() + 25 -- (one wait for all three robes)
+        pledgeWaitUntil[player] = deadline
+        while player.Parent == Players and player:GetAttribute("FactionReady") ~= true and os.clock() < deadline do
+            task.wait(0.25)
+        end
+        if player:GetAttribute("FactionReady") ~= true then
+            return false, false
+        end
+        return player:GetAttribute("Faction") == config.Faction, true
     end
     if table.find(config.OwnerUserIds or {}, player.UserId) then
         return true, true
@@ -145,8 +159,41 @@ local function onCharacterAdded(player, character)
     end
 end
 
+-- puts the player's owned outfits on the player, for the Robes button
+local function publishOwned(player)
+    local owned = {}
+    for outfitId in ownership[player] or {} do
+        table.insert(owned, outfitId)
+    end
+    table.sort(owned)
+    player:SetAttribute("OwnedOutfits", table.concat(owned, ","))
+end
+
+-- A player who has just joined a faction gets its robes, and wears them (the pledge ceremony). Only a join that happens while they
+-- are here: a member's robes arrive with the ownership check at their join, and keep whatever they last chose to wear.
+local function onJoinedFaction(player)
+    local factionId = player:GetAttribute("Faction")
+    local info = factionId and GameConfig.Faction.Factions[factionId]
+    if not info or not ownership[player] then
+        return
+    end
+    ownership[player][info.OutfitId] = true
+    publishOwned(player)
+    player:SetAttribute("OutfitId", info.OutfitId)
+    if player.Character then
+        applyToCharacter(player, player.Character)
+    end
+    PlayerData.saveSoon(player)
+end
+
 local function onPlayerAdded(player)
     ownership[player] = {}
+    local checked = false
+    player:GetAttributeChangedSignal("Faction"):Connect(function()
+        if checked then
+            onJoinedFaction(player)
+        end
+    end)
     player.CharacterAdded:Connect(function(character)
         onCharacterAdded(player, character)
     end)
@@ -191,6 +238,13 @@ local function onPlayerAdded(player)
         if player.Character then
             applyToCharacter(player, player.Character)
         end
+    end
+    checked = true
+    -- a faction joined while the checks above ran (they can wait on the pledge): its robes are put on now
+    local factionId = player:GetAttribute("Faction")
+    local info = factionId and GameConfig.Faction.Factions[factionId]
+    if info and not owns[info.OutfitId] then
+        onJoinedFaction(player)
     end
 end
 
