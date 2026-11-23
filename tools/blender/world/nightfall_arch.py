@@ -507,6 +507,13 @@ def armory():
     t = tb + (tt - tb) * (7.0 + 1.0) / (H + 1.0)
     frust(gc, -(13.0 + t) - 0.22, (13.0 + t) + 0.22, -(5.0 + t) - 0.22, (5.0 + t) + 0.22, 7.0, 7.7, 0.12)
     roof_gable(P, -xo, xo, -zo, zo, H + 0.1, 16.8, over=2.0, rake=1.3, th=0.6, rib_gap=2.4, wall_y=H, z_r=0.0)
+    # a spire tower at each end of the hall, rising over the roof (the hall reads as a long low roof between two spikes)
+    for sx in (-1, 1):
+        cx = sx * 16.5
+        bmass(P, cx - 1.6, cx + 1.6, -1.8, 1.8, -1.0, 20.5, 0.4, bands=(3.0, 9.0, 14.0), seed=90 + sx)
+        P.block("EndTower", cx - 1.6, cx + 1.6, -1.0, 20.5, -1.8, 1.8)
+        frust(gc, cx - 1.5, cx + 1.5, -1.7, 1.7, 16.2, 16.9, 0.1)
+        roof_hip(P, cx, 0.0, 1.5, 1.7, 20.4, 24.2, over=0.9, rib_gap=0, spike=5.0)
     # the porch between two piers
     for sx in (-1, 1):
         cx = sx * 6.2
@@ -682,6 +689,15 @@ def arena():
             t = (i + 0.5) / 5
             x, z = lerp(pts[0][0], pts[1][0], t), lerp(pts[0][1], pts[1][1], t)
             pyramid(gi, x, z, 7.0, 0.2, 0.2, 1.3)
+    # four standards on the wall's crest at the diagonals: an iron mast with a spike and a crimson pennant
+    for k in range(4):
+        a = PI / 4 + k * PI / 2
+        r = (Rin + Rout1) / 2
+        mx, mz = r * math.cos(a), r * math.sin(a)
+        cyl(gi, (mx, H - 0.1, mz), (mx, H + 10.5, mz), 0.28, 0.2, seg=6)
+        pyramid(gi, mx, mz, H + 10.4, 0.3, 0.3, 2.4)
+        banner(P, mx, H + 10.0, mz, w=1.7, h=5.2, plane="xy")
+        P.block("Mast", mx - 0.4, mx + 0.4, H, H + 10.5, mz - 0.4, mz + 0.4)
     # the floor: a black disc, a crimson ring, eight plinths and a plate
     pprism(gs, 0.0, 0.0, -0.7, 0.04, Rin - 0.05, seg=24, r_top=Rin - 0.05, caps=True)
     m = 16

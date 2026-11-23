@@ -550,6 +550,18 @@ def main():
         hit = [b["name"] for b in world.near(x, z) if world.inside(b, x, z) and b["y1"] > 0.3 and b["y0"] < 3.0 and b["name"] not in ("Floor",)]
         check("marker %-11s at pad (%6.1f, %6.1f)" % (nm, x, z), not hit or nm == "MainHall", "(inside: %s%s)" % (", ".join(sorted(set(hit))), "; a placeholder for the headquarters: Spots.HqDoor and HqInside are the faction's places" if nm == "MainHall" and hit else "") if hit else "(free)")
     say("")
+    # ------------------------------------------------------------------------------------------------ 10. controls: the checks are shown able to fail
+    say("10. Controls: the same checks must REFUSE what a body cannot do (each line is ok when the refusal happens)")
+    ok_a, why_a, _ = walk(world, [(-20.0, 40.0), (-20.0, 58.0)], terrain_y(-20.0, 40.0), 1.0)
+    check("a body walking at the Upper Ward's 24-stud cliff from the pad (x -20, z 40 to 58) is stopped", not ok_a, "(%s)" % why_a)
+    ok_b, why_b, _ = walk(world, [(0.0, -8.0), (0.0, 12.0)], terrain_y(0.0, -8.0), 1.0)
+    check("a body walking out of the arena's pit through its back wall (no gate there) is stopped", not ok_b, "(%s)" % why_b)
+    n_c, bad_c2 = corridor_free(world, [(-20.0, 124.0), (-20.0, 134.0)], D.GU, half=2.5)
+    check("the voxel corridor rule finds the mountain's cells in a corridor run into the massif behind the Upper Ward (x -20, z 124 to 134)", len(bad_c2) > 0, "(%d of %d points blocked)" % (len(bad_c2), n_c))
+    path_b = [(x_a + 0.2, cb["z"] + 21.0), (x_b - 0.2, cb["z"] + 21.0)]
+    n_d, bad_d = corridor_free(world, path_b, ta, half=2.5)
+    check("the bridge's corridor rule finds terrain where the same bridge would cross the mountain instead of the fissure (z %.0f, 21 studs along it)" % (cb["z"] + 21.0), len(bad_d) > 0, "(%d of %d points blocked)" % (len(bad_d), n_d))
+    say("")
     check("RESULT: every check above passed", not FAILS, "(%d failed: %s)" % (len(FAILS), FAILS) if FAILS else "")
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     open(OUT, "w").write("\n".join(LINES) + "\n")

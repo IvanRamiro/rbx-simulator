@@ -6,6 +6,7 @@
       look        the compound on its terrain: aerial, from the plaza's stair, per area (renders/nightfall/look_*.png)
       silhouette  black silhouettes of every building in a row (renders/nightfall/silhouettes_buildings.png)
       qa          asset QA (profile roblox) on every piece, written to renders/nightfall/qa.txt
+      uniq        silhouettes against Windrift's and Dawnspire's buildings, IoU numbers and a sheet (renders/nightfall/uniqueness.txt, uniqueness_sheet.png)
       export      FBX files into assets/world/MurimCrossing/Nightfall/ (Nightfall_Buildings, _Courts, _Props), pieces.json and the placements Lua
 Scratch output goes to renders/nightfall/ (local, never committed). HQ_QA_SCRIPT names the blender-asset-qa qa_check.py.
 """
@@ -491,8 +492,136 @@ def export():
     print("EXPORT_DONE")
 
 
+def _sil_mask(piece, name, view, size=300):
+    """A black silhouette of a piece seen from the front (-z) or the side (+x), as a numpy mask (True where the piece is)."""
+    import numpy as np
+    B.setup_render((size, size), samples=1)
+    B.set_world((1.0, 1.0, 1.0), 1.0)
+    B.set_sun(0.0, (-50, 0, 0))
+    B.clear_scene()
+    for me in list(bpy.data.meshes):
+        bpy.data.meshes.remove(me)
+    coll = bpy.data.collections.new("c")
+    bpy.context.scene.collection.children.link(coll)
+    for suffix in piece.g:
+        B.PREVIEW.setdefault(suffix, ((60, 60, 60), 0.8, 0.0, None, None))
+    B.piece_objects(name, piece, coll)
+    B.set_material_mode(bpy.data.objects[:], "black")
+    lo, hi = piece.bounds()
+    cx, cy, cz = (lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2
+    cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
+    bpy.context.scene.collection.objects.link(cam)
+    cam.data.type = "ORTHO"
+    cam.data.clip_end = 3000
+    if view == "front":
+        cam.data.ortho_scale = max(hi[0] - lo[0], hi[1] - lo[1]) * 1.08
+        cam.location = (cx, 500.0 - cz, cy)
+        cam.rotation_euler = (math.pi / 2, 0.0, math.pi)
+    else:
+        cam.data.ortho_scale = max(hi[2] - lo[2], hi[1] - lo[1]) * 1.08
+        cam.location = (500.0 + cx, -cz, cy)
+        cam.rotation_euler = (math.pi / 2, 0.0, math.pi / 2)
+    path = os.path.join(RENDERS, "tmp_sil.png")
+    B.shoot(cam, path)
+    px = load_pixels(path)
+    os.remove(path)
+    mask = px[:, :, 0] < 0.5
+    ys, xs = np.where(mask)
+    if len(ys) == 0:
+        return mask, (1, 1)
+    return mask[ys.min():ys.max() + 1, xs.min():xs.max() + 1], (hi[0] - lo[0] if view == "front" else hi[2] - lo[2], hi[1] - lo[1])
+
+
+def _fit(mask, extent, H=160):
+    """The mask scaled to a common height H (its true proportions kept), centred on a square canvas."""
+    import numpy as np
+    w_true, h_true = extent
+    h = H
+    w = max(2, int(round(H * w_true / max(h_true, 1e-6))))
+    w = min(w, 2 * H)
+    ys = (np.linspace(0, mask.shape[0] - 1, h)).astype(int)
+    xs = (np.linspace(0, mask.shape[1] - 1, w)).astype(int)
+    m = mask[np.ix_(ys, xs)]
+    canvas = np.zeros((H, 2 * H), dtype=bool)
+    x0 = (2 * H - w) // 2
+    canvas[:, x0:x0 + w] = m
+    return canvas
+
+
+def uniq():
+    """Uniqueness of the architecture: the front and side silhouettes of Nightfall's buildings against Windrift's and Dawnspire's (height-fitted masks, intersection over union, the
+    best of five horizontal shifts), a sheet (Nightfall on top, Windrift in the middle, Dawnspire below) and the numbers in renders/nightfall/uniqueness.txt."""
+    import numpy as np
+    import windrift_arch as WA
+    import dawnspire as DS
+    sets = {"Nightfall": {}, "Windrift": {}, "Dawnspire": {}}
+    for n, f in D.A.BUILDING_BUILDERS.items():
+        if n in ("RackShed", "UpperGate", "ChainRing", "EmberCourt", "Bastion"):
+            continue
+        p = f()
+        p.finish()
+        sets["Nightfall"][n] = p
+    for n, f in WA.BUILDING_BUILDERS.items():
+        p = f()
+        p.finish()
+        sets["Windrift"][n] = p
+    for (fam, n), f in DS.BUILDERS.items():
+        if fam != "Buildings":
+            continue
+        p = f()
+        p.finish()
+        sets["Dawnspire"][n] = p
+    masks = {}
+    for who, d in sets.items():
+        for n, p in d.items():
+            for view in ("front", "side"):
+                m, ext = _sil_mask(p, "u_%s_%s" % (who, n), view)
+                masks[(who, n, view)] = _fit(m, ext)
+    lines = ["Uniqueness of the architecture: height-fitted black silhouettes (front and side), intersection over union, the best of five horizontal shifts (0 = nothing in common, 1 = the same shape)", ""]
+    worst_all = 0.0
+    for n in sets["Nightfall"]:
+        for view in ("front", "side"):
+            a = masks[("Nightfall", n, view)]
+            best = (0.0, "", "")
+            for who in ("Windrift", "Dawnspire"):
+                for n2 in sets[who]:
+                    b = masks[(who, n2, view)]
+                    iou = 0.0
+                    for sh in (-12, -6, 0, 6, 12):
+                        bb = np.roll(b, sh, axis=1)
+                        iou = max(iou, float((a & bb).sum()) / max(1.0, float((a | bb).sum())))
+                    if iou > best[0]:
+                        best = (iou, who, n2)
+            lines.append("%-12s %-5s  most like %-10s %-14s  IoU %.3f" % (n, view, best[1], best[2], best[0]))
+            worst_all = max(worst_all, best[0])
+    # the other maps against each other, for scale
+    cross = 0.0
+    for n in sets["Windrift"]:
+        for n2 in sets["Dawnspire"]:
+            for view in ("front", "side"):
+                a, b = masks[("Windrift", n, view)], masks[("Dawnspire", n2, view)]
+                iou = max(float((a & np.roll(b, sh, axis=1)).sum()) / max(1.0, float((a | np.roll(b, sh, axis=1)).sum())) for sh in (-12, -6, 0, 6, 12))
+                cross = max(cross, iou)
+    lines.append("")
+    lines.append("the highest overlap of any Nightfall building with any Windrift or Dawnspire building: %.3f (for scale, the highest between a Windrift and a Dawnspire building: %.3f)" % (worst_all, cross))
+    open(os.path.join(RENDERS, "uniqueness.txt"), "w").write("\n".join(lines) + "\n")
+    print("\n".join(lines))
+    # the sheet: three rows of front silhouettes
+    rows = []
+    for who in ("Nightfall", "Windrift", "Dawnspire"):
+        row = [masks[(who, n, "front")] for n in sets[who]]
+        rows.append(np.concatenate([np.pad(r, ((4, 4), (4, 4))) for r in row], axis=1))
+    wmax = max(r.shape[1] for r in rows)
+    rows = [np.pad(r, ((0, 0), (0, wmax - r.shape[1]))) for r in rows]
+    sheet = np.concatenate(rows, axis=0)
+    img = np.ones((sheet.shape[0], sheet.shape[1], 4), dtype=np.float32)
+    img[sheet] = (0.05, 0.05, 0.08, 1.0)
+    save_pixels(np.ascontiguousarray(img), os.path.join(RENDERS, "uniqueness_sheet.png"))
+    print("sheet written")
+
+
 def main():
-    {"look": look, "sides": sides, "silhouette": silhouette, "qa": lambda: run_qa(NAMES or None), "export": export}[STAGE]()
+    {"look": look, "sides": sides, "silhouette": silhouette, "qa": lambda: run_qa(NAMES or None), "export": export, "uniq": uniq}[STAGE]()
 
 
 if __name__ == "__main__":

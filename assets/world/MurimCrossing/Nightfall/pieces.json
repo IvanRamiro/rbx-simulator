@@ -40,7 +40,7 @@
     "Nightfall_Buildings_UpperGate__Iron",
     "Nightfall_Buildings_UpperGate__Stone"
    ],
-   "tris": 15812,
+   "tris": 18064,
    "verify": "ok"
   },
   "Courts": {
@@ -214,13 +214,13 @@
    ],
    "max": [
     14.63,
-    10.95,
+    18.0,
     15.15
    ],
-   "tris": 1790,
+   "tris": 1990,
    "materials": {
-    "Crimson": 488,
-    "Iron": 254,
+    "Crimson": 568,
+    "Iron": 374,
     "Stone": 1048
    }
   },
@@ -438,21 +438,21 @@
   },
   "Nightfall_Buildings_Armory": {
    "min": [
-    -18.22,
+    -19.17,
     -1.0,
     -13.38
    ],
    "max": [
-    18.22,
-    20.4,
+    19.18,
+    29.1,
     8.96
    ],
-   "tris": 2210,
+   "tris": 4262,
    "materials": {
-    "Crimson": 244,
-    "Iron": 350,
-    "Stone": 1088,
-    "Tile": 528
+    "Crimson": 364,
+    "Iron": 458,
+    "Stone": 2816,
+    "Tile": 624
    }
   },
   "Nightfall_Courts_Parapet12": {
