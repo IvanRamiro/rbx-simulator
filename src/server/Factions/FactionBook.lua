@@ -284,6 +284,15 @@ end
 
 -- a trial's clock running for the player (TrialService sets and clears it; FactionService publishes it)
 local running = {} -- [player] = server time the run ends
+local passing = {} -- [player] = true while a trial just passed is being written on the pledge (they are shown as Passed meanwhile, never as Open)
+
+function FactionBook.setPassing(player, on)
+    passing[player] = if on then true else nil
+end
+
+function FactionBook.isPassing(player)
+    return passing[player] == true
+end
 
 function FactionBook.setRunning(player, endsAt)
     running[player] = endsAt
@@ -296,6 +305,7 @@ end
 function FactionBook.forget(player)
     state[player] = nil
     running[player] = nil
+    passing[player] = nil
 end
 
 return FactionBook

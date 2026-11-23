@@ -20,25 +20,40 @@ local function met(player)
     return player:GetAttribute("SettingGuideMet") == true
 end
 
--- Once the player's settings and quest step are known: someone already past the start is counted as having met her.
+-- Once the player's settings and quest step are known: someone already past the start is counted as having met her. Run whenever one of the three arrives, so a returning player
+-- is settled the moment their save has loaded (the "Talk to Seren" card never has time to show for them).
 local function settle(player)
-    local waited = 0
-    while player.Parent == Players and (player:GetAttribute("SettingGuideMet") == nil or player:GetAttribute("SettingTutorialDone") == nil
-        or player:GetAttribute("QuestStep") == nil) do
-        task.wait(0.5)
-        waited += 0.5
-        if waited > 120 then
-            return
+    local names = { "SettingGuideMet", "SettingTutorialDone", "QuestStep" }
+    local function check()
+        if player.Parent ~= Players or met(player) then
+            return true
         end
+        for _, name in names do
+            if player:GetAttribute(name) == nil then
+                return false
+            end
+        end
+        local step = player:GetAttribute("QuestStep")
+        if (typeof(step) == "number" and step > 1) or player:GetAttribute("SettingTutorialDone") == true then
+            if Settings.set(player, "GuideMet", true) then
+                PlayerData.saveSoon(player)
+            end
+        end
+        return true
     end
-    if player.Parent ~= Players or met(player) then
+    if check() then
         return
     end
-    local step = player:GetAttribute("QuestStep")
-    if (typeof(step) == "number" and step > 1) or player:GetAttribute("SettingTutorialDone") == true then
-        if Settings.set(player, "GuideMet", true) then
-            PlayerData.saveSoon(player)
+    local connections = {}
+    local function again()
+        if check() then
+            for _, connection in connections do
+                connection:Disconnect()
+            end
         end
+    end
+    for _, name in names do
+        table.insert(connections, player:GetAttributeChangedSignal(name):Connect(again))
     end
 end
 

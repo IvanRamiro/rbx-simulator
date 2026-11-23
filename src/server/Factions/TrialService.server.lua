@@ -222,9 +222,12 @@ local function finish(player, passed, reason)
         return
     end
     recording[player] = true
+    FactionBook.setPassing(player, true)
+    FactionBook.setTrial(player, "Passed", nil) -- (at once: the banner must not stay on "Running", nor the faction window say "begin" while the pass is written)
     task.spawn(function()
         local ok = writePass(player)
         recording[player] = nil
+        FactionBook.setPassing(player, nil)
         if player.Parent ~= Players then
             return
         end
@@ -242,7 +245,11 @@ end
 -- ---------- beginning a trial ----------
 local function begin(player, post)
     local factionId = post:GetAttribute("Faction")
-    if not FactionRules.isFaction(factionId) or runs[player] or recording[player] then
+    if not FactionRules.isFaction(factionId) or runs[player] then
+        return
+    end
+    if recording[player] then
+        tell(player, "Your pass is being written down. One moment.")
         return
     end
     local info = FactionRules.get(factionId)
@@ -430,19 +437,29 @@ RunService.Heartbeat:Connect(function()
         elseif TrialRules.expired(run, clock) then
             finish(player, false, "Time is up. Begin again when you are ready.")
         elseif run.Kind == "Gates" and not MovementGuard.isSuspect(player) then
+            -- the gates in order, and only the first that changes anything: two zones that meet at an edge can't both count in one frame
             local zones = indexed(FactionRules.GateTag, run.Faction)
-            for index, zone in zones do
-                if insideZone(zone, root.Position) then
+            for index = 1, TrialRules.of(run.Faction).Count do
+                local zone = zones[index]
+                if zone and insideZone(zone, root.Position) then
+                    local hadProgress = run.Done > 0
                     local outcome = TrialRules.gate(run, index)
                     if outcome == "Next" then
                         publishProgress(player, run)
                         if run.Passed then
                             finish(player, true)
-                            break
                         end
+                        break
                     elseif outcome == "Reset" then
-                        publishProgress(player, run)
-                        note(player, "You skipped a gate. Go back to gate 1 and pass them in order.")
+                        -- (standing in a later gate's zone with nothing to lose: said once in a while, not every frame)
+                        if hadProgress then
+                            publishProgress(player, run)
+                        end
+                        if hadProgress or os.clock() - (run.WarnedAt or -10) > 4 then
+                            run.WarnedAt = os.clock()
+                            note(player, "You skipped a gate. Go back to gate 1 and pass them in order.")
+                        end
+                        break
                     end
                 end
             end

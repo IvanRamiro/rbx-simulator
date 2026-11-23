@@ -32,7 +32,7 @@ local TAGS = { Post = "FactionTrialPost", Gate = "TrialGateZone", Token = "Trial
 
 -- the gate mesh (Trial_Props_TrialGate, measured: pieces.json): its size in studs, the opening a body passes through (16.5 clear from the ground to 12), the shafts of its two pillars (13.1 high,
 -- solid), and the zone the server tests the player against: the gate's own width, so a body must go through the gate and not round it, tall enough for a flyer
-local GATE = { Width = 24.6, Height = 17.4, Depth = 3.4, Opening = 16.5, PillarHeight = 13.1, ZoneSize = Vector3.new(24.6, 46, 12) }
+local GATE = { Width = 24.6, Height = 17.4, Depth = 3.4, Opening = 16.5, PillarHeight = 13.1, ZoneSize = Vector3.new(24.6, 46, 10) }
 
 -- the looks of the Trial kit's pieces by material suffix (assets/world/MurimCrossing/Trial/pieces.json "looks"): the gate's are Dawnspire's, the dummy's Nightfall's, the token's Windrift's
 local LOOKS = {
@@ -461,7 +461,7 @@ function TrialBuilder.build()
         if standIns > 0 then
             table.insert(report.StandIns, "gates x" .. standIns)
         end
-        buildStone(f, "Orthodox", stoneFrame(points[1], points[2], 9, 11))
+        buildStone(f, "Orthodox", stoneFrame(points[1], points[2], 18, 11)) -- (behind gate 1's zone, which reaches 5 back, and past the prompt's reach of it)
         local vault = ortho:FindFirstChild("Hall") and ortho.Hall:FindFirstChild("Spots") and ortho.Hall.Spots:FindFirstChild("VaultSpot")
         report.OrthodoxVault = if vault then buildVault(f, "Orthodox", vault.Position) ~= nil else false
     end

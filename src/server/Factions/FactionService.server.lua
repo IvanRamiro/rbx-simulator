@@ -174,7 +174,7 @@ local function trialState(player)
         return "Done"
     end
     local record = FactionBook.record(player)
-    if record and record.Trial then
+    if (record and record.Trial) or FactionBook.isPassing(player) then
         return "Passed"
     end
     local endsAt = FactionBook.runEnds(player)

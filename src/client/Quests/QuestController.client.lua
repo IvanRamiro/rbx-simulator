@@ -221,10 +221,24 @@ end)
 Hud.CompactChanged:Connect(applyFold)
 
 local lastStep = nil
-local wasMet = guideMet()
+local sawUnmet = player:GetAttribute("SettingGuideMet") == false -- the player has been seen not to have met Seren (a returning player's attribute only ever arrives true)
+local announce = false -- they have just met her: their first quest arrives like any new one, once the panel is on the screen (her window hides it)
+local function arrive()
+    peekUntil = os.clock() + 8
+    task.delay(8.1, applyFold)
+    UiFx.flash(panel, C.Highlight)
+    UiFx.typeIn(title, 0.25)
+    UiFx.typeIn(body, 0.55)
+end
 local function render()
     local step = player:GetAttribute("QuestStep")
     local quest = typeof(step) == "number" and QUESTS[step]
+    if player:GetAttribute("SettingGuideMet") == false then
+        sawUnmet = true
+    end
+    if guideMet() and sawUnmet then
+        sawUnmet, announce = false, true
+    end
     panel.Visible = quest ~= nil and questAllowed() and guideMet()
     if not quest then
         return
@@ -232,20 +246,11 @@ local function render()
     count.Text = step .. " / " .. #QUESTS
     title.Text = quest.Title
     body.Text = quest.Text
-    local justMet = guideMet() and not wasMet -- the player has just talked to Seren: their first quest arrives like any new one
-    wasMet = guideMet()
-    if justMet and panel.Visible then
-        peekUntil = os.clock() + 8
-        task.delay(8.1, applyFold)
-        UiFx.flash(panel, C.Highlight)
-        UiFx.typeIn(title, 0.25)
-        UiFx.typeIn(body, 0.55)
-    elseif lastStep and lastStep ~= step and panel.Visible then -- a new quest writes itself on
-        peekUntil = os.clock() + 8
-        task.delay(8.1, applyFold)
-        UiFx.flash(panel, C.Highlight)
-        UiFx.typeIn(title, 0.25)
-        UiFx.typeIn(body, 0.55)
+    if announce and panel.Visible and Hud.Quest.Visible then
+        announce = false
+        arrive()
+    elseif not announce and lastStep and lastStep ~= step and panel.Visible then -- a new quest writes itself on
+        arrive()
     end
     lastStep = step
     reward.Text = NumberFormat.compact(quest.Reward) .. " Spirit Stones"
@@ -336,6 +341,11 @@ end)
 
 player:GetAttributeChangedSignal("QuestStep"):Connect(render)
 player:GetAttributeChangedSignal("SettingGuideMet"):Connect(render)
+Hud.Quest:GetPropertyChangedSignal("Visible"):Connect(function() -- (Seren's window closed: the panel is back, and the first quest can arrive)
+    if announce then
+        render()
+    end
+end)
 player:GetAttributeChangedSignal("QuestProgress"):Connect(renderProgress)
 render()
 renderProgress()
