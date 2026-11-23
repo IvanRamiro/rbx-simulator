@@ -126,6 +126,10 @@ class Plan:
     def box(self, name, x0, x1, y0, y1, z0, z1):
         self.colliders.append(dict(name=name, x0=x0, x1=x1, y0=y0, y1=y1, z0=z0, z1=z1))
 
+    def abox(self, name, cx, cz, sx, sz, y0, y1, yaw):
+        """A collider box turned by yaw about its centre (a gap filler on a diagonal stair)."""
+        self.colliders.append(dict(name=name, x0=cx - sx / 2, x1=cx + sx / 2, y0=y0, y1=y1, z0=cz - sz / 2, z1=cz + sz / 2, yaw=yaw, rotated=True, cx=cx, cz=cz, sx=sx, sz=sz))
+
     def vegp(self, name, x, z, y=None, yaw=0.0, scale=1.0, folder="Vegetation"):
         """A tree, rock or plant of the vegetation library at ground y (default: the terrain's own, frame y): its colliders (rotated by yaw) join the colliders."""
         k = "Windrift_%s" % name
@@ -229,12 +233,16 @@ def build_all(with_veg=True):
     # ---------------------------------------------------------------------------------------------- bridges and stairs
     P.put("Courts", "GorgeBridge", 9.25, 0.0, 14.0, role="bridge")
     P.put("Courts", "GreatSpan", 2.5, Fl(T.Y_EYRIE), 66.0, role="bridge")
-    P.put("Courts", "CleftStair", 3.0, 0.0, 27.0, role="stair")
+    P.put("Courts", "CleftStair", 5.0, 0.0, 27.0, role="stair")
     # the Eyrie stair (terrain runs in murim_windrift_terrain.STAIRS): two flights and a landing, the Perch stair one long flight
     ey = T.STAIRS["Eyrie"]["runs"]
     P.put("Courts", "Flight11", ey[0][0][0], G(36.0), ey[0][0][1], yaw=run_yaw(ey[0][0], ey[0][1]), role="stair")
     P.put("Courts", "Landing", ey[1][0][0], G(47.0), ey[1][0][1], yaw=run_yaw(ey[1][0], ey[1][1]), role="stair")
     P.put("Courts", "Flight11", ey[2][0][0], G(47.0), ey[2][0][1], yaw=run_yaw(ey[2][0], ey[2][1]), role="stair")
+    # (the landing piece is 5.0 deep, its run 5.3: an invisible fill closes the 0.3 gap to the second flight, which matters now that the ground under the landing is cut 3 studs down)
+    ly = run_yaw(ey[1][0], ey[1][1])
+    ldx, ldz = math.sin(ly), math.cos(ly)
+    P.abox("LandingFill", ey[1][0][0] + ldx * 5.2, ey[1][0][1] + ldz * 5.2, 8.0, 0.8, G(47.0) - 3.0, G(47.0), ly)
     # ---------------------------------------------------------------------------------------------- the Moss Court (walled, hidden gate on its west side)
     wall_line(P, 18.0, -10.0, 30.0, -10.0)
     wall_line(P, 18.0, 3.0, 30.0, 3.0)

@@ -50,12 +50,20 @@ SLOT = dict(x0=3.0, x1=16.0, z0=8.0, z1=72.0, r=2.0)
 # ---------- terraces: flat rectangles (x0, x1, z0, z1) at a level, rounded corners; skirt = how far outside the flat the ground blends back ----------
 TERRACES = {
     "Eyrie": dict(x0=-32.5, x1=-13.0, z0=61.5, z1=76.0, y=Y_EYRIE, r=3.0, skirt=3.0, mat="Sandstone"),
-    "Perch": dict(x0=18.0, x1=33.0, z0=61.5, z1=75.0, y=Y_PERCH, r=3.0, skirt=3.0, mat="Sandstone"),
+    "Perch": dict(x0=16.0, x1=33.0, z0=61.5, z1=75.0, y=Y_PERCH, r=2.0, skirt=3.0, skirt_max_z=72.0, skirt_max_x=20.0, mat="Sandstone"),   # (no skirt at the corner behind the gorge's rear end, z > 72 and x < 20: the mesa's rim beside the falls stays as it was; the Perch's east and rear skirt is the old one)
     "Drip": dict(x0=3.0, x1=11.0, z0=45.0, z1=53.0, y=Y_DRIP, r=1.5, skirt=2.0, mat="Rock"),
 }
 
+# ---------- open-sky cuts: rectangles (pad frame) in which every column whose centre lies inside is removed ----------
+# The Great Span (deck along z 66, x -14 .. 19) runs from the Eyrie's ledge to the Perch's across the cliff foot, and the cliff stands in its way: Studio's 4-stud voxel
+# columns are filled to their height, so the corridor of the span (3 studs each side of its axis, the deck top up to 6 over it) must hold no column. A column's cell is
+# 4 studs square and turned 23 degrees against this frame, so one whose centre is up to 2.9 outside the corridor can still reach into it: the cut is the corridor
+# plus 2.9 each side (z 60.1 .. 71.9), from 3 studs inside the Eyrie ledge's east edge (x -16: the ledge's own columns would reach 2.6 studs into the corridor) to the Gorge (x 3, where the slot's own open sky begins).
+CUTS = [dict(name="SpanCut", x0=-16.0, x1=3.0, z0=60.1, z1=71.9)]
+
 # ---------- stairs: straight runs (from (x, z) at level y0 to (x, z) at y1); a flight has one-stud risers and 1.5 treads ----------
 UNDER_STEP = 1.8
+UNDER_LANDING = 3.0         # a landing's stone stands 3 deep in the ground (the 4-stud columns beside a flight reach under its last steps)
 STAIRS = {
     # up from the pad's right-rear to the Eyrie: a flight along the cliff foot, a landing, a flight turned back toward the ledge (22 one-stud risers)
     "Eyrie": dict(half=3.0, blend=3.0, runs=[((-46.5, 29.5), (-40.5, 44.5), 36.0, 47.0), ((-40.5, 44.5), (-37.7, 49.0), 47.0, 47.0),
@@ -178,7 +186,7 @@ def override(lx, lz, h, d):
         near = None
         for name, t in TERRACES.items():
             dout = -rr_inside(x, z, t["x0"], t["x1"], t["z0"], t["z1"], t["r"])
-            if dout < t["skirt"] and (near is None or dout < near[1]):
+            if dout < t["skirt"] and not (z > t.get("skirt_max_z", 1e9) and x < t.get("skirt_max_x", -1e9)) and (near is None or dout < near[1]):
                 near = (name, dout, t)
         if near and h is not None:
             name, dout, t = near
@@ -192,7 +200,7 @@ def override(lx, lz, h, d):
         if -1.0 <= s <= run["L"] + 1.0:
             m = 1.0 - smoothstep(gh, gh + run["blend"], abs(u))
             if m > 0.0:
-                line = stair_line(run, s) - (UNDER_STEP if run["flight"] else 0.0)
+                line = stair_line(run, s) - (UNDER_STEP if run["flight"] else UNDER_LANDING)
                 if new_h is None:
                     if m >= 0.5 and abs(u) <= run["half"] + 2.0:
                         new_h = line
@@ -201,6 +209,10 @@ def override(lx, lz, h, d):
                     new_h = lerp(new_h, line, m)
                     if m > 0.5:
                         wind = {"terrace": None, "inside": 4.0, "mat": "Rock" if run["flight"] else "Ground", "depth": 10.0, "stair": run["stair"]}
+    # 2b. the cuts (open sky across the Great Span's corridor)
+    for c in CUTS:
+        if c["x0"] <= x <= c["x1"] and c["z0"] <= z <= c["z1"]:
+            return None, None
     # 3. the gorge: a slot of open sky through the pad (the falls land in it; the route zones catch a fall)
     if rr_inside(x, z, SLOT["x0"], SLOT["x1"], SLOT["z0"], SLOT["z1"], SLOT["r"]) >= 0.0:
         keep = best and best[0] == "Drip"

@@ -298,7 +298,7 @@ def main():
         ("the gate to the Gallery of Blades' door and to the cradle", [(0.0, -49.0), (0.0, -20.0), (14.0, -14.0), (14.0, 6.5), (31.4, 7.5), (31.4, 11.0), (31.4, 14.0), (31.4, 20.0), (46.0, 20.0), (55.0, 20.0)], y0),
         ("the gate to the Hearth Yard's NPC ring", [(0.0, -49.0), (0.0, -20.0), (20.0, -22.0), (30.0, -24.5), (32.4, -24.7)], y0),
         ("the gate over the Gorge Bridge at z 14 (from the lane by the Long Hold to the left lane)", [(0.0, -49.0), (0.0, -20.0), (0.5, 8.0), (0.5, 14.0), (2.5, 14.0), (9.25, 14.0), (16.5, 14.0), (19.5, 14.0)], y0),
-        ("the Cleft Stair down to the Drip ledge", [(0.0, -20.0), (0.5, 8.0), (0.5, 26.0), (2.0, 27.5), (4.8, 28.5), (4.8, 44.0), (7.0, 48.0)], y0),
+        ("the Cleft Stair down to the Drip ledge", [(0.0, -20.0), (0.5, 8.0), (0.5, 26.0), (2.0, 27.5), (4.0, 27.6), (6.8, 27.7), (6.8, 44.0), (7.0, 48.0)], y0),
         ("the Moss Court's west gate", [(0.0, -20.0), (10.0, -10.0), (14.0, -3.5), (20.0, -3.5), (24.0, -3.5)], y0),
         ("the stone ring by its west gap", [(0.0, -49.0), (-18.0, -20.0), (-24.0, -20.0), (-30.0, -20.0), (-30.0, -14.0)], y0),
         ("the wire course", [(0.0, -49.0), (0.0, -36.0), (-14.0, -36.0), (-26.0, -35.0)], y0),
@@ -384,6 +384,78 @@ def main():
         a, b = br
         ta, tb = terrain_y(a[0], a[1] - 250.0), terrain_y(b[0], b[1] - 250.0)
         check("rope bridge %d: its two rims at y %.2f and %.2f (a plank deck between them, as built by CrossingBuilder)" % (k + 1, ta + D.Y0, tb + D.Y0), abs(ta - tb) < 3.0)
+    say("")
+    # ------------------------------------------------------------------------------------------------ 8. the 4-stud voxel rule (what Studio's terrain does)
+    say("8. Voxel-aware: Studio fills each 4-stud column up to its height; a body's corridor must be free of every column whose cell is within 0.6 of a sample point")
+    say("   (a column's height h (the cell centre's, as written to the data) must not stand above the deck or step top minus 0.5 (steps: minus 0.2); open sky is fine)")
+
+    def vox_max(x, z, r=0.6):
+        m = None
+        for dx in (-r, 0.0, r):
+            for dz in (-r, 0.0, r):
+                t_ = terrain_y(x + dx, z + dz)
+                if t_ is not None and (m is None or t_ > m):
+                    m = t_
+        return m
+    pl = {p_["name"]: p_ for p_ in P.placements}
+    decks = [b for b in P.colliders if b["name"] == "Deck" and not b.get("rotated")]
+
+    def deck_top(x, z):
+        best = None
+        for b in decks:
+            if b["x0"] - 1e-6 <= x <= b["x1"] + 1e-6 and b["z0"] - 3.2 <= z <= b["z1"] + 3.2 and (best is None or b["y1"] > best):
+                best = b["y1"]
+        return best
+    for label, axis_z, x0_, x1_ in (("Great Span", 66.0, -13.0, 16.0), ("Gorge Bridge", 14.0, 2.0, 16.5)):
+        bad = []
+        n = 0
+        for xi in range(int(x0_), int(x1_) + 1):
+            dt = None
+            for b in decks:
+                if b["x0"] - 1e-6 <= xi <= b["x1"] + 1e-6 and abs((b["z0"] + b["z1"]) / 2 - axis_z) < 1.5:
+                    dt = b["y1"] if dt is None else max(dt, b["y1"])
+            if dt is None:
+                continue
+            for dzi in (-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0):
+                n += 1
+                m = vox_max(xi, axis_z + dzi)
+                if m is not None and m > dt - (0.5 if label == "Great Span" else 0.0) + 0.05:
+                    bad.append((xi, axis_z + dzi, round(m, 2), round(dt, 2)))
+        if label == "Great Span":
+            cons = []
+            for xi in range(int(x0_), int(x1_) + 1):
+                dt = max((b["y1"] for b in decks if b["x0"] - 1e-6 <= xi <= b["x1"] + 1e-6 and abs((b["z0"] + b["z1"]) / 2 - axis_z) < 1.5), default=None)
+                for dzi in (-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0):
+                    m = vox_max(xi, axis_z + dzi)
+                    if dt is not None and m is not None:
+                        top = 4.0 * math.ceil((m + D.Y0) / 4.0) - D.Y0       # (the voxel's top, the conservative rule)
+                        if top > dt - 0.5 + 0.05:
+                            cons.append((xi, axis_z + dzi, round(top, 2), round(dt, 2)))
+            check("Great Span: the same corridor under the conservative rule (every column counted as its whole voxel, rounded up to the voxel top)", not cons, "(%d points: %s)" % (len(cons), cons[:4]))
+        check("%s: the corridor between the ledges (3 studs each side of the axis, %d points) is free of terrain above the deck top minus 0.5" % (label, n), not bad, "(%d points blocked: %s)" % (len(bad), bad[:5]))
+    # the Perch's landing flush with the deck's last planks, and the Eyrie's end
+    gs = [b for b in decks if abs((b["z0"] + b["z1"]) / 2 - 66.0) < 1.5]
+    last = max(gs, key=lambda b: b["x1"])
+    t_end = max(v for v in (terrain_y(last["x1"] - 0.5 + dx, 66.0 + dz) for dx in (-1.0, 0.0, 1.0) for dz in (-1.0, 0.0, 1.0)) if v is not None)
+    check("Great Span's Perch end: the terrain under the last planks (top %.2f) is flush with the deck (top %.2f) within 0.6" % (t_end, last["y1"]), -0.2 <= last["y1"] - t_end <= 0.6)
+    # every step: the terrain over its tread
+    stair_bad = []
+    nsteps = 0
+    for b in P.colliders:
+        if b["name"] != "Step" or b["y1"] - b["y0"] < 1.0:
+            continue
+        nsteps += 1
+        if b.get("rotated"):
+            c, s = math.cos(b["yaw"]), math.sin(b["yaw"])
+            pts = [(b["cx"] + (u * c + v * s), b["cz"] + (-u * s + v * c)) for u in (-0.75, 0.0, 0.75) for v in (-b["sz"] / 2 + 0.2, 0.0, b["sz"] / 2 - 0.2)]
+        else:
+            xm = (b["x0"] + b["x1"]) / 2
+            pts = [(xx, zz) for xx in (xm - 0.75, xm, xm + 0.75) for zz in (b["z0"] + 0.2, (b["z0"] + b["z1"]) / 2, b["z1"] - 0.2)]
+        for (xx, zz) in pts:
+            m = vox_max(xx, zz, 0.1)
+            if m is not None and m > b["y1"] - 0.2:
+                stair_bad.append((round(xx, 1), round(zz, 1), round(m, 2), round(b["y1"], 2)))
+    check("every stair step (%d treads) has no terrain above its top minus 0.2 at its nine sample points down the middle 1.5 studs of the tread (a body of radius 0.75)" % nsteps, not stair_bad, "(%d blocked: %s)" % (len(stair_bad), stair_bad[:6]))
     say("")
     check("RESULT: every check above passed", not FAILS, "(%d failed: %s)" % (len(FAILS), FAILS) if FAILS else "")
     os.makedirs(os.path.dirname(OUT), exist_ok=True)

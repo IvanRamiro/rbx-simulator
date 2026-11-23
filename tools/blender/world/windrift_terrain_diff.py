@@ -2,7 +2,7 @@
 committed before it (git's src/worldbuild/Terrain/MurimCrossing.lua at the given ref), cell by cell, in all four arrays (heights, surface material, underside depth, underside
 material), and lists where every difference is. Plain Python.
 
-    python3 tools/blender/world/windrift_terrain_diff.py [git-ref]   # writes renders/windrift/terrain_diff.txt (the ref defaults to 781d9c4^, the commit before Windrift's terrain: the data the plaza, the bridge and the other two sides were last written with)
+    python3 tools/blender/world/windrift_terrain_diff.py [git-ref [new-terrain-file]]   # writes renders/windrift/terrain_diff.txt (the ref defaults to 781d9c4^, the commit before Windrift's terrain: the data the plaza, the bridge and the other two sides were last written with)
 Run it after `python3 tools/blender/world/murim_layout.py --write` (it reads the file on disk).
 """
 import math
@@ -44,7 +44,8 @@ def grids(lua):
 def main():
     ref = sys.argv[1] if len(sys.argv) > 1 else "781d9c4^"
     old_lua = subprocess.run(["git", "show", ref + ":src/worldbuild/Terrain/MurimCrossing.lua"], cwd=REPO, capture_output=True, text=True, check=True).stdout
-    new_lua = open(os.path.join(REPO, "src", "worldbuild", "Terrain", "MurimCrossing.lua")).read()
+    new_path = sys.argv[2] if len(sys.argv) > 2 else os.path.join(REPO, "src", "worldbuild", "Terrain", "MurimCrossing.lua")   # (a second argument names a file to check before it is copied into src/)
+    new_lua = open(new_path).read()
     a, b = grids(old_lua), grids(new_lua)
     lines = []
 

@@ -799,7 +799,7 @@ def cleft_stair():
         post(gt, x, z + 0.2, y - 0.2, y + 1.3, 0.28, taper=0.03)
         pts.append((x, y + 1.15, z + 0.2))
     rope_line(P, pts, r=0.09, suffix=S_ROPE)
-    P.block("Apron", -1.7, 0.3, -3.0, -0.4, -0.5, 3.5)      # (the pad's rim beside the first step: the slot's cell edge is ragged, a small slab bridges it)
+    P.block("Apron", -3.6, 0.3, -3.0, -0.4, -0.5, 3.5)      # (the stair stands 2 studs out from the slot's edge, where the 4-stud columns hang over it: an invisible apron bridges the lane's edge to the first step)
     P.floor.append((0.0, w, 0.0, n * tread, 0.0))
     P.marks["Bottom"] = (w / 2, -float(n), n * tread + 1.0)
     return P
