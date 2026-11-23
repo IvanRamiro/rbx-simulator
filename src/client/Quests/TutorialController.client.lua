@@ -7,6 +7,8 @@
 --   2. "Qi is coming in!": what Qi is for, and that the quest panel (top right) says what to do next. GOT IT ends it.
 -- It shows once: only to a player on the first quest who hasn't seen it, and SKIP or the end saves that (the TutorialDone setting,
 -- server/Data/Settings). A player who is past the first quest never sees it.
+-- It waits for the player to talk to Seren the Guide (the setting GuideMet, set by the server: World/GuideService; the owner, 2026-11-23: "the tutorial must be shown when the
+-- player talked to the NPC"): a new player is guided to her first (client/World/GuideController), and the card comes when they have.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -25,7 +27,7 @@ local C = UiTheme.Colors
 local KEY = GameConfig.CultivationKeybind.Name
 
 -- wait for the saved settings and the quest step (the server sets both once the save has loaded)
-while player:GetAttribute("SettingTutorialDone") == nil or player:GetAttribute("QuestStep") == nil do
+while player:GetAttribute("SettingTutorialDone") == nil or player:GetAttribute("QuestStep") == nil or player:GetAttribute("SettingGuideMet") == nil do
     task.wait(0.5)
     if not player.Parent then
         return
@@ -43,6 +45,14 @@ end
 if player:GetAttribute("QuestStep") ~= 1 then -- already past the first quest: an old save, nothing to teach
     finish()
     return
+end
+
+-- not before they have talked to Seren (ended elsewhere meanwhile: nothing to show)
+while player:GetAttribute("SettingGuideMet") ~= true do
+    task.wait(0.25)
+    if not player.Parent or player:GetAttribute("SettingTutorialDone") == true or player:GetAttribute("QuestStep") ~= 1 then
+        return
+    end
 end
 
 -- ---------- the card ----------

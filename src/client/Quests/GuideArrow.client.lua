@@ -1,6 +1,8 @@
 -- The guide arrow (the owner, beta 2026-11-17: "The tutorial arrow must always be positioned above the player's chest, clearly
 -- visible and properly aligned with the character"): a small gold 3D arrow that floats just above the player's chest, on the side
 -- of what they should go to, and points at it (turning, and tilting up or down a little). It is for the beginner's path only:
+--   * before anything else, for a player who has not yet talked to Seren the Guide (their GuideMet setting is false: World/GuideService; the owner, 2026-11-23: "you can guide
+--     them to talk with the NPC"): Seren herself, on the spawn plaza, until they stand by her;
 --   * the quest's place (its Way in GameConfig.Quests, then its Then once the player has been there, as the quest's marker does:
 --     QuestController);
 --   * while the guardian is weak and they can take an egg (their CanTakeEgg), the nearest stand holding an egg their rank can carry;
@@ -8,6 +10,7 @@
 -- It hides at the place, while a window is open (Hud steps the dock aside), during the hatch cinematic, in first person, and when
 -- the player hid the quest; it fades out for good once the beginner's quests are done (through "JadeBridge"). One model, drawn in
 -- front of everything by its Highlight (the character never hides it), one RenderStepped. Reduced Effects: no bob, no pulse.
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -134,8 +137,30 @@ local function standToTake(guardianId, from)
     return best
 end
 
+-- Seren the Guide's place (her model is tagged HubNpc and named Guide: WorldBuilder.buildHubNpcs), or nil while she is not loaded
+local seren = nil
+local function serenPosition()
+    if seren and seren.Parent then
+        return seren.Position
+    end
+    for _, model in CollectionService:GetTagged("HubNpc") do
+        if model.Name == "Guide" then
+            local root = model:FindFirstChild("HumanoidRootPart")
+            if root and root:IsA("BasePart") then
+                seren = root
+                return root.Position
+            end
+        end
+    end
+    return nil
+end
+
 -- The place to point at and how near counts as there; nil when there is none right now.
 local function target(step, from)
+    if player:GetAttribute("SettingGuideMet") == false then
+        local at = serenPosition()
+        return if at then at + Vector3.new(0, 1, 0) else nil, 9
+    end
     local carrying = player:GetAttribute("CarryingGuardian")
     if carrying then
         local guardians = Workspace:FindFirstChild("Guardians")
@@ -197,7 +222,8 @@ local function hiddenByScreen()
     if cinema and cinema.Enabled then
         return true
     end
-    return player:GetAttribute("SettingShowQuest") == false
+    -- (a player who hid the quest still gets led to Seren: that is no quest)
+    return player:GetAttribute("SettingShowQuest") == false and player:GetAttribute("SettingGuideMet") ~= false
 end
 
 connection = RunService.RenderStepped:Connect(function(dt)

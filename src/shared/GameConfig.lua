@@ -750,8 +750,9 @@ local GameConfig = {
         },
     },
 
-    -- each player's own view and sound (server/Data/Settings, client/UI/SettingsController)
-    Settings = { Music = 1, Sound = 1, ReducedEffects = false, StatusMinimized = false, ShowQuest = true, TutorialDone = false, MenuHidden = false },
+    -- each player's own view and sound (server/Data/Settings, client/UI/SettingsController). GuideMet: they have talked to Seren the Guide, so the quests, the quest
+    -- panel and the first-time tutorial begin (server/World/GuideService sets it, the client never can)
+    Settings = { Music = 1, Sound = 1, ReducedEffects = false, StatusMinimized = false, ShowQuest = true, TutorialDone = false, MenuHidden = false, GuideMet = false },
 
     MaxOwnedPets = 50,
 

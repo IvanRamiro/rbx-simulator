@@ -197,4 +197,12 @@ t.test("developer test grants are off (they would hand every new Studio save fre
     t.eq(GameConfig.GrantDevTestPets, false)
 end)
 
+t.test("a new player has not met the Guide: the quests and the tutorial wait for them to talk to her", function()
+    t.eq(GameConfig.Settings.GuideMet, false, "GuideMet must start false")
+    t.eq(GameConfig.Settings.TutorialDone, false)
+    for key, default in GameConfig.Settings do
+        t.ok(type(default) == "number" or type(default) == "boolean", "setting " .. key .. " has no usable default")
+    end
+end)
+
 t.finish("config")

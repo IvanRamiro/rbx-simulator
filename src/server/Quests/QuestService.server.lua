@@ -4,7 +4,8 @@
 -- and the moments the server sees (an air leap, a strike on a guardian, a secured egg).
 -- A finished quest pays its Spirit Stones, moves the player to the next (Quests) and tells their
 -- client (QuestEvent "Complete", step, reward). The client may only ask to skip them all
--- (QuestEvent "Skip"). The player's "QuestProgress" attribute (0 to 1) feeds the tracker's bar.
+-- (QuestEvent "Skip"). The player's "QuestProgress" attribute (0 to 1) feeds the tracker's bar. Nothing counts, pays or shows until the player has talked to Seren
+-- the Guide (their GuideMet setting: World/GuideService).
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -96,7 +97,7 @@ end
 
 -- a moment the server saw: it counts only toward the quest the player is on
 local function saw(player, kind, goal)
-    local step = ready[player] and Quests.get(player)
+    local step = ready[player] and player:GetAttribute("SettingGuideMet") == true and Quests.get(player)
     local quest = step and GameConfig.Quests[step]
     if quest and quest.Kind == kind and (quest.Goal == nil or quest.Goal == goal) and seen[player] then
         seen[player][kind] = true
@@ -150,7 +151,8 @@ while true do
     for player in ready do
         local step = Quests.get(player)
         local quest = step and GameConfig.Quests[step]
-        if quest and player.Parent == Players then
+        -- (the quests wait until the player has talked to Seren the Guide: World/GuideService; the panel is hidden till then, so nothing may be paid unseen)
+        if quest and player.Parent == Players and player:GetAttribute("SettingGuideMet") == true then
             local done, share = check(player, quest)
             player:SetAttribute("QuestProgress", math.clamp(share, 0, 1))
             if done then

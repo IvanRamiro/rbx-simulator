@@ -3,6 +3,8 @@
 -- count (the "QuestProgress" attribute), its reward, and SKIP (asks once more). A finished
 -- quest is announced with its reward (QuestEvent "Complete"); after the last, the tracker goes.
 -- Its header folds it to the quest's title: it starts folded on a phone, opens for a moment when a new quest arrives, and stays as the player leaves it.
+-- It (and the quest's marker in the world) stays hidden until the player has talked to Seren the Guide (the setting GuideMet, set by the server: World/GuideService; the owner,
+-- 2026-11-23: "don't show the quest if the players aren't talking to the NPC"); until then the Quests button tells them to go to her.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -143,6 +145,9 @@ local message = Toast.new("QuestMessage", C.Highlight, 4)
 
 -- The Quests button on the rail shows or hides it, and the choice is saved.
 local questButton = Hud.railButton("QuestButton", UiTheme.Icons.Quest, "Quests", 4)
+local function guideMet()
+    return player:GetAttribute("SettingGuideMet") == true
+end
 local function questAllowed()
     local chosen = player:GetAttribute("SettingShowQuest")
     if chosen == nil then
@@ -216,17 +221,26 @@ end)
 Hud.CompactChanged:Connect(applyFold)
 
 local lastStep = nil
+local wasMet = guideMet()
 local function render()
     local step = player:GetAttribute("QuestStep")
     local quest = typeof(step) == "number" and QUESTS[step]
-    panel.Visible = quest ~= nil and questAllowed()
+    panel.Visible = quest ~= nil and questAllowed() and guideMet()
     if not quest then
         return
     end
     count.Text = step .. " / " .. #QUESTS
     title.Text = quest.Title
     body.Text = quest.Text
-    if lastStep and lastStep ~= step and panel.Visible then -- a new quest writes itself on
+    local justMet = guideMet() and not wasMet -- the player has just talked to Seren: their first quest arrives like any new one
+    wasMet = guideMet()
+    if justMet and panel.Visible then
+        peekUntil = os.clock() + 8
+        task.delay(8.1, applyFold)
+        UiFx.flash(panel, C.Highlight)
+        UiFx.typeIn(title, 0.25)
+        UiFx.typeIn(body, 0.55)
+    elseif lastStep and lastStep ~= step and panel.Visible then -- a new quest writes itself on
         peekUntil = os.clock() + 8
         task.delay(8.1, applyFold)
         UiFx.flash(panel, C.Highlight)
@@ -274,8 +288,11 @@ RunService.RenderStepped:Connect(function()
     nextWay = now + WAY_EVERY
     -- the place's marker goes with the panel: while a window steps the panel aside (or the player hid it) the marker lay
     -- over the window's edge (a new player's run, 2026-11-12)
-    if not Hud.Quest.Visible then
+    if not Hud.Quest.Visible or not guideMet() then
         wayMarker.world = nil
+        if way.Visible then
+            way.Visible = false
+        end
         return
     end
     local step = player:GetAttribute("QuestStep")
@@ -318,6 +335,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 player:GetAttributeChangedSignal("QuestStep"):Connect(render)
+player:GetAttributeChangedSignal("SettingGuideMet"):Connect(render)
 player:GetAttributeChangedSignal("QuestProgress"):Connect(renderProgress)
 render()
 renderProgress()
@@ -352,6 +370,10 @@ RemoteEvents.QuestEvent.OnClientEvent:Connect(function(kind, step, stones)
 end)
 
 questButton.Activated:Connect(function()
+    if not guideMet() then
+        message:show("Talk to Seren, the Guide, to begin your quests. Follow the gold arrow.", "Info")
+        return
+    end
     -- with a window open the panel is stepped aside, so the press means "show me my quest": close the window, never hide it
     -- (a new player's run, 2026-11-12: pressed over the Codex, it switched the quest off unseen, and it stayed off)
     local chosen = questAllowed()

@@ -375,6 +375,9 @@ player:GetAttributeChangedSignal("IsCultivating"):Connect(function()
     end
 end)
 local function tutorialInTheWay()
+    if player:GetAttribute("SettingGuideMet") ~= true then
+        return true -- (a new player has yet to talk to Seren the Guide: the tutorial follows that, and the gift after it)
+    end
     local card = Hud.Banner:FindFirstChild("Tutorial")
     if not card then
         return player:GetAttribute("SettingTutorialDone") == nil -- (not known yet: it may still come)

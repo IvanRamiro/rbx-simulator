@@ -26,6 +26,9 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 RemoteEvents.SettingsEvent.OnServerEvent:Connect(function(player, key, value)
+    if key == "GuideMet" then
+        return -- (only talking to Seren sets it: World/GuideService)
+    end
     if os.clock() - (lastChange[player] or 0) < THROTTLE then
         return
     end
