@@ -32,6 +32,7 @@ import blossom_layout as BL          # its noise, its footprint (the clearance c
 import layout as LAYOUT              # where every island stands
 import murim_dawnspire_terrain as DT  # Dawnspire's terraces on the Orthodox side (changes only its own region; DAWNSPIRE_TERRAIN=0 turns it off)
 import murim_windrift_terrain as WT   # Windrift Hold's gorge, ledges and stairs on the Unorthodox pad (changes only its own region; WINDRIFT_TERRAIN=0 turns it off)
+import murim_nightfall_terrain as NT   # Nightfall Citadel's terraces and fissure on the Demonic side (changes only its own region; NIGHTFALL_TERRAIN=0 turns it off)
 
 ISLAND = "MurimCrossing"
 CENTRE = tuple(float(v) for v in LAYOUT.ISLANDS[ISLAND]["centre"])
@@ -102,7 +103,7 @@ PATH_HALF = 3.0
 MATERIALS = ["Limestone", "Grass", "Pavement", "Ground", "Mud", "LeafyGrass", "Rock", "Slate", "Asphalt", "Basalt", "CrackedLava", "Sandstone"]
 MI = {m: i + 1 for i, m in enumerate(MATERIALS)}
 # what each hanging underside is made of: (rock, the strata bands). The plaza and the spur hang plain rock.
-UNDERSIDE = {None: ("Rock", "Ground"), "O": ("Limestone", "Rock"), "U": ("Sandstone", "Rock"), "D": ("Slate", "Basalt")}
+UNDERSIDE = {None: ("Rock", "Ground"), "O": ("Limestone", "Rock"), "U": ("Sandstone", "Rock"), "D": ("Slate", "Basalt"), "N": ("CrackedLava", "Basalt")}
 DEEPEST = 100.0       # the underside never reaches the fall line (110 under the island's ground)
 
 vnoise, fbm, smoothstep, lerp = BL.vnoise, BL.fbm, BL.smoothstep, BL.lerp
@@ -288,11 +289,12 @@ def path_state(x, z):
 
 
 def ground(x, z):
-    """The ground (height over Y 200, details) with Dawnspire's terraces laid over the Orthodox side (murim_dawnspire_terrain) and Windrift's gorge and ledges
-    over the Unorthodox pad (murim_windrift_terrain): the two regions never meet."""
+    """The ground (height over Y 200, details) with Dawnspire's terraces laid over the Orthodox side (murim_dawnspire_terrain), Windrift's gorge and ledges
+    over the Unorthodox pad (murim_windrift_terrain) and Nightfall's terraces and fissure over the Demonic pad (murim_nightfall_terrain): the three regions never meet."""
     h, d = _ground_base(x, z)
     h, d = DT.override(x, z, h, d)
-    return WT.override(x, z, h, d)
+    h, d = WT.override(x, z, h, d)
+    return NT.override(x, z, h, d)
 
 
 def _ground_base(x, z):
@@ -358,6 +360,8 @@ def surface(x, z, slope, d):
         return DT.surface(x, z, slope, d, m)
     if "wind" in d:
         return WT.surface(x, z, slope, d, m)
+    if "night" in d:
+        return NT.surface(x, z, slope, d, m)
     return DT.hall_pave(x, z, m)
 
 
@@ -423,6 +427,8 @@ def bottom(x, z, d):
         return -min(DEEPEST, max(-b, DT.bottom_depth(d)))
     if "wind" in d:
         return -min(DEEPEST, max(-b, WT.bottom_depth(d)))
+    if "night" in d:
+        return -min(DEEPEST, max(-b, NT.bottom_depth(d)))
     return b
 
 
@@ -455,6 +461,8 @@ def underside_owner(d):
         return "O"
     if "wind" in d:                      # a Windrift ledge hangs in the Unorthodox side's rock
         return "U"
+    if "night" in d:                     # a Nightfall terrace hangs in the Demonic side's black slate and basalt; the fissure's walls glow in cracked lava (below the surface layers)
+        return "N" if d["night"].get("rim", 99.0) < NT.GLOW_RIM else "D"
     if f["massif"] > 0 or f["stair_Orthodox"] > 0 or f["stair_Unorthodox"] > 0 or f["stair_Demonic"] > 0:
         return d["zone"]
     return None
@@ -617,7 +625,8 @@ def placed():
     trees_o = [] if DT.ENABLED else scatter("O", 24, 15.0, 211, (50.0, 330.0, 20.0, 330.0), 0.55, 4.0)
     # (Windrift plants its own forest: the first foundation's borrowed Jade Grove trees on the Unorthodox side are gone)
     trees_u = [] if WT.ENABLED else scatter("U", 32, 12.0, 223, (-125.0, 125.0, 30.0, 400.0), 0.65, 4.0)
-    rocks_d = scatter("D", 20, 18.0, 233, (-330.0, -60.0, 40.0, 340.0), 0.9, -10.0)
+    # (Nightfall brings its own rocks: the first foundation's borrowed Ember Peak basalt on the Demonic side is gone)
+    rocks_d = [] if NT.ENABLED else scatter("D", 20, 18.0, 233, (-330.0, -60.0, 40.0, 340.0), 0.9, -10.0)
     falls = []
     # waterfalls: where a mesa's rim faces the plaza: (zone, mesa index, bearing from its middle) -> lip and the point behind it
     fall_list = [("O", 0, -150.0), ("O", 2, -125.0), ("U", 3, -90.0)]
@@ -683,6 +692,8 @@ def report():
             for rr in (0.0, 20.0, 40.0, HQ[q]["flat"] - 2.0):
                 h_, d_ = ground(px + math.cos(math.radians(k)) * rr, pz + math.sin(math.radians(k)) * rr)
                 if d_ and "dawn" in d_:          # (Dawnspire's terraces rise behind the hall on purpose: the pad is level where they did not change it)
+                    continue
+                if NT.ENABLED and q == "Demonic" and (d_ is None or "night" in d_):   # (Nightfall's terraces rise behind the pad's middle and the fissure is open sky: the pad is level where it did not change it)
                     continue
                 if WT.ENABLED and q == "Unorthodox" and (d_ is None or "wind" in d_):   # (Windrift's gorge is open sky in the pad, its ledges rise in the cliff: the pad is level where it did not change it)
                     continue

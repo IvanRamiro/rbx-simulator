@@ -78,7 +78,7 @@ return {
     Dress = { -- trees and rocks, each at the ground's own height: position, yaw
         TreesO = {  },
         TreesU = {  },
-        RocksD = { { Vector3.new(-172.77, 15.17, 129.59), 4.233 }, { Vector3.new(-78.13, 16.00, 150.21), 0.224 }, { Vector3.new(-167.86, 24.13, 246.04), 3.267 }, { Vector3.new(-129.78, 20.90, 225.14), 6.157 }, { Vector3.new(-94.46, 21.90, 251.44), 2.738 }, { Vector3.new(-148.43, 22.95, 262.13), 0.578 }, { Vector3.new(-301.41, 21.52, 238.23), 2.637 }, { Vector3.new(-222.27, 25.96, 251.44), 1.696 }, { Vector3.new(-171.15, 20.84, 205.52), 1.407 }, { Vector3.new(-137.78, 42.49, 317.53), 5.551 }, { Vector3.new(-262.12, 23.18, 229.09), 5.639 }, { Vector3.new(-173.53, 16.00, 181.11), 3.115 }, { Vector3.new(-152.73, 23.62, 299.43), 1.984 }, { Vector3.new(-187.80, 52.58, 322.31), 2.804 }, { Vector3.new(-274.48, 21.67, 246.28), 0.067 }, { Vector3.new(-250.18, 24.00, 284.86), 0.364 }, { Vector3.new(-218.09, 70.26, 289.18), 5.639 }, { Vector3.new(-322.39, 21.43, 210.90), 2.865 }, { Vector3.new(-259.13, 18.49, 177.45), 1.278 }, { Vector3.new(-188.46, 21.78, 215.11), 3.001 } },
+        RocksD = {  },
     },
     Falls = { -- where a waterfall pours off a mesa's rim: the lip and the point behind it
     },
