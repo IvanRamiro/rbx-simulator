@@ -152,7 +152,7 @@ RunService.RenderStepped:Connect(function()
     local rootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     local her = if waiting then findSeren() else nil
     local windowOpen = not Hud.Dock.Visible
-    call.Visible = waiting and not windowOpen
+    call.Visible = waiting and not windowOpen and player:GetAttribute("FactionTrial") ~= "Running" -- (a faction trial's banner has the top to itself)
     if not (waiting and rootPart and her) or windowOpen then
         marker.world = nil
         return
