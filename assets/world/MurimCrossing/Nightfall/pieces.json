@@ -1,0 +1,583 @@
+{
+ "frame": "pad frame: origin at the Demonic pad's centre (+0.5 up), turned by the pad's FrontYaw; every piece at its own origin, front -Z; anchor NF_Anchor",
+ "files": {
+  "Buildings": {
+   "fbx": "assets/world/MurimCrossing/Nightfall/Nightfall_Buildings.fbx",
+   "objects": [
+    "Nightfall_Buildings_Arena__Crimson",
+    "Nightfall_Buildings_Arena__Iron",
+    "Nightfall_Buildings_Arena__Stone",
+    "Nightfall_Buildings_Armory__Crimson",
+    "Nightfall_Buildings_Armory__Iron",
+    "Nightfall_Buildings_Armory__Stone",
+    "Nightfall_Buildings_Armory__Tile",
+    "Nightfall_Buildings_Bastion__Ember",
+    "Nightfall_Buildings_Bastion__Iron",
+    "Nightfall_Buildings_Bastion__Stone",
+    "Nightfall_Buildings_ChainRing__Crimson",
+    "Nightfall_Buildings_ChainRing__Iron",
+    "Nightfall_Buildings_ChainRing__Stone",
+    "Nightfall_Buildings_EmberCourt__Ember",
+    "Nightfall_Buildings_EmberCourt__Iron",
+    "Nightfall_Buildings_EmberCourt__Stone",
+    "Nightfall_Buildings_Gatehouse__Crimson",
+    "Nightfall_Buildings_Gatehouse__Iron",
+    "Nightfall_Buildings_Gatehouse__Stone",
+    "Nightfall_Buildings_Gatehouse__Tile",
+    "Nightfall_Buildings_Keep__Crimson",
+    "Nightfall_Buildings_Keep__Iron",
+    "Nightfall_Buildings_Keep__Stone",
+    "Nightfall_Buildings_Keep__Tile",
+    "Nightfall_Buildings_RackShed__Crimson",
+    "Nightfall_Buildings_RackShed__Iron",
+    "Nightfall_Buildings_RackShed__Stone",
+    "Nightfall_Buildings_RackShed__Tile",
+    "Nightfall_Buildings_Residence__Crimson",
+    "Nightfall_Buildings_Residence__Iron",
+    "Nightfall_Buildings_Residence__Stone",
+    "Nightfall_Buildings_Residence__Tile",
+    "Nightfall_Buildings_UpperGate__Crimson",
+    "Nightfall_Buildings_UpperGate__Iron",
+    "Nightfall_Buildings_UpperGate__Stone"
+   ],
+   "tris": 15812,
+   "verify": "ok"
+  },
+  "Courts": {
+   "fbx": "assets/world/MurimCrossing/Nightfall/Nightfall_Courts.fbx",
+   "objects": [
+    "Nightfall_Courts_BridgeFlight__Iron",
+    "Nightfall_Courts_BridgeFlight__Stone",
+    "Nightfall_Courts_BridgeTop__Iron",
+    "Nightfall_Courts_BridgeTop__Stone",
+    "Nightfall_Courts_ChainBridge__Crimson",
+    "Nightfall_Courts_ChainBridge__Ember",
+    "Nightfall_Courts_ChainBridge__Iron",
+    "Nightfall_Courts_ChainBridge__Stone",
+    "Nightfall_Courts_Curtain12__Iron",
+    "Nightfall_Courts_Curtain12__Stone",
+    "Nightfall_Courts_Curtain6__Iron",
+    "Nightfall_Courts_Curtain6__Stone",
+    "Nightfall_Courts_GreatFlightHigh__Iron",
+    "Nightfall_Courts_GreatFlightHigh__Stone",
+    "Nightfall_Courts_GreatFlight__Iron",
+    "Nightfall_Courts_GreatFlight__Stone",
+    "Nightfall_Courts_GreatLanding__Iron",
+    "Nightfall_Courts_GreatLanding__Stone",
+    "Nightfall_Courts_Parapet12__Iron",
+    "Nightfall_Courts_Parapet12__Stone",
+    "Nightfall_Courts_Parapet6__Iron",
+    "Nightfall_Courts_Parapet6__Stone",
+    "Nightfall_Courts_PosternFlightHigh__Iron",
+    "Nightfall_Courts_PosternFlightHigh__Stone",
+    "Nightfall_Courts_PosternFlight__Iron",
+    "Nightfall_Courts_PosternFlight__Stone",
+    "Nightfall_Courts_PosternLanding__Iron",
+    "Nightfall_Courts_PosternLanding__Stone"
+   ],
+   "tris": 5700,
+   "verify": "ok"
+  },
+  "Props": {
+   "fbx": "assets/world/MurimCrossing/Nightfall/Nightfall_Props.fbx",
+   "objects": [
+    "Nightfall_Props_BannerPole__Crimson",
+    "Nightfall_Props_BannerPole__Iron",
+    "Nightfall_Props_BannerPole__Stone",
+    "Nightfall_Props_BrazierTall__Ember",
+    "Nightfall_Props_BrazierTall__Iron",
+    "Nightfall_Props_BrazierTall__Stone",
+    "Nightfall_Props_StakeRow__Crimson",
+    "Nightfall_Props_StakeRow__Iron",
+    "Nightfall_Props_StakeRow__Stone",
+    "Nightfall_Props_TalonPlinth__Crimson",
+    "Nightfall_Props_TalonPlinth__Iron",
+    "Nightfall_Props_TalonPlinth__Stone"
+   ],
+   "tris": 638,
+   "verify": "ok"
+  }
+ },
+ "pieces": {
+  "Nightfall_Buildings_Gatehouse": {
+   "min": [
+    -13.78,
+    -1.5,
+    -6.09
+   ],
+   "max": [
+    13.78,
+    29.1,
+    6.1
+   ],
+   "tris": 1092,
+   "materials": {
+    "Crimson": 124,
+    "Iron": 328,
+    "Stone": 352,
+    "Tile": 288
+   }
+  },
+  "Nightfall_Courts_Curtain12": {
+   "min": [
+    -6.55,
+    -1.2,
+    -2.3
+   ],
+   "max": [
+    6.55,
+    9.81,
+    1.97
+   ],
+   "tris": 150,
+   "materials": {
+    "Iron": 18,
+    "Stone": 132
+   }
+  },
+  "Nightfall_Courts_Curtain6": {
+   "min": [
+    -3.55,
+    -1.2,
+    -2.3
+   ],
+   "max": [
+    3.55,
+    9.81,
+    1.97
+   ],
+   "tris": 108,
+   "materials": {
+    "Iron": 12,
+    "Stone": 96
+   }
+  },
+  "Nightfall_Buildings_Bastion": {
+   "min": [
+    -6.27,
+    -3.0,
+    -5.69
+   ],
+   "max": [
+    6.27,
+    15.85,
+    5.69
+   ],
+   "tris": 618,
+   "materials": {
+    "Ember": 10,
+    "Iron": 200,
+    "Stone": 408
+   }
+  },
+  "Nightfall_Props_BrazierTall": {
+   "min": [
+    -1.35,
+    -0.8,
+    -1.46
+   ],
+   "max": [
+    1.37,
+    5.99,
+    1.35
+   ],
+   "tris": 168,
+   "materials": {
+    "Ember": 10,
+    "Iron": 146,
+    "Stone": 12
+   }
+  },
+  "Nightfall_Props_BannerPole": {
+   "min": [
+    -1.76,
+    -0.9,
+    -1.35
+   ],
+   "max": [
+    1.76,
+    14.5,
+    1.35
+   ],
+   "tris": 98,
+   "materials": {
+    "Crimson": 20,
+    "Iron": 54,
+    "Stone": 24
+   }
+  },
+  "Nightfall_Buildings_Arena": {
+   "min": [
+    -14.63,
+    -1.2,
+    -14.63
+   ],
+   "max": [
+    14.63,
+    10.95,
+    15.15
+   ],
+   "tris": 1790,
+   "materials": {
+    "Crimson": 488,
+    "Iron": 254,
+    "Stone": 1048
+   }
+  },
+  "Nightfall_Buildings_ChainRing": {
+   "min": [
+    -8.24,
+    -0.8,
+    -8.24
+   ],
+   "max": [
+    8.24,
+    5.85,
+    8.24
+   ],
+   "tris": 1360,
+   "materials": {
+    "Crimson": 256,
+    "Iron": 944,
+    "Stone": 160
+   }
+  },
+  "Nightfall_Props_StakeRow": {
+   "min": [
+    -4.6,
+    -0.7,
+    -0.7
+   ],
+   "max": [
+    4.6,
+    4.65,
+    0.7
+   ],
+   "tris": 216,
+   "materials": {
+    "Crimson": 48,
+    "Iron": 72,
+    "Stone": 96
+   }
+  },
+  "Nightfall_Buildings_RackShed": {
+   "min": [
+    -7.19,
+    -0.7,
+    -3.75
+   ],
+   "max": [
+    7.2,
+    8.15,
+    3.1
+   ],
+   "tris": 714,
+   "materials": {
+    "Crimson": 180,
+    "Iron": 378,
+    "Stone": 72,
+    "Tile": 84
+   }
+  },
+  "Nightfall_Buildings_EmberCourt": {
+   "min": [
+    -14.0,
+    -0.9,
+    -14.0
+   ],
+   "max": [
+    14.0,
+    14.65,
+    14.0
+   ],
+   "tris": 482,
+   "materials": {
+    "Ember": 10,
+    "Iron": 210,
+    "Stone": 262
+   }
+  },
+  "Nightfall_Courts_GreatFlight": {
+   "min": [
+    -9.0,
+    -1.6,
+    0.0
+   ],
+   "max": [
+    9.0,
+    14.15,
+    18.0
+   ],
+   "tris": 496,
+   "materials": {
+    "Iron": 64,
+    "Stone": 432
+   }
+  },
+  "Nightfall_Courts_GreatLanding": {
+   "min": [
+    -9.0,
+    -13.6,
+    0.0
+   ],
+   "max": [
+    9.0,
+    3.45,
+    6.0
+   ],
+   "tris": 52,
+   "materials": {
+    "Iron": 16,
+    "Stone": 36
+   }
+  },
+  "Nightfall_Courts_GreatFlightHigh": {
+   "min": [
+    -9.0,
+    -13.6,
+    0.0
+   ],
+   "max": [
+    9.0,
+    14.15,
+    18.0
+   ],
+   "tris": 496,
+   "materials": {
+    "Iron": 64,
+    "Stone": 432
+   }
+  },
+  "Nightfall_Buildings_UpperGate": {
+   "min": [
+    -10.21,
+    -13.6,
+    0.0
+   ],
+   "max": [
+    10.21,
+    18.3,
+    4.31
+   ],
+   "tris": 1414,
+   "materials": {
+    "Crimson": 64,
+    "Iron": 138,
+    "Stone": 1212
+   }
+  },
+  "Nightfall_Courts_PosternFlight": {
+   "min": [
+    -3.3,
+    -1.6,
+    0.0
+   ],
+   "max": [
+    3.3,
+    13.3,
+    18.0
+   ],
+   "tris": 480,
+   "materials": {
+    "Iron": 48,
+    "Stone": 432
+   }
+  },
+  "Nightfall_Courts_PosternLanding": {
+   "min": [
+    -3.3,
+    -13.6,
+    0.0
+   ],
+   "max": [
+    3.3,
+    3.25,
+    4.0
+   ],
+   "tris": 52,
+   "materials": {
+    "Iron": 16,
+    "Stone": 36
+   }
+  },
+  "Nightfall_Courts_PosternFlightHigh": {
+   "min": [
+    -3.3,
+    -13.6,
+    0.0
+   ],
+   "max": [
+    3.3,
+    13.3,
+    18.0
+   ],
+   "tris": 480,
+   "materials": {
+    "Iron": 48,
+    "Stone": 432
+   }
+  },
+  "Nightfall_Buildings_Keep": {
+   "min": [
+    -17.33,
+    -1.0,
+    -14.33
+   ],
+   "max": [
+    17.33,
+    60.7,
+    14.33
+   ],
+   "tris": 4678,
+   "materials": {
+    "Crimson": 352,
+    "Iron": 798,
+    "Stone": 3000,
+    "Tile": 528
+   }
+  },
+  "Nightfall_Buildings_Armory": {
+   "min": [
+    -18.22,
+    -1.0,
+    -13.38
+   ],
+   "max": [
+    18.22,
+    20.4,
+    8.96
+   ],
+   "tris": 2210,
+   "materials": {
+    "Crimson": 244,
+    "Iron": 350,
+    "Stone": 1088,
+    "Tile": 528
+   }
+  },
+  "Nightfall_Courts_Parapet12": {
+   "min": [
+    -6.0,
+    -1.0,
+    -1.0
+   ],
+   "max": [
+    6.0,
+    3.45,
+    1.0
+   ],
+   "tris": 66,
+   "materials": {
+    "Iron": 42,
+    "Stone": 24
+   }
+  },
+  "Nightfall_Courts_BridgeFlight": {
+   "min": [
+    -4.0,
+    -9.6,
+    0.0
+   ],
+   "max": [
+    4.0,
+    10.95,
+    12.0
+   ],
+   "tris": 336,
+   "materials": {
+    "Iron": 48,
+    "Stone": 288
+   }
+  },
+  "Nightfall_Courts_BridgeTop": {
+   "min": [
+    -4.0,
+    -9.6,
+    0.0
+   ],
+   "max": [
+    4.0,
+    3.25,
+    4.0
+   ],
+   "tris": 52,
+   "materials": {
+    "Iron": 16,
+    "Stone": 36
+   }
+  },
+  "Nightfall_Courts_ChainBridge": {
+   "min": [
+    -11.92,
+    -2.0,
+    -4.72
+   ],
+   "max": [
+    11.92,
+    11.55,
+    4.72
+   ],
+   "tris": 2884,
+   "materials": {
+    "Crimson": 48,
+    "Ember": 12,
+    "Iron": 1240,
+    "Stone": 1584
+   }
+  },
+  "Nightfall_Courts_Parapet6": {
+   "min": [
+    -3.0,
+    -1.0,
+    -1.0
+   ],
+   "max": [
+    3.0,
+    3.45,
+    1.0
+   ],
+   "tris": 48,
+   "materials": {
+    "Iron": 24,
+    "Stone": 24
+   }
+  },
+  "Nightfall_Buildings_Residence": {
+   "min": [
+    -7.08,
+    -1.0,
+    -10.68
+   ],
+   "max": [
+    7.08,
+    34.7,
+    6.4
+   ],
+   "tris": 1454,
+   "materials": {
+    "Crimson": 156,
+    "Iron": 758,
+    "Stone": 276,
+    "Tile": 264
+   }
+  },
+  "Nightfall_Props_TalonPlinth": {
+   "min": [
+    -3.94,
+    -0.4,
+    -1.54
+   ],
+   "max": [
+    3.94,
+    3.0,
+    1.54
+   ],
+   "tris": 156,
+   "materials": {
+    "Crimson": 12,
+    "Iron": 120,
+    "Stone": 24
+   }
+  }
+ }
+}

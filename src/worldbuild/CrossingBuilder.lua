@@ -17,8 +17,9 @@
 --   <Faction>Pad   empty markers for each headquarters (centre, gate, main hall, vault, trial points): nothing is built on the pads yet
 --   Approach       the route zones and checks WorldService uses to bring back a player who falls (bridge, spur, plaza, stairs, pads, hidden paths)
 --   Checkpoint     where a fall from the island lands (the plaza, facing the oath stone)
---   Dress          basalt and shards (the Ember Peak's) on the Demonic side and the blood moon (the Orthodox side's own trees and falls are Dawnspire's: DawnspireBuilder;
---                  the Unorthodox side's are Windrift's: WindriftBuilder, which also replaced the Jade Grove's forest and the one waterfall the first foundation made)
+--   Dress          the blood moon (the Orthodox side's own trees and falls are Dawnspire's: DawnspireBuilder; the Unorthodox side's are Windrift's: WindriftBuilder, which also
+--                  replaced the Jade Grove's forest and the one waterfall the first foundation made; the Demonic side's are Nightfall's: NightfallBuilder, which also replaced the
+--                  Ember Peak's basalt this foundation borrowed there)
 --   HubApron       the hub's end of the bridge: a marble apron (cobblestone under it, so no grass grows through) and a pair of crystal lamps
 -- No Chinese forms anywhere (no paifang, red lacquer or lanterns, dragon or ridge beasts, lettering): Korean hanok and gate forms, plain
 -- timber and stone, Japanese-style paper lanterns, and shapes of its own.
@@ -838,30 +839,14 @@ local function buildApproach(root)
     return #zones:GetChildren()
 end
 
--- ---------- the mountains' dressing: trees, rocks, waterfalls, the moon ----------
--- Reused for now (the Demonic territory gets its own library later): the Ember Peak's basalt clusters and shards on the Demonic side, the place's own waterfall
--- (WorldBuilder.buildWaterfall, for any fall Placements.MurimCrossing.Falls still lists: none now). The Orthodox side's borrowed Blossom Sanctuary trees are gone
--- (2026-11-22: Dawnspire plants its own, DawnspireBuilder) and so are the Unorthodox side's Jade Grove trees and its fall (2026-11-23: WindriftBuilder). A piece whose kit
--- isn't stored is left out (the build still runs).
-local EMBER = { "EP_BasaltClusterA", "EP_BasaltClusterB", "EP_ObsidianShard", "EP_BasaltStep", "EP_PetrifiedTreeA", "EP_ObsidianShard", "EP_PetrifiedTreeB", "EP_BasaltClusterA" }
-
-local function place(parent, kit, names, list, scaleFrom, scaleTo, sink)
-    local placed = 0
-    for index, entry in list do
-        local name = names[(index - 1) % #names + 1]
-        if WorldBuilder.hasTemplate(kit, name) then
-            local scale = scaleFrom + (scaleTo - scaleFrom) * (((index * 37) % 10) / 9)
-            WorldBuilder.placeTemplate(kit, name, at(entry[1] - Vector3.new(0, sink, 0), entry[2]), parent, scale)
-            placed += 1
-        end
-    end
-    return placed
-end
+-- ---------- the mountains' dressing: waterfalls, the moon ----------
+-- The place's own waterfall (WorldBuilder.buildWaterfall, for any fall Placements.MurimCrossing.Falls still lists: none now). The Orthodox side's borrowed Blossom Sanctuary trees are gone
+-- (2026-11-22: Dawnspire plants its own, DawnspireBuilder), so are the Unorthodox side's Jade Grove trees and its fall (2026-11-23: WindriftBuilder) and the Demonic side's borrowed Ember Peak
+-- basalt (2026-11-23: Nightfall brings its own rocks and trees, NightfallBuilder).
 
 local function buildDress(root)
     local dress = folder(root, "Dress")
     local counts = {}
-    counts.Ember = place(folder(dress, "Basalt"), "EmberPeak", EMBER, P.Dress.RocksD, 1.8, 3.0, 0.5)
     -- waterfalls: where a mesa's rim faces the plaza
     local falls = folder(dress, "Waterfalls")
     for index, fall in P.Falls do
@@ -1037,6 +1022,10 @@ function CrossingBuilder.build()
     local okWindrift, windrift = pcall(function()
         return require(WorldBuild:WaitForChild("WindriftBuilder"):Clone()).build()
     end)
+    -- Nightfall Citadel (NightfallBuilder): rebuilt here too, for the same reason (it does nothing until its kit is stored)
+    local okNightfall, nightfall = pcall(function()
+        return require(WorldBuild:WaitForChild("NightfallBuilder"):Clone()).build()
+    end)
     WorldBuilder.applyCollision(root)
     local parts = 0
     for _, d in root:GetDescendants() do
@@ -1044,9 +1033,9 @@ function CrossingBuilder.build()
             parts += 1
         end
     end
-    return { Parts = parts, Zones = zones, ApronVoxels = cobbled, Lamps = lamps, Basalt = dress.Ember, Falls = dress.Falls,
+    return { Parts = parts, Zones = zones, ApronVoxels = cobbled, Lamps = lamps, Falls = dress.Falls,
         Hall = if okHall then hall else tostring(hall), Territory = if okTerritory then territory else tostring(territory),
-        Windrift = if okWindrift then windrift else tostring(windrift) }
+        Windrift = if okWindrift then windrift else tostring(windrift), Nightfall = if okNightfall then nightfall else tostring(nightfall) }
 end
 
 return CrossingBuilder
