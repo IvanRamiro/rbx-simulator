@@ -194,7 +194,8 @@ def overlay_for(pl):
         svg.append(label(x, z - 9, name, 6.2, "#ffffff", "700"))
     for name, (x, z, t) in {"ARENA": (0, -2, "MANTIS ARENA"), "GATE": (I.GATE[0], I.GATE[1] - 6, "Grove Gate"), "GLADE": (I.GLADE[0], I.GLADE[1] - 20, "Bloom Glade"),
                            "HERM": (I.HERMITAGE[0], I.HERMITAGE[1] - 16, "Hermitage"), "HOLLOW": (I.HOLLOW[0] - 4, I.HOLLOW[1] - 20, "Hollow"), "ELDER": (I.ELDER[0], I.ELDER[1] - 26, "Guardian Tree"),
-                           "RUINS": (I.RUINS[0], I.RUINS[1] + 24, "Ruin Court"), "PLATEAU": (I.PLATEAU_C[0] - 10, I.PLATEAU_C[1] - 6, "MISTFALL HEIGHTS"), "POND": (I.POND[0] + 16, I.POND[1] - 14, "Spirit Pond"),
+                           "RUINS": (I.RUINS[0], I.RUINS[1] + 24, "Ruin Court"), "PLATEAU": (I.PLATEAU_C[0] - 10, I.PLATEAU_C[1] - 6, "MISTFALL HEIGHTS"), "POND": (I.POND[0] + 22, I.POND[1] - 20, "Spirit Pond"),
+                           "RIDGE": (-88, -202, "Mossback Ridge"), "RIB": (I.RIB_POOL[0] - 6, I.RIB_POOL[1] + 14, "Ribbon Fall"), "RAMP": (-190, -80, "the ramp"),
                            "RIFT": (-108, 114, "Rift of Roots"), "VAL": (I.W_VALLEY[0] - 6, I.W_VALLEY[1] + 40, "Western Valley"), "GLEN": (I.GLEN[0] + 26, I.GLEN[1] - 14, "Northern Glen"),
                            "GORGE": (-134, 8, "Mosswater Gorge")}.items():
         svg.append(label(x, z, t, 7.5 if name in ("ARENA", "PLATEAU") else 6.4, "#ffffff", "800"))
@@ -265,9 +266,10 @@ if __name__ == "__main__":
         import jade_lib_forest as F
         pl = F.build()
         A = (I.PLATEAU_C[0] - I.DIR_F[0] * 36, I.PLATEAU_C[1] - I.DIR_F[1] * 36)
-        B = (I.PLATEAU_C[0] + I.DIR_F[0] * 100, I.PLATEAU_C[1] + I.DIR_F[1] * 100)
+        B = (I.PLATEAU_C[0] + I.DIR_F[0] * 110, I.PLATEAU_C[1] + I.DIR_F[1] * 110)
+        pa = I.PLATEAU_A + I.FACE_BACK
         section(os.path.join(os.path.dirname(out), "section_high_falls.png"), pl, (A, B), "Cross-section: Mistfall Heights, the High Falls and grotto, the Spirit Pond", [
-            ("spring", 0, 14), ("falls lip", 36 * 0.8 + 36, 15), ("grotto cliff foot", 36 + 34, 0), ("Spirit Pond", 36 + 34 + 9, 0)])
+            ("spring", 36 - 0.46 * I.PLATEAU_A, 31), ("falls lip", 36 + pa + 1.4, 31), ("face foot", 36 + pa, 1), ("Spirit Pond", 36 + pa + I.POND_AHEAD, 0)])
         b = pl.bridges["RootBridge"]
         mx, mz = (b["A"][0] + b["B"][0]) / 2, (b["A"][1] + b["B"][1]) / 2
         d = (b["B"][0] - b["A"][0], b["B"][1] - b["A"][1])
@@ -278,3 +280,78 @@ if __name__ == "__main__":
     elif what == "plan":
         cells = plan(out)
         print("cells", len(cells), "area", len(cells) * 16, "ratio", round(len(cells) * 16 / 73664.0, 3))
+
+
+# ======================================================================================================================
+# relief map (polish pass 2026-11-23): heights as a colour ramp with hill shading and contour lines every 5 studs, key lines and sites drawn over it
+# ======================================================================================================================
+def _ramp(h):
+    stops = [(-14.0, (26, 60, 92)), (-6.0, (36, 110, 118)), (0.0, (70, 140, 82)), (6.0, (126, 168, 84)), (14.0, (190, 186, 104)), (22.0, (206, 160, 100)), (31.0, (240, 226, 206))]
+    if h <= stops[0][0]:
+        return stops[0][1]
+    for (a, ca), (b, cb) in zip(stops, stops[1:]):
+        if h <= b:
+            t = (h - a) / (b - a)
+            return tuple(int(ca[i] + (cb[i] - ca[i]) * t) for i in range(3))
+    return stops[-1][1]
+
+
+def relief(out, pl=None, title="JADE GROVE - relief (height colours, contours every 5 studs)", width=2400, step=2.0, box=None, lines=(), marks=()):
+    H = I.HALF
+    x0, x1, z0, z1 = box if box else (-H, H, -H, H)
+    nx, nz = int((x1 - x0) / step), int((z1 - z0) / step)
+    hs = {}
+    for j in range(nz):
+        for i in range(nx):
+            hs[(i, j)] = I.ground(x0 + (i + 0.5) * step, z0 + (j + 0.5) * step)
+    px = 4
+    rows = []
+    for rj in range(nz * px):
+        j = rj // px
+        row = bytearray()
+        for ri in range(nx * px):
+            i = ri // px
+            h = hs[(i, j)]
+            if h is None:
+                row += b"\x00\x00\x00\x00"
+                continue
+            e = hs.get((i + 1, j), h) if hs.get((i + 1, j)) is not None else h
+            w = hs.get((i - 1, j), h) if hs.get((i - 1, j)) is not None else h
+            n = hs.get((i, j - 1), h) if hs.get((i, j - 1)) is not None else h
+            s = hs.get((i, j + 1), h) if hs.get((i, j + 1)) is not None else h
+            # light from the north-west: slopes facing it are brighter
+            shade = ((w - e) + (n - s)) * 0.5 / step
+            k = max(0.55, min(1.45, 1.0 + 0.55 * shade))
+            col = _ramp(h)
+            band = math.floor(h / 5.0)
+            for (di, dj) in ((1, 0), (0, 1)):
+                o = hs.get((i + di, j + dj))
+                if o is not None and math.floor(o / 5.0) != band:
+                    k *= 0.72
+                    break
+            row += bytes(tuple(max(0, min(255, int(c * k))) for c in col) + (255,))
+        rows.append(row)
+    png = png_rgba(nx * px, nz * px, rows)
+    W, Hh = x1 - x0, z1 - z0
+    parts = ['<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" fill="#0b1020"/>' % (x0 - 20, z0 - 60, W + 40, Hh + 80),
+             '<image x="%.1f" y="%.1f" width="%.1f" height="%.1f" href="data:image/png;base64,%s"/>' % (x0, z0, W, Hh, base64.b64encode(png).decode())]
+    for g in range(int(x0 // 50) * 50, int(x1) + 1, 50):
+        if x0 <= g <= x1:
+            parts.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" stroke="#fff" stroke-opacity="0.12" stroke-width="0.4"/>' % (g, z0, g, z1))
+            parts.append(label(g, z0 - 3, str(g), 5.0, "#aab6d8", "500", opacity=0.9))
+    for g in range(int(z0 // 50) * 50, int(z1) + 1, 50):
+        if z0 <= g <= z1:
+            parts.append('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" stroke="#fff" stroke-opacity="0.12" stroke-width="0.4"/>' % (x0, g, x1, g))
+            parts.append(label(x0 + 2, g + 2, str(g), 5.0, "#aab6d8", "500", "start", 0.9))
+    for (cx, cz, r) in I.PROTECT:
+        parts.append('<circle cx="%.1f" cy="%.1f" r="%.1f" fill="none" stroke="#ffd76a" stroke-opacity="0.35" stroke-width="0.5" stroke-dasharray="2 2"/>' % (cx, cz, r))
+    for pts, colour, wd in lines:
+        parts.append(polyline(pts, colour, wd, None, 0.9))
+    for (x, z, text, size) in marks:
+        parts.append(label(x, z, text, size, "#ffffff", "800"))
+    parts.append(label(x0 + 4, z0 - 22, title, 8, "#ffffff", "800", "start"))
+    vb = (x0 - 20, z0 - 60, W + 40, Hh + 80)
+    render_svg(out, '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="%.1f %.1f %.1f %.1f" font-family="Helvetica Neue, Arial, sans-serif">%s</svg>' % (
+        width, int(width * vb[3] / vb[2]), vb[0], vb[1], vb[2], vb[3], "\n".join(parts)), vb[2], vb[3], width)
+    vals = [v for v in hs.values() if v is not None]
+    return min(vals), max(vals)
