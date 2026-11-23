@@ -34,7 +34,7 @@ LOOKS = {
     # wood and bark
     "Char": {"Material": "Basalt", "Color": [36, 32, 36]},                        # charred black wood (trunks, limbs, thorn stems)
     "IronBark": {"Material": "CorrodedMetal", "Color": [58, 52, 58]},             # the iron pines' bark and spike stars
-    "Thorn": {"Material": "SmoothPlastic", "Color": [172, 26, 36]},               # crimson thorn tips
+    "Thorn": {"Material": "Metal", "Color": [172, 26, 36]},                        # crimson thorn tips (lacquered iron)
     # ember
     "Ember": {"Material": "CrackedLava", "Color": [255, 96, 24], "CastShadow": False},   # glowing cracks, embers, lava seams
     # stone
@@ -46,8 +46,8 @@ LOOKS = {
     "AshPile": {"Material": "Sand", "Color": [128, 124, 126], "CastShadow": False},    # drifts of grey ash
     "AshCap": {"Material": "Concrete", "Color": [150, 146, 150]},                 # pale fungus caps and stalks
     "SpearBlade": {"Material": "Metal", "Color": [46, 46, 58]},                   # iron leaves
-    "DeepCrimson": {"Material": "Fabric", "Color": [96, 10, 24]},                 # stems, roses, dark crimson leaves
-    "Crimson": {"Material": "SmoothPlastic", "Color": [206, 28, 46], "CastShadow": False},   # spider lily
+    "DeepCrimson": {"Material": "Concrete", "Color": [96, 10, 24]},               # stems, roses, dark crimson leaves
+    "Crimson": {"Material": "Concrete", "Color": [206, 28, 46], "CastShadow": False},   # spider lily
 }
 
 UP = (0.0, 1.0, 0.0)
@@ -808,13 +808,13 @@ def hex_column(g, cx, cz, a, h, rot, tops, taper=0.0, y0=-0.5):
 
 def basalt_columns():
     """The crown of columns: ten hexagonal basalt columns standing in a ring 6 across round a hollow where an ember pit glows (a low hexagonal bed at 0.4),
-    heights from 2.4 to 9.4 in no order, every top chiselled to its own slope; the columns touch their neighbours. Two outliers (a thin pike 7.4 and a
+    two tall horns (11.4 and 10.2) on opposite sides and eight low teeth (2.2 to 4.6), every top chiselled to its own slope; the columns touch their neighbours. Two outliers (a thin pike 7.4 and a
     stub 1.6) stand off the ring. Upright, 13 across with the outliers."""
     P = Piece()
     rng = random.Random(500)
     g = P.geo("Basalt")
     ge = P.geo("Ember")
-    hs = [9.4, 4.2, 7.0, 2.6, 8.2, 3.4, 6.2, 2.4, 7.6, 4.6]
+    hs = [11.4, 3.0, 4.6, 2.2, 3.8, 2.6, 10.2, 2.4, 4.2, 3.2]
     R = 3.15
     for k, h in enumerate(hs):
         az = TAU * k / 10 + 0.2
@@ -870,19 +870,19 @@ def obsidian_shards():
 
 
 def split_obelisk():
-    """The slipped obelisk: a four-sided basalt shaft 5.2 high, a narrower middle part shifted 0.5 and turned 9 degrees on it (to 8.6), and a broad capstone
-    (4.2 x 2.7, 1.4 thick) that has slid 1.4 off to one side and carries a small pyramid, 11.9 high in all; an ember seam glows in each joint, and a
+    """The slipped obelisk: a four-sided basalt shaft 5.2 high, a narrower middle part shifted 0.4 and turned 9 degrees on it (to 8.6), and a broad capstone
+    (5.8 x 4.6, 1.4 thick) that has slid 1.4 off to one side and carries a small pyramid, 11.9 high in all; an ember seam glows in each joint, and a
     fallen piece of shaft leans against the foot on the other side. Upright."""
     P = Piece()
     gb = P.geo("Basalt")
     ge = P.geo("Ember")
-    add_convex(gb, frustum(0.0, 0.0, 1.5, -0.5, 5.2, taper=0.045, rot=0.1))
-    add_convex(gb, frustum(0.5, -0.25, 1.15, 5.3, 8.6, taper=0.05, rot=0.26))
-    cap = polygon_planes(1.5, -0.2, [2.1, 1.35, 2.1, 1.35], rot=0.12) + [top_plane(1.5, -0.2, 10.1, 0.35, 0.1), ((0.0, -1.0, 0.0), -8.7)]
+    add_convex(gb, frustum(0.0, 0.0, 1.3, -0.5, 5.2, taper=0.04, rot=0.1))
+    add_convex(gb, frustum(0.4, -0.25, 0.98, 5.3, 8.6, taper=0.04, rot=0.26))
+    cap = polygon_planes(1.4, -0.5, [2.9, 2.3, 2.9, 2.3], rot=0.12) + [top_plane(1.3, -0.5, 10.1, 0.35, 0.1), ((0.0, -1.0, 0.0), -8.7)]
     add_convex(gb, cap)
-    add_convex(gb, frustum(1.5, -0.2, 0.95, 10.0, 11.9, taper=0.5, rot=0.2))
-    add_convex(ge, frustum(0.05, -0.05, 1.22, 5.18, 5.32, rot=0.42))
-    add_convex(ge, frustum(0.7, -0.3, 0.97, 8.58, 8.72, rot=0.05))
+    add_convex(gb, frustum(1.4, -0.5, 0.95, 10.0, 11.9, taper=0.5, rot=0.2))
+    add_convex(ge, frustum(0.05, -0.05, 1.05, 5.18, 5.32, rot=0.42))
+    add_convex(ge, frustum(0.6, -0.3, 0.8, 8.58, 8.72, rot=0.05))
     fall = xform(frustum(0.0, 0.0, 0.95, 0.0, 3.0, taper=0.04, rot=0.5, tops=(0.6, 0.0)), 0.0, (0.0, 0.0, 0.0), rz=-0.9)
     fall = xform(fall, -0.3, (-2.9, 0.2, 0.6)) + [ground(-0.35)]
     add_convex(gb, fall)
@@ -920,15 +920,15 @@ def ember_cone():
 
 
 def ember_fangs():
-    """The ember fangs: two five-sided basalt fangs 8.2 and 6 high standing 7 apart in a shallow pool of glowing ember (the pool is 11 x 4.6 and 0.5 deep and
+    """The ember fangs: two five-sided basalt fangs 10.4 and 7.4 high standing 7 apart in a shallow pool of glowing ember (the pool is 11 x 4.6 and 0.5 deep and
     joins their feet), the tops chiselled to a point, each leaning 3 degrees outward; two ember spikes in the pool and basalt chips at the feet. Upright,
     12 across, 4.6 deep."""
     P = Piece()
     gb = P.geo("Basalt")
     ge = P.geo("Ember")
-    f1 = xform(frustum(0.0, 0.0, 1.6, -0.5, 8.2, taper=0.11, rot=0.3, n=5, tops=(1.4, 0.2)), 0.0, (0.0, 0.0, 0.0), rz=0.05)
+    f1 = xform(frustum(0.0, 0.0, 1.3, -0.5, 10.4, taper=0.1, rot=0.3, n=5, tops=(1.5, 0.2)), 0.0, (0.0, 0.0, 0.0), rz=0.05)
     f1 = xform(f1, 0.0, (-3.4, 0.0, 0.0))
-    f2 = xform(frustum(0.0, 0.0, 1.35, -0.5, 6.0, taper=0.12, rot=0.9, n=5, tops=(-1.3, 0.3)), 0.0, (0.0, 0.0, 0.0), rz=-0.05)
+    f2 = xform(frustum(0.0, 0.0, 1.1, -0.5, 7.4, taper=0.11, rot=0.9, n=5, tops=(-1.4, 0.3)), 0.0, (0.0, 0.0, 0.0), rz=-0.05)
     f2 = xform(f2, 0.0, (3.3, 0.0, 0.4))
     add_convex(gb, f1)
     add_convex(gb, f2)
@@ -1434,7 +1434,11 @@ def _band_boxes(pts, axis, lo, hi, step, shrink, min_size=0.3, ymin=0.0):
             hi3 = [max(p[i] for p in sel) for i in range(3)]
             c = [(lo3[i] + hi3[i]) / 2 for i in range(3)]
             h = [(hi3[i] - lo3[i]) / 2 * (1 - (0.0 if i == 1 else shrink)) for i in range(3)]
-            bx = {"x0": round(c[0] - h[0], 2), "x1": round(c[0] + h[0], 2), "y0": round(max(ymin, c[1] - h[1]), 2), "y1": round(c[1] + h[1], 2),
+            y0, y1 = c[1] - h[1], c[1] + h[1]
+            if axis == 1:               # bands run on one another: a band's box reaches its band's own edges (only the lowest and the highest follow the points)
+                y0 = lo3[1] if a <= lo + 1e-6 else a
+                y1 = hi3[1] if b >= hi - 1e-6 else b
+            bx = {"x0": round(c[0] - h[0], 2), "x1": round(c[0] + h[0], 2), "y0": round(max(ymin, y0), 2), "y1": round(y1, 2),
                   "z0": round(c[2] - h[2], 2), "z1": round(c[2] + h[2], 2)}
             if bx["x1"] - bx["x0"] > min_size and bx["y1"] - bx["y0"] > min_size and bx["z1"] - bx["z0"] > min_size:
                 out.append(bx)
@@ -1478,7 +1482,7 @@ def body_boxes(piece, suffixes=("Basalt",), step=2.6, shrink=0.12, min_h=0.9, ta
         for sh in range(n):
             if shells is not None and sh not in shells:
                 continue
-            pts = _shell_samples(g, {sh}, shell, per_edge=3)
+            pts = _shell_samples(g, {sh}, shell, per_edge=9)
             if not pts:
                 continue
             top = max(p[1] for p in pts)
@@ -1510,18 +1514,18 @@ USE = {
     "AshthornA2": ("the crowned thorn: a short grey bole with a fan of spears, 16 high and 8 across at the crown: gate sides, ledges and path forks; keep 4 studs clear", 4.0),
     "IronpineB1": ("the twisted iron pine: a mast 21 high with spike stars, 12 across: along walls and stairs and on terraces; keep 5 studs clear of other trees", 5.0),
     "IronpineB2": ("the bolt pine: a trunk that kinks like lightning, 17 high and 13 across: cliff edges, ledge corners and bridge heads, standing alone; keep 5 studs clear", 5.0),
-    "ShardtreeC1": ("the obsidian tree: black glass branches, 15 high, 8 across: chasm rims, the fissure's lip and the keep's terrace; keep 4 studs clear", 4.0),
+    "ShardtreeC1": ("the obsidian tree: black glass branches, 15 high, 7.5 across: chasm rims, the fissure's lip and the keep's terrace; keep 4 studs clear", 4.0),
     "ShardtreeC2": ("the obsidian sapling: 8.5 high, 4 across: beside C1, on rock feet and along rims; keep 2 studs clear", 2.0),
-    "CinderstumpD1": ("the hollow stump: a ring of burnt staves 7.6 high round glowing embers (the ring is hollow, a player can not enter it: the staves are boxed), 10 across: court corners and the training ground's edge; keep 3 studs clear; the ember bed glows by night", 3.0),
-    "CinderstumpD2": ("the three-claw stump: pillars of 11, 8.2 and 5.5 with an ember core between them, 8.5 across: gate flanks and wall ends; keep 3 studs clear", 3.0),
+    "CinderstumpD1": ("the hollow stump: a ring of six narrow burnt staves 2 to 5.4 high round glowing embers with ember-tipped thorns to 11 high, 11 across (the staves are boxed, the centre is free but fenced by them): court corners and the training ground's edge; keep 3 studs clear; the ember bed glows by night", 3.0),
+    "CinderstumpD2": ('the three-claw stump: three pillars of 11, 8.2 and 5.5 standing apart on an ember core, bare arms and ember-tipped thorns, 16 high, 11 across: gate flanks and wall ends; keep 3 studs clear', 3.0),
     "GiantBlackthorn": ("THE landmark: one only: a 47 high dead thorn tree held by six stone talons (the mound and talons are part of the piece: set it on flat ground, 22 across), at the keep's court or the great stair's head; keep 14 studs clear all round", 14.0),
-    "BasaltColumns": ("a causeway of hexagonal basalt columns up to 9.3 high, 9 across: against a wall or at a stair's side, the lower ward's edge; keep 2 studs clear", 2.0),
-    "BasaltPalisade": ("a row of nine columns 18 long, 2.8 to 9.3 high: the back of a court, a path's edge or a rim, a natural battlement; keep 2 studs clear, yaw so its length runs along the edge", 2.0),
+    "BasaltColumns": ("the crown of columns: ten hexagonal basalt columns in a ring round a glowing ember pit, two tall horns (11.4 and 10.2) and eight low teeth, with two outliers, 12.5 high and 9.6 across: against a wall or at a stair's side, the lower ward's edge; keep 2 studs clear", 2.0),
+    "BasaltPalisade": ("the pike row: eleven columns in a row 18 long, a comb of thin pikes (up to 10.3 high) between low blocks: the back of a court, a path's edge or a rim, a natural battlement; keep 2 studs clear, yaw so its length runs along the edge", 2.0),
     "ObsidianShards": ("a cluster of nine black glass shards, the tallest 9.5, on a low basalt mound, 7 across: fissure lips, court centres and the arena's rim; keep 3 studs clear; the collision is the mound and the central core only", 3.0),
-    "SplitObelisk": ("a broken obelisk 11.9 high with ember in its joints and a fallen piece (the fallen piece lies to +X of the shaft: yaw it away from a path): court markers and the gate's approach; keep 3 studs clear", 3.0),
-    "EmberCone": ("an ember cone 6 high with a glowing crater and four glowing cracks, 10 across with its blocks: beside the fissure, on terraces and as a brazier-like landmark; keep 3 studs clear; the crater glows", 3.0),
-    "EmberFangs": ("two basalt fangs 8.4 and 5.4 high with an ember core between them, 8 across: gate flanks, stair sides and the bridge heads; keep 2 studs clear", 2.0),
-    "CragSpires": ("a crag of five spires up to 13.5 high on a massif 2.4 high, 13 across: backdrops, the edge of the upper ward and the cliff sides; keep 3 studs clear", 3.0),
+    "SplitObelisk": ("a slipped obelisk 11.9 high with a broad capstone that has slid off to +X and ember in its joints, and a fallen piece leaning at the foot on the -X side (yaw it away from a path): court markers and the gate's approach; 8 x 5.5; keep 3 studs clear", 3.0),
+    "EmberCone": ('an ember cone 7.2 high with a glowing crater, a crown of shards and four glowing cracks, 9 across with its blocks: beside the fissure, on terraces and as a brazier-like landmark; keep 3 studs clear; the crater glows', 3.0),
+    "EmberFangs": ('two basalt fangs 10.4 and 7.4 high standing 7 apart in a shallow pool of glowing ember, 11.3 x 5.9: gate flanks, stair sides and the bridge heads (the pool is part of the piece: lay it on level ground; the collision is the two fangs); keep 2 studs clear', 2.0),
+    "CragSpires": ('a crag of five spires up to 11.8 high on a massif 2.4 high, 13 across: backdrops, the edge of the upper ward and the cliff sides; keep 3 studs clear', 3.0),
     "ShardScatter": ("a scatter of obsidian shards (up to 2.3 high) and chips over a patch 6 across, no collision: rock feet, the fissure's edge and the training ground", 0.0),
     "BasaltPave": ("WALKABLE: a strip of hexagonal basalt pavers 4 wide and 9 long along z with a glowing honeycomb of ember in the gaps, every top at y 0.20: lay the piece with its origin 0.3 under the wanted top and no collision part (the mesh itself walks); chain end to end 8.63 apart along z", 0.0),
     "HexStepsA": ("WALKABLE: four hexagonal basalt stepping slabs along z, 4.2 apart (a straight way, 16 long); every top at y 0.20: lay the piece with its origin 0.3 under the wanted top, no collision part; the slabs are tied by buried bars", 0.0),
@@ -1532,7 +1536,7 @@ USE = {
     "SpiderLilyB": ("a drift of seven short crimson spider lilies (1.3 to 2.3 high), 3.6 across: along path edges and under trees, no collision", 0.0),
     "Thornbrake": ("a low thorn tangle 3.8 across and 1.7 high, crimson thorns: on slopes and under walls; keep 1 stud clear; one box collider", 1.0),
     "ThornClimber": ("a thorn vine for a wall, post or pillar, 5 wide, 7 high and 1.4 deep (z): stand it against a wall with its back to -Z... either face has thorns; no collision", 0.0),
-    "Spearleaf": ("a spearleaf (dark iron agave) 4 across and 3.4 high: path sides, rock feet and the court's corners, no collision", 0.0),
+    "Spearleaf": ("a spearleaf (dark iron agave) 4 across and 3.1 high: path sides, rock feet and the court's corners, no collision", 0.0),
     "Thornrose": ("three thornroses, deep crimson blooms on thorny stalks, 1.2 to 3 high: sparse accents among ash grass, no collision", 0.0),
     "Cinderbush": ("a cinderbush, black sticks tipped with embers, 3 across and 2.2 high: scree, rim edges and the fissure's side, no collision", 0.0),
     "Ashcap": ("a clump of pale angular fungus 4 across and 2 high: shaded corners and wall feet, no collision", 0.0),
@@ -1571,17 +1575,19 @@ def collision_for(name, piece):
     if base == "ShardtreeC2":
         return trunk_boxes(piece, "Obsidian", 3.8, step=3.5, shrink=0.18)
     if base == "CinderstumpD1":
-        return body_boxes(piece, ("Char",), min_h=1.4, tall=3.5, shells=set(range(6)))
+        return body_boxes(piece, ("Char",), min_h=1.4, tall=9.0, shells=set(range(6)))
     if base == "CinderstumpD2":
         return body_boxes(piece, ("Char",), min_h=1.4, tall=3.5, step=2.8, shells=set(range(3)))
     if base == "GiantBlackthorn":
         return trunk_boxes(piece, "Char", 22.0, step=3.6, shrink=0.14) + body_boxes(piece, ("Char",), min_h=1.4, tall=3.5, shells=set(range(1, 8)))
     if base in ("BasaltColumns", "BasaltPalisade", "EmberFangs"):
         return body_boxes(piece, ("Basalt",), min_h=1.4, tall=14.0)
-    if base in ("CragSpires", "EmberCone"):
+    if base == "CragSpires":
         return body_boxes(piece, ("Basalt",), min_h=1.4, tall=3.5, step=3.2)
+    if base == "EmberCone":
+        return body_boxes(piece, ("Basalt",), min_h=1.4, tall=3.0, step=2.2, shells={0})
     if base == "SplitObelisk":
-        return body_boxes(piece, ("Basalt",), min_h=1.4, tall=3.5, step=3.0, shells=set(range(4)))
+        return body_boxes(piece, ("Basalt",), min_h=1.4, tall=3.5, step=3.0, shells=set(range(5)))
     if base == "ObsidianShards":
         return body_boxes(piece, ("Obsidian",), min_h=0.9, tall=3.5, shells={0}) + [{"x0": -1.3, "x1": 1.3, "y0": 0.0, "y1": 6.0, "z0": -1.3, "z1": 1.3}]
     if base == "Thornbrake":
