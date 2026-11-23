@@ -60,6 +60,7 @@ local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local applyHudScale = require(UI:WaitForChild("HudScale"))
 local Sfx = require(Client:WaitForChild("Audio"):WaitForChild("Sfx"))
+local BreakthroughShow = require(Client:WaitForChild("Auras"):WaitForChild("BreakthroughShow"))
 local LOW = require(Client:WaitForChild("Quality")).Low
 local CodexState = require(script.Parent:WaitForChild("CodexState"))
 local PetPreload = require(script.Parent:WaitForChild("PetPreload"))
@@ -454,7 +455,7 @@ local function play(result)
 
     -- the camera: round to the egg, a slow push in, a shake at the crack
     local camera = Workspace.CurrentCamera
-    local saved = { Type = camera.CameraType, CFrame = camera.CFrame, FieldOfView = camera.FieldOfView }
+    local saved = { Type = camera.CameraType, CFrame = camera.CFrame, FieldOfView = BreakthroughShow.baseFov() or camera.FieldOfView }
     local model = result.Staged
     local eggBase = if model and model.PrimaryPart then model:GetPivot() else nil
     local eggScale = if model and model.PrimaryPart then model:GetScale() else 1

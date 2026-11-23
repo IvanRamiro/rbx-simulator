@@ -151,10 +151,13 @@ local function onCharacterAdded(player, character)
             task.defer(hideAccessory, child)
         end
     end)
-    if not player:HasAppearanceLoaded() then
-        player.CharacterAppearanceLoaded:Wait()
+    -- (a plain CharacterAppearanceLoaded:Wait() never returned for a player who left first, holding the thread and the character
+    -- for the life of the server: bug audit, 2026-11-24)
+    local waited = 0
+    while not player:HasAppearanceLoaded() and player.Parent and player.Character == character and waited < 30 do
+        waited += task.wait(0.25)
     end
-    if player.Character == character then
+    if player.Parent and player.Character == character then
         applyToCharacter(player, character)
     end
 end

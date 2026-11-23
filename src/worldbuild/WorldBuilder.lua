@@ -1431,6 +1431,10 @@ function WorldBuilder.buildNpc(npc, rootCFrame, data)
     description.LeftLegColor, description.RightLegColor = body.Legs, body.Legs
     local rig = Players:CreateHumanoidModelFromDescription(description, Enum.HumanoidRigType.R15)
     rig.Name = npc
+    local stockAnimate = rig:FindFirstChild("Animate")
+    if stockAnimate then
+        stockAnimate:Destroy() -- (a LocalScript in the Workspace never runs; NpcService plays the idle on the server)
+    end
     rig.Head.TextureID = "" -- the stock face: each NPC wears its own
     rig:PivotTo(rootCFrame)
     rig.HumanoidRootPart.Anchored = true

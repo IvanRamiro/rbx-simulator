@@ -120,6 +120,9 @@ function actions.Redeem(player, raw)
     if typeof(raw) ~= "string" or #raw > 40 then
         return
     end
+    if Wallet.exportData(player) == nil then
+        return -- (as ClaimDaily: a code marked used before the wallet is set up would pay nothing; bug audit, 2026-11-24)
+    end
     local code = string.upper((string.gsub(raw, "%s", "")))
     local reward = Codes[code]
     local data = Rewards.get(player)
@@ -138,8 +141,8 @@ end
 
 function actions.ClaimGroup(player)
     local data = Rewards.get(player)
-    if config.Group.GroupId <= 0 or data.GroupClaimed then
-        return
+    if config.Group.GroupId <= 0 or data.GroupClaimed or Wallet.exportData(player) == nil then
+        return -- (no wallet yet: marking it claimed would pay nothing, as ClaimDaily; bug audit, 2026-11-24)
     end
     local ok, member = pcall(player.IsInGroup, player, config.Group.GroupId)
     if not ok then
@@ -175,7 +178,11 @@ end)
 -- a new UTC day reaches players already online
 while true do
     task.wait(60)
+    -- (each player under pcall: one error used to be able to stop this loop for the whole server; bug audit, 2026-11-24)
     for player in ready do
-        publish(player)
+        local ok, err = pcall(publish, player)
+        if not ok then
+            warn("RewardService: publish for " .. player.Name .. " failed: " .. tostring(err))
+        end
     end
 end

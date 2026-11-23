@@ -584,6 +584,12 @@ function Guardian:watchThief()
         self:dropEgg(from or egg.lastGrounded or egg.takenFrom)
         return
     end
+    -- caught by the long-run rule (a thief can't fly, so it budgets them at running pace): a client sprinting at flight speed in
+    -- short bursts under the burst rule (security audit, 2026-11-24)
+    if MovementGuard.isSuspect(player) then
+        self:dropEgg(egg.lastGrounded or egg.takenFrom)
+        return
+    end
     -- farther from where it was taken than the thief could honestly get: a hacked client creeping along
     -- under the burst rule. The egg falls where they stood
     if (position - egg.takenFrom).Magnitude > MovementGuard.maxTravel(player, os.clock() - egg.takenAt) + CARRY_SLACK then

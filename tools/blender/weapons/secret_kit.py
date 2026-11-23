@@ -1,6 +1,6 @@
 """What the three Murim faction secret weapons share (run inside Blender, headless):
 
-    blender -b --factory-startup --python tools/blender/weapons/secret_orthodox.py -- build|clay|export|review
+    blender -b --factory-startup --python tools/blender/weapons/sword_orthodox.py   (or sword_unorthodox.py, sword_demonic.py)
 
 They are built like the realm weapons (weapon_kit.py): high-detail pieces with procedural shaders, baked onto one
 game mesh ("Body"), plus Neon glow pieces, one per colour. This module adds what a hero prop needs on top of

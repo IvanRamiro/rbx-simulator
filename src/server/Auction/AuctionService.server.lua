@@ -18,7 +18,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 local TextService = game:GetService("TextService")
 
-local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local AuctionRules = require(ReplicatedStorage:WaitForChild("AuctionRules"))
 local NumberFormat = require(ReplicatedStorage:WaitForChild("NumberFormat"))
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
@@ -80,10 +79,7 @@ local function rankName(player)
     return Ranks.getPlayerRankName(player)
 end
 
-local function creatorPet(player, petId)
-    local creators = GameConfig.CreatorPets
-    return table.find(creators.UserIds, player.UserId) ~= nil and table.find(creators.PetIds, petId) ~= nil
-end
+local creatorPet = PetInventory.isCreatorPet
 
 local function makeP(player, paidOk)
     local p = { userId = player.UserId, name = player.DisplayName, paidOk = paidOk, ledger = AuctionLedger.get(player), pending = {} }
@@ -540,6 +536,11 @@ function actions.Bid(player, state, listingId, amount)
     if not nearAuctionHouse(player) then
         return result(player, false, "Walk back to the Auction House.")
     end
+    -- only a listing this player can have seen, as reads.Detail: each unknown id would cost a fresh store read from the
+    -- server's shared GetAsync budget (security audit, 2026-11-24)
+    if not (browse.byId[listingId] or records[listingId] or table.find(state.p.ledger.Watch, listingId)) then
+        return result(player, false, "That listing has ended.")
+    end
     local ok, record = readRecord(listingId, true)
     if not ok then
         return result(player, false, "The Auction House is busy. Try again in a moment.")
@@ -655,13 +656,27 @@ function reads.Claim(player, state)
     sendMine(player, state)
 end
 
-Event.OnServerEvent:Connect(function(player, action, ...)
+local function onRequest(player, action, ...)
     local state = players[player]
     if not state or typeof(action) ~= "string" then
         return
     end
     local now = os.clock()
     if now - (state.lastRequest or 0) < REQUEST_GAP then
+        -- a read (a listing's page, the browse list) arriving too soon is answered when the gap ends, one at a time, instead of
+        -- dropped: a BID or VIEW click just after the window's own poll sat on "Opening the listing..." for 10 s (bug audit,
+        -- 2026-11-24). Actions are still refused.
+        if reads[action] and not state.heldRead then
+            state.heldRead = true
+            local args = table.pack(...)
+            task.delay(REQUEST_GAP - (now - (state.lastRequest or 0)) + 0.02, function()
+                local current = players[player]
+                if current then
+                    current.heldRead = nil
+                    onRequest(player, action, table.unpack(args, 1, args.n))
+                end
+            end)
+        end
         return
     end
     state.lastRequest = now
@@ -708,7 +723,8 @@ Event.OnServerEvent:Connect(function(player, action, ...)
         end
     end
     return
-end)
+end
+Event.OnServerEvent:Connect(onRequest)
 
 -- ---------- the prompt: the Market's, which now opens the Auction House ----------
 local function watchPrompt(holder)

@@ -12,8 +12,12 @@
 -- * the long run (every SAMPLE_TIME): a travel allowance, a bucket filled at the fastest they can honestly
 --   keep up (RunSpeed, dashing as often as stamina allows, or sword flight), up to a burst for the dashes
 --   and air leaps in hand. Each sample spends what they moved, not counting falls.
--- Caught by either, they're "suspect" for SUSPECT_TIME: rewards are refused and it's logged. It never
--- kicks or drags anyone back: a wrong guess costs an honest player a few seconds, nothing more.
+-- Caught by either, they're "suspect": rewards are refused and it's logged. For at least SUSPECT_TIME, and for as long as an
+-- honest run over the same distance would have taken (up to SUSPECT_MOST), so a teleport saves no time: before this a cheat
+-- could teleport to any shop, altar or wheel and use it 5 s later (security audit, 2026-11-24). It never kicks or drags anyone
+-- back: a wrong guess costs an honest player a few seconds (their own moves are short), nothing more.
+-- A new character may be anywhere for SPAWN_GRACE while Roblox puts it at its spawn, but only on its spawn pad
+-- (player.RespawnLocation) or where the server moved it: anywhere else is a teleport too.
 --
 --   MovementGuard.isSuspect(player)          true while rewards should be refused
 --   MovementGuard.movedSince(player, t)      true if, since os.clock() `t`, they outran the burst rule or the server moved them
@@ -32,6 +36,7 @@ local MovementGuard = {}
 
 local SAMPLE_TIME = 0.25
 local SUSPECT_TIME = 5
+local SUSPECT_MOST = 120 -- seconds: the longest a single move keeps them suspect
 local BURST_SLACK = 60  -- studs of allowance for lag and small errors (the long run)
 local SPEED_SLACK = 1.15
 -- the burst rule's slack: LAG_SECONDS more of their top speed (packets reaching the server bunched, the server's own
@@ -101,7 +106,23 @@ local function flag(player, state, level, moved, seconds)
         warn("MovementGuard:", player.Name, "moved", math.floor(moved), "studs in", string.format("%.2f", seconds), "s")
         Analytics.event(player, "MovementSuspect", 1, level.RankId)
     end
-    state.suspectUntil = clock + SUSPECT_TIME
+    local honest = moved / math.max(sustainedSpeed(player, level), 1)
+    state.suspectUntil = math.max(state.suspectUntil, clock + math.clamp(honest, SUSPECT_TIME, SUSPECT_MOST))
+end
+
+-- During SPAWN_GRACE: true if `at` is on (or just over) their spawn pad, or where the server just moved them
+local function nearSpawn(player, state, at)
+    if state.resetTo and (at - state.resetTo).Magnitude <= RESET_NEAR then
+        return true
+    end
+    local pad = player.RespawnLocation
+    if not (pad and pad:IsA("BasePart")) then
+        return true -- (no pad to measure from: Roblox picks one; trust it)
+    end
+    local offset = pad.CFrame:PointToObjectSpace(at)
+    local half = pad.Size / 2
+    return math.abs(offset.X) <= half.X + RESET_NEAR and math.abs(offset.Z) <= half.Z + RESET_NEAR
+        and offset.Y >= -RESET_NEAR and offset.Y <= half.Y + 40
 end
 
 local function restartTrail(state, at, clock)
@@ -127,6 +148,14 @@ local function observe(player, state)
         return -- not moved: the place keeps the time it first showed
     end
     if clock < state.spawnUntil then
+        -- (measured every frame: the server receives a client teleport spread over several frames, so the first one saw a
+        -- fraction of it; flag keeps the longest window and logs once per window)
+        if not nearSpawn(player, state, now) then
+            local pad = player.RespawnLocation
+            local from = if pad and pad:IsA("BasePart") then pad.Position else now
+            flag(player, state, (levelOf(player)), (now - from).Magnitude, clock - (state.spawnUntil - SPAWN_GRACE))
+            state.movedAt, state.movedFrom = clock, from
+        end
         restartTrail(state, now, clock)
         return
     end

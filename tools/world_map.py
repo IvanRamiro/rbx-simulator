@@ -281,7 +281,7 @@ def world_map():
         "Yggdrasil": ((-380, 215), "YGGDRASIL", "the hub"),
         "BeginnerIsle": ((-480, -150), "BEGINNER ISLE", "open from the start - Stone Lion"),
         "JadeGrove": ((-420, -635), "JADE GROVE", "gate: Qi Gatherer - Bamboo Mantis Sage"),
-        "EmberPeak": ((-128, -880), "EMBER PEAK", "gate: Qi Awakener - Ember Xuanwu"),
+        "EmberPeak": ((-128, -880), "EMBER PEAK", "gate: Qi Awakener - Cinder Roc"),
         "MoonlitIsle": ((192, -985), "MOONLIT ISLE", "gate: Soul Awakening - Tiangou"),
         "OriginAbyss": ((560, -1070), "ORIGIN ABYSS", "gate: Divine Initiate - Pangu"),
         "BlossomSanctuary": ((490, 700), "BLOSSOM SANCTUARY", "Training Ground +50% Qi - stepping stones, open to all"),

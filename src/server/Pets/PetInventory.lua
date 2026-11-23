@@ -305,6 +305,13 @@ end
 -- Mutated }. The fused pet keeps the larger size of the two (a Giant copy is never lost by fusing it) and the rarer mutation (a
 -- Void copy is never lost either), and nothing else about it changes.
 -- The server picks the copy (PetRules.findMaterial): never a locked or equipped one, and a Secret one only when confirmed.
+-- True for a pet a creator is given back on every join (GameConfig.CreatorPets): it may not be sold for stones or auctioned, or
+-- selling and rejoining would mint stones without end (security audit, 2026-11-24)
+function PetInventory.isCreatorPet(player, petId)
+    local creators = GameConfig.CreatorPets
+    return creators ~= nil and table.find(creators.UserIds, player.UserId) ~= nil and table.find(creators.PetIds, petId) ~= nil
+end
+
 function PetInventory.fuse(player, targetId, confirmSecret)
     local data = playerData[player]
     local target = PetInventory.get(player, targetId)

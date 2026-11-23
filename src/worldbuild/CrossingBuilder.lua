@@ -620,6 +620,10 @@ local function buildRep(parent, faction)
     description.LeftLegColor, description.RightLegColor = look.Legs, look.Legs
     local rig = Players:CreateHumanoidModelFromDescription(description, Enum.HumanoidRigType.R15)
     rig.Name = look.Rig
+    local stockAnimate = rig:FindFirstChild("Animate")
+    if stockAnimate then
+        stockAnimate:Destroy() -- (a LocalScript in the Workspace never runs; NpcService plays the idle on the server)
+    end
     rig:PivotTo(at(spot.Position + Vector3.new(0, 3, 0), spot.Yaw))
     rig.HumanoidRootPart.Anchored = true
     -- plain dress, for now: a long coat skirt, a sash and plain hair (the faction robes come later)

@@ -36,6 +36,12 @@ local function sanitizePending(raw)
     if typeof(raw.EggId) == "string" and GameConfig.Eggs[raw.EggId] then
         pending.EggId = raw.EggId
     end
+    -- the kind decided when it was rolled (a restricted player's jackpot is "Stones"): dropping it turned that jackpot back into
+    -- the Exclusive Egg after a leave mid-spin (bug audit, 2026-11-24)
+    local kinds = { Stones = true, Qi = true, Egg = true, Spin = true, Jackpot = true }
+    if typeof(raw.Kind) == "string" and kinds[raw.Kind] then
+        pending.Kind = raw.Kind
+    end
     if raw.Paid == true then -- (rolled on a spin bought with Robux: its egg is a paid one, EggInventory; save schema 24)
         pending.Paid = true
     end

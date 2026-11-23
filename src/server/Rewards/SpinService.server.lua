@@ -88,6 +88,10 @@ local function settle(player, late)
     local rankName = Ranks.getPlayerRankName(player)
     -- (the kind decided when it was rolled: a restricted player's jackpot is stones; older pending prizes carry no Kind)
     local text, kind, big = nil, pending.Kind or segment.Kind, false
+    if kind == "Jackpot" and pending.Kind == nil and SpinRules.restricted(player) then
+        kind = "Stones" -- (a prize saved before its kind was kept: never a paid random item for a restricted player)
+        pending.Stones = pending.Stones or SpinRules.fallbackStones(rankName, player)
+    end
     local function payStones(amount)
         Wallet.add(player, amount, "Spin", "Segment" .. index)
         return NumberFormat.compact(amount) .. " Spirit Stones"
@@ -255,7 +259,11 @@ end)
 -- a new UTC day reaches players already online
 while true do
     task.wait(15)
+    -- (each player under pcall: one error used to be able to stop this loop for the whole server; bug audit, 2026-11-24)
     for player in ready do
-        publish(player)
+        local ok, err = pcall(publish, player)
+        if not ok then
+            warn("SpinService: publish for " .. player.Name .. " failed: " .. tostring(err))
+        end
     end
 end

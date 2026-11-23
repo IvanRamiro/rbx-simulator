@@ -17,6 +17,7 @@
 --     spec: Player, Character, Root, Info (BreakthroughStyles.describe), Container (a Folder in the workspace), Calm, Low,
 --           OnBreak() at the break (the new aura is shown), OnSettle() as the card leaves, OnDone() when everything is over and removed
 --   BreakthroughShow.skip(show), BreakthroughShow.stop(show)  (stop: at once, nothing left behind)
+--   BreakthroughShow.baseFov()  the field of view the running show started from, or nil
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -456,6 +457,12 @@ local function cleanUp(S)
         S.card.destroy()
     end
     S.gui:Destroy()
+end
+
+-- The field of view the running show started from (nil when none runs): a hatch that takes the camera mid-show saves this, not
+-- the show's shifted value, or it put the shift back for the session (bug audit, 2026-11-24)
+function Show.baseFov()
+    return active and active.baseFov or nil
 end
 
 -- ---------- starting ----------

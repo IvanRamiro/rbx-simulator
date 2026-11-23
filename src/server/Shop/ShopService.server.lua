@@ -205,6 +205,9 @@ function actions.SellPet(player, instanceId, extra)
     if pet.Equipped then
         return false, "Unequip that pet before selling it."
     end
+    if PetInventory.isCreatorPet(player, pet.PetId) then
+        return false, "This creator's pet can't be sold."
+    end
     local definition = GameConfig.Pets[pet.PetId]
     if (definition.Rarity == "Secret" or definition.Rarity == "Divine") and not (typeof(extra) == "table" and extra.ConfirmSecret == true) then
         return false, "A Secret pet needs your confirmation to sell."

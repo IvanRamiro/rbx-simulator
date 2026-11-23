@@ -275,15 +275,22 @@ local nextWay = 0
 local wayMarker = WorldMarkers.new(UiTheme.Colors.Highlight, true)
 local wayGround = {} -- [quest step] = the ground's height at its Way
 local reachedWay = {} -- [quest step] = true once the player has been at its Way (its Then takes over)
+-- (only real ground is kept: a far Way's island may not be streamed in yet, and a ray could meet a passing player or guardian;
+-- caching that miss hid the marker for the whole step: bug audit, 2026-11-24. A miss is asked again a second later.)
+local wayRetryAt = {} -- [quest step] = os.clock() when a missed ray may be cast again
 local function groundAt(step, x, z)
-    if wayGround[step] == nil then
+    if wayGround[step] == nil and os.clock() >= (wayRetryAt[step] or 0) then
         local params = RaycastParams.new()
         params.FilterType = Enum.RaycastFilterType.Exclude
         params.FilterDescendantsInstances = { player.Character }
         local hit = workspace:Raycast(Vector3.new(x, 1500, z), Vector3.new(0, -3000, 0), params)
-        wayGround[step] = if hit then hit.Position.Y else false
+        if hit and (hit.Instance:IsA("Terrain") or (hit.Instance:IsA("BasePart") and hit.Instance.Anchored)) then
+            wayGround[step] = hit.Position.Y
+        else
+            wayRetryAt[step] = os.clock() + 1
+        end
     end
-    return wayGround[step] or nil
+    return wayGround[step]
 end
 RunService.RenderStepped:Connect(function()
     local now = os.clock()

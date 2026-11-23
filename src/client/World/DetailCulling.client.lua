@@ -81,7 +81,8 @@ RunService.Heartbeat:Connect(function()
         end
         local entry = registry[cursor]
         local part = entry.part
-        if not part.Parent then -- streamed out (or destroyed): forget it
+        if not part:IsDescendantOf(world) then -- streamed out (or destroyed): forget it (an Atomic model streams out whole and
+            -- its parts keep their parent, so part.Parent alone kept them listed for the session: bug audit, 2026-11-24)
             known[part] = nil
             registry[cursor] = registry[count]
             registry[count] = nil

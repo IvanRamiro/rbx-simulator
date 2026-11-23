@@ -104,10 +104,26 @@ local function saw(player, kind, goal)
     end
 end
 
+-- a leap counts once the server sees them off the ground within a moment of it (the event alone was enough before: security
+-- audit, 2026-11-24); one watch at a time per player
+local leapWatch = {}
 RemoteEvents.QinggongFxEvent.OnServerEvent:Connect(function(player, kind)
-    if kind == "Leap" then
-        saw(player, "Leap")
+    if kind ~= "Leap" or leapWatch[player] then
+        return
     end
+    leapWatch[player] = true
+    task.spawn(function()
+        for _ = 1, 15 do
+            local character = player.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 and humanoid.FloorMaterial == Enum.Material.Air then
+                saw(player, "Leap")
+                break
+            end
+            task.wait(0.1)
+        end
+        leapWatch[player] = nil
+    end)
 end)
 
 Combat.Hit.Event:Connect(function(player, target)
@@ -148,16 +164,22 @@ end)
 
 while true do
     task.wait(CHECK_EVERY)
+    -- (each player under pcall: one error used to be able to stop this loop for the whole server; bug audit, 2026-11-24)
     for player in ready do
-        local step = Quests.get(player)
-        local quest = step and GameConfig.Quests[step]
-        -- (the quests wait until the player has talked to Seren the Guide: World/GuideService; the panel is hidden till then, so nothing may be paid unseen)
-        if quest and player.Parent == Players and player:GetAttribute("SettingGuideMet") == true then
-            local done, share = check(player, quest)
-            player:SetAttribute("QuestProgress", math.clamp(share, 0, 1))
-            if done then
-                complete(player, step)
+        local ok, err = pcall(function()
+            local step = Quests.get(player)
+            local quest = step and GameConfig.Quests[step]
+            -- (the quests wait until the player has talked to Seren the Guide: World/GuideService; the panel is hidden till then, so nothing may be paid unseen)
+            if quest and player.Parent == Players and player:GetAttribute("SettingGuideMet") == true then
+                local done, share = check(player, quest)
+                player:SetAttribute("QuestProgress", math.clamp(share, 0, 1))
+                if done then
+                    complete(player, step)
+                end
             end
+        end)
+        if not ok then
+            warn("QuestService: quest check for " .. player.Name .. " failed: " .. tostring(err))
         end
     end
 end

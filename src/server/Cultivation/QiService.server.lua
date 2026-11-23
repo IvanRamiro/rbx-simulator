@@ -221,7 +221,11 @@ end)
 while true do
     task.wait(GameConfig.CultivationInterval)
 
+    -- (each player under pcall: one error used to be able to stop this loop for the whole server; bug audit, 2026-11-24)
     for player in cultivatingPlayers do
-        awardCultivationQi(player)
+        local ok, err = pcall(awardCultivationQi, player)
+        if not ok then
+            warn("QiService: cultivation Qi for " .. player.Name .. " failed: " .. tostring(err))
+        end
     end
 end

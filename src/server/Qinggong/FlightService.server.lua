@@ -228,9 +228,15 @@ end)
 while true do
     task.wait(1)
     local now = os.clock()
+    -- (each player under pcall: one error used to be able to stop this loop for the whole server; bug audit, 2026-11-24)
     for player in flights do
-        if staminaAt(player, now).stamina < -config.HoverCost * DURATION_MARGIN or not canFly(player) then
-            land(player)
+        local ok, err = pcall(function()
+            if staminaAt(player, now).stamina < -config.HoverCost * DURATION_MARGIN or not canFly(player) then
+                land(player)
+            end
+        end)
+        if not ok then
+            warn("FlightService: flight check for " .. player.Name .. " failed: " .. tostring(err))
         end
     end
 end

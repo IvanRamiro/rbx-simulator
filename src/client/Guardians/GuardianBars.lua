@@ -3,8 +3,8 @@
 -- associated with their respective Guardians and never track or follow individual players"):
 --   - THE BAR stands over the guardian's head: an Attachment on its PrimaryPart, so it goes wherever the guardian goes (a
 --     chase, a leap, the walk home), and a new model gets a new bar. Across, it follows the head (eased, so a strike doesn't
---     shake it); its height is fixed, ABOVE studs over the top of the guardian's solid silhouette (horns, a mane, Ember
---     Xuanwu's serpent coil, Tiangou's eclipse disc), measured as it arrives, so it never covers any of it. The world
+--     shake it); its height is fixed, ABOVE studs over the top of the guardian's solid silhouette (horns, a mane, the
+--     Cinder Roc's crest, Tiangou's eclipse disc), measured as it arrives, so it never covers any of it. The world
 --     hides it behind walls (not AlwaysOnTop), it is gone past BAR_DISTANCE from the camera, and its size eases from full
 --     close by to a smaller floor far off, never below readable text. It shows the guardian's name, its state in a word, and
 --     its health from the replicated Health attribute: the fill eases to it, what was just lost trails behind in white, a
@@ -188,7 +188,8 @@ local function buildSign(anchor)
     return { gui = gui, panel = panel, scale = scale, name = name, word = word, bar = bar, edge = panel:FindFirstChildOfClass("UIStroke") }
 end
 
--- The guardian's head: the Head bone of a skinned guardian, the Head part of a jointed one (Ember Xuanwu); nil if it has none.
+-- The guardian's head: the Head bone of a skinned guardian (every guardian is skinned now; a Head part is still taken, should a
+-- jointed one come back); nil if it has none.
 local function findHead(model)
     local head = model:FindFirstChild("Head", true)
     return if head and (head:IsA("Bone") or head:IsA("BasePart")) then head else nil

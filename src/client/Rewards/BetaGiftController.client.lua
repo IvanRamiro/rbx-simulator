@@ -128,6 +128,17 @@ local function ask(petId)
     })
 end
 
+-- the portraits turn only while the window is open (they were started at load and never stopped: four RenderStepped loops for
+-- the whole session on every client, offered the gift or not; bug audit, 2026-11-24)
+local spinFrames = {} -- the choice cards' portraits
+local stopSpins = {}
+local function stopSpinning()
+    for _, stop in stopSpins do
+        stop()
+    end
+    table.clear(stopSpins)
+end
+
 for order, petId in BetaGift.PetIds do
     local pet = GameConfig.Pets[petId]
     local color = GameConfig.PetRarityColors[pet.Rarity] or C.Edge
@@ -137,7 +148,7 @@ for order, petId in BetaGift.PetIds do
     local portrait = Portraits.pet(petId, 140)
     portrait.Name = "Portrait"
     portrait.Parent = card
-    Portraits.spin(portrait)
+    table.insert(spinFrames, portrait)
     local name = UiKit.boldLabel({ Name = "PetName", Text = pet.DisplayName, TextSize = 16, TextColor3 = C.Text,
         TextWrapped = true, Parent = card })
     -- its rarity in the rarity's colour and its Qi bonus: on one line, or two beside a phone's portrait (layout)
@@ -294,6 +305,18 @@ end
 player:GetAttributeChangedSignal(ATTRIBUTE):Connect(refresh)
 refresh()
 
+local function startSpinning()
+    stopSpinning()
+    for _, frame in spinFrames do
+        table.insert(stopSpins, Portraits.spin(frame))
+    end
+    for _, frame in doneHolder:GetChildren() do
+        if frame:IsA("ViewportFrame") then
+            table.insert(stopSpins, Portraits.spin(frame))
+        end
+    end
+end
+
 local function showDone(petId)
     claimed = petId
     setBusy(false)
@@ -313,7 +336,9 @@ local function showDone(petId)
         edge.Thickness = 2
     end
     portrait.Parent = doneHolder
-    Portraits.spin(portrait)
+    if window.Frame.Visible then
+        startSpinning()
+    end
     layout()
     refresh()
 end
@@ -340,7 +365,9 @@ local seen = false -- it has been open this visit: it doesn't open by itself aft
 window.Frame:GetPropertyChangedSignal("Visible"):Connect(function()
     if window.Frame.Visible then
         seen = true
+        startSpinning()
     else
+        stopSpinning()
         closeForGood()
     end
 end)

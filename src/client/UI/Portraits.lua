@@ -99,14 +99,34 @@ local function shoot(frame, model, direction, fill, visibleOnly)
 end
 
 local pets = {}
+-- The pet's flattened model, kept once it has a body: on a slow join PetModels.build gives only the root until
+-- ReplicatedStorage.PetMeshes arrives, and caching that left the beast's portrait empty in every window for the session
+-- (bug audit, 2026-11-24). An empty one is used this once and built again next time.
+local function petTemplate(petId)
+    if pets[petId] ~= nil then
+        return pets[petId]
+    end
+    local model = PetModels.build(petId)
+    local flat = if model then flatten(model, PetMaps[petId]) else false
+    local pieces = 0
+    if flat then
+        for _, piece in flat:GetDescendants() do
+            if piece:IsA("BasePart") and piece.Transparency < 1 then
+                pieces += 1
+            end
+        end
+    end
+    if pieces > 0 or not model then
+        pets[petId] = flat
+    end
+    return flat
+end
+
 function Portraits.pet(petId, size)
     local frame = view(size)
-    if pets[petId] == nil then
-        local model = PetModels.build(petId)
-        pets[petId] = if model then flatten(model, PetMaps[petId]) else false
-    end
-    if pets[petId] then
-        shoot(frame, pets[petId]:Clone(), DIRECTION_FOR[petId] or DIRECTION, FILL_FOR[petId] or 0.82, VISIBLE_BOX_FOR[petId]) -- pets face -Z
+    local template = petTemplate(petId)
+    if template then
+        shoot(frame, template:Clone(), DIRECTION_FOR[petId] or DIRECTION, FILL_FOR[petId] or 0.82, VISIBLE_BOX_FOR[petId]) -- pets face -Z
     end
     return frame
 end
@@ -119,12 +139,9 @@ function Portraits.silhouette(petId, size)
     frame.LightColor = Color3.new(0, 0, 0)
     frame.BackgroundColor3 = Color3.fromRGB(86, 104, 190) -- a lit page, so the black shape reads against it
     frame.BackgroundTransparency = 0.35
-    if pets[petId] == nil then
-        local model = PetModels.build(petId)
-        pets[petId] = if model then flatten(model, PetMaps[petId]) else false
-    end
-    if pets[petId] then
-        local copy = pets[petId]:Clone()
+    local template = petTemplate(petId)
+    if template then
+        local copy = template:Clone()
         for _, piece in copy:GetDescendants() do
             if piece:IsA("BasePart") then
                 piece.Color = Color3.new(0, 0, 0)
