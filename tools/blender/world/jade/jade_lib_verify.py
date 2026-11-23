@@ -28,7 +28,8 @@ import jade_lib_oldmap as O  # noqa: E402
 import jade_lib_sites as S  # noqa: E402
 
 REPO = O.REPO
-BASELINE = "a35265c"   # the commit before the expansion: the old terrain and placements are read from it
+BASELINE = "a35265c"   # the commit before the expansion: the old terrain and placements are read from it (the terrain is the same file as 60f9d20^)
+PHASE_A = "484e202"    # the commit that holds phase A's terrain and placements (before the polish pass): the new data must own every cell phase A owned
 OUT = os.path.join(REPO, "renders", "jade_grove_library", "verify.txt")
 LINES = []
 
@@ -38,8 +39,8 @@ def say(s=""):
     print(s)
 
 
-def git_show(path):
-    return subprocess.run(["git", "-C", REPO, "show", "%s:%s" % (BASELINE, path)], capture_output=True, text=True).stdout
+def git_show(path, rev=None):
+    return subprocess.run(["git", "-C", REPO, "show", "%s:%s" % (rev or BASELINE, path)], capture_output=True, text=True).stdout
 
 
 def parse_terrain(text):
@@ -113,6 +114,11 @@ def main():
             changed += 1
             diffs.append((k, "changed"))
     say("   old cells %d: identical %d, changed %d, no longer ground %d; new cells %d (%d added)" % (len(old), ident, changed, gone, len(new), len(new) - (len(old) - gone)))
+    ok_all &= gone == 0
+    pa = terrain_cells(parse_terrain(git_show("src/worldbuild/Terrain/JadeGrove.lua", PHASE_A)))
+    lost_a = [k for k in pa if k not in new]
+    say("   phase A's data (commit %s): %d owned cells; cells of it the new data does not own: %d (must be 0); cells the new data owns that phase A did not: %d" % (PHASE_A, len(pa), len(lost_a), len([k for k in new if k not in pa])))
+    ok_all &= not lost_a and len(old) == 4604
 
     def local(k):
         return (k[0] * 4 + 2 - cx, k[1] * 4 + 2 - cz)
@@ -129,14 +135,17 @@ def main():
             zones["old rim band on a side that grew (the lip moved out)"] += 1
         elif I.poly_nearest(x, z, I.STREAM)[0] < 28:
             zones["the stream, gorge and weir"] += 1
-        elif math.hypot(x - I.PLATEAU_C[0], z - I.PLATEAU_C[1]) < 60:
-            zones["Mistfall Heights and the pond"] += 1
+        elif math.hypot(x - I.PLATEAU_C[0], z - I.PLATEAU_C[1]) < 75 or I.poly_nearest(x, z, I.RAMP)[0] < 45 or I.poly_nearest(x, z, I.RIDGE)[0] < 35:
+            zones["Mistfall Heights, its ramp, the ridge and the pond"] += 1
         elif I.poly_nearest(x, z, I.RIFT)[0] < 24:
             zones["the Rift of Roots"] += 1
         else:
-            zones["a structure's levelled pad or a new trail"] += 1
+            zones["a structure's levelled pad, a new trail or one of the broad swells"] += 1
     for z_, c in zones.most_common():
         say("      changed cells: %-58s %d" % (z_, c))
+    east = [k for k, why in diffs if I._east_keep(math.degrees(math.atan2(local(k)[1], local(k)[0]))) > 0.5]
+    far_east = [k for k in east if math.hypot(*local(k)) > 95.0 and not any(math.hypot(local(k)[0] - px, local(k)[1] - pz) < r + 6 for (px, pz, r) in [(p[0], p[1], p[2]) for p in I.PROTECT])]
+    say("   changed cells in the sector toward Ember Peak (bearings -72 to +76): %d, of them %d farther than 95 studs from the arena and clear of every protected disc (the structure pads and the east shrine's trail account for these; the broad swells are masked out there)" % (len(east), len(far_east)))
     say("   changed or lost cells inside a protected disc less its 2.5-stud sample window (the arena, arrival, gate, checkpoint, egg stands, hermitage, glade, guardian knoll, hollow, ruin court): %d  (must be 0)" % len(bad))
     ok_all &= len(bad) == 0
     # the relics, the checkpoint, the egg stands, the gate: heights at their exact positions, old vs new
@@ -216,7 +225,10 @@ def main():
     ok_all &= 1.4 <= area / (len(old) * 16.0) <= 1.8
     reach = max(math.hypot(local(k)[0], local(k)[1]) for k in new)
     deepest = min(v[0] for v in new.values())
-    say("   farthest ground from the centre: %.1f (old %.1f); WorldConfig.Islands.JadeGrove.Reach should be 250 or more (it is 208 now); lowest ground %.2f (the gorge): the fall line is 110 under the centre" % (reach, max(math.hypot(*local(k)) for k in old), deepest))
+    say("   farthest ground from the centre: %.1f (old %.1f); WorldConfig.Islands.JadeGrove.Reach is 250 (the ground runs to 241); lowest ground %.2f (the gorge): the engine builder writes a 22-stud shell, so %.1f studs of terrain lie under the deepest bed (the limit: the lowest ground at -14 or higher)" % (reach, max(math.hypot(*local(k)) for k in old), deepest, 22.0 + deepest))
+    ok_all &= deepest >= -14.0 and reach <= 250.0
+    highest = max(v[0] for v in new.values())
+    say("   ground range in the data: %.2f to %.2f studs (phase A: %.2f to %.2f)" % (deepest, highest, min(v[0] for v in pa.values()), max(v[0] for v in pa.values())))
 
     # ------------------------------------------------------------------ 4: the guardian keeps the Elder Tree's numbers
     say("")
@@ -305,11 +317,122 @@ def main():
     say("8. BUDGETS")
     budget(pl, P)
     say("")
+    say("9. THE POLISH PASS (2026-11-23): RELIEF, THE FALLS, THE PART COUNT")
+    ok_all &= polish(pl, P)
+    say("")
     say("ALL NUMERIC CHECKS: %s" % ("PASS" if ok_all else "FAIL"))
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w") as f:
         f.write("\n".join(LINES) + "\n")
     return ok_all
+
+
+def slope_deg(x, z, e=2.0):
+    gx = (I.ground(x + e, z) - I.ground(x - e, z)) / (2 * e)
+    gz = (I.ground(x, z + e) - I.ground(x, z - e)) / (2 * e)
+    return math.degrees(math.atan(math.hypot(gx, gz)))
+
+
+def polish(pl, P):
+    ok = True
+    arena_y = I.ground(0.0, 0.0)
+    # --- Mistfall Heights
+    tops = []
+    for xi in range(-200, -60, 2):
+        for zi in range(-180, -80, 2):
+            if I.plateau_sd(xi + 1, zi + 1) > 8.0 and I.poly_nearest(xi + 1, zi + 1, I.STREAM_TOP)[0] > 14.0 and I.poly_nearest(xi + 1, zi + 1, I.RIB_BROOK)[0] > 10.0 and math.hypot(xi + 1 - I.SPRING[0], zi + 1 - I.SPRING[1]) > 9.0:
+                g = I.ground(xi + 1, zi + 1)
+                if g is not None:
+                    tops.append(g)
+    mean_top = sum(tops) / len(tops)
+    say("   Mistfall Heights: surface %.1f to %.1f studs (mean %.1f), that is %.1f to %.1f above the arena's level %.1f (the owner asked for about 28 to 32; phase A: 13)" % (min(tops), max(tops), mean_top, min(tops) - arena_y, max(tops) - arena_y, arena_y))
+    ok &= 27.0 <= min(tops) - arena_y and max(tops) - arena_y <= 33.0
+    sd0 = [(xi, zi) for xi in range(-200, -60, 2) for zi in range(-180, -80, 2) if 0.0 < I.plateau_sd(xi + 1, zi + 1) < 1.0]
+    steep = [slope_deg(xi + 1, zi + 1, 2.0) for (xi, zi) in sd0]
+    say("   its cliff band: %d ground samples on the edge, steepest %.0f degrees, median %.0f (sheer faces on every side but the ramp's and the two fall faces' plazas)" % (len(steep), max(steep), sorted(steep)[len(steep) // 2]))
+    # --- the ramp
+    tot = I._RAMP[0]
+    centre, band = 0.0, 0.0
+    s_ = 0.0
+    while s_ <= tot:
+        p, d = I.point_at(I.RAMP, s_)
+        for off in (-3.0, 0.0, 3.0):
+            q = (p[0] - d[1] * off, p[1] + d[0] * off)
+            sl = slope_deg(q[0], q[1])
+            band = max(band, sl)
+            if off == 0.0:
+                centre = max(centre, sl)
+        s_ += 1.0
+    z0, z1 = I.ground(*I.RAMP[0]), I.ground(*I.RAMP[-1])
+    say("   the ramp up the south-west flank: %.1f studs long, rises %.1f to %.1f; slope on its centre line at most %.1f degrees, within 3 studs of it at most %.1f (the limit is 25); 14 studs wide, mud trail on it" % (tot, z0, z1, centre, band))
+    ok &= band <= 25.0 and abs(z1 - mean_top) < 2.5
+    # --- the gorge
+    bridge_root = pl.bridges["RootBridge"]
+    mx, mz = (bridge_root["A"][0] + bridge_root["B"][0]) / 2, (bridge_root["A"][1] + bridge_root["B"][1]) / 2
+    bed = I.ground(mx, mz)
+    bridge_log = pl.bridges["LogBridge"]
+    lx_, lz_ = (bridge_log["A"][0] + bridge_log["B"][0]) / 2, (bridge_log["A"][1] + bridge_log["B"][1]) / 2
+    lbed = I.ground(lx_, lz_)
+    say("   the Mosswater Gorge: bed %.1f under the root bridge's centre (banks %.1f: %.1f deep) and %.1f under the log bridge's (banks %.1f: %.1f deep, at the waist, %.1f wide at the bridge); the lowest ground anywhere %.2f (phase A: -10.5, the limit -14)" % (
+        bed, bridge_root["level"], bridge_root["level"] - bed, lbed, bridge_log["level"], bridge_log["level"] - lbed, 2 * I._gorge_width(0.52), min(g for g in [I.ground(x, z) for x in range(-236, 236, 2) for z in range(-236, 236, 2)] if g is not None)))
+    # --- the ridge
+    rtot = I.poly_nearest(0, 0, I.RIDGE)[2]
+    best = None
+    for f in [k / 40.0 for k in range(5, 36)]:
+        (qx, qz), dd = I.point_at(I.RIDGE, f * rtot)
+        crest_g = max(I.ground(qx + dd[1] * o, qz - dd[0] * o) for o in (-4.0, -2.0, 0.0, 2.0, 4.0))
+        sides = [g for g in (I.ground(qx + dd[1] * 20.0, qz - dd[0] * 20.0), I.ground(qx - dd[1] * 20.0, qz + dd[0] * 20.0)) if g is not None]
+        base = sum(sides) / len(sides)
+        if best is None or crest_g - base > best[0]:
+            best = (crest_g - base, crest_g, base)
+    say("   Mossback Ridge: crest %.1f over the ground on both sides of it (%.1f): %.1f high (asked for 12 to 16), %.0f studs long, cliffed on its north side" % (best[1], best[2], best[0], rtot))
+    ok &= 12.0 <= best[0] <= 16.5
+    # --- the falls
+    for f in pl.falls:
+        scale, cur = f.get("scale", 1.0), f.get("curtains", 1)
+        width = 2.4 * scale * cur
+        say("   fall %-9s lip y %.2f  drop %.2f  Scale %g x Curtains %d = lip about %.1f studs wide%s" % (f["name"], f["lip"][1], f["drop"], scale, cur, width, "  Splash" if f.get("splash") else ""))
+    hf = [f for f in pl.falls if f["name"] == "HighFalls"][0]
+    rb = [f for f in pl.falls if f["name"] == "RibbonFall"][0]
+    foot = I.FOOT_LV
+    pond_surface = I.POND_WATER
+    say("   High Falls: face piece %.1f high (phase A: 14.5), 34 wide, top at %.1f; the plateau at its lip %.1f; lip %.2f; drop %.2f measured to the pond's surface %.2f (lip - surface = %.2f); water %.1f wide, %.1f studs of rock each side" % (
+        I.FALLS_H, foot + I.FALLS_H, I.plateau_top(*I.FALLS_LIP), hf["lip"][1], hf["drop"], pond_surface, hf["lip"][1] - pond_surface, 2.4 * hf.get("scale", 1) * hf.get("curtains", 1), (I.FACE_W - 2.4 * hf.get("scale", 1) * hf.get("curtains", 1)) / 2))
+    ok &= abs(hf["drop"] - (hf["lip"][1] - pond_surface)) < 0.05 and abs(foot + I.FALLS_H - I.plateau_top(*I.FALLS_LIP)) < 0.6 and (I.FACE_W - 2.4 * hf.get("scale", 1) * hf.get("curtains", 1)) / 2 >= 2.0
+    landing = math.hypot(I.POND[2], 0.0)
+    cx_ = I.FALLS_FOOT[0] + I.DIR_F[0] * 3.2
+    half_chord = math.sqrt(max(0.0, I.POND[2] ** 2 - (I.POND_AHEAD - 3.2) ** 2))
+    say("   the Spirit Pond: shore radius %.1f, centre %.1f in front of the foot, %.1f studs wide at the water's landing line (the curtains need %.1f), surface %.2f, bowl %.1f deep at its middle" % (I.POND[2], I.POND_AHEAD, 2 * half_chord, 2.4 * 3.5 * 3 * 1.1, pond_surface, pond_surface - I.ground(I.POND[0], I.POND[1])))
+    ok &= 2 * half_chord >= 2.4 * 3.5 * 3 * 1.1 + 2.0
+    brook = [s_ for s_ in pl.water["streams"] if s_["name"] == "PlateauBrook"][0]
+    say("   plateau brook: %.1f studs wide (the owner asked for 8 or more; phase A: 4), opening into a %.1f-wide basin at the lip" % (brook["width"], 2 * I.BASIN_W))
+    ok &= brook["width"] >= 8.0
+    say("   ribbon fall: rock %.1f high (asked for about 18 to 22), lip %.2f, plunge pool surface %.2f, drop %.2f, water %.1f wide (the High Falls' is %.1f), the pool drains into the stream's head" % (I.RIB_H, rb["lip"][1], pond_surface, rb["drop"], 2.4 * rb.get("scale", 1) * rb.get("curtains", 1), 2.4 * 3.5 * 3))
+    ok &= 18.0 <= rb["drop"] <= 22.0
+    say("   cascades: " + ", ".join("%s drop %.1f" % (f["name"], f["drop"]) for f in pl.falls if f["name"].startswith("Cascade")) + "; RimFall drop %.1f (unchanged)" % [f for f in pl.falls if f["name"] == "RimFall"][0]["drop"])
+    # --- Ember's gap and the bridges are not touched (layout.py is not edited by this pass): the clearance lines in section 3 are the proof
+    # --- budgets
+    fam_parts = collections.Counter()
+    tri = 0
+    for piece, lst in pl.place.items():
+        if piece in P:
+            fam_parts[piece.split("_")[1]] += len(P[piece].g) * len(lst)
+            tri += P[piece].tris() * len(lst)
+    allin = tri + sum(p.tris() for p in jade_lib_island_mesh_pieces())
+    parts = sum(fam_parts.values()) + 3
+    say("   triangles as placed, everything in: %d (phase A 250,150; the limit 252,000)" % allin)
+    ok &= allin <= 252000
+    say("   MeshParts as placed: %d (phase A 1,427 by this count; the Studio measure was 1,448): %.0f percent of phase A. By family: %s" % (parts, 100.0 * parts / 1427.0, ", ".join("%s %d" % (k, v) for k, v in fam_parts.most_common())))
+    ok &= parts <= 1284
+    suffixes = sorted(((len([m for m, g in P[p].g.items() if g.f]), p) for p in pl.place if p in P), reverse=True)
+    say("   material suffixes per piece (placed pieces): " + ", ".join("%d x %d" % (n, sum(1 for c, _ in suffixes if c == n)) for n in sorted(set(c for c, _ in suffixes), reverse=True)) + " (suffix count x number of pieces); pieces placed more than 3 times with more than 3: " +
+        (", ".join(p for c, p in suffixes if c > 3 and len(pl.place[p]) > 3) or "none"))
+    new_pieces = ["JG_Cliff_Grotto_G1", "JG_Cliff_Ribbon_R1", "JG_Cliff_GrottoCrystals_K1"]
+    for n in new_pieces:
+        say("   %-28s %d suffixes %s, %d triangles, largest mesh %d" % (n, len([1 for g in P[n].g.values() if g.f]), sorted(m for m, g in P[n].g.items() if g.f), P[n].tris(), max(g.tris() for g in P[n].g.values())))
+        ok &= max(g.tris() for g in P[n].g.values()) <= 2400
+    ok &= len([1 for g in P["JG_Cliff_Grotto_G1"].g.values() if g.f]) <= 3 and len([1 for g in P["JG_Cliff_Ribbon_R1"].g.values() if g.f]) <= 3
+    return ok
 
 
 def walk_through(pl):
