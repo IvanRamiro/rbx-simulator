@@ -43,7 +43,7 @@
     "Windrift_Buildings_SwingLogs__Rope",
     "Windrift_Buildings_SwingLogs__Timber"
    ],
-   "tris": 31034,
+   "tris": 30668,
    "verify": "ok"
   },
   "Courts": {
@@ -110,16 +110,16 @@
     -11.64
    ],
    "max": [
-    17.76,
+    14.76,
     16.9,
     11.49
    ],
-   "tris": 7220,
+   "tris": 6848,
    "materials": {
-    "Bronze": 1480,
-    "Stone": 1152,
-    "Tile": 2232,
-    "Timber": 2356
+    "Bronze": 1468,
+    "Stone": 1092,
+    "Tile": 2048,
+    "Timber": 2240
    }
   },
   "Windrift_Buildings_Hq": {

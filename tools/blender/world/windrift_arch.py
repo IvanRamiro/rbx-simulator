@@ -165,8 +165,8 @@ def rain_hall():
     1.5 over the pad; the gorge lies under the middle (x -6.5 .. 6.5)."""
     P = WP()
     gs, gt, gb = P.geo(S_STONE), P.geo(S_TIMBER), P.geo(S_BRONZE)
-    X0, X1, Z0, Z1, FY = -15.5, 15.5, -6.5, 6.5, 0.0
-    for (xa, xb) in ((X0 - 1.5, -6.9), (6.9, X1 + 1.5)):
+    X0, X1, Z0, Z1, FY = -15.5, 12.5, -6.5, 6.5, 0.0
+    for (xa, xb) in ((X0 - 1.5, -6.9), (6.9, X1 + 0.5)):
         stone_box(gs, xa, xb, Z0 - 1.2, Z1 + 1.8, -4.6, FY - 0.55, seed=3 + int(xa), batter=0.35, course=(1.3, 1.9), blen=(3.0, 5.0))
         P.block("Abutment", xa, xb, -8.0, FY, Z0 - 1.2, Z1 + 1.8)
     for zz in (-5.2, 5.2):                                                          # the trusses
@@ -187,15 +187,15 @@ def rain_hall():
     P.floor.append((X0 + 1.0, X1 - 1.0, Z1, Z1 + 3.4, FY))
     corbels(P, X0 + 2.0, X1 - 2.0, Z1, FY - 0.55, 3.4, steps=3, w=0.5, direction=1.0)
     for z, yy in ((Z0, 8.9), (Z1, 8.3)):
-        posts_grid(P, [-14.0, -9.0, -4.0, 4.0, 9.0, 14.0], z, FY, yy, 0.75, lean=(0.0, 0.0 if z < 0 else 0.015), band=FY + 1.8)
+        posts_grid(P, [-14.0, -6.5, -2.0, 2.0, 6.0, 12.0] if z < 0 else [-14.0, -9.0, -4.0, 4.0, 8.5, 12.0], z, FY, yy, 0.75, lean=(0.0, 0.0 if z < 0 else 0.015), band=FY + 1.8)
         beam(gt, (X0 - 0.4, yy, z), (X1 + 0.4, yy, z), 0.7, 0.9)
-    wall_run(P, (X0 + 0.3, Z0), (X1 - 0.3, Z0), FY, 8.7, thick=0.45, openings=[(3.0, 7.0, 0.0, 4.4), (24.0, 28.0, 0.0, 4.4), (12.0, 14.2, 5.6, 7.4), (16.2, 18.4, 5.6, 7.4)],
+    wall_run(P, (X0 + 0.3, Z0), (X1 - 0.3, Z0), FY, 8.7, thick=0.45, openings=[(3.0, 7.0, 0.0, 4.4), (22.4, 26.4, 0.0, 4.4), (12.0, 14.2, 5.6, 7.4), (16.2, 18.4, 5.6, 7.4)],
              seed=2, name="FrontWall")
     wall_run(P, (X0 + 0.3, Z0), (X0 + 0.3, Z1), FY, 8.4, thick=0.45, openings=[(4.0, 8.5, 0.0, 4.2)], seed=4, name="EndWall")
     for dx in (-8.0, 7.3):                                                          # two steps in front of each door
         for k, (za, zb, top) in enumerate(((-9.6, -8.1, -1.0), (-8.1, -6.5, -0.0 - 0.0))):
             pass
-    for (xa, xb) in ((-13.0, -7.4), (8.0, 13.6)):
+    for (xa, xb) in ((-13.0, -7.4), (7.2, 11.8)):
         rubble(gs, xa, xb, -3.0, -1.0, -9.9, -7.6, random.Random(int(xa)), j=0.05)
         P.block("DoorStep", xa, xb, -3.0, -1.0, -9.9, -7.7)
     rail(P, (X0 + 1.2, Z1 + 3.3), (X1 - 1.2, Z1 + 3.3), FY, h=1.15, every=2.9)

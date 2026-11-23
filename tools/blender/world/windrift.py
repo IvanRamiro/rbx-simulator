@@ -392,7 +392,7 @@ def plant(P):
     # ---- rocks and paths
     for (n, x, z, yw) in (("CragTail", -52.0, 6.0, 0.0), ("CragTail", 55.5, 4.0, 0.1), ("CragTail", 14.0, 66.0, 0.0), ("SlateSlab", -12.0, 40.0, 0.0), ("SlateSlab", 34.0, 42.0, 0.0),
                           ("StrataStack", -49.0, -34.0, 0.0), ("StrataStack", 50.0, -50.0, 0.0), ("VeinBoulderA", -50.0, 16.0, 0.3), ("VeinBoulderA", 45.0, 38.0, 0.0),
-                          ("VeinBoulderB", 56.0, -16.0, 0.0), ("VeinBoulderB", -20.0, 49.0, 0.0), ("Fin", -45.0, 44.0, 0.0), ("Fin", 28.0, 46.0, 0.0),
+                          ("VeinBoulderB", 56.0, -16.0, 0.0), ("VeinBoulderB", -12.0, 52.0, 0.0), ("Fin", -45.0, 44.0, 0.0), ("Fin", 28.0, 46.0, 0.0),
                           ("ScreeA", -54.0, -2.0, 0.0), ("ScreeA", 58.0, 12.0, 0.0), ("ScreeB", -44.0, -46.0, 0.0), ("ScreeB", 36.0, -46.0, 0.0)):
         t("Rocks_" + n, x, z, yaw=yw, folder="Rocks")
     t("Rocks_Windgate", 52.0, -32.0, yaw=0.0, folder="Rocks")
