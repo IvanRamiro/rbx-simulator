@@ -196,7 +196,7 @@ function JadeGroveBuilder.removeOld()
     for _, name in H.Remove.Borrowed do
         keep[name] = true
     end
-    local counts = { Placed = 0, IslandPieces = 0, Templates = 0, KeptBorrowed = 0 }
+    local counts = { Placed = 0, IslandPieces = 0, Templates = 0, KeptBorrowed = 0, Stale = 0 }
     local kit = root:FindFirstChild("Kit")
     for _, d in (kit and kit:GetChildren() or {}) do
         if old[baseOf(d.Name)] then
@@ -220,6 +220,20 @@ function JadeGroveBuilder.removeOld()
                 d:Destroy()
                 counts.Templates += 1
             end
+        end
+    end
+    -- the polish pass (2026-11-23) merged small accent materials into each piece's main one: the meshes the new FBX files no longer hold stay in the kit when it is
+    -- re-imported (WorldBuilder.storeKit replaces same-named parts only), and would be placed as extra parts: destroy them (never one the borrowed list or a placement names)
+    local placed = {}
+    for name in H.Place do
+        placed[name] = true
+    end
+    for _, name in H.Remove.StaleMeshes or {} do
+        local template = folder and folder:FindFirstChild(name)
+        local base = WorldBuilder.splitName(name)
+        if template and not keep[base] and not placed[name] then
+            template:Destroy()
+            counts.Stale += 1
         end
     end
     return counts
@@ -396,14 +410,46 @@ local function waterPart(parent, name, size, cframe)
     return p
 end
 
+local WATER_TOLERANCE = 1.0 -- studs a merged stream piece may stray from the path it replaces
+
+-- Douglas-Peucker: the points of a polyline that matter to within `tolerance` (the ends always stay)
+local function simplify(points, tolerance)
+    if #points <= 2 then
+        return points
+    end
+    local first, last = points[1], points[#points]
+    local line = last - first
+    local worst, at = 0, nil
+    for i = 2, #points - 1 do
+        local offset = points[i] - first
+        local distance = if line.Magnitude < 1e-6 then offset.Magnitude else offset:Cross(line).Magnitude / line.Magnitude
+        if distance > worst then
+            worst, at = distance, i
+        end
+    end
+    if worst <= tolerance or not at then
+        return { first, last }
+    end
+    local left = simplify({ table.unpack(points, 1, at) }, tolerance)
+    local right = simplify({ table.unpack(points, at, #points) }, tolerance)
+    table.remove(left)
+    for _, p in right do
+        table.insert(left, p)
+    end
+    return left
+end
+
 local function buildWater(root, frame)
     local folder = mark(Instance.new("Folder"))
     folder.Name = "Water"
     folder.Parent = folderOf(root, "Terrain")
     local n = 0
     for _, s in H.Water.Streams do
-        for i = 1, #s.Points - 1 do
-            local a, b = frame:PointToWorldSpace(s.Points[i]), frame:PointToWorldSpace(s.Points[i + 1])
+        -- (every water part is a draw call, and the transparent ones are sorted one by one: 64 of them cost 53 draw calls from the hub and 108 at the pond, measured
+        -- 2026-11-23. A stream's tiny straight pieces are merged wherever the path is straight to within a stud (Douglas-Peucker), the first and last points kept)
+        local points = simplify(s.Points, WATER_TOLERANCE)
+        for i = 1, #points - 1 do
+            local a, b = frame:PointToWorldSpace(points[i]), frame:PointToWorldSpace(points[i + 1])
             local len = (b - a).Magnitude
             if len > 0.1 then
                 waterPart(folder, s.Name, Vector3.new(s.Width, 0.3, len + 0.5), CFrame.lookAt((a + b) / 2, b))
