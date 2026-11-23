@@ -280,10 +280,10 @@ local GameConfig = {
             },
         },
         EmberXuanwu = {
-            DisplayName = "Ember Xuanwu",
+            DisplayName = "Cinder Roc", -- (2026-11-23: the guardian of Ember Peak is a new boss; its id stays EmberXuanwu, which saves, records, titles and quests key off)
             Island = "EmberPeak",
-            -- the Cinder Arena's middle, set 3.5 studs toward the gate so its beak (29 studs ahead of
-            -- its origin) clears the egg pedestals behind it when it turns to face them
+            -- the Cinder Arena's middle, set 3.5 studs toward the gate: the Roc's tail (24 studs behind its origin) and its wings (26 to a side) then
+            -- clear the egg pedestals behind it when it turns to face them
             Lair = Vector3.new(0.6, 0.5, 3.4),
             Facing = Vector3.new(22.0, 0.5, 121.0), -- toward the Ember Gate, where challengers arrive
             Eggs = { "InfernoEgg", "MagmaHeartEgg", "PhoenixAshEgg" },
@@ -291,28 +291,28 @@ local GameConfig = {
             Element = "Fire",
             MaxHealth = 3200,      -- a Qi Awakener's starter sword (~24 a strike) weakens it alone in ~120 strikes
             WeakenedAt = 0.1,
-            HitRadius = 15,        -- its shell
+            HitRadius = 13,        -- its body: the chest and the folded wings
             EngageRadius = 28,     -- the egg pedestals stand just outside it (31)
             LeashRadius = 62,
             CalmAfter = 12,
             RespawnTime = 30,
             DropTime = 30,
             WalkSpeed = 9,
-            ChaseSpeed = 20,       -- slow (a Qi Awakener runs 26): its charge decides the chase
-            ChaseStop = 22,        -- it stops this far from the thief: its beak is 29 studs ahead of its origin
-            TurnSpeed = 75,        -- a ponderous turn: those who circle it meet its quake
+            ChaseSpeed = 20,       -- slow (a Qi Awakener runs 26): its dive decides the chase
+            ChaseStop = 16,        -- it stops this far from the thief: its beak is 15 studs ahead of its origin, its talons close to it
+            TurnSpeed = 75,        -- a heavy turn: those who circle it meet its gale
             TurnsToFace = true,
             Egg = { CarriedHeight = 2.6 },
             WeakenedHint = "is worn out! Take an egg from the stands behind it and carry it home to Yggdrasil!",
             Stagger = 1.2,
             WeakenedSlowdown = 1.7,
             Attacks = {
-                -- the serpent rears back over the volcano and strikes down at the ground before it
-                SerpentLash = { Kind = "Sweep", Range = 30, Arc = 70, WindUp = 0.8, Cooldown = 2.8, Knockback = 50 },
-                -- it rears onto its hind legs and stomps: a quake ring rolls out all round (jump it)
-                Quake = { Kind = "Wave", Radius = 50, WaveSpeed = 30, WindUp = 1.3, Cooldown = 7.5, Knockback = 45 },
-                -- a ground-shaking lunge, low and heavy
-                Charge = { Kind = "Pounce", MinRange = 16, MaxRange = 56, WindUp = 0.9, Air = 1.0, Height = 3, Cooldown = 5, Radius = 15, Knockback = 60 },
+                -- it throws the near wing back and up, then scythes it across: the primaries close into one blade
+                WingScythe = { Kind = "Sweep", Range = 30, Arc = 80, WindUp = 0.8, Cooldown = 2.8, Knockback = 50 },
+                -- it rises on its toes, sweeps both wings overhead and hammers them down: a ring of embers rolls out all round (jump it)
+                CinderGale = { Kind = "Wave", Radius = 50, WaveSpeed = 30, WindUp = 1.3, Cooldown = 7.5, Knockback = 45 },
+                -- a crouch, a wing-driven spring, a glide with the talons thrust forward, a crushing landing
+                TalonDive = { Kind = "Pounce", MinRange = 16, MaxRange = 56, WindUp = 0.9, Air = 1.0, Height = 10, Cooldown = 5, Radius = 15, Knockback = 60 },
             },
         },
         Tiangou = {
@@ -650,9 +650,9 @@ local GameConfig = {
         { Id = "EmberBridge", Kind = "Visit", Goal = "EmberPeak", Reward = 60, Title = "Into the Fire",
             Way = { "the Ember bridge", -44, -241 },
             Text = "Cross the rock bridge to Ember Peak. Stay off the lava." },
-        { Id = "Xuanwu", Kind = "Secure", Goal = "EmberXuanwu", Reward = 400, Title = "The Ember Xuanwu",
-            Way = { "the Ember Xuanwu", -128, -693 },
-            Text = "Steal an egg from the Ember Xuanwu and carry it home. Jump over its shock rings." },
+        { Id = "Xuanwu", Kind = "Secure", Goal = "EmberXuanwu", Reward = 400, Title = "The Cinder Roc", -- (Id and Goal kept: a save holds the step, the records the guardian)
+            Way = { "the Cinder Roc", -128, -693 },
+            Text = "Steal an egg from the Cinder Roc and carry it home. Jump over the ring of embers its wings throw out." },
         { Id = "Forge", Kind = "Forge", Reward = 100, Title = "Forge a Weapon",
             Way = { "the Blacksmith", 233, -172 },
             Text = "Eggs you bring home and relics unlock elements. At the Blacksmith, give a weapon an element and a name." },

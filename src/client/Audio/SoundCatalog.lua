@@ -59,18 +59,22 @@ local catalog = {
     MantisLand = guardian({ Id = "9113470014", Volume = 0.8, Pitch = 0.8, Start = 0.5, Length = 0.6 }),
     MantisWeaken = guardian({ Id = "9119577515", Volume = 5, Pitch = 0.8 }),                             -- bamboo stalks snapping
 
-    -- ---------- the Ember Xuanwu ----------
-    XuanwuAwaken = guardian({ Id = "9113220677", Volume = 2, Pitch = 0.85, With = "FireSurge" }),          -- the mountain breaks, fire rises
+    -- ---------- the Cinder Roc (Ember Peak, 2026-11-23: the Xuanwu's place) ----------
+    -- Its cry is the Dawn Phoenix pet's voice, pitched down a third and held long (a bigger bird, a heavier one); every other layer is a sound this game already
+    -- measured and levelled, set at the Roc's own pitches. Levels are first settings, not yet judged by ear.
+    RocCry = guardian({ Id = "9114661938", Volume = 2.4, Pitch = 0.62, Length = 2.0, Fade = 0.4 }),
+    RocWhoosh = guardian({ Id = "9126013811", Volume = 3, Pitch = 0.5 }),                                       -- a great wing cutting the air
+    RocAwaken = guardian({ Id = "9113220677", Volume = 2, Pitch = 0.85, With = { "FireSurge", { "RocCry", 0.9 } } }), -- the mountain breaks, fire rises, then the cry
     FireSurge = guardian({ Id = "9114432334", Volume = 2.7, Length = 4 }),
-    XuanwuLash = guardian({ Id = "9113611449", Volume = 5, Pitch = 0.8, With = "SerpentHiss" }),
-    SerpentHiss = guardian({ Id = "9120049675", Volume = 4, Pitch = 0.9 }),
-    XuanwuQuake = guardian({ Id = "9114362918", Volume = 3, Pitch = 0.75, With = "QuakeRumble" }),
+    RocReady = guardian({ Id = "9126014082", Volume = 1.4, Pitch = 0.55, Length = 0.7, Fade = 0.2 }),         -- the wing cocked back: a low rush of feathers
+    RocScythe = guardian({ Id = "9113611449", Volume = 4, Pitch = 1.05, With = "RocWhoosh" }),                 -- the blow, with the wing's whoosh under it
+    RocGaleGather = guardian({ Id = "9114432334", Volume = 1.4, Pitch = 1.35, Length = 1.1, Fade = 0.3 }),    -- the breath drawn in as the wings rise
+    RocGale = guardian({ Id = "9114362918", Volume = 3, Pitch = 0.9, With = { "QuakeRumble", "RocWhoosh" } }), -- both wings hammer down
     QuakeRumble = guardian({ Id = "9113222322", Volume = 2.4, Length = 3.5 }),
-    XuanwuReady = guardian({ Id = "9120049675", Volume = 1.8, Pitch = 1, Length = 0.7, Fade = 0.2 }),         -- a hiss as the serpent rears
-    QuakeGather = guardian({ Id = "9113222322", Volume = 1.1, Pitch = 1.15, Length = 1, Fade = 0.3 }),       -- the ground starts to grumble
-    XuanwuLand = guardian({ Id = "9119037589", Volume = 0.9, Pitch = 0.75, With = "FlameBurst" }),
+    RocLand = guardian({ Id = "9119037589", Volume = 0.9, Pitch = 0.7, With = { "FlameBurst", "RocWhoosh" } }),
     FlameBurst = guardian({ Id = "9114463208", Volume = 1.6 }),
-    XuanwuWeaken = guardian({ Id = "9116308360", Volume = 1.2, Pitch = 0.65 }),
+    RocWeaken = guardian({ Id = "9116308360", Volume = 1.2, Pitch = 0.65, With = { { "RocCryWeak", 0.25 } } }),
+    RocCryWeak = guardian({ Id = "9114661950", Volume = 1.6, Pitch = 0.5, Length = 2.2, Fade = 0.6 }),        -- a worn-out cry
 
     -- ---------- Tiangou the Moon-Eater ----------
     TiangouAwaken = guardian({ Id = "9120790529", Volume = 1.1, Pitch = 0.85 }),
