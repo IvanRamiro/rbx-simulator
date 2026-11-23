@@ -1026,6 +1026,10 @@ function CrossingBuilder.build()
     local okNightfall, nightfall = pcall(function()
         return require(WorldBuild:WaitForChild("NightfallBuilder"):Clone()).build()
     end)
+    -- the three faction trials' places (TrialBuilder): last, because they stand on the territories' markers
+    local okTrials, trials = pcall(function()
+        return require(WorldBuild:WaitForChild("TrialBuilder"):Clone()).build()
+    end)
     WorldBuilder.applyCollision(root)
     local parts = 0
     for _, d in root:GetDescendants() do
@@ -1033,7 +1037,7 @@ function CrossingBuilder.build()
             parts += 1
         end
     end
-    return { Parts = parts, Zones = zones, ApronVoxels = cobbled, Lamps = lamps, Falls = dress.Falls,
+    return { Parts = parts, Zones = zones, ApronVoxels = cobbled, Lamps = lamps, Falls = dress.Falls, Trials = if okTrials then trials else tostring(trials),
         Hall = if okHall then hall else tostring(hall), Territory = if okTerritory then territory else tostring(territory),
         Windrift = if okWindrift then windrift else tostring(windrift), Nightfall = if okNightfall then nightfall else tostring(nightfall) }
 end

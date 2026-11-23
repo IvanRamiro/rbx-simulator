@@ -13,6 +13,7 @@
 --   FactionBook.join(player, id)     "Set" | "Taken" | "Failed", the record: the one set-once write
 --   FactionBook.markTrial(player)    true once the trial passed is on the record
 --   FactionBook.setTrial(player, state, endsAt)  what the clients are told (the "FactionTrial" attributes)
+--   FactionBook.setProgress(player, done, total, text, taken)  how far a running trial has got (the "FactionTrialDone" ... attributes)
 --   FactionBook.forget(player)
 -- Player attributes: Faction, FactionReady (see shared/FactionRules).
 local DataStoreService = game:GetService("DataStoreService")
@@ -270,6 +271,15 @@ end
 function FactionBook.setTrial(player, trialState, endsAt)
     player:SetAttribute("FactionTrial", trialState)
     player:SetAttribute("FactionTrialEnds", endsAt)
+end
+
+-- how far a running trial has got, for the HUD: "FactionTrialDone" / "FactionTrialTotal" (numbers), "FactionTrialText" (plain words) and
+-- "FactionTrialTaken" (a trial of tokens: the places already taken, "1,4"). All nil once the trial is over.
+function FactionBook.setProgress(player, done, total, text, taken)
+    player:SetAttribute("FactionTrialDone", done)
+    player:SetAttribute("FactionTrialTotal", total)
+    player:SetAttribute("FactionTrialText", text)
+    player:SetAttribute("FactionTrialTaken", taken)
 end
 
 -- a trial's clock running for the player (TrialService sets and clears it; FactionService publishes it)

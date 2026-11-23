@@ -1117,6 +1117,7 @@ local KIT_PATHS = {
     Dawnspire = { "MurimAssets", "DawnspireAssets" },
     Windrift = { "MurimAssets", "WindriftAssets" },
     Nightfall = { "MurimAssets", "NightfallAssets" },
+    Trial = { "MurimAssets", "TrialAssets" }, -- the three faction trials' props (TrialBuilder: a gate, a token, a dummy)
     HubNpcs = { "NpcAssets" }, -- people, not environment
 }
 

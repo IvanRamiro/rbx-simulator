@@ -107,13 +107,31 @@ local page = 1
 local busy = false
 
 -- (state, text): what the decision page can offer this player now
+-- a member's trial in a sentence or two (the server keeps "FactionTrial": Locked, Open, Running, Passed or Done)
+local function trialLine(info)
+    local state = player:GetAttribute("FactionTrial")
+    local trial = info.Trial
+    if state == "Locked" then
+        return "Your trial, the " .. trial.Name .. ", opens at the " .. config.TrialRealm .. "."
+    elseif state == "Open" then
+        return trial.Name .. ": " .. trial.Text .. " " .. trial.Hint
+    elseif state == "Running" then
+        return "Your " .. trial.Name .. " is running. Good luck."
+    elseif state == "Passed" then
+        return "You passed the " .. trial.Name .. ". Take the " .. info.Weapon.Name .. " from the vault in " .. info.Hq .. "."
+    elseif state == "Done" then
+        return "You hold the " .. info.Weapon.Name .. ". Your trial is done."
+    end
+    return ""
+end
+
 local function standing(factionId)
     local own = FactionRules.of(player)
     local info = config.Factions[factionId]
     if own then
         local ownInfo = config.Factions[own]
         if own == factionId then
-            return "Member", "You belong to the " .. ownInfo.DisplayName .. ". Welcome home."
+            return "Member", "You belong to the " .. ownInfo.DisplayName .. ". Welcome home.\n\n" .. trialLine(ownInfo)
         end
         return "Member", "You belong to the " .. ownInfo.DisplayName .. ". A faction is for good, so you can't join the " .. info.DisplayName .. "."
     end

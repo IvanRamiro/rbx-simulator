@@ -8,6 +8,8 @@
 --   FactionTrial   the trial's state for a member: "Locked" (below the trial's realm), "Open" (can start), "Running" (the clock runs),
 --                  "Passed" (the vault is open), "Done" (they hold the faction's weapon), else nil
 --   FactionTrialEnds   the server time the running trial ends (workspace:GetServerTimeNow())
+--   FactionTrialDone, FactionTrialTotal, FactionTrialText, FactionTrialTaken   how far the running trial has got (shared/TrialRules: done of total, in words;
+--                      for tokens the places taken, "1,4"); all nil when no trial runs
 -- There is no way to leave or change a faction: nothing here, on the server or on the client, writes one over another.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -17,8 +19,14 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local FactionRules = {
     -- the tag on a faction's representative model (its "Faction" attribute names the faction); the dialog's prompt is on it
     RepTag = "FactionRep",
-    -- the tag on each faction's vault (a model; its "Faction" attribute) where the trial's reward is taken
+    -- the tag on each faction's vault (a model or part; its "Faction" attribute) where the trial's reward is taken
     VaultTag = "FactionVault",
+    -- the tags of the trials' places in the world (world/TrialBuilder makes them; each has a "Faction" attribute): the Trial Stone where a member begins
+    -- their trial (a part with a prompt), an Orthodox gate's zone (a part with an "Index"), a Windrift token (a model with an "Index" and a prompt)
+    PostTag = "FactionTrialPost",
+    GateTag = "TrialGateZone",
+    TokenTag = "TrialToken",
+    DummyTag = "TrialDummy", -- a dummy of the arena's trial, alive only while someone's trial runs (its "TrialOwner" is that player's UserId)
 }
 
 local config = GameConfig.Faction

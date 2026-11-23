@@ -1059,7 +1059,12 @@ local GameConfig = {
         KeyPrefix = "U_",
         JoinRealm = "Qi Foundation",
         TrialRealm = "Immortal Realm",
-        RepRange = 22, -- studs from a faction's representative, to ask to join or to start the trial
+        RepRange = 22, -- studs from a faction's representative, to ask to join
+        -- The trials (shared/TrialRules; server/Factions/TrialService decides everything; world/TrialBuilder puts their places in the world).
+        -- A member at TrialRealm begins theirs at its Trial Stone in their faction's territory (a prompt), the clock runs, and passing it opens the faction's vault.
+        TrialRange = 14,    -- studs from a Trial Stone, a token or a vault (the prompt's own reach plus this slack is checked on the server)
+        TrialCooldown = 4,  -- seconds after a run ends before the same player may begin another
+        TrialKinds = { "Gates", "Tokens", "Dummies" },
         WeaponTier = 6,
         WeaponBonus = 1.1,
         Order = { "Orthodox", "Unorthodox", "Demonic" },
@@ -1070,7 +1075,11 @@ local GameConfig = {
                 Motto = "Keep your word. Protect the weak.",
                 OutfitId = "OrthodoxRobes", TitleId = "OrthodoxDisciple",
                 Weapon = { Id = "SecretOrthodox", Name = "Dawnspire Regent", Kind = "Sword" }, -- (the owner approved the redesign on 2026-11-22)
-                Trial = { Name = "Trial of Discipline", Text = "Pass five gates up the Dawnspire stair, in order, before the time runs out." },
+                Trial = {
+                    Name = "Trial of Discipline", Text = "Pass five gates up the Dawnspire stair, in order, before the time runs out.",
+                    Kind = "Gates", Seconds = 90, Count = 5, -- gate 1 to 5 in order; a gate skipped sends you back to the first (flying is allowed)
+                    Hint = "Begin it at the Trial Stone at the foot of the stair. The gates are in order, and a skipped gate sends you back to the first.",
+                },
                 Pages = {
                     { Title = "WHO WE ARE", Text = "The Orthodox Faction keeps the old rules. Its disciples train every day, keep their word and stand between the weak and danger. Their home is Dawnspire Hall, a white stone hall high above the clouds." },
                     { Title = "HOW WE FIGHT", Text = "They fight with clean, careful sword work. They never strike first and never strike a beaten foe. Their trial tests patience: you must follow the path in order." },
@@ -1083,7 +1092,19 @@ local GameConfig = {
                 Motto = "No master. No map. Only skill.",
                 OutfitId = "UnorthodoxRobes", TitleId = "UnorthodoxWanderer",
                 Weapon = { Id = "SecretUnorthodox", Name = "Crosscurrent Saber", Kind = "Sword" }, -- (the owner, 2026-11-22: all three are swords; approved the design the same day)
-                Trial = { Name = "Trial of Three Tokens", Text = "Find three tokens hidden around Windrift Hold before the time runs out. Nobody tells you the road." },
+                Trial = {
+                    Name = "Trial of Three Tokens", Text = "Find three tokens hidden around Windrift Hold before the time runs out. Nobody tells you the road.",
+                    Kind = "Tokens", Seconds = 300, Need = 3, Count = 6, -- six tokens are hidden (their places, in order, are the clues); any three pass
+                    Hint = "Begin it at the Trial Stone by the Hold's gate. Six tokens are hidden around the Hold. Find any three.",
+                    Clues = {
+                        "A lookout low on the right flank, in front of the Hold.",
+                        "A lookout far out on the left flank, level with the hearth yard.",
+                        "A lookout far out on the right flank, past the log yard.",
+                        "A lookout at the back left, beyond the Gallery of Blades.",
+                        "A nook in the rock beside the Great Falls, under the Rain Hall.",
+                        "A nook under the Eyrie's cliff, at the foot of its stair.",
+                    },
+                },
                 Pages = {
                     { Title = "WHO WE ARE", Text = "The Unorthodox Faction answers to no one. Its fighters come from rivers, markets and back roads, and they judge each other by skill, not by rank. Windrift Hold stands over a waterfall, and every road into it is open." },
                     { Title = "HOW WE FIGHT", Text = "They fight in odd, quick ways and use whatever is at hand. Their trial tests your wits: you have to find your own way." },
@@ -1096,7 +1117,16 @@ local GameConfig = {
                 Motto = "Strength is the only law.",
                 OutfitId = "DemonicRobes", TitleId = "DemonicBlade",
                 Weapon = { Id = "SecretDemonic", Name = "Nightfall Talon", Kind = "Sword" }, -- (the owner approved the redesign on 2026-11-22)
-                Trial = { Name = "Trial of Strength", Text = "Defeat every dummy the arena sends before the time runs out." },
+                Trial = {
+                    Name = "Trial of Strength", Text = "Defeat every dummy the arena sends before the time runs out.",
+                    Kind = "Dummies", Seconds = 90, -- the arena sends three waves; each dummy falls after its wave's number of landing blows, whatever the weapon
+                    Waves = {
+                        { Places = { 1, 4, 7 }, Blows = 3 },
+                        { Places = { 2, 5, 8 }, Blows = 3 },
+                        { Places = { 3, 6 }, Blows = 5 },
+                    },
+                    Hint = "Begin it at the Trial Stone at the arena's gate. One challenger in the arena at a time.",
+                },
                 Pages = {
                     { Title = "WHO WE ARE", Text = "The Demonic Faction believes strength is the only law. Others fear it, and it does not mind. Nightfall Citadel is a black fortress where only the strong are heard." },
                     { Title = "HOW WE FIGHT", Text = "They fight hard and fast and give no ground. Their trial tests your strength: beat everything the arena sends." },

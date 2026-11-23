@@ -5,7 +5,7 @@ local t = require("@env/t")
 local MODULES = {
     "AuctionRules", "AuraConfig", "BetaGift", "CodexRules", "FactionRules", "GameConfig", "Merchant", "NumberFormat", "PassRules",
     "PenLayout", "PetLore", "PetMaps", "PetRules", "Ranks", "RecordsConfig", "RewardRules", "Shop", "SpinRules", "TitleRules",
-    "WeaponMaps", "WeatherConfig", "WeatherRules",
+    "TrialRules", "WeaponMaps", "WeatherConfig", "WeatherRules",
 }
 
 for _, name in MODULES do
