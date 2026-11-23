@@ -220,7 +220,7 @@ def build_all():
     out["JG_Rock_RiverStones_R2"] = river_stones("JG_Rock_RiverStones_R2", 271, 5, 2.4)
     out["JG_Rock_Arch_A1"] = arch("JG_Rock_Arch_A1", 281)
     out["JG_Rock_JadeVein_J1"] = jade_vein("JG_Rock_JadeVein_J1", 291)
-    return out
+    return C.apply_merges(out)
 
 
 if __name__ == "__main__":

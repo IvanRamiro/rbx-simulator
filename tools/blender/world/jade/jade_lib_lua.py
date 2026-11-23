@@ -144,9 +144,17 @@ def write_placements(pl, path=PLACEMENTS):
         A("        { Name = \"%s\", Position = %s, Range = %d, Brightness = %.1f }," % (l["name"], v3(l["x"], l["y"], l["z"]), l["range"], l["brightness"]))
     A("    },")
     A("    LightColor = { 255, 196, 128 }, -- warm, so the forest is not washed green")
-    A("    Falls = { -- WorldBuilder.buildWaterfall(parent, lip, from): Drop = how far the water falls (a short fall is shortened after it is built)")
+    A("    Falls = { -- WorldBuilder.buildWaterfall(parent, lip, from, look, opts): Drop = how far the water falls (measured to the pool's surface; under 40 the water hugs the face)")
+    A("    --   optional: Scale = width multiplier of the water beams (default 1), Curtains = how many parallel curtains side by side across the lip (default 1; the lip is about 2.4 x Scale x Curtains studs), Splash = true adds a splash emitter at the pool")
     for f in pl.falls:
-        A("        { Name = \"%s\", Lip = %s, From = %s, Drop = %.1f }," % (f["name"], v3(*f["lip"]), v3(*f["frm"]), f["drop"]))
+        extra = ""
+        if f.get("scale", 1.0) != 1.0:
+            extra += ", Scale = %g" % f["scale"]
+        if f.get("curtains", 1) != 1:
+            extra += ", Curtains = %d" % f["curtains"]
+        if f.get("splash"):
+            extra += ", Splash = true"
+        A("        { Name = \"%s\", Lip = %s, From = %s, Drop = %.1f%s }," % (f["name"], v3(*f["lip"]), v3(*f["frm"]), f["drop"], extra))
     A("    },")
     A("    Water = {")
     A("        Streams = { -- ribbons of Glass parts between the points (x, y, z of the surface), Width across")
@@ -173,11 +181,30 @@ def write_placements(pl, path=PLACEMENTS):
     A("        Keep = { %s }, -- what stays of the first foundation's kit (Placements/JadeGrove.lua); every other name in its Kit is old dress: its placed copies and templates go" % ", ".join('"%s"' % n for n in KEEP))
     A("        Borrowed = { %s }, -- templates Murim Crossing's first-foundation dress still borrows (CrossingBuilder JADE): kept until that track stops using them" % ", ".join('"%s"' % n for n in BORROWED))
     A("        IslandPieces = { %s }," % ", ".join('"%s"' % n for n in REMOVE_ISLAND_PIECES))
+    A("        StaleMeshes = { %s }, -- polish pass 2026-11-23: material meshes phase A's import left in the kit that the new FBX files no longer hold (a merged suffix): WorldBuilder.storeKit replaces same-named parts only, so destroy these in the kit folder before or after storing, or they place as extra parts" % ", ".join('"%s"' % n for n in stale_meshes()))
     A("    },")
     A("}")
     with open(path, "w", encoding="utf8") as f:
         f.write("\n".join(L) + "\n")
     return len("\n".join(L))
+
+
+# the face of the High Falls shed these suffixes when it was rebuilt (its jade crystals became their own piece, its stone and root meshes joined the rock and the moss)
+GROTTO_SHED = ["RockPale", "Stone", "StoneDark", "JadeGlass", "GlowTeal", "Jade", "Root", "MossDeep"]
+
+
+def stale_meshes():
+    """Names of the kit meshes phase A had and the new FBX files do not: from the merge table and the High Falls' face."""
+    final = {"%s__%s" % (name, suffix) for name, p in S.pieces().items() for suffix, g in p.g.items() if g.f}
+    out = set()
+    for piece, mapping in LK.MERGE.items():
+        for src, dst in mapping.items():
+            if src != dst and "%s__%s" % (piece, src) not in final:
+                out.add("%s__%s" % (piece, src))
+    for src in GROTTO_SHED:
+        if "JG_Cliff_Grotto_G1__%s" % src not in final:
+            out.add("JG_Cliff_Grotto_G1__%s" % src)
+    return sorted(out)
 
 
 REACH = 0.0

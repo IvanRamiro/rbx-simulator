@@ -241,7 +241,7 @@ def build_all():
     out["JG_Vine_Curtain_V2"] = vine_curtain("JG_Vine_Curtain_V2", 171, 5, 4.4, (5.0, 9.0), leafy=True)
     out["JG_Moss_Curtain_M1"] = moss_curtain("JG_Moss_Curtain_M1", 181, 8.0, 6.0)
     out["JG_Moss_Curtain_M2"] = moss_curtain("JG_Moss_Curtain_M2", 191, 5.0, 8.5, 7, 5)
-    return out
+    return C.apply_merges(out)
 
 
 if __name__ == "__main__":

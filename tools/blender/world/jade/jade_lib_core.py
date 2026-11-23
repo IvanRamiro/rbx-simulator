@@ -333,6 +333,15 @@ class Piece:
             self.marks[k] = ((x * c + z * sn + t[0], y + t[1], -x * sn + z * c + t[2]), py + yaw)
         return self
 
+    def merge(self, mapping):
+        """Moves each source material's geometry into the destination material (`mapping` = {from suffix: to suffix}): fewer meshes per piece (each mesh is one MeshPart in the game).
+        The shells stay separate (Geo.add does not weld), so nothing that touched stays welded."""
+        for src, dst in mapping.items():
+            if src in self.g and src != dst:
+                g = self.g.pop(src)
+                self.geo(dst).add(g)
+        return self
+
     def tris(self):
         return sum(g.tris() for g in self.g.values())
 
@@ -693,3 +702,13 @@ def leaf_tier(c, R, H, seg=16, lobes=5, ruffle=0.2, droop=0.42, seed=0, lean=(0.
             ring.append((c[0] + math.cos(th) * rr + lx, c[1] + yy, c[2] + math.sin(th) * rr + lz))
         rings.append(ring)
     return loft(rings, True, True)
+
+
+def apply_merges(pieces):
+    """Applies jade_lib_looks.MERGE (the polish pass's part-count cuts) to a family's finished pieces; returns the same dict."""
+    import jade_lib_looks as LK
+    for name, piece in pieces.items():
+        m = LK.MERGE.get(name)
+        if m:
+            piece.merge(m)
+    return pieces

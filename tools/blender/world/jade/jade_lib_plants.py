@@ -348,7 +348,7 @@ def build_all():
     out["JG_Moss_Mat_M2"] = moss_mat("JG_Moss_Mat_M2", 441, 4.8)
     out["JG_Log_Fallen_L1"] = fallen_log("JG_Log_Fallen_L1", 451)
     out["JG_Log_Stump_S1"] = stump("JG_Log_Stump_S1", 461)
-    return out
+    return C.apply_merges(out)
 
 
 if __name__ == "__main__":

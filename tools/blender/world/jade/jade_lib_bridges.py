@@ -159,7 +159,7 @@ def build_all():
     out["JG_Bridge_RopePost_B2P"] = rope_post()
     out["JG_Bridge_RopeSpan_B2"] = rope_span()
     out["JG_Bridge_RootSpan_B3"] = root_span()
-    return out
+    return C.apply_merges(out)
 
 
 if __name__ == "__main__":

@@ -235,7 +235,7 @@ def build_all():
     out["JG_Ruin_Column_C2"] = S2.ruin_column("JG_Ruin_Column_C2", 572, 1)
     out["JG_Hidden_HollowTrunk_X1"] = hollow_trunk()
     out["JG_Hidden_PavilionRuin_X2"] = pavilion_ruin()
-    return out
+    return C.apply_merges(out)
 
 
 if __name__ == "__main__":

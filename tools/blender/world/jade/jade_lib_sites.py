@@ -28,6 +28,7 @@ def all_pieces():
 
 
 PIECES = None
+LOOKOUT = I._uv(1.0, -21.0)             # on Mistfall Heights, north of the brook, over the falls' side
 
 
 def pieces():
@@ -113,17 +114,16 @@ def stream_samples(step=6.0):
 
 
 def water_levels():
-    """The stream's water surface: 0.9 over the bed, never rising downstream; the Spirit Pond's surface."""
+    """The stream's water surface: 0.9 over the bed, never rising downstream, starting at the Spirit Pond's surface (it flows out of the pond)."""
     samples, tot = stream_samples(6.0)
-    pond_y = I.ground(*I.POND[:2]) + 4.8 * 0.0
     ys = []
-    cur = None
+    cur = I.POND_WATER
     for s, p, d in samples:
         g = I.ground(p[0], p[1])
         if g is None:
             break
         y = g + 0.9
-        cur = y if cur is None else min(cur, y)
+        cur = min(cur, y)
         ys.append((s, p, d, cur))
     return ys
 
@@ -164,7 +164,7 @@ def plan():
     hx, hz = -40.0, -150.0
     structure("JG_Shrine_HallRuin_H2", hx, hz, yaw_front(-hx, -hz), 13.0, note="OldGroveHall")
     # the lookout tower on Mistfall Heights
-    lx, lz = -107.0, -132.0
+    lx, lz = LOOKOUT
     structure("JG_Lookout_Tower_T1", lx, lz, 0.0, 9.0, note="Lookout")
     # the hollow-tree shrine room in the northern glen, entrance toward the arena
     gx, gz = I.GLEN[0], I.GLEN[1]
@@ -189,33 +189,74 @@ def plan():
     pl.sites.append(("hermitage annex", ax, az, 9.0))
     pl.spots["HermitageAnnex"] = (ax, I.ground(ax, az), az, "annex")
 
-    # ------------------------------------------------------------------ the High Falls: the grotto cliff, the pond, the cascade, the rim lip
+    # ------------------------------------------------------------------ the High Falls: the tall face with its cave, the pond at its foot, the brook above it, the ribbon fall
     fx, fz = I.FALLS_FOOT
     yawF = yaw_front(I.DIR_F[0], I.DIR_F[1])
-    foot_lv = snap(I.ground(fx, fz))
-    pads.append((fx, fz, 4.0, foot_lv))
+    foot_lv = I.FOOT_LV
     e = pl.add("JG_Cliff_Grotto_G1", fx, fz, yawF, 1.0, y=foot_lv)
+    pl.add("JG_Cliff_GrottoCrystals_K1", fx, fz, yawF, 1.0, y=foot_lv)
     lip = pl.mark("JG_Cliff_Grotto_G1", "Lip", e)
-    base = pl.mark("JG_Cliff_Grotto_G1", "CurtainBase", e)
-    pl.falls.append({"name": "HighFalls", "lip": lip, "frm": (lip[0] - I.DIR_F[0] * 3.0, lip[1], lip[2] - I.DIR_F[1] * 3.0), "drop": lip[1] - (I.ground(I.POND[0], I.POND[1]) + 2.6)})
+    pond_water = I.POND_WATER
+    hf_drop = lip[1] - pond_water
+    pl.falls.append({"name": "HighFalls", "lip": lip, "frm": (lip[0] - I.DIR_F[0] * 3.0, lip[1], lip[2] - I.DIR_F[1] * 3.0), "drop": hf_drop, "scale": 3.5, "curtains": 3, "splash": True})
     pl.spots["SpiritGrotto"] = (e["x"], foot_lv + 0.6, e["z"], "grotto floor behind the High Falls")
     pl.sites.append(("grotto cliff", fx, fz, 20.0))
-    # the pond's discs and rim stones
-    pond_y = I.ground(I.POND[0], I.POND[1]) + 4.8 * 0.0
-    pond_floor = I.ground(I.POND[0], I.POND[1])
-    pond_water = pond_floor + 2.6
-    pl.water["discs"].append({"name": "SpiritPond", "x": I.POND[0], "z": I.POND[1], "r": I.POND[2] + 3.0, "y": pond_water})
-    pl.add("JG_Cliff_PoolRim_P1", I.POND[0], I.POND[1], 0.0, 1.0, y=pond_water - 0.4)
+    pl.notes.append("High Falls: lip %.2f, pond surface %.2f, drop %.2f, face %.1f high, lip width %.1f" % (lip[1], pond_water, hf_drop, I.FALLS_H, 2.4 * 3.5 * 3))
+    # the pond at the foot: a disc, a ring of rim stones (the arc open toward the falls and the stream's outlet), lilies
+    pl.water["discs"].append({"name": "SpiritPond", "x": I.POND[0], "z": I.POND[1], "r": I.POND[2] + 0.5, "y": pond_water})
+    # (PoolRim_P1's arc is centred on a0 + 180 degrees open: turn it so the gap faces bearing 160)
+    a0 = random.Random(831).uniform(0, TAU)
+    psi = a0 + math.pi - math.radians(160.5)
+    pl.add("JG_Cliff_PoolRim_P1", I.POND[0], I.POND[1], psi, 2.15, y=pond_water - 0.5)
     pl.add("JG_Plant_SpiritLily_P1", I.POND[0] + 2.0, I.POND[1] + 3.0, 0.5, 1.0, y=pond_water)
     pl.add("JG_Plant_SpiritLily_P2", I.POND[0] - 3.0, I.POND[1] - 2.0, 2.0, 1.0, y=pond_water)
-    # the spring pool on the plateau and the stream across it
-    sy = I.ground(*I.SPRING)
-    pl.water["discs"].append({"name": "Spring", "x": I.SPRING[0], "z": I.SPRING[1], "r": 5.5, "y": sy + 0.9})
-    pl.water["streams"].append({"name": "PlateauBrook", "pts": [(p[0], p[1], I.ground(p[0], p[1]) + 0.9 - 0.9) for p in I.STREAM_TOP], "width": 4.0})
-    # the lip: the plateau brook's last point is the High Falls' lip (the grotto's own notch)
+    # the spring pool on the plateau and the brook to the lip: a 9-stud ribbon that opens into a 25-stud basin over its last stretch
+    sy = I.brook_y(0.0)
+    pl.water["discs"].append({"name": "Spring", "x": I.SPRING[0], "z": I.SPRING[1], "r": 5.5, "y": sy})
+    tot_b = I.poly_nearest(0, 0, I.STREAM_TOP)[2]
+    pts, s_ = [], 0.0
+    while s_ < tot_b - 17.0:
+        p, _ = I.point_at(I.STREAM_TOP, s_)
+        pts.append((p[0], p[1], I.brook_y(s_)))
+        s_ += 6.0
+    p, _ = I.point_at(I.STREAM_TOP, tot_b - 17.0)
+    pts.append((p[0], p[1], I.brook_y(tot_b - 17.0)))
+    pl.water["streams"].append({"name": "PlateauBrook", "pts": pts, "width": 2 * I.BROOK_W})
+    # the basin: a wide short ribbon from there to the lip (the lip is 25 studs wide: 3 curtains of 3.5 x 2.4)
+    basin = []
+    for k in range(5):
+        sk = tot_b - 17.0 + 17.0 * k / 4.0
+        p, _ = I.point_at(I.STREAM_TOP, sk)
+        basin.append((p[0], p[1], I.brook_y(sk)))
+    pl.water["streams"].append({"name": "FallsBasin", "pts": basin, "width": 2 * I.BASIN_W})
+    # the ribbon fall: a narrow rock over the plateau's south-east shoulder, its brook from the spring, a plunge pool that drains into the stream's head
+    rx, rz = I.RIB_FOOT
+    yawR = yaw_front(I.RIB_DIR[0], I.RIB_DIR[1])
+    re_ = pl.add("JG_Cliff_Ribbon_R1", rx, rz, yawR, 1.0, y=foot_lv)
+    rlip = pl.mark("JG_Cliff_Ribbon_R1", "Lip", re_)
+    rdrop = rlip[1] - pond_water
+    pl.falls.append({"name": "RibbonFall", "lip": rlip, "frm": (rlip[0] - I.RIB_DIR[0] * 3.0, rlip[1], rlip[2] - I.RIB_DIR[1] * 3.0), "drop": rdrop, "scale": 2.0, "curtains": 1, "splash": True})
+    pl.sites.append(("ribbon fall", rx, rz, 14.0))
+    pl.notes.append("Ribbon fall: lip %.2f, pool surface %.2f, drop %.2f, face %.1f high, lip width %.1f" % (rlip[1], pond_water, rdrop, I.RIB_H, 2.4 * 2.0))
+    pl.water["discs"].append({"name": "RibbonPool", "x": I.RIB_POOL[0], "z": I.RIB_POOL[1], "r": I.RIB_POOL[2] + 2.0, "y": pond_water})
+    tot_r = I.poly_nearest(0, 0, I.RIB_BROOK)[2]
+    rp = []
+    s_ = 0.0
+    while s_ < tot_r - 6.0:
+        p, _ = I.point_at(I.RIB_BROOK, s_)
+        rp.append((p[0], p[1], I.rib_y(s_, tot_r)))
+        s_ += 6.0
+    p, _ = I.point_at(I.RIB_BROOK, tot_r)
+    rp.append((p[0], p[1], I.RIB_LIP_Y))
+    pl.water["streams"].append({"name": "RibbonBrook", "pts": rp, "width": 5.0})
+    # the pool's overflow runs to the stream's head
+    head = I.STREAM[1]
+    pl.water["streams"].append({"name": "RibbonOutflow", "pts": [(I.RIB_POOL[0] + 5.0, I.RIB_POOL[1] + 1.0, pond_water), (-108.0, -80.0, pond_water), (head[0], head[1], pond_water)], "width": 4.0})
+    pl.add("JG_Cliff_PoolRim_P2", I.RIB_POOL[0], I.RIB_POOL[1], 2.6, 1.15, y=pond_water - 0.4)
     # the weir cascade on the stream's first stretch
     s0 = 58.0         # where the stream's bed drops from -1.4 to -9.7 over 14 studs: the three ledges stand on that drop
-    (cp, cd) = I.point_at(I.STREAM, s0)
+    OLD_STREAM = [(-89.3, -98.3)] + list(I.STREAM[1:])       # phase A's polyline (the stream's start moved with the pond): the cascade stays where it was
+    (cp, cd) = I.point_at(OLD_STREAM, s0)
     lv = snap(I.ground(*cp))
     ce = pl.add("JG_Cliff_Cascade_C1", cp[0], cp[1], yaw_front(cd[0], cd[1]), 1.0, y=lv)
     for k in (1, 2, 3):

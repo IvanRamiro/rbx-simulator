@@ -37,13 +37,15 @@ def _layers(rnd, H, count, soft_every):
     return out, pr
 
 
-def rock_face(W, H, D, seed, layers=5, soft_every=3, overhang=1.2, undercut=0.9, cracks=4, rough=0.22, step=1.0, fine=None, arch=None, notch=None, mouth_depth=8.0, end_curl=0.0, end_drop=0.0):
+def rock_face(W, H, D, seed, layers=5, soft_every=3, overhang=1.2, undercut=0.9, cracks=4, rough=0.22, step=1.0, fine=None, arch=None, notch=None, mouth_depth=8.0, end_curl=0.0, end_drop=0.0, relief=1.0, bow=0.0, skyline=0.0):
     """Returns a closed Geo. Frame: x across (centred), y up from 0, the face looking toward -z, the rock running back to z = D.
     arch = (cx, half_width, jamb_height, crown_height): a cave mouth (pocket of depth `mouth_depth`) in the face.  notch = (cx, half_width, drop): the top edge lowered there.
     fine = (x0, x1): between these x the columns are half-spaced (the mouth needs resolution).
-    end_curl / end_drop: over the last 3.4 studs at each end the face turns back into the rock by end_curl and the top comes down by end_drop (a fraction of H): the mass ends rounded, not cut."""
+    relief: the strata's in-and-out offsets are multiplied by it. bow: the face curves toward the viewer by this much at its ends (a shallow bowl round a plunge pool). skyline: the top edge wavers by up to this many studs
+    (not inside the notch). end_curl / end_drop: over the last 3.4 studs at each end the face turns back into the rock by end_curl and the top comes down by end_drop (a fraction of H): the mass ends rounded, not cut."""
     rnd = random.Random(seed)
     bounds, prot = _layers(rnd, H, layers, soft_every)
+    prot = [p * relief for p in prot]      # relief > 1: the strata step in and out further (the tall faces)
     cr = []
     for _ in range(cracks):
         x = rnd.uniform(-W / 2 + 1.5, W / 2 - 1.5)
@@ -61,6 +63,9 @@ def rock_face(W, H, D, seed, layers=5, soft_every=3, overhang=1.2, undercut=0.9,
 
     def top_at(x):
         t = H * (1.0 - end_drop * end_k(x))
+        if skyline:
+            away = C.smoothstep((notch[1] if notch else 0.0) + 0.6, (notch[1] if notch else 0.0) + 3.0, abs(x - (notch[0] if notch else 0.0)))
+            t += skyline * C.fbm2(x * 0.21 + seed, 0.7, seed + 9, 2) * away
         if notch:
             cx, hw, drop = notch
             t -= drop * (1.0 - C.smoothstep(hw - 0.6, hw + 0.6, abs(x - cx)))
@@ -84,6 +89,7 @@ def rock_face(W, H, D, seed, layers=5, soft_every=3, overhang=1.2, undercut=0.9,
                 z += d * math.exp(-((x - xj) / w) ** 2) * C.smoothstep(ya, ya + 1.2, y) * (1 - C.smoothstep(yb - 1.2, yb, y))
         z += rough * C.fbm2(x * 0.3 + seed, y * 0.4, seed, 2)
         z += end_curl * end_k(x) ** 1.5 * (0.6 + 0.4 * y / H)
+        z -= bow * (x / (W / 2.0)) ** 2
         if arch:
             cx, hw, jh, ch = arch
             dx = abs(x - cx)

@@ -313,7 +313,7 @@ def build_all():
     out["JG_Tree_Mistbough_D1"] = tree_mistbough("JG_Tree_Mistbough_D1", seed=71, height=11.5, lean=1.0)
     out["JG_Tree_Mistbough_D2"] = tree_mistbough("JG_Tree_Mistbough_D2", seed=83, height=9.5, lean=-0.8)
     out["JG_Tree_Veil_F1"] = tree_veil("JG_Tree_Veil_F1", seed=91)
-    return out
+    return C.apply_merges(out)
 
 
 if __name__ == "__main__":

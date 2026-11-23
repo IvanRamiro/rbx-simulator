@@ -332,7 +332,7 @@ def build_all():
     out = {}
     for p in (build_tree(), build_crown(), build_shelf(), build_shrine()):
         out[p.name] = p
-    return out
+    return C.apply_merges(out)
 
 
 if __name__ == "__main__":
