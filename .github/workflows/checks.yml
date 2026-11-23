@@ -1,0 +1,41 @@
+# Runs tools/check.py on every push and pull request: every Lua file compiles, no lint warning, no misspelt global, rojo builds, the rule-module
+# tests pass, no machine path in src or the docs. The same command works locally: python3 tools/check.py
+# Only the folders it needs are checked out (the repository's assets are over a gigabyte), so the FBX path scan is skipped here and runs locally.
+name: checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      LUAU_VERSION: "0.744"
+      ROJO_VERSION: "7.7.1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout: |
+            src
+            tests
+            tools/check.py
+            default.project.json
+            Qi_Aura_Simulator_Design.md
+          sparse-checkout-cone-mode: false
+
+      - name: Install Luau and Rojo
+        run: |
+          mkdir -p "$HOME/bin"
+          curl -fsSL -o luau.zip "https://github.com/luau-lang/luau/releases/download/${LUAU_VERSION}/luau-ubuntu.zip"
+          unzip -q luau.zip -d "$HOME/bin"
+          curl -fsSL -o rojo.zip "https://github.com/rojo-rbx/rojo/releases/download/v${ROJO_VERSION}/rojo-${ROJO_VERSION}-linux-x86_64.zip"
+          unzip -q rojo.zip -d "$HOME/bin"
+          chmod +x "$HOME/bin"/*
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Run the checks
+        run: python3 tools/check.py

@@ -84,7 +84,7 @@ Then the path on, so a player always has a next goal (steps 8 to 23): buy a weap
 - **Skip:** a player can skip them all, which asks "SURE?" and pays nothing.
 - **Existing saves** were marked done at step 8 (migration 8), so they skip the first seven and start the path on at step 8.
 
-### Core loop (planned): guardians and egg theft
+### Core loop: guardians and egg theft
 
 Defeating a guardian is not the goal. **Stealing its egg and escaping with it is.**
 Cultivate → train Qinggong → find an island's guardian → weaken it → take an egg from the stands
@@ -1471,6 +1471,8 @@ Code: `shared/TitleRules` (every title: text, colours, how), `server/Titles/Titl
 ## 8. Technical architecture
 
 **Tools:** Roblox Studio and Rojo 7.7.1 (VS Code, Git), with Blender 5.2 for pets, eggs, aura pieces and islands. Serve the project with `./tools/rojo_keepalive.sh` rather than a bare `rojo serve`: Rojo 7.7.1 crashes when a folder under `src` is deleted while it serves, and Studio then quietly stops syncing; the script starts it again whenever it stops (its log: `~/Library/Logs/rojo-qi-aura.log`). After deleting a folder, check that Studio's matching instance went too.
+
+**Checks and tests (2026-11-23):** `python3 tools/check.py` is the one command before a commit or a release: every Lua file under `src` compiles, `luau-analyze` reports no lint warning and no unknown global that is not a Roblox one (a misspelt name), `rojo build` succeeds, the tests pass, and no machine path is in `src` or this document (nor in any tracked FBX). `python3 tests/run.py` runs the tests alone: plain-Luau specs for the rule modules in `src/shared` (ranks, pets and their odds, the spin wheel, the daily reward, the Auction House, the Wandering Merchant, weather, the Codex, factions) and for the integrity of `GameConfig` (every egg pool adds up to 100, every pet has lore, every faction is complete), run with the `luau` command-line tool and stand-ins for the few Roblox globals the modules touch (`tests/README.md`). Anything under `src/server` or `src/client` that needs a real player or instance is not covered and is tested in Studio. GitHub runs the same `tools/check.py` on every push (`.github/workflows/checks.yml`; it checks out only `src`, `tests`, the script, the project file and this document, so it skips the FBX scan). The vault (the project's memory notes, kept out of git) has its own local history and a dated archive outside the project folder, made by the vault's snapshot script (see the vault note "Safety Net 2026-11-23"); both are on this Mac only.
 
 **Rojo mapping**
 
