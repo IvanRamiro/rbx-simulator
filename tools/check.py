@@ -11,7 +11,9 @@ What it checks, in order (it needs `luau`, `luau-compile`, `luau-analyze` and `r
                type definitions here, so its type errors are noise and are ignored: only lint warnings and unknown globals count.
   3. build     `rojo build` of default.project.json succeeds
   4. tests     tests/run.py: the shared rule modules (ranks, pets, spins, auction, weather, codex, factions, config integrity)
-  5. hygiene   no machine path (a macOS home folder) in src/, the design doc or the project file; no tracked FBX that embeds the home
+  5. sounds    every sound name the client plays (Sfx.play / after / loop with a literal name, a guardian's VOICES and ALERTS, a catalog entry's `With`
+               layers) is an entry of the sound catalog: a leftover name after a rename plays nothing, silently
+  6. hygiene   no machine path (a macOS home folder) in src/, the design doc or the project file; no tracked FBX that embeds the home
                path of the Mac it runs on (worked out at run time: no user name is stored in this file)
 Exit code 0 = all passed. The FBX part only runs where the FBX files are checked out (CI checks out src/ and tests/ only).
 """
@@ -102,6 +104,50 @@ def check_tests():
         print("\n".join("      " + l for l in result.stdout.splitlines()))
 
 
+def check_sounds():
+    """A sound that is named but not in the catalog plays nothing and says nothing (Sfx ignores it): after a guardian is replaced its old names linger."""
+    catalog_path = os.path.join(REPO, "src", "client", "Audio", "SoundCatalog.lua")
+    pets_path = os.path.join(REPO, "src", "client", "Audio", "PetSounds.lua")
+    if not os.path.exists(catalog_path):
+        print("SKIP  sound names (no client sources checked out)")
+        return
+    catalog = open(catalog_path, encoding="utf-8").read()
+    pets = open(pets_path, encoding="utf-8").read() if os.path.exists(pets_path) else ""
+    known = set(re.findall(r"^    ([A-Za-z0-9_]+) = ", catalog, flags=re.M))
+    pet_ids = set(re.findall(r"^    ([A-Za-z0-9_]+) = \{", pets, flags=re.M))
+
+    def exists(name):
+        return name in known or name in pet_ids or ('"' + name + '"') in pets
+
+    missing = {}
+    # 1. layers named by the catalog's own entries
+    for match in re.finditer(r"With = (\"[A-Za-z0-9_]+\"|\{[^\n]*?\})\s*[,}]", catalog):
+        for name in re.findall(r"\"([A-Za-z][A-Za-z0-9_]*)\"", match.group(1)):
+            if not exists(name):
+                missing.setdefault(name, "SoundCatalog With")
+    # 2. literal names the client plays
+    for folder, _, files in os.walk(os.path.join(REPO, "src", "client")):
+        for f in files:
+            if not f.endswith(".lua"):
+                continue
+            path = os.path.join(folder, f)
+            text = open(path, encoding="utf-8").read()
+            for name in re.findall(r"Sfx\.(?:play|after|loop)\(\"([A-Za-z0-9_]+)\"", text):
+                if not exists(name):
+                    missing.setdefault(name, os.path.relpath(path, REPO))
+            if f == "GuardianController.client.lua":
+                voices = text[text.find("local VOICES"):text.find("local EGG_SOUNDS")]
+                for name in re.findall(r"(?:Start|Hit) = \"([A-Za-z0-9_]+)\"", voices):
+                    if not exists(name):
+                        missing.setdefault(name, "GuardianController VOICES")
+                alerts = re.search(r"local ALERTS = \{([^}]*)\}", text)
+                for name in re.findall(r"= \"([A-Za-z0-9_]+)\"", alerts.group(1) if alerts else ""):
+                    if not exists(name):
+                        missing.setdefault(name, "GuardianController ALERTS")
+    detail = "" if not missing else ", ".join(f"{n} ({w})" for n, w in sorted(missing.items())[:6])
+    record("sound names exist in the catalog", not missing, detail)
+
+
 def check_hygiene():
     hits = run(["git", "grep", "-I", "-n", "-E", r"/Users/[A-Za-z]+|C:\\Users", "--", "src", "Qi_Aura_Simulator_Design.md", "default.project.json"])
     lines = hits.stdout.strip().splitlines()
@@ -127,6 +173,7 @@ def main(argv):
     if "--fast" not in argv:
         check_build()
     check_tests()
+    check_sounds()
     check_hygiene()
     failed = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(failed)} of {len(results)} checks passed")
