@@ -265,10 +265,10 @@ local function send(player, data)
         attempt(Enum.DataStoreRequestType.SetIncrementSortedAsync, function()
             indexStore:SetAsync(key, entry.Time)
         end)
-        reply(player, true)
+        return reply(player, true)
     else
         table.remove(list)
-        reply(player, false, MESSAGES.busy)
+        return reply(player, false, MESSAGES.busy)
     end
 end
 

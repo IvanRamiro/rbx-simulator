@@ -263,11 +263,11 @@ local function followOffsets(pets, hip, flying)
     end
     -- (evenly spaced round the circle: each pair of neighbours needs the chord between them longer than their reaches together)
     local orbit = math.max(ORBIT_RADIUS, reachMost + 3)
-    local count = #reaches
-    if count >= 2 then
-        local chord = 2 * math.sin(math.pi / count)
+    local total = #reaches
+    if total >= 2 then
+        local chord = 2 * math.sin(math.pi / total)
         for index, reach in reaches do
-            orbit = math.max(orbit, (reach + reaches[index % count + 1] + 1.5) / chord)
+            orbit = math.max(orbit, (reach + reaches[index % total + 1] + 1.5) / chord)
         end
     end
     for _, offset in offsets do
