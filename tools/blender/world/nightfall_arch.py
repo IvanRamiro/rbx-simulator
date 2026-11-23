@@ -582,54 +582,59 @@ def talon_plinth():
 
 
 def residence():
-    """The Lord's tower: a battered stone tower 11 x 11 (a room 7 x 7 inside, a door 4.2 wide), a stone mass above it with a crimson band, an overhanging balcony ringed with iron spikes, an
-    upper storey with arrow slits under a hard gable roof with horns and a crest, a small gabled porch over the door and an iron spire. Faces -z."""
+    """The Lord's tower: a battered stone tower 13 x 13 (a room 9 x 9 inside, a door 5.8 wide: the pathfinder needs 2 r + 2.2 clear, so 5.2 for radius 1.5), a stone mass above it with a
+    crimson band, an overhanging balcony ringed with iron spikes, an upper storey with arrow slits under a hard gable roof with horns and a crest, a small gabled porch over the door
+    between two stone posts 8 apart, and an iron spire. Faces -z."""
     P = NP()
     gs, gt, gi, gc = P.geo(S_STONE), P.geo(S_TILE), P.geo(S_IRON), P.geo(S_CRIMSON)
-    X, Hg, tb, tt = 5.5, 7.0, 2.0, 1.6
-    box(gs, -3.5, 3.5, -0.9, 0.0, -3.5, 3.5)
-    P.block("Floor", -3.5, 3.5, -1.5, 0.0, -3.5, 3.5)
+    X, Hg, tb, tt = 6.5, 7.0, 2.0, 1.6
+    DOOR = 5.8
+    inner = X - tb                                   # 4.5: the room is 9 x 9
+    box(gs, -inner, inner, -0.9, 0.0, -inner, inner)
+    P.block("Floor", -inner, inner, -1.5, 0.0, -inner, inner)
     P.floor.append((-X, X, -X, X, 0.0))
-    shell(P, -X, X, -X, X, -1.0, Hg, tb, tt, doors={"N": [(X - 2.1, X + 2.1, 5.6)]}, name="Wall")
-    box(gs, -3.6, 3.6, Hg - 0.6, Hg, -3.6, 3.6)
-    P.block("Ceiling", -3.6, 3.6, Hg - 0.6, Hg, -3.6, 3.6)
-    xo = 3.5 + tt
+    shell(P, -X, X, -X, X, -1.0, Hg, tb, tt, doors={"N": [(X - DOOR / 2, X + DOOR / 2, 5.6)]}, name="Wall")
+    box(gs, -inner - 0.1, inner + 0.1, Hg - 0.6, Hg, -inner - 0.1, inner + 0.1)
+    P.block("Ceiling", -inner - 0.1, inner + 0.1, Hg - 0.6, Hg, -inner - 0.1, inner + 0.1)
+    xo = inner + tt                                  # 6.1: the shell's outer face at its top
     frust(gs, -xo, xo, -xo, xo, Hg, 14.0, 0.7)
     P.block("Upper", -xo, xo, Hg, 14.0, -xo, xo)
     for yb in (3.0,):
         t = tb + (tt - tb) * (yb + 1.0) / (Hg + 1.0)
-        frust(gs, -(3.5 + t) - 0.2, 3.5 + t + 0.2, -(3.5 + t) - 0.2, 3.5 + t + 0.2, yb, yb + 0.4, 0.12)
-    frust(gc, -4.75, 4.75, -4.75, 4.75, 12.9, 13.6, 0.08)
+        frust(gs, -(inner + t) - 0.2, inner + t + 0.2, -(inner + t) - 0.2, inner + t + 0.2, yb, yb + 0.4, 0.12)
+    frust(gc, -5.65, 5.65, -5.65, 5.65, 12.9, 13.6, 0.08)
     # the balcony: a slab on corbels with an iron spike rail
-    frust(gs, -6.4, 6.4, -6.4, 6.4, 13.9, 14.9, 0.0)
+    BAL = 7.1
+    frust(gs, -BAL - 0.2, BAL + 0.2, -BAL - 0.2, BAL + 0.2, 13.9, 14.9, 0.0)
     for sx in (-1, 1):
         for sz in (-1, 1):
-            pprism(gs, sx * 4.3, sz * 4.3, 12.2, 14.0, 1.0, seg=4, r_top=0.5, caps=True, phase=PI / 4)
-    for a, b in (((-6.1, -6.1), (6.1, -6.1)), ((6.1, -6.1), (6.1, 6.1)), ((6.1, 6.1), (-6.1, 6.1)), ((-6.1, 6.1), (-6.1, -6.1))):
-        beam(gi, (a[0], 15.9, a[1]), (b[0], 15.9, b[1]), 0.2, 0.2)
-        L = math.hypot(b[0] - a[0], b[1] - a[1])
+            pprism(gs, sx * 5.2, sz * 5.2, 12.2, 14.0, 1.0, seg=4, r_top=0.5, caps=True, phase=PI / 4)
+    for a_, b_ in (((-BAL + 0.1, -BAL + 0.1), (BAL - 0.1, -BAL + 0.1)), ((BAL - 0.1, -BAL + 0.1), (BAL - 0.1, BAL - 0.1)), ((BAL - 0.1, BAL - 0.1), (-BAL + 0.1, BAL - 0.1)), ((-BAL + 0.1, BAL - 0.1), (-BAL + 0.1, -BAL + 0.1))):
+        beam(gi, (a_[0], 15.9, a_[1]), (b_[0], 15.9, b_[1]), 0.2, 0.2)
+        L = math.hypot(b_[0] - a_[0], b_[1] - a_[1])
         n = int(L / 1.8)
         for i in range(n + 1):
-            x = lerp(a[0], b[0], i / n)
-            z = lerp(a[1], b[1], i / n)
+            x = lerp(a_[0], b_[0], i / n)
+            z = lerp(a_[1], b_[1], i / n)
             box(gi, x - 0.1, x + 0.1, 14.8, 15.9, z - 0.1, z + 0.1)
             pyramid(gi, x, z, 15.8, 0.16, 0.16, 0.7)
-    bmass(P, -4.2, 4.2, -4.2, 4.2, 14.8, 20.8, 0.6, bands=(2.4,), quoins=False)
-    for x in (-2.0, 2.0):
-        slit(P, x, 16.3, -4.2 + 0.1, (0.0, -1.0), w=0.45, h=2.6)
-        slit(P, x, 16.3, 4.2 - 0.1, (0.0, 1.0), w=0.45, h=2.6)
-        slit(P, -4.2 + 0.1, 16.3, x, (-1.0, 0.0), w=0.45, h=2.6)
-        slit(P, 4.2 - 0.1, 16.3, x, (1.0, 0.0), w=0.45, h=2.6)
-    roof_gable(P, -3.6, 3.6, -3.6, 3.6, 20.9, 27.6, over=2.3, rake=1.9, th=0.6, rib_gap=2.2, wall_y=20.8, z_r=0.0)
-    cyl(gi, (0.0, 27.5, 0.0), (0.0, 33.0, 0.0), 0.34, 0.14, seg=6)
-    pyramid(gi, 0.0, 0.0, 32.9, 0.14, 0.14, 1.8)
-    for yy in (29.0, 31.0):
+    UP = 4.9
+    bmass(P, -UP, UP, -UP, UP, 14.8, 20.8, 0.6, bands=(2.4,), quoins=False)
+    for x in (-2.4, 0.0, 2.4):
+        slit(P, x, 16.3, -UP + 0.1, (0.0, -1.0), w=0.45, h=2.6)
+        slit(P, x, 16.3, UP - 0.1, (0.0, 1.0), w=0.45, h=2.6)
+        slit(P, -UP + 0.1, 16.3, x, (-1.0, 0.0), w=0.45, h=2.6)
+        slit(P, UP - 0.1, 16.3, x, (1.0, 0.0), w=0.45, h=2.6)
+    roof_gable(P, -(UP - 0.6), UP - 0.6, -(UP - 0.6), UP - 0.6, 20.9, 27.9, over=2.3, rake=1.9, th=0.6, rib_gap=2.2, wall_y=20.8, z_r=0.0)
+    cyl(gi, (0.0, 27.8, 0.0), (0.0, 33.3, 0.0), 0.34, 0.14, seg=6)
+    pyramid(gi, 0.0, 0.0, 33.2, 0.14, 0.14, 1.8)
+    for yy in (29.3, 31.3):
         pprism(gi, 0.0, 0.0, yy, yy + 0.28, 0.55, seg=6, r_top=0.55, caps=True)
-    # the door's porch: a small gable on two stone posts
+    # the door's porch: a small gable on two stone posts, 8 apart (7.2 clear between them)
     for sx in (-1, 1):
-        bmass(P, sx * 3.1 - 0.4, sx * 3.1 + 0.4, -X - 2.3, -X - 1.5, -1.0, 6.4, 0.08, quoins=False)
-        P.block("PorchPost", sx * 3.1 - 0.4, sx * 3.1 + 0.4, 0.0, 6.4, -X - 2.3, -X - 1.5)
-    porch(P, -3.8, 3.8, 6.4, 8.9, -X - 3.0, -X + 1.0, over=1.0, rake=0.6)
+        bmass(P, sx * 4.0 - 0.4, sx * 4.0 + 0.4, -X - 2.3, -X - 1.5, -1.0, 6.4, 0.08, quoins=False)
+        P.block("PorchPost", sx * 4.0 - 0.4, sx * 4.0 + 0.4, 0.0, 6.4, -X - 2.3, -X - 1.5)
+    porch(P, -4.6, 4.6, 6.4, 9.2, -X - 3.0, -X + 1.0, over=1.0, rake=0.6)
     P.lights.append((0.0, 5.0, 0.0))
     P.marks["Door"] = (0.0, 0.0, -X)
     P.marks["Inside"] = (0.0, 0.0, 0.0)
@@ -671,7 +676,7 @@ def arena():
         ring_slab(gs, 0.0, 0.0, Rin + 0.5, Rout0 + 0.55, 2.2, 2.62, a0, a1, r_out_top=Rout0 + 0.45 - 0.0)
     # the three gates: two pylons and an iron lintel, spiked, a crimson band on each pylon
     gr = (Rin + Rout0) / 2 + 0.2
-    half = math.radians(17.0)
+    half = math.radians(19.0)                    # the pylons stand 19 degrees either side of a gate's middle: 6.0 clear between them (the pathfinder needs 5.2)
     for g_ in gates:
         pts = []
         for sg in (-1, 1):
@@ -774,7 +779,7 @@ def chain_ring():
     return P
 
 
-def chain_bridge(L=22.0, w=5.0, sag=0.5, tower_h=8.6):
+def chain_bridge(L=22.0, w=5.8, sag=0.5, tower_h=8.6):
     """The chain bridge over the fissure: an iron plank deck 22 long and 5 wide, four battered stone pylons with iron spike crowns, two heavy hanging chains and two hand chains (links of
     iron) joined by hanger rods, a crimson pennant on each pylon and a glowing seam under the deck. Along x, deck top y 0 at both ends (it sags half a stud in the middle). Collision: the
     deck in 1.5-stud boxes, a guard along each edge, the pylons."""
@@ -798,24 +803,24 @@ def chain_bridge(L=22.0, w=5.0, sag=0.5, tower_h=8.6):
         P.block("Guard", xa, xb + 0.02, y, y + 1.3, -w / 2 - 0.3, -w / 2 + 0.05)
         P.block("Guard", xa, xb + 0.02, y, y + 1.3, w / 2 - 0.05, w / 2 + 0.3)
     for z in (-w / 2 + 0.15, w / 2 - 0.15):
-        box(gi, -L / 2, L / 2, -0.95, -0.5, z - 0.2, z + 0.2)                       # the stringers under the deck
+        box(gi, -L / 2, L / 2, -0.95, -0.3, z - 0.2, z + 0.2)                       # the stringers under the deck (their top 0.1 inside the planks)
     box(ge, -L / 2 + 1.5, L / 2 - 1.5, -0.85, -0.6, -0.3, 0.3)                       # the glowing seam under the deck's middle
     top = {}
+    ZP = w / 2 + 1.5                                  # the pylons stand 1.5 beyond the deck's edge: 6.2 clear between them (the pathfinder needs 5.2), 5.7 between the guard rails
     for xt in (-L / 2 + 0.4, L / 2 - 0.4):
-        for z in (-w / 2 - 0.9, w / 2 + 0.9):
+        for z in (-ZP, ZP):
             bmass(P, xt - 1.2, xt + 1.2, z - 1.2, z + 1.2, -2.0, tower_h, 0.45, bands=(2.6, 5.4), seed=int(xt + z * 7))
             P.block("Pylon", xt - 1.3, xt + 1.3, -2.0, tower_h, z - 1.3, z + 1.3)
             cone(gi, xt, tower_h - 0.05, z, 0.95, 3.0, seg=4, phase=PI / 4)
             frust(gc, xt - 1.1, xt + 1.1, z - 1.1, z + 1.1, tower_h - 2.0, tower_h - 1.4, 0.05)
         top[xt] = tower_h - 0.9
     tops = sorted(top)
-    for z in (-w / 2 - 0.9, w / 2 + 0.9):
+    for sg in (-1.0, 1.0):
+        z = sg * (ZP - 1.1)                           # the chains hang from the pylons' inner faces
         a = (tops[0], top[tops[0]], z)
         b = (tops[1], top[tops[1]], z)
         chain_swag(P, a, b, sag=top[tops[0]] - 2.6, links=16, size=1.1)
-        hand_a = (tops[0], 1.6 + deck_y(tops[0]), z)
-        hand_b = (tops[1], 1.6 + deck_y(tops[1]), z)
-        chain_swag(P, (tops[0], 1.7, z), (tops[1], 1.7, z), sag=-0.0 - sag * 0 + 0.3, links=16, size=0.7)
+        chain_swag(P, (tops[0], 1.7, z), (tops[1], 1.7, z), sag=0.3, links=16, size=0.7)
         hx = tops[0] + 3.4
         while hx < tops[1] - 2.0:
             t = (hx - tops[0]) / (tops[1] - tops[0])
@@ -833,8 +838,8 @@ def chain_bridge(L=22.0, w=5.0, sag=0.5, tower_h=8.6):
 BUILDING_BUILDERS = {"Gatehouse": gatehouse, "Keep": keep, "Armory": armory, "Residence": residence, "Arena": arena, "Bastion": bastion, "EmberCourt": ember_court,
                      "ChainRing": chain_ring, "RackShed": rack_shed, "UpperGate": upper_gate}
 COURT_BUILDERS = {"GreatFlight": lambda: stair_flight(12, 14.0, 1.6, 2.0), "GreatFlightHigh": lambda: stair_flight(12, 14.0, 13.6, 2.0), "GreatLanding": lambda: stair_landing(14.0, 6.0, 13.6, 2.0),
-                  "PosternFlight": lambda: stair_flight(12, 4.4, 1.6, 1.1, flank_h=1.3, post_every=4), "PosternFlightHigh": lambda: stair_flight(12, 4.4, 13.6, 1.1, flank_h=1.3, post_every=4),
-                  "PosternLanding": lambda: stair_landing(4.4, 4.0, 13.6, 1.1, 1.3), "BridgeFlight": lambda: stair_flight(8, 6.0, 9.6, 1.0, flank_h=1.3, post_every=3),
+                  "PosternFlight": lambda: stair_flight(12, 5.0, 1.6, 1.1, flank_h=1.3, post_every=4), "PosternFlightHigh": lambda: stair_flight(12, 5.0, 13.6, 1.1, flank_h=1.3, post_every=4),
+                  "PosternLanding": lambda: stair_landing(5.0, 4.0, 13.6, 1.1, 1.3), "BridgeFlight": lambda: stair_flight(8, 6.0, 9.6, 1.0, flank_h=1.3, post_every=3),
                   "BridgeTop": lambda: stair_landing(6.0, 4.0, 9.6, 1.0, 1.3), "ChainBridge": chain_bridge, "Curtain12": lambda: curtain(12.0), "Curtain6": lambda: curtain(6.0),
                   "Parapet12": lambda: parapet(12.0), "Parapet6": lambda: parapet(6.0)}
 PROP_BUILDERS = {"BrazierTall": brazier_tall, "BannerPole": banner_pole, "WeaponRack": weapon_rack, "StakeRow": stake_row, "TalonPlinth": talon_plinth}

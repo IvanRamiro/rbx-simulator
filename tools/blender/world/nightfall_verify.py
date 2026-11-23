@@ -243,6 +243,31 @@ def corridor_free(world, path, y0, half=2.5, lo=0.8, hi=4.6, step=1.0, lateral=0
     return n_pts, bad
 
 
+def gap_width(world, x, z, nx, nz, y, limit=9.0):
+    """The clear width of a doorway, gate or gap: from the point (x, z) at floor height y, how far a body's centre line runs free (boxes and terrain cells, tested with a radius of 0)
+    to each side along (nx, nz), the two distances added. 0 if the point itself is blocked."""
+    def free(px, pz):
+        return world.blocked(px, pz, y, 0.0) is None
+    if not free(x, z):
+        return 0.0
+    total = 0.0
+    for sgn in (1.0, -1.0):
+        d = 0.0
+        while d < limit and free(x + sgn * nx * (d + 0.02), z + sgn * nz * (d + 0.02)):
+            d += 0.02
+        total += d + 0.01
+    return total
+
+
+def pathfinder_ok(gap, r):
+    """Roblox's PathfindingService, measured in Studio on the Residence's door (2026-11-23): a doorway is passable for an agent of radius r when it is at least 2 r + 2.2 studs clear (4.2 fails
+    at 1.0, 1.25 and 1.5; 4.7 passes at 1.0; 5.2 passes at 1.5). The headless flood fill's 2 r is not enough for NPCs."""
+    return gap >= 2.0 * r + 2.2 - 1e-6
+
+
+MAIN_GAP, SECOND_GAP = 2 * 1.5 + 2.2, 2 * 1.0 + 2.2 + 0.5      # 5.2 for a main route (radius 1.5), 4.7 for a secondary one (radius 1.0 plus the 0.5 Studio's step of 0.5 shows)
+
+
 # ---------------------------------------------------------------------------------------------------------------------------------
 # Route zones
 # ---------------------------------------------------------------------------------------------------------------------------------
@@ -286,6 +311,47 @@ def mark_world(placement, key):
 
 def placement(name):
     return [p for p in P.placements if p["name"] == name][0]
+
+
+def measure_gaps(world, P):
+    """Every doorway, gate and gap on the main routes (and the Postern's stair): (label, clear width, main)."""
+    out = []
+    cb_ = placement("ChainBridge")
+    arm = placement("Armory")
+    keep = placement("Keep")
+    res = placement("Residence")
+    out.append(("the gatehouse's passage", gap_width(world, 0.0, D.GATE_Z, 1.0, 0.0, D.GR), True))
+    for name, a in (("front", -math.pi / 2), ("right", 0.0), ("left", math.pi)):
+        x, z = D.ARENA[0] + 13.4 * math.cos(a), D.ARENA[1] + 13.4 * math.sin(a)
+        out.append(("the arena's %s gate" % name, gap_width(world, x, z, -math.sin(a), math.cos(a), D.GR), True))
+    out.append(("the keep's door", gap_width(world, keep["x"], keep["z"] - 14.0 + 2.5, 1.0, 0.0, keep["y"]), True))
+    out.append(("the armory's door", gap_width(world, arm["x"] + 6.5, arm["z"], 0.0, 1.0, arm["y"]), True))
+    out.append(("the armory's porch between its piers", gap_width(world, arm["x"] + 9.0, arm["z"], 0.0, 1.0, arm["y"]), True))
+    rx = res["x"] - (res["x"] - 48.0) - 0.0
+    pc = P.pieces[res["piece"]]
+    door = mark_world(res, "Door")
+    out.append(("the Residence's door", gap_width(world, door[0] + 1.0, door[2], 0.0, 1.0, res["y"]), True))
+    out.append(("the Residence's porch between its posts", gap_width(world, door[0] - 1.8, door[2], 0.0, 1.0, res["y"]), True))
+    for label, x in (("the bridge's bridgehead end (between the pylons)", cb_["x"] - 10.6), ("the bridge's middle (between the guard rails)", cb_["x"]), ("the bridge's Residence end (between the pylons)", cb_["x"] + 10.6)):
+        yb = world.support(x, cb_["z"], 40.0)
+        out.append((label, gap_width(world, x, cb_["z"], 0.0, 1.0, yb), True))
+    ug = placement("UpperGate")
+    out.append(("the Upper Gate at the Great Stair's head (between the pylons)", gap_width(world, 0.0, ug["z"] + 2.3, 1.0, 0.0, ug["y"]), True))
+    out.append(("the Great Stair (between its flanks, mid first flight)", gap_width(world, 0.0, 20.0, 1.0, 0.0, world.support(0.0, 20.0, 40.0)), True))
+    out.append(("the bridgehead stair (between its flanks)", gap_width(world, D.BH_X, 80.0, 1.0, 0.0, world.support(D.BH_X, 80.0, 40.0)), True))
+    out.append(("the Postern's first flight (between its flanks)", gap_width(world, D.POSTERN_X, 20.0, 1.0, 0.0, world.support(D.POSTERN_X, 20.0, 40.0)), False))
+    out.append(("the Postern's second flight (between its flanks)", gap_width(world, D.POSTERN_X, 45.0, 1.0, 0.0, world.support(D.POSTERN_X, 45.0, 40.0)), False))
+    return out
+
+
+def ring_gaps(world, P):
+    """The chain ring's gaps between neighbouring posts (not doorways: the ring is open between them)."""
+    out = []
+    for k in range(8):
+        a = 2 * math.pi * (k + 0.5) / 8 + 2 * math.pi / 16
+        x, z = D.RING[0] + 8.0 * math.cos(a), D.RING[1] + 8.0 * math.sin(a)
+        out.append(("ring gap %d" % k, gap_width(world, x, z, -math.sin(a), math.cos(a), D.GR), False))
+    return out
 
 
 def main():
@@ -526,7 +592,7 @@ def main():
     say("8. Voxel corridors: no terrain cell (a column counts as its whole voxel, rounded up) in a body's space, 0.8 to 4.6 over the floor and 2.5 to each side of the axis")
     corr = [
         ("Great Stair (both flights, the landing and the gate's platform)", [(0.0, 12.0), (0.0, 53.0)], 6.0),
-        ("Postern (both flights and the landing: the steps are 4.4 wide, so the body's 2.5 each side includes the flank walls)", [(D.POSTERN_X, 14.0), (D.POSTERN_X, 53.0)], 2.2),
+        ("Postern (both flights and the landing: the steps are 5.0 wide, so the body's 2.5 each side is the flank walls' inner faces)", [(D.POSTERN_X, 14.0), (D.POSTERN_X, 53.0)], 2.5),
         ("Bridgehead stair and the bridgehead's shelf to the bridge", [(18.0, 76.0), (18.0, 91.0), (22.0, 101.0)], 2.5),
         ("gatehouse passage (8 wide)", [(0.0, -40.0), (0.0, -28.0)], 2.5),
         ("arena's front gate (the pit's mouth, 6.8 wide)", [(0.0, -26.0), (0.0, -8.0)], 2.5),
@@ -550,6 +616,14 @@ def main():
         hit = [b["name"] for b in world.near(x, z) if world.inside(b, x, z) and b["y1"] > 0.3 and b["y0"] < 3.0 and b["name"] not in ("Floor",)]
         check("marker %-11s at pad (%6.1f, %6.1f)" % (nm, x, z), not hit or nm == "MainHall", "(inside: %s%s)" % (", ".join(sorted(set(hit))), "; a placeholder for the headquarters: Spots.HqDoor and HqInside are the faction's places" if nm == "MainHall" and hit else "") if hit else "(free)")
     say("")
+    # ------------------------------------------------------------------------------------------------ 11. the pathfinder rule
+    say("11. The pathfinder rule: a doorway, gate or gap on a MAIN route is at least 5.2 clear (2 x 1.5 + 2.2: Studio's PathfindingService, measured), on a secondary route at least 4.7")
+    gaps = measure_gaps(world, P)
+    for (label, w, main_) in gaps:
+        need = MAIN_GAP if main_ else SECOND_GAP
+        check("gap %-62s %5.2f clear (%s: at least %.1f; margin %+.2f)" % (label, w, "main" if main_ else "secondary", need, w - need), w >= need - 1e-6)
+    say("   gaps below the main rule that are not doorways (informational): the chain ring's eight gaps between its posts: %s" % ", ".join("%.2f" % w for (l, w, m) in ring_gaps(world, P)))
+    say("")
     # ------------------------------------------------------------------------------------------------ 10. controls: the checks are shown able to fail
     say("10. Controls: the same checks must REFUSE what a body cannot do (each line is ok when the refusal happens)")
     ok_a, why_a, _ = walk(world, [(-20.0, 40.0), (-20.0, 58.0)], terrain_y(-20.0, 40.0), 1.0)
@@ -561,6 +635,11 @@ def main():
     path_b = [(x_a + 0.2, cb["z"] + 21.0), (x_b - 0.2, cb["z"] + 21.0)]
     n_d, bad_d = corridor_free(world, path_b, ta, half=2.5)
     check("the bridge's corridor rule finds terrain where the same bridge would cross the mountain instead of the fissure (z %.0f, 21 studs along it)" % (cb["z"] + 21.0), len(bad_d) > 0, "(%d of %d points blocked)" % (len(bad_d), n_d))
+    # the rule itself: a 4.2 door (the Residence's first) is refused, measured in a world of two boxes 4.2 apart
+    boxes42 = [dict(name="Wall", x0=-5.0, x1=-2.1, y0=0.0, y1=9.0, z0=-1.0, z1=1.0), dict(name="Wall", x0=2.1, x1=5.0, y0=0.0, y1=9.0, z0=-1.0, z1=1.0)]
+    w42 = gap_width(World(boxes42), 0.0, 0.0, 1.0, 0.0, 0.0)
+    check("a door 4.2 clear (two walls 4.2 apart, measured by the same function: %.2f) is refused for a main route, and for radius 1.5" % w42, w42 < MAIN_GAP and not pathfinder_ok(w42, 1.5), "(Studio: fails at 1.0, 1.25 and 1.5)")
+    check("the rule agrees with Studio's table: 4.7 passes at 1.0 and not 1.5, 5.2 passes at 1.5", pathfinder_ok(4.7, 1.0) and not pathfinder_ok(4.7, 1.5) and pathfinder_ok(5.2, 1.5) and not pathfinder_ok(4.2, 1.0 + 0.25))
     say("")
     check("RESULT: every check above passed", not FAILS, "(%d failed: %s)" % (len(FAILS), FAILS) if FAILS else "")
     os.makedirs(os.path.dirname(OUT), exist_ok=True)

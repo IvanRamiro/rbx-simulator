@@ -266,11 +266,11 @@ def build_all(with_veg=True):
     P.put("Courts", "BridgeFlight", BH_X, GU, 75.0, role="stair")
     P.put("Courts", "BridgeTop", BH_X, GB, 87.0, role="stair")
     P.put("Courts", "ChainBridge", BRIDGE[0], Fl(T.Y_BRIDGEHEAD), BRIDGE[1], role="bridge", light=True, fx=True)
-    for z in (BRIDGE[1] - 7.0, BRIDGE[1] + 7.0):
+    for z in (BRIDGE[1] - 8.8, BRIDGE[1] + 8.8):
         P.put("Courts", "Parapet6", 22.8, GB, z, yaw=PI / 2, role="rail")
     # ---------------------------------------------------------------------------------------------- the Residence on its ledge
     P.put("Buildings", "Residence", RES[0], Fl(T.Y_RESIDENCE), RES[1], yaw=PI / 2, role="house", light=True)
-    for z in (RES[1] - 6.5, RES[1] + 6.5):
+    for z in (RES[1] - 8.0, RES[1] + 8.0):
         P.put("Props", "BrazierTall", 46.4, GB, z, role="prop")
     # ---------------------------------------------------------------------------------------------- the marks
     arm = [p for p in P.placements if p["name"] == "Armory"][0]

@@ -50,7 +50,7 @@ def zones(P):
     for name, t in T.TERRACES.items():
         routes.append(dict(name=name, c=((t["x0"] + t["x1"]) / 2, D.G(t["y"]), (t["z0"] + t["z1"]) / 2), size=(t["x1"] - t["x0"] + 7.0, t["z1"] - t["z0"] + 7.0), high=0.0, yaw=0.0))
     stairs = (("Great", D.STAIR_X, 14.0 + 4.0, ((11.0, 29.0, D.GR, 12.0), (29.0, 35.0, D.G(28.0), 0.0), (35.0, 53.0, D.G(28.0), 12.0))),
-              ("Postern", D.POSTERN_X, 4.4 + 2.2, ((13.0, 31.0, D.GR, 12.0), (31.0, 35.0, D.G(28.0), 0.0), (35.0, 53.0, D.G(28.0), 12.0))),
+              ("Postern", D.POSTERN_X, 5.0 + 2.2, ((13.0, 31.0, D.GR, 12.0), (31.0, 35.0, D.G(28.0), 0.0), (35.0, 53.0, D.G(28.0), 12.0))),
               ("Bridgehead", D.BH_X, 6.0 + 2.0, ((75.0, 87.0, D.GU, 8.0),)))
     for nm, x, w, runs in stairs:
         for (z0, z1, y, hi) in runs:
