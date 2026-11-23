@@ -30,8 +30,29 @@ local SPOT_LIFT = 0.4 -- a marked place stands this far over its floor
 -- the tags and attributes the server and the client read (shared/FactionRules)
 local TAGS = { Post = "FactionTrialPost", Gate = "TrialGateZone", Token = "TrialToken", Vault = "FactionVault" }
 
--- the gate mesh: its authored size (studs), the opening a body passes through, and the zone the server tests
-local GATE = { Width = 24, Height = 17, Depth = 3, Opening = 16, ZoneSize = Vector3.new(32, 46, 12) }
+-- the gate mesh (Trial_Props_TrialGate, measured: pieces.json): its size in studs, the opening a body passes through (16.5 clear from the ground to 12), the shafts of its two pillars (13.1 high,
+-- solid), and the zone the server tests the player against: the gate's own width, so a body must go through the gate and not round it, tall enough for a flyer
+local GATE = { Width = 24.6, Height = 17.4, Depth = 3.4, Opening = 16.5, PillarHeight = 13.1, ZoneSize = Vector3.new(24.6, 46, 12) }
+
+-- the looks of the Trial kit's pieces by material suffix (assets/world/MurimCrossing/Trial/pieces.json "looks"): the gate's are Dawnspire's, the dummy's Nightfall's, the token's Windrift's
+local LOOKS = {
+    Trial_Props_TrialGate = {
+        Marble = { Material = "Marble", Color = { 238, 236, 232 } },
+        Gold = { Material = "Metal", Color = { 255, 172, 48 } },
+        Azure = { Material = "SmoothPlastic", Color = { 38, 104, 204 } },
+    },
+    Trial_Props_TrialToken = {
+        Stone = { Material = "Slate", Color = { 62, 82, 74 } },
+        Timber = { Material = "Wood", Color = { 88, 66, 46 } },
+        Copper = { Material = "Metal", Color = { 196, 108, 58 } },
+        Glow = { Material = "Neon", Color = { 60, 212, 178 }, CastShadow = false },
+    },
+    Trial_Props_TrialDummy = {
+        Iron = { Material = "Metal", Color = { 78, 76, 92 } },
+        Crimson = { Material = "Fabric", Color = { 158, 24, 36 }, CastShadow = false },
+        Timber = { Material = "Wood", Color = { 52, 40, 36 } },
+    },
+}
 
 local FACTION = { -- colours of each faction's stone (the stand-ins use them too)
     Orthodox = { Stele = Color3.fromRGB(236, 238, 244), Base = Color3.fromRGB(120, 124, 134), Band = Color3.fromRGB(96, 168, 255), SteleMaterial = Enum.Material.Marble, BaseMaterial = Enum.Material.Granite },
@@ -52,6 +73,29 @@ end
 
 function TrialBuilder.storeKit(model)
     return WorldBuilder.storeKit(KIT, model, "TR_Anchor")
+end
+
+-- places a kit piece (every material part of it) at `frame` inside `parent`, with its look, anchored and touching nothing
+local function placeKitPiece(parent, name, frame)
+    WorldBuilder.placeTemplate(KIT, name, frame, parent)
+    for _, part in parent:GetChildren() do
+        if part:IsA("MeshPart") then
+            local _, suffix = WorldBuilder.splitName(part.Name)
+            local look = suffix and LOOKS[name] and LOOKS[name][suffix]
+            if look then
+                part.Material = Enum.Material[look.Material]
+                part.Color = Color3.fromRGB(look.Color[1], look.Color[2], look.Color[3])
+                part.CastShadow = look.CastShadow ~= false
+                part.Reflectance = 0
+            end
+            part.Anchored = true
+            part.CanCollide = false
+            part.CanQuery = false
+            part.CanTouch = false
+            part.Massless = true
+            part.CollisionFidelity = Enum.CollisionFidelity.Box
+        end
+    end
 end
 
 -- ---------- the ground ----------
@@ -226,17 +270,7 @@ local function buildGates(trials, markers)
             local model = Instance.new("Model")
             model.Name = "Gate"
             model.Parent = holder
-            WorldBuilder.placeTemplate(KIT, "Trial_Props_TrialGate", frame, model)
-            for _, part in model:GetChildren() do
-                if part:IsA("BasePart") then
-                    part.Anchored = true
-                    part.CanCollide = false
-                    part.CanQuery = false
-                    part.CanTouch = false
-                    part.Massless = true
-                    part.CollisionFidelity = Enum.CollisionFidelity.Box
-                end
-            end
+            placeKitPiece(model, "Trial_Props_TrialGate", frame)
         else
             standInGate(holder, frame)
             standIns += 1
@@ -245,7 +279,7 @@ local function buildGates(trials, markers)
         local pillarWidth = (GATE.Width - GATE.Opening) / 2
         local side = GATE.Opening / 2 + pillarWidth / 2
         for _, sign in { -1, 1 } do
-            box(holder, "Pillar", Vector3.new(pillarWidth, GATE.Height, GATE.Depth), frame * CFrame.new(sign * side, GATE.Height / 2, 0))
+            box(holder, "Pillar", Vector3.new(pillarWidth, GATE.PillarHeight, GATE.Depth), frame * CFrame.new(sign * side, GATE.PillarHeight / 2, 0))
         end
         -- the zone the server tests the player against: tall, so a flyer passes through it too
         local zone = Instance.new("Part")
@@ -259,6 +293,7 @@ local function buildGates(trials, markers)
         zone.Transparency = 1
         zone:SetAttribute("Faction", "Orthodox")
         zone:SetAttribute("Index", index)
+        zone:SetAttribute("BadgeHeight", GATE.Height + 4) -- where the client hangs the gate's number: just over its top (studs over the ground)
         CollectionService:AddTag(zone, TAGS.Gate)
         zone.Parent = holder
         placed += 1
@@ -302,7 +337,7 @@ local function buildTokens(trials, markers)
         local root = Instance.new("Part")
         root.Name = "Root"
         root.Size = Vector3.new(2, 2, 2)
-        root.CFrame = base * CFrame.new(0, 2.2, 0)
+        root.CFrame = base * CFrame.new(0, 1.95, 0) -- (the disc's middle)
         root.Anchored = true
         root.CanCollide = false
         root.CanQuery = false
@@ -312,19 +347,7 @@ local function buildTokens(trials, markers)
         model.PrimaryPart = root
         model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- (its prompt arrives with it)
         if WorldBuilder.hasTemplate(KIT, "Trial_Props_TrialToken") then
-            local first = WorldBuilder.placeTemplate(KIT, "Trial_Props_TrialToken", base, model)
-            for _, part in model:GetChildren() do
-                if part:IsA("MeshPart") then
-                    part.Anchored = true
-                    part.CanCollide = false
-                    part.CanQuery = false
-                    part.CanTouch = false
-                    part.Massless = true
-                end
-            end
-            if not first then
-                standInToken(model, base)
-            end
+            placeKitPiece(model, "Trial_Props_TrialToken", base)
         else
             standInToken(model, base)
             standIns += 1
@@ -364,7 +387,7 @@ local function buildDummyTemplate()
     local standIn = false
     local foot = CFrame.new(0, 0, 0)
     if WorldBuilder.hasTemplate(KIT, "Trial_Props_TrialDummy") then
-        WorldBuilder.placeTemplate(KIT, "Trial_Props_TrialDummy", foot, model)
+        placeKitPiece(model, "Trial_Props_TrialDummy", foot)
     else
         standIn = true
         local function piece(name, size, offset, color, material)

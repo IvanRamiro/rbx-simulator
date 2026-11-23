@@ -195,7 +195,8 @@ local function addGate(zone)
     gui.Name = "GateNumber"
     gui.Adornee = zone
     gui.Size = UDim2.fromOffset(84, 84)
-    gui.StudsOffsetWorldSpace = Vector3.new(0, zone.Size.Y / 2 - 6, 0)
+    -- (the zone's middle is 2 studs under half its height over the ground; the number hangs at the BadgeHeight the builder gives over the ground)
+    gui.StudsOffsetWorldSpace = Vector3.new(0, (zone:GetAttribute("BadgeHeight") or 20) - (zone.Size.Y / 2 - 2), 0)
     gui.AlwaysOnTop = false
     gui.LightInfluence = 0
     gui.MaxDistance = 260
