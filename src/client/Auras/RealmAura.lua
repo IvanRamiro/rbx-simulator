@@ -24,6 +24,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local LightningCorona = require(script.Parent:WaitForChild("LightningCorona")) -- Realm 7's unique feature, built in code (2026-11-23)
 
 local RealmAura = {}
 
@@ -940,7 +941,8 @@ local function buildRealm(root, tier, sub)
     local library = ReplicatedStorage:FindFirstChild("AuraMeshes")
     library = library and library:FindFirstChild("RealmUnique")
     -- (Realm 1's vortex took the place of its First Breath piece, 2026-11-16)
-    local template = tier ~= 1 and library and library:FindFirstChild(string.format("Tier%02d", tier))
+    -- (Realm 7's took the place of its Tier07 piece, 2026-11-23: a corona of black-and-red lightning, LightningCorona, driven by this module's own loop; the old model stays in the library, the breakthrough reads its textures)
+    local template = tier ~= 1 and tier ~= 7 and library and library:FindFirstChild(string.format("Tier%02d", tier))
     local riders = {}
     -- (a test-range dummy already wearing its preview copy, a Model named Unique, keeps that one)
     if template and not (root.Parent and root.Parent:FindFirstChild("Unique")) then
@@ -959,6 +961,11 @@ local function buildRealm(root, tier, sub)
         end
         copy:PivotTo(root.CFrame)
         copy.Parent = fx
+    end
+
+    if tier == 7 then
+        table.insert(spinners, { kind = "corona", root = root, speed = 0, angle = 0,
+            state = LightningCorona.build(fx, root, { low = LOW, isLocal = building ~= nil and building.isLocal == true }) })
     end
 
     -- one step per aura moves everything that rides on the body (lifted attachments, the unique
@@ -1206,6 +1213,8 @@ local function step(dt)
                     L.beam.Brightness = L.bright * (0.85 + 0.35 * ex)
                 end
             end
+        elseif s.kind == "corona" then      -- Realm 7's lightning: a steady crackle round the body, riding the hips' shift
+            LightningCorona.step(s.state, dt, s.record and s.record.shift)
         elseif s.kind == "follow" then      -- an emitter host, keeping its place round the root (riding the body's lift if marked)
             local shift = if s.lifted and s.record and s.record.shift then s.record.shift else Vector3.zero
             s.part.CFrame = s.root.CFrame * CFrame.new(shift) * s.offset
