@@ -58,7 +58,7 @@ TERRACES = {
 UNDER_STEP = 1.8
 STAIRS = {
     # up from the pad's right-rear to the Eyrie: a flight along the cliff foot, a landing, a flight turned back toward the ledge (22 one-stud risers)
-    "Eyrie": dict(half=3.0, blend=3.0, runs=[((-43.0, 29.5), (-37.0, 44.5), 36.0, 47.0), ((-37.0, 44.5), (-37.7, 49.0), 47.0, 47.0),
+    "Eyrie": dict(half=3.0, blend=3.0, runs=[((-46.5, 29.5), (-40.5, 44.5), 36.0, 47.0), ((-40.5, 44.5), (-37.7, 49.0), 47.0, 47.0),
                                               ((-37.7, 49.0), (-26.9, 61.5), 47.0, 58.0)]),
 }
 

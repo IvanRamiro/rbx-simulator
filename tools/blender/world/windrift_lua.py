@@ -38,7 +38,7 @@ def zones(P):
     """Route zones and checks: pad-frame rectangles (Centre = x, level, z; Size = x, z; High = the rise above Centre's level for a slope; Yaw for a diagonal flight)."""
     routes, checks = [], []
     for name, t in T.TERRACES.items():
-        routes.append(dict(name=name, c=((t["x0"] + t["x1"]) / 2, D.G(t["y"]), (t["z0"] + t["z1"]) / 2), size=(t["x1"] - t["x0"] + 4.0, t["z1"] - t["z0"] + 4.0), high=0.0, yaw=0.0))
+        routes.append(dict(name=name, c=((t["x0"] + t["x1"]) / 2, D.G(t["y"]), (t["z0"] + t["z1"]) / 2), size=(t["x1"] - t["x0"] + 7.0, t["z1"] - t["z0"] + 7.0), high=0.0, yaw=0.0))
     for sname, st in T.STAIRS.items():
         for run in T.stair_runs(sname):
             (ax, az), (bx, bz) = run["a"], run["b"]
@@ -54,11 +54,11 @@ def zones(P):
             routes.append(dict(name=p["name"], c=(p["x"], p["y"] - drop - 3.0, p["z"]), size=(L + 4.0, 12.0), high=drop + 6.0, yaw=0.0))
     # the Cleft stair, hanging in the gorge (axis-aligned: along +z from x 3, z 27, down 12)
     routes.append(dict(name="Cleft stair", c=(4.8, D.G(T.Y_DRIP), 36.5), size=(8.0, 22.0), high=12.0, yaw=0.0))
-    checks.append(dict(name="Forecourt", c=(0.0, 0.0, -20.0), size=(30.0, 24.0), ret=(0.0, 0.3, -18.0)))
+    checks.append(dict(name="Forecourt", c=(0.0, 0.0, -20.0), size=(30.0, 24.0), ret=(0.0, -0.2, -18.0)))
     checks.append(dict(name="Eyrie", c=((T.TERRACES["Eyrie"]["x0"] + T.TERRACES["Eyrie"]["x1"]) / 2, D.G(T.Y_EYRIE), 69.0), size=(14.0, 8.0), ret=(-27.5, D.Fl(T.Y_EYRIE) + 0.3, 66.0)))
-    checks.append(dict(name="Perch", c=(25.5, D.G(T.Y_PERCH), 68.5), size=(8.0, 8.0), ret=(25.5, D.Fl(T.Y_PERCH) + 0.3, 68.5)))
-    checks.append(dict(name="Drip ledge", c=(7.0, D.G(T.Y_DRIP), 49.0), size=(5.0, 6.0), ret=(7.2, D.Fl(T.Y_DRIP) + 0.3, 47.2)))
-    checks.append(dict(name="Rain Hall", c=(9.5, 1.5, 52.0), size=(20.0, 10.0), ret=(9.5, 1.8, 40.0)))
+    checks.append(dict(name="Perch", c=(27.5, D.G(T.Y_PERCH), 68.5), size=(8.0, 8.0), ret=(27.5, D.Fl(T.Y_PERCH) + 0.3, 68.5)))
+    checks.append(dict(name="Drip ledge", c=(7.0, D.G(T.Y_DRIP), 49.0), size=(5.0, 6.0), ret=(7.2, D.G(T.Y_DRIP) + 0.3, 47.2)))
+    checks.append(dict(name="Rain Hall", c=(9.5, 1.5, 52.0), size=(24.0, 10.0), ret=(1.0, -0.2, 41.5)))
     return routes, checks
 
 

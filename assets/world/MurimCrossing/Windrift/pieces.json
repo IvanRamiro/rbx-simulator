@@ -1,0 +1,606 @@
+{
+ "frame": "pad frame: origin at the Unorthodox pad's centre (+0.5 up); every piece at its own origin, front -Z; anchor WR_Anchor",
+ "files": {
+  "Buildings": {
+   "fbx": "assets/world/MurimCrossing/Windrift/Windrift_Buildings.fbx",
+   "objects": [
+    "Windrift_Buildings_DripShrine__Bronze",
+    "Windrift_Buildings_DripShrine__Stone",
+    "Windrift_Buildings_DripShrine__Tile",
+    "Windrift_Buildings_DripShrine__Timber",
+    "Windrift_Buildings_Eyrie__Bronze",
+    "Windrift_Buildings_Eyrie__Stone",
+    "Windrift_Buildings_Eyrie__Tile",
+    "Windrift_Buildings_Eyrie__Timber",
+    "Windrift_Buildings_Gallery__Bronze",
+    "Windrift_Buildings_Gallery__Stone",
+    "Windrift_Buildings_Gallery__Tile",
+    "Windrift_Buildings_Gallery__Timber",
+    "Windrift_Buildings_HearthYard__Bronze",
+    "Windrift_Buildings_HearthYard__Cloth",
+    "Windrift_Buildings_HearthYard__Stone",
+    "Windrift_Buildings_HearthYard__Timber",
+    "Windrift_Buildings_Hq__Bronze",
+    "Windrift_Buildings_Hq__Stone",
+    "Windrift_Buildings_Hq__Tile",
+    "Windrift_Buildings_Hq__Timber",
+    "Windrift_Buildings_LogYard__Rope",
+    "Windrift_Buildings_LogYard__Timber",
+    "Windrift_Buildings_PerchPavilion__Bronze",
+    "Windrift_Buildings_PerchPavilion__Stone",
+    "Windrift_Buildings_PerchPavilion__Tile",
+    "Windrift_Buildings_PerchPavilion__Timber",
+    "Windrift_Buildings_RainHall__Bronze",
+    "Windrift_Buildings_RainHall__Stone",
+    "Windrift_Buildings_RainHall__Tile",
+    "Windrift_Buildings_RainHall__Timber",
+    "Windrift_Buildings_RopeCourse__Bronze",
+    "Windrift_Buildings_RopeCourse__Rope",
+    "Windrift_Buildings_RopeCourse__Timber",
+    "Windrift_Buildings_StoneRing__Bronze",
+    "Windrift_Buildings_StoneRing__Stone",
+    "Windrift_Buildings_StoneRing__Timber",
+    "Windrift_Buildings_SwingLogs__Rope",
+    "Windrift_Buildings_SwingLogs__Timber"
+   ],
+   "tris": 31034,
+   "verify": "ok"
+  },
+  "Courts": {
+   "fbx": "assets/world/MurimCrossing/Windrift/Windrift_Courts.fbx",
+   "objects": [
+    "Windrift_Courts_CleftStair__Plank",
+    "Windrift_Courts_CleftStair__Rope",
+    "Windrift_Courts_CleftStair__Timber",
+    "Windrift_Courts_Flight11__Stone",
+    "Windrift_Courts_Flight11__Timber",
+    "Windrift_Courts_GorgeBridge__Bronze",
+    "Windrift_Courts_GorgeBridge__Plank",
+    "Windrift_Courts_GorgeBridge__Rope",
+    "Windrift_Courts_GorgeBridge__Timber",
+    "Windrift_Courts_GreatSpan__Bronze",
+    "Windrift_Courts_GreatSpan__Plank",
+    "Windrift_Courts_GreatSpan__Rope",
+    "Windrift_Courts_GreatSpan__Timber",
+    "Windrift_Courts_Landing__Stone",
+    "Windrift_Courts_MossGate__Bronze",
+    "Windrift_Courts_MossGate__Stone",
+    "Windrift_Courts_MossGate__Timber",
+    "Windrift_Courts_RimRail8__Timber",
+    "Windrift_Courts_WallRough12__Stone",
+    "Windrift_Courts_WallRough12__Timber",
+    "Windrift_Courts_WallRough2__Stone",
+    "Windrift_Courts_WallRough2__Timber"
+   ],
+   "tris": 5604,
+   "verify": "ok"
+  },
+  "Props": {
+   "fbx": "assets/world/MurimCrossing/Windrift/Windrift_Props.fbx",
+   "objects": [
+    "Windrift_Props_BannerPole__Bronze",
+    "Windrift_Props_BannerPole__Cloth",
+    "Windrift_Props_BannerPole__Timber",
+    "Windrift_Props_Bench__Timber",
+    "Windrift_Props_Cradle__Bronze",
+    "Windrift_Props_Cradle__Stone",
+    "Windrift_Props_Cradle__Timber",
+    "Windrift_Props_LanternPost__Bronze",
+    "Windrift_Props_LanternPost__Lamp",
+    "Windrift_Props_LanternPost__Timber",
+    "Windrift_Props_ScaffoldA__Bamboo",
+    "Windrift_Props_ScaffoldA__Rope",
+    "Windrift_Props_ScaffoldB__Bamboo",
+    "Windrift_Props_ScaffoldB__Rope",
+    "Windrift_Props_Waymarker__Bronze",
+    "Windrift_Props_Waymarker__Stone",
+    "Windrift_Props_Waymarker__Timber",
+    "Windrift_Props_WeaponRack__Bronze",
+    "Windrift_Props_WeaponRack__Timber"
+   ],
+   "tris": 5013,
+   "verify": "ok"
+  }
+ },
+ "pieces": {
+  "Windrift_Buildings_RainHall": {
+   "min": [
+    -17.45,
+    -4.69,
+    -11.64
+   ],
+   "max": [
+    17.76,
+    16.9,
+    11.49
+   ],
+   "tris": 7220,
+   "materials": {
+    "Bronze": 1480,
+    "Stone": 1152,
+    "Tile": 2232,
+    "Timber": 2356
+   }
+  },
+  "Windrift_Buildings_Hq": {
+   "min": [
+    -22.26,
+    -6.11,
+    -16.18
+   ],
+   "max": [
+    19.19,
+    21.6,
+    14.97
+   ],
+   "tris": 9047,
+   "materials": {
+    "Bronze": 1311,
+    "Stone": 1632,
+    "Tile": 4024,
+    "Timber": 2080
+   }
+  },
+  "Windrift_Buildings_Gallery": {
+   "min": [
+    -16.44,
+    -16.0,
+    -9.44
+   ],
+   "max": [
+    24.72,
+    12.4,
+    7.92
+   ],
+   "tris": 5675,
+   "materials": {
+    "Bronze": 1027,
+    "Stone": 816,
+    "Tile": 2576,
+    "Timber": 1256
+   }
+  },
+  "Windrift_Buildings_Eyrie": {
+   "min": [
+    -10.54,
+    -15.0,
+    -7.2
+   ],
+   "max": [
+    13.72,
+    12.81,
+    7.71
+   ],
+   "tris": 2548,
+   "materials": {
+    "Bronze": 216,
+    "Stone": 288,
+    "Tile": 848,
+    "Timber": 1196
+   }
+  },
+  "Windrift_Buildings_PerchPavilion": {
+   "min": [
+    -5.74,
+    -2.49,
+    -5.73
+   ],
+   "max": [
+    5.85,
+    11.8,
+    5.77
+   ],
+   "tris": 1821,
+   "materials": {
+    "Bronze": 485,
+    "Stone": 336,
+    "Tile": 840,
+    "Timber": 160
+   }
+  },
+  "Windrift_Buildings_DripShrine": {
+   "min": [
+    -3.08,
+    -1.02,
+    -1.25
+   ],
+   "max": [
+    3.25,
+    6.0,
+    2.26
+   ],
+   "tris": 400,
+   "materials": {
+    "Bronze": 132,
+    "Stone": 136,
+    "Tile": 72,
+    "Timber": 60
+   }
+  },
+  "Windrift_Props_Cradle": {
+   "min": [
+    -3.4,
+    -0.2,
+    -1.4
+   ],
+   "max": [
+    3.4,
+    4.21,
+    1.4
+   ],
+   "tris": 144,
+   "materials": {
+    "Bronze": 108,
+    "Stone": 12,
+    "Timber": 24
+   }
+  },
+  "Windrift_Props_WeaponRack": {
+   "min": [
+    -2.08,
+    -0.2,
+    -0.25
+   ],
+   "max": [
+    2.07,
+    4.4,
+    0.28
+   ],
+   "tris": 240,
+   "materials": {
+    "Bronze": 180,
+    "Timber": 60
+   }
+  },
+  "Windrift_Buildings_HearthYard": {
+   "min": [
+    -11.5,
+    -0.95,
+    -11.5
+   ],
+   "max": [
+    11.5,
+    12.6,
+    11.5
+   ],
+   "tris": 1681,
+   "materials": {
+    "Bronze": 445,
+    "Cloth": 576,
+    "Stone": 144,
+    "Timber": 516
+   }
+  },
+  "Windrift_Buildings_StoneRing": {
+   "min": [
+    -8.45,
+    -0.61,
+    -7.68
+   ],
+   "max": [
+    8.43,
+    5.4,
+    7.74
+   ],
+   "tris": 248,
+   "materials": {
+    "Bronze": 64,
+    "Stone": 160,
+    "Timber": 24
+   }
+  },
+  "Windrift_Buildings_LogYard": {
+   "min": [
+    -8.55,
+    -0.53,
+    -4.98
+   ],
+   "max": [
+    8.27,
+    5.22,
+    5.04
+   ],
+   "tris": 1320,
+   "materials": {
+    "Rope": 144,
+    "Timber": 1176
+   }
+  },
+  "Windrift_Buildings_RopeCourse": {
+   "min": [
+    -9.0,
+    -0.5,
+    -2.83
+   ],
+   "max": [
+    9.0,
+    10.2,
+    6.97
+   ],
+   "tris": 880,
+   "materials": {
+    "Bronze": 192,
+    "Rope": 408,
+    "Timber": 280
+   }
+  },
+  "Windrift_Buildings_SwingLogs": {
+   "min": [
+    -6.0,
+    -0.46,
+    -2.42
+   ],
+   "max": [
+    6.0,
+    9.41,
+    2.42
+   ],
+   "tris": 204,
+   "materials": {
+    "Rope": 48,
+    "Timber": 156
+   }
+  },
+  "Windrift_Courts_GorgeBridge": {
+   "min": [
+    -7.56,
+    -1.21,
+    -3.07
+   ],
+   "max": [
+    7.56,
+    6.66,
+    3.06
+   ],
+   "tris": 1000,
+   "materials": {
+    "Bronze": 128,
+    "Plank": 216,
+    "Rope": 416,
+    "Timber": 240
+   }
+  },
+  "Windrift_Courts_GreatSpan": {
+   "min": [
+    -16.82,
+    -7.2,
+    -3.16
+   ],
+   "max": [
+    16.81,
+    7.86,
+    3.16
+   ],
+   "tris": 1792,
+   "materials": {
+    "Bronze": 128,
+    "Plank": 528,
+    "Rope": 688,
+    "Timber": 448
+   }
+  },
+  "Windrift_Courts_CleftStair": {
+   "min": [
+    -1.3,
+    -13.23,
+    -0.53
+   ],
+   "max": [
+    3.84,
+    0.3,
+    18.23
+   ],
+   "tris": 348,
+   "materials": {
+    "Plank": 144,
+    "Rope": 48,
+    "Timber": 156
+   }
+  },
+  "Windrift_Courts_Flight11": {
+   "min": [
+    -4.33,
+    -1.6,
+    -0.08
+   ],
+   "max": [
+    4.33,
+    12.45,
+    16.58
+   ],
+   "tris": 540,
+   "materials": {
+    "Stone": 396,
+    "Timber": 144
+   }
+  },
+  "Windrift_Courts_Landing": {
+   "min": [
+    -4.59,
+    -3.09,
+    -0.38
+   ],
+   "max": [
+    4.57,
+    -0.0,
+    5.34
+   ],
+   "tris": 348,
+   "materials": {
+    "Stone": 348
+   }
+  },
+  "Windrift_Courts_WallRough12": {
+   "min": [
+    -6.2,
+    -1.24,
+    -0.85
+   ],
+   "max": [
+    6.2,
+    5.25,
+    0.86
+   ],
+   "tris": 216,
+   "materials": {
+    "Stone": 156,
+    "Timber": 60
+   }
+  },
+  "Windrift_Courts_WallRough2": {
+   "min": [
+    -1.1,
+    -1.21,
+    -0.83
+   ],
+   "max": [
+    1.1,
+    5.25,
+    0.72
+   ],
+   "tris": 72,
+   "materials": {
+    "Stone": 36,
+    "Timber": 36
+   }
+  },
+  "Windrift_Courts_MossGate": {
+   "min": [
+    -5.42,
+    -1.29,
+    -1.92
+   ],
+   "max": [
+    5.42,
+    6.97,
+    1.93
+   ],
+   "tris": 1144,
+   "materials": {
+    "Bronze": 64,
+    "Stone": 1044,
+    "Timber": 36
+   }
+  },
+  "Windrift_Courts_RimRail8": {
+   "min": [
+    -4.14,
+    -0.1,
+    -0.14
+   ],
+   "max": [
+    4.14,
+    1.2,
+    0.14
+   ],
+   "tris": 144,
+   "materials": {
+    "Timber": 144
+   }
+  },
+  "Windrift_Props_BannerPole": {
+   "min": [
+    -2.31,
+    -0.4,
+    -0.35
+   ],
+   "max": [
+    0.61,
+    10.8,
+    0.35
+   ],
+   "tris": 333,
+   "materials": {
+    "Bronze": 45,
+    "Cloth": 252,
+    "Timber": 36
+   }
+  },
+  "Windrift_Props_LanternPost": {
+   "min": [
+    -0.25,
+    -0.3,
+    -0.47
+   ],
+   "max": [
+    2.37,
+    5.64,
+    0.47
+   ],
+   "tris": 116,
+   "materials": {
+    "Bronze": 32,
+    "Lamp": 12,
+    "Timber": 72
+   }
+  },
+  "Windrift_Props_Bench": {
+   "min": [
+    -2.3,
+    0.0,
+    -0.5
+   ],
+   "max": [
+    2.3,
+    1.45,
+    0.5
+   ],
+   "tris": 48,
+   "materials": {
+    "Timber": 48
+   }
+  },
+  "Windrift_Props_Waymarker": {
+   "min": [
+    -1.89,
+    -0.8,
+    -0.54
+   ],
+   "max": [
+    1.65,
+    4.4,
+    1.36
+   ],
+   "tris": 92,
+   "materials": {
+    "Bronze": 32,
+    "Stone": 36,
+    "Timber": 24
+   }
+  },
+  "Windrift_Props_ScaffoldA": {
+   "min": [
+    -4.01,
+    -0.3,
+    -2.65
+   ],
+   "max": [
+    4.01,
+    16.4,
+    2.65
+   ],
+   "tris": 2576,
+   "materials": {
+    "Bamboo": 1296,
+    "Rope": 1280
+   }
+  },
+  "Windrift_Props_ScaffoldB": {
+   "min": [
+    -2.76,
+    -0.3,
+    -2.4
+   ],
+   "max": [
+    2.76,
+    11.32,
+    2.4
+   ],
+   "tris": 1464,
+   "materials": {
+    "Bamboo": 744,
+    "Rope": 720
+   }
+  }
+ }
+}

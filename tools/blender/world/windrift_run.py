@@ -323,7 +323,7 @@ def run_qa(names=None):
     for name in sorted(P.pieces):
         if names and name not in names:
             continue
-        objs = B.piece_objects(name, P.pieces[name], coll)
+        objs = piece_objects(name, P.pieces[name], coll)
         r = qa.run(objects=[o.name for o in objs], profile="roblox", eps=0.001, tol=0.002)
         t = {o.name: B.tris(o) for o in objs}
         all_pass &= r["pass"]
@@ -348,6 +348,83 @@ def run_qa(names=None):
         f.write("\n".join(lines) + "\n")
     print("\n".join(l for l in lines if l.endswith("errors") or l.startswith("Overall") or "ERROR" in l or "WARNING" in l))
     return all_pass
+
+
+def prune_zfight(objs, eps=0.00105, passes=10):
+    """The asset QA fails two same-facing faces that overlap in one plane; a few survive the kit's own resolver (shallow-angle crossings of two roof courses). This replays the
+    QA's test on the piece's meshes and deletes the later face of each pair (a face hidden inside the roof, a hair from the one that stays): nothing visible changes. Returns
+    how many faces were deleted."""
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    total = 0
+    for _ in range(passes):
+        verts, tris, meta = [], [], []
+        for oi, o in enumerate(objs):
+            me = o.data
+            bm_t = bmesh.new()
+            bm_t.from_mesh(me)
+            bm_t.faces.ensure_lookup_table()
+            res = bmesh.ops.triangulate(bm_t, faces=bm_t.faces[:])
+            fmap = res["face_map"]
+            base = len(verts)
+            verts += [o.matrix_world @ v.co for v in bm_t.verts]
+            bm_t.verts.ensure_lookup_table()
+            for f in bm_t.faces:
+                orig = fmap.get(f)
+                pidx = orig.index if orig is not None else f.index
+                tris.append(tuple(base + v.index for v in f.verts))
+                meta.append((oi, pidx, f.normal.copy()))
+            bm_t.free()
+        if not tris:
+            return total
+        bvh = BVHTree.FromPolygons(verts, tris, epsilon=0.0)
+        sets = [set(t) for t in tris]
+        kill = set()
+        for ti, t in enumerate(tris):
+            a, b, c = (verts[i] for i in t)
+            n = meta[ti][2]
+            if n.length < 0.5:
+                continue
+            cen = (a + b + c) / 3
+            for p in (cen, cen.lerp(a, .6), cen.lerp(b, .6), cen.lerp(c, .6)):
+                for _, _, tj, _ in bvh.find_nearest_range(p, eps):
+                    if tj is None or tj == ti or (sets[ti] & sets[tj]):
+                        continue
+                    n2 = meta[tj][2]
+                    if n.dot(n2) < 0.999:
+                        continue
+                    a2, b2, c2 = (verts[i] for i in tris[tj])
+                    q = p - n2 * n2.dot(p - a2)
+                    v0, v1, v2 = c2 - a2, b2 - a2, q - a2
+                    d00, d01, d02, d11, d12 = v0.dot(v0), v0.dot(v1), v0.dot(v2), v1.dot(v1), v1.dot(v2)
+                    den = d00 * d11 - d01 * d01
+                    if abs(den) < 1e-14:
+                        continue
+                    uu, vv = (d11 * d02 - d01 * d12) / den, (d00 * d12 - d01 * d02) / den
+                    if uu >= -1e-6 and vv >= -1e-6 and uu + vv <= 1 + 1e-6:
+                        late = max((meta[ti][0], meta[ti][1]), (meta[tj][0], meta[tj][1]))
+                        kill.add(late)
+        if not kill:
+            return total
+        by_obj = {}
+        for (oi, pi) in kill:
+            by_obj.setdefault(oi, set()).add(pi)
+        for oi, polys in by_obj.items():
+            bm = bmesh.new()
+            bm.from_mesh(objs[oi].data)
+            bm.faces.ensure_lookup_table()
+            bmesh.ops.delete(bm, geom=[bm.faces[i] for i in polys], context="FACES_ONLY")
+            bm.to_mesh(objs[oi].data)
+            bm.free()
+            total += len(polys)
+    return total
+
+
+def piece_objects(name, piece, coll):
+    """The piece's objects (one per material) with the QA's z-fighting pairs pruned: what QA, the FBX and the triangle counts all see."""
+    objs = B.piece_objects(name, piece, coll)
+    prune_zfight(objs)
+    return objs
 
 
 def verify_fbx(path, expect):
@@ -392,7 +469,7 @@ def export():
         for key in sorted(P.pieces):
             if D.family_of(key) != fam:
                 continue
-            objs = B.piece_objects(key, P.pieces[key], coll)
+            objs = piece_objects(key, P.pieces[key], coll)
             for o in objs:
                 lo, hi = B.bbox_roblox([o])
                 expect[o.name] = (B.tris(o), lo, hi)

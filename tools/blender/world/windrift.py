@@ -182,13 +182,15 @@ def wall_line(P, x0, z0, x1, z1, gate=None, y=G(36.0)):
         pos = a
         while b - pos > 0.5:
             rem = b - pos
-            for nm, ln in (("WallRough12", 12.0), ("WallRough6", 6.0), ("WallRough3", 3.2)):
-                if rem >= ln - 0.35 or ln == 3.2:
+            for nm, ln in (("WallRough12", 12.0), ("WallRough6", 6.0), ("WallRough3", 3.2), ("WallRough2", 1.8)):
+                if rem >= ln - 0.35 or ln == 1.8:
                     break
             cx = x0 + ux * (pos + ln / 2)
             cz = z0 + uz * (pos + ln / 2)
             P.put("Courts", nm, cx, y, cz, yaw=yaw, role="wall")
             pos += ln - 0.2
+            if rem <= 2.2:
+                break
 
 
 def build_all(with_veg=True):
@@ -196,17 +198,17 @@ def build_all(with_veg=True):
     Yp = G(T.Y_PAD) if False else -0.5          # the pad's terrain top, frame y
     # ---------------------------------------------------------------------------------------------- the great buildings
     P.put("Buildings", "RainHall", 9.5, 1.5, 52.0, role="hall", light=True)
-    P.put("Buildings", "Hq", -19.0, 2.5, 22.0, role="hq", light=True)
-    P.put("Buildings", "Gallery", 40.0, 1.5, 22.0, role="hall", light=True)
+    P.put("Buildings", "Hq", -20.0, 2.5, 22.0, role="hq", light=True)
+    P.put("Buildings", "Gallery", 38.5, 1.5, 20.0, role="hall", light=True)
     P.put("Buildings", "Eyrie", -25.0, Fl(T.Y_EYRIE), 68.0, role="house", light=True)
-    P.put("Buildings", "PerchPavilion", 25.5, Fl(T.Y_PERCH), 68.5, role="hall")
+    P.put("Buildings", "PerchPavilion", 27.5, Fl(T.Y_PERCH), 68.5, role="hall")
     P.put("Buildings", "DripShrine", 7.2, Fl(T.Y_DRIP), 50.2, role="hall")
     # the weapon in the Gallery's lantern room
-    P.put("Props", "Cradle", 58.2, 1.5, 22.0, role="prop")
-    P.spots["SaberDisplay"] = dict(pos=(58.2, 1.5 + 3.2, 22.0), yaw=0.0, note="the Crosscurrent Saber lies along x on the cradle's saddles (a static clone of ServerStorage.Weapons.SecretUnorthodox: blade along the marker's x axis, the curve and edge as the weapon's own model sits, flat up)")
+    P.put("Props", "Cradle", 56.7, 1.5, 20.0, role="prop")
+    P.spots["SaberDisplay"] = dict(pos=(56.7, 1.5 + 3.2, 20.0), yaw=0.0, note="the Crosscurrent Saber lies along x on the cradle's saddles (a static clone of ServerStorage.Weapons.SecretUnorthodox: blade along the marker's x axis, the curve and edge as the weapon's own model sits, flat up)")
     for k, x in enumerate((26.0, 30.5)):
         pass
-    for k, (x, z) in enumerate(((27.0, 28.4), (33.0, 28.4), (45.5, 28.4))):
+    for k, (x, z) in enumerate(((27.0, 26.2), (33.0, 26.2), (43.5, 26.2))):
         P.put("Props", "WeaponRack", x, 1.5, z, yaw=PI, role="prop")
     # ---------------------------------------------------------------------------------------------- the gathering place (10 NPC spots)
     hx, hz = 38.0, -24.0
@@ -220,12 +222,12 @@ def build_all(with_veg=True):
     P.put("Buildings", "StoneRing", -30.0, -0.5, -20.0, role="court")
     P.put("Buildings", "LogYard", -42.0, -0.5, -2.0, role="court")
     P.put("Buildings", "RopeCourse", -26.0, -0.5, -40.0, role="court")
-    P.put("Buildings", "SwingLogs", -8.0, -0.5, -14.0, role="court")
+    P.put("Buildings", "SwingLogs", 14.0, -0.5, -33.0, role="court")
     P.spots["TrainingRing"] = dict(pos=(-30.0, 0.8, -20.0), yaw=0.0, note="the middle of the stone sparring ring")
-    P.spots["LogYard"] = dict(pos=(-42.0, 0.0, -2.0), yaw=0.0, note="the log yard's middle")
+    P.spots["LogYard"] = dict(pos=(-42.0, 0.0, -10.5), yaw=0.0, note="the log yard's middle")
     P.spots["WireCourse"] = dict(pos=(-26.0, 0.0, -40.0), yaw=0.0, note="the wire course's start")
     # ---------------------------------------------------------------------------------------------- bridges and stairs
-    P.put("Courts", "GorgeBridge", 9.5, 0.0, 20.0, role="bridge")
+    P.put("Courts", "GorgeBridge", 9.25, 0.0, 14.0, role="bridge")
     P.put("Courts", "GreatSpan", 2.5, Fl(T.Y_EYRIE), 66.0, role="bridge")
     P.put("Courts", "CleftStair", 3.0, 0.0, 27.0, role="stair")
     # the Eyrie stair (terrain runs in murim_windrift_terrain.STAIRS): two flights and a landing, the Perch stair one long flight
@@ -234,14 +236,14 @@ def build_all(with_veg=True):
     P.put("Courts", "Landing", ey[1][0][0], G(47.0), ey[1][0][1], yaw=run_yaw(ey[1][0], ey[1][1]), role="stair")
     P.put("Courts", "Flight11", ey[2][0][0], G(47.0), ey[2][0][1], yaw=run_yaw(ey[2][0], ey[2][1]), role="stair")
     # ---------------------------------------------------------------------------------------------- the Moss Court (walled, hidden gate on its west side)
-    wall_line(P, 18.0, -10.0, 34.0, -10.0)
-    wall_line(P, 18.0, 6.0, 34.0, 6.0)
-    wall_line(P, 34.0, -10.0, 34.0, 6.0)
-    wall_line(P, 18.0, -10.0, 18.0, 6.0, gate=(5.6, 9.8))
-    P.put("Courts", "MossGate", 18.0, -0.5, -2.0, yaw=PI / 2, role="wall")
-    P.spots["MossCourt"] = dict(pos=(26.0, 0.0, -2.0), yaw=PI / 2, note="the Moss Court's middle (a hidden garden: a pond, an old tree)")
+    wall_line(P, 18.0, -10.0, 30.0, -10.0)
+    wall_line(P, 18.0, 3.0, 30.0, 3.0)
+    wall_line(P, 30.0, -10.0, 30.0, 3.0)
+    wall_line(P, 18.0, -10.0, 18.0, 3.0, gate=(1.6, 9.8))
+    P.put("Courts", "MossGate", 18.0, -0.5, -3.5, yaw=PI / 2, role="wall")
+    P.spots["MossCourt"] = dict(pos=(24.0, 0.0, -3.5), yaw=PI / 2, note="the Moss Court's middle (a hidden garden: a pond, an old tree)")
     # ---------------------------------------------------------------------------------------------- rails along the gorge, banners and lanterns
-    for (x, z, yaw) in ((2.4, 12.2, PI / 2), (16.6, 12.2, PI / 2), (16.6, 27.5, PI / 2), (16.6, 35.5, PI / 2), (16.6, 41.8, PI / 2)):
+    for (x, z, yaw) in ((16.6, 27.5, PI / 2), (16.6, 35.5, PI / 2)):
         P.put("Courts", "RimRail8", x, 0.0, z, yaw=yaw, role="rail")
     P.put("Courts", "RimRail8", 7.2, 0.0, 8.4, role="rail")
     P.put("Courts", "RimRail8", 12.0, 0.0, 8.4, role="rail")
@@ -259,10 +261,10 @@ def build_all(with_veg=True):
     # ---------------------------------------------------------------------------------------------- other marks
     P.spots["ElderSpot"] = dict(pos=(-29.0, Fl(T.Y_EYRIE) + 0.5, 71.6), yaw=PI, note="Elder Kang Dal's place in his house (the Eyrie), facing the door")
     P.spots["ElderDeck"] = dict(pos=(-28.0, Fl(T.Y_EYRIE) + 0.5, 65.0), yaw=PI, note="where the Elder receives on his deck in fair weather")
-    P.spots["HqDoor"] = dict(pos=(-20.0, 2.5, 8.8), yaw=PI, note="the Long Hold's doorway (the headquarters)")
-    P.spots["HqInside"] = dict(pos=(-19.0, 2.5, 22.0), yaw=0.0, note="the middle of the Long Hold's hall")
+    P.spots["HqDoor"] = dict(pos=(-21.0, 2.5, 8.8), yaw=PI, note="the Long Hold's doorway (the headquarters)")
+    P.spots["HqInside"] = dict(pos=(-20.0, 2.5, 22.0), yaw=0.0, note="the middle of the Long Hold's hall")
     P.spots["FallsView"] = dict(pos=(9.5, 1.5 + 1.0, 52.0 + 8.3), yaw=0.0, note="the Rain Hall's gallery: the Great Falls are in front")
-    P.spots["BellPerch"] = dict(pos=(25.5, Fl(T.Y_PERCH) + 0.5, 68.5), yaw=0.0, note="the Windbell Perch's middle (the great bell)")
+    P.spots["BellPerch"] = dict(pos=(27.5, Fl(T.Y_PERCH) + 0.5, 68.5), yaw=0.0, note="the Windbell Perch's middle (the great bell)")
     P.spots["DripLedge"] = dict(pos=(7.2, Fl(T.Y_DRIP) + 0.5, 49.0), yaw=0.0, note="the ledge in the gorge under the Rain Hall (the Drip Shrine)")
     P.spots["GateCourt"] = dict(pos=(0.0, 0.0, -40.0), yaw=0.0, note="the forecourt behind the gate, between the banner poles")
     # ---------------------------------------------------------------------------------------------- waterfalls
@@ -375,16 +377,16 @@ def plant(P):
     t("Trees_BannerPineB1", 44.0, 84.0, yaw=0.0)
     t("Trees_BannerPineB1", -58.0, 84.0, yaw=0.1)
     t("Trees_BannerPineB2", 58.0, 66.0, yaw=0.0)
-    t("Trees_GaleCedarA1", 54.0, 20.0, yaw=0.1)           # the pad's rim, right and left of the gate
+    t("Trees_GaleCedarA1", 57.5, 3.0, yaw=0.1)           # the pad's rim, right and left of the gate
     t("Trees_GaleCedarA1", -55.0, -18.0, yaw=0.0)
     t("Trees_GaleCedarA2", -31.0, 74.0, yaw=0.0)          # the Eyrie ledge's far end
     t("Trees_SplitSnagE1", 60.0, -34.0, yaw=0.2)
     t("Trees_SplitSnagE1", -52.0, 36.0, yaw=-0.1)
     t("Trees_SplitSnagE2", 49.0, 44.0, yaw=0.0)
     # inside the Moss Court
-    t("Trees_CliffJuniperC1", 20.5, 3.5, yaw=0.0, scale=1.0)
-    t("Trees_BronzeleafD1", 24.0, -6.5, yaw=0.0)
-    t("Trees_CliffJuniperC2", 31.0, -7.0, yaw=0.1)
+    t("Trees_CliffJuniperC1", 22.0, 0.5, yaw=0.0, scale=1.0)
+    t("Trees_BronzeleafD1", 25.5, -7.5, yaw=0.0)
+    t("Trees_CliffJuniperC2", 28.0, -7.0, yaw=0.1)
     t("Trees_CliffJuniperC2", 52.0, -8.0, yaw=0.0)         # the hearth yard's edge
     t("Trees_BronzeleafD2", 49.0, -38.0, yaw=0.0)
     # ---- rocks and paths
@@ -393,7 +395,7 @@ def plant(P):
                           ("VeinBoulderB", 56.0, -16.0, 0.0), ("VeinBoulderB", -20.0, 49.0, 0.0), ("Fin", -45.0, 44.0, 0.0), ("Fin", 28.0, 46.0, 0.0),
                           ("ScreeA", -54.0, -2.0, 0.0), ("ScreeA", 58.0, 12.0, 0.0), ("ScreeB", -44.0, -46.0, 0.0), ("ScreeB", 36.0, -46.0, 0.0)):
         t("Rocks_" + n, x, z, yaw=yw, folder="Rocks")
-    t("Rocks_Windgate", 13.5, -2.0, yaw=PI_ / 2, folder="Rocks")
+    t("Rocks_Windgate", 52.0, -32.0, yaw=0.0, folder="Rocks")
     t("Rocks_StepsA", 0.0, -46.0, yaw=0.0, folder="Paths")
     t("Rocks_StepsA", -22.0, 13.0 - 6.0 - 4.0 - 0.0, yaw=0.0, folder="Paths") if False else None
     t("Rocks_StepsB", -22.0, -6.0, yaw=0.3, folder="Paths")
@@ -401,14 +403,14 @@ def plant(P):
     t("Rocks_StepsA", 9.5, 32.0, yaw=0.0, folder="Paths")
     t("Rocks_Cobble", 9.5, 40.4, yaw=0.0, folder="Paths")
     t("Rocks_PlankWalk", 30.0, 9.0, yaw=PI_ / 2, folder="Paths") if False else None
-    t("Rocks_PlankWalk", 22.0, -2.0, yaw=PI_ / 2, folder="Paths")
+    t("Rocks_PlankWalk", 22.0, -3.5, yaw=PI_ / 2, folder="Paths")
     t("Rocks_StepsB", 37.0, 6.4 - 12.0, yaw=0.0, folder="Paths") if False else None
     # ---- plants: ring of grass round the pad's rim, tufts in the courts and along the rocks, flowers in the cracks of the walls
     P.vegp_set = True
     for name, n, sampler, r, seed in (
-            ("Plants_GaleGrassA", 10, _ring(48.0, 58.5), 0.5, 101), ("Plants_GaleGrassB", 4, _ring(44.0, 57.0), 0.5, 103), ("Plants_Sedge", 4, _box_sampler(21.0, 30.0, -8.0, 3.0), 0.6, 107),
+            ("Plants_GaleGrassA", 10, _ring(48.0, 58.5), 0.5, 101), ("Plants_GaleGrassB", 4, _ring(44.0, 57.0), 0.5, 103), ("Plants_Sedge", 4, _box_sampler(21.0, 29.0, -8.0, 1.5), 0.6, 107),
             ("Plants_Gorse", 3, _ring(40.0, 57.0), 1.2, 109), ("Plants_Heather", 5, _ring(38.0, 58.0), 0.6, 113), ("Plants_JuniperCreeper", 3, _ring(46.0, 58.0), 1.5, 127),
-            ("Plants_Cushion", 8, _box_sampler(19.0, 33.0, -9.0, 5.0), 0.8, 131), ("Plants_Stonecrop", 8, _ring(30.0, 56.0), 0.5, 137), ("Plants_Thistle", 5, _ring(42.0, 58.0), 0.6, 139),
+            ("Plants_Cushion", 8, _box_sampler(19.5, 29.0, -9.0, 2.0), 0.8, 131), ("Plants_Stonecrop", 8, _ring(30.0, 56.0), 0.5, 137), ("Plants_Thistle", 5, _ring(42.0, 58.0), 0.6, 139),
             ("Plants_WindStar", 5, _box_sampler(-52.0, -14.0, -48.0, -2.0), 0.6, 149), ("Plants_LichenA", 3, _ring(30.0, 56.0), 0.5, 151), ("Plants_LichenB", 2, _ring(30.0, 56.0), 0.5, 157)):
         _scatter(P, name, n, sampler, r, seed, yaw_jitter=0.25, lane=(name not in ("Plants_Sedge",)))
 
@@ -416,8 +418,8 @@ def plant(P):
 # ======================================================================================================================
 # terrain pavement: the ground under every building, floor and walk is Sandstone or Ground, never Grass
 # ======================================================================================================================
-WALKS = [((0.0, -50.0), (0.0, -20.0), 4.2), ((0.0, -20.0), (-19.0, 4.0), 3.6), ((0.0, -20.0), (30.0, -22.0), 3.4), ((0.0, -20.0), (-26.0, -20.0), 3.2),
-         ((0.0, -20.0), (9.5, 42.0), 3.6), ((9.5, 14.0), (9.5, 14.0), 0.1), ((-19.0, -4.0), (-42.0, -2.0), 3.0)]
+WALKS = [((0.0, -50.0), (0.0, -20.0), 4.2), ((0.0, -20.0), (-21.0, 4.0), 3.6), ((0.0, -20.0), (30.0, -22.0), 3.4), ((0.0, -20.0), (-26.0, -20.0), 3.2),
+         ((0.0, -20.0), (0.5, 10.0), 3.4), ((-21.0, -4.0), (-42.0, -2.0), 3.0)]
 PAVE_ROLES = ("hall", "hq", "house", "bridge", "stair", "court", "shelter", "wall")
 
 
@@ -435,7 +437,7 @@ def register_pavement():
             rects.append((min(q[0] for q in pts) - m, max(q[0] for q in pts) + m, min(q[1] for q in pts) - m, max(q[1] for q in pts) + m))
     T.PAVED_RECTS[:] = rects
     T.PAVED_STRIPS[:] = [(a, b, w) for (a, b, w) in WALKS]
-    T.COURTS[:] = [(18.0, 34.0, -10.0, 6.0), (-52.0, -14.0, -30.0, 2.0)]
+    T.COURTS[:] = [(18.0, 30.0, -10.0, 3.0), (-52.0, -14.0, -30.0, 2.0)]
     return len(rects)
 
 

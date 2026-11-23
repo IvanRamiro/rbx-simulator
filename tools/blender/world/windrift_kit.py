@@ -31,6 +31,200 @@ class WP(Piece):
         self.lights = []
         self.floor = []            # (x0, x1, z0, z1, y): walkable floors for the walk check and the paving (a footprint)
 
+    def finish(self):
+        """Drops faces that duplicate another face of the same mesh exactly (two builders that both made the same post at a corner), then Piece.finish."""
+        for g in self.g.values():
+            seen = set()
+            keep = []
+            for f in g.f:
+                key = tuple(sorted((round(g.v[i][0] * 5000), round(g.v[i][1] * 5000), round(g.v[i][2] * 5000)) for i in f))
+                if key in seen:
+                    continue
+                seen.add(key)
+                keep.append(f)
+            g.f = keep
+        super().finish()
+        self.resolve_planes()
+        self.resolve_exact()
+        return self
+
+    def resolve_planes(self, passes=16, step=0.0045, tol=0.0028):
+        """The asset QA fails two faces that lie in one plane, look the same way and overlap (z-fighting), also between two meshes of a piece. Solids of one building are
+        often made to the same round numbers (a post and a wall plate, two courses of the same block height), so: every solid (a connected shell, across all meshes) that has
+        an axis-aligned face in the plane of another solid's face, both facing the same way and overlapping, is moved a hair (4.5 thousandths of a stud) out along that face's
+        normal; repeated until no pair is left. The moves are far below anything visible and a solid keeps overlapping what it overlapped."""
+        for _ in range(passes):
+            comp_of = {}
+            comps = []
+            for gi, g in enumerate(self.g.values()):
+                parent = list(range(len(g.v)))
+
+                def find(i):
+                    while parent[i] != i:
+                        parent[i] = parent[parent[i]]
+                        i = parent[i]
+                    return i
+                for f in g.f:
+                    r = find(f[0])
+                    for i in f[1:]:
+                        ri = find(i)
+                        if ri != r:
+                            parent[ri] = r
+                roots = {}
+                for i in range(len(g.v)):
+                    roots.setdefault(find(i), []).append(i)
+                for r, idx in roots.items():
+                    comps.append((g, idx))
+                    for i in idx:
+                        comp_of[(id(g), i)] = len(comps) - 1
+            faces = []
+            for g in self.g.values():
+                for f in g.f:
+                    pts = [g.v[i] for i in f]
+                    n = vcross(vsub(pts[1], pts[0]), vsub(pts[2], pts[0]))
+                    ln = vlen(n)
+                    if ln < 1e-9:
+                        continue
+                    n = (n[0] / ln, n[1] / ln, n[2] / ln)
+                    d = n[0] * pts[0][0] + n[1] * pts[0][1] + n[2] * pts[0][2]
+                    ax = max(range(3), key=lambda a: abs(n[a]))
+                    o = [a for a in range(3) if a != ax]
+                    faces.append((n, d, min(p[o[0]] for p in pts), max(p[o[0]] for p in pts), min(p[o[1]] for p in pts), max(p[o[1]] for p in pts),
+                                  comp_of[(id(g), f[0])], ax))
+            buckets = {}
+            for fi, fc in enumerate(faces):
+                key = (round(fc[0][0] * 40), round(fc[0][1] * 40), round(fc[0][2] * 40))
+                buckets.setdefault(key, []).append(fi)
+            moves = {}
+            for key, idx in buckets.items():
+                near = []
+                for dx in (-1, 0, 1):
+                    for dy in (-1, 0, 1):
+                        for dz in (-1, 0, 1):
+                            near += buckets.get((key[0] + dx, key[1] + dy, key[2] + dz), [])
+                for fi in idx:
+                    a = faces[fi]
+                    for fj in near:
+                        b = faces[fj]
+                        if b[6] <= a[6] or b[7] != a[7]:
+                            continue
+                        if abs(a[1] - b[1]) > tol or a[0][0] * b[0][0] + a[0][1] * b[0][1] + a[0][2] * b[0][2] < 0.9999:
+                            continue
+                        if min(a[3], b[3]) - max(a[2], b[2]) > 0.0004 and min(a[5], b[5]) - max(a[4], b[4]) > 0.0004:
+                            moves[b[6]] = a[0]
+            if not moves:
+                break
+            st = step * (1.0 + 0.41 * (_ % 5))
+            for ci, nrm in moves.items():
+                g, idx = comps[ci]
+                for i in idx:
+                    p = g.v[i]
+                    g.v[i] = (p[0] + nrm[0] * st, p[1] + nrm[1] * st, p[2] + nrm[2] * st)
+        return self
+
+    def resolve_exact(self, passes=14, step=0.0046, eps=0.0011):
+        """The QA's own z-fighting test, replayed on the finished piece: sample points of every face (the centroid and the points 60 percent of the way to each corner of each
+        triangle of both ways of cutting a quad), any other solid's face within eps of one of them that faces the same way (dot of the normals 0.999 or more) and whose plane
+        carries the point inside it is a conflict; the later solid is moved `step` along that face's normal."""
+        for ps in range(passes):
+            faces = []
+            comp_of = {}
+            ncomp = 0
+            gmap = {}
+            for g in self.g.values():
+                gmap[id(g)] = g
+                parent = list(range(len(g.v)))
+
+                def find(i):
+                    while parent[i] != i:
+                        parent[i] = parent[parent[i]]
+                        i = parent[i]
+                    return i
+                for f in g.f:
+                    r = find(f[0])
+                    for i in f[1:]:
+                        ri = find(i)
+                        if ri != r:
+                            parent[ri] = r
+                roots = {}
+                for i in range(len(g.v)):
+                    roots.setdefault(find(i), ncomp + len(roots))
+                for i in range(len(g.v)):
+                    comp_of[(id(g), i)] = roots[find(i)]
+                ncomp += len(roots)
+                for f in g.f:
+                    pts = [g.v[i] for i in f]
+                    n = vcross(vsub(pts[1], pts[0]), vsub(pts[2], pts[0]))
+                    ln = vlen(n)
+                    if ln < 1e-9:
+                        continue
+                    n = (n[0] / ln, n[1] / ln, n[2] / ln)
+                    faces.append((pts, n, comp_of[(id(g), f[0])]))
+            cell = 1.0
+            grid = {}
+            for fi, (pts, n, cid) in enumerate(faces):
+                lo = [min(p[a] for p in pts) - eps for a in range(3)]
+                hi = [max(p[a] for p in pts) + eps for a in range(3)]
+                for ix in range(int(math.floor(lo[0] / cell)), int(math.floor(hi[0] / cell)) + 1):
+                    for iy in range(int(math.floor(lo[1] / cell)), int(math.floor(hi[1] / cell)) + 1):
+                        for iz in range(int(math.floor(lo[2] / cell)), int(math.floor(hi[2] / cell)) + 1):
+                            grid.setdefault((ix, iy, iz), []).append(fi)
+            moves = {}
+
+            def inside(q, pts):
+                a = pts[0]
+                for t in range(1, len(pts) - 1):
+                    b, c = pts[t], pts[t + 1]
+                    v0, v1, v2 = vsub(c, a), vsub(b, a), vsub(q, a)
+                    d00, d01, d02, d11, d12 = vdot(v0, v0), vdot(v0, v1), vdot(v0, v2), vdot(v1, v1), vdot(v1, v2)
+                    den = d00 * d11 - d01 * d01
+                    if abs(den) < 1e-14:
+                        continue
+                    uu = (d11 * d02 - d01 * d12) / den
+                    vv = (d00 * d12 - d01 * d02) / den
+                    if uu >= -1e-6 and vv >= -1e-6 and uu + vv <= 1 + 1e-6:
+                        return True
+                return False
+            for fi, (pts, n, ca) in enumerate(faces):
+                tri_sets = [(pts[0], pts[1], pts[2])]
+                if len(pts) == 4:
+                    tri_sets += [(pts[0], pts[2], pts[3]), (pts[1], pts[2], pts[3]), (pts[0], pts[1], pts[3])]
+                samples = []
+                for (a, b, c) in tri_sets:
+                    cen = ((a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3, (a[2] + b[2] + c[2]) / 3)
+                    samples.append(cen)
+                    for v in (a, b, c):
+                        samples.append((cen[0] + (v[0] - cen[0]) * 0.6, cen[1] + (v[1] - cen[1]) * 0.6, cen[2] + (v[2] - cen[2]) * 0.6))
+                for p in samples:
+                    for fj in grid.get((int(math.floor(p[0] / cell)), int(math.floor(p[1] / cell)), int(math.floor(p[2] / cell))), ()):
+                        u = faces[fj]
+                        if u[2] == ca:
+                            continue
+                        n2 = u[1]
+                        if n[0] * n2[0] + n[1] * n2[1] + n[2] * n2[2] < 0.999:
+                            continue
+                        dist = n2[0] * (p[0] - u[0][0][0]) + n2[1] * (p[1] - u[0][0][1]) + n2[2] * (p[2] - u[0][0][2])
+                        if abs(dist) > eps:
+                            continue
+                        q = (p[0] - n2[0] * dist, p[1] - n2[1] * dist, p[2] - n2[2] * dist)
+                        if inside(q, u[0]):
+                            if u[2] > ca:
+                                moves[u[2]] = n2
+                            else:
+                                moves[ca] = n
+            if not moves:
+                break
+            by_comp = {}
+            for (gid, vi), cid in comp_of.items():
+                by_comp.setdefault(cid, []).append((gid, vi))
+            st = step * (1.0 + 0.37 * (ps % 4))
+            for cid, nrm in moves.items():
+                for (gid, vi) in by_comp[cid]:
+                    g = gmap[gid]
+                    p = g.v[vi]
+                    g.v[vi] = (p[0] + nrm[0] * st, p[1] + nrm[1] * st, p[2] + nrm[2] * st)
+        return self
+
     def block(self, name, x0, x1, y0, y1, z0, z1):
         self.col.append((x0, x1, y0, y1, z0, z1, name))
 
@@ -79,9 +273,18 @@ def obox(g, c, ex, ey, ez, hx, hy, hz):
     hex8(g, [pt(-1, -1, -1), pt(1, -1, -1), pt(1, -1, 1), pt(-1, -1, 1), pt(-1, 1, -1), pt(1, 1, -1), pt(1, 1, 1), pt(-1, 1, 1)])
 
 
+def _jit(a, b):
+    """A deterministic pair of numbers in -1..1 from two points (a few percent of size jitter so no two timbers share a face plane)."""
+    s = math.sin(a[0] * 12.9898 + a[1] * 78.233 + a[2] * 37.719 + b[0] * 4.1414 + b[1] * 9.1317 + b[2] * 2.7183) * 43758.5453
+    t = math.sin(a[0] * 3.1415 + a[1] * 5.3 + a[2] * 7.7 + b[0] * 1.31 + b[1] * 2.17 + b[2] * 3.9) * 24634.6345
+    return (s - math.floor(s)) * 2 - 1, (t - math.floor(t)) * 2 - 1
+
+
 def beam(g, a, b, w, h=None, up=(0.0, 1.0, 0.0), grow=0.0):
     """A square-sectioned timber from a to b (centre line): w across, h along `up` (default w). `grow` lengthens both ends."""
     h = w if h is None else h
+    j = _jit(a, b)
+    w, h = w * (1.0 + 0.035 * j[0]), h * (1.0 + 0.035 * j[1])
     u, v, ww = axes_of(a, b, up)
     a2, b2 = vsub(a, vmul(u, grow)), vadd(b, vmul(u, grow))
     L = vlen(vsub(b2, a2))
@@ -91,6 +294,8 @@ def beam(g, a, b, w, h=None, up=(0.0, 1.0, 0.0), grow=0.0):
 def post(g, x, z, y0, y1, w, lean=(0.0, 0.0), taper=0.0, d=None):
     """An upright timber (x, z at its base, `lean` = how far the top moves per stud of height), tapering by `taper` on each side at the top."""
     d = w if d is None else d
+    jj = _jit((x, y0, z), (lean[0], y1, lean[1]))
+    w, d = w * (1.0 + 0.03 * jj[0]), d * (1.0 + 0.03 * jj[1])
     h = y1 - y0
     tx, tz = x + lean[0] * h, z + lean[1] * h
     hw, hd = w / 2, d / 2
@@ -116,8 +321,8 @@ def cyl(g, a, b, r0, r1=None, seg=6, caps=True, phase=0.0):
         ca, cb = g.vert(a), g.vert(b)
         for k in range(seg):
             j = (k + 1) % seg
-            g.face(ca, ra[j], ra[k])
-            g.face(cb, rb[k], rb[j])
+            g.face(ca, ra[k], ra[j])
+            g.face(cb, rb[j], rb[k])
 
 
 def wedge(g, b0, b1, b2, b3, th, n):
@@ -137,8 +342,8 @@ def tri_prism(g, a, b, c, thick, nrm):
     """A thin triangular plate a b c with thickness `thick` along the unit normal `nrm` (centred)."""
     o = vmul(nrm, thick / 2)
     p = [g.vert(vsub(q, o)) for q in (a, b, c)] + [g.vert(vadd(q, o)) for q in (a, b, c)]
-    g.face(p[0], p[1], p[2])
-    g.face(p[5], p[4], p[3])
+    g.face(p[0], p[2], p[1])
+    g.face(p[3], p[4], p[5])
     for i in range(3):
         j = (i + 1) % 3
         g.face(p[i], p[j], p[j + 3], p[i + 3])
@@ -174,7 +379,7 @@ def rubble(g, x0, x1, y0, y1, z0, z1, rng, j=0.22):
 # ======================================================================================================================
 # stone
 # ======================================================================================================================
-def stone_wall(g, a, b, h, t0, t1=None, y0=0.0, course=(0.9, 1.35), blen=(1.8, 3.6), seed=1, gaps=(), j=0.2):
+def stone_wall(g, a, b, h, t0, t1=None, y0=0.0, course=(0.9, 1.35), blen=(1.8, 3.6), seed=1, gaps=(), j=0.2, ybias=0):
     """A rubble wall from a to b (x, z each) standing on y0, h tall, t0 thick at its foot and t1 at its top (a batter), laid in staggered courses of random
     height and block length; `gaps` is a list of (s0, s1) distances along the wall left open (doorways). Returns the course tops used."""
     t1 = t0 if t1 is None else t1
@@ -207,7 +412,8 @@ def stone_wall(g, a, b, h, t0, t1=None, y0=0.0, course=(0.9, 1.35), blen=(1.8, 3
             cx1, cz1 = a[0] + ux * s1, a[1] + uz * s1
             ring = [(cx0 - nx * tm / 2, cz0 - nz * tm / 2), (cx1 - nx * tm / 2, cz1 - nz * tm / 2), (cx1 + nx * tm / 2, cz1 + nz * tm / 2), (cx0 + nx * tm / 2, cz0 + nz * tm / 2)]
             ring = [(x + rng.uniform(-j, j), z + rng.uniform(-j, j)) for x, z in ring]
-            hex8(g, [(x, y, z) for x, z in ring] + [(x, y + ch, z) for x, z in ring])
+            yb, yt = y - (0.012 + 0.024 * ybias + rng.uniform(0.0, 0.008)), y + ch + (0.012 + 0.024 * ybias + rng.uniform(0.0, 0.008))
+            hex8(g, [(x, yb, z) for x, z in ring] + [(x, yt, z) for x, z in ring])
         y += ch
         tops.append(y)
         k += 1
@@ -219,7 +425,7 @@ def stone_box(g, x0, x1, z0, z1, y0, y1, seed=1, batter=0.3, course=(0.9, 1.35),
     The core is a plain solid so nothing is hollow; the courses stand proud of it."""
     h = y1 - y0
     hexa_core = [(x0 + 0.3, z0 + 0.3), (x1 - 0.3, z0 + 0.3), (x1 - 0.3, z1 - 0.3), (x0 + 0.3, z1 - 0.3)]
-    K.hexa(g, hexa_core, y0, hexa_core, y1 - 0.02, "TB0123")
+    K.hexa(g, hexa_core, y0 + 0.05, hexa_core, y1 - 0.07, "TB0123")
     sides = {"N": ((x0, z0), (x1, z0)), "E": ((x1, z0), (x1, z1)), "S": ((x1, z1), (x0, z1)), "W": ((x0, z1), (x0, z0))}
     for n, (a, b) in sides.items():
         if n in skip:
@@ -231,7 +437,7 @@ def stone_box(g, x0, x1, z0, z1, y0, y1, seed=1, batter=0.3, course=(0.9, 1.35),
         ox, oz = uz, -ux
         off = 0.35
         a2, b2 = (a[0] - ox * off, a[1] - oz * off), (b[0] - ox * off, b[1] - oz * off)
-        stone_wall(g, a2, b2, h, 1.1 + batter, 1.1, y0=y0, course=course, blen=blen, seed=seed + len(n) * 7 + ord(n), j=0.12)
+        stone_wall(g, a2, b2, h, 1.1 + batter, 1.1, y0=y0, course=course, blen=blen, seed=seed + len(n) * 7 + ord(n), j=0.12, ybias="NESW".index(n))
 
 
 # ======================================================================================================================
@@ -249,6 +455,9 @@ def roof_plane(P, E0, E1, R0, R1, seed=1, row=1.0, th=0.5, tile=S_TILE, under=S_
     eave up: every course is cut into segments of random length (they do not line up from course to course), its lip stands th over the one below and its
     height jitters a little; the eave's lowest course is ragged. Returns the up normal."""
     rng = random.Random(seed)
+    if vlen(vsub(R1, R0)) < 0.05:                       # a hip's ridge point: give it a hand's width so no face is degenerate
+        d_ = vnorm(vsub(E1, E0))
+        R0, R1 = vsub(R0, vmul(d_, 0.03)), vadd(R1, vmul(d_, 0.03))
     n = vnorm(vcross(vsub(E1, E0), vsub(R0, E0)))
     if n[1] < 0:
         n = vmul(n, -1.0)
@@ -277,15 +486,18 @@ def roof_plane(P, E0, E1, R0, R1, seed=1, row=1.0, th=0.5, tile=S_TILE, under=S_
             tt0 = t0 + (t_low if k == 0 else 0.0)
             if rng.random() < 0.045:        # a missing tile segment: the underlay shows
                 continue
-            e0 += gap / edge_len
+            e0 += gap / edge_len + ((0.04 + 0.023 * (k % 13) + rng.uniform(0.0, 0.01)) / edge_len if s0 <= 1e-9 else 0.0)
+            if s1 >= 1.0 - 1e-9:
+                e1 -= (0.03 + 0.021 * ((k * 5) % 11) + rng.uniform(0.0, 0.01)) / edge_len
             thk = th * rng.uniform(0.85, 1.2)
-            b0, b1 = _bil(E0, E1, R0, R1, e0, max(tt0, 0.0)), _bil(E0, E1, R0, R1, e1, max(tt0, 0.0))
-            b2, b3 = _bil(E0, E1, R0, R1, e1, t1), _bil(E0, E1, R0, R1, e0, t1)
+            sink = vmul(n, -(0.014 + 0.013 * (k % 4) + 0.003 * (int(s * 7) % 3)))
+            b0, b1 = vadd(_bil(E0, E1, R0, R1, e0, max(tt0, 0.0)), sink), vadd(_bil(E0, E1, R0, R1, e1, max(tt0, 0.0)), sink)
+            b2, b3 = vadd(_bil(E0, E1, R0, R1, e1, t1), sink), vadd(_bil(E0, E1, R0, R1, e0, t1), sink)
             wedge(gt, b0, b1, b2, b3, thk, n)
     return n
 
 
-def cap_line(P, a, b, w=0.42, h=0.34, piece=2.0, gap=0.1, suffix=S_BRONZE, lift=0.0):
+def cap_line(P, a, b, w=0.42, h=0.34, piece=2.0, gap=0.1, suffix=S_BRONZE, lift=-0.14):
     """A ridge or hip cap: short bronze caps end to end along a -> b (a small gap between), sitting `lift` over the line."""
     g = P.geo(suffix)
     L = vlen(vsub(a, b))
@@ -298,6 +510,7 @@ def cap_line(P, a, b, w=0.42, h=0.34, piece=2.0, gap=0.1, suffix=S_BRONZE, lift=
 
 
 def finial(P, p, h=1.1, r=0.28, suffix=S_BRONZE, lean=(0.0, 0.0)):
+    p = (p[0], p[1] - 0.2, p[2])
     """A small bronze finial: a stepped spike (three tapering drums) with a ball on top, at p."""
     g = P.geo(suffix)
     x, y, z = p
@@ -348,7 +561,7 @@ def roof_gable(P, x0, x1, zf, zb, y_ef, y_eb, z_r, y_r, over=1.8, rake=(0.9, 0.9
             pr = (xx, yr[k] - 0.05, zr_k)
             gable_plate(P, pf, pb, pr, 0.35, (1.0, 0.0, 0.0))
     if caps:
-        cap_line(P, (R0[0], R0[1] + 0.02, R0[2]), (R1[0], R1[1] + 0.02, R1[2]), w=0.55, h=0.36, piece=2.2, gap=0.12, lift=0.0)
+        cap_line(P, (R0[0], R0[1] + 0.02, R0[2]), (R1[0], R1[1] + 0.02, R1[2]), w=0.55, h=0.36, piece=2.2, gap=0.12, lift=-0.14)
         if finials:
             finial(P, (R0[0] + 0.1, R0[1] + 0.3, R0[2]), h=1.5, lean=(-0.2, 0.0))
             finial(P, (R1[0] - 0.1, R1[1] + 0.3, R1[2]), h=1.1, lean=(0.2, 0.0))
@@ -418,9 +631,9 @@ def corbels(P, x0, x1, z, y, reach, steps=3, w=0.5, suffix=S_TIMBER, direction=-
         x = lerp(x0, x1, i / (n - 1))
         for s in range(steps):
             r = reach * (s + 1) / steps
-            yy = y - 0.6 * (steps - 1 - s) - 0.35
-            beam(g, (x, yy, z), (x, yy, z + direction * r), w, 0.5, up=(0, 1, 0))
-        beam(g, (x, y - 0.4 - 0.6 * (steps - 1), z + direction * reach * 0.9), (x, y - 0.4 - 0.6 * (steps - 1) - reach * 0.9, z), w * 0.7, w * 0.7)   # the strut back to the wall
+            yy = y - 0.45 * (steps - 1 - s) - 0.2
+            beam(g, (x, yy, z - direction * 0.3), (x, yy, z + direction * r), w, 0.5, up=(0, 1, 0))
+        beam(g, (x, y - 0.3, z + direction * reach * 0.92), (x, y - 0.5 - 0.45 * (steps - 1) - reach * 0.7, z - direction * 0.15), w * 0.7, w * 0.7)   # the strut back to the wall
 
 
 def rope_line(P, pts, r=0.1, seg=4, suffix=S_ROPE):
@@ -442,24 +655,27 @@ def catenary(a, b, sag, n):
 
 def awning(P, corners, sag=0.5, seed=1, suffix=S_CLOTH, thick=0.08, panels=3, drop=0.0):
     """A cloth sheet stretched between four points (a b c d in order), hanging with a sag in the middle and a scalloped hem: panels of cloth side by side, each a thin
-    slab drooping a little differently (a patchwork). corners = [a, b, c, d]: a-b the high edge, d-c the low edge."""
+    slab drooping a little differently (a patchwork); every panel is two thin triangular plates so it is always flat. corners = [a, b, c, d]: a-b the high edge, d-c the low edge."""
     rng = random.Random(seed)
     a, b, c, d = corners
     g = P.geo(suffix)
     for i in range(panels):
-        s0, s1 = i / panels + 0.004, (i + 1) / panels - 0.004
+        s0, s1 = i / panels + 0.006, (i + 1) / panels - 0.006
+        dr = drop * rng.uniform(0.0, 1.0)
+
         def pt(s, t):
             top = vadd(vmul(a, 1 - s), vmul(b, s))
             bot = vadd(vmul(d, 1 - s), vmul(c, s))
             p = vadd(vmul(top, 1 - t), vmul(bot, t))
-            return (p[0], p[1] - sag * 4 * t * (1 - t) - (drop * rng.uniform(0.0, 1.0) if t > 0.9 else 0.0), p[2])
+            return (p[0], p[1] - sag * 4 * t * (1 - t) - (dr if t > 0.9 else 0.0), p[2])
         rows = 3
         for r in range(rows):
-            t0, t1 = r / rows, (r + 1) / rows
+            t0, t1 = r / rows + 0.004, (r + 1) / rows - 0.004
             q = [pt(s0, t0), pt(s1, t0), pt(s1, t1), pt(s0, t1)]
-            n = vnorm(vcross(vsub(q[1], q[0]), vsub(q[3], q[0])))
-            o = vmul(n, thick / 2)
-            hex8(g, [vsub(q[0], o), vsub(q[1], o), vsub(q[2], o), vsub(q[3], o), vadd(q[0], o), vadd(q[1], o), vadd(q[2], o), vadd(q[3], o)])
+            th = thick * (1.0 + 0.25 * rng.random())
+            for tri in ((q[0], q[1], q[2]), (q[0], q[2], q[3])):
+                n = vnorm(vcross(vsub(tri[1], tri[0]), vsub(tri[2], tri[0])))
+                tri_prism(g, tri[0], tri[1], tri[2], th, n)
 
 
 # ======================================================================================================================
@@ -492,21 +708,21 @@ def scaffold(P, x0, x1, z0, z1, y0, y1, bays=2, levels=3, seed=1, suffix=S_BAMBO
     for x in xs:
         for z in zs:
             top = y1 + rng.uniform(0.0, 1.4)
-            cyl(g, (x, y0 - 0.3, z), (x + lean[0] * h, top, z + lean[1] * h), r, r * 0.8, seg=6)
+            cyl(g, (x, y0 - 0.3, z), (x + lean[0] * h, top, z + lean[1] * h), r, r * 0.8, seg=6, phase=rng.uniform(0, 1.0))
     for lv in range(1, levels + 1):
         y = y0 + h * lv / levels
         for z in zs:
             for a, b in zip(xs, xs[1:]):
-                cyl(g, (a - 0.5, y + rng.uniform(-0.1, 0.1), z), (b + 0.5, y + rng.uniform(-0.1, 0.1), z), r * 0.85, seg=6)
+                cyl(g, (a - 0.5, y + rng.uniform(-0.1, 0.1), z), (b + 0.5, y + rng.uniform(-0.1, 0.1), z), r * 0.85, seg=6, phase=rng.uniform(0, 1.0))
         for x in xs:
-            cyl(g, (x, y, z0 - 0.4), (x, y, z1 + 0.4), r * 0.85, seg=6)
+            cyl(g, (x, y, z0 - 0.4), (x, y, z1 + 0.4), r * 0.85, seg=6, phase=rng.uniform(0, 1.0))
         if gr is not None:
             for x in xs:
                 for z in zs:
-                    ring_band(gr, x + lean[0] * (y - y0), y, z + lean[1] * (y - y0), r, r, y - 0.18, y + 0.18, seg=5, t=0.07)
+                    ring_band(gr, x + lean[0] * (y - y0), y, z + lean[1] * (y - y0), r * 1.2, r * 1.2, y - 0.18, y + 0.18, seg=5, t=0.07)
     for a, b in zip(xs, xs[1:]):
-        cyl(g, (a, y0, z0), (b, y1 - h / levels, z0), r * 0.75, seg=6)
-        cyl(g, (b, y0, z1), (a, y1 - h / levels, z1), r * 0.75, seg=6)
+        cyl(g, (a, y0, z0), (b, y1 - h / levels, z0), r * 0.75, seg=6, phase=rng.uniform(0, 1.0))
+        cyl(g, (b, y0, z1), (a, y1 - h / levels, z1), r * 0.75, seg=6, phase=rng.uniform(0, 1.0))
 
 
 def ladder(P, x, z, y0, y1, yaw=0.0, w=1.5, suffix=S_TIMBER, rung=1.0, lean=0.22):
@@ -523,9 +739,10 @@ def ladder(P, x, z, y0, y1, yaw=0.0, w=1.5, suffix=S_TIMBER, rung=1.0, lean=0.22
 def bell(P, x, y, z, r=0.9, h=1.5):
     """A bronze bell hanging from (x, y, z) (y = the top): a lathe-like bell of three tapering drums with a flared lip and a clapper."""
     g = P.geo(S_BRONZE)
-    cyl(g, (x, y - 0.2, z), (x, y - h * 0.45, z), r * 0.45, r * 0.7, seg=8)
+    cyl(g, (x, y + 0.12, z), (x, y - h * 0.45, z), r * 0.45, r * 0.7, seg=8)
     cyl(g, (x, y - h * 0.45, z), (x, y - h * 0.85, z), r * 0.7, r * 1.0, seg=8)
     cyl(g, (x, y - h * 0.85, z), (x, y - h, z), r * 1.0, r * 1.15, seg=8, caps=False)
+    cyl(g, (x, y - h * 0.8, z), (x, y - h * 0.95, z), r * 0.1, r * 0.1, seg=4)
     cyl(g, (x, y - h * 0.9, z), (x, y - h * 1.05, z), r * 0.2, r * 0.3, seg=5)
 
 

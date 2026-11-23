@@ -53,15 +53,14 @@ def wall_run(P, a, b, y0, y1, thick=0.5, openings=(), batten=1.7, seed=1, suffix
         n = int((s1 - s0) / batten)
         for k in range(1, n + 1):
             s = s0 + (s1 - s0) * k / (n + 1) + rng.uniform(-0.12, 0.12)
-            box_s(s - 0.11, s + 0.11, y0 + 0.2, y1 - 0.15, thick, off=0.0)
             beam(g, (a[0] + ux * s + nx * (thick / 2 + 0.04), y0 + 0.2, a[1] + uz * s + nz * (thick / 2 + 0.04)),
                  (a[0] + ux * s + nx * (thick / 2 + 0.04), y1 - 0.15, a[1] + uz * s + nz * (thick / 2 + 0.04)), 0.2, 0.12, up=(nx, 0, nz))
     for (s0, s1, o0, o1) in ops:
         if o1 < y1 - y0 - 0.05:
-            box_s(s0, s1, y0 + o1, y1, thick)
+            box_s(s0 - 0.12, s1 + 0.12, y0 + o1, y1, thick)
             solid_box(s0, s1, y0 + o1 if o0 < 0.1 else y0 + o1, y1, name + "Header") if (o1 > 2.8 and False) else None
         if o0 > 0.05:
-            box_s(s0, s1, y0, y0 + o0, thick)
+            box_s(s0 - 0.12, s1 + 0.12, y0, y0 + o0, thick)
             solid_box(s0, s1, y0, y0 + o0, name)
 
 
@@ -79,7 +78,7 @@ def plank_floor(P, x0, x1, z0, z1, y, thick=0.5, suffix=S_PLANK, name="Floor", j
             K.box(gt, x - 0.18, x + 0.18, y - thick - 0.55, y - thick, z0 - 0.25, z1 + 0.25)
 
 
-def rail(P, a, b, y, h=1.1, every=3.0, post_w=0.28, suffix=S_TIMBER, rope=True, lean=(0.0, 0.0), sag=0.12, rope_suffix=S_TIMBER):
+def rail(P, a, b, y, h=1.1, every=3.0, post_w=0.28, suffix=S_TIMBER, rope=True, lean=(0.0, 0.0), sag=0.12, rope_suffix=S_TIMBER, skip_first=False):
     """A rope rail along a -> b (x, z) on a deck at height y: posts every ~`every`, two ropes (hand and knee), no collision (a rail you can fall through: the plan adds
     guards where it matters)."""
     g = P.geo(suffix)
@@ -89,7 +88,8 @@ def rail(P, a, b, y, h=1.1, every=3.0, post_w=0.28, suffix=S_TIMBER, rope=True, 
     for i in range(n + 1):
         t = i / n
         x, z = lerp(a[0], b[0], t), lerp(a[1], b[1], t)
-        post(g, x, z, y - 0.1, y + h, post_w, lean=lean, taper=0.03)
+        if not (skip_first and i == 0):
+            post(g, x, z, y - 0.1, y + h, post_w, lean=lean, taper=0.03)
         pts_hand.append((x, y + h - 0.1 - (sag * 4 * 0 if False else 0.0), z))
         pts_knee.append((x, y + h * 0.45, z))
     if rope:
@@ -129,20 +129,23 @@ def posts_grid(P, xs, z, y0, y1, w=0.7, lean=(0.0, 0.0), name="Post", band=None,
         post(g, x, z, y0, y1, w, lean=lean, taper=taper)
         P.block(name, x - w / 2 - 0.05, x + w / 2 + 0.05, y0, y1, z - w / 2 - 0.05, z + w / 2 + 0.05)
         if band is not None:
-            ring_band(gb, x + lean[0] * (band - y0), band, z + lean[1] * (band - y0), w * 0.6, w * 0.6, band - 0.2, band + 0.2, seg=4, t=0.08, phase=PI / 4)
+            ring_band(gb, x + lean[0] * (band - y0), band, z + lean[1] * (band - y0), w * 0.74, w * 0.74, band - 0.2, band + 0.2, seg=4, t=0.09, phase=PI / 4)
 
 
 def chime(P, x, y, z, seed=1):
     """A bronze wind chime: a cord and a ring from the eave, five tubes of different lengths."""
     rng = random.Random(seed)
     gb, gt = P.geo(S_BRONZE), P.geo(S_TIMBER)
-    beam(gt, (x, y, z), (x, y - 0.8, z), 0.06, 0.06)
+    beam(gt, (x, y + 1.1, z), (x, y - 0.8, z), 0.06, 0.06)
     ring_band(gb, x, y - 0.9, z, 0.55, 0.55, y - 1.0, y - 0.86, seg=8, t=0.08)
+    for k_ in range(5):
+        a_ = TAU * k_ / 5
+        beam(gt, (x, y - 0.88, z), (x + 0.6 * math.cos(a_), y - 0.95, z + 0.6 * math.sin(a_)), 0.05, 0.05)
     for k in range(5):
         a = TAU * k / 5
-        px, pz = x + 0.42 * math.cos(a), z + 0.42 * math.sin(a)
+        px, pz = x + 0.55 * math.cos(a), z + 0.55 * math.sin(a)
         ln = rng.uniform(0.9, 1.9)
-        cyl(gb, (px, y - 1.0, pz), (px, y - 1.0 - ln, pz), 0.09, 0.09, seg=4)
+        cyl(gb, (px, y - 0.9, pz), (px, y - 1.0 - ln, pz), 0.09, 0.09, seg=4)
 
 
 def round_disc(P, x, y, z, r, nz=-1.0, suffix=S_BRONZE, t=0.2, seg=8):
@@ -184,20 +187,20 @@ def rain_hall():
     P.floor.append((X0 + 1.0, X1 - 1.0, Z1, Z1 + 3.4, FY))
     corbels(P, X0 + 2.0, X1 - 2.0, Z1, FY - 0.55, 3.4, steps=3, w=0.5, direction=1.0)
     for z, yy in ((Z0, 8.9), (Z1, 8.3)):
-        posts_grid(P, [-14.0, -9.0, -4.0, 4.0, 9.0, 14.0], z, FY, yy, 0.75, lean=(0.0, -0.012 if z < 0 else 0.015), band=FY + 1.8)
+        posts_grid(P, [-14.0, -9.0, -4.0, 4.0, 9.0, 14.0], z, FY, yy, 0.75, lean=(0.0, 0.0 if z < 0 else 0.015), band=FY + 1.8)
         beam(gt, (X0 - 0.4, yy, z), (X1 + 0.4, yy, z), 0.7, 0.9)
-    wall_run(P, (X0 + 0.3, Z0), (X1 - 0.3, Z0), FY, 8.7, thick=0.45, openings=[(5.5, 9.5, 0.0, 4.4), (21.0, 24.6, 0.0, 4.4), (12.0, 14.2, 5.6, 7.4), (16.2, 18.4, 5.6, 7.4)],
+    wall_run(P, (X0 + 0.3, Z0), (X1 - 0.3, Z0), FY, 8.7, thick=0.45, openings=[(3.0, 7.0, 0.0, 4.4), (24.0, 28.0, 0.0, 4.4), (12.0, 14.2, 5.6, 7.4), (16.2, 18.4, 5.6, 7.4)],
              seed=2, name="FrontWall")
     wall_run(P, (X0 + 0.3, Z0), (X0 + 0.3, Z1), FY, 8.4, thick=0.45, openings=[(4.0, 8.5, 0.0, 4.2)], seed=4, name="EndWall")
     for dx in (-8.0, 7.3):                                                          # two steps in front of each door
         for k, (za, zb, top) in enumerate(((-9.6, -8.1, -1.0), (-8.1, -6.5, -0.0 - 0.0))):
             pass
-    for (xa, xb) in ((-10.4, -5.6), (5.0, 9.8)):
-        rubble(gs, xa, xb, -3.0, -1.0, -8.2, -6.4, random.Random(int(xa)), j=0.05)
-        P.block("DoorStep", xa, xb, -3.0, -1.0, -8.2, -6.4)
+    for (xa, xb) in ((-13.0, -7.4), (8.0, 13.6)):
+        rubble(gs, xa, xb, -3.0, -1.0, -9.9, -7.6, random.Random(int(xa)), j=0.05)
+        P.block("DoorStep", xa, xb, -3.0, -1.0, -9.9, -7.7)
     rail(P, (X0 + 1.2, Z1 + 3.3), (X1 - 1.2, Z1 + 3.3), FY, h=1.15, every=2.9)
-    rail(P, (X0 + 1.2, Z1 + 3.3), (X0 + 1.2, Z1 + 0.4), FY, h=1.15, every=2.9)
-    rail(P, (X1 - 1.2, Z1 + 3.3), (X1 - 1.2, Z1 + 0.4), FY, h=1.15, every=2.9)
+    rail(P, (X0 + 1.2, Z1 + 3.3), (X0 + 1.2, Z1 + 0.4), FY, h=1.15, every=2.9, skip_first=True)
+    rail(P, (X1 - 1.2, Z1 + 3.3), (X1 - 1.2, Z1 + 0.4), FY, h=1.15, every=2.9, skip_first=True)
     P.block("GalleryRail", X0 + 1.0, X1 - 1.0, FY, FY + 1.2, Z1 + 3.2, Z1 + 3.5)
     r = roof_gable(P, X0, X1, Z0 - 0.4, Z1 + 3.0, (9.0, 8.6), (7.6, 7.2), (1.2, 1.5), (14.8, 12.4), over=2.0, rake=(1.4, 0.8), seed=7)
     # the lantern box on the ridge (left third): slatted walls, a small gable across the ridge
@@ -213,9 +216,9 @@ def rain_hall():
     # the porch: a lean-to over the left door, on two posts
     sub = WP()
     roof_shed(sub, -3.4, 3.4, -3.8, 0.4, 4.2, 6.0, over=0.8, rake=(0.5, 0.5), seed=23, row=0.9)
-    P.absorb(sub, t=(-8.0, 0.0, Z0 - 0.4))
-    posts_grid(P, [-11.0, -5.0], Z0 - 3.6, FY, 4.5, 0.55, lean=(0.0, 0.02), band=1.6, name="PorchPost")
-    beam(gt, (-11.4, 4.5, Z0 - 3.6), (-4.6, 4.5, Z0 - 3.6), 0.5, 0.6)
+    P.absorb(sub, t=(-10.2, 0.0, Z0 - 0.4))
+    posts_grid(P, [-13.4, -7.0], Z0 - 3.6, FY, 4.5, 0.55, lean=(0.0, 0.02), band=1.6, name="PorchPost")
+    beam(gt, (-13.8, 4.5, Z0 - 3.6), (-6.6, 4.5, Z0 - 3.6), 0.5, 0.6)
     # the bell hood at the right gable and a chime on the gallery's eave
     posts_grid(P, [X1 + 1.4], Z0 + 2.2, FY, 6.2, 0.5, lean=(-0.02, 0.0), name="BellPost")
     posts_grid(P, [X1 + 1.4], Z0 + 5.2, FY, 6.2, 0.5, lean=(-0.02, 0.0), name="BellPost")
@@ -253,7 +256,7 @@ def hq():
         P.block("Step", -6.5, 4.5, top - 1.6, top, za, zb)
     # the hall: x -14.5 .. 10.5, z -6.5 .. 6.5, wall to 9
     HX0, HX1, HZ0, HZ1 = -14.5, 10.5, -6.5, 6.5
-    posts_grid(P, [HX0 + 0.5 + i * 4.9 for i in range(6)], HZ0, FY, 9.2, 0.8, lean=(0.0, -0.01))
+    posts_grid(P, [HX0 + 0.5 + i * 4.9 for i in range(6) if i != 3], HZ0, FY, 9.2, 0.8)       # (none in the doorway, x -4 .. 2.5)
     posts_grid(P, [HX0 + 0.5 + i * 4.9 for i in range(6)], HZ1, FY, 8.4, 0.8)
     beam(gt, (HX0 - 0.4, 9.2, HZ0), (HX1 + 0.4, 9.2, HZ0), 0.8, 1.0)
     beam(gt, (HX0 - 0.4, 8.4, HZ1), (HX1 + 0.4, 8.4, HZ1), 0.8, 1.0)
@@ -263,7 +266,7 @@ def hq():
     wall_run(P, (HX0, HZ0), (HX0, HZ1), FY, 8.6, thick=0.5, openings=[(4.5, 8.5, 0.0, 4.6)], seed=15, name="EndWallL")
     # the porch: low posts of different heights carrying the front eave, a rail between two of them
     ph = [5.0, 5.4, 5.2, 5.6, 5.0, 5.3, 5.1]
-    posts_grid(P, [-13.0 + i * 4.0 for i in range(7)], -12.0, FY, 5.2, 0.7, lean=(0.0, 0.03), band=1.4, name="PorchPost")
+    posts_grid(P, [-13.0, -9.0, -5.0, 3.5, 7.5, 11.0], -12.0, FY, 5.2, 0.7, lean=(0.0, 0.03), band=1.4, name="PorchPost")
     beam(gt, (-14.0, 5.1, -12.0), (11.5, 5.1, -12.0), 0.7, 0.8)
     for x in (-10.0, 6.0):
         bracket(P, x, 4.4, -6.7, 4.8, h=1.6, along="z", direction=-1.0)
@@ -353,9 +356,11 @@ def eyrie():
     beam(gt, (-2.0, -9.0, FZ0 + 0.5), (4.0, -3.0, FZ0 + 0.5), 0.4, 0.4)
     beam(gt, (4.0, -9.0, FZ0 + 0.5), (-2.0, -3.0, FZ0 + 0.5), 0.4, 0.4)
     corbels(P, -9.0, 4.0, FZ0, FY - 0.45, 1.6, steps=2, w=0.45, direction=1.0)
-    rail(P, (-10.0, FZ0), (5.0, FZ0), FY, h=1.15, every=2.5, suffix=S_TIMBER)
-    rail(P, (5.0, FZ0), (5.0, 1.2), FY, h=1.15, every=2.5, suffix=S_TIMBER)
-    P.block("DeckRail", -10.0, 5.0, FY, FY + 1.2, FZ0 - 0.1, FZ0 + 0.15)
+    rail(P, (-10.0, FZ0), (-4.6, FZ0), FY, h=1.15, every=2.7, suffix=S_TIMBER)
+    rail(P, (0.6, FZ0), (5.0, FZ0), FY, h=1.15, every=2.2, suffix=S_TIMBER)
+    rail(P, (5.0, FZ0), (5.0, 1.2), FY, h=1.15, every=2.5, suffix=S_TIMBER, skip_first=True)
+    P.block("DeckRail", -10.0, -4.6, FY, FY + 1.2, FZ0 - 0.1, FZ0 + 0.15)
+    P.block("DeckRail", 0.6, 5.0, FY, FY + 1.2, FZ0 - 0.1, FZ0 + 0.15)
     # the tea nook (to the right of the deck, on stilts over the drop): x 5 .. 12, z -5 .. 1.3
     NX0, NX1, NZ0, NZ1 = 5.0, 11.5, -4.5, 1.3
     K.box(gt, NX0, NX1, FY - 0.45, FY, NZ0, NZ1)
@@ -366,7 +371,7 @@ def eyrie():
     beam(gt, (NX1 - 0.4, -9.0, NZ0 + 0.4), (NX0 + 1.5, -3.0, NZ0 + 0.4), 0.4, 0.4)
     corbels(P, NZ0 + 0.5, NZ1 - 0.5, NX1, FY - 0.45, 1.8, steps=2, w=0.45, direction=1.0) if False else None
     wall_run(P, (NX0, NZ1), (NX1, NZ1), FY, 4.8, thick=0.4, openings=[(0.0, 1.0, 0.0, 4.8)], seed=34, name="NookWall")
-    wall_run(P, (NX1, NZ0), (NX1, NZ1), FY, 4.8, thick=0.4, openings=[(1.2, 4.6, 1.5, 3.8)], seed=35, name="NookWall")
+    wall_run(P, (NX1, NZ0), (NX1, NZ1), FY, 4.8, thick=0.4, openings=[(0.9, 4.7, 0.0, 4.2)], seed=35, name="NookWall")
     wall_run(P, (NX0, NZ0), (NX1, NZ0), FY, 1.5, thick=0.35, seed=36, name="NookRail")
     posts_grid(P, [NX0 + 0.4], NZ0 + 0.4, FY, 4.8, 0.6, lean=(0.02, 0.0), name="NookPost")
     sub = WP()
@@ -389,24 +394,25 @@ def gallery():
     P = WP()
     gs, gt, gb = P.geo(S_STONE), P.geo(S_TIMBER), P.geo(S_BRONZE)
     FY = 0.0
-    PX0, PX1, PZ0, PZ1 = -17.0, 14.5, -8.5, 8.5
+    PX0, PX1, PZ0, PZ1 = -16.0, 12.0, -7.5, 7.5
     stone_box(gs, PX0, PX1, PZ0, PZ1, -5.5, FY - 0.5, seed=17, batter=0.35, course=(1.4, 2.0), blen=(3.2, 5.4))
     P.block("Podium", PX0, PX1, -8.0, FY, PZ0, PZ1)
     K.box(gt, PX0 + 0.4, PX1 - 0.4, FY - 0.5, FY, PZ0 + 0.4, PZ1 - 0.4)
     P.floor.append((PX0, PX1, PZ0, PZ1, FY))
     # steps at the front (two risers) in front of the door at x -9 .. -5
     rng = random.Random(7)
-    rubble(gs, -10.5, -3.5, -2.8, -1.0, -11.0, -9.4, rng, j=0.05)
-    P.block("Step", -10.5, -3.5, -2.8, -1.0, -11.0, -9.4)
+    rubble(gs, -10.5, -3.5, -2.8, -1.0, -9.4, -7.3, rng, j=0.05)
+    P.block("Step", -10.5, -3.5, -2.8, -1.0, -9.4, -7.5)
     rubble(gs, -10.5, -3.5, -2.8, -0.0, -9.4, -8.5, rng, j=0.04) if False else None
     # walls
-    W0, W1, WZ0, WZ1 = -16.0, 13.5, -7.5, 7.5
+    W0, W1, WZ0, WZ1 = -15.0, 11.0, -6.5, 6.5
     ys = 6.2
-    posts_grid(P, [W0 + 0.4 + i * 5.9 for i in range(6)], WZ0, FY, ys + 0.6, 0.8, lean=(0.0, -0.01))
-    posts_grid(P, [W0 + 0.4 + i * 5.9 for i in range(6)], WZ1, FY, ys, 0.8)
-    wins = [(1.6 + i * 5.9, 4.3 + i * 5.9, 1.6, 4.4) for i in range(5)]
+    px_ = [W0 + 0.4 + i * (W1 - W0 - 0.8) / 5 for i in range(6)]
+    posts_grid(P, px_, WZ0, FY, ys + 0.6, 0.8)
+    posts_grid(P, px_, WZ1, FY, ys, 0.8)
+    wins = [(1.4 + i * 5.2, 3.8 + i * 5.2, 1.6, 4.4) for i in range(5)]
     wins = [(a, b, c, d) for (a, b, c, d) in wins if not (3.0 < a < 8.0)]
-    wall_run(P, (W0, WZ0), (W1, WZ0), FY, ys, thick=0.5, openings=[(6.8, 11.4, 0.0, 4.6)] + [w for w in wins if not (5.5 < w[0] < 12.0)], seed=41, name="FrontWall")
+    wall_run(P, (W0, WZ0), (W1, WZ0), FY, ys, thick=0.5, openings=[(5.6, 10.2, 0.0, 4.6)] + [w for w in wins if not (4.0 < w[0] < 11.0)], seed=41, name="FrontWall")
     wall_run(P, (W0, WZ1), (W1, WZ1), FY, ys, thick=0.5, seed=42, name="BackWall")
     wall_run(P, (W0, WZ0), (W0, WZ1), FY, ys, thick=0.5, seed=43, name="EndWallL")
     # the comb roof: five gables across the front, ridges along z; eave heights at the six lines and ridge heights per bay
@@ -423,11 +429,11 @@ def gallery():
         cap_line(P, (xm, rr[k] + 0.02, zf_r), (xm, rr[k] + 0.02, zb_r), w=0.5, h=0.34, piece=2.0)
         finial(P, (xm, rr[k] + 0.3, zf_r + 0.1), h=0.9 + 0.2 * (k % 3))
         tri_prism(gt, (ex[k] + 0.3, ee[k] - 0.3, WZ0 - 0.3), (ex[k + 1] - 0.3, ee[k + 1] - 0.3, WZ0 - 0.3), (xm, rr[k] - 0.4, WZ0 - 0.3), 0.35, (0, 0, 1.0))
-        round_disc(P, xm, (ee[k] + rr[k]) / 2 - 0.1, WZ0 - 0.55, 0.7, nz=-1.0)
+        round_disc(P, xm, (ee[k] + rr[k]) / 2 - 0.1, WZ0 - 0.4, 0.7, nz=-1.0, t=0.32)
         for xx in (ex[k], ex[k + 1]):
             pass
     # the lantern room at the outer end: x 13.5 .. 22, z -4 .. 4.5, hanging on stilts and corbels
-    LX0, LX1, LZ0, LZ1 = 13.5, 22.0, -4.0, 4.5
+    LX0, LX1, LZ0, LZ1 = 11.0, 21.5, -4.0, 4.5
     K.box(gt, LX0, LX1, FY - 0.5, FY, LZ0, LZ1)
     P.block("LanternFloor", LX0, LX1, FY - 1.2, FY, LZ0, LZ1)
     P.floor.append((LX0, LX1, LZ0, LZ1, FY))
@@ -450,7 +456,6 @@ def gallery():
     roof_gable(sub, LX0 - 1.2, LX1 + 1.6, LZ0 - 0.8, LZ1 + 0.8, 6.1, 5.9, 0.4, 9.6, over=1.2, rake=(0.8, 1.2), seed=101, row=0.9)
     P.absorb(sub)
     # a tall bronze-capped post at the very end with a hanging chime
-    chime(P, LX1 + 0.4, 5.2, LZ0 + 2.2, seed=9)
     P.marks["Saber"] = (19.0, FY + 1.0, 0.0)
     P.marks["Door"] = (-7.0, FY, -8.5)
     P.lights += [(18.0, 3.6, 0.0), (-6.0, 3.4, 0.0)]
@@ -474,19 +479,20 @@ def hearth_yard():
     P = WP()
     gs, gt, gb, gc = P.geo(S_STONE), P.geo(S_TIMBER), P.geo(S_BRONZE), P.geo(S_CLOTH)
     rng = random.Random(61)
+    K.box(gs, -11.5, 11.5, -0.95, -0.1, -11.5, 11.5)      # (a buried footing: it ties the yard's pieces into one body, and lies under the ground)
     # the fire ring: ten stones round a bed of ash, a stone apron
     n = 10
     for i in range(n):
         a = TAU * i / n + 0.1
         cx, cz = 2.5 * math.cos(a), 2.5 * math.sin(a)
         w = rng.uniform(1.4, 1.8)
-        rubble(gs, cx - w / 2, cx + w / 2, -0.6, rng.uniform(0.9, 1.3), cz - 0.7, cz + 0.7, rng, j=0.18)
-    K.box(gs, -2.0, 2.0, -0.6, 0.15, -2.0, 2.0)
+        rubble(gs, cx - w / 2, cx + w / 2, -0.62 - 0.03 * i, rng.uniform(0.9, 1.3), cz - 0.7, cz + 0.7, rng, j=0.18)
+    K.box(gs, -2.0, 2.0, -0.5, 0.15, -2.0, 2.0)
     P.block("FireRing", -3.4, 3.4, -0.6, 1.2, -3.4, 3.4)
     # the tripod and the cauldron (bronze): three legs leaning together, a chain, a pot of three tapering drums
     for k in range(3):
         a = TAU * k / 3 + 0.5
-        cyl(gt, (2.2 * math.cos(a), -0.2, 2.2 * math.sin(a)), (0.2 * math.cos(a), 5.4, 0.2 * math.sin(a)), 0.2, 0.15, seg=5)
+        cyl(gt, (2.2 * math.cos(a), -0.2, 2.2 * math.sin(a)), (0.08 * math.cos(a), 5.4, 0.08 * math.sin(a)), 0.2, 0.15, seg=5)
     beam(gt, (0.0, 5.4, 0.0), (0.0, 3.6, 0.0), 0.08, 0.08)
     cyl(gb, (0, 1.6, 0), (0, 2.4, 0), 0.8, 1.15, seg=8)
     cyl(gb, (0, 2.4, 0), (0, 3.3, 0), 1.15, 1.3, seg=8, caps=False)
@@ -499,7 +505,7 @@ def hearth_yard():
         cx, cz = 6.6 * math.cos(a), 6.6 * math.sin(a)
         ln = rng.uniform(3.4, 4.6)
         ux, uz = -math.sin(a), math.cos(a)
-        cyl(gt, (cx - ux * ln / 2, 0.45, cz - uz * ln / 2), (cx + ux * ln / 2, 0.5, cz + uz * ln / 2), 0.55, 0.5, seg=6)
+        cyl(gt, (cx - ux * ln / 2, 0.42, cz - uz * ln / 2), (cx + ux * ln / 2, 0.45, cz + uz * ln / 2), 0.55, 0.5, seg=6)
         pts = [(cx + dx * ux - dz * uz, cz + dx * uz + dz * ux) for dx in (-ln / 2, ln / 2) for dz in (-0.55, 0.55)]
         P.block("Bench", min(p[0] for p in pts), max(p[0] for p in pts), 0.0, 1.0, min(p[1] for p in pts), max(p[1] for p in pts))
     # the mast and the poles
@@ -529,7 +535,7 @@ def hearth_yard():
     # the stack of firewood on the open side
     for i in range(3):
         for j in range(3 - i):
-            cyl(gt, (-9.5 + j * 0.9 + i * 0.45, 0.4 + i * 0.75, 7.2), (-9.5 + j * 0.9 + i * 0.45, 0.4 + i * 0.75, 11.0), 0.42, 0.42, seg=6)
+            cyl(gt, (-9.5 + j * 0.9 + i * 0.45, 0.3 + i * 0.68, 7.2), (-9.5 + j * 0.9 + i * 0.45, 0.3 + i * 0.68, 11.0), 0.5, 0.5, seg=6)
     P.block("Firewood", -9.9, -7.0, 0.0, 2.4, 7.0, 11.2)
     P.marks["Fire"] = (0.0, 0.6, 0.0)
     P.lights.append((0.0, 3.0, 0.0))
@@ -578,7 +584,7 @@ def rope_course():
             h = (8.4, 9.6, 7.6)[i] + (0.6 if z > 0 else 0.0)
             post(gt, x, z, -0.5, h, 0.7, lean=(0.0, -0.025 if z > 0 else 0.025), taper=0.1)
             P.block("Pole", x - 0.45, x + 0.45, 0.0, h, z - 0.45, z + 0.45)
-            ring_band(gb, x, 1.4, z, 0.4, 0.4, 1.3, 1.7, seg=4, t=0.08, phase=PI / 4)
+            ring_band(gb, x, 1.4, z, 0.52, 0.52, 1.3, 1.7, seg=4, t=0.09, phase=PI / 4)
     for z in (-2.4, 2.4):
         rope_line(P, catenary((-8.0, 8.0, z), (0.0, 9.0, z), 0.5, 5) + catenary((0.0, 9.0, z), (8.0, 7.0, z), 0.5, 5)[1:], r=0.09)
         rope_line(P, catenary((-8.0, 3.6, z), (0.0, 3.8, z), 0.35, 5) + catenary((0.0, 3.8, z), (8.0, 3.4, z), 0.35, 5)[1:], r=0.09)
@@ -606,7 +612,7 @@ def stone_ring():
     P = WP()
     gs, gt, gb = P.geo(S_STONE), P.geo(S_TIMBER), P.geo(S_BRONZE)
     rng = random.Random(91)
-    R = 6.6
+    R = 7.6
     K.prism(gs, [(R * math.cos(TAU * i / 16), R * math.sin(TAU * i / 16)) for i in range(16)], -0.6, 0.8, caps="TB")
     P.block("Dais", -R + 0.6, R - 0.6, -0.6, 0.8, -R + 0.6, R - 0.6)
     # joints: a cross of flat slabs standing 0.05 proud, so the floor reads as slabs
@@ -615,14 +621,14 @@ def stone_ring():
     n = 22
     for i in range(n):
         a = TAU * i / n
-        if any(abs(((a - g) + PI) % TAU - PI) < 0.28 for g in (0.0, PI / 2, PI, 3 * PI / 2)):
+        if any(abs(((a - g) + PI) % TAU - PI) < 0.45 for g in (0.0, PI / 2, PI, 3 * PI / 2)):
             continue
-        cx, cz = 8.2 * math.cos(a), 8.2 * math.sin(a)
+        cx, cz = 8.4 * math.cos(a), 8.4 * math.sin(a)
         w = rng.uniform(1.8, 2.6)
         h = rng.uniform(1.4, 2.2)
         ux, uz = -math.sin(a), math.cos(a)
-        ring = [(cx - ux * w / 2 - math.cos(a) * 0.8, cz - uz * w / 2 - math.sin(a) * 0.8), (cx + ux * w / 2 - math.cos(a) * 0.8, cz + uz * w / 2 - math.sin(a) * 0.8),
-                (cx + ux * w / 2 + math.cos(a) * 0.8, cz + uz * w / 2 + math.sin(a) * 0.8), (cx - ux * w / 2 + math.cos(a) * 0.8, cz - uz * w / 2 + math.sin(a) * 0.8)]
+        ring = [(cx - ux * w / 2 - math.cos(a) * 1.3, cz - uz * w / 2 - math.sin(a) * 1.3), (cx + ux * w / 2 - math.cos(a) * 1.3, cz + uz * w / 2 - math.sin(a) * 1.3),
+                (cx + ux * w / 2 + math.cos(a) * 0.9, cz + uz * w / 2 + math.sin(a) * 0.9), (cx - ux * w / 2 + math.cos(a) * 0.9, cz - uz * w / 2 + math.sin(a) * 0.9)]
         ring = [(x + rng.uniform(-0.15, 0.15), z + rng.uniform(-0.15, 0.15)) for x, z in ring]
         hex8(gs, [(x, -0.6, z) for x, z in ring] + [(x, h, z) for x, z in ring])
         P.block("RingWall", cx - w / 2 - 0.3, cx + w / 2 + 0.3, 0.0, h, cz - w / 2 - 0.3, cz + w / 2 + 0.3)
@@ -631,7 +637,7 @@ def stone_ring():
         post(gt, x, z, 1.0, 5.4, 0.45, lean=(-0.05 * math.cos(a), -0.05 * math.sin(a)), taper=0.06)
         ring_band(gb, x - 0.05 * math.cos(a) * 3, 4.0, z - 0.05 * math.sin(a) * 3, 0.4, 0.4, 3.9, 4.2, seg=4, t=0.07, phase=PI / 4)
         P.block("JudgePost", x - 0.4, x + 0.4, 0.0, 5.0, z - 0.4, z + 0.4)
-    P.floor.append((-R, R, -R, R, 0.8))
+    P.floor.append((-R + 0.8, R - 0.8, -R + 0.8, R - 0.8, 0.8))
     return P
 
 
@@ -691,7 +697,7 @@ def rope_bridge(L=20.0, w=4.6, sag=0.9, drop=0.0, tower_h=7.5, name="Bridge", se
     for xt in towers:
         yb = deck_y(xt)
         for z in (-w / 2 - 0.55, w / 2 + 0.55):
-            post(gt, xt, z, yb - 1.2, yb + tower_h, 0.62, lean=(0.04 if xt < 0 else -0.04, -0.045 if z < 0 else 0.045), taper=0.08)
+            post(gt, xt, z, yb - 1.2, yb + tower_h, 0.62, lean=(0.04 if xt < 0 else -0.04, 0.045 if z < 0 else -0.045), taper=0.08)
             P.block("Tower", xt - 0.4, xt + 0.4, yb - 0.5, yb + tower_h, z - 0.4, z + 0.4)
         zt = w / 2 + 0.55 - 0.045 * (tower_h + 1.2) * 0.0
         beam(gt, (xt + (0.04 if xt < 0 else -0.04) * tower_h, yb + tower_h, -w / 2 - 0.55 + 0.045 * tower_h), (xt + (0.04 if xt < 0 else -0.04) * tower_h, yb + tower_h, w / 2 + 0.55 - 0.045 * tower_h), 0.5, 0.5)
@@ -718,7 +724,7 @@ def rope_bridge(L=20.0, w=4.6, sag=0.9, drop=0.0, tower_h=7.5, name="Bridge", se
 
 
 def gorge_bridge():
-    return rope_bridge(L=20.0, w=4.4, sag=0.8, drop=0.0, tower_h=6.4, seed=5, hang=4.0)
+    return rope_bridge(L=14.5, w=4.4, sag=0.6, drop=0.0, tower_h=6.4, seed=5, hang=3.6)
 
 
 def great_span():
@@ -738,7 +744,7 @@ def stair_flight(n=11, width=6.0, tread=1.5):
         za, zb = k * tread, (k + 1) * tread
         top = float(k + 1)
         rubble(gs, -width / 2, width / 2, top - 2.6, top, za - 0.04, zb + 0.02, rng, j=0.05)
-        P.block("Step", -width / 2, width / 2, top - 2.6, top, za, zb)
+        P.block("Step", -width / 2, width / 2, top - 2.6, top, za, zb + (0.4 if k == n - 1 else 0.0))
         for sx in (-1, 1):
             xa, xb = (width / 2 + 0.05, width / 2 + 1.25) if sx > 0 else (-width / 2 - 1.25, -width / 2 - 0.05)
             rubble(gs, xa, xb, top - 2.6, top + 0.9 + 0.05 * rng.random(), za - 0.04, zb + 0.02, rng, j=0.08)
@@ -793,6 +799,7 @@ def cleft_stair():
         post(gt, x, z + 0.2, y - 0.2, y + 1.3, 0.28, taper=0.03)
         pts.append((x, y + 1.15, z + 0.2))
     rope_line(P, pts, r=0.09, suffix=S_ROPE)
+    P.block("Apron", -1.7, 0.3, -3.0, -0.4, -0.5, 3.5)      # (the pad's rim beside the first step: the slot's cell edge is ragged, a small slab bridges it)
     P.floor.append((0.0, w, 0.0, n * tread, 0.0))
     P.marks["Bottom"] = (w / 2, -float(n), n * tread + 1.0)
     return P
@@ -869,8 +876,8 @@ def drip_shrine():
     roof_shed(sub, -1.9, 1.9, -0.6, 1.9, 4.2, 5.8, over=0.5, rake=(0.4, 0.4), seed=121, row=0.8, th=0.4)
     P.absorb(sub)
     bell(P, 0.0, 4.0, 0.5, r=0.7, h=1.2)
-    ring_band(gs, 2.2, 0.0, -0.6, 0.8, 0.8, 0.0, 0.5, seg=8, t=0.25)
-    P.block("Bowl", 1.2, 3.2, 0.0, 0.5, -1.6, 0.4)
+    ring_band(gs, 2.2, -0.2, 0.0, 0.8, 0.8, -0.2, 0.5, seg=8, t=0.25)
+    P.block("Bowl", 1.2, 3.2, 0.0, 0.5, -1.0, 1.0)
     P.floor.append((-3.0, 3.0, -2.0, 1.6, 0.0))
     return P
 
@@ -958,7 +965,7 @@ def waymarker():
     gs, gt, gb = P.geo(S_STONE), P.geo(S_TIMBER), P.geo(S_BRONZE)
     rng = random.Random(33)
     for i, (w, h, lean) in enumerate(((2.2, 3.4, 0.08), (1.6, 2.4, -0.1), (1.2, 1.6, 0.12))):
-        rubble(gs, -w / 2 + i * 0.5 - 0.8, w / 2 + i * 0.5 - 0.8, -0.5, h, -0.5 + i * 0.4, 0.5 + i * 0.4, rng, j=0.08)
+        rubble(gs, -w / 2 + i * 0.5 - 0.8, w / 2 + i * 0.5 - 0.8, -0.5 - 0.15 * i, h, -0.5 + i * 0.4, 0.5 + i * 0.4, rng, j=0.08)
     post(gt, 0.6, 0.0, -0.3, 4.4, 0.35, lean=(0.04, 0.0), taper=0.05)
     beam(gt, (0.75, 4.1, 0.0), (1.6, 3.6, 0.0), 0.2, 0.2)
     ring_band(gb, 0.7, 2.6, 0.0, 0.25, 0.25, 2.5, 2.8, seg=4, t=0.07, phase=PI / 4)
@@ -992,7 +999,7 @@ def rim_rail(L=8.0):
     return P
 
 
-COURT_BUILDERS = {"RimRail8": lambda: rim_rail(8.0), "WallRough3": lambda: wall_rough(3.2), "WallRough6": lambda: wall_rough(6.0),"GorgeBridge": gorge_bridge, "GreatSpan": great_span, "Flight11": lambda: stair_flight(11), "Landing": landing,
+COURT_BUILDERS = {"RimRail8": lambda: rim_rail(8.0), "WallRough2": lambda: wall_rough(1.8), "WallRough3": lambda: wall_rough(3.2), "WallRough6": lambda: wall_rough(6.0),"GorgeBridge": gorge_bridge, "GreatSpan": great_span, "Flight11": lambda: stair_flight(11), "Landing": landing,
                   "CleftStair": cleft_stair, "WallRough8": lambda: wall_rough(8.0), "WallRough12": lambda: wall_rough(12.0), "MossGate": moss_gate}
 PROP_BUILDERS = {"Bench": bench, "LanternPost": lantern_post, "BannerPole": banner_pole, "WeaponRack": weapon_rack, "Cradle": cradle, "Waymarker": waymarker,
                  "ScaffoldA": scaffold_a, "ScaffoldB": scaffold_b, "ScaffoldC": scaffold_c}
