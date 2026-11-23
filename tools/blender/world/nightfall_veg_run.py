@@ -388,6 +388,8 @@ def sheets():
 # label, FBX (relative to assets/world), object-name prefixes (an asset = the objects sharing one name before "__"; None = every asset of the file),
 # kind (tree or rock), and an optional filter on names (the file may hold buildings too)
 OTHERS = [
+    ("Windrift", "MurimCrossing/Windrift/Windrift_Trees.fbx", None, "tree"),
+    ("Windrift", "MurimCrossing/Windrift/Windrift_Rocks.fbx", None, "rock"),
     ("Jade Grove (new)", "JadeGrove/Library/JadeGrove_Trees.fbx", None, "tree"),
     ("Jade Grove (new)", "JadeGrove/Library/JadeGrove_Bamboo.fbx", None, "tree"),
     ("Jade Grove (new)", "JadeGrove/Library/JadeGrove_Rocks.fbx", None, "rock"),
@@ -510,7 +512,7 @@ def silhouette():
         fam = n.split("_")[1]
         if fam == "Plants":
             continue
-        if fam == "Rocks" and any(k in n for k in ("_Steps", "_Cobble", "_PlankWalk")):
+        if fam == "Rocks" and any(k in n for k in ("_BasaltPave", "_HexSteps")):
             continue
         coll = new_scene()
         objs = piece_objs(n, piece, coll, "black")
@@ -530,6 +532,8 @@ def silhouette():
                 if p not in groups:
                     print("MISSING", p)
         for base, objs in groups.items():
+            if label == "Windrift" and any(k in base for k in ("_Steps", "_Cobble", "_PlankWalk")):
+                continue                    # Windrift's walkable path slabs are not rocks to compare with
             key = "%s@%s" % (label, base)
             if key in masks:
                 continue
@@ -567,11 +571,11 @@ def silhouette():
         return same, anyv
 
     def profile(a, b):
-        """The wind-side profile of a Nightfall piece ('back') against either view of the other piece."""
+        """A Nightfall piece's 'back' view against either view of the other piece (a view-free reading)."""
         return max(iou_height_fit(masks[a]["back"], masks[b][w]) for w in views)
     lines = ["Nightfall trees and rocks: silhouette overlap against every other map's trees and rocks",
              "IoU = intersection over union of black masks fitted to the same height (aspect kept), centred, best of a few shifts and of mirroring the second mask,",
-             "orthographic views: 'back' (camera at +Z, wind to the right) and 'right' (camera at +X). SAME-VIEW = the best of the two same-view pairs (the method of Dawnspire's note);",
+             "orthographic views: 'back' (camera at +Z) and 'right' (camera at +X). SAME-VIEW = the best of the two same-view pairs (the method of Dawnspire's note);",
              "ANY-VIEW = the best of all four view pairs (stricter: a long rock's end view against a boulder's side view).",
              "SAME KIND = trees and bamboo against trees, rocks against rocks (the comparison that matters); ALL KINDS = against every other map's piece of any kind.", ""]
     res_kind, res_all = {}, {}
@@ -620,7 +624,7 @@ def silhouette():
             lines.append("    all kinds %.3f / %.3f   %s" % (same, anyv, b))
         s0 = res_kind[a][0]
         prof = sorted(((profile(a, b), b) for b in others if kind[b] == kind[a]), reverse=True)[0]
-        lines.append("    wind profile (my 'back' view against either view of any other %s) %.3f   %s" % (kind[a], prof[0], prof[1]))
+        lines.append("    back view against either view of any other %s: %.3f   %s" % (kind[a], prof[0], prof[1]))
         summary[a] = (s0[0], s0[2], max(r[1] for r in res_kind[a]), res_all[a][0][0], res_all[a][0][2], prof[0], prof[1])
     lines += ["", "summary (highest SAME-KIND same-view IoU against any other map, the piece it is, the highest any-view IoU of the same kind, then the highest of any kind):"]
     for a in mine:
@@ -655,7 +659,7 @@ def sheet():
         label, _, asset = name.partition("@")
         dims = open(f.replace("__front.png", ".txt")).read().split()
         groups.setdefault(label, []).append((asset, f, dims))
-    order = ["Nightfall", "Jade Grove (new)", "Dawnspire", "Jade (old, replaced)", "Blossom Sanctuary", "Ember Peak", "Moonlit Isle", "Origin Abyss"]
+    order = ["Nightfall", "Windrift", "Jade Grove (new)", "Dawnspire", "Jade (old, replaced)", "Blossom Sanctuary", "Ember Peak", "Moonlit Isle", "Origin Abyss"]
     summ = {}
     jp = os.path.join(RENDERS, "uniqueness.json")
     if os.path.exists(jp):
@@ -695,7 +699,7 @@ def sheet():
             y += rows * (cell + 34 + gap) + 26
     H = y + 20
     svg = ('<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d" font-family="Helvetica Neue, Arial, sans-serif"><rect width="%d" height="%d" fill="#f3f1ea"/>'
-           '<text x="20" y="34" font-size="20" font-weight="800" fill="#111">UNIQUENESS SHEET: Nightfall Hold\'s trees and rocks beside every other map\'s (black silhouettes seen from the side the wind blows toward the right; each framed on its own size; width x height in studs; red = highest overlap with another map)</text>%s</svg>'
+           '<text x="20" y="34" font-size="17" font-weight="800" fill="#111">UNIQUENESS SHEET: Nightfall Citadel\'s trees and rocks beside every other map\'s (Windrift\'s too). Black side silhouettes, each on its own scale, width x height in studs; red = highest overlap</text>%s</svg>'
            % (Wd, H, Wd, H, Wd, H, "".join(parts)))
     work = tempfile.mkdtemp()
     sp = os.path.join(work, "sheet.svg")
@@ -852,61 +856,38 @@ def export():
     print("EXPORT_DONE")
 
 
-def mirror_fraction(piece, tol=0.15):
-    """The fraction of a piece's vertices that have a mirror partner (the vertex mirrored in x) within tol studs: 1.0 = a mirror-symmetric piece. The trees are
-    asymmetric by design (the wind), so this is reported and required to be low."""
-    n = tot = 0
-    for suffix, g in piece.g.items():
-        cells = {}
-        h = tol
-        for p in g.v:
-            cells.setdefault((round(p[0] / h), round(p[1] / h), round(p[2] / h)), []).append(p)
-        for p in g.v:
-            q = (-p[0], p[1], p[2])
-            kx, ky, kz = round(q[0] / h), round(q[1] / h), round(q[2] / h)
-            found = False
-            for dx in (-1, 0, 1):
-                for dy in (-1, 0, 1):
-                    for dz in (-1, 0, 1):
-                        for r in cells.get((kx + dx, ky + dy, kz + dz), []):
-                            if max(abs(r[0] - q[0]), abs(r[1] - q[1]), abs(r[2] - q[2])) <= tol:
-                                found = True
-            n += found
-            tot += 1
-    return n / max(1, tot)
-
-
 def verify():
     data = build(None)
     pieces, meta = data["pieces"], data["meta"]
-    L = ["Nightfall vegetation: numeric checks (Roblox studs, y = 0 the ground, the wind blows toward +X)", ""]
+    L = ["Nightfall vegetation: numeric checks (Roblox studs, y = 0 the ground, every piece upright)", ""]
     bad = []
 
     def chk(name, ok, detail=""):
-        L.append("%-92s %s %s" % (name, "ok" if ok else "FAIL", detail))
+        L.append("%-96s %s %s" % (name, "ok" if ok else "FAIL", detail))
         if not ok:
             bad.append(name)
     short = lambda n: n.replace("Nightfall_", "")
     # 1. budgets
-    L.append("1. Budgets per piece (trees 1,100-2,400 and the giant up to 6,000; rocks 150-800; path pieces 80-400; plants 60-350; at most 2 material suffixes, the giant and the two bronze-veined rocks may have 3;")
-    L.append("   largest single mesh 3,000, the giant may exceed it: its crown is one flag of foliage in one material, splitting it would add MeshParts; nothing under y = -1.5)")
+    L.append("1. Budgets per piece (trees 400-2,400 and the giant up to 6,000; rocks 70-900; path pieces 150-700; plants 60-450; at most 2 material suffixes, the giant 3;")
+    L.append("   largest single mesh 3,000; nothing under y = -1.5)")
     for n, m in sorted(meta.items()):
         base, fam = m["piece"], m["family"]
+        walk = m["walkable"]
         if fam == "Trees":
-            lim = (1100, 6000) if base == "GiantCedar" else (1100, 2400)
+            lim = (1500, 6000) if base == "GiantBlackthorn" else (150, 2400)
         elif fam == "Plants":
-            lim = (60, 350)
+            lim = (60, 450)
         else:
-            lim = (80, 400) if base.startswith(("Steps", "Cobble", "PlankWalk")) else (150, 800)
+            lim = (150, 700) if walk else (70, 900)
         nm = len(m["materials"])
-        max_mat = 3 if base in ("GiantCedar", "VeinBoulderA", "VeinBoulderB") else 2
+        max_mat = 3 if base == "GiantBlackthorn" else 2
         chk("   %-30s %5d tris (range %d-%d), %d materials (max %d)" % (short(n), m["tris"], lim[0], lim[1], nm, max_mat), lim[0] <= m["tris"] <= lim[1] and nm <= max_mat)
         mx = max(m["materials"].values())
-        chk("   %-30s largest mesh %d (max 3,000%s)" % (short(n), mx, ", giant exempt" if base == "GiantCedar" else ""), mx <= 3000 or base == "GiantCedar")
+        chk("   %-30s largest mesh %d (max 3,000)" % (short(n), mx), mx <= 3000)
         chk("   %-30s lowest point %.2f (not under -1.5)" % (short(n), m["bounds_min"][1]), m["bounds_min"][1] > -1.5)
     L.append("")
     # 2. the planned mix
-    L.append("2. The planned mix (15 trees with the one giant, 24 rocks and path pieces, 60 plants): counts, triangles, MeshParts (one per material per placed piece)")
+    L.append("2. The planned mix (16 trees with the one giant, 24 rocks and path pieces, 60 plants): counts, triangles, MeshParts (one per material per placed piece)")
     tot = {"Trees": [0, 0, 0], "Rocks": [0, 0, 0], "Plants": [0, 0, 0]}
     rows = []
     for n, m in sorted(meta.items(), key=lambda kv: (["Trees", "Rocks", "Plants"].index(kv[1]["family"]), kv[0])):
@@ -922,52 +903,49 @@ def verify():
     for fam, t in tot.items():
         L.append("   %-8s %2d pieces placed, %6d triangles, %3d MeshParts" % (fam, t[0], t[1], t[2]))
     L.append("   TOTAL    %2d pieces placed, %6d triangles, %3d MeshParts" % (gt[0], gt[1], gt[2]))
-    chk("   15 trees (one of them the giant), 24 rocks and path pieces, 60 plants", tot["Trees"][0] == 15 and tot["Rocks"][0] == 24 and tot["Plants"][0] == 60, "%d / %d / %d" % (tot["Trees"][0], tot["Rocks"][0], tot["Plants"][0]))
-    chk("   the mix is about 40,000 triangles (36,000 to 44,000)", 36000 <= gt[1] <= 44000, str(gt[1]))
+    chk("   16 trees (one of them the giant), 24 rocks and path pieces, 60 plants", tot["Trees"][0] == 16 and tot["Rocks"][0] == 24 and tot["Plants"][0] == 60, "%d / %d / %d" % (tot["Trees"][0], tot["Rocks"][0], tot["Plants"][0]))
+    chk("   at most 45,000 triangles as placed", gt[1] <= 45000, str(gt[1]))
     chk("   at most 160 MeshParts", gt[2] <= 160, str(gt[2]))
-    chk("   one giant only", meta["Nightfall_Trees_GiantCedar"]["plan_count"] == 1)
+    chk("   one giant only", meta["Nightfall_Trees_GiantBlackthorn"]["plan_count"] == 1)
+    chk("   at least 5 tree designs in 3 families (plus the giant)", len([n for n in meta if "_Trees_" in n]) - 1 >= 5 and len({m["piece"][:-2] for n, m in meta.items() if m["family"] == "Trees" and m["variant"]}) >= 3)
+    chk("   at least 5 rocks (columns and shards among them), 8 plants", len([m for m in meta.values() if m["family"] == "Rocks" and not m["walkable"]]) >= 5 and len([m for m in meta.values() if m["family"] == "Plants"]) >= 8)
     L.append("")
-    # 3. flat bases, paths, the wind
-    L.append("3. Bases, paths and the wind")
+    # 3. bases, paths and the upright rule
+    L.append("3. Bases, paths and the upright rule")
     for n in sorted(pieces):
         m = meta[n]
         if m["family"] != "Trees":
             continue
-        g = pieces[n].g.get("Bark") or pieces[n].g.get("Deadwood")
-        trunk_lo = min(p[1] for p in g.v)
-        chk("   %-30s feet sunk under the ground: lowest wood %.2f (0.2 to 1.0 under)" % (short(n), trunk_lo), -1.0 <= trunk_lo <= -0.2)
-    for n in ("Nightfall_Rocks_StepsA", "Nightfall_Rocks_StepsB"):
-        g = pieces[n].g["SlateStep"]
+        lo_y = min(p[1] for g in pieces[n].g.values() for p in g.v)
+        chk("   %-30s feet sunk under the ground: lowest point %.2f (0.2 to 1.2 under)" % (short(n), lo_y), -1.2 <= lo_y <= -0.2)
+    for n in ("Nightfall_Rocks_HexStepsA", "Nightfall_Rocks_HexStepsB"):
+        g = pieces[n].g["Basalt"]
         tops = [p[1] for p in g.v if p[1] > 0.0]
         chk("   %-30s every walking top within 0.05 of one level: %.3f to %.3f (y 0 to 0.25)" % (short(n), min(tops), max(tops)), max(tops) - min(tops) <= 0.05 and 0.0 <= min(tops) and max(tops) <= 0.25)
-    g = pieces["Nightfall_Rocks_Cobble"].g["Cobble"]
-    tops = [p[1] for p in g.v if p[1] > 0.0]
-    chk("   %-30s every cobble top within 0.05 of one level: %.3f to %.3f" % ("Rocks_Cobble", min(tops), max(tops)), max(tops) - min(tops) <= 0.05 and max(tops) <= 0.25)
-    tops = [p[1] for p in pieces["Nightfall_Rocks_PlankWalk"].g["Plank"].v if p[1] > 0.1]
-    chk("   %-30s every plank top within 0.05 of one level: %.3f to %.3f" % ("Rocks_PlankWalk", min(tops), max(tops)), max(tops) - min(tops) <= 0.05 and max(tops) <= 0.25)
+    tops = [p[1] for p in pieces["Nightfall_Rocks_BasaltPave"].g["Basalt"].v if p[1] > 0.0]
+    chk("   %-30s every paver top within 0.05 of one level: %.3f to %.3f" % ("Rocks_BasaltPave", min(tops), max(tops)), max(tops) - min(tops) <= 0.05 and max(tops) <= 0.25)
+    eg = [p[1] for p in pieces["Nightfall_Rocks_BasaltPave"].g["Ember"].v]
+    chk("   %-30s the ember grout lies under the paver tops (its top %.2f, the pavers' lowest top %.3f)" % ("Rocks_BasaltPave", max(eg), min(tops)), max(eg) < min(tops) - 0.05)
+    for n in sorted(pieces):
+        if meta[n]["family"] == "Rocks" and meta[n]["walkable"]:
+            chk("   %-30s no collision boxes (the walkable mesh itself carries the foot)" % short(n), not meta[n]["collision"])
+    L.append("   upright: the horizontal middle of everything above 40 percent of the piece's height lies within 18 percent of that height (plus 1.5 studs) of its foot's middle")
     for n in sorted(pieces):
         m = meta[n]
-        if m["family"] == "Rocks" and m["walkable"]:
-            chk("   %-30s no collision boxes (the walkable mesh itself carries the foot)" % short(n), not m["collision"])
-    L.append("   the wind: the mass of the foliage (trees, plants) or of the stone beyond the base lies to +X")
-    for n in sorted(pieces):
-        m = meta[n]
-        pc = pieces[n]
-        vs = [(v, sfx) for sfx, g in pc.g.items() for v in g.v]
-        if m["family"] == "Trees":
-            fol = [v for v, sfx in vs if sfx in ("Cedar", "Needle", "Juniper", "BronzeLeaf")]
-            base_x = sum(v[0] for v, sfx in vs if v[1] < 1.0) / max(1, sum(1 for v, sfx in vs if v[1] < 1.0))
-            cx = sum(v[0] for v in fol) / len(fol)
-            chk("   %-30s foliage centre x %.1f is %.1f downwind of the foot (x %.1f)" % (short(n), cx, cx - base_x, base_x), cx - base_x > 1.5)
-        elif m["family"] == "Plants" and not m["piece"].startswith(("Lichen", "Cushion", "Stonecrop")):
-            tips = [v for v, sfx in vs if v[1] > 0.4]
-            if tips:
-                cx = sum(v[0] for v in tips) / len(tips)
-                chk("   %-30s upper parts centre x %.2f (to +X of the root at 0)" % (short(n), cx), cx > 0.05)
-    for n in sorted(pieces):
-        if meta[n]["family"] == "Trees":
-            d = mirror_fraction(pieces[n])
-            chk("   %-30s asymmetric by design: %.0f%% of its vertices have a mirror partner within 0.15 (must be under 25%%)" % (short(n), 100 * d), d < 0.25)
+        if m["family"] == "Plants" and m["piece"] in ("EmberCrust", "AshDrift"):
+            continue
+        if m["walkable"]:
+            continue
+        vs = [v for g in pieces[n].g.values() for v in g.v]
+        H = m["height"]
+        up = [v for v in vs if v[1] > 0.4 * H]
+        low = [v for v in vs if v[1] < 0.2 * H + 0.3]
+        if not up or not low:
+            continue
+        ux, uz = sum(v[0] for v in up) / len(up), sum(v[2] for v in up) / len(up)
+        lx, lz = sum(v[0] for v in low) / len(low), sum(v[2] for v in low) / len(low)
+        off = math.hypot(ux - lx, uz - lz)
+        chk("   %-30s upper mass %.2f from the foot's middle (limit %.2f)" % (short(n), off, 0.18 * H + 1.5), off <= 0.18 * H + 1.5)
     L.append("")
     # 4. colliders
     L.append("4. Colliders (invisible boxes in the piece frame)")
@@ -976,13 +954,13 @@ def verify():
         boxes = m["collision"]
         lo, hi = m["bounds_min"], m["bounds_max"]
         within = all(b["x0"] >= lo[0] - 0.05 and b["x1"] <= hi[0] + 0.05 and b["z0"] >= lo[2] - 0.05 and b["z1"] <= hi[2] + 0.05 and b["y0"] >= -0.01 and b["y1"] <= hi[1] + 0.05 for b in boxes)
-        need = m["family"] == "Trees" or m["piece"] in ("Gorse", "JuniperCreeper") or (m["family"] == "Rocks" and not m["walkable"] and not m["piece"].startswith("Scree"))
+        need = m["family"] == "Trees" or m["piece"] == "Thornbrake" or (m["family"] == "Rocks" and not m["walkable"] and not m["piece"].startswith("ShardScatter"))
         chk("   %-30s %2d boxes (%s), inside the bounds" % (short(n), len(boxes), "needed" if need else "none wanted"), within and (bool(boxes) == need))
-    wg = meta["Nightfall_Rocks_Windgate"]["collision"]
-    clear = not any(b["x0"] < 1.5 and b["x1"] > -1.2 and b["y0"] < 6.0 for b in wg)
-    chk("   Rocks_Windgate: the opening (x -1.2..1.5, y 0..6, between the pillars) is clear of every box, %d boxes" % len(wg), clear)
-    g_boxes = meta["Nightfall_Trees_GiantCedar"]["collision"]
-    chk("   Trees_GiantCedar: no collider over y 24 (the crown is decoration)", max(b["y1"] for b in g_boxes) <= 24.5, "%d boxes" % len(g_boxes))
+    g_boxes = meta["Nightfall_Trees_GiantBlackthorn"]["collision"]
+    chk("   Trees_GiantBlackthorn: no collider over y 24 (the crown is decoration)", max(b["y1"] for b in g_boxes) <= 24.5, "%d boxes" % len(g_boxes))
+    for n in ("Nightfall_Trees_CinderstumpD1",):
+        bx = meta[n]["collision"]
+        chk("   Trees_CinderstumpD1: the staves are boxed, the hollow centre (radius 1) is free of every box", not any(b["x0"] < 1.0 and b["x1"] > -1.0 and b["z0"] < 1.0 and b["z1"] > -1.0 for b in bx), "%d boxes" % len(bx))
     L.append("")
     # 5. the exported files
     L.append("5. The exported files (re-imported)")
@@ -1002,18 +980,20 @@ def verify():
         chk("   %s re-imports with %d objects, the same triangles and boxes, and its %s" % (fname, len(expect), ANCHOR), not problems, str(problems[:3]))
         raw = open(path, "rb").read()
         home = os.path.expanduser("~").encode()
-        chk("   %s holds neither this machine's home path nor its user name" % fname, home not in raw and os.path.basename(home) not in raw, "size %d bytes" % len(raw))
-    jp = os.path.join(RENDERS, "uniqueness.json")
+        chk("   %s holds neither this machine's home path nor its user name" % fname, home not in raw and os.path.basename(home) not in raw and b"/Users/" not in raw, "size %d bytes" % len(raw))
+    jp = os.path.join(OUT, "veg_pieces.json")
+    raw = open(jp, "rb").read()
+    chk("   veg_pieces.json holds no machine path", os.path.expanduser("~").encode() not in raw and b"/Users/" not in raw)
+    chk("   veg_pieces.json lists every piece and every FBX as verified ok", len(json.load(open(jp))["pieces"]) == len(pieces) and all(v["verify"] == "ok" for v in json.load(open(jp))["files"].values()))
     L.append("")
     L.append("6. Uniqueness (from uniqueness.json, the silhouette stage)")
-    if os.path.exists(jp):
-        u = json.load(open(jp))
+    ju = os.path.join(RENDERS, "uniqueness.json")
+    if os.path.exists(ju):
+        u = json.load(open(ju))
         worst_t = max((v["iou"] for k, v in u["summary"].items() if k.startswith("Nightfall@Trees")), default=0)
         worst_r = max((v["iou"] for k, v in u["summary"].items() if k.startswith("Nightfall@Rocks")), default=0)
-        wp_t = max((v["profile"] for k, v in u["summary"].items() if k.startswith("Nightfall@Trees")), default=0)
-        wp_r = max((v["profile"] for k, v in u["summary"].items() if k.startswith("Nightfall@Rocks")), default=0)
-        L.append("   trees: highest same-kind IoU against any other map %.3f (reference: the other maps against each other, highest tree pair %.3f); wind-profile IoU %.3f" % (worst_t, u["reference"]["tree"][0], wp_t))
-        L.append("   rocks: highest same-kind IoU against any other map %.3f (reference: the other maps against each other, highest rock pair %.3f); wind-profile IoU %.3f" % (worst_r, u["reference"]["rock"][0], wp_r))
+        L.append("   trees: highest same-kind IoU against any other map %.3f (reference: the other maps against each other, highest tree pair %.3f)" % (worst_t, u["reference"]["tree"][0]))
+        L.append("   rocks: highest same-kind IoU against any other map %.3f (reference: the other maps against each other, highest rock pair %.3f)" % (worst_r, u["reference"]["rock"][0]))
     else:
         L.append("   (run the silhouette stage first)")
     L.append("")

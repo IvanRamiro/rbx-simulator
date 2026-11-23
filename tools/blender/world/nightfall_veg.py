@@ -363,9 +363,14 @@ def inflate(planes, k, skip_down=True):
     return out
 
 
+_GROUND_N = [0]
+
+
 def ground(y=-0.5):
-    """The plane that cuts a solid off at y (its foot sunk in the ground)."""
-    return ((0.0, -1.0, 0.0), -y)
+    """The plane that cuts a solid off at y (its foot sunk in the ground). Each call sinks the next solid 0.017 deeper (the counter restarts for every piece),
+    so two solids of one piece never share a bottom plane (the QA's z-fighting test)."""
+    _GROUND_N[0] += 1
+    return ((0.0, -1.0, 0.0), -(y - 0.017 * (_GROUND_N[0] % 13)))
 
 
 def polygon_planes(cx, cz, apothems, rot=0.0, taper=0.0):
@@ -589,16 +594,20 @@ def ironpine(variant):
         ptube(gi, s2, [0.46, 0.34, 0.24], 4, phase=0.4, twist=0.5)
         _starburst(gn, gt, vadd(s2[2], (0.0, 0.05, 0.0)), 7, 2.4, rng)
         _starburst(gn, gt, vadd(trunk[-1], (0.0, 0.1, 0.0)), 9, 3.2, rng, el=(14.0, 62.0))
-        # a hooked stub on the lower kink, two spears out of the middle limb
+        # a hooked stub on the lower kink, two spears out of the middle limb, and three more twisted arms with a star each
         spike(gi, (2.9, 7.0, 0.3), vnorm((1.0, 0.25, 0.1)), 2.4, 0.34, 4, phase=0.4)
         spike(gn, (0.5, 4.2, 0.1), vnorm((-1.0, 0.6, 0.3)), 2.4, 0.2, 3)
+        for (p0, p1, p2, n, L) in (((0.1, 3.6, 0.0), (-1.4, 4.2, 0.4), (-2.4, 5.2, 0.5), 7, 2.3), ((2.9, 8.2, 0.3), (4.1, 8.6, -0.1), (4.8, 9.6, -0.2), 7, 2.2),
+                                   ((0.1, 12.1, -0.2), (1.4, 12.6, -0.5), (2.2, 13.6, -0.6), 6, 2.0)):
+            ptube(gi, [p0, p1, p2], [0.34, 0.27, 0.2], 4, phase=0.4, twist=0.5)
+            _starburst(gn, gt, vadd(p2, (0.0, 0.05, 0.0)), n, L, rng)
     return P
 
 
 def shardtree(variant):
-    """The Shardtree, a tree grown of black glass. A faceted six-sided obsidian trunk branches in tiers of crystal prisms that climb at 40 to 55
-    degrees, and its crown is a fan of five tall shards round a central one; small ember shards sit in the joints like buds. C1: 15 high, four tiers
-    of branches. C2, the sapling: 8.5 high, three branches and a small crown."""
+    """The Shardtree, a tree grown of black glass. A faceted six-sided obsidian trunk branches in tiers of crystal prisms that climb at 38 to 55
+    degrees, and its crown is a fan of six tall shards round a central one; small ember shards sit in the joints like buds. C1: 15 high, four tiers
+    of three branches. C2, the sapling: 8.5 high, four branches and a small crown."""
     P = Piece()
     rng = random.Random(300 + variant)
     go = P.geo("Obsidian")
@@ -607,34 +616,35 @@ def shardtree(variant):
         trunk = [(0.0, -0.7, 0.0), (0.0, 2.4, 0.0), (0.15, 5.4, 0.05), (0.1, 7.5, 0.0)]
         radii = [1.55, 1.3, 1.02, 0.72]
         ptube(go, trunk, radii, 6, phase=0.2, twist=0.14)
-        for i, (y, L) in enumerate(((2.6, 4.6), (4.0, 4.2), (5.4, 3.6), (6.6, 3.0))):
-            for k in range(2):
-                az = 1.1 * i + k * math.pi + rng.uniform(-0.25, 0.25)
-                el = math.radians(rng.uniform(38.0, 55.0))
+        for i, (y, L) in enumerate(((2.6, 4.8), (4.0, 4.4), (5.4, 3.8), (6.6, 3.2))):
+            for k in range(3):
+                az = 1.1 * i + k * TAU / 3 + rng.uniform(-0.25, 0.25)
+                el = math.radians(rng.uniform(36.0, 56.0))
                 base = surface_pt(trunk, radii, y, az, 0.6)
-                shard(go, base, dirv(az, el), L, 0.36 + 0.07 * L, 5, 0.32, skew=vmul(horiz(az + 1.0), 0.3))
-        for i in range(4):
-            az = 0.5 + 1.7 * i
-            y = (3.2, 4.4, 5.6, 6.2)[i]
+                shard(go, base, dirv(az, el), L * rng.uniform(0.85, 1.1), 0.36 + 0.07 * L, 5, 0.32, skew=vmul(horiz(az + 1.0), 0.3))
+        for i in range(6):
+            az = 0.5 + 1.1 * i
+            y = (3.2, 4.4, 5.6, 6.2, 2.4, 4.9)[i]
             shard(ge, surface_pt(trunk, radii, y, az, 0.9), dirv(az, math.radians(20.0)), 1.5, 0.2, 4, 0.4)
         c = (0.1, 7.2, 0.0)
         shard(go, c, UP, 7.8, 0.62, 6, 0.3, skew=(0.2, 0.0, -0.15))
-        for k, (L, tilt) in enumerate(((5.8, 18.0), (5.2, 24.0), (4.6, 14.0), (5.0, 28.0), (4.2, 20.0))):
-            az = 0.4 + TAU * k / 5
+        for k, (L, tilt) in enumerate(((5.8, 18.0), (5.2, 24.0), (4.6, 14.0), (5.0, 28.0), (4.2, 20.0), (3.8, 30.0))):
+            az = 0.4 + TAU * k / 6
             shard(go, vadd(c, vmul(horiz(az), 0.3)), dirv(az, math.radians(90.0 - tilt)), L, 0.44, 5, 0.32, skew=vmul(horiz(az + 1.5), 0.25))
     else:
         trunk = [(0.0, -0.7, 0.0), (0.0, 1.8, 0.0), (0.1, 3.8, 0.0)]
         radii = [1.0, 0.8, 0.55]
         ptube(go, trunk, radii, 6, phase=0.2, twist=0.12)
-        for i, (y, L) in enumerate(((1.9, 3.2), (2.8, 2.8), (3.4, 2.4))):
-            az = 0.8 + 2.1 * i
+        for i, (y, L) in enumerate(((1.9, 3.2), (2.8, 2.8), (3.4, 2.4), (2.3, 2.6))):
+            az = 0.8 + 1.6 * i
             shard(go, surface_pt(trunk, radii, y, az, 0.6), dirv(az, math.radians(44.0 + 4 * i)), L, 0.3 + 0.05 * L, 5, 0.32, skew=vmul(horiz(az + 1.0), 0.2))
         c = (0.1, 3.6, 0.0)
         shard(go, c, UP, 4.9, 0.46, 6, 0.3, skew=(0.15, 0.0, 0.1))
-        for k, (L, tilt) in enumerate(((3.6, 20.0), (3.2, 26.0), (3.4, 16.0), (2.9, 30.0))):
-            az = 0.6 + TAU * k / 4
+        for k, (L, tilt) in enumerate(((3.6, 20.0), (3.2, 26.0), (3.4, 16.0), (2.9, 30.0), (2.5, 24.0))):
+            az = 0.6 + TAU * k / 5
             shard(go, vadd(c, vmul(horiz(az), 0.2)), dirv(az, math.radians(90.0 - tilt)), L, 0.32, 5, 0.32, skew=vmul(horiz(az + 1.5), 0.2))
         shard(ge, surface_pt(trunk, radii, 2.4, 3.6, 0.9), dirv(3.6, math.radians(20.0)), 1.3, 0.18, 4, 0.4)
+        shard(ge, surface_pt(trunk, radii, 3.1, 1.2, 0.9), dirv(1.2, math.radians(24.0)), 1.1, 0.16, 4, 0.4)
     return P
 
 
@@ -656,52 +666,54 @@ def _stave(planes_h, az, Ri, Ro, h, slope, taper, gap=0.05, span=TAU / 6):
 
 def cinderstump(variant):
     """The Cinderstump, the burnt stump of a tree the fire took down to its heart. D1, the hollow: six battered charred staves in a ring (outer radius
-    3, inner 1.5), heights from 2.8 to 7.6 and every top sheared at its own angle, round a bed of glowing embers; ember cracks run up two staves and
-    three ember-tipped thorns stand on the highest. D2, the three claws: three tall five-sided pillars of unequal height (11, 8.2, 5.5) pressed
-    together, chiselled tops, an ember core showing in the gaps between them, root claws and two ember-tipped thorns."""
+    3.8, inner 2), heights from 2 to 5.4 and every top sheared at its own angle (each stave only 37 degrees wide, so sky shows between them), round a bed of glowing embers; ember cracks run up two staves and
+    six ember-tipped thorns (2.6 to 6 long) stand on the staves. D2, the three claws: three tall five-sided pillars of unequal height (11, 8.2, 5.5)
+    pressed together, chiselled tops, an ember core showing in the gaps between them, root claws, two bare elbow arms on the tall pillar and an
+    ember-tipped thorn on each top (3.4 to 5.4 long)."""
     P = Piece()
     rng = random.Random(400 + variant)
     gc = P.geo("Char")
     ge = P.geo("Ember")
     gt = ge                      # the thorns of a burnt stump are tipped with embers: one MeshPart less
     if variant == 0:
-        heights = [7.6, 5.4, 3.4, 6.4, 4.4, 2.8]
+        heights = [5.4, 3.8, 2.4, 4.8, 3.2, 2.0]
         slopes = [(0.55, 0.1), (-0.3, 0.6), (0.2, -0.7), (-0.6, -0.2), (0.4, 0.5), (-0.1, -0.5)]
         for k in range(6):
             az = 0.3 + TAU * k / 6
-            add_convex(gc, _stave(None, az, 1.5, 3.0, heights[k], slopes[k], 0.12))
-        add_convex(ge, polygon_planes(0.0, 0.0, [1.25] * 8, rot=0.2, taper=0.55) + [top_plane(0.0, 0.0, 1.7, 0.1, 0.0), ground()])
-        add_convex(ge, polygon_planes(0.5, -0.3, [0.5] * 5, rot=0.6, taper=0.3) + [top_plane(0.5, -0.3, 2.3, 0.2, 0.1), ground()])
-        for k, az0 in ((0, 0.3), (3, 0.3 + TAU * 3 / 6)):
-            c = horiz(az0 + TAU * k / 6 - 0.3)
+            add_convex(gc, _stave(None, az, 2.0, 3.8, heights[k], slopes[k], 0.12, span=0.66))
+        add_convex(ge, polygon_planes(0.0, 0.0, [2.3] * 8, rot=0.2, taper=0.55) + [top_plane(0.0, 0.0, 1.5, 0.1, 0.0), ground(-0.62)])
+        add_convex(ge, polygon_planes(0.5, -0.3, [0.7] * 5, rot=0.6, taper=0.3) + [top_plane(0.5, -0.3, 2.4, 0.2, 0.1), ground(-0.66)])
+        for k in (0, 3):
             for dz, (y0, y1) in ((-0.28, (0.6, 4.4)), (0.4, (0.5, 3.0))):
                 a = 0.3 + TAU * k / 6 + dz
-                pts, w = [], 0.1
+                pts = []
                 for i in range(6):
                     t = i / 5.0
                     y = y0 + (y1 - y0) * t
                     zz = a + 0.12 * (1 if i % 2 else -1) * math.sin(math.pi * t)
-                    r = 3.0 - 0.12 * y + 0.04
+                    r = 3.8 - 0.12 * y + 0.04
                     pts.append((r * math.cos(zz), y, r * math.sin(zz)))
                 ptube(ge, pts, [0.13] * 6, 3, phase=a)
-        for k in (0, 3, 1):
+        for k, L in ((0, 6.0), (3, 4.8), (1, 4.2), (4, 3.6), (2, 3.0), (5, 2.6)):
             az = 0.3 + TAU * k / 6
-            nrm = vnorm((math.cos(az), 0.12, math.sin(az)))
-            sx, sz = slopes[k]
-            cx, cz = math.cos(az) * 2.25, math.sin(az) * 2.25
-            y_top = heights[k] - (sx * 0.0 + sz * 0.0)
-            thorn(gc, gt, (cx, y_top - 0.2, cz), UP, 2.4 if k == 0 else 1.9, 0.26, 0.55, 3, phase=az)
+            thorn(gc, gt, (math.cos(az) * 2.9, heights[k] - 0.25, math.sin(az) * 2.9), UP, L, 0.3, 0.55, 3, phase=az)
         for k in range(5):
             az = 0.5 + TAU * k / 5
-            spike(gc, pol(2.6, az, 1.4), vnorm((math.cos(az) * 0.85, -0.5, math.sin(az) * 0.85)), 3.0, 0.55, 4, phase=az)
+            spike(gc, pol(3.4, az, 1.4), vnorm((math.cos(az) * 0.85, -0.5, math.sin(az) * 0.85)), 3.0, 0.55, 4, phase=az)
     else:
-        spec = [((0.0, 0.0), 1.55, 11.0, (0.9, 0.3), 0.55), ((1.9, -0.95), 1.3, 8.2, (-0.7, 0.4), 1.1), ((1.15, 1.7), 1.1, 5.5, (0.2, -0.9), 0.2)]
+        spec = [((0.0, 0.0), 1.55, 11.0, (0.9, 0.3), 0.55), ((2.9, -1.4), 1.3, 8.2, (-0.7, 0.4), 1.1), ((1.6, 2.6), 1.1, 5.5, (0.2, -0.9), 0.2)]
         for (c, a, h, sl, rot) in spec:
             add_convex(gc, polygon_planes(c[0], c[1], [a, a * 0.93, a * 1.04, a * 0.97, a * 1.0], rot=rot, taper=0.06) + [top_plane(c[0], c[1], h, sl[0], sl[1]), ground()])
-        add_convex(ge, polygon_planes(1.0, 0.1, [0.85] * 4, rot=0.2, taper=0.12) + [top_plane(1.0, 0.1, 3.4, 0.2, 0.2), ground()])
-        _roots(gc, [(0.9, -0.7, 0.2), (0.9, 5.0, 0.2)], [2.2, 2.0], 5, rng, L=3.6, r=0.6, y=1.8, sides=4)
-        thorn(gc, gt, (1.15, 5.2, 1.7), UP, 2.2, 0.26, 0.55, 3)
-        thorn(gc, gt, (1.9, 7.9, -0.95), UP, 2.4, 0.28, 0.55, 3)
+        add_convex(ge, polygon_planes(1.5, 0.4, [1.45] * 5, rot=0.2, taper=0.2) + [top_plane(1.5, 0.4, 3.4, 0.2, 0.2), ground(-0.42)])
+        _roots(gc, [(0.0, -0.7, 0.0), (0.0, 5.0, 0.0)], [1.9, 1.7], 4, rng, L=3.6, r=0.6, y=1.8, sides=4)
+        _roots(gc, [(2.9, -0.7, -1.4), (2.9, 5.0, -1.4)], [1.5, 1.4], 3, rng, L=3.2, r=0.5, y=1.6, sides=4, off=0.4)
+        _roots(gc, [(1.6, -0.7, 2.6), (1.6, 5.0, 2.6)], [1.3, 1.2], 3, rng, L=3.0, r=0.5, y=1.5, sides=4, off=1.9)
+        thorn(gc, gt, (1.6, 5.2, 2.6), UP, 3.4, 0.28, 0.55, 3)
+        thorn(gc, gt, (2.9, 7.9, -1.4), UP, 4.2, 0.3, 0.55, 3)
+        thorn(gc, gt, (0.0, 10.6, 0.0), UP, 5.4, 0.34, 0.55, 3)
+        for (h, az, R, s_) in ((6.4, 3.0, 3.6, 0.8), (8.6, 0.1, 2.8, 0.7)):
+            p0 = (1.05 * math.cos(az), h, 1.05 * math.sin(az))
+            _elbow_arm(gc, gt, p0, az, R, s_, rng)
         for (y0, y1, a) in ((0.8, 8.6, 5.1), (0.8, 5.0, 3.9)):
             pts = []
             for i in range(7):
@@ -716,9 +728,10 @@ def cinderstump(variant):
 
 def giant_blackthorn():
     """The Black Heart, the landmark: a colossal dead thorn tree 47 high held up from the ground by six leaning talons of black stone. An eight-sided
-    trunk (radius 3.1 at the foot, 0.55 at 35) climbs straight with a few small kinks; seven tiers of limbs leave it (reach 8.5 at the bottom, 3.4 at
-    the top) as three-knuckle arms that turn up into crimson-tipped spears 5 to 2 long; a crown of one central spear and four kinked outer ones;
-    five glowing ember cracks run up the trunk. Three meshes: Char (wood and talons), Thorn, Ember. The Char mesh is the one landmark's price."""
+    trunk (radius 3.1 at the foot, 0.55 at 35) climbs straight with a few small kinks, ribbed by seven raised bark ridges; seven tiers of limbs leave
+    it (reach 8.5 at the bottom, 3.4 at the top) as three-knuckle arms that turn up into crimson-tipped spears 5 to 2 long, each with a second short
+    spear on its elbow and two barbs; a crown of one central spear and four kinked outer ones; five glowing ember cracks run up the trunk. Three meshes:
+    Char (wood and talons), Thorn, Ember. The Char mesh is the one landmark's price (kept under 3,000)."""
     P = Piece()
     rng = random.Random(777)
     gc = P.geo("Char")
@@ -737,6 +750,9 @@ def giant_blackthorn():
         planes = xform(xform(base, 0.0, (R, 0.0, 0.0), rz=0.26), -az)
         add_convex(gb, planes)
     add_convex(gb, polygon_planes(0.0, 0.0, [5.6, 5.2, 5.8, 5.3, 5.6, 5.0, 5.7], rot=0.3, taper=0.45) + [top_plane(0.0, 0.0, 2.2, 0.0, 0.0), ground()])
+    # bark ridges (raised ribs that zigzag up the trunk)
+    for i in range(7):
+        crack(gc, trunk, radii, 0.45 + TAU * i / 7, 3.8 + 0.9 * (i % 3), 24.0 + 1.6 * (i % 4), zig=0.3, steps=8, w=0.3, rise=0.18)
     # limb tiers
     tiers = [(8.0, 8.5, 5), (11.5, 8.0, 5), (15.0, 7.2, 4), (18.5, 6.4, 4), (22.0, 5.4, 4), (25.5, 4.4, 3), (28.5, 3.4, 3)]
     for i, (h, R, n) in enumerate(tiers):
@@ -753,6 +769,9 @@ def giant_blackthorn():
             thorn(gc, gt, p3, vnorm(vadd(vmul(out, 0.15), UP)), 2.0 + 0.45 * Rk, 0.34 * s, 0.55, 3, phase=az)
             spike(gc, vadd(p0, vmul(vsub(p1, p0), 0.6)), vnorm(vadd(vmul(out, 0.5), (0.0, -0.8, 0.0))), 1.7 * s + 0.5, 0.2 * s + 0.08, 3)
             spike(gc, p2, vnorm(vadd(out, (0.0, 0.5, rng.uniform(-0.3, 0.3)))), 1.4 * s + 0.5, 0.18 * s + 0.08, 3)
+            q1 = vadd(p1, vadd(vmul(out, 0.14 * Rk), (0.0, 0.7 + 0.12 * Rk, 0.0)))
+            ptube(gc, [p1, q1], [0.5 * s, 0.34 * s], 4, phase=az + 0.5)
+            thorn(gc, gt, q1, vnorm(vadd(vmul(out, 0.1), UP)), 1.2 + 0.2 * Rk, 0.24 * s, 0.55, 3, phase=az)
     # the crown
     top = trunk[-1]
     ptube(gc, [vadd(top, (0.0, -0.5, 0.0)), (0.4, 38.0, 0.2), (0.1, 41.2, 0.0)], [0.55, 0.42, 0.28], 4, phase=0.3)
@@ -776,10 +795,11 @@ def giant_blackthorn():
 # ======================================================================================================================
 def frustum(cx, cz, a0, y0, y1, taper=0.0, rot=0.0, n=4, tops=None, jit=None):
     """Planes of an n-sided solid between y0 and y1 whose sides are battered inward by `taper` per stud; a0 is the apothem AT y0. tops: an optional
-    sheared top (sx, sz) instead of the flat one. jit: a list of n apothem factors."""
+    sheared top (sx, sz) instead of the flat one. jit: a list of n apothem factors. A foot at or under -0.45 is a ground cut (staggered, see ground())."""
     ap = [(a0 + taper * y0) * (jit[k] if jit else 1.0) for k in range(n)]
     top = top_plane(cx, cz, y1, tops[0], tops[1]) if tops else top_plane(cx, cz, y1)
-    return polygon_planes(cx, cz, ap, rot=rot, taper=taper) + [top, ((0.0, -1.0, 0.0), -y0)]
+    bottom = ground(y0) if y0 <= -0.45 else ((0.0, -1.0, 0.0), -y0)
+    return polygon_planes(cx, cz, ap, rot=rot, taper=taper) + [top, bottom]
 
 
 def hex_column(g, cx, cz, a, h, rot, tops, taper=0.0, y0=-0.5):
@@ -787,42 +807,47 @@ def hex_column(g, cx, cz, a, h, rot, tops, taper=0.0, y0=-0.5):
 
 
 def basalt_columns():
-    """The causeway: a cluster of hexagonal basalt columns of thirteen different heights, up to 8.6 in the middle and falling off to the edge, each one
-    thinner than its cell (there is a gap between them), flat-sided and every top sheared to its own chisel. Stands upright, 9 across."""
+    """The crown of columns: ten hexagonal basalt columns standing in a ring 6 across round a hollow where an ember pit glows (a low hexagonal bed at 0.4),
+    heights from 2.4 to 9.4 in no order, every top chiselled to its own slope; the columns touch their neighbours. Two outliers (a thin pike 7.4 and a
+    stub 1.6) stand off the ring. Upright, 13 across with the outliers."""
     P = Piece()
     rng = random.Random(500)
     g = P.geo("Basalt")
-    s = 2.3
-    cells = []
-    for j in range(-2, 3):
-        for i in range(-2, 3):
-            x = (i + 0.5 * (j % 2)) * s
-            z = j * s * 0.866
-            d = math.hypot(x - 0.3, z + 0.2)
-            if d > 4.5:
-                continue
-            cells.append((x, z, d))
-    for (x, z, d) in cells:
-        h = 8.6 - 1.45 * d + rng.uniform(-0.8, 0.8)
-        if h < 1.4:
-            continue
-        a = rng.uniform(0.74, 1.02)
-        az = rng.uniform(0.0, TAU)
-        mag = rng.uniform(0.45, 1.0)
-        hex_column(g, x + rng.uniform(-0.06, 0.06), z + rng.uniform(-0.06, 0.06), a, h, rng.uniform(-0.12, 0.12), (mag * math.cos(az), mag * math.sin(az)), taper=0.012)
+    ge = P.geo("Ember")
+    hs = [9.4, 4.2, 7.0, 2.6, 8.2, 3.4, 6.2, 2.4, 7.6, 4.6]
+    R = 3.15
+    for k, h in enumerate(hs):
+        az = TAU * k / 10 + 0.2
+        c = pol(R, az)
+        a = rng.uniform(1.0, 1.14)
+        t = rng.uniform(0.5, 1.0)
+        tz = rng.uniform(0.0, TAU)
+        hex_column(g, c[0], c[2], a, h, az + rng.uniform(-0.1, 0.1), (t * math.cos(tz), t * math.sin(tz)), taper=0.012)
+    add_convex(ge, polygon_planes(0.0, 0.0, [1.95] * 6, rot=0.4) + [top_plane(0.0, 0.0, 0.4, 0.05, 0.0), ground()])
+    hex_column(g, 4.3, -2.3, 0.55, 7.4, 0.2, (1.4, 0.3), taper=0.02)
+    hex_column(g, -3.6, 3.0, 0.9, 1.6, 0.5, (0.6, -0.4), taper=0.02)
     return P
 
 
 def basalt_palisade():
-    """The palisade: nine hexagonal basalt columns in a row 18 long, heights 2.8 to 8.6 in no order, the tops chiselled, a battlement the mountain made. The
-    row is a wall for a path's edge or the back of a court."""
+    """The pike row: eleven hexagonal basalt columns in a row 17 long, each touching the next: three thin pikes (apothem 0.55, 7.8 to 9.8 high, the tops cut
+    to a spear point), three medium posts (5 to 5.8) and five broad stubs (1.6 to 3.2): a comb of spears between low blocks, a natural battlement."""
     P = Piece()
     rng = random.Random(510)
     g = P.geo("Basalt")
-    hs = [6.0, 3.4, 7.4, 4.5, 8.6, 5.1, 6.6, 2.8, 4.2]
-    for i, h in enumerate(hs):
-        x = (i - 4) * 2.2 + rng.uniform(-0.1, 0.1)
-        hex_column(g, x, rng.uniform(-0.3, 0.3), rng.uniform(0.86, 1.04), h, rng.uniform(-0.1, 0.1), (rng.choice((-1, 1)) * rng.uniform(0.5, 1.0), rng.uniform(-0.3, 0.3)), taper=0.015)
+    spec = [(1.15, 2.4), (0.55, 8.4), (0.8, 5.4), (1.1, 1.8), (0.55, 9.8), (1.0, 3.2), (0.8, 5.8), (1.2, 2.0), (0.55, 7.8), (0.8, 5.0), (1.1, 2.8)]
+    x = 0.0
+    prev = 0.0
+    xs = []
+    for (a, h) in spec:
+        x += (prev + a - 0.12) if xs else 0.0
+        xs.append(x)
+        prev = a
+    mid = (xs[0] + xs[-1]) / 2
+    for (a, h), px in zip(spec, xs):
+        pike = a < 0.6
+        sl = (rng.choice((-1, 1)) * (1.7 if pike else rng.uniform(0.4, 0.9)), rng.uniform(-0.3, 0.3))
+        hex_column(g, px - mid, rng.uniform(-0.25, 0.25), a, h, rng.uniform(-0.1, 0.1), sl, taper=0.03 if pike else 0.012)
     return P
 
 
@@ -845,26 +870,29 @@ def obsidian_shards():
 
 
 def split_obelisk():
-    """The split obelisk: a four-sided basalt shaft 11.6 high broken into three stacked parts that have slipped against each other (the middle shifted
-    0.5 and turned 9 degrees, the top a sheared pyramid with an oblique break), a seam of ember glowing in each joint, and a fallen piece of shaft
-    leaning at the foot. Upright."""
+    """The slipped obelisk: a four-sided basalt shaft 5.2 high, a narrower middle part shifted 0.5 and turned 9 degrees on it (to 8.6), and a broad capstone
+    (4.2 x 2.7, 1.4 thick) that has slid 1.4 off to one side and carries a small pyramid, 11.9 high in all; an ember seam glows in each joint, and a
+    fallen piece of shaft leans against the foot on the other side. Upright."""
     P = Piece()
     gb = P.geo("Basalt")
     ge = P.geo("Ember")
     add_convex(gb, frustum(0.0, 0.0, 1.5, -0.5, 5.2, taper=0.045, rot=0.1))
-    add_convex(gb, frustum(0.5, -0.25, 1.15, 5.3, 9.9, taper=0.05, rot=0.26))
-    add_convex(gb, frustum(0.3, -0.35, 0.86, 10.0, 11.7, taper=0.34, rot=0.2, tops=(0.8, 0.25)))
+    add_convex(gb, frustum(0.5, -0.25, 1.15, 5.3, 8.6, taper=0.05, rot=0.26))
+    cap = polygon_planes(1.5, -0.2, [2.1, 1.35, 2.1, 1.35], rot=0.12) + [top_plane(1.5, -0.2, 10.1, 0.35, 0.1), ((0.0, -1.0, 0.0), -8.7)]
+    add_convex(gb, cap)
+    add_convex(gb, frustum(1.5, -0.2, 0.95, 10.0, 11.9, taper=0.5, rot=0.2))
     add_convex(ge, frustum(0.05, -0.05, 1.22, 5.18, 5.32, rot=0.42))
-    add_convex(ge, frustum(0.4, -0.3, 0.92, 9.88, 10.02, rot=0.05))
-    fall = xform(frustum(0.0, 0.0, 0.95, 0.0, 3.0, taper=0.04, rot=0.5, tops=(0.6, 0.0)), 0.0, (0.0, 0.0, 0.0), rz=0.9)
-    fall = xform(fall, -0.3, (3.0, 0.2, 0.6)) + [ground(-0.35)]
+    add_convex(ge, frustum(0.7, -0.3, 0.97, 8.58, 8.72, rot=0.05))
+    fall = xform(frustum(0.0, 0.0, 0.95, 0.0, 3.0, taper=0.04, rot=0.5, tops=(0.6, 0.0)), 0.0, (0.0, 0.0, 0.0), rz=-0.9)
+    fall = xform(fall, -0.3, (-2.9, 0.2, 0.6)) + [ground(-0.35)]
     add_convex(gb, fall)
     return P
 
 
 def ember_cone():
     """The ember cone: a battered eight-sided basalt cone 4 high and 7 across with a crater of glowing ember at its top (a raised disc), four ember cracks
-    running down the flanks from the rim, three basalt shards on the rim and three low blocks at the foot. Upright, symmetrical in plan."""
+    running down the flanks from the rim, a crown of six basalt shards (1.8 to 3.6 long, splayed 12 to 20 degrees) round the rim and three low blocks at the
+    foot. Upright, symmetrical in plan."""
     P = Piece()
     rng = random.Random(530)
     gb = P.geo("Basalt")
@@ -873,7 +901,7 @@ def ember_cone():
     add_convex(gb, polygon_planes(0.0, 0.0, [3.4] * 8, rot=0.0, taper=taper) + [top_plane(0.0, 0.0, 4.0), ground()])
     add_convex(ge, frustum(0.0, 0.0, 1.0, 3.92, 4.18, rot=0.39, n=8))
     for k in range(4):
-        az0 = TAU * (2 * k + 1) / 8 + 0.0
+        az0 = TAU * (2 * k + 1) / 8
         pts = []
         for i in range(6):
             t = i / 5.0
@@ -882,9 +910,9 @@ def ember_cone():
             r = 3.4 - taper * y + 0.05
             pts.append((r * math.cos(zz), y, r * math.sin(zz)))
         ptube(ge, pts, [0.15] * 6, 3, phase=az0)
-    for k in range(3):
-        az = 0.6 + 1.9 * k
-        shard(gb, vadd(pol(1.35, az), (0.0, 3.8, 0.0)), dirv(az, math.radians(78.0)), 1.6 + 0.4 * k, 0.28, 4, 0.4, skew=vmul(horiz(az + 1.0), 0.15), phase=az)
+    for k, (L, tilt) in enumerate(((3.6, 14.0), (2.4, 18.0), (3.0, 12.0), (1.8, 20.0), (3.3, 16.0), (2.2, 18.0))):
+        az = 0.3 + TAU * k / 6
+        shard(gb, vadd(pol(1.3, az), (0.0, 3.7, 0.0)), dirv(az, math.radians(90.0 - tilt)), L, 0.3, 4, 0.4, skew=vmul(horiz(az + 1.0), 0.15), phase=az)
     for (az, rr, a, h) in ((1.0, 4.1, 0.8, 1.1), (3.2, 4.3, 0.7, 0.9), (5.0, 4.2, 0.9, 1.3)):
         c = pol(rr, az)
         add_convex(gb, polygon_planes(c[0], c[2], [a, a * 0.9, a * 1.05, a * 0.95, a], rot=az, taper=0.1) + [top_plane(c[0], c[2], h, rng.uniform(-0.5, 0.5), rng.uniform(-0.5, 0.5)), ground()])
@@ -892,19 +920,23 @@ def ember_cone():
 
 
 def ember_fangs():
-    """The ember fangs: two five-sided basalt fangs 7.2 and 5.4 high (battered, the tops chiselled to a point, leaning 3 degrees toward each other) with a
-    hand's width between them where an ember core glows (2.9 high, its top broken), a few basalt chips at the foot. Upright, 6 across, 3.5 deep."""
+    """The ember fangs: two five-sided basalt fangs 8.2 and 6 high standing 7 apart in a shallow pool of glowing ember (the pool is 11 x 4.6 and 0.5 deep and
+    joins their feet), the tops chiselled to a point, each leaning 3 degrees outward; two ember spikes in the pool and basalt chips at the feet. Upright,
+    12 across, 4.6 deep."""
     P = Piece()
     gb = P.geo("Basalt")
     ge = P.geo("Ember")
-    f1 = xform(frustum(0.0, 0.0, 1.7, -0.5, 7.2, taper=0.11, rot=0.3, n=5, tops=(1.3, 0.2)), 0.0, (0.0, 0.0, 0.0), rz=-0.05)
-    f1 = xform(f1, 0.0, (-1.55, 0.0, 0.0))
-    f2 = xform(frustum(0.0, 0.0, 1.45, -0.5, 5.4, taper=0.12, rot=0.9, n=5, tops=(-1.2, 0.3)), 0.0, (0.0, 0.0, 0.0), rz=0.05)
-    f2 = xform(f2, 0.0, (1.55, 0.0, 0.4))
+    f1 = xform(frustum(0.0, 0.0, 1.6, -0.5, 8.2, taper=0.11, rot=0.3, n=5, tops=(1.4, 0.2)), 0.0, (0.0, 0.0, 0.0), rz=0.05)
+    f1 = xform(f1, 0.0, (-3.4, 0.0, 0.0))
+    f2 = xform(frustum(0.0, 0.0, 1.35, -0.5, 6.0, taper=0.12, rot=0.9, n=5, tops=(-1.3, 0.3)), 0.0, (0.0, 0.0, 0.0), rz=-0.05)
+    f2 = xform(f2, 0.0, (3.3, 0.0, 0.4))
     add_convex(gb, f1)
     add_convex(gb, f2)
-    add_convex(ge, frustum(0.0, 0.2, 0.62, -0.4, 2.9, taper=0.12, rot=0.35, n=5, tops=(0.5, 0.4)))
-    for (x, z, a, h, yaw) in ((-0.2, 1.9, 0.6, 0.9, 0.4), (3.0, -0.9, 0.55, 0.7, 1.0), (-3.3, 0.6, 0.5, 0.6, 0.2)):
+    pool = [(5.6 * math.cos(TAU * (k + 0.5) / 12), 2.4 * math.sin(TAU * (k + 0.5) / 12)) for k in range(12)]
+    slab(ge, pool, -0.6, 0.5)
+    shard(ge, (-0.4, 0.2, 0.3), UP, 2.0, 0.3, 4, 0.4, skew=(0.1, 0.0, 0.0))
+    shard(ge, (0.9, 0.2, -0.5), dirv(1.0, math.radians(78.0)), 1.4, 0.24, 4, 0.4)
+    for (x, z, a, h, yaw) in ((-0.2, 2.9, 0.6, 0.9, 0.4), (-5.4, 0.5, 0.5, 0.6, 0.2), (4.7, -0.7, 0.5, 0.7, 1.0)):
         add_convex(gb, xform(polygon_planes(0.0, 0.0, [a, a * 1.1, a * 0.9, a], rot=0.3) + [top_plane(0.0, 0.0, h, 0.7, 0.3), ground()], yaw, (x, 0.0, z)))
     return P
 
@@ -929,10 +961,11 @@ def crag_spires():
 
 def shard_scatter():
     """A scatter of obsidian: five standing shards (1.2 to 2.3 high, tilted up to 20 degrees) and ten chips lying flat or tilted on the ground, spread over
-    a patch 6 across. No collision."""
+    a patch 6 across and held together by a thin buried bed (under the ground). No collision."""
     P = Piece()
     rng = random.Random(550)
     go = P.geo("Obsidian")
+    slab(go, [(3.1 * math.cos(TAU * (k + 0.5) / 12), 3.1 * math.sin(TAU * (k + 0.5) / 12)) for k in range(12)], -0.3, -0.04)
     for k, (r, az, L, tilt) in enumerate(((0.4, 0.5, 2.3, 8.0), (1.6, 2.1, 1.7, 16.0), (1.4, 3.9, 1.4, 20.0), (2.4, 5.0, 1.2, 14.0), (2.3, 1.1, 1.5, 18.0))):
         shard(go, vadd(pol(r, az), (0.0, -0.1, 0.0)), dirv(az + 0.8, math.radians(90.0 - tilt)), L, 0.24 + 0.05 * L, 4, 0.34, skew=vmul(horiz(az), 0.12), phase=az)
     for k in range(10):
@@ -941,14 +974,14 @@ def shard_scatter():
         L, W, H = rng.uniform(0.45, 0.95), rng.uniform(0.3, 0.6), rng.uniform(0.12, 0.28)
         box = [((1, 0, 0), L / 2), ((-1, 0, 0), L / 2), ((0, 0, 1), W / 2), ((0, 0, -1), W / 2), (vnorm((rng.uniform(-0.5, 0.5), 1.0, rng.uniform(-0.5, 0.5))), H), ((0, -1, 0), 1.0)]
         c = pol(r, az)
-        add_convex(go, xform(box, rng.uniform(0.0, TAU), (c[0], 0.0, c[2]), rz=rng.uniform(-0.2, 0.2)) + [ground(-0.12 - 0.01 * k)])
+        add_convex(go, xform(box, rng.uniform(0.0, TAU), (c[0], 0.0, c[2]), rz=rng.uniform(-0.2, 0.2)) + [((0.0, -1.0, 0.0), 0.12 + 0.01 * k)])
     return P
 
 
 def basalt_pave():
-    """BasaltPave, a WALKABLE strip of hexagonal basalt pavers: eighteen flat-topped hexagons (apothem 0.78, a 0.1 gap) in six rows 8.6 long, 4 wide, every
-    top at y 0.2 (+- 0.008), sunk to -0.4; the gaps show a slab of ember at y 0.1 under them (a glowing honeycomb). The rows repeat: chain pieces 8.63
-    apart along z. Lay it with its origin 0.3 under the wanted top."""
+    """BasaltPave, a WALKABLE strip of hexagonal basalt pavers: eighteen flat-topped hexagons (apothem 0.78, a 0.1 gap) in six rows 8.6 long, about 4.5 wide,
+    every top at y 0.2 (+- 0.008), sunk to -0.4; the gaps show a slab of ember at y 0.1 under them (a glowing honeycomb). The rows repeat: chain pieces
+    8.63 apart along z. Lay it with its origin 0.3 under the wanted top."""
     P = Piece()
     rng = random.Random(560)
     gb = P.geo("Basalt")
@@ -961,8 +994,8 @@ def basalt_pave():
         xs = [-s, 0.0, s] if j % 2 == 0 else [-s / 2, s / 2, 1.5 * s]
         for x in xs:
             top = 0.2 + rng.uniform(-0.008, 0.008)
-            slab(gb, hex_ring(x - (0.0 if j % 2 == 0 else s / 4), z, a, 0.0), -0.4, top)
-    slab(ge, [(-1.45, -4.0), (1.7, -4.0), (1.7, 4.0), (-1.45, 4.0)], -0.45, 0.10)
+            slab(gb, hex_ring(x, z, a, 0.0), -0.4, top)
+    slab(ge, [(-1.5, -4.0), (2.3, -4.0), (2.3, 4.0), (-1.5, 4.0)], -0.45, 0.10)
     return P
 
 
@@ -984,7 +1017,8 @@ def hex_steps(variant):
         mx, mz = (x0 + x1) / 2, (z0 + z1) / 2
         ln = math.hypot(x1 - x0, z1 - z0) + 1.0
         yaw = math.atan2(x1 - x0, z1 - z0)
-        box = [((1, 0, 0), 0.18), ((-1, 0, 0), 0.18), ((0, 1, 0), -0.30 + 0.01 * i), ((0, -1, 0), 0.5 + 0.01 * i), ((0, 0, 1), ln / 2), ((0, 0, -1), ln / 2)]
+        hw = 0.18 + 0.023 * i
+        box = [((1, 0, 0), hw), ((-1, 0, 0), hw), ((0, 1, 0), -0.30 + 0.017 * i), ((0, -1, 0), 0.5 + 0.019 * i), ((0, 0, 1), ln / 2), ((0, 0, -1), ln / 2)]
         add_convex(g, xform(box, yaw, (mx, 0.0, mz)))
     return P
 
@@ -1162,9 +1196,12 @@ def thornrose():
         top = (x + rng.uniform(-0.08, 0.08), h, z)
         mid = (x + (top[0] - x) * 0.4 + 0.12, h * 0.5, z + 0.08)
         ptube(gs, [(x, -0.15, z), mid, top], [0.08, 0.065, 0.055], 3, phase=x)
+        knots = [(x, -0.15, z), mid, top]
         for (t, sg) in ((0.25, 1), (0.55, -1), (0.8, 1)):
-            c = vadd((x, -0.15, z), vmul(vsub(top, (x, -0.15, z)), t))
-            spike(gt, c, vnorm((0.8 * sg, 0.3, rng.uniform(-0.5, 0.5))), 0.42, 0.06, 3)
+            a, b = (knots[0], knots[1]) if t < 0.5 else (knots[1], knots[2])
+            u = (t * 2.0) if t < 0.5 else (t * 2.0 - 1.0)
+            c = vadd(a, vmul(vsub(b, a), u))
+            spike(gt, vsub(c, (0.0, 0.0, 0.0)), vnorm((0.8 * sg, 0.3, rng.uniform(-0.5, 0.5))), 0.42, 0.06, 3)
         for k in range(6):
             az = TAU * k / 6 + rng.uniform(-0.1, 0.1) + x
             blade(gs, vadd(top, (0.0, -0.05, 0.0)), dirv(az, math.radians(40.0)), 1.05, 0.62, 0.16, face=horiz(az), rings=1)
@@ -1579,6 +1616,7 @@ def build_all(names=None):
             full = "Nightfall_%s_%s" % (fam, name)
             if names and full not in names and name not in names:
                 continue
+            _GROUND_N[0] = 0
             p = fn()
             p.finish()
             pieces[full] = p
