@@ -1,0 +1,2156 @@
+{
+ "frame": "each piece at its own origin, y = 0 the ground it stands on (feet sink below), front is -Z, Roblox studs; the prevailing wind blows toward +X in every piece (place with a yaw of about 0 so the whole territory leans one way); anchor cube WR_Anchor (1 stud) at the origin; Roblox material and colour per material suffix in `looks`; collision boxes are invisible Plastic colliders in the piece frame (none for crowns, plants, ground patches and walkable path pieces)",
+ "looks": {
+  "Bark": {
+   "Material": "Wood",
+   "Color": [
+    58,
+    46,
+    38
+   ]
+  },
+  "Deadwood": {
+   "Material": "Wood",
+   "Color": [
+    118,
+    108,
+    94
+   ]
+  },
+  "Plank": {
+   "Material": "WoodPlanks",
+   "Color": [
+    84,
+    68,
+    52
+   ]
+  },
+  "Cedar": {
+   "Material": "LeafyGrass",
+   "Color": [
+    72,
+    100,
+    54
+   ]
+  },
+  "Needle": {
+   "Material": "LeafyGrass",
+   "Color": [
+    30,
+    78,
+    64
+   ]
+  },
+  "Juniper": {
+   "Material": "LeafyGrass",
+   "Color": [
+    44,
+    90,
+    72
+   ]
+  },
+  "BronzeLeaf": {
+   "Material": "LeafyGrass",
+   "Color": [
+    138,
+    102,
+    58
+   ]
+  },
+  "Moss": {
+   "Material": "Grass",
+   "Color": [
+    92,
+    112,
+    58
+   ]
+  },
+  "Grass": {
+   "Material": "Grass",
+   "Color": [
+    96,
+    110,
+    58
+   ],
+   "CastShadow": false
+  },
+  "Reed": {
+   "Material": "Grass",
+   "Color": [
+    82,
+    104,
+    60
+   ]
+  },
+  "Seed": {
+   "Material": "SmoothPlastic",
+   "Color": [
+    104,
+    74,
+    50
+   ]
+  },
+  "Gorse": {
+   "Material": "LeafyGrass",
+   "Color": [
+    58,
+    84,
+    50
+   ]
+  },
+  "Heather": {
+   "Material": "LeafyGrass",
+   "Color": [
+    78,
+    92,
+    62
+   ]
+  },
+  "Crassula": {
+   "Material": "LeafyGrass",
+   "Color": [
+    84,
+    124,
+    104
+   ]
+  },
+  "Lichen": {
+   "Material": "Concrete",
+   "Color": [
+    112,
+    118,
+    80
+   ],
+   "CastShadow": false
+  },
+  "FlowerOchre": {
+   "Material": "SmoothPlastic",
+   "Color": [
+    196,
+    152,
+    66
+   ]
+  },
+  "FlowerRose": {
+   "Material": "SmoothPlastic",
+   "Color": [
+    166,
+    98,
+    94
+   ]
+  },
+  "FlowerTeal": {
+   "Material": "SmoothPlastic",
+   "Color": [
+    74,
+    134,
+    132
+   ]
+  },
+  "Slate": {
+   "Material": "Slate",
+   "Color": [
+    52,
+    60,
+    58
+   ]
+  },
+  "SlateStep": {
+   "Material": "Slate",
+   "Color": [
+    46,
+    54,
+    52
+   ]
+  },
+  "Scree": {
+   "Material": "Pebble",
+   "Color": [
+    70,
+    78,
+    72
+   ],
+   "CastShadow": false
+  },
+  "Cobble": {
+   "Material": "Cobblestone",
+   "Color": [
+    64,
+    68,
+    62
+   ]
+  },
+  "Bronze": {
+   "Material": "Metal",
+   "Color": [
+    150,
+    112,
+    62
+   ]
+  }
+ },
+ "files": {
+  "Trees": {
+   "fbx": "assets/world/MurimCrossing/Windrift/Windrift_Trees.fbx",
+   "objects": 23,
+   "tris": 19744,
+   "verify": "ok"
+  },
+  "Plants": {
+   "fbx": "assets/world/MurimCrossing/Windrift/Windrift_Plants.fbx",
+   "objects": 18,
+   "tris": 2512,
+   "verify": "ok"
+  },
+  "Rocks": {
+   "fbx": "assets/world/MurimCrossing/Windrift/Windrift_Rocks.fbx",
+   "objects": 20,
+   "tris": 3306,
+   "verify": "ok"
+  }
+ },
+ "pieces": {
+  "Windrift_Trees_GaleCedarA1": {
+   "family": "Trees",
+   "piece": "GaleCedarA1",
+   "variant": "A1",
+   "tris": 1874,
+   "materials": {
+    "Bark": 704,
+    "Cedar": 1170
+   },
+   "bounds_min": [
+    -4.84,
+    -0.69,
+    -5.2
+   ],
+   "bounds_max": [
+    13.88,
+    17.21,
+    5.79
+   ],
+   "radius": 4.84,
+   "crown_radius": 14.1,
+   "height": 17.21,
+   "collision": [
+    {
+     "x0": -1.78,
+     "x1": 1.45,
+     "y0": 0.0,
+     "y1": 1.8,
+     "z0": -1.36,
+     "z1": 2.03
+    },
+    {
+     "x0": -0.86,
+     "x1": 1.25,
+     "y0": 1.8,
+     "y1": 3.99,
+     "z0": -0.86,
+     "z1": 0.99
+    },
+    {
+     "x0": -0.04,
+     "x1": 1.86,
+     "y0": 4.0,
+     "y1": 6.2,
+     "z0": -0.7,
+     "z1": 0.76
+    },
+    {
+     "x0": 0.73,
+     "x1": 2.47,
+     "y0": 6.2,
+     "y1": 7.99,
+     "z0": -0.72,
+     "z1": 0.5
+    }
+   ],
+   "use": "the flagged cliff cedar: on a ridge, a terrace corner or a cliff edge, standing alone; keep 5 studs clear of other trees (the limbs stream 13 studs to +X)",
+   "keepout": 5.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "fbx": "Windrift_Trees.fbx",
+   "objects": [
+    "Windrift_Trees_GaleCedarA1__Bark",
+    "Windrift_Trees_GaleCedarA1__Cedar"
+   ]
+  },
+  "Windrift_Trees_GaleCedarA2": {
+   "family": "Trees",
+   "piece": "GaleCedarA2",
+   "variant": "A2",
+   "tris": 1958,
+   "materials": {
+    "Bark": 748,
+    "Cedar": 1210
+   },
+   "bounds_min": [
+    -3.85,
+    -0.78,
+    -6.78
+   ],
+   "bounds_max": [
+    16.42,
+    8.63,
+    8.24
+   ],
+   "radius": 4.5,
+   "crown_radius": 16.56,
+   "height": 8.63,
+   "collision": [
+    {
+     "x0": -2.07,
+     "x1": 1.8,
+     "y0": 0.0,
+     "y1": 1.6,
+     "z0": -1.59,
+     "z1": 2.38
+    },
+    {
+     "x0": -0.69,
+     "x1": 1.65,
+     "y0": 1.6,
+     "y1": 3.59,
+     "z0": -1.06,
+     "z1": 1.06
+    },
+    {
+     "x0": 0.14,
+     "x1": 2.72,
+     "y0": 3.6,
+     "y1": 5.6,
+     "z0": -0.79,
+     "z1": 0.81
+    },
+    {
+     "x0": 1.27,
+     "x1": 3.32,
+     "y0": 5.6,
+     "y1": 6.97,
+     "z0": -0.44,
+     "z1": 0.75
+    }
+   ],
+   "use": "the lee-canopy cedar: low and wide, over a drop or against a wall; its veils reach 8 studs either side of the line to +X, keep 7 studs clear",
+   "keepout": 7.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 1,
+   "fbx": "Windrift_Trees.fbx",
+   "objects": [
+    "Windrift_Trees_GaleCedarA2__Bark",
+    "Windrift_Trees_GaleCedarA2__Cedar"
+   ]
+  },
+  "Windrift_Trees_BannerPineB1": {
+   "family": "Trees",
+   "piece": "BannerPineB1",
+   "variant": "B1",
+   "tris": 1492,
+   "materials": {
+    "Bark": 470,
+    "Needle": 1022
+   },
+   "bounds_min": [
+    -2.0,
+    -0.58,
+    -2.6
+   ],
+   "bounds_max": [
+    9.8,
+    25.28,
+    3.34
+   ],
+   "radius": 2.31,
+   "crown_radius": 9.85,
+   "height": 25.28,
+   "collision": [
+    {
+     "x0": -1.61,
+     "x1": 1.48,
+     "y0": 0.0,
+     "y1": 2.6,
+     "z0": -1.42,
+     "z1": 1.87
+    },
+    {
+     "x0": -0.76,
+     "x1": 0.84,
+     "y0": 2.6,
+     "y1": 5.6,
+     "z0": -0.85,
+     "z1": 0.91
+    },
+    {
+     "x0": -0.33,
+     "x1": 0.96,
+     "y0": 5.6,
+     "y1": 7.91,
+     "z0": -0.55,
+     "z1": 0.72
+    }
+   ],
+   "use": "the tall mast pine: up a slope or beside stairs, singly or in a loose line across the wind; keep 4 studs clear",
+   "keepout": 4.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "fbx": "Windrift_Trees.fbx",
+   "objects": [
+    "Windrift_Trees_BannerPineB1__Bark",
+    "Windrift_Trees_BannerPineB1__Needle"
+   ]
+  },
+  "Windrift_Trees_BannerPineB2": {
+   "family": "Trees",
+   "piece": "BannerPineB2",
+   "variant": "B2",
+   "tris": 1706,
+   "materials": {
+    "Bark": 572,
+    "Needle": 1134
+   },
+   "bounds_min": [
+    -4.85,
+    -0.51,
+    -4.29
+   ],
+   "bounds_max": [
+    9.44,
+    20.45,
+    3.32
+   ],
+   "radius": 3.49,
+   "crown_radius": 9.45,
+   "height": 20.45,
+   "collision": [
+    {
+     "x0": -1.74,
+     "x1": 1.68,
+     "y0": 0.0,
+     "y1": 2.59,
+     "z0": -1.33,
+     "z1": 2.09
+    },
+    {
+     "x0": -1.0,
+     "x1": 1.17,
+     "y0": 2.6,
+     "y1": 5.6,
+     "z0": -0.98,
+     "z1": 0.91
+    },
+    {
+     "x0": -0.37,
+     "x1": 1.5,
+     "y0": 5.6,
+     "y1": 8.0,
+     "z0": -0.88,
+     "z1": 0.74
+    }
+   ],
+   "use": "the snapped sail pine: ridge shoulders and terrace edges; keep 5 studs clear",
+   "keepout": 5.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 1,
+   "fbx": "Windrift_Trees.fbx",
+   "objects": [
+    "Windrift_Trees_BannerPineB2__Bark",
+    "Windrift_Trees_BannerPineB2__Needle"
+   ]
+  },
+  "Windrift_Trees_CliffJuniperC1": {
+   "family": "Trees",
+   "piece": "CliffJuniperC1",
+   "variant": "C1",
+   "tris": 1576,
+   "materials": {
+    "Deadwood": 416,
+    "Juniper": 1160
+   },
+   "bounds_min": [
+    -5.45,
+    -0.88,
+    -1.88
+   ],
+   "bounds_max": [
+    9.74,
+    5.47,
+    2.36
+   ],
+   "radius": 5.58,
+   "crown_radius": 9.75,
+   "height": 5.47,
+   "collision": [
+    {
+     "x0": -4.59,
+     "x1": -2.67,
+     "y0": 0.0,
+     "y1": 1.92,
+     "z0": -0.72,
+     "z1": 1.34
+    },
+    {
+     "x0": -2.19,
+     "x1": -0.27,
+     "y0": 0.0,
+     "y1": 2.1,
+     "z0": -0.7,
+     "z1": 1.19
+    },
+    {
+     "x0": 0.21,
+     "x1": 2.13,
+     "y0": 0.47,
+     "y1": 2.46,
+     "z0": -0.93,
+     "z1": 0.21
+    },
+    {
+     "x0": 2.61,
+     "x1": 4.53,
+     "y0": 1.51,
+     "y1": 3.57,
+     "z0": -0.8,
+     "z1": 0.34
+    },
+    {
+     "x0": 4.92,
+     "x1": 6.11,
+     "y0": 3.01,
+     "y1": 4.0,
+     "z0": -0.01,
+     "z1": 0.45
+    }
+   ],
+   "use": "the crawling juniper: on rock and at the foot of walls, its roots at the windward end (the foot sits on the ground; 14 long); keep 2 studs clear",
+   "keepout": 2.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 1,
+   "fbx": "Windrift_Trees.fbx",
+   "objects": [
+    "Windrift_Trees_CliffJuniperC1__Deadwood",
+    "Windrift_Trees_CliffJuniperC1__Juniper"
+   ]
+  },
+  "Windrift_Trees_CliffJuniperC2": {
+   "family": "Trees",
+   "piece": "CliffJuniperC2",
+   "variant": "C2",
+   "tris": 1164,
+   "materials": {
+    "Deadwood": 284,
+    "Juniper": 880
+   },
+   "bounds_min": [
+    -2.65,
+    -0.86,
+    -1.65
+   ],
+   "bounds_max": [
+    6.79,
+    9.33,
+    1.97
+   ],
+   "radius": 3.0,
+   "crown_radius": 6.79,
+   "height": 9.33,
+   "collision": [
+    {
+     "x0": -0.67,
+     "x1": 1.55,
+     "y0": 0.0,
+     "y1": 2.1,
+     "z0": -0.65,
+     "z1": 1.62
+    },
+    {
+     "x0": -0.58,
+     "x1": 1.83,
+     "y0": 2.11,
+     "y1": 4.6,
+     "z0": -0.92,
+     "z1": 0.32
+    },
+    {
+     "x0": 1.41,
+     "x1": 2.19,
+     "y0": 4.61,
+     "y1": 5.0,
+     "z0": -0.26,
+     "z1": 0.49
+    }
+   ],
+   "use": "the corkscrew juniper: beside steps, rocks and gates, a small accent 9 high; keep 3 studs clear",
+   "keepout": 3.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "fbx": "Windrift_Trees.fbx",
+   "objects": [
+    "Windrift_Trees_CliffJuniperC2__Deadwood",
+    "Windrift_Trees_CliffJuniperC2__Juniper"
+   ]
+  },
+  "Windrift_Trees_BronzeleafD1": {
+   "family": "Trees",
+   "piece": "BronzeleafD1",
+   "variant": "D1",
+   "tris": 1120,
+   "materials": {
+    "Bark": 350,
+    "BronzeLeaf": 770
+   },
+   "bounds_min": [
+    -0.3,
+    -0.5,
+    -1.83
+   ],
+   "bounds_max": [
+    9.39,
+    8.5,
+    1.74
+   ],
+   "radius": 2.87,
+   "crown_radius": 9.44,
+   "height": 8.5,
+   "collision": [
+    {
+     "x0": -0.3,
+     "x1": 0.7,
+     "y0": 0.0,
+     "y1": 2.4,
+     "z0": -0.6,
+     "z1": 0.6
+    }
+   ],
+   "use": "the bronze windbroom: gardens, courts and pathsides, a small tree 9 long; keep 3 studs clear",
+   "keepout": 3.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 1,
+   "fbx": "Windrift_Trees.fbx",
+   "objects": [
+    "Windrift_Trees_BronzeleafD1__Bark",
+    "Windrift_Trees_BronzeleafD1__BronzeLeaf"
+   ]
+  },
+  "Windrift_Trees_BronzeleafD2": {
+   "family": "Trees",
+   "piece": "BronzeleafD2",
+   "variant": "D2",
+   "tris": 1526,
+   "materials": {
+    "Bark": 896,
+    "BronzeLeaf": 630
+   },
+   "bounds_min": [
+    -2.65,
+    -0.56,
+    -3.41
+   ],
+   "bounds_max": [
+    10.8,
+    6.96,
+    3.59
+   ],
+   "radius": 2.96,
+   "crown_radius": 11.13,
+   "height": 6.96,
+   "collision": [
+    {
+     "x0": -1.78,
+     "x1": 0.73,
+     "y0": 0.0,
+     "y1": 3.0,
+     "z0": -1.28,
+     "z1": 1.65
+    }
+   ],
+   "use": "the bronze wind-pruned wedge: against walls and rock, a small tree 11 long; keep 3 studs clear",
+   "keepout": 3.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 1,
+   "fbx": "Windrift_Trees.fbx",
+   "objects": [
+    "Windrift_Trees_BronzeleafD2__Bark",
+    "Windrift_Trees_BronzeleafD2__BronzeLeaf"
+   ]
+  },
+  "Windrift_Trees_SplitSnagE1": {
+   "family": "Trees",
+   "piece": "SplitSnagE1",
+   "variant": "E1",
+   "tris": 1288,
+   "materials": {
+    "Cedar": 926,
+    "Deadwood": 362
+   },
+   "bounds_min": [
+    -2.86,
+    -0.61,
+    -2.62
+   ],
+   "bounds_max": [
+    10.03,
+    12.27,
+    3.18
+   ],
+   "radius": 8.32,
+   "crown_radius": 10.04,
+   "height": 12.27,
+   "collision": [
+    {
+     "x0": -2.26,
+     "x1": 2.01,
+     "y0": 0.0,
+     "y1": 2.4,
+     "z0": -1.91,
+     "z1": 2.57
+    },
+    {
+     "x0": -1.11,
+     "x1": 1.3,
+     "y0": 2.5,
+     "y1": 5.05,
+     "z0": -1.27,
+     "z1": 1.18
+    }
+   ],
+   "use": "the lightning-split pole: a dead landmark on a ridge or by a trail, 11 high; keep 3 studs clear",
+   "keepout": 3.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "fbx": "Windrift_Trees.fbx",
+   "objects": [
+    "Windrift_Trees_SplitSnagE1__Cedar",
+    "Windrift_Trees_SplitSnagE1__Deadwood"
+   ]
+  },
+  "Windrift_Trees_SplitSnagE2": {
+   "family": "Trees",
+   "piece": "SplitSnagE2",
+   "variant": "E2",
+   "tris": 1116,
+   "materials": {
+    "Cedar": 770,
+    "Deadwood": 346
+   },
+   "bounds_min": [
+    -2.86,
+    -0.6,
+    -2.43
+   ],
+   "bounds_max": [
+    13.95,
+    8.13,
+    3.18
+   ],
+   "radius": 13.97,
+   "crown_radius": 13.97,
+   "height": 8.13,
+   "collision": [
+    {
+     "x0": -2.21,
+     "x1": 2.24,
+     "y0": 0.0,
+     "y1": 2.33,
+     "z0": -1.93,
+     "z1": 2.58
+    },
+    {
+     "x0": -1.43,
+     "x1": 1.21,
+     "y0": 2.48,
+     "y1": 5.2,
+     "z0": -1.25,
+     "z1": 1.2
+    },
+    {
+     "x0": 1.4,
+     "x1": 4.6,
+     "y0": 3.6,
+     "y1": 5.6,
+     "z0": -0.8,
+     "z1": 1.0
+    },
+    {
+     "x0": 4.6,
+     "x1": 8.0,
+     "y0": 1.7,
+     "y1": 3.9,
+     "z0": -0.8,
+     "z1": 1.0
+    }
+   ],
+   "use": "the fallen half: a ruined stump with its torn half sliding downwind (the slab ramps 8 studs to +X); keep 3 studs clear",
+   "keepout": 3.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 1,
+   "fbx": "Windrift_Trees.fbx",
+   "objects": [
+    "Windrift_Trees_SplitSnagE2__Cedar",
+    "Windrift_Trees_SplitSnagE2__Deadwood"
+   ]
+  },
+  "Windrift_Trees_GiantCedar": {
+   "family": "Trees",
+   "piece": "GiantCedar",
+   "variant": "",
+   "tris": 4924,
+   "materials": {
+    "Bark": 1902,
+    "Cedar": 2880,
+    "Slate": 142
+   },
+   "bounds_min": [
+    -13.57,
+    -0.72,
+    -10.35
+   ],
+   "bounds_max": [
+    41.96,
+    47.07,
+    16.06
+   ],
+   "radius": 13.57,
+   "crown_radius": 42.22,
+   "height": 47.07,
+   "collision": [
+    {
+     "x0": -3.65,
+     "x1": 4.08,
+     "y0": 2.75,
+     "y1": 3.2,
+     "z0": -4.95,
+     "z1": 4.95
+    },
+    {
+     "x0": -4.07,
+     "x1": 3.74,
+     "y0": 3.2,
+     "y1": 6.8,
+     "z0": -4.45,
+     "z1": 4.73
+    },
+    {
+     "x0": -2.06,
+     "x1": 3.17,
+     "y0": 6.8,
+     "y1": 10.39,
+     "z0": -2.16,
+     "z1": 2.44
+    },
+    {
+     "x0": -1.36,
+     "x1": 3.81,
+     "y0": 10.41,
+     "y1": 13.99,
+     "z0": -2.17,
+     "z1": 2.77
+    },
+    {
+     "x0": -0.48,
+     "x1": 4.55,
+     "y0": 14.01,
+     "y1": 17.6,
+     "z0": -2.11,
+     "z1": 2.65
+    },
+    {
+     "x0": 0.21,
+     "x1": 5.1,
+     "y0": 17.62,
+     "y1": 21.19,
+     "z0": -1.78,
+     "z1": 1.92
+    },
+    {
+     "x0": 1.73,
+     "x1": 5.44,
+     "y0": 21.2,
+     "y1": 21.98,
+     "z0": -1.74,
+     "z1": 1.52
+    },
+    {
+     "x0": -8.54,
+     "x1": 5.54,
+     "y0": 0.0,
+     "y1": 2.2,
+     "z0": -6.01,
+     "z1": 5.61
+    },
+    {
+     "x0": -8.54,
+     "x1": 5.54,
+     "y0": 2.24,
+     "y1": 4.8,
+     "z0": -6.04,
+     "z1": 5.11
+    },
+    {
+     "x0": 3.6,
+     "x1": 12.4,
+     "y0": 0.0,
+     "y1": 2.4,
+     "z0": -3.32,
+     "z1": 3.72
+    },
+    {
+     "x0": -12.52,
+     "x1": -5.48,
+     "y0": 0.0,
+     "y1": 2.11,
+     "z0": -5.02,
+     "z1": 2.02
+    },
+    {
+     "x0": -7.7,
+     "x1": -3.3,
+     "y0": 0.0,
+     "y1": 1.2,
+     "z0": 4.29,
+     "z1": 8.51
+    }
+   ],
+   "use": "THE landmark: one only, at the cliff edge of the territory (the crag is part of the piece, set it on the rim so the crown streams over the drop); keep 14 studs clear all round and 40 to +X",
+   "keepout": 14.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 1,
+   "fbx": "Windrift_Trees.fbx",
+   "objects": [
+    "Windrift_Trees_GiantCedar__Bark",
+    "Windrift_Trees_GiantCedar__Cedar",
+    "Windrift_Trees_GiantCedar__Slate"
+   ]
+  },
+  "Windrift_Rocks_CragTail": {
+   "family": "Rocks",
+   "piece": "CragTail",
+   "variant": "",
+   "tris": 160,
+   "materials": {
+    "Moss": 29,
+    "Slate": 131
+   },
+   "bounds_min": [
+    -4.6,
+    -0.6,
+    -4.4
+   ],
+   "bounds_max": [
+    15.4,
+    4.75,
+    3.6
+   ],
+   "radius": 15.42,
+   "crown_radius": 15.42,
+   "height": 4.75,
+   "collision": [
+    {
+     "x0": -2.66,
+     "x1": 7.04,
+     "y0": 0.0,
+     "y1": 2.15,
+     "z0": -2.2,
+     "z1": 2.19
+    },
+    {
+     "x0": -2.63,
+     "x1": 4.21,
+     "y0": 2.2,
+     "y1": 4.75,
+     "z0": -1.43,
+     "z1": 2.24
+    },
+    {
+     "x0": -4.29,
+     "x1": 0.29,
+     "y0": 0.0,
+     "y1": 2.3,
+     "z0": -4.2,
+     "z1": -1.2
+    }
+   ],
+   "use": "a crag with a long scoured tail to +X: terrace edges and slopes, 16 long; keep 2 studs clear; the tail is low (under 1 stud) beyond x 6",
+   "keepout": 2.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 3,
+   "fbx": "Windrift_Rocks.fbx",
+   "objects": [
+    "Windrift_Rocks_CragTail__Moss",
+    "Windrift_Rocks_CragTail__Slate"
+   ]
+  },
+  "Windrift_Rocks_SlateSlab": {
+   "family": "Rocks",
+   "piece": "SlateSlab",
+   "variant": "",
+   "tris": 200,
+   "materials": {
+    "Moss": 28,
+    "Slate": 172
+   },
+   "bounds_min": [
+    -6.49,
+    -0.4,
+    -2.67
+   ],
+   "bounds_max": [
+    13.0,
+    5.92,
+    2.73
+   ],
+   "radius": 13.03,
+   "crown_radius": 13.03,
+   "height": 5.92,
+   "collision": [
+    {
+     "x0": 0.42,
+     "x1": 3.79,
+     "y0": 0.46,
+     "y1": 2.17,
+     "z0": -2.38,
+     "z1": 1.89
+    },
+    {
+     "x0": -4.03,
+     "x1": 1.43,
+     "y0": 2.28,
+     "y1": 4.8,
+     "z0": -2.21,
+     "z1": 2.42
+    },
+    {
+     "x0": -4.85,
+     "x1": -2.67,
+     "y0": 4.81,
+     "y1": 5.92,
+     "z0": -1.62,
+     "z1": 2.44
+    },
+    {
+     "x0": -6.16,
+     "x1": -1.41,
+     "y0": 0.0,
+     "y1": 2.11,
+     "z0": -1.84,
+     "z1": 2.28
+    },
+    {
+     "x0": -5.67,
+     "x1": -1.22,
+     "y0": 2.22,
+     "y1": 4.73,
+     "z0": -2.04,
+     "z1": 2.38
+    },
+    {
+     "x0": -1.08,
+     "x1": 1.96,
+     "y0": 0.0,
+     "y1": 2.16,
+     "z0": -0.84,
+     "z1": 1.9
+    },
+    {
+     "x0": -0.77,
+     "x1": 1.64,
+     "y0": 2.21,
+     "y1": 3.05,
+     "z0": -0.4,
+     "z1": 1.12
+    }
+   ],
+   "use": "a plank-slab slanting down to +X on a boulder, with a scatter of plates downwind: against a terrace wall or a path edge; the underside is hollow, 18 long; keep 2 studs clear",
+   "keepout": 2.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "fbx": "Windrift_Rocks.fbx",
+   "objects": [
+    "Windrift_Rocks_SlateSlab__Moss",
+    "Windrift_Rocks_SlateSlab__Slate"
+   ]
+  },
+  "Windrift_Rocks_StrataStack": {
+   "family": "Rocks",
+   "piece": "StrataStack",
+   "variant": "",
+   "tris": 336,
+   "materials": {
+    "Moss": 48,
+    "Slate": 288
+   },
+   "bounds_min": [
+    -2.91,
+    -0.5,
+    -3.02
+   ],
+   "bounds_max": [
+    7.29,
+    5.12,
+    3.03
+   ],
+   "radius": 7.5,
+   "crown_radius": 7.5,
+   "height": 5.12,
+   "collision": [
+    {
+     "x0": -1.32,
+     "x1": 4.22,
+     "y0": 0.36,
+     "y1": 1.06,
+     "z0": -1.93,
+     "z1": 2.72
+    },
+    {
+     "x0": -0.06,
+     "x1": 5.05,
+     "y0": 1.02,
+     "y1": 1.97,
+     "z0": -1.57,
+     "z1": 2.52
+    },
+    {
+     "x0": 0.88,
+     "x1": 5.0,
+     "y0": 1.93,
+     "y1": 2.48,
+     "z0": -1.7,
+     "z1": 2.33
+    },
+    {
+     "x0": 1.7,
+     "x1": 5.95,
+     "y0": 2.44,
+     "y1": 3.24,
+     "z0": -1.53,
+     "z1": 2.41
+    },
+    {
+     "x0": 2.66,
+     "x1": 5.93,
+     "y0": 3.2,
+     "y1": 3.8,
+     "z0": -1.74,
+     "z1": 1.91
+    },
+    {
+     "x0": 3.55,
+     "x1": 6.6,
+     "y0": 3.76,
+     "y1": 4.61,
+     "z0": -1.27,
+     "z1": 1.79
+    },
+    {
+     "x0": 4.63,
+     "x1": 7.03,
+     "y0": 4.57,
+     "y1": 5.12,
+     "z0": -0.85,
+     "z1": 1.19
+    }
+   ],
+   "use": "a stack of plates leaning to +X: a path marker or a courtyard accent, 5 high; keep 2 studs clear",
+   "keepout": 2.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "fbx": "Windrift_Rocks.fbx",
+   "objects": [
+    "Windrift_Rocks_StrataStack__Moss",
+    "Windrift_Rocks_StrataStack__Slate"
+   ]
+  },
+  "Windrift_Rocks_VeinBoulderA": {
+   "family": "Rocks",
+   "piece": "VeinBoulderA",
+   "variant": "A",
+   "tris": 234,
+   "materials": {
+    "Bronze": 86,
+    "Slate": 148
+   },
+   "bounds_min": [
+    -2.73,
+    -0.45,
+    -3.15
+   ],
+   "bounds_max": [
+    5.2,
+    7.8,
+    3.27
+   ],
+   "radius": 5.32,
+   "crown_radius": 5.32,
+   "height": 7.8,
+   "collision": [
+    {
+     "x0": -1.33,
+     "x1": 2.93,
+     "y0": 2.28,
+     "y1": 4.78,
+     "z0": -2.03,
+     "z1": 2.35
+    },
+    {
+     "x0": -1.11,
+     "x1": 3.21,
+     "y0": 4.83,
+     "y1": 7.4,
+     "z0": -2.12,
+     "z1": 1.7
+    },
+    {
+     "x0": 1.43,
+     "x1": 2.69,
+     "y0": 7.4,
+     "y1": 7.8,
+     "z0": -1.33,
+     "z1": -0.05
+    },
+    {
+     "x0": -2.3,
+     "x1": 4.06,
+     "y0": 0.0,
+     "y1": 2.18,
+     "z0": -2.77,
+     "z1": 2.89
+    },
+    {
+     "x0": -2.03,
+     "x1": 2.9,
+     "y0": 2.21,
+     "y1": 4.14,
+     "z0": -2.44,
+     "z1": 2.55
+    },
+    {
+     "x0": 0.6,
+     "x1": 4.73,
+     "y0": 2.18,
+     "y1": 4.42,
+     "z0": -2.49,
+     "z1": 1.25
+    },
+    {
+     "x0": 1.53,
+     "x1": 4.97,
+     "y0": 0.0,
+     "y1": 2.17,
+     "z0": -2.41,
+     "z1": 0.46
+    }
+   ],
+   "use": "a leaning bronze-veined monolith 7.5 high with a small boulder at its foot: courtyards, path forks, the stronghold's approaches; keep 2 studs clear",
+   "keepout": 2.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "fbx": "Windrift_Rocks.fbx",
+   "objects": [
+    "Windrift_Rocks_VeinBoulderA__Bronze",
+    "Windrift_Rocks_VeinBoulderA__Slate"
+   ]
+  },
+  "Windrift_Rocks_VeinBoulderB": {
+   "family": "Rocks",
+   "piece": "VeinBoulderB",
+   "variant": "B",
+   "tris": 160,
+   "materials": {
+    "Bronze": 28,
+    "Slate": 132
+   },
+   "bounds_min": [
+    -3.78,
+    -0.55,
+    -3.18
+   ],
+   "bounds_max": [
+    5.83,
+    6.22,
+    3.37
+   ],
+   "radius": 5.88,
+   "crown_radius": 5.88,
+   "height": 6.22,
+   "collision": [
+    {
+     "x0": -3.16,
+     "x1": -0.18,
+     "y0": 0.0,
+     "y1": 2.17,
+     "z0": -2.69,
+     "z1": 2.62
+    },
+    {
+     "x0": -3.56,
+     "x1": -0.34,
+     "y0": 2.29,
+     "y1": 4.7,
+     "z0": -2.79,
+     "z1": 2.96
+    },
+    {
+     "x0": -2.8,
+     "x1": -0.81,
+     "y0": 4.86,
+     "y1": 6.22,
+     "z0": -1.92,
+     "z1": 2.07
+    },
+    {
+     "x0": 0.16,
+     "x1": 3.39,
+     "y0": 0.0,
+     "y1": 2.16,
+     "z0": -2.41,
+     "z1": 2.74
+    },
+    {
+     "x0": 0.23,
+     "x1": 3.35,
+     "y0": 2.22,
+     "y1": 4.77,
+     "z0": -2.66,
+     "z1": 2.98
+    },
+    {
+     "x0": 0.7,
+     "x1": 2.8,
+     "y0": 4.82,
+     "y1": 6.21,
+     "z0": -2.15,
+     "z1": 1.64
+    },
+    {
+     "x0": 2.41,
+     "x1": 5.61,
+     "y0": 0.0,
+     "y1": 2.24,
+     "z0": -0.5,
+     "z1": 2.3
+    }
+   ],
+   "use": "a cloven boulder, the halves leaning apart over a bronze core (the cleft is 0.6 wide at the ground and opens upward): gate sides and trail corners; keep 2 studs clear",
+   "keepout": 2.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "fbx": "Windrift_Rocks.fbx",
+   "objects": [
+    "Windrift_Rocks_VeinBoulderB__Bronze",
+    "Windrift_Rocks_VeinBoulderB__Slate"
+   ]
+  },
+  "Windrift_Rocks_Windgate": {
+   "family": "Rocks",
+   "piece": "Windgate",
+   "variant": "",
+   "tris": 192,
+   "materials": {
+    "Moss": 33,
+    "Slate": 159
+   },
+   "bounds_min": [
+    -5.31,
+    -0.5,
+    -2.88
+   ],
+   "bounds_max": [
+    13.0,
+    8.5,
+    2.74
+   ],
+   "radius": 13.04,
+   "crown_radius": 13.04,
+   "height": 8.5,
+   "collision": [
+    {
+     "x0": -4.45,
+     "x1": -1.54,
+     "y0": 0.03,
+     "y1": 2.14,
+     "z0": -1.54,
+     "z1": 1.63
+    },
+    {
+     "x0": -4.35,
+     "x1": -1.43,
+     "y0": 2.2,
+     "y1": 4.77,
+     "z0": -1.56,
+     "z1": 1.52
+    },
+    {
+     "x0": -4.21,
+     "x1": -1.32,
+     "y0": 4.84,
+     "y1": 7.31,
+     "z0": -1.52,
+     "z1": 1.19
+    },
+    {
+     "x0": 1.73,
+     "x1": 4.61,
+     "y0": 0.12,
+     "y1": 2.06,
+     "z0": -1.39,
+     "z1": 1.65
+    },
+    {
+     "x0": 1.59,
+     "x1": 4.41,
+     "y0": 2.26,
+     "y1": 4.77,
+     "z0": -1.41,
+     "z1": 1.64
+    },
+    {
+     "x0": 1.62,
+     "x1": 4.06,
+     "y0": 4.96,
+     "y1": 6.41,
+     "z0": -1.42,
+     "z1": 1.63
+    },
+    {
+     "x0": -4.67,
+     "x1": 4.77,
+     "y0": 6.18,
+     "y1": 8.5,
+     "z0": -1.79,
+     "z1": 1.86
+    }
+   ],
+   "use": "a rock gate: the opening is about 3 wide and 6.4 high and runs along z: set it across a hidden path (yaw so the path runs through it); keep the opening clear; spill of plates to +X",
+   "keepout": 3.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 1,
+   "fbx": "Windrift_Rocks.fbx",
+   "objects": [
+    "Windrift_Rocks_Windgate__Moss",
+    "Windrift_Rocks_Windgate__Slate"
+   ]
+  },
+  "Windrift_Rocks_Fin": {
+   "family": "Rocks",
+   "piece": "Fin",
+   "variant": "",
+   "tris": 196,
+   "materials": {
+    "Slate": 196
+   },
+   "bounds_min": [
+    -4.57,
+    -0.49,
+    -1.34
+   ],
+   "bounds_max": [
+    8.46,
+    7.36,
+    1.33
+   ],
+   "radius": 8.5,
+   "crown_radius": 8.5,
+   "height": 7.36,
+   "collision": [
+    {
+     "x0": -3.27,
+     "x1": -0.05,
+     "y0": 0.42,
+     "y1": 4.16,
+     "z0": -0.52,
+     "z1": 1.03
+    },
+    {
+     "x0": -2.27,
+     "x1": -0.12,
+     "y0": 4.22,
+     "y1": 7.36,
+     "z0": -0.35,
+     "z1": 0.84
+    },
+    {
+     "x0": -1.0,
+     "x1": 1.76,
+     "y0": 0.28,
+     "y1": 4.2,
+     "z0": -1.05,
+     "z1": 0.1
+    },
+    {
+     "x0": 0.34,
+     "x1": 1.56,
+     "y0": 4.23,
+     "y1": 5.81,
+     "z0": -0.69,
+     "z1": -0.01
+    },
+    {
+     "x0": 1.18,
+     "x1": 3.35,
+     "y0": 0.15,
+     "y1": 4.13,
+     "z0": -0.12,
+     "z1": 0.91
+    },
+    {
+     "x0": 3.05,
+     "x1": 4.84,
+     "y0": 0.05,
+     "y1": 3.28,
+     "z0": -0.66,
+     "z1": 0.05
+    },
+    {
+     "x0": 4.44,
+     "x1": 6.04,
+     "y0": 0.0,
+     "y1": 2.11,
+     "z0": -0.04,
+     "z1": 0.66
+    }
+   ],
+   "use": "a comb of five leaning slate fins stepping down from 7.4 to 2.5 toward +X, 14 long: cliff edges and the back of terraces; keep 2 studs clear",
+   "keepout": 2.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "fbx": "Windrift_Rocks.fbx",
+   "objects": [
+    "Windrift_Rocks_Fin__Slate"
+   ]
+  },
+  "Windrift_Rocks_ScreeA": {
+   "family": "Rocks",
+   "piece": "ScreeA",
+   "variant": "A",
+   "tris": 330,
+   "materials": {
+    "Scree": 330
+   },
+   "bounds_min": [
+    -4.8,
+    -0.25,
+    -2.87
+   ],
+   "bounds_max": [
+    4.79,
+    2.25,
+    2.88
+   ],
+   "radius": 4.84,
+   "crown_radius": 4.84,
+   "height": 2.25,
+   "collision": [],
+   "use": "a scree fan 10 x 6: standing shards (up to 2.3 high) at the windward end stepping down to flat chips (under 0.5) downwind, no collision: on slopes and under rock walls",
+   "keepout": 0.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "fbx": "Windrift_Rocks.fbx",
+   "objects": [
+    "Windrift_Rocks_ScreeA__Scree"
+   ]
+  },
+  "Windrift_Rocks_ScreeB": {
+   "family": "Rocks",
+   "piece": "ScreeB",
+   "variant": "B",
+   "tris": 322,
+   "materials": {
+    "Scree": 322
+   },
+   "bounds_min": [
+    -5.77,
+    -0.25,
+    -1.64
+   ],
+   "bounds_max": [
+    4.92,
+    1.97,
+    1.59
+   ],
+   "radius": 5.77,
+   "crown_radius": 5.77,
+   "height": 1.97,
+   "collision": [],
+   "use": "a narrow scree drift 11 x 3.5, three standing shards (up to 2 high) at the windward end then flat chips, no collision: along a path edge or a gully",
+   "keepout": 0.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "fbx": "Windrift_Rocks.fbx",
+   "objects": [
+    "Windrift_Rocks_ScreeB__Scree"
+   ]
+  },
+  "Windrift_Rocks_StepsA": {
+   "family": "Rocks",
+   "piece": "StepsA",
+   "variant": "A",
+   "tris": 228,
+   "materials": {
+    "SlateStep": 228
+   },
+   "bounds_min": [
+    -2.34,
+    -0.52,
+    -7.73
+   ],
+   "bounds_max": [
+    2.09,
+    0.2,
+    7.8
+   ],
+   "radius": 7.8,
+   "crown_radius": 7.8,
+   "height": 0.2,
+   "collision": [],
+   "use": "WALKABLE: four stepping slabs in a line along z, 4.2 apart (a straight way, 16 long); every top is at y 0.20: lay the piece with its origin 0.3 under the wanted top and no collision part (the mesh itself walks); the slabs are tied by buried bars",
+   "keepout": 0.0,
+   "walkable": true,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "walk_top_min": 0.16,
+   "walk_top_max": 0.2,
+   "fbx": "Windrift_Rocks.fbx",
+   "objects": [
+    "Windrift_Rocks_StepsA__SlateStep"
+   ]
+  },
+  "Windrift_Rocks_StepsB": {
+   "family": "Rocks",
+   "piece": "StepsB",
+   "variant": "B",
+   "tris": 288,
+   "materials": {
+    "SlateStep": 288
+   },
+   "bounds_min": [
+    -3.02,
+    -0.53,
+    -8.31
+   ],
+   "bounds_max": [
+    5.44,
+    0.2,
+    7.42
+   ],
+   "radius": 8.84,
+   "crown_radius": 8.84,
+   "height": 0.2,
+   "collision": [],
+   "use": "WALKABLE: five smaller slabs on a slow curve along z (a winding way, 15 long); tops at y 0.20; as StepsA",
+   "keepout": 0.0,
+   "walkable": true,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "walk_top_min": 0.16,
+   "walk_top_max": 0.2,
+   "fbx": "Windrift_Rocks.fbx",
+   "objects": [
+    "Windrift_Rocks_StepsB__SlateStep"
+   ]
+  },
+  "Windrift_Rocks_Cobble": {
+   "family": "Rocks",
+   "piece": "Cobble",
+   "variant": "",
+   "tris": 348,
+   "materials": {
+    "Cobble": 348
+   },
+   "bounds_min": [
+    -1.45,
+    -0.42,
+    -4.55
+   ],
+   "bounds_max": [
+    1.57,
+    0.21,
+    4.87
+   ],
+   "radius": 4.89,
+   "crown_radius": 4.89,
+   "height": 0.21,
+   "collision": [],
+   "use": "WALKABLE: a worn cobble strip 3 wide and 9 long along z, tops at y 0.20 within 0.03; chain end to end",
+   "keepout": 0.0,
+   "walkable": true,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 1,
+   "walk_top_min": 0.179,
+   "walk_top_max": 0.212,
+   "fbx": "Windrift_Rocks.fbx",
+   "objects": [
+    "Windrift_Rocks_Cobble__Cobble"
+   ]
+  },
+  "Windrift_Rocks_PlankWalk": {
+   "family": "Rocks",
+   "piece": "PlankWalk",
+   "variant": "",
+   "tris": 312,
+   "materials": {
+    "Bronze": 192,
+    "Plank": 120
+   },
+   "bounds_min": [
+    -1.58,
+    -0.35,
+    -4.4
+   ],
+   "bounds_max": [
+    1.58,
+    0.31,
+    4.4
+   ],
+   "radius": 4.57,
+   "crown_radius": 4.57,
+   "height": 0.31,
+   "collision": [],
+   "use": "WALKABLE: a plank-and-peg walk 3.2 wide and 8.4 long along z, tops at y 0.20 within 0.02; chain end to end over rough or wet ground",
+   "keepout": 0.0,
+   "walkable": true,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 1,
+   "walk_top_min": 0.02,
+   "walk_top_max": 0.308,
+   "fbx": "Windrift_Rocks.fbx",
+   "objects": [
+    "Windrift_Rocks_PlankWalk__Bronze",
+    "Windrift_Rocks_PlankWalk__Plank"
+   ]
+  },
+  "Windrift_Plants_GaleGrassA": {
+   "family": "Plants",
+   "piece": "GaleGrassA",
+   "variant": "A",
+   "tris": 264,
+   "materials": {
+    "Grass": 264
+   },
+   "bounds_min": [
+    -2.64,
+    -0.13,
+    -2.63
+   ],
+   "bounds_max": [
+    4.19,
+    1.83,
+    3.07
+   ],
+   "radius": 3.95,
+   "crown_radius": 4.3,
+   "height": 1.83,
+   "collision": [],
+   "use": "a patch of gale grass about 7 x 6 (blades combed to +X): open ground and slopes, no collision",
+   "keepout": 0.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 10,
+   "fbx": "Windrift_Plants.fbx",
+   "objects": [
+    "Windrift_Plants_GaleGrassA__Grass"
+   ]
+  },
+  "Windrift_Plants_GaleGrassB": {
+   "family": "Plants",
+   "piece": "GaleGrassB",
+   "variant": "B",
+   "tris": 192,
+   "materials": {
+    "Grass": 192
+   },
+   "bounds_min": [
+    -0.77,
+    -0.12,
+    -1.05
+   ],
+   "bounds_max": [
+    3.43,
+    2.25,
+    1.23
+   ],
+   "radius": 2.11,
+   "crown_radius": 3.48,
+   "height": 2.25,
+   "collision": [],
+   "use": "a tall grass tussock 5 x 2.5, blades to +X: beside rocks and walls, no collision",
+   "keepout": 0.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 4,
+   "fbx": "Windrift_Plants.fbx",
+   "objects": [
+    "Windrift_Plants_GaleGrassB__Grass"
+   ]
+  },
+  "Windrift_Plants_Sedge": {
+   "family": "Plants",
+   "piece": "Sedge",
+   "variant": "",
+   "tris": 198,
+   "materials": {
+    "Reed": 144,
+    "Seed": 54
+   },
+   "bounds_min": [
+    -1.08,
+    -0.2,
+    -1.04
+   ],
+   "bounds_max": [
+    3.71,
+    3.41,
+    1.08
+   ],
+   "radius": 1.44,
+   "crown_radius": 3.78,
+   "height": 3.41,
+   "collision": [],
+   "use": "sedge for the water's edge and wet hollows, 4 tall, no collision",
+   "keepout": 0.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 4,
+   "fbx": "Windrift_Plants.fbx",
+   "objects": [
+    "Windrift_Plants_Sedge__Reed",
+    "Windrift_Plants_Sedge__Seed"
+   ]
+  },
+  "Windrift_Plants_Gorse": {
+   "family": "Plants",
+   "piece": "Gorse",
+   "variant": "",
+   "tris": 270,
+   "materials": {
+    "FlowerOchre": 60,
+    "Gorse": 210
+   },
+   "bounds_min": [
+    -1.77,
+    -0.32,
+    -1.06
+   ],
+   "bounds_max": [
+    2.87,
+    2.39,
+    0.84
+   ],
+   "radius": 1.77,
+   "crown_radius": 2.98,
+   "height": 2.39,
+   "collision": [
+    {
+     "x0": -1.5,
+     "x1": 1.6,
+     "y0": 0.0,
+     "y1": 1.1,
+     "z0": -0.6,
+     "z1": 0.7
+    }
+   ],
+   "use": "a wind-clipped gorse mound with ochre flowers: a big shrub, 4.4 x 2.4; keep 1 stud clear; one box collider",
+   "keepout": 1.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 3,
+   "fbx": "Windrift_Plants.fbx",
+   "objects": [
+    "Windrift_Plants_Gorse__FlowerOchre",
+    "Windrift_Plants_Gorse__Gorse"
+   ]
+  },
+  "Windrift_Plants_Heather": {
+   "family": "Plants",
+   "piece": "Heather",
+   "variant": "",
+   "tris": 198,
+   "materials": {
+    "FlowerRose": 48,
+    "Heather": 150
+   },
+   "bounds_min": [
+    -0.55,
+    -0.2,
+    -0.74
+   ],
+   "bounds_max": [
+    1.88,
+    1.77,
+    0.73
+   ],
+   "radius": 1.83,
+   "crown_radius": 1.96,
+   "height": 1.77,
+   "collision": [],
+   "use": "a heather tuft, small, no collision: rock feet and path sides",
+   "keepout": 0.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 5,
+   "fbx": "Windrift_Plants.fbx",
+   "objects": [
+    "Windrift_Plants_Heather__FlowerRose",
+    "Windrift_Plants_Heather__Heather"
+   ]
+  },
+  "Windrift_Plants_JuniperCreeper": {
+   "family": "Plants",
+   "piece": "JuniperCreeper",
+   "variant": "",
+   "tris": 250,
+   "materials": {
+    "Juniper": 250
+   },
+   "bounds_min": [
+    -0.52,
+    -0.53,
+    -1.93
+   ],
+   "bounds_max": [
+    3.87,
+    1.41,
+    1.84
+   ],
+   "radius": 3.87,
+   "crown_radius": 3.87,
+   "height": 1.41,
+   "collision": [
+    {
+     "x0": -0.2,
+     "x1": 2.9,
+     "y0": 0.0,
+     "y1": 0.8,
+     "z0": -0.9,
+     "z1": 0.9
+    }
+   ],
+   "use": "a creeping dwarf juniper 4.5 long, hugging the ground; a big shrub, one low box collider; keep 1 stud clear",
+   "keepout": 1.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 3,
+   "fbx": "Windrift_Plants.fbx",
+   "objects": [
+    "Windrift_Plants_JuniperCreeper__Juniper"
+   ]
+  },
+  "Windrift_Plants_Cushion": {
+   "family": "Plants",
+   "piece": "Cushion",
+   "variant": "",
+   "tris": 172,
+   "materials": {
+    "FlowerRose": 100,
+    "Moss": 72
+   },
+   "bounds_min": [
+    -1.43,
+    -0.2,
+    -1.41
+   ],
+   "bounds_max": [
+    1.63,
+    1.06,
+    1.14
+   ],
+   "radius": 1.63,
+   "crown_radius": 1.63,
+   "height": 1.06,
+   "collision": [],
+   "use": "a cushion plant with rose-brown stars, 3 across: on rock and path edges, no collision",
+   "keepout": 0.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 8,
+   "fbx": "Windrift_Plants.fbx",
+   "objects": [
+    "Windrift_Plants_Cushion__FlowerRose",
+    "Windrift_Plants_Cushion__Moss"
+   ]
+  },
+  "Windrift_Plants_Stonecrop": {
+   "family": "Plants",
+   "piece": "Stonecrop",
+   "variant": "",
+   "tris": 170,
+   "materials": {
+    "Crassula": 170
+   },
+   "bounds_min": [
+    -1.95,
+    -0.06,
+    -0.92
+   ],
+   "bounds_max": [
+    2.01,
+    0.44,
+    0.88
+   ],
+   "radius": 2.01,
+   "crown_radius": 2.01,
+   "height": 0.44,
+   "collision": [],
+   "use": "stonecrop in a crack, 4 long and under half a stud tall: along a rock's foot or a wall joint, no collision",
+   "keepout": 0.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 8,
+   "fbx": "Windrift_Plants.fbx",
+   "objects": [
+    "Windrift_Plants_Stonecrop__Crassula"
+   ]
+  },
+  "Windrift_Plants_Thistle": {
+   "family": "Plants",
+   "piece": "Thistle",
+   "variant": "",
+   "tris": 162,
+   "materials": {
+    "FlowerRose": 36,
+    "Reed": 126
+   },
+   "bounds_min": [
+    -0.47,
+    -0.21,
+    -0.89
+   ],
+   "bounds_max": [
+    1.59,
+    4.04,
+    1.08
+   ],
+   "radius": 1.52,
+   "crown_radius": 1.59,
+   "height": 4.04,
+   "collision": [],
+   "use": "a mountain thistle, 4 tall: sparse accents among grass, no collision",
+   "keepout": 0.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 5,
+   "fbx": "Windrift_Plants.fbx",
+   "objects": [
+    "Windrift_Plants_Thistle__FlowerRose",
+    "Windrift_Plants_Thistle__Reed"
+   ]
+  },
+  "Windrift_Plants_WindStar": {
+   "family": "Plants",
+   "piece": "WindStar",
+   "variant": "",
+   "tris": 216,
+   "materials": {
+    "FlowerTeal": 84,
+    "Reed": 132
+   },
+   "bounds_min": [
+    -1.0,
+    -0.2,
+    -1.23
+   ],
+   "bounds_max": [
+    1.59,
+    3.2,
+    0.86
+   ],
+   "radius": 1.61,
+   "crown_radius": 1.61,
+   "height": 3.2,
+   "collision": [],
+   "use": "wind stars, a small teal aster, 3 tall: path sides and rock feet, no collision",
+   "keepout": 0.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 5,
+   "fbx": "Windrift_Plants.fbx",
+   "objects": [
+    "Windrift_Plants_WindStar__FlowerTeal",
+    "Windrift_Plants_WindStar__Reed"
+   ]
+  },
+  "Windrift_Plants_LichenA": {
+   "family": "Plants",
+   "piece": "LichenA",
+   "variant": "A",
+   "tris": 180,
+   "materials": {
+    "Lichen": 180
+   },
+   "bounds_min": [
+    -2.09,
+    -0.05,
+    -1.97
+   ],
+   "bounds_max": [
+    2.79,
+    0.07,
+    1.91
+   ],
+   "radius": 2.79,
+   "crown_radius": 2.79,
+   "height": 0.07,
+   "collision": [],
+   "use": "a lichen crust, 5 across and 0.1 high: lay on rock tops or ground (y 0.04), no collision",
+   "keepout": 0.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 3,
+   "fbx": "Windrift_Plants.fbx",
+   "objects": [
+    "Windrift_Plants_LichenA__Lichen"
+   ]
+  },
+  "Windrift_Plants_LichenB": {
+   "family": "Plants",
+   "piece": "LichenB",
+   "variant": "B",
+   "tris": 240,
+   "materials": {
+    "Lichen": 240
+   },
+   "bounds_min": [
+    -4.35,
+    -0.06,
+    -1.41
+   ],
+   "bounds_max": [
+    3.65,
+    0.07,
+    1.66
+   ],
+   "radius": 4.35,
+   "crown_radius": 4.35,
+   "height": 0.07,
+   "collision": [],
+   "use": "a lichen band 8 x 2.5, 0.1 high: along rock faces and ground, no collision",
+   "keepout": 0.0,
+   "walkable": false,
+   "leans": "+X (the prevailing wind: the crown, tail or blades stream toward +X in the piece's own frame)",
+   "plan_count": 2,
+   "fbx": "Windrift_Plants.fbx",
+   "objects": [
+    "Windrift_Plants_LichenB__Lichen"
+   ]
+  }
+ }
+}
