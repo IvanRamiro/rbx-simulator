@@ -1,6 +1,9 @@
 -- The guide arrow (the owner, beta 2026-11-17: "The tutorial arrow must always be positioned above the player's chest, clearly
--- visible and properly aligned with the character"): a small gold 3D arrow that floats just above the player's chest, on the side
--- of what they should go to, and points at it (turning, and tilting up or down a little). It is for the beginner's path only:
+-- visible and properly aligned with the character"; 2026-11-23: "choose a better guiding arrow ... something like a multiple arrow showing the directions", then "the arrow
+-- line that continue moving towards your destination"): a line of gold chevrons (">>>") laid on the ground from just ahead of the player toward what they should go to,
+-- up to 64 studs of it (and no further than the place), each one sliding along the line toward the place, fading in as it leaves the player and out at the line's far
+-- end, so the whole line flows toward the destination. Each chevron stands on the ground under it (a ray down, so a slope or a stair carries the line up with it; over a
+-- gap it runs level to the place) and tilts a little toward the camera, so it reads from behind and from the side. It is for the beginner's path only:
 --   * before anything else, for a player who has not yet talked to Seren the Guide (their GuideMet setting is false: World/GuideService; the owner, 2026-11-23: "you can guide
 --     them to talk with the NPC"): Seren herself, on the spawn plaza, until they stand by her;
 --   * the quest's place (its Way in GameConfig.Quests, then its Then once the player has been there, as the quest's marker does:
@@ -8,8 +11,8 @@
 --   * while the guardian is weak and they can take an egg (their CanTakeEgg), the nearest stand holding an egg their rank can carry;
 --   * while they carry an egg, the way home (the guardian's SafeZone).
 -- It hides at the place, while a window is open (Hud steps the dock aside), during the hatch cinematic, in first person, and when
--- the player hid the quest; it fades out for good once the beginner's quests are done (through "JadeBridge"). One model, drawn in
--- front of everything by its Highlight (the character never hides it), one RenderStepped. Reduced Effects: no bob, no pulse.
+-- the player hid the quest; it fades out for good once the beginner's quests are done (through "JadeBridge"). One model of 21 chevrons (neon parts, no script of its own),
+-- one RenderStepped. Reduced Effects: the line stands still.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,7 +23,6 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
-local UiTheme = require(UI:WaitForChild("UiTheme"))
 
 local player = Players.LocalPlayer
 local QUESTS = GameConfig.Quests
@@ -34,68 +36,45 @@ for index, quest in QUESTS do
     end
 end
 
-local GOLD = UiTheme.Colors.Highlight
 local CORE = Color3.fromRGB(255, 184, 52) -- the neon's own colour: deeper than the HUD's gold, which neon washed to white
-local RIM = Color3.fromRGB(255, 246, 214)
-local HEIGHT_OVER_CHEST = 0.45 -- studs over the chest's top
-local OUT = 2.3               -- studs out from the chest's middle, toward the place
-local MAX_TILT = math.rad(30) -- it tilts toward a place above or below, at most this
+local START = 3.2            -- studs from the player to where the line begins
+local GAP = 3.4              -- studs between one chevron and the next
+local REACH = 64             -- the longest the line runs
+local SPEED = 6              -- studs a second the chevrons slide toward the place
+local LIFT = 2.0             -- studs a chevron floats over the ground under it (clear of the tall grass, about a body's waist)
+local LEAN = 0.85            -- how much a chevron turns its face toward the camera (0 lies flat on the ground, 1 faces the camera square on)
+local CHEVRONS = math.ceil(REACH / GAP) + 2
 local WAY_NEAR = 25           -- studs: at a quest's place it hides (the quest's own marker goes there too)
 local THEN_REACHED = 60       -- studs from a Way that count as having been there (QuestController's WAY_MARKER_NEAR)
 local STAND_NEAR = 7          -- studs from a stand: its prompt has taken over
 local FADE = 5                -- alpha per second
 
 -- ---------- the arrow ----------
--- It points along its -Z: a square shaft and a head of four wedges in a cross, so it reads as an arrow from any side.
+-- A chevron points along its -Z: two flat bars meeting at the tip and opening backward (a ">" seen from above), so it reads from behind and above as a clear arrowhead.
 local model = Instance.new("Model")
 model.Name = "GuideArrow"
-local function piece(class, size, cframe)
-    local part = Instance.new(class)
-    part.Size = size
-    part.CFrame = cframe
+local BAR_LEN, BAR_W, BAR_THICK, BAR_ANGLE = 2.1, 0.5, 0.14, math.rad(42)
+local chevrons = {} -- [index] = { parts = { left, right }, local_ = their frames in the chevron's own, shown = the light last set }
+local function bar(parent, side)
+    local direction = Vector3.new(side * math.sin(BAR_ANGLE), 0, math.cos(BAR_ANGLE))
+    local centre = direction * (BAR_LEN / 2 - 0.12) + Vector3.new(0, 0, -0.12) -- (a touch forward, so the bars cross at the tip and leave no notch)
+    local part = Instance.new("Part")
+    part.Name = "Bar"
+    part.Size = Vector3.new(BAR_W, BAR_THICK, BAR_LEN)
     part.Material = Enum.Material.Neon
     part.Color = CORE
     part.CanCollide, part.CanQuery, part.CanTouch = false, false, false
     part.CastShadow = false
     part.Massless = true
-    part.Anchored = false
-    part.Parent = model
+    part.Anchored = true
+    part.Transparency = 1
+    part.CFrame = CFrame.lookAt(centre, centre + direction) -- (local until the chevron is placed: the placement multiplies this in)
+    part.Parent = parent
     return part
 end
-local SHAFT, HEAD, WING, THICK = 1.0, 1.0, 0.62, 0.2
-local SHAFT_FROM_MIDDLE = 0.5 -- the arrow runs from -0.95 (its tip) to 1.05: the shaft's middle is this far behind the arrow's
-local shaft = piece("Part", Vector3.new(0.3, 0.3, SHAFT), CFrame.new(0, 0, SHAFT / 2 + 0.05))
-shaft.Name = "Shaft"
-shaft.Anchored = true
-model.PrimaryPart = shaft
--- a wedge's slope runs from its back (+Z, full height) down to its front: laid on its side, its low edge on the arrow's middle
--- line and its tall end out to one side, two make the head flat and two more stand across it
-local headZ = -HEAD / 2 + 0.05
-for _, side in {
-    { Vector3.new(0, -1, 0), Vector3.new(1, 0, 0) },  -- right
-    { Vector3.new(0, 1, 0), Vector3.new(-1, 0, 0) },  -- left
-    { Vector3.new(1, 0, 0), Vector3.new(0, 1, 0) },   -- up
-    { Vector3.new(-1, 0, 0), Vector3.new(0, -1, 0) }, -- down
-} do
-    local across, out = side[1], side[2]
-    local wedge = piece("WedgePart", Vector3.new(THICK, WING, HEAD), CFrame.fromMatrix(out * WING / 2 + Vector3.new(0, 0, headZ), across, out))
-    wedge.Name = "Head"
-    local weld = Instance.new("Weld")
-    weld.Part0, weld.Part1 = shaft, wedge
-    weld.C0 = shaft.CFrame:Inverse() * wedge.CFrame
-    weld.Parent = wedge
-end
-local glow = Instance.new("Highlight") -- drawn over everything, so the character never hides it
-glow.FillColor = GOLD
-glow.OutlineColor = RIM
-glow.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-glow.Adornee = model
-glow.Parent = model
-local parts = {}
-for _, part in model:GetChildren() do
-    if part:IsA("BasePart") then
-        table.insert(parts, part)
-    end
+for index = 1, CHEVRONS do
+    local left, right = bar(model, -1), bar(model, 1)
+    chevrons[index] = { parts = { left, right }, local_ = { left.CFrame, right.CFrame }, shown = 1 }
 end
 
 -- ---------- where it points ----------
@@ -195,21 +174,26 @@ end
 
 -- ---------- each frame ----------
 local alpha = 0
-local facing = nil -- the rotation shown, eased toward the goal
+local lastToward = nil -- where it was last pointed (it stays so while it fades out)
 local connection
 
-local shownAlpha = -1
-local function setAlpha(value)
-    if value == shownAlpha then
+-- one chevron's light (0 to 1, with the line's fade and the chevron's own fade in and out already in it)
+local function lightChevron(chevron, value)
+    value = math.clamp(value, 0, 1)
+    if math.abs(value - chevron.shown) < 0.01 then
         return
     end
-    shownAlpha = value
-    for _, part in parts do
-        part.Transparency = 1 - value * 0.95
+    chevron.shown = value
+    for _, part in chevron.parts do
+        part.Transparency = 1 - value * 0.92
     end
-    glow.FillTransparency = 1 - value * 0.35
-    glow.OutlineTransparency = 1 - value * 0.9
-    glow.Enabled = value > 0.01
+end
+local function setAlpha(value)
+    if value <= 0 then
+        for _, chevron in chevrons do
+            lightChevron(chevron, 0)
+        end
+    end
 end
 setAlpha(0)
 model.Parent = Workspace
@@ -253,22 +237,43 @@ connection = RunService.RenderStepped:Connect(function(dt)
         return
     end
     -- (while it fades out it stays where it was last pointed)
-    local toward = if goal then goal - chest.Position else nil
+    local toward = if goal then goal - chest.Position else lastToward
+    lastToward = toward
     local across = toward and flat(toward)
     if not (across and across.Magnitude > 0.05) then
         return
     end
     local still = player:GetAttribute("SettingReducedEffects") == true
     local now = os.clock()
-    local bob = if still then 0 else 0.16 * math.sin(now * 2.6)
-    local centre = chest.Position + Vector3.new(0, chest.Size.Y / 2 + HEIGHT_OVER_CHEST + bob, 0) + across.Unit * OUT
-    local tilt = math.clamp(math.atan2(toward.Y, across.Magnitude), -MAX_TILT, MAX_TILT)
-    local aim = CFrame.lookAt(Vector3.zero, across.Unit) * CFrame.Angles(tilt, 0, 0)
-    facing = if facing then facing:Lerp(aim, 1 - math.exp(-12 * dt)) else aim
-    -- a small push toward the place, so it reads as "this way"
-    local push = if still then 0 else 0.12 * math.sin(now * 4)
-    shaft.CFrame = CFrame.new(centre) * facing * CFrame.new(0, 0, SHAFT_FROM_MIDDLE - push)
-    if not still then
-        glow.FillTransparency = 1 - alpha * (0.3 + 0.1 * math.sin(now * 3))
+    local reach = across.Magnitude
+    local flatDirection = across.Unit
+    local feet = Vector3.new(root.Position.X, root.Position.Y - 2.6, root.Position.Z) -- (their feet's height: where a stretch with no ground runs level from)
+    local last = math.min(REACH, reach - 1) -- the line's far end
+    local slide = if still then 0 else (now * SPEED) % GAP
+    local camera_ = camera.CFrame
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = { character, model }
+    params.RespectCanCollide = true -- (only what a body can stand on: terrain, floors, bridges; not a leaf or a banner)
+    for index, chevron in chevrons do
+        local distance = START + slide + (index - 1) * GAP
+        local light = alpha * math.clamp((distance - START) / GAP, 0, 1) * math.clamp((last - distance) / (GAP * 2), 0, 1)
+        if light <= 0 or distance > last then
+            lightChevron(chevron, 0)
+            continue
+        end
+        lightChevron(chevron, light)
+        local x, z = root.Position.X + flatDirection.X * distance, root.Position.Z + flatDirection.Z * distance
+        local hit = Workspace:Raycast(Vector3.new(x, root.Position.Y + 14, z), Vector3.new(0, -34, 0), params)
+        local y = if hit then hit.Position.Y else feet.Y + (goal.Y - feet.Y) * math.clamp(distance / math.max(reach, 1), 0, 1)
+        local at = Vector3.new(x, y + LIFT, z)
+        -- the face turns a little toward the camera: its normal is between straight up and the way to the camera, kept square to the line's direction
+        local toCamera = (camera_.Position - at).Unit
+        local blend = (Vector3.yAxis * (1 - LEAN) + toCamera * LEAN)
+        local up = blend - flatDirection * blend:Dot(flatDirection)
+        up = if up.Magnitude > 0.05 then up.Unit else Vector3.yAxis
+        local frame = CFrame.fromMatrix(at, flatDirection:Cross(up).Unit, up, -flatDirection)
+        chevron.parts[1].CFrame = frame * chevron.local_[1]
+        chevron.parts[2].CFrame = frame * chevron.local_[2]
     end
 end)
