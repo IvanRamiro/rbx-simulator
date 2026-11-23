@@ -2771,8 +2771,19 @@ WorldBuilder.Falls = {
 
 -- A liquid pouring off `lip`: a short arc, then a long fall fading into the sky with a wider, fainter
 -- sheen scrolling at another speed, and mist drifting off it.
-function WorldBuilder.buildWaterfall(parent, lip, from, look)
+-- A fall: a few beams of water over a lip, a mist, a spray at the lip. `opts` (all optional; the default is the 52-stud fall off an island's edge):
+--   Drop      how far the water falls. Under 40 it falls almost straight down the face (a cliff's fall); otherwise it leaves the island in an arc
+--   Scale     width of every water beam as a multiple of the default (2.4 studs at the lip)
+--   Curtains  how many curtains hang side by side across the lip (each as wide as one Scale'd fall, so the whole lip is about 2.4 x Scale x Curtains studs)
+--   Splash    true: a splash and a foam mist where it lands (the fall's own bottom)
+function WorldBuilder.buildWaterfall(parent, lip, from, look, opts)
+    opts = opts or {}
+    local scale = opts.Scale or 1
+    local curtains = math.max(1, opts.Curtains or 1)
+    local drop = opts.Drop or 52
+    local short = drop < 40
     local out = Vector3.new(lip.X - from.X, 0, lip.Z - from.Z).Unit
+    local side = Vector3.new(-out.Z, 0, out.X) -- horizontal, along the lip
     local holder = marker(look.Name, Vector3.new(1, 1, 1), CFrame.new(lip), parent)
     local function attach(name, offset)
         local a = Instance.new("Attachment")
@@ -2781,15 +2792,16 @@ function WorldBuilder.buildWaterfall(parent, lip, from, look)
         a.WorldPosition = lip + offset
         return a
     end
-    local top = attach("Lip", out * 0.4)
-    local bend = attach("Bend", out * 3.2 + Vector3.new(0, -5, 0))
-    local bottom = attach("Bottom", out * 5.5 + Vector3.new(0, -52, 0))
+    -- where the water bends over the lip and where it ends (a short fall hugs the face; the default leaves in an arc)
+    local bendOut, bendDown = if short then 1.2 else 3.2, if short then math.min(2, drop * 0.2) else 5
+    local bottomOut = if short then 1.8 else 5.5
+    local mistOut, mistDown = if short then 2.0 else 4.5, if short then drop * 0.85 else 16
 
     local function beam(name, a0, a1, w0, w1, transparency, speed, length)
         local b = Instance.new("Beam")
         b.Name = name
         b.Attachment0, b.Attachment1 = a0, a1
-        b.Width0, b.Width1 = w0, w1
+        b.Width0, b.Width1 = w0 * scale, w1 * scale
         b.FaceCamera = true
         b.Texture = WorldBuilder.WaterfallTexture
         b.TextureMode = Enum.TextureMode.Wrap
@@ -2803,17 +2815,28 @@ function WorldBuilder.buildWaterfall(parent, lip, from, look)
         b.Parent = holder
         return b
     end
-    beam("LipCore", top, bend, 2.4, 2.6, NumberSequence.new(0.05, 0.1), 1.6, 4)
-    beam("FallCore", bend, bottom, 2.6, 4.2, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(0.45, 0.3), NumberSequenceKeypoint.new(1, 1) }), 1.6, 6)
-    beam("FallSheen", bend, bottom, 3.6, 6.5, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(0.5, 0.7), NumberSequenceKeypoint.new(1, 1) }), 2.3, 9)
+    local bottom
+    for c = 1, curtains do
+        local across = side * ((c - (curtains + 1) / 2) * 2.4 * scale) -- each curtain's own place along the lip (they touch, so together they read as one wide fall)
+        local suffix = if curtains > 1 then tostring(c) else ""
+        local top = attach("Lip" .. suffix, across + out * 0.4)
+        local bend = attach("Bend" .. suffix, across + out * bendOut + Vector3.new(0, -bendDown, 0))
+        local foot = attach("Bottom" .. suffix, across + out * bottomOut + Vector3.new(0, -drop, 0))
+        bottom = bottom or foot
+        local speed = 1 + 0.25 * ((c - 1) % 3) -- (a different pace in each curtain, so a wide fall doesn't read as one stamped strip)
+        beam("LipCore" .. suffix, top, bend, 2.4, 2.6, NumberSequence.new(0.05, 0.1), 1.6 * speed, 4)
+        beam("FallCore" .. suffix, bend, foot, 2.6, if short then 3.4 else 4.2, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(0.45, 0.3), NumberSequenceKeypoint.new(1, 1) }), 1.6 * speed, 6)
+        beam("FallSheen" .. suffix, bend, foot, 3.6, if short then 4.8 else 6.5, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(0.5, 0.7), NumberSequenceKeypoint.new(1, 1) }), 2.3 * speed, 9)
+    end
+    local bend = holder:FindFirstChild("Bend") or holder:FindFirstChild("Bend" .. math.ceil(curtains / 2))
 
-    local mistAt = attach("Mist", out * 4.5 + Vector3.new(0, -16, 0))
+    local mistAt = attach("Mist", out * mistOut + Vector3.new(0, -mistDown, 0))
     local mist = Instance.new("ParticleEmitter")
     mist.Name = "Mist"
     mist.Texture = "rbxasset://textures/particles/smoke_main.dds"
     mist.Color = ColorSequence.new(look.Mist)
     mist.LightInfluence = 0.6
-    mist.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2), NumberSequenceKeypoint.new(1, 7) })
+    mist.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2 * math.sqrt(scale)), NumberSequenceKeypoint.new(1, 7 * math.sqrt(scale)) })
     mist.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.82), NumberSequenceKeypoint.new(1, 1) })
     mist.Lifetime = NumberRange.new(3, 5)
     mist.Speed = NumberRange.new(1, 2.5)
@@ -2821,7 +2844,7 @@ function WorldBuilder.buildWaterfall(parent, lip, from, look)
     mist.EmissionDirection = Enum.NormalId.Bottom
     mist.Rotation = NumberRange.new(0, 360)
     mist.RotSpeed = NumberRange.new(-15, 15)
-    mist.Rate = 5
+    mist.Rate = math.min(12, 5 * math.sqrt(scale) * math.sqrt(curtains))
     mist.Parent = mistAt
 
     local spray = Instance.new("ParticleEmitter")
@@ -2834,8 +2857,40 @@ function WorldBuilder.buildWaterfall(parent, lip, from, look)
     spray.Speed = NumberRange.new(2, 4)
     spray.SpreadAngle = Vector2.new(35, 35)
     spray.Acceleration = Vector3.new(0, -20, 0)
-    spray.Rate = 14
+    spray.Rate = math.min(30, 14 * math.sqrt(scale * curtains))
     spray.Parent = bend
+
+    if opts.Splash and bottom then
+        -- where it lands: spray thrown up and out of the pool, and a low foam that spreads over the water (a beam's own end hides in the mist otherwise)
+        local splash = Instance.new("ParticleEmitter")
+        splash.Name = "Splash"
+        splash.Color = ColorSequence.new(look.Spray)
+        splash.LightEmission = look.SprayEmission
+        splash.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(0.4, 0.9), NumberSequenceKeypoint.new(1, 0) })
+        splash.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+        splash.Lifetime = NumberRange.new(0.6, 1.1)
+        splash.Speed = NumberRange.new(5, 11)
+        splash.SpreadAngle = Vector2.new(50, 50)
+        splash.EmissionDirection = Enum.NormalId.Top
+        splash.Acceleration = Vector3.new(0, -26, 0)
+        splash.Rate = math.min(28, 10 * math.sqrt(scale * curtains))
+        splash.Parent = bottom
+        local foam = Instance.new("ParticleEmitter")
+        foam.Name = "Foam"
+        foam.Texture = "rbxasset://textures/particles/smoke_main.dds"
+        foam.Color = ColorSequence.new(look.Mist)
+        foam.LightInfluence = 0.5
+        foam.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 3 * math.sqrt(scale)), NumberSequenceKeypoint.new(1, 8 * math.sqrt(scale)) })
+        foam.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.25, 0.75), NumberSequenceKeypoint.new(1, 1) })
+        foam.Lifetime = NumberRange.new(2.5, 4)
+        foam.Speed = NumberRange.new(1, 3)
+        foam.SpreadAngle = Vector2.new(85, 85)
+        foam.EmissionDirection = Enum.NormalId.Top
+        foam.Rotation = NumberRange.new(0, 360)
+        foam.RotSpeed = NumberRange.new(-20, 20)
+        foam.Rate = math.min(10, 4 * math.sqrt(scale * curtains))
+        foam.Parent = bottom
+    end
     return holder
 end
 

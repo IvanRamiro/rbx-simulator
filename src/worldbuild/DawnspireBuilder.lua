@@ -20,7 +20,7 @@
 --   Territory/Rocks       the scholar's rocks
 --   Territory/Colliders   invisible Plastic boxes (one material, one batch): floors, steps, walls, columns, bridges, trunks, rocks
 --   Territory/Spots       markers: MasterSpot, RegentDisplay, ExhibitDoor, the NPC places (Npc*), the garden and the yard; tags are set (see buildSpots)
---   Territory/Falls       three waterfalls (WorldBuilder.buildWaterfall); Territory/Lights six PointLights; the Regent's static clone when ServerStorage.Weapons has it
+--   Territory/Falls       three waterfalls (WorldBuilder.buildWaterfall); Territory/Lights six PointLights and four warm fills (2026-11-23); the Regent's static clone when ServerStorage.Weapons has it
 --   Approach/Zones        Route and Check zones over every new terrace, stair and bridge, so nobody who falls from them is lost (WorldService reads them at start)
 -- It also deletes what the first foundation borrowed on the Orthodox side (Dress.Blossom, the two Orthodox waterfalls, OrthodoxPad.Hall.Trees): replace means delete.
 -- Every instance it makes is nested under Territory except the zones; build() can be run again (it removes Territory first).
@@ -171,6 +171,16 @@ local function buildSpots(territory, frame)
     end
 end
 
+-- Warm fill for the rooms the sky does not reach (the 2026-11-23 polish: the exhibition hall, the Master's house and the tea pavilion read cold and over-blue under the
+-- bluish ambient light). Each sits above a marker of the placements (H.Spots, in the pad's frame): a place, an offset, and `Between` (the middle of two markers).
+local FILL = { Color = Color3.fromRGB(255, 214, 160), Range = 15, Brightness = 0.8 }
+local FILL_LIGHTS = {
+    { Name = "FillExhibitBack", Spot = "RegentDisplay", Offset = Vector3.new(0, 5, 0) },
+    { Name = "FillExhibitMid", Between = { "ExhibitDoor", "RegentDisplay" }, Offset = Vector3.new(0, 5.5, 0) },
+    { Name = "FillHouse", Spot = "MasterSpot", Offset = Vector3.new(0, 5, 0) },
+    { Name = "FillTea", Spot = "TeaTable1", Offset = Vector3.new(0, 5, 0) },
+}
+
 local function buildLights(territory, frame)
     local lights = folder(territory, "Lights")
     for index, l in H.Lights do
@@ -178,7 +188,13 @@ local function buildLights(territory, frame)
         m.Material = Enum.Material.Plastic
         WorldBuilder.addLight(m, Color3.fromRGB(l.Color[1], l.Color[2], l.Color[3]), l.Range, l.Brightness)
     end
-    return #H.Lights
+    for _, l in FILL_LIGHTS do
+        local at = if l.Between then (H.Spots[l.Between[1]].Position + H.Spots[l.Between[2]].Position) / 2 else H.Spots[l.Spot].Position
+        local m = WorldBuilder.marker(l.Name, Vector3.new(0.4, 0.4, 0.4), frame * CFrame.new(at + l.Offset), lights)
+        m.Material = Enum.Material.Plastic
+        WorldBuilder.addLight(m, FILL.Color, FILL.Range, FILL.Brightness)
+    end
+    return #H.Lights + #FILL_LIGHTS
 end
 
 local function buildFalls(territory, frame)
@@ -310,6 +326,15 @@ function DawnspireBuilder.build()
     local frame = padFrame()
     local removed = removeSuperseded(root, frame)
     local territory = folder(pad, "Territory")
+    -- where the territory is and how far its air reaches (DawnspireLife.client reads these: petals drift only inside it)
+    local sum = Vector3.zero
+    local count = 0
+    for _, spot in H.Spots do
+        sum += frame:PointToWorldSpace(spot.Position)
+        count += 1
+    end
+    territory:SetAttribute("Centre", sum / math.max(1, count))
+    territory:SetAttribute("Radius", 150)
     local placed, missing = buildKit(territory, frame)
     local boxes = buildColliders(territory, frame)
     buildSpots(territory, frame)
@@ -361,7 +386,7 @@ function DawnspireBuilder.check()
     end
     local blossom = root:FindFirstChild("Dress") and root.Dress:FindFirstChild("Blossom")
     local hallTrees = pad:FindFirstChild("Hall") and pad.Hall:FindFirstChild("Trees")
-    return string.format("%d MeshParts (%d that collide or answer queries: must be 0; %d whose mesh is not one of Dawnspire's own templates: must be 0), %d PointLights (at most 6), "
+    return string.format("%d MeshParts (%d that collide or answer queries: must be 0; %d whose mesh is not one of Dawnspire's own templates: must be 0), %d PointLights (at most 10: the first 6 and the 4 warm fills), "
         .. "%d collision boxes, %d zones, borrowed Blossom trees left: %d (must be 0)", meshes, collides, foreign, lights, boxes and #boxes:GetChildren() or 0, zones,
         (blossom and #blossom:GetChildren() or 0) + (hallTrees and #hallTrees:GetChildren() or 0))
 end

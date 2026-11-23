@@ -373,17 +373,9 @@ local function buildFalls(root, frame)
     for _, f in H.Falls do
         local lip = frame:PointToWorldSpace(f.Lip)
         local from = frame:PointToWorldSpace(f.From)
-        local holder = WorldBuilder.buildWaterfall(folder, lip, from, WorldBuilder.Falls.Water)
+        -- (Drop: how far it falls; Scale, Curtains and Splash are optional: a wide fall is several curtains side by side, see WorldBuilder.buildWaterfall)
+        local holder = WorldBuilder.buildWaterfall(folder, lip, from, WorldBuilder.Falls.Water, { Drop = f.Drop, Scale = f.Scale, Curtains = f.Curtains, Splash = f.Splash })
         holder.Name = f.Name
-        if f.Drop < 40 then -- buildWaterfall pours off an island's edge (a 52-stud fall): shorten it to this fall's drop
-            local out = Vector3.new(lip.X - from.X, 0, lip.Z - from.Z).Unit
-            local bend, bottom, mist = holder:FindFirstChild("Bend"), holder:FindFirstChild("Bottom"), holder:FindFirstChild("Mist")
-            if bend and bottom and mist then
-                bend.WorldPosition = lip + out * 1.2 + Vector3.new(0, -math.min(2, f.Drop * 0.2), 0)
-                bottom.WorldPosition = lip + out * 1.8 + Vector3.new(0, -f.Drop, 0)
-                mist.WorldPosition = lip + out * 2.0 + Vector3.new(0, -f.Drop * 0.85, 0)
-            end
-        end
     end
     return #H.Falls
 end
