@@ -8,8 +8,9 @@
 -- thrust and a sweeping slash with its own reach (WeaponKinds.Spear.Slash); the server keeps the count,
 -- so a client can't choose the wider reach. A landing strike
 -- fires Combat.Hit; every strike is relayed to all clients (CombatEvent: striker, kind ("Palm",
--- "Sword" or "Spear"), hit position or nil, a spear's step in its combo or nil, and for a strike that
--- landed: its damage (a whole number), true if it was critical, and the target it struck).
+-- "Sword" or "Spear"), hit position or nil, the strike's step in its weapon's combo (shared/ComboRules: the same
+-- chain on every client), and for a strike that landed: its damage (a whole number), true if it was critical, and the
+-- target it struck).
 --
 -- A landing strike may be critical (GameConfig.Combat.Crit): rolled here, never by a client.
 --
@@ -26,17 +27,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
+local ComboRules = require(ReplicatedStorage:WaitForChild("ComboRules"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Combat = require(script.Parent:WaitForChild("Combat"))
 local MovementGuard = require(script.Parent.Parent:WaitForChild("Security"):WaitForChild("MovementGuard"))
 
 local COOLDOWN_SLACK = 0.15 -- the share of a cooldown a request may come early: latency, not cheating
-local lastStrike = {}
+local lastStrike = {} -- [player] = { Weapon, Step, At } (ComboRules): the chain's last strike
 -- [player] = when their next strike is due. It moves on by a whole cooldown from when the last was
 -- due, not from when it arrived, so coming early can't add up: a client firing as early as the slack
 -- allows gets the same strikes a second as anyone else.
 local nextStrike = {}
-local spearSlashNext = {} -- [player] = true: their last strike was a thrust, inside the combo window
 local roll = Random.new() -- critical strikes
 
 do
@@ -171,11 +172,10 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
         return
     end
     nextStrike[player] = math.max(now, due or 0) + strike.Cooldown
-    local continuing = strike.ComboWindow and lastStrike[player] and now - lastStrike[player] < strike.ComboWindow
-    lastStrike[player] = now
-    -- a spear's combo: a thrust, then a slash
-    local slashing = strike.Slash ~= nil and continuing and spearSlashNext[player] == true
-    spearSlashNext[player] = strike.Slash ~= nil and not slashing or nil
+    -- the chain (ComboRules): which strike of its weapon's combo this is, the same for every client. A spear's second strike is its slash.
+    local step = ComboRules.step(strike.Kind, lastStrike[player], now)
+    lastStrike[player] = { Weapon = strike.Kind, Step = step, At = now }
+    local slashing = strike.Slash ~= nil and step == 2
     -- from sword flight a strike swings but can't land: guardians can't reach a flyer, so a flyer
     -- can't reach them
     local target, point = nil, nil
@@ -189,13 +189,11 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
         damage = strike.Damage * Combat.powerOf(player) * (if critical then crit.Multiplier else 1)
         Combat.Hit:Fire(player, target, damage, point)
     end
-    RemoteEvents.CombatEvent:FireAllClients(player, strike.Kind, point, if strike.Slash then (if slashing then 2 else 1) else nil,
-        if damage then math.round(damage) else nil, critical or nil, target)
+    RemoteEvents.CombatEvent:FireAllClients(player, strike.Kind, point, step, if damage then math.round(damage) else nil, critical or nil, target)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
     lastDraw[player], pendingDraw[player] = nil, nil
     lastStrike[player] = nil
     nextStrike[player] = nil
-    spearSlashNext[player] = nil
 end)

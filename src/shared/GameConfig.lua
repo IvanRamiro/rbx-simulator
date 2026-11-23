@@ -291,6 +291,7 @@ local GameConfig = {
             Element = "Fire",
             MaxHealth = 3200,      -- a Qi Awakener's starter sword (~24 a strike) weakens it alone in ~120 strikes
             WeakenedAt = 0.1,
+            AwakenTime = 2.8,      -- its Awaken clip is 2.8 s (the wings unfold at 1.5 to 2.0): the first Wing Scythe waits until it stands (default 1.6)
             HitRadius = 13,        -- its body: the chest and the folded wings
             EngageRadius = 28,     -- the egg pedestals stand just outside it (31)
             LeashRadius = 62,

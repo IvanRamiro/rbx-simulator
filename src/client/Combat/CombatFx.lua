@@ -43,6 +43,7 @@ local Workspace = game:GetService("Workspace")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local ComboRules = require(ReplicatedStorage:WaitForChild("ComboRules"))
 local AuraKit = require(script.Parent.Parent:WaitForChild("Auras"):WaitForChild("AuraKit"))
 local QinggongFx = require(script.Parent.Parent:WaitForChild("Qinggong"):WaitForChild("QinggongFx"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
@@ -140,7 +141,6 @@ local SPEAR_LOW_TIME = 1.4 -- seconds a spear stays in its low stance after a th
 local GRIP_TURN = { Sword = CFrame.Angles(math.rad(80), 0, 0), Spear = CFrame.identity }
 local PUNCHES = { WeaponClips.Clips.PunchRight, WeaponClips.Clips.PunchLeft } -- bare hands: right, then left
 local PUNCH_TIMINGS = { timingOf("PunchRight", PUNCHES[1]), timingOf("PunchLeft", PUNCHES[2]) }
-local PUNCH_WINDOW = 1.1 -- seconds in which the next punch uses the other hand
 local SWING = { Palm = "PalmStrike" } -- a strike's sound at once (SoundCatalog; a weapon's plays with its blow)
 -- where a strike lands (landHit), by the kind of blow
 local HIT_SOUND = { Cut = "BladeHit", Pierce = "SpearHit", Blunt = "PalmHit" }
@@ -161,10 +161,16 @@ local BLOWS = {
     Palm = { Stop = 0.040, Shake = { 0.35, 0.12 }, Kick = 0.35 },        -- 2.4 f
     SwordA = { Stop = 0.055, Shake = { 0.40, 0.12 }, Kick = 0.45 },      -- 3.3 f
     SwordB = { Stop = 0.055, Shake = { 0.40, 0.12 }, Kick = 0.45 },
-    SwordC = { Stop = 0.100, Shake = { 0.80, 0.18 }, Kick = 0.9 },       -- 6 f: the finisher
-    Thrust = { Stop = 0.090, Shake = { 0.60, 0.16 }, Kick = 0.75 },      -- 5.4 f: the spear's heavy blow
-    SpearSlash = { Stop = 0.065, Shake = { 0.45, 0.14 }, Kick = 0.5 },   -- 3.9 f
+    SwordC = { Stop = 0.100, Shake = { 0.80, 0.18 }, Kick = 0.9, Punch = 2.0 },       -- 6 f: the finisher
+    Thrust = { Stop = 0.090, Shake = { 0.60, 0.16 }, Kick = 0.75, Punch = 1.4 },      -- 5.4 f: the spear's heavy blow
+    SpearSlash = { Stop = 0.065, Shake = { 0.45, 0.14 }, Kick = 0.5, Punch = 1.0 },   -- 3.9 f: the spear's finisher
 }
+-- Punch: how many degrees a blow narrows the player's own field of view as it lands (GuardianFx.punch): the camera leans in on a chain's
+-- last blow, a thrust, a critical strike (CRIT_PUNCH at least, 1.5 times a heavy blow's own, to PUNCH_MAX). Held for PUNCH_TIME seconds.
+local CRIT_PUNCH, PUNCH_MAX, PUNCH_TIME = 1.2, 3.2, 0.24
+-- The hit's sound is pitched up a little at each step of a chain, so a combo climbs as it goes, and the finisher drops under it, heavier
+-- (the sword's overhead, with its thump below it; the spear's slash was already pitched down). By weapon, then step.
+local HIT_LADDER = { Sword = { 1, 1.07, 0.9 }, Spear = { 1, 0.8 }, Palm = { 1, 1.06 } }
 local CRIT_STOP, CRIT_STOP_MAX = 1.4, 0.12
 local CRIT_SHAKE, CRIT_SHAKE_MAX = 1.5, { 1.2, 0.24 }
 local TIER_STEP = 0.02 -- a weapon of tier n shows (1 + TIER_STEP * (n - 1)) as big: 1.0 for the first realm, 1.22 for the twelfth
@@ -180,6 +186,7 @@ fxFolder.Name = "CombatFx"
 fxFolder.Parent = Workspace
 
 local COMBO_STEPS = { Sword = #SLASHES, Spear = 2 } -- how many strikes each weapon's combo has
+assert(COMBO_STEPS.Sword == ComboRules.Steps.Sword and COMBO_STEPS.Spear == ComboRules.Steps.Spear, "CombatFx's slashes and ComboRules' steps disagree")
 local strikes = {} -- [player] = { weapon, started, untilTime, step (its place in the weapon's combo), palette (what it draws with),
                    -- holdAt, holdUntil (a hit-stop: its clip holds at holdAt seconds until then) }
 local combos = {}  -- [player] = { weapon, step, at }: their last strike in a combo
@@ -905,6 +912,21 @@ local function criticalFlare(holder, power)
     }):Emit(1)
 end
 
+-- whether the strike is the last blow of a weapon's chain (a nil strike, the blunt burst with no strike behind it, is not; nor is a fist's
+-- second punch: bare hands have no heavy blow to end on)
+local function finisherOf(strike)
+    return strike ~= nil and strike.weapon ~= "Palm" and ComboRules.isFinisher(strike.weapon, strike.step)
+end
+
+-- how far a blow narrows the player's own view as it lands (GuardianFx.punch), in degrees: nothing for a chain's early blows
+local function punchOf(strike, critical, size)
+    local punch = if strike then (BLOWS[nameOf(strike)].Punch or 0) else 0
+    if critical then
+        punch = math.min(math.max(punch * CRIT_SHAKE, CRIT_PUNCH), PUNCH_MAX)
+    end
+    return punch * size
+end
+
 -- strike: the striker's strike as the server's answer came (nil if they had none: the blunt burst).
 -- info: { damage, critical, target } from the server, or { target, predicted = true } for a blow shown before its answer.
 local function landHit(player, position, info, strike)
@@ -912,7 +934,8 @@ local function landHit(player, position, info, strike)
     local critical = info.critical == true
     local heavy = critical or blow == "Pierce" or (slash ~= nil and slash.Finisher == true)
     local grade = if critical then "Critical" elseif heavy then "Heavy" else "Normal"
-    Sfx.play(HIT_SOUND[blow], position, if blow == "Cut" and strike.weapon == "Spear" then 0.8 else nil)
+    local ladder = strike and HIT_LADDER[strike.weapon]
+    Sfx.play(HIT_SOUND[blow], position, ladder and ladder[strike.step])
     if heavy then
         Sfx.play("HeavyThump", position) -- (the weight under it)
     end
@@ -1049,8 +1072,12 @@ local function landHit(player, position, info, strike)
             local look = camera.CFrame:VectorToObjectSpace(direction)
             GuardianFx.kick(position, kick * (0.8 * look.Y + 0.35 * look.Z), -kick * 0.8 * look.X, shakeTime)
         end
+        local punch = punchOf(strike, critical, size)
+        if punch > 0 then
+            GuardianFx.punch(punch, PUNCH_TIME)
+        end
         if info.damage then
-            DamageNumbers.show(position + Vector3.new(0, 1.5, 0), info.damage, critical, p.Main)
+            DamageNumbers.show(position + Vector3.new(0, 1.5, 0), info.damage, critical, p.Main, finisherOf(strike))
         end
     end
 end
@@ -1067,9 +1094,12 @@ local function confirmHit(player, strike, info)
             GuardianReact.hit(info.target, strike.impactDirection, "Critical")
         end
         GuardianFx.shake(position, 0.6, 0.18)
+        if player == Players.LocalPlayer then
+            GuardianFx.punch(punchOf(strike, true, 1 + TIER_STEP * (tierOf(player) - 1)), PUNCH_TIME) -- (the blow's own was drawn at its frame)
+        end
     end
     if player == Players.LocalPlayer and info.damage then
-        DamageNumbers.show(position + Vector3.new(0, 1.5, 0), info.damage, info.critical == true, p.Main)
+        DamageNumbers.show(position + Vector3.new(0, 1.5, 0), info.damage, info.critical == true, p.Main, finisherOf(strike))
     end
 end
 
@@ -1102,8 +1132,108 @@ function CombatFx.missed(player)
     end
 end
 
+-- ---------- the step into a strike ----------
+-- (the owner, 2026-11-23: "make combos flow naturally from one attack into another") A strike carries the striker forward as its blade
+-- comes round, so a chain of them walks into the target instead of swinging on the spot: how far each one steps, in studs, by weapon and
+-- step (a finisher and a thrust step furthest; a fist hardly). Only for the player's own character, which their client moves; the others see
+-- it arrive. The step begins part way through the wind-up and is over as the blow lands, an eased slide (the character's own pose clips
+-- already lean and turn the hips: this is the travel under them). It is a movement of the character, not a speed given to it: the pose
+-- code takes a character with any speed over a few studs a second for a runner and drops the clip's legs (PoseController STANCE_MAX_SPEED),
+-- and a speed given to a Humanoid is half taken back by its floor friction, more at a low frame rate (Play, 2026-11-23: 0.91 of 1.4 studs
+-- at 56 fps, 0.68 at 15). It moves the same studs at any frame rate and MovementGuard sees a few studs in a third of a second. It never
+-- steps a player who is running or airborne, stops short of a wall, a guardian and an edge, and ends at the blow.
+local LUNGE = { Sword = { 1.6, 2.0, 2.8 }, Spear = { 3.0, 2.0 }, Palm = { 1.0, 1.0 } }
+local LUNGE_RUNNING = 20      -- a player faster than this (studs a second) is already travelling: no step
+local LUNGE_WALKING = 3       -- faster than this and they are walking: half the step (they are going that way already)
+local LUNGE_CLEAR = 1.6       -- studs left between the end of a step and a wall or a guardian's skin (the character is about 1 wide)
+local LUNGE_DROP = 6          -- a step that would end over a drop deeper than this is cut to nothing
+local LUNGE_AIM = 0.8         -- a guardian this much ahead (cosine) of the facing shortens the step to stop at it
+local LUNGE_STOP_SHORT = 4.5  -- studs from a guardian's centre at which the step stops
+
+local function lungeParams(character)
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = { character, fxFolder }
+    params.RespectCanCollide = true
+    return params
+end
+
+-- how far (studs) a step of `reach` along `direction` from `root` can go
+local function clearReach(root, character, direction, reach)
+    local params = lungeParams(character)
+    local origin = root.Position
+    local wall = Workspace:Raycast(origin, direction * (reach + LUNGE_CLEAR), params)
+    if wall then
+        reach = math.max(0, math.min(reach, wall.Distance - LUNGE_CLEAR))
+    end
+    if reach <= 0 then
+        return 0
+    end
+    local ground = Workspace:Raycast(origin + direction * reach, Vector3.new(0, -(LUNGE_DROP + 3.5), 0), params) -- (the root is about 3 above the feet)
+    if not ground then
+        return 0
+    end
+    return reach
+end
+
+local function lunge(player, root, strike, timing, target, point)
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local reaches = LUNGE[strike.weapon]
+    local reach = reaches and reaches[strike.step]
+    if not reach or not humanoid or humanoid.Health <= 0 or humanoid.Sit or humanoid.FloorMaterial == Enum.Material.Air then
+        return
+    end
+    local flat = Vector3.new(1, 0, 1)
+    local speed = (root.AssemblyLinearVelocity * flat).Magnitude
+    if speed > LUNGE_RUNNING then
+        return
+    elseif speed > LUNGE_WALKING then
+        reach *= 0.5
+    end
+    local facing = root.CFrame.LookVector * flat
+    if facing.Magnitude < 0.1 then
+        return
+    end
+    local direction = facing.Unit
+    if target and point then -- stop at a guardian ahead of them, not through it
+        local to = (point - root.Position) * flat
+        if to.Magnitude > 0.1 and to.Unit:Dot(direction) >= LUNGE_AIM then
+            reach = math.min(reach, math.max(0, to.Magnitude - LUNGE_STOP_SHORT))
+        end
+    end
+    reach = clearReach(root, character, direction, reach)
+    if reach < 0.25 then
+        return
+    end
+    local scale = CombatFx.TimeScale
+    local begin = timing.Wind * 0.55 / scale
+    local duration = math.max(0.12, (timing.Hit + 0.02 - timing.Wind * 0.55)) / scale
+    task.delay(begin, function()
+        if strikes[player] ~= strike then
+            return
+        end
+        local started, done = os.clock(), 0 -- done: the share of the step already made
+        local connection
+        connection = RunService.Heartbeat:Connect(function()
+            local share = math.min((os.clock() - started) / duration, 1)
+            if strikes[player] ~= strike or strike.impacted or not root.Parent or humanoid.Health <= 0
+                or humanoid.FloorMaterial == Enum.Material.Air or player:GetAttribute("IsFlying") == true then
+                connection:Disconnect()
+                return
+            end
+            local eased = (1 - math.cos(math.pi * share)) / 2 -- (slow, quick, slow: the studs covered by the half sine of speed)
+            character:PivotTo(character:GetPivot() + direction * (reach * (eased - done)))
+            done = eased
+            if share >= 1 then
+                connection:Disconnect()
+            end
+        end)
+    end)
+end
+
 -- ---------- entry points ----------
--- step: which strike of the combo it is, when the server says (another player's spear); else counted here
+-- step: which strike of the combo it is, when the server says; else counted here
 function CombatFx.play(player, weapon, step)
     local root = rootOf(player)
     if not root then
@@ -1114,12 +1244,12 @@ function CombatFx.play(player, weapon, step)
     local steps = COMBO_STEPS[weapon]
     if steps then
         local last = combos[player]
-        local continuing = last and last.weapon == weapon and now - last.at < GameConfig.WeaponKinds[weapon].ComboWindow / CombatFx.TimeScale
+        local continuing = last and last.weapon == weapon and now - last.at < ComboRules.window(weapon) / CombatFx.TimeScale
         strike.step = step or if continuing then last.step % steps + 1 else 1
         combos[player] = { weapon = weapon, step = strike.step, at = now }
     else
         local last = combos[player]
-        strike.step = if last and last.weapon == weapon and now - last.at < PUNCH_WINDOW / CombatFx.TimeScale then last.step % 2 + 1 else 1
+        strike.step = step or if last and last.weapon == weapon and now - last.at < ComboRules.PalmWindow / CombatFx.TimeScale then last.step % 2 + 1 else 1
         combos[player] = { weapon = weapon, step = strike.step, at = now }
         putAway(player) -- a palm strike is bare-handed
     end
@@ -1144,6 +1274,7 @@ function CombatFx.play(player, weapon, step)
         local spec = if weapon == "Palm" then GameConfig.Combat.Palm
             elseif weapon == "Spear" and strike.step == 2 then GameConfig.WeaponKinds.Spear.Slash else GameConfig.WeaponKinds[weapon]
         local target, point = predictTarget(root, spec)
+        lunge(player, root, strike, timing, target, point)
         if target then
             task.delay(timing.Hit / CombatFx.TimeScale, function()
                 if not strike.answered and not strike.impacted then

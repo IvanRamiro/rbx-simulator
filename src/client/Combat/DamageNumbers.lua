@@ -2,11 +2,12 @@
 -- server decides the damage and whether it was critical, CombatService). A number pops, rises and
 -- fades in under a second; a critical one is bigger, gold and tilted, with a "!".
 --
---   DamageNumbers.show(position, amount, critical, tint)
+--   DamageNumbers.show(position, amount, critical, tint, finisher)
 --       position  where the strike landed, in the world
 --       amount    the damage, a whole number (NumberFormat.compact shortens the big ones)
 --       critical  true for a critical strike
 --       tint      the striker's colour (their realm's, or their forged element's): the number's outline
+--       finisher  true for the last blow of a combo (ComboRules): a bigger, warmer number than a plain one, under a critical's
 --
 -- Labels in one ScreenGui, placed each frame from the world position (not BillboardGuis: their size and
 -- motion on screen are set here in pixels, the same at any distance). Nothing runs while none is shown.
@@ -24,6 +25,7 @@ local DamageNumbers = {}
 local MAX_LIVE = 10 -- the most on screen at once: the oldest goes first
 local LOOK = {
     Normal = { Size = 28, Life = 0.75, Rise = 46, Pop = 1.35, Color = Color3.fromRGB(255, 255, 255) },
+    Finisher = { Size = 34, Life = 0.9, Rise = 54, Pop = 1.55, Color = Color3.fromRGB(255, 240, 200) },
     Critical = { Size = 40, Life = 1.0, Rise = 64, Pop = 1.75, Color = Color3.fromRGB(255, 216, 92), Stroke = Color3.fromRGB(120, 46, 10) },
 }
 local POP_TIME, SETTLE_TIME = 0.08, 0.2 -- seconds: up to its biggest, then back to its size
@@ -84,10 +86,10 @@ local function update()
     end
 end
 
-function DamageNumbers.show(position, amount, critical, tint)
-    local look = if critical then LOOK.Critical else LOOK.Normal
+function DamageNumbers.show(position, amount, critical, tint, finisher)
+    local look = if critical then LOOK.Critical elseif finisher then LOOK.Finisher else LOOK.Normal
     local label = Instance.new("TextLabel")
-    label.Name = if critical then "Critical" else "Damage"
+    label.Name = if critical then "Critical" elseif finisher then "Finisher" else "Damage"
     label.AnchorPoint = Vector2.new(0.5, 0.5)
     label.AutomaticSize = Enum.AutomaticSize.XY
     label.BackgroundTransparency = 1
@@ -98,7 +100,7 @@ function DamageNumbers.show(position, amount, critical, tint)
     label.Text = NumberFormat.compact(amount) .. (if critical then "!" else "")
     label.Visible = false
     local stroke = Instance.new("UIStroke")
-    stroke.Thickness = if critical then 3 else 2
+    stroke.Thickness = if critical then 3 elseif finisher then 2.5 else 2
     stroke.Color = look.Stroke or (tint or Color3.new(0, 0, 0)):Lerp(Color3.new(0, 0, 0), 0.7)
     stroke.Parent = label
     local scale = Instance.new("UIScale")

@@ -3,7 +3,7 @@
 local t = require("@env/t")
 
 local MODULES = {
-    "AuctionRules", "AuraConfig", "BetaGift", "CodexRules", "FactionRules", "GameConfig", "Merchant", "NumberFormat", "PassRules",
+    "AuctionRules", "AuraConfig", "BetaGift", "CodexRules", "ComboRules", "FactionRules", "GameConfig", "Merchant", "NumberFormat", "PassRules",
     "PenLayout", "PetLore", "PetMaps", "PetRules", "Ranks", "RecordsConfig", "RewardRules", "Shop", "SpinRules", "TitleRules",
     "TrialRules", "WeaponMaps", "WeatherConfig", "WeatherRules",
 }

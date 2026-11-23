@@ -166,7 +166,16 @@ local GAZE_JOINTS = { { "Neck2", 0.25 }, { "Neck3", 0.3 }, { "Head", 0.45 } }
 local function gazeOf(anim, now, calm)
     anim.gazeAt = anim.gazeAt or now
     anim.gaze = anim.gaze or { 0, 0, 0 }
-    if not calm and now >= anim.gazeAt then
+    local dt = math.clamp(now - (anim.gazeSeen or now), 0, 0.2)
+    anim.gazeSeen = now
+    if calm then
+        -- worn out or enraged: it stops studying, and the last tilt eases out instead of staying for the whole state
+        local keep = math.exp(-3 * dt)
+        for i = 1, 3 do
+            anim.gaze[i] *= keep
+        end
+        anim.gazeAt = now + 1
+    elseif now >= anim.gazeAt then
         local last = anim.gaze
         anim.gaze = { -5 + 9 * math.random(), (if last[2] > 0 then -1 else 1) * (6 + 18 * math.random()), (if last[3] > 0 then -1 else 1) * (4 + 12 * math.random()) }
         anim.gazeAt = now + 1.4 + 3.6 * math.random()
@@ -194,6 +203,14 @@ local function flourish(anim, now, state)
     return f[1], envelope(t, 0.8, f[3], 0.9), t
 end
 
+-- the tail ribbons' joints (TailnA, B, C), found once
+local RIBBONS = {}
+for _, name in Clips.Joints do
+    if string.find(name, "Tail%d[ABC]$") then
+        table.insert(RIBBONS, { Name = name, Seed = string.byte(name, #name - 1), Lag = if string.find(name, "B$") then 0.7 else 0 })
+    end
+end
+
 function Rig.life(anim, pose, state, now)
     local asleep = state == "Dormant" or state == "Resting"
     local rate = if state == "Weakened" then 1.6 elseif asleep then 0.18 else 0.3
@@ -208,11 +225,8 @@ function Rig.life(anim, pose, state, now)
     end
     -- the ribbons and the crest sway out of step with each other
     add(pose, "TailBase", 1.2 * math.sin(now * 0.7), 3 * math.sin(now * 0.5))
-    for _, name in Clips.Joints do
-        if string.find(name, "Tail%d[ABC]$") then
-            local k = string.byte(name, #name - 1)
-            add(pose, name, 0.8 * math.sin(now * 1.1 + k), 2.2 * math.sin(now * 0.9 + k * 0.7 + (if string.find(name, "B$") then 0.7 else 0)))
-        end
+    for _, ribbon in RIBBONS do
+        add(pose, ribbon.Name, 0.8 * math.sin(now * 1.1 + ribbon.Seed), 2.2 * math.sin(now * 0.9 + ribbon.Seed * 0.7 + ribbon.Lag))
     end
     add(pose, "CrestA", 1.4 * math.sin(now * 1.3), 1.6 * math.sin(now * 0.8))
     add(pose, "CrestB", 2.2 * math.sin(now * 1.3 - 0.8), 2 * math.sin(now * 0.8 - 0.6))
@@ -575,8 +589,10 @@ Rig.Fx = {
                 return
             end
             local pivot = model:GetPivot()
-            GuardianFx.shockRing((pivot * GALE_LEFT).Position, style, 12, 0.5)
-            GuardianFx.shockRing((pivot * GALE_RIGHT).Position, style, 12, 0.5)
+            for _, tip in { GALE_LEFT, GALE_RIGHT } do -- (the rings lie on the ground under each wingtip: the tips themselves are 4.5 studs up)
+                local at = (pivot * tip).Position
+                GuardianFx.shockRing(Vector3.new(at.X, pivot.Y, at.Z), style, 12, 0.5)
+            end
             GuardianFx.embers(pivot * GALE_LEFT, 22, 26, 90, 1.6)
             GuardianFx.embers(pivot * GALE_RIGHT, 22, 26, 90, 1.6)
             GuardianFx.flash(pivot * GALE_GROUND * CFrame.new(0, 2, 0), style, 26)

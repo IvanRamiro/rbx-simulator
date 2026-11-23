@@ -193,6 +193,51 @@ RunService:BindToRenderStep("GuardianShake", Enum.RenderPriority.Camera.Value + 
     end
 end)
 
+-- The punch narrows the player's own field of view for a moment, so the camera leans in on a heavy blow (CombatFx: a chain's last blow, a
+-- thrust, a critical strike). Placed after the camera scripts and taken back before them each frame, like the shake; if something else has
+-- set the field of view in between (a ceremony taking the camera), it is left as that set it. Overlapping punches do not add: the deepest
+-- one shows.
+local punches = {}
+local punched = nil -- { base, written }: the field of view before this frame's punch and what the punch set it to
+RunService:BindToRenderStep("GuardianPunchUndo", Enum.RenderPriority.Camera.Value - 1, function()
+    local camera = Workspace.CurrentCamera
+    if camera and punched and math.abs(camera.FieldOfView - punched.written) < 0.001 then
+        camera.FieldOfView = punched.base
+    end
+    punched = nil
+end)
+RunService:BindToRenderStep("GuardianPunch", Enum.RenderPriority.Camera.Value + 1, function()
+    local camera = Workspace.CurrentCamera
+    if not camera or #punches == 0 then
+        return
+    end
+    local now = os.clock()
+    local narrow = 0
+    for i = #punches, 1, -1 do
+        local k = punches[i]
+        local t = now - k.start
+        if t >= k.time then
+            table.remove(punches, i)
+        else
+            narrow = math.max(narrow, k.degrees * math.min(t / 0.04, 1) * (1 - t / k.time) ^ 2) -- (in fast, out slow)
+        end
+    end
+    if narrow > 0 then
+        punched = { base = camera.FieldOfView, written = camera.FieldOfView - narrow }
+        camera.FieldOfView = punched.written
+    end
+end)
+
+function GuardianFx.punch(degrees, time)
+    if Players.LocalPlayer:GetAttribute("SettingReducedEffects") == true or degrees <= 0 then
+        return
+    end
+    if #punches >= 4 then
+        table.remove(punches, 1)
+    end
+    table.insert(punches, { start = os.clock(), time = time, degrees = degrees })
+end
+
 function GuardianFx.shake(origin, strength, time)
     local camera = Workspace.CurrentCamera
     if not camera or Players.LocalPlayer:GetAttribute("SettingReducedEffects") == true then
