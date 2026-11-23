@@ -1,0 +1,257 @@
+{
+ "frame": "authoring frame: x right, y up, z back, the front is -Z; every piece at its own origin (on the ground, at the middle of its footprint); anchor TR_Anchor (a 1-stud cube at the origin). One MeshPart per material per piece, named Trial_Props_<Piece>__<Suffix>",
+ "looks": {
+  "TrialGate": {
+   "Marble": {
+    "Material": "Marble",
+    "Color": [
+     238,
+     236,
+     232
+    ]
+   },
+   "Gold": {
+    "Material": "Metal",
+    "Color": [
+     255,
+     172,
+     48
+    ]
+   },
+   "Azure": {
+    "Material": "SmoothPlastic",
+    "Color": [
+     38,
+     104,
+     204
+    ]
+   }
+  },
+  "TrialToken": {
+   "Stone": {
+    "Material": "Slate",
+    "Color": [
+     62,
+     82,
+     74
+    ]
+   },
+   "Timber": {
+    "Material": "Wood",
+    "Color": [
+     88,
+     66,
+     46
+    ]
+   },
+   "Copper": {
+    "Material": "Metal",
+    "Color": [
+     196,
+     108,
+     58
+    ]
+   },
+   "Glow": {
+    "Material": "Neon",
+    "Color": [
+     60,
+     212,
+     178
+    ],
+    "CastShadow": false
+   }
+  },
+  "TrialDummy": {
+   "Iron": {
+    "Material": "Metal",
+    "Color": [
+     78,
+     76,
+     92
+    ]
+   },
+   "Crimson": {
+    "Material": "Fabric",
+    "Color": [
+     158,
+     24,
+     36
+    ],
+    "CastShadow": false
+   },
+   "Timber": {
+    "Material": "Wood",
+    "Color": [
+     52,
+     40,
+     36
+    ]
+   }
+  }
+ },
+ "files": {
+  "Props": {
+   "fbx": "assets/world/MurimCrossing/Trial/Trial_Props.fbx",
+   "objects": [
+    "Trial_Props_TrialDummy__Crimson",
+    "Trial_Props_TrialDummy__Iron",
+    "Trial_Props_TrialDummy__Timber",
+    "Trial_Props_TrialGate__Azure",
+    "Trial_Props_TrialGate__Gold",
+    "Trial_Props_TrialGate__Marble",
+    "Trial_Props_TrialToken__Copper",
+    "Trial_Props_TrialToken__Glow",
+    "Trial_Props_TrialToken__Stone",
+    "Trial_Props_TrialToken__Timber",
+    "TR_Anchor"
+   ],
+   "tris": 6594,
+   "verify": "ok"
+  }
+ },
+ "pieces": {
+  "Trial_Props_TrialDummy": {
+   "min": [
+    -2.0,
+    0.0,
+    -1.22
+   ],
+   "max": [
+    2.0,
+    6.6,
+    1.22
+   ],
+   "size": [
+    4.0,
+    6.6,
+    2.44
+   ],
+   "tris": 2032,
+   "materials": {
+    "Crimson": 232,
+    "Iron": 1448,
+    "Timber": 352
+   },
+   "front": "-Z",
+   "pivot": "origin on the ground at the middle of the footprint (the lowest point is y = 0)",
+   "marks": {},
+   "centre_of_mass": {
+    "uniform_density_overlaps_once": [
+     0.002,
+     2.931,
+     0.0
+    ],
+    "volume": 17.79,
+    "bounding_box_centre_y": 3.302
+   }
+  },
+  "Trial_Props_TrialGate": {
+   "min": [
+    -12.3,
+    0.0,
+    -1.72
+   ],
+   "max": [
+    12.3,
+    17.37,
+    1.72
+   ],
+   "size": [
+    24.61,
+    17.37,
+    3.44
+   ],
+   "tris": 3094,
+   "materials": {
+    "Azure": 924,
+    "Gold": 1634,
+    "Marble": 536
+   },
+   "front": "-Z",
+   "pivot": "origin on the ground at the middle of the footprint (the lowest point is y = 0)",
+   "marks": {
+    "BellBottom": [
+     0.0,
+     12.14,
+     0.0
+    ],
+    "NumberPlateBack": [
+     0.0,
+     15.18,
+     1.2
+    ],
+    "NumberPlateFront": [
+     0.0,
+     15.18,
+     -1.2
+    ]
+   },
+   "number_plate": {
+    "centre_front": [
+     0.0,
+     15.18,
+     -1.2
+    ],
+    "centre_back": [
+     0.0,
+     15.18,
+     1.2
+    ],
+    "size": [
+     4.4,
+     0.85
+    ],
+    "normal_front": [
+     0.0,
+     0.0,
+     -1.0
+    ],
+    "normal_back": [
+     0.0,
+     0.0,
+     1.0
+    ],
+    "note": "a flat azure plate in a gilt frame on the raised middle storey, front faces -Z and back faces +Z: the gate's number goes here (drawn by code); size = width x height in studs"
+   },
+   "clear_opening": {
+    "min_clear_width_0_to_12": 16.5,
+    "at_height": 0.0,
+    "lowest_intrusion_into_central_16": 12.14
+   }
+  },
+  "Trial_Props_TrialToken": {
+   "min": [
+    -1.93,
+    0.0,
+    -1.38
+   ],
+   "max": [
+    1.9,
+    3.62,
+    1.26
+   ],
+   "size": [
+    3.83,
+    3.62,
+    2.63
+   ],
+   "tris": 1468,
+   "materials": {
+    "Copper": 640,
+    "Glow": 80,
+    "Stone": 328,
+    "Timber": 420
+   },
+   "front": "-Z",
+   "pivot": "origin on the ground at the middle of the footprint (the lowest point is y = 0)",
+   "marks": {
+    "DiscCentre": [
+     0.0,
+     1.94,
+     0.0
+    ]
+   }
+  }
+ }
+}
