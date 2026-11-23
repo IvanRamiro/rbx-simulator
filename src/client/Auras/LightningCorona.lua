@@ -1,6 +1,6 @@
 -- Realm 7's (Divine Realm) unique feature, 2026-11-23: a CORONA OF BLACK-AND-RED LIGHTNING (the owner: keep it a steady, very visible loop like the base aura, and replace the old
 -- piece, a 6-stud sphere of bolts 1.2 studs long that lived a tenth of a second, with black and red lightning). It replaces RealmUnique.Tier07 for this realm only (the old model
--- stays in ReplicatedStorage: the breakthrough still reads its textures). Prototype and history: Claude Memory/Aura Crimson Lightning Prototype 2026-11-23.md.
+-- stays in ReplicatedStorage: the breakthrough still reads its textures). Prototype and history: the vault note "Aura Crimson Lightning Prototype 2026-11-23".
 --
 -- A loop, not an event: about a dozen jagged bolts are alive round the body at every moment (nine are being drawn on average, each leaving a quarter second of fading trail), and each
 -- re-forms in a new shape and direction a moment after it fades, so the crackle never settles into one look:
