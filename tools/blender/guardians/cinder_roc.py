@@ -229,7 +229,7 @@ def _talons():
             p0 = tip + V((0, 0.12, 0.35))
             Hm.htube(hi, [p0, p0 + V((sign * 0.12 * dx, 0.0, -0.9)), p0 + V((sign * 0.2 * dx, -0.3, -1.7)), p0 + V((sign * 0.26 * dx, -0.62, -2.2))],
                      lambda t: 0.40 * (1 - t) ** 0.8 + 0.03, sides=7, per=5, uv_scale=1.0, tip=True, wobble=0.0)
-        base = V((sign * 3.4, 0.99, 0.8))
+        base = V((sign * 3.4, 0.99, 0.3))
         Hm.htube(hi, [base, base + V((0, 0.2, 1.1)), base + V((0, 0.0, 2.1)), base + V((0, -0.5, 2.8))], lambda t: 0.5 * (1 - t) ** 0.8 + 0.03, sides=8, per=5, uv_scale=1.0, tip=True, wobble=0.0)
     return hi
 
@@ -328,6 +328,15 @@ def bind_distance(obj, names, falloff=1.0, mask=None, influences=4, bias=None):
             d[~mask[nm], j] = 1e6
         if bias and nm in bias:
             d[:, j] += bias[nm]
+    blocked = d.min(axis=1) >= 1e5          # no bone may reach it: the nearest takes it whole, masks ignored
+    if blocked.any():
+        free = _distances(pts[blocked], names)
+        for j, nm in enumerate(names):
+            if nm.startswith("Left"):
+                free[pts[blocked][:, 0] > 0.3, j] = 1e6
+            elif nm.startswith("Right"):
+                free[pts[blocked][:, 0] < -0.3, j] = 1e6
+        d[blocked] = free
     near = d.min(axis=1, keepdims=True)
     w = np.exp(-((d - near) / falloff) ** 2 * 2.2)
     w[d >= 1e5] = 0
@@ -439,6 +448,64 @@ def _clean(obj, normals=True):
     obj.data.update()
 
 
+def drop_zfighting(lows, eps=0.001):
+    """Where two triangles of the asset lie on one plane (within eps) facing the same way and overlap, one of them is hidden under the other
+    and z-fights with it: the later one is removed (the same test blender-asset-qa makes). Every piece is triangulated first."""
+    import bmesh
+    from mathutils.bvhtree import BVHTree
+    objs = list(lows.values())
+    for o in objs:
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        bmesh.ops.triangulate(bm, faces=bm.faces)
+        bm.to_mesh(o.data)
+        bm.free()
+    verts, tris, meta = [], [], []
+    for oi, o in enumerate(objs):
+        base = len(verts)
+        verts += [o.matrix_world @ v.co for v in o.data.vertices]
+        for p in o.data.polygons:
+            tris.append(tuple(base + i for i in p.vertices))
+            meta.append((oi, p.index, p.normal.copy()))
+    bvh = BVHTree.FromPolygons(verts, tris, epsilon=0.0)
+    tri_sets = [set(t) for t in tris]
+    drop = set()
+    for ti, t in enumerate(tris):
+        a, b, c = (verts[i] for i in t)
+        n = meta[ti][2]
+        if n.length < 0.5:
+            continue
+        cen = (a + b + c) / 3
+        for p in (cen, cen.lerp(a, .6), cen.lerp(b, .6), cen.lerp(c, .6)):
+            for _, _, tj, _ in bvh.find_nearest_range(p, eps):
+                if tj is None or tj == ti or tri_sets[ti] & tri_sets[tj]:
+                    continue
+                n2 = meta[tj][2]
+                if n.dot(n2) < 0.999:
+                    continue
+                a2, b2, c2 = (verts[i] for i in tris[tj])
+                q = p - n2 * n2.dot(p - a2)
+                v0, v1, v2 = c2 - a2, b2 - a2, q - a2
+                d00, d01, d02, d11, d12 = v0.dot(v0), v0.dot(v1), v0.dot(v2), v1.dot(v1), v1.dot(v2)
+                inv = d00 * d11 - d01 * d01
+                if abs(inv) < 1e-12:
+                    continue
+                u, w = (d11 * d02 - d01 * d12) / inv, (d00 * d12 - d01 * d02) / inv
+                if u >= -1e-6 and w >= -1e-6 and u + w <= 1 + 1e-6:
+                    drop.add(max(ti, tj))
+    per = {}
+    for ti in drop:
+        per.setdefault(meta[ti][0], set()).add(meta[ti][1])
+    for oi, faces in per.items():
+        bm = bmesh.new()
+        bm.from_mesh(objs[oi].data)
+        bm.faces.ensure_lookup_table()
+        bmesh.ops.delete(bm, geom=[bm.faces[i] for i in faces], context="FACES")
+        bm.to_mesh(objs[oi].data)
+        bm.free()
+    return len(drop)
+
+
 def _wing_plan(side):
     tag = "Left" if side == "L" else "Right"
     return [("Wing" + side, "flight", None, ("dist", wing_bones(tag), 0.7)), ("Wing" + side, "covert", None, ("dist", wing_bones(tag), 0.7)),
@@ -497,7 +564,10 @@ def make_low(piece, parts, plan):
 
 def make_all_lows(parts):
     plan = piece_plan()
-    return {piece: make_low(piece, parts, plan) for piece in plan}
+    lows = {piece: make_low(piece, parts, plan) for piece in plan}
+    lows_dropped = drop_zfighting(lows)
+    print("hidden coplanar triangles removed:", lows_dropped)
+    return lows
 
 
 # ---------------------------------------------------------------- review renders
@@ -634,6 +704,16 @@ def bake_all(parts, lows, only=None):
 GAME_NAMES = {"Skin": "Skin", "Plumage": "Plumage", "WingL": "WingL", "WingR": "WingR", "Tail": "Tail", "Crest": "Crest", "Eyes": "Eyes", "Pupils": "Pupils", "Magma": "Magma"}
 
 
+def scrub_fbx(path):
+    """The FBX remembers the absolute folder its maps were copied from. Done to the bytes, in place, each machine path becomes filler of
+    the same length (so the file's length-prefixed strings stay valid): nothing of this machine is left in it."""
+    data = open(path, "rb").read()
+    for what in sorted({REPO, os.path.expanduser("~")}, key=len, reverse=True):
+        data = data.replace(what.encode(), b"x" * len(what))
+    open(path, "wb").write(data)
+    return sum(data.lower().count(w) for w in (os.path.basename(os.path.expanduser("~")).lower().encode(), b"/users/"))
+
+
 def export_fbx(lows):
     """assets/guardians/CinderRoc.fbx: every game piece, skinned, and the skeleton, bound as modelled. The maps go in with it."""
     import cinder_roc_motion as M
@@ -653,17 +733,113 @@ def export_fbx(lows):
     bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={"MESH", "ARMATURE"}, axis_forward="-Z", axis_up="Y", apply_scale_options="FBX_SCALE_UNITS",
                              path_mode="COPY", embed_textures=True, mesh_smooth_type="FACE", add_leaf_bones=False, use_armature_deform_only=True, bake_anim=False,
                              primary_bone_axis="Y", secondary_bone_axis="X")
-    return path, os.path.getsize(path) // 1024
+    left = scrub_fbx(path)
+    return path, os.path.getsize(path) // 1024, "machine path hits left: %d" % left
 
 
-def build_final(out_blend=None):
-    WANT = True
+ADD_BONE_FLIP = Matrix(((-1, 0, 0), (0, 1, 0), (0, 0, -1)))
+
+
+def addbone_cframe(parent, bone):
+    """A bone's place under its parent as Roblox's importer gives it: Blender's bone-local value with X and Z flipped, in position and
+    rotation alike (checked against the two AddBones of PanguSkinned, which it reproduces to five places)."""
+    arm = bpy.data.objects[RIG]
+    rel = arm.data.bones[parent].matrix_local.inverted() @ arm.data.bones[bone].matrix_local
+    pos = ADD_BONE_FLIP @ rel.to_translation()
+    rot = ADD_BONE_FLIP @ rel.to_3x3() @ ADD_BONE_FLIP
+    return [round(x, 5) for x in (*pos, *[rot[i][j] for i in range(3) for j in range(3)])]
+
+
+def bone_use(lows):
+    """For each bone, the pieces that weight to it and how many bones each of those pieces uses (a piece with one bone is single-bone: the
+    importer drops a bone only such pieces use)."""
+    use = {}
+    for piece, o in lows.items():
+        names = {g.name for g in o.vertex_groups}
+        weighted = set()
+        for v in o.data.vertices:
+            for g in v.groups:
+                if g.weight > 0:
+                    weighted.add(o.vertex_groups[g.group].name)
+        for n in weighted:
+            use.setdefault(n, []).append((piece, len(weighted)))
+    return use
+
+
+def write_placements(path, lows):
+    use = bone_use(lows)
+    need = [n for n in BONES if n != "Root" and not any(count > 1 for _, count in use.get(n, []))]
+    glow = {"Magma": Mt.MAGMA_HEX, "Eyes": Mt.EYE_HEX, "Pupils": Mt.PUPIL_HEX}
+    rgb = lambda h: "Color3.fromRGB(%d, %d, %d)" % tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+    f = lambda v: "Vector3.new(%s)" % ", ".join(("%.4f" % c).rstrip("0").rstrip(".") for c in v)
+    lines = ["-- The Cinder Roc, Ember Peak's guardian, with a skeleton (tools/blender/guardians/cinder_roc.py, assets/guardians/CinderRoc.fbx). Used by",
+             "-- GuardianBuilder.storeSkinned for the guardian EmberXuanwu (the id stays: saves, records and quests key off it).",
+             "return {", '    Rig = "CinderRocSkinned",', "    Fit = {"]
+    for name in ("Hips", "Head", "LeftThigh", "RightShin"):
+        lines.append("        %s = %s," % (name, f(BONES[name][1])))
+    lines += ["    },",
+              "    -- The importer drops a bone that only single-bone pieces use. These are put back on the same bind, from Blender's rest pose. The",
+              "    -- import is a half turn about Y: a bone-local value is Blender's with X and Z flipped, in position and rotation alike.",
+              "    AddBones = {"]
+    for n in need:
+        parent = BONES[n][0]
+        c = addbone_cframe(parent, n)
+        lines.append('        %s = { Parent = "%s", CFrame = CFrame.new(%s) },' % (n, parent, ", ".join(("%g" % x) for x in c)))
+    lines += ["    },", "    Glow = {"]
+    for k, h in glow.items():
+        lines.append("        %s = %s," % (k, rgb(h)))
+    lines += ["    },", "}"]
+    with open(path, "w", encoding="utf8") as fh:
+        fh.write("\n".join(lines) + "\n")
+    return need
+
+
+def write_report(path, lows, parts):
+    import json
+    arm = bpy.data.objects[RIG]
+    use = bone_use(lows)
+    rep = {"Pieces": {}, "Bones": len([n for n in BONES if n != "Root"]), "Joints": len(joints())}
+    lo = V((1e9, 1e9, 1e9))
+    hi = -lo
+    for piece, o in lows.items():
+        pts = _points(o)
+        rep["Pieces"][GAME_NAMES[piece]] = {"Triangles": tris(o), "Vertices": len(o.data.vertices), "BonesUsed": len({n for n, lst in use.items() if any(p == piece for p, _ in lst)}),
+                                            "Glow": ("#" + NEON[piece]) if piece in NEON else None, "Size": [round(float(x), 2) for x in (pts.max(axis=0) - pts.min(axis=0))]}
+        lo = V(map(min, lo, pts.min(axis=0)))
+        hi = V(map(max, hi, pts.max(axis=0)))
+    rep["Bounds"] = {"Min": [round(x, 2) for x in lo], "Max": [round(x, 2) for x in hi]}
+    rep["Triangles"] = sum(p["Triangles"] for p in rep["Pieces"].values())
+    rep["MeshParts"] = len(rep["Pieces"])
+    with open(path, "w", encoding="utf8") as fh:
+        json.dump(rep, fh, indent=1, sort_keys=True)
+    return rep
+
+
+def run_qa(lows, profile="roblox"):
+    """blender-asset-qa on each game piece (the folder of its qa_check.py in $CINDER_QA_DIR)."""
+    qa_dir = os.environ.get("CINDER_QA_DIR")
+    if not qa_dir:
+        return "skipped: set CINDER_QA_DIR to the folder holding qa_check.py"
+    sys.path.insert(0, qa_dir)
+    import qa_check
+    names = [GAME_NAMES[p] for p in lows]
+    r = qa_check.run(objects=names, profile=profile)            # one asset: its pieces are judged together (the eyes sit in the head)
+    return {"pass": r["pass"], "errors": r["errors"], "warnings": r["warnings"][:24], "zfighting": str(r.get("zfighting"))[:1800], "floating": str(r.get("floating"))[:600]}
+
+
+def build_final(out_blend=None, placements=None, report=None):
     info, parts, lows = build_lows(real=True)
     bake_all(parts, lows)
     path = export_fbx(lows)
+    notes = {}
+    if placements:
+        notes["AddBones"] = write_placements(placements, lows)
+    if report:
+        notes["report"] = write_report(report, lows, parts)
+    notes["qa"] = run_qa(lows)
     if out_blend:
         bpy.ops.wm.save_as_mainfile(filepath=out_blend)
-    return info, count(lows), path
+    return info, count(lows), path, notes
 
 
 def build_lows(real=False):
@@ -966,6 +1142,46 @@ def run_checks():
     return report
 
 
+def state_sheet(path, size=330):
+    """Every state pose and the two idle flourishes, from three-quarter and from the side, in clay."""
+    import cinder_roc_motion as M
+    info, parts, lows = build_lows()
+    scene, cam = T._review_scene(size)
+    tmp = path + ".tile.png"
+    tiles = []
+    sts = M.state_tables()
+    names = ["Guardian", "Dormant", "Weakened", "Enraged", "Returning", "Display", "Preen"]
+    for yaw, pitch in ((-38, 12), (-90, 4)):
+        for n in names:
+            pose, shift = sts[n]
+            M.set_pose({k: tuple(v) for k, v in pose.items()}, shift)
+            tiles.append(T._shot(scene, cam, yaw, pitch, 85, W.rb(0, 12, -1), size, tmp))
+    T._sheet(tiles, len(names), path, size)
+    if os.path.exists(tmp):
+        os.remove(tmp)
+
+
+def dormant_test(path, size=330):
+    import cinder_roc_motion as M
+    info, parts, lows = build_lows()
+    scene, cam = T._review_scene(size)
+    tmp = path + ".tile.png"
+    tiles = []
+    D = M.states()["Dormant"]
+    variants = [dict(Chest=(-6, -10, 0), Neck1=(-20, -30, 0), Neck2=(24, -40, 0), Neck3=(14, -30, 0), Head=(4, -30, 0)),
+                dict(Chest=(-6, -12, 0), Neck1=(-10, -40, 0), Neck2=(12, -50, 0), Neck3=(4, -30, 0), Head=(0, -30, 0)),
+                dict(Chest=(-8, -14, 0), Neck1=(-6, -55, 0), Neck2=(8, -60, 0), Neck3=(0, -40, 0), Head=(-8, -20, 0))]
+    for v in variants:
+        k = M.merge(D, dict(body=v))
+        pose, shift, _ = M.build_pose(body=k["body"], shift=k["shift"], wl=k["wl"], wr=k["wr"], feet=k["feet"], tail=k["tail"], crest=k["crest"])
+        M.set_pose(pose, shift)
+        for yaw, pitch in ((-38, 14), (-90, 4), (60, 24)):
+            tiles.append(T._shot(scene, cam, yaw, pitch, 60, W.rb(0, 11, -1), size, tmp))
+    T._sheet(tiles, 3, path, size)
+    if os.path.exists(tmp):
+        os.remove(tmp)
+
+
 if __name__ == "__main__":
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     stage = argv[0] if argv else "form"
@@ -984,7 +1200,10 @@ if __name__ == "__main__":
         print(bones_report())
     if stage == "final":
         blend = os.path.join(out_dir, "CinderRoc_final.blend")
-        print(build_final(blend))
+        pl = argv[argv.index("--placements") + 1] if "--placements" in argv else None
+        rp = argv[argv.index("--report") + 1] if "--report" in argv else None
+        import json
+        print("FINAL " + json.dumps(build_final(blend, pl, rp), default=str))
     if stage == "stress":
         stress(os.path.join(out_dir, "stress.png"))
     if stage == "wings":
@@ -1002,3 +1221,9 @@ if __name__ == "__main__":
         import cinder_roc_motion as M
         path = argv[1] if len(argv) > 1 else os.path.join(out_dir, "CinderRocClips.lua")
         print(M.write_clips(path))
+    if stage == "scrub":
+        print("scrubbed, hits left:", scrub_fbx(os.path.join(OUT, NAME + ".fbx")))
+    if stage == "states":
+        state_sheet(os.path.join(out_dir, "states.png"))
+    if stage == "dormant":
+        dormant_test(os.path.join(out_dir, "dormant.png"))

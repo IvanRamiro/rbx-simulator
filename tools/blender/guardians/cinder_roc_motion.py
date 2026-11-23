@@ -363,8 +363,8 @@ def sample(keys, t):
 W_HALF = dict(sweep=-25, lift=18, bank=-15, elbow=40, wrist=-45, fan=0.7, sec_fan=0.8)
 W_UP = dict(sweep=-30, lift=72, bank=-25, elbow=25, wrist=-20, fan=0.95, sec_fan=1.0)
 W_UPWIDE = dict(sweep=-34, lift=78, bank=-30, elbow=14, wrist=-10, fan=1.12, sec_fan=1.1)
-W_DOWN = dict(sweep=14, lift=-30, bank=20, elbow=10, wrist=-5, fan=0.8, sec_fan=0.9)
-W_DOWNLOW = dict(sweep=22, lift=-36, bank=24, elbow=6, wrist=-2, fan=0.55, sec_fan=0.7, tip_curl=-12.0)
+W_DOWN = dict(sweep=14, lift=-12, bank=20, elbow=10, wrist=-5, fan=0.8, sec_fan=0.9)
+W_DOWNLOW = dict(sweep=22, lift=-15, bank=24, elbow=6, wrist=-2, fan=0.55, sec_fan=0.7, tip_curl=-6.0)
 W_COCK = dict(sweep=-16, lift=44, bank=-22, elbow=14, wrist=-6, fan=1.12, sec_fan=1.0)
 W_COCKMORE = dict(sweep=-22, lift=50, bank=-20, elbow=14, wrist=-6, fan=1.2, sec_fan=1.05)
 W_CUT = dict(sweep=76, lift=2, bank=10, elbow=0, wrist=0, fan=0.08, sec_fan=0.2)
@@ -396,7 +396,7 @@ def states():
     out["Returning"] = key(0.0, wl=W_HALF, wr=W_HALF, body=dict(Head=(2.0, 0, 0), Chest=(2.0, 0, 0)), shift=(-0.3, 0.0), feet=stand_feet(-2.1, -2.1, 46, 46))
     # roosting: low on its legs, the wings drawn round it like a cloak, the head tucked back under the near wing
     out["Dormant"] = key(0.0, shift=(-2.6, 0.3), wl=dict(FOLDED, bank=-62, sweep=-48, elbow=126, wrist=-128), wr=dict(FOLDED, bank=-62, sweep=-48, elbow=126, wrist=-128),
-                         body=dict(Hips=(-4, 0, 0), Spine=(2, 0, 0), Chest=(-6, -14, 0), Neck1=(-34, -26, 8), Neck2=(40, -30, 6), Neck3=(26, -34, 4), Head=(14, -30, 10)),
+                         body=dict(Hips=(-4, 0, 0), Spine=(2, 0, 0), Chest=(-8, -14, 0), Neck1=(-6, -55, 0), Neck2=(8, -60, 0), Neck3=(0, -40, 0), Head=(-8, -20, 0)),
                          feet=crouch_feet(0.3, -2.3, 58.0), tail={"TailBase": (-2, 0, 0)}, crest={"CrestA": (-12, 0, 0)})
     out["Resting"] = out["Dormant"]
     # worn out: sunk onto its breast, the near wing dragging, the head low, the tail on the ground
@@ -516,7 +516,7 @@ def moves_more(M):
     ]
     # ---- Awaken (2.8 s): the veins flicker, the head lifts from under the wing and shakes, the wings unfold to their full span, a shiver, it stands tall and lowers into its stance
     dorm = states()["Dormant"]
-    lift1 = dict(Neck1=(-24, -14, 6), Neck2=(30, -18, 4), Neck3=(14, -20, 4), Head=(8, -16, 6), Chest=(-3, -8, 0))
+    lift1 = dict(Neck1=(-14, -30, 0), Neck2=(20, -32, 0), Neck3=(8, -24, 0), Head=(4, -16, 0), Chest=(-3, -8, 0))
     free_head = dict(Neck1=(-6, -4, 0), Neck2=(10, -3, 0), Neck3=(-2, -2, 0), Head=(4, -2, 0), Chest=(0, -2, 0))
     base_up = dict(dorm, body=dict(dorm["body"], **free_head))
     M["Awaken"] = [

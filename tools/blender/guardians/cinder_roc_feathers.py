@@ -66,6 +66,7 @@ def blade(hi, pts, up, side, width, shape=None, lead=0.42, th=0.11, steps=8, acr
     centre = curve_points(pts, steps + 1)
     n_across = across
     rows = []
+    edge_pts = []
     for i, c in enumerate(centre):
         s = i / steps
         tan = (centre[min(i + 1, steps)] - centre[max(i - 1, 0)]).normalized()
@@ -76,7 +77,8 @@ def blade(hi, pts, up, side, width, shape=None, lead=0.42, th=0.11, steps=8, acr
         face = tan.cross(sd)
         if face.dot(uv_) < 0:
             face = -face
-        w = width * shape(s)
+        w = width * max(shape(s), 0.05)
+        edge_pts.append(c + sd * w)
         wl = w * lead
         offs = [(-wl, 0.0), (-wl * 0.5, 0.35), (0.0, ridge), (w * 0.5, 0.45), (w, 0.0)] if n_across == 5 else [(-wl, 0.0), (0.0, ridge), (w, 0.0)]
         top, bot = [], []
@@ -93,6 +95,7 @@ def blade(hi, pts, up, side, width, shape=None, lead=0.42, th=0.11, steps=8, acr
             hi.facing([t0[k], t0[k + 1], t1[k + 1], t1[k]], uv, tuple(f0), mat)
             if solid:
                 hi.facing([b0[k], b1[k], b1[k + 1], b0[k + 1]], [uv[0], uv[3], uv[2], uv[1]], tuple(-f0), mat)
+    blade.last_edge = edge_pts
     return centre
 
 
@@ -152,7 +155,8 @@ def build_wing(M, coll, seed=1):
         length = (7.4, 9.2, 9.8, 9.6, 9.4, 9.0, 8.6, 8.2, 7.8, 7.2)[k]
         mid = root + d * length * 0.5 + up * 0.10 * length * 0.25 + t_h * 0.04 * length * 0.25
         end = root + d * length + up * 0.07 * length + t_h * 0.07 * length - hd * 0.0
-        blade(flight, [root, mid, end], up, t_h, 0.66 - 0.05 * (k / 9), vane(0.10, 0.34, 0.5), lead=0.38, th=0.13, steps=9, mat=0)
+        mid, end = mid + up * 0.014 * k, end + up * 0.014 * k
+        blade(flight, [root + up * 0.014 * k, mid, end], up, t_h, 0.66 - 0.05 * (k / 9), vane(0.10, 0.34, 0.5), lead=0.38, th=0.13, steps=9, mat=0)
         prim_roots.append((root, d, length))
     # secondaries: twelve broad blades along the forearm, their blunt tips drawing the trailing edge
     for k in range(12):
@@ -162,34 +166,35 @@ def build_wing(M, coll, seed=1):
         length = 6.4 + 1.2 * math.sin(math.pi * (0.12 + 0.76 * (1 - q)))
         mid = root + d * length * 0.5 + up * 0.5
         end = root + d * length + up * 0.45 * (0.6 + (1 - q) * 0.6)
-        blade(flight, [root + up * 0.05, mid, end], up, t_f, 0.92, vane(0.16, 0.26, 1.0), lead=0.5, th=0.13, steps=8, mat=0)
+        mid, end = mid + up * 0.02 * k, end + up * 0.02 * k
+        blade(flight, [root + up * (0.05 + 0.02 * k), mid, end], up, t_f, 0.92, vane(0.16, 0.26, 1.0), lead=0.5, th=0.13, steps=8, mat=0)
     # tertials: four short broad blades from the upper arm that close the trailing edge against the body
     for k in range(4):
         q = lerp(0.9, 0.18, k / 3)
         root = sh.lerp(el, q) + up * 0.1
         d = (t_u + ud * 0.05).normalized()
         length = 5.4 - 0.5 * k
-        blade(flight, [root, root + d * length * 0.5 + up * 0.3, root + d * length + up * 0.5], up, t_u, 1.0, vane(0.16, 0.3, 1.0), lead=0.5, th=0.12, steps=7, mat=0)
+        blade(flight, [root + up * 0.03 * k, root + d * length * 0.5 + up * (0.3 + 0.03 * k), root + d * length + up * (0.5 + 0.03 * k)], up, t_u, 1.0, vane(0.16, 0.3, 1.0), lead=0.5, th=0.12, steps=7, mat=0)
     # coverts: rows of small blades on the face of the wing, hiding the roots of the flight feathers
     for k in range(10):
         root, d, length = prim_roots[k]
-        base = root + d * length * 0.10 + up * 0.28
+        base = root + d * length * 0.10 + up * 0.09
         blade(covert, [base, base + d * length * 0.20 + up * 0.06, base + d * length * 0.40 + up * 0.10], up, t_h, 0.60, vane(0.2, 0.4, 0.6), lead=0.4, th=0.10, steps=4, across=3, mat=0)
     for k in range(12):
         q = lerp(0.97, 0.06, k / 11)
         root = el.lerp(wr, q)
         d = (t_f * math.cos(math.radians(8 + 6 * (1 - q))) - fd * math.sin(math.radians(8 + 6 * (1 - q)))).normalized()
-        base = root + d * 0.8 + up * 0.5
+        base = root + d * 0.8 + up * 0.14
         blade(covert, [base, base + d * 1.6 + up * 0.1, base + d * 3.0 + up * 0.18], up, t_f, 0.82, vane(0.2, 0.35, 1.0), lead=0.5, th=0.10, steps=4, across=3, mat=0)
     for k in range(12):
         q = lerp(0.95, 0.05, k / 11)
         root = el.lerp(wr, q) + t_f * 0.3
         d = (t_f * 0.95 - fd * 0.2).normalized()
-        base = root + d * 0.5 + up * 0.85
+        base = root + d * 0.5 + up * 0.22
         blade(covert, [base, base + d * 1.0 + up * 0.08, base + d * 1.9 + up * 0.14], up, t_f, 0.7, vane(0.2, 0.4, 1.0), lead=0.5, th=0.09, steps=3, across=3, mat=0)
     for k in range(8):
         q = lerp(0.9, 0.12, k / 7)
-        root = sh.lerp(el, q) + t_u * 0.3 + up * 1.2
+        root = sh.lerp(el, q) + t_u * 0.3 + up * 0.3
         d = (t_u + ud * 0.1).normalized()
         blade(covert, [root, root + d * 1.1 + up * 0.1, root + d * 2.3 + up * 0.2], up, t_u, 0.8, vane(0.2, 0.4, 1.0), lead=0.5, th=0.09, steps=3, across=3, mat=0)
 
@@ -206,7 +211,7 @@ def build_wing(M, coll, seed=1):
         edge = []
         for i in range(8):
             s = 0.28 + 0.66 * i / 7
-            p = root + d * length * s + t_h * w * vane(0.10, 0.34, 0.5)(s) + up * (0.10 * length * s * s + 0.13 * 0.4)
+            p = root + d * length * s + t_h * w * vane(0.10, 0.34, 0.5)(s) + up * (0.10 * length * s * s + 0.014 * k + 0.045)
             edge.append(p)
         Hm.htube(magma, edge, lambda t: 0.065 * (1 - 0.75 * t), sides=4, per=2, uv_scale=1.0, tip=True, wobble=0.0)
     out = {"flight": flight, "covert": covert, "arm": arm, "claws": claws, "magma": magma}
@@ -239,17 +244,34 @@ def build_tail(coll, M):
         side = V((1 if "Right" in key else -1 if "Left" in key else 1, 0, 0))
         # a gentle ripple so the ribbon already moves in the bind: it is straightened by the pose, never by the model
         pts = [p + V((0.35 * math.sin(i * 1.7 + len(key)), 0.0, 0.0)) if i else p for i, p in enumerate(pts)]
+        layer = {"Tail0": 0.0, "RightTail1": 0.12, "LeftTail1": 0.12, "RightTail2": 0.24, "LeftTail2": 0.24}[key]
+        pts = [p + V((0, layer, 0)) for p in pts]
         tilt = {"Tail0": 0.0, "RightTail1": -0.5, "LeftTail1": 0.5, "RightTail2": -0.9, "LeftTail2": 0.9}[key]
         centre = blade(tail, pts, up, side, widths[key], vane(0.10, 0.26, 0.7), lead=0.9, th=0.12, steps=16, mat=0, cup=0.05, twist=tilt * 1.6)
-        edge = [c + side * widths[key] * vane(0.10, 0.26, 0.7)(i / 15) for i, c in enumerate(centre)][3:14]
+        edge = [e + V((0, 0.05, 0)) for e in blade.last_edge][3:14]
         Hm.htube(glow, edge, lambda t: 0.07 * (1 - 0.7 * t), sides=4, per=2, uv_scale=1.0, tip=True, wobble=0.0)
+    # the rump: a soft mass every ribbon's root is sunk in
+    _stub(tail, V((0, 12.3, 4.6)), (1.9, 0.8, 1.9))
     # the short upper coverts fanned over the root
     for k in range(9):
         a = math.radians(-60 + 15 * k)
         root = V((0, 12.9, 3.3))
         d = V((math.sin(a), -0.05, math.cos(a))).normalized()
-        blade(tail, [root, root + d * 1.6 + V((0, 0.3, 0)), root + d * 3.2 + V((0, 0.1, 0))], up, V((math.cos(a), 0, -math.sin(a))), 0.8, vane(0.2, 0.45, 1.0), lead=0.9, th=0.1, steps=5, across=3, mat=0)
+        blade(tail, [root + V((0, 0.03 * k, 0)), root + d * 1.6 + V((0, 0.3 + 0.03 * k, 0)), root + d * 3.2 + V((0, 0.1 + 0.03 * k, 0))], up, V((math.cos(a), 0, -math.sin(a))), 0.8, vane(0.2, 0.45, 1.0), lead=0.9, th=0.1, steps=5, across=3, mat=0)
     return {"tail": tail, "glow": glow}
+
+
+def _stub(hi, centre, radii, nu=10, nv=6):
+    """A small ellipsoid joining feathers whose roots are sunk in it."""
+    c = V(centre)
+    rows = []
+    for j in range(nv + 1):
+        th = math.pi * j / nv
+        rows.append([hi.v(c + V((math.sin(th) * math.cos(TAU * i / nu) * radii[0], -math.cos(th) * radii[1], math.sin(th) * math.sin(TAU * i / nu) * radii[2]))) for i in range(nu)])
+    for j in range(nv):
+        for i in range(nu):
+            k = (i + 1) % nu
+            hi.f([rows[j][i], rows[j][k], rows[j + 1][k], rows[j + 1][i]], [(i / nu, j / nv), ((i + 1) / nu, j / nv), ((i + 1) / nu, (j + 1) / nv), (i / nu, (j + 1) / nv)])
 
 
 def build_crest(coll, M):
@@ -257,6 +279,7 @@ def build_crest(coll, M):
     crest, glow = Hm.Hi(), Hm.Hi()
     up = V((0, 1, 0))
     base = V(BONES["CrestA"][1])
+    _stub(crest, base + V((0, 0.0, 0.2)), (1.3, 0.55, 1.1))
     plumes = [(0.0, 1.0, 1.0), (-0.9, 0.82, 1.0), (0.9, 0.82, 1.0), (-1.5, 0.62, 0.8), (1.5, 0.62, 0.8), (-0.45, 0.9, 1.0), (0.45, 0.9, 1.0)]
     for x, scale, w in plumes:
         p0 = V((x * 0.55, base.y - 0.1 - 0.05 * abs(x), base.z + 0.1))
