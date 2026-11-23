@@ -31,6 +31,7 @@ sys.path.insert(0, HERE)
 import blossom_layout as BL          # its noise, its footprint (the clearance check) and the shared sketch writer
 import layout as LAYOUT              # where every island stands
 import murim_dawnspire_terrain as DT  # Dawnspire's terraces on the Orthodox side (changes only its own region; DAWNSPIRE_TERRAIN=0 turns it off)
+import murim_windrift_terrain as WT   # Windrift Hold's gorge, ledges and stairs on the Unorthodox pad (changes only its own region; WINDRIFT_TERRAIN=0 turns it off)
 
 ISLAND = "MurimCrossing"
 CENTRE = tuple(float(v) for v in LAYOUT.ISLANDS[ISLAND]["centre"])
@@ -287,9 +288,11 @@ def path_state(x, z):
 
 
 def ground(x, z):
-    """The ground (height over Y 200, details) with Dawnspire's terraces laid over the Orthodox side (murim_dawnspire_terrain)."""
+    """The ground (height over Y 200, details) with Dawnspire's terraces laid over the Orthodox side (murim_dawnspire_terrain) and Windrift's gorge and ledges
+    over the Unorthodox pad (murim_windrift_terrain): the two regions never meet."""
     h, d = _ground_base(x, z)
-    return DT.override(x, z, h, d)
+    h, d = DT.override(x, z, h, d)
+    return WT.override(x, z, h, d)
 
 
 def _ground_base(x, z):
@@ -353,6 +356,8 @@ def surface(x, z, slope, d):
     m = _surface_base(x, z, slope, d)
     if "dawn" in d:
         return DT.surface(x, z, slope, d, m)
+    if "wind" in d:
+        return WT.surface(x, z, slope, d, m)
     return DT.hall_pave(x, z, m)
 
 
@@ -416,6 +421,8 @@ def bottom(x, z, d):
     b = _bottom_base(x, z, d)
     if "dawn" in d:
         return -min(DEEPEST, max(-b, DT.bottom_depth(d)))
+    if "wind" in d:
+        return -min(DEEPEST, max(-b, WT.bottom_depth(d)))
     return b
 
 
@@ -446,6 +453,8 @@ def underside_owner(d):
     f = d["fields"]
     if "dawn" in d:                      # a Dawnspire terrace hangs in the Orthodox side's pale limestone
         return "O"
+    if "wind" in d:                      # a Windrift ledge hangs in the Unorthodox side's rock
+        return "U"
     if f["massif"] > 0 or f["stair_Orthodox"] > 0 or f["stair_Unorthodox"] > 0 or f["stair_Demonic"] > 0:
         return d["zone"]
     return None
@@ -471,6 +480,9 @@ def sample_grid():
     if DT.ENABLED:
         import dawnspire                 # (its buildings' footprints and walks: the terrain under them is Pavement)
         dawnspire.register_pavement()
+    if WT.ENABLED:
+        import windrift                  # (its buildings' footprints and walks: the terrain under them is Sandstone and Ground)
+        windrift.register_pavement()
     ox, oz, n = grid()
     H, D, X = [], [], []
     for j in range(n):
@@ -603,11 +615,17 @@ def placed():
         return _CACHE["placed"]
     # (Dawnspire plants its own cherry trees: the first foundation's borrowed Blossom Sanctuary trees on the Orthodox side are gone)
     trees_o = [] if DT.ENABLED else scatter("O", 24, 15.0, 211, (50.0, 330.0, 20.0, 330.0), 0.55, 4.0)
-    trees_u = scatter("U", 32, 12.0, 223, (-125.0, 125.0, 30.0, 400.0), 0.65, 4.0)
+    # (Windrift plants its own forest: the first foundation's borrowed Jade Grove trees on the Unorthodox side are gone)
+    trees_u = [] if WT.ENABLED else scatter("U", 32, 12.0, 223, (-125.0, 125.0, 30.0, 400.0), 0.65, 4.0)
     rocks_d = scatter("D", 20, 18.0, 233, (-330.0, -60.0, 40.0, 340.0), 0.9, -10.0)
     falls = []
     # waterfalls: where a mesa's rim faces the plaza: (zone, mesa index, bearing from its middle) -> lip and the point behind it
-    for zone, idx, bearing in ((("O", 0, -150.0), ("O", 2, -125.0), ("U", 3, -90.0)) if not DT.ENABLED else (("U", 3, -90.0),)):
+    fall_list = [("O", 0, -150.0), ("O", 2, -125.0), ("U", 3, -90.0)]
+    if DT.ENABLED:                       # (the Orthodox mesas' falls are Dawnspire's now)
+        fall_list = [f for f in fall_list if f[0] != "O"]
+    if WT.ENABLED:                       # (the Unorthodox mesa's fall is Windrift's: WindriftBuilder, Placements/MurimWindrift.lua)
+        fall_list = [f for f in fall_list if f[0] != "U"]
+    for zone, idx, bearing in fall_list:
         z_, cx, cz, R, H, style = MOUNTAINS[idx]
         ang = math.radians(bearing)
         rr = 0.58
@@ -665,6 +683,8 @@ def report():
             for rr in (0.0, 20.0, 40.0, HQ[q]["flat"] - 2.0):
                 h_, d_ = ground(px + math.cos(math.radians(k)) * rr, pz + math.sin(math.radians(k)) * rr)
                 if d_ and "dawn" in d_:          # (Dawnspire's terraces rise behind the hall on purpose: the pad is level where they did not change it)
+                    continue
+                if WT.ENABLED and q == "Unorthodox" and (d_ is None or "wind" in d_):   # (Windrift's gorge is open sky in the pad, its ledges rise in the cliff: the pad is level where it did not change it)
                     continue
                 worst = max(worst, abs((0.0 if h_ is None else h_) - HQ[q]["pad_h"]))
         level[q] = round(worst, 2)
