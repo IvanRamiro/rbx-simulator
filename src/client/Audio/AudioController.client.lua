@@ -20,7 +20,7 @@ local AMBIENCE = { Yggdrasil = "AmbYggdrasil", BeginnerIsle = "AmbYggdrasil", Ja
 local BIRDS = { AmbYggdrasil = true } -- a daytime bed: night insects after dark, nothing under the rain
 local NIGHT_BED = "AmbMoon"
 local MUSIC = { Yggdrasil = "MusicHub", BeginnerIsle = "MusicHub", JadeGrove = "MusicJade", EmberPeak = "MusicEmber", MoonlitIsle = "MusicMoon", OriginAbyss = "MusicAbyss",
-    BlossomSanctuary = "MusicHub", MurimCrossing = "MusicHub" }
+    BlossomSanctuary = "MusicOrient", MurimCrossing = "MusicOrient" }
 local AWAKE = { Guardian = true, Weakened = true, Enraged = true }
 local BATTLE_DISTANCE = 150    -- studs from an awake guardian at which the battle theme takes over
 local CROSSFADE = 2.5          -- seconds

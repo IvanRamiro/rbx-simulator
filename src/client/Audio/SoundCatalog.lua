@@ -400,7 +400,10 @@ local catalog = {
     AmbRain = { Id = "9112854469", Volume = 0.4, Group = "Ambience", FadeIn = 6, FadeOut = 6 }, -- 39 x 0.4: a little over the birds (9 x 1.6)
 
     -- ---------- music (APM) ----------
-    MusicHub = { Id = "1847656215", Volume = 0.4, Group = "Music", FadeIn = 2.5 },     -- Forests Of The Orient
+    -- the hub (the owner, 2026-11-24, item 13: "a different hub track"; the hub must not read as Chinese): APM Music's "High Whisps" (celestial vocal elements and ethereal pads, 124 s),
+    -- levelled by measured loudness in Play against the track it replaces (avg PlaybackLoudness at Volume 1: Whisps 43.3, floor 12.7; Forests Of The Orient 133.4 x 0.4 = 53.4): 43.3 x 1.2 = 52
+    MusicHub = { Id = "9045016418", Volume = 1.2, Group = "Music", FadeIn = 2.5 },     -- High Whisps
+    MusicOrient = { Id = "1847656215", Volume = 0.4, Group = "Music", FadeIn = 2.5 },  -- Forests Of The Orient: the Blossom Sanctuary and Murim Crossing's plaza, where Asian design is allowed
     MusicJade = { Id = "1840356481", Volume = 1.3, Group = "Music", FadeIn = 2.5 },    -- Ethnic Lullaby: bamboo flute
     MusicEmber = { Id = "9041879299", Volume = 1.3, Group = "Music", FadeIn = 2.5 },   -- Territory Conquest: tense drums
     MusicMoon = { Id = "1837129588", Volume = 0.16, Group = "Music", FadeIn = 2.5 },   -- Orient At Twilight

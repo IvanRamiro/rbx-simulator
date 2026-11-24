@@ -144,6 +144,12 @@ def check_sounds():
                 for name in re.findall(r"= \"([A-Za-z0-9_]+)\"", alerts.group(1) if alerts else ""):
                     if not exists(name):
                         missing.setdefault(name, "GuardianController ALERTS")
+    # 2b. the island beds and musics named in the audio controller's tables
+    controller = os.path.join(REPO, "src", "client", "Audio", "AudioController.client.lua")
+    if os.path.exists(controller):
+        for name in re.findall(r"\"((?:Amb|Music)[A-Za-z0-9]+)\"", open(controller, encoding="utf-8").read()):
+            if not exists(name):
+                missing.setdefault(name, "AudioController")
     # 3. the territories' sounds (shared/TerritoryRules.SOUND names a bed, a music and an accent each)
     territory_path = os.path.join(REPO, "src", "shared", "TerritoryRules.lua")
     if os.path.exists(territory_path):
