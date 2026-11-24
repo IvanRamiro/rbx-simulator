@@ -2,7 +2,7 @@
 
     python3 tools/ui/thumbnail.py <fonts dir> <out.jpg>      (needs numpy and Pillow)
 
-The art is assets/ui/thumbnail/art_thumbnail.png: a blocky Roblox avatar in white and gold robes carrying a glowing lava egg, chased by an obsidian-and-gold phoenix-roc
+The art is assets/ui/thumbnail/art_thumbnail.png (AI-generated, with the owner's permission; the file keeps its content-credential metadata): a blocky Roblox avatar in white and gold robes carrying a glowing lava egg, chased by an obsidian-and-gold phoenix-roc
 (the owner, 2026-11-24: "use roblox character not a human figure"). It has no text in it, so the title is set here. It leaves the left third calm; a soft dark scrim behind the title
 keeps it readable. The icon is assets/ui/thumbnail/Eggbound_icon_1024.png (no text on an icon). The fonts are the UI's (UiTheme): Merriweather and Montserrat from Google Fonts (OFL),
 saved in <fonts dir> as merri.ttf and mont.ttf (the variable fonts from github.com/google/fonts, ofl/merriweather and ofl/montserrat). Roblox wants 1920x1080.
