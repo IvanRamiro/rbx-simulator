@@ -624,6 +624,49 @@ def head_turntable(path, size=420):
     look(path, shots, size=size, samples=36, columns=4)
 
 
+def head_measure(lows):
+    """The head's widths from the Skull game mesh (Roblox space), as ratios of the skull's width at the eyes: the skull at the eye level, the cheeks, the muzzle half way to
+    the nose, the muzzle at the nose pad, and the eyes' spacing. Slabs across the head's axis (ears and teeth above and below are left out of the skull's width)."""
+    import numpy as np
+    P = Md.default_params()
+    at, hs = Md.head_frame(P)
+    pts = _points(lows["Skull"])
+    z_of = lambda f: at(f)[2]
+
+    def width(f, lo_y, hi_y, tol=0.3):
+        zc = z_of(f)
+        sel = pts[(abs(pts[:, 2] - zc) < tol) & (pts[:, 1] > lo_y) & (pts[:, 1] < hi_y)]
+        return float(sel[:, 0].max() - sel[:, 0].min()) if len(sel) else 0.0, float(sel[:, 1].max() - sel[:, 1].min()) if len(sel) else 0.0
+
+    ey = _points(lows["Eyes"])
+    centres = [float(np.mean(np.abs(ey[ey[:, 0] > 0][:, 0]))), float(np.mean(np.abs(ey[ey[:, 0] < 0][:, 0])))]
+    ez = float(np.mean(ey[:, 2]))
+    f_eye = (ez - at(0)[2]) / (at(1)[2] - at(0)[2])
+    w_eye, _ = width(0.45, 15.4, 18.3)       # the reference: the skull's width at the eye region (f 0.45)
+    out = {"eye level f": round(f_eye, 2), "skull width at the eyes (studs)": round(w_eye, 2)}
+    for name, f, lo, hi in (("cheeks (f 0.28)", 0.28, 14.0, 18.3), ("muzzle at the stop (f 0.55)", 0.55, 13.5, 17.0), ("muzzle half way (f 0.75)", 0.75, 13.0, 16.6), ("muzzle at the nose pad (f 0.97)", 0.97, 12.8, 16.3)):
+        w, h = width(f, lo, hi)
+        out[name] = {"width": round(w, 2), "ratio to the eye width": round(w / max(w_eye, 1e-6), 2), "height": round(h, 2)}
+    out["eyes' spacing (centre to centre) / skull width"] = round(2 * np.mean(centres) / max(w_eye, 1e-6), 2)
+    return out
+
+
+def head_ortho(path, size=480):
+    """A true orthographic front view and side view of the head (the clay game meshes), side by side."""
+    scene, cam = T._review_scene(size)
+    cam.data.type = "ORTHO"
+    cam.data.ortho_scale = 11.0
+    for o in bpy.data.objects:
+        if o.type == "MESH" and o.name in ("LOW_Fire", "LOW_Corona", "LOW_CoronaCore", "LOW_Eclipse"):
+            o.hide_render = True
+    tmp = path + ".tile.png"
+    tiles = [T._shot(scene, cam, -0.01, 0, 40, W.rb(0, 16.2, -18.5), size, tmp), T._shot(scene, cam, -90, 0, 40, W.rb(0, 16.2, -18.0), size, tmp)]
+    T._sheet(tiles, 2, path, size)
+    cam.data.type = "PERSP"
+    if os.path.exists(tmp):
+        os.remove(tmp)
+
+
 # ---------------------------------------------------------------- maps, the FBX, the placements
 BAKES = {"Pelt": dict(size=2048, small=1024, ray=0.25, extrusion=0.10), "Skull": dict(size=2048, small=1024, ray=0.18, extrusion=0.06)}
 NEON = {"Eclipse": Mt.ECLIPSE_HEX, "Corona": Mt.CORONA_HEX, "CoronaCore": Mt.CORE_HEX, "Eyes": Mt.EYE_HEX, "Pupils": Mt.PUPIL_HEX}
@@ -1193,3 +1236,10 @@ if __name__ == "__main__":
         closeups(os.path.join(out_dir, "closeups_hi.png"))
     if stage == "posed":
         posed_heads(os.path.join(out_dir, "posed_heads.png"))
+    if stage == "headfront":
+        import json
+        parts, lows = build_lows()
+        print("HEAD " + json.dumps(head_measure(lows), indent=1))
+        for k, o in lows.items():
+            o.name = o.data.name = "LOW_" + k
+        head_ortho(os.path.join(out_dir, argv[1] if len(argv) > 1 else "head_ortho.png"))

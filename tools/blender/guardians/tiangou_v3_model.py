@@ -147,32 +147,30 @@ def skull_lobes(P):
     """A canine skull: a domed cranium with brow ridges, a definite stop where the forehead drops to a tapered, bridged muzzle, flews that hang over the lower jaw,
     full cheeks, tall pointed ears."""
     at, hs = head_frame(P)
-    L = [(tuple(at(0.17, 0.85)), (2.2 * hs, 1.85 * hs, 2.4 * hs), None),                  # the cranium, wide
-         (tuple(at(0.42, 1.15)), (1.95 * hs, 1.6 * hs, 1.95 * hs), None)]                 # the forehead dome
-    # the muzzle as a rounded wedge: a narrow nasal bridge on top, a wider body below it that spreads into the flews and cheeks, tapering to the nose
-    L += lobe_along(at(0.60, 0.50), at(0.95, 0.26), 0.62 * hs, 0.38 * hs, 6, 0.8, 1.0)     # the bridge (narrow)
-    L += lobe_along(at(0.58, -0.12), at(0.94, -0.12), 1.3 * hs, 0.72 * hs, 6, 1.0, 0.62)   # the muzzle body (wide, low)
+    L = [(tuple(at(0.15, 0.9)), (1.68 * hs, 1.75 * hs, 2.0 * hs), None),                   # the cranium: narrow and domed
+         (tuple(at(0.36, 1.1)), (1.5 * hs, 1.35 * hs, 1.7 * hs), None)]                   # the forehead rising gently from the stop
+    # the muzzle as a lean wedge: a narrow nasal ridge on top, the sides sloping down and out to the flews, everything narrowing steadily to the nose
+    L += lobe_along(at(0.42, 0.75), at(0.96, 0.3), 0.58 * hs, 0.32 * hs, 7, 0.85, 1.0)
     shift = V(P["head_at"]) - V(BONES["Head"][1])
     for s in (-1, 1):
-        L.append((tuple(at(0.36, 1.62, s * 0.92)), (0.85 * hs, 0.4 * hs, 0.85 * hs), None))   # the brow ridge
-        L.append((tuple(at(0.30, -0.12, s * 1.45)), (0.62 * hs, 0.92 * hs, 1.35 * hs), None))  # the cheek
-        L.append((tuple(at(0.36, 0.55, s * 1.8)), (0.55 * hs, 0.62 * hs, 1.1 * hs), None))     # the zygomatic arch: the skull is wider than the face
-        L.append((tuple(at(0.55, 0.35, s * 0.95)), (0.5 * hs, 0.45 * hs, 0.7 * hs), None))     # the nasal bone's shoulder where the bridge meets the stop
-        L += lobe_along(at(0.54, -0.3, s * 1.12), at(0.9, -0.5, s * 0.66), 0.58 * hs, 0.4 * hs, 6, 0.8, 1.0)   # the flew: the jowl line
+        L += lobe_along(at(0.44, 0.2, s * 0.55), at(0.95, 0.0, s * 0.3), 0.55 * hs, 0.3 * hs, 7, 0.85, 0.9)       # the muzzle's sides
+        L += lobe_along(at(0.44, -0.35, s * 0.6), at(0.9, -0.5, s * 0.36), 0.45 * hs, 0.3 * hs, 7, 0.8, 1.0)     # the flews: the jowl line
+        L.append((tuple(at(0.40, 1.5, s * 0.75)), (0.55 * hs, 0.25 * hs, 0.6 * hs), None))                      # a soft supraorbital ridge (the scowl)
+        L.append((tuple(at(0.28, 0.0, s * 1.05)), (0.45 * hs, 0.75 * hs, 1.0 * hs), None))                    # a subtle cheek
         tag = "Left" if s < 0 else "Right"
-        a, b = (V(x) + shift for x in BONES[tag + "EarA"][1:3])
-        e = V(BONES[tag + "EarB"][2]) + shift
+        a_, b_ = (V(x) + shift + V((s * 0.25, 0.25, 0)) for x in BONES[tag + "EarA"][1:3])      # the ears set a little higher and wider on the skull
+        e = V(BONES[tag + "EarB"][2]) + shift + V((s * 0.25, 0.25, 0))
         k = P["ears"]
-        L += lobe_along(a, b, 0.95 * k, 0.82 * k, 4, 0.28, 1.0, 1.1)
-        L += lobe_along(b, e, 0.82 * k, 0.12 * k, 5, 0.28, 1.0, 1.1)
+        L += lobe_along(a_, b_, 0.95 * k, 0.82 * k, 4, 0.28, 1.0, 1.1)
+        L += lobe_along(b_, e, 0.82 * k, 0.12 * k, 5, 0.28, 1.0, 1.1)
     return L
 
 
 def jaw_lobes(P):
     """The lower jaw: narrower than the muzzle so the flews overhang it, a rounded chin, a tongue lying on the floor of the mouth."""
     at, hs = head_frame(P)
-    L = lobe_along(at(0.34, -0.78), at(0.9, -0.82), 0.95 * hs, 0.42 * hs, 7, 0.85, 0.8)
-    L.append((tuple(at(0.28, -0.8)), (1.1 * hs, 0.9 * hs, 0.95 * hs), None))
+    L = lobe_along(at(0.34, -0.78), at(0.9, -0.82), 0.85 * hs, 0.4 * hs, 7, 0.82, 0.8)
+    L.append((tuple(at(0.28, -0.8)), (0.95 * hs, 0.9 * hs, 0.95 * hs), None))
     L.append((tuple(at(0.88, -0.86)), (0.3 * hs, 0.3 * hs, 0.32 * hs), None))
     return L
 
@@ -191,29 +189,29 @@ def teeth(P, hi_up, hi_low):
     curve = lambda f, h0, h1, x, c: (at(f, h0, x), at(f + c, h1, x))
     for s in (-1, 1):
         # upper canine (long, curved back), premolars (hidden), carnassial (shows a little)
-        a, b = curve(0.90, -0.28, -1.42, s * 0.80, 0.025)
-        G.cone(hi_up, a, b, 0.25 * hs, 6)
-        for f, x in ((0.84, 0.96), (0.78, 1.02), (0.72, 1.07)):
+        a, b = curve(0.90, -0.28, -1.0, s * 0.62, 0.025)
+        G.cone(hi_up, a, b, 0.17 * hs, 6)
+        for f, x in ((0.84, 0.56), (0.78, 0.6), (0.72, 0.64)):
             k = R.uniform(0.85, 1.15)
             a, b = curve(f, -0.28, -0.58 * k, s * x, 0.01)
-            G.cone(hi_up, a, b, 0.14 * hs, 5)
-        a, b = curve(0.65, -0.28, -1.0, s * 1.1, 0.03)
-        G.cone(hi_up, a, b, 0.21 * hs, 5)
+            G.cone(hi_up, a, b, 0.1 * hs, 5)
+        a, b = curve(0.65, -0.28, -0.8, s * 0.7, 0.03)
+        G.cone(hi_up, a, b, 0.15 * hs, 5)
         # lower canine (shows beside the upper one), premolars hidden, carnassial
-        a, b = curve(0.915, -1.05, -0.40, s * 0.60, -0.02)
-        G.cone(hi_low, a, b, 0.22 * hs, 6)
-        for f, x in ((0.83, 0.86), (0.77, 0.92), (0.71, 0.97)):
+        a, b = curve(0.915, -1.05, -0.45, s * 0.3, -0.02)
+        G.cone(hi_low, a, b, 0.15 * hs, 6)
+        for f, x in ((0.83, 0.34), (0.77, 0.37), (0.71, 0.4)):
             k = R.uniform(0.85, 1.15)
             a, b = curve(f, -1.05, -0.72 * k, s * x, -0.01)
-            G.cone(hi_low, a, b, 0.13 * hs, 5)
-        a, b = curve(0.64, -1.05, -0.68, s * 0.98, -0.02)
-        G.cone(hi_low, a, b, 0.18 * hs, 5)
-    for k, x in enumerate((-0.5, -0.3, -0.1, 0.1, 0.3, 0.5)):
-        f = 0.965 - 0.05 * (x / 0.5) ** 2
-        ln = R.uniform(0.38, 0.52)
+            G.cone(hi_low, a, b, 0.1 * hs, 5)
+        a, b = curve(0.64, -1.05, -0.68, s * 0.42, -0.02)
+        G.cone(hi_low, a, b, 0.12 * hs, 5)
+    for k, x in enumerate((-0.3, -0.18, -0.06, 0.06, 0.18, 0.3)):
+        f = 0.965 - 0.05 * (x / 0.3) ** 2
+        ln = R.uniform(0.2, 0.3)
         G.cone(hi_up, at(f, -0.28, x), at(f + 0.008, -0.28 - ln, x), R.uniform(0.09, 0.13) * hs, 5)
-        ln = R.uniform(0.38, 0.5)
-        G.cone(hi_low, at(f - 0.01, -1.05, x * 0.9), at(f - 0.018, -1.05 + ln, x * 0.9), R.uniform(0.08, 0.12) * hs, 5)
+        ln = R.uniform(0.3, 0.4)
+        G.cone(hi_low, at(f - 0.01, -1.05, x * 0.8), at(f - 0.018, -1.05 + ln, x * 0.8), R.uniform(0.08, 0.12) * hs, 5)
 
 
 def claws(hi):
@@ -229,11 +227,11 @@ def claws(hi):
 def nose_pad(hi, P):
     """A small matte rhinarium: a narrow pad, two nostril wings, a nostril in each (material 1) and a vertical philtrum groove running down to the lip."""
     at, hs = head_frame(P)
-    G.sphere(hi, at(0.99, 0.26), 0.5, nu=14, nv=9, radii=(0.5 * hs, 0.27 * hs, 0.3 * hs))
+    G.sphere(hi, at(0.985, 0.3), 0.5, nu=14, nv=9, radii=(0.42 * hs, 0.28 * hs, 0.3 * hs))
     for s in (-1, 1):
-        G.sphere(hi, at(1.012, 0.2, s * 0.25), 0.3, nu=10, nv=7, radii=(0.2 * hs, 0.24 * hs, 0.23 * hs))
-        G.sphere(hi, at(1.045, 0.18, s * 0.24), 0.2, nu=8, nv=6, radii=(0.1 * hs, 0.14 * hs, 0.08 * hs), mat=1)
-    G.sphere(hi, at(1.0, -0.08), 0.2, nu=8, nv=6, radii=(0.035 * hs, 0.12 * hs, 0.3 * hs), mat=1)   # the philtrum
+        G.sphere(hi, at(1.01, 0.24, s * 0.2), 0.3, nu=10, nv=7, radii=(0.16 * hs, 0.22 * hs, 0.2 * hs))
+        G.sphere(hi, at(1.04, 0.22, s * 0.19), 0.2, nu=8, nv=6, radii=(0.08 * hs, 0.13 * hs, 0.07 * hs), mat=1)
+    G.sphere(hi, at(0.995, 0.0), 0.2, nu=8, nv=6, radii=(0.03 * hs, 0.1 * hs, 0.3 * hs), mat=1)   # the philtrum
 
 
 def eyes(P, skull):
@@ -241,10 +239,9 @@ def eyes(P, skull):
     iris, pupil, lids = Hm.Hi(), Hm.Hi(), Hm.Hi()
     hs = P["hs"]
     for s in (-1, 1):
-        n = V((s * 0.8, 0.12, -0.58)).normalized()
-        near = V((s * 1.0, 17.15, -16.7))
-        c = G.surface_along(skull, near, n, 4.0) - n * 0.1
-        G.eye(iris, pupil, lids, c, n, V((s * 0.0, -0.35, -1.0)), 0.74 * hs, 0.56 * hs, tilt=0.30, bulge=0.14, lid=0.34, droop=0.55, lower=0.17, slit=0.55, pupil_height=0.8)
+        n = V((s * 0.42, 0.14, -0.88)).normalized()
+        c = G.surface_along(skull, V((s * 1.0, 17.15, -17.0)), V((0, 0.08, -1.0)), 5.0) - n * 0.12
+        G.eye(iris, pupil, lids, c, n, V((s * 0.0, -0.35, -1.0)), 0.5 * hs, 0.37 * hs, tilt=0.62, bulge=0.12, lid=0.34, droop=0.55, lower=0.17, slit=0.55, pupil_height=0.8)
     return iris, pupil, lids
 
 
@@ -328,7 +325,7 @@ def build_fire(P):
     # make the forechest tuft, the ones on top the mane, the ones either side the collar: the same tongues, so it reads as one mass of fire
     stations, around = 8, 9
     for si in range(stations):
-        t = si / (stations - 1)
+        t = si / (stations - 1) * 0.86
         c, d, r = axis_at(t)
         e1 = V((1, 0, 0))
         e2 = d.cross(e1).normalized()
@@ -338,7 +335,7 @@ def build_fire(P):
             R = random.Random(1000 * si + int(round(abs(math.sin(a / 2) * 100))))
             out = e1 * math.cos(a) + e2 * math.sin(a)
             tang = e1 * -math.sin(a) + e2 * math.cos(a)
-            base = c + out * (r * 0.9)
+            base = c + out * (r * 0.72)
             direction = (-d * 1.0 + out * 0.55 + V((0, -0.1, 0))).normalized()
             length = (2.4 + 1.6 * math.sin(math.pi * min(1.0, t * 1.1))) * k * R.uniform(0.85, 1.15) * (1.2 if abs(math.cos(a / 2)) < 0.4 else 1.0)
             f.tongue(base, direction, tang, length, R.uniform(0.95, 1.25), ring_bones, R.uniform(-1, 1) * (1 if math.sin(a) >= 0 else -1), (0, 0.06, 0))
@@ -362,7 +359,7 @@ def build_fire(P):
         t = "Left" if mirror else "Right"
         for i in range(5):
             u = i / 4
-            f.cluster(V((2.2, 6.8 - 3.5 * u, -7.0 - 0.15 * u)), V((0.05, -0.5, 0.85)), (0, 0, 1), 2.2 + 1.2 * math.sin(math.pi * u), 0.85, ["Front%sFeather" % t, "Front%sLower" % t], 3, 0.35, mirror, (0, -0.06, 0), 0.5)
+            f.cluster(V((1.9, 6.8 - 3.5 * u, -6.8 - 0.15 * u)), V((0.05, -0.5, 0.85)), (0, 0, 1), 2.2 + 1.2 * math.sin(math.pi * u), 0.85, ["Front%sFeather" % t, "Front%sLower" % t], 3, 0.35, mirror, (0, -0.06, 0), 0.5)
         for i in range(6):
             u = i / 5
             f.cluster(V((2.2, 9.0 - 5.0 * u, 3.2 + 2.4 * u)), V((0.05, -0.6, 0.75)), (0, 0, 1), 2.4 + 1.4 * math.sin(math.pi * u), 0.9, ["Back%sFeather" % t, "Back%sThigh" % t, "Back%sShin" % t], 3, 0.35, mirror, (0, -0.06, 0), 0.5)
