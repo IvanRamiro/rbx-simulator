@@ -35,6 +35,7 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Combat = require(script.Parent:WaitForChild("Combat"))
 local MovementGuard = require(script.Parent.Parent:WaitForChild("Security"):WaitForChild("MovementGuard"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
+local GoalBook = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("GoalBook"))
 
 local COOLDOWN_SLACK = 0.15 -- the share of a cooldown a request may come early: latency, not cheating
 local lastStrike = {} -- [player] = { Form, Step, At } (FormRules.plan): the chain's last strike
@@ -243,6 +244,9 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
     end
     -- the counter as it stands: a miss leaves it, and it lapses after the window
     local hits = if counter and now - counter.At <= FormRules.Counter.WINDOW then counter.Hits else 0
+    if hits > 1 then
+        GoalBook.count(player, "Combo", hits) -- (a daily or weekly goal: the best combo; the goal's own mode keeps the best)
+    end
     RemoteEvents.CombatEvent:FireAllClients(player, weapon.Kind, point, strike.Step, if damage then math.round(damage) else nil, critical or nil, target,
         strike.Form, hits)
 end)

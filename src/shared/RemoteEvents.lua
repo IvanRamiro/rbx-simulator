@@ -29,6 +29,7 @@ local EVENT_NAMES = {
     "QuestEvent",
     "SettingsEvent",
     "RewardEvent",
+    "GoalEvent",
     "TitleEvent",
     "TribulationEvent",
     "PerfEvent",

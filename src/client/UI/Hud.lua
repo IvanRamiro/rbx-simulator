@@ -858,11 +858,12 @@ function Hud.window(props)
     hudScale.Scale = windowScale()
     hudScale.Parent = frame
     -- on a small screen it keeps its scale, so its text stays readable, and gets shorter: its lists scroll
+    local wanted = props.Size -- (what it asks for; win.resize changes it: a window with a longer page than its first, the Rewards' goals)
     local function fitToScreen()
         local view, scale = HudMetrics.viewport(), windowScale()
         local room = (view.Y - GuiService:GetGuiInset().Y - WINDOW_MARGIN) / scale
         local across = (view.X - WINDOW_MARGIN) / scale
-        frame.Size = UDim2.fromOffset(math.min(props.Size.X, across), math.min(props.Size.Y, room))
+        frame.Size = UDim2.fromOffset(math.min(wanted.X, across), math.min(wanted.Y, room))
     end
     -- where it rests: the middle of the screen; moved right only as far as it takes to clear the left column (the profile
     -- and the menu), and only if it then still fits on the screen. (Centring it in the room beside the column put every
@@ -901,6 +902,11 @@ function Hud.window(props)
     body.Parent = frame
 
     local win = { Frame = frame, Body = body }
+    -- asks for another height (as tall as the screen allows), e.g. when a taller page is shown; the width stays
+    function win.resize(height)
+        wanted = Vector2.new(props.Size.X, height)
+        place()
+    end
     local opened = false
     local linked = nil -- the menu button that opens it
     local shown = 0 -- which opening or closing is the latest: a quick reopen cancels a closing

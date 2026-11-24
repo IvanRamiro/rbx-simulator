@@ -14,6 +14,7 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
 local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
+local GoalBook = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("GoalBook"))
 
 local cultivatingPlayers = {}
 
@@ -184,6 +185,7 @@ local function awardCultivationQi(player)
     local _, rankValue = PlayerData.getStats(player)
     local multiplier = Ranks.getQiMultiplier(rankValue and rankValue.Value) * PassRules.qiMultiplier(player)
     qi.Value += math.floor(GameConfig.CultivationQiReward * multiplier * (100 + bonusPercent) / 100)
+    GoalBook.count(player, "Cultivate", GameConfig.CultivationInterval) -- (a daily or weekly goal: seconds spent cultivating, counted where the Qi is paid)
 end
 
 Players.PlayerAdded:Connect(setupPlayer)

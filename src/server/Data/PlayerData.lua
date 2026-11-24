@@ -31,9 +31,10 @@ local SpinLedger = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForC
 local QiBoost = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("QiBoost"))
 local AuctionLedger = require(script.Parent.Parent:WaitForChild("Auction"):WaitForChild("AuctionLedger"))
 local RecordBook = require(script.Parent.Parent:WaitForChild("Records"):WaitForChild("RecordBook"))
+local GoalBook = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("GoalBook"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 27
+local SCHEMA_VERSION = 28
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -223,6 +224,13 @@ MIGRATIONS[26] = function(progress)
     return progress
 end
 
+-- Version 28 added the daily and weekly goals (GoalBook): an older save has no progress, so both periods start empty (sanitizeProgress). A stray Goals in an older
+-- save could only be garbage: dropped.
+MIGRATIONS[27] = function(progress)
+    progress.Goals = nil
+    return progress
+end
+
 -- Playtesting in Studio: with ServerStorage's StudioTestSave attribute set, saves go to a separate store of that name, so
 -- each new name starts a new player and a real save can't be touched (set to true, a store called "StudioTestSave").
 -- Ignored outside Studio.
@@ -274,6 +282,7 @@ local function sanitizeProgress(raw)
         Auction = AuctionLedger.sanitize(nil),
         Records = RecordBook.sanitize(nil),
         Forms = {},
+        Goals = GoalBook.sanitize(nil),
     }
 
     if typeof(raw) ~= "table" then
@@ -381,6 +390,7 @@ local function sanitizeProgress(raw)
     progress.Auction = AuctionLedger.sanitize(raw.Auction)
     progress.Records = RecordBook.sanitize(raw.Records)
     progress.Forms = FormRules.sanitizeChoices(raw.Forms)
+    progress.Goals = GoalBook.sanitize(raw.Goals)
 
     return progress
 end
@@ -437,6 +447,8 @@ local function captureProgress(player)
         chosen[family] = player:GetAttribute("Form" .. family) or (loaded and loaded.Forms and loaded.Forms[family])
     end
     local forms = FormRules.sanitizeChoices(chosen)
+    -- (and the goals' progress: kept as loaded until GoalService has set them up)
+    local goals = GoalBook.exportData(player) or (loaded and loaded.Goals) or GoalBook.sanitize(nil)
     if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings and rewards and codex) then
         -- nothing is saved until every part is set up: say once which part is missing, or a session could go unsaved unseen
         local profile = profiles[player]
@@ -484,6 +496,7 @@ local function captureProgress(player)
         Auction = auction,
         Records = records,
         Forms = forms,
+        Goals = goals,
     }
 end
 
@@ -865,6 +878,7 @@ function PlayerData.release(player)
     QiBoost.removePlayer(player)
     AuctionLedger.removePlayer(player)
     RecordBook.removePlayer(player)
+    GoalBook.removePlayer(player)
 
     if not profile then
         return

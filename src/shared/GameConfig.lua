@@ -684,6 +684,39 @@ local GameConfig = {
     -- Spirit Stones, times SpiritStones.RealmFactor per realm (a full week is worth about five weapons of
     -- the player's realm), and any minutes of Qi. Offline: the share
     -- of the cultivating rate paid for time away. Group: set GroupId to turn the group reward on.
+    -- Daily and weekly goals (2026-11-24, the owner: "daily or weekly goals beyond the quest chain"): three of each, chosen for a player by their id and the UTC day
+    -- or week (shared/GoalRules, the same for the server and the window), counted by the server from what they really do (server/Rewards/GoalService), a few stones
+    -- each and a small bonus of timed 2x Qi for finishing all three. Nothing here asks for anything new: cultivating, hitting a guardian, carrying an egg home,
+    -- hatching, a combo, a spin. Stones scale by realm as the login reward's do (SpiritStones.RealmFactor); Target is in the Kind's own unit (Cultivate: seconds).
+    -- Mode "sum" adds up what happens; "max" keeps the best (a combo). A scope's pool has one goal of each Kind at most per day (the pick takes distinct Kinds).
+    -- Tunable: the stones and the boost minutes are the owner's to confirm (a free week of goals is about 65 minutes of 2x Qi: under 3 percent of the climb).
+    Goals = {
+        Daily = {
+            Count = 3, Stones = 4, Bonus = { Stones = 6, BoostMinutes = 5 },
+            Pool = {
+                { Id = "D_Cultivate10", Kind = "Cultivate", Mode = "sum", Target = 600, Unit = 60, Text = "Cultivate for %d minutes" },
+                { Id = "D_Cultivate20", Kind = "Cultivate", Mode = "sum", Target = 1200, Unit = 60, Text = "Cultivate for %d minutes" },
+                { Id = "D_Hit20", Kind = "GuardianHit", Mode = "sum", Target = 20, Unit = 1, Text = "Land %d strikes on a guardian" },
+                { Id = "D_Hit40", Kind = "GuardianHit", Mode = "sum", Target = 40, Unit = 1, Text = "Land %d strikes on a guardian" },
+                { Id = "D_Combo6", Kind = "Combo", Mode = "max", Target = 6, Unit = 1, Text = "Reach a %d-hit combo" },
+                { Id = "D_Combo10", Kind = "Combo", Mode = "max", Target = 10, Unit = 1, Text = "Reach a %d-hit combo" },
+                { Id = "D_Spin1", Kind = "Spin", Mode = "sum", Target = 1, Unit = 1, Text = "Spin the wheel %d time" },
+                { Id = "D_Secure1", Kind = "Secure", Mode = "sum", Target = 1, Unit = 1, Text = "Carry %d egg home from a guardian" },
+            },
+        },
+        Weekly = {
+            Count = 3, Stones = 15, Bonus = { Stones = 30, BoostMinutes = 30 },
+            Pool = {
+                { Id = "W_Cultivate90", Kind = "Cultivate", Mode = "sum", Target = 5400, Unit = 60, Text = "Cultivate for %d minutes" },
+                { Id = "W_Hit150", Kind = "GuardianHit", Mode = "sum", Target = 150, Unit = 1, Text = "Land %d strikes on guardians" },
+                { Id = "W_Secure3", Kind = "Secure", Mode = "sum", Target = 3, Unit = 1, Text = "Carry %d eggs home from guardians" },
+                { Id = "W_Hatch5", Kind = "Hatch", Mode = "sum", Target = 5, Unit = 1, Text = "Hatch %d eggs" },
+                { Id = "W_Combo15", Kind = "Combo", Mode = "max", Target = 15, Unit = 1, Text = "Reach a %d-hit combo" },
+                { Id = "W_Spin5", Kind = "Spin", Mode = "sum", Target = 5, Unit = 1, Text = "Spin the wheel %d times" },
+            },
+        },
+    },
+
     Rewards = {
         -- Spirit Stones at realm 1 (RewardRules scales them by realm). Raised four times on November 11, 2026: a day used to
         -- pay 5 stones against the 40 one stolen egg pays (15 seconds of play), so logging in wasn't worth it. Now day 1 is

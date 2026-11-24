@@ -2,7 +2,7 @@
 -- today's to claim, a code box, and the group reward when GameConfig.Rewards.Group has a GroupId. The
 -- server decides everything (server/Rewards/RewardService); the "DailyReady", "DailyDay" and
 -- "GroupClaimed" attributes carry the state here, and the button shows a dot while a claim waits.
--- Also announces offline Qi on joining.
+-- Also announces offline Qi on joining. A second tab holds the daily and weekly goals (GoalsPage; the server: server/Rewards/GoalService).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -17,6 +17,7 @@ local Toast = require(UI:WaitForChild("Toast"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
+local GoalsPage = require(script.Parent:WaitForChild("GoalsPage"))
 
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
@@ -32,11 +33,45 @@ local CLAIM_Y = DAY_HEIGHT + GAP
 local CODE_Y = CLAIM_Y + UiTheme.Height.ButtonLarge + GAP
 local GROUP_Y = CODE_Y + UiTheme.Height.Field + GAP
 local BODY = (if hasGroup then GROUP_Y + UiTheme.Height.Button else CODE_Y + UiTheme.Height.Field)
+local LOGIN_HEIGHT = BODY + UiTheme.Height.TitleBar + UiTheme.Space.M + UiTheme.Pad.Window
+local GOALS_HEIGHT = 520
 local window = Hud.window({
-    Name = "RewardsWindow", Title = "DAILY REWARDS", Size = Vector2.new(480, BODY + UiTheme.Height.TitleBar + UiTheme.Space.M + UiTheme.Pad.Window),
+    Name = "RewardsWindow", Title = "REWARDS", Size = Vector2.new(480, LOGIN_HEIGHT),
     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 })
-local body = window.Body
+-- the tabs stand in the title band, where the window's name was (a phone's window is already as tall as the screen allows, so a row of tabs in the body would push
+-- the code box off it): LOGIN shows what this file draws, GOALS the goals page
+local bar = window.Frame:FindFirstChild("TitleBar")
+local nameLabel = bar and bar:FindFirstChild("Title")
+if nameLabel then
+    nameLabel.Visible = false
+end
+local TAB_W = 132
+local loginTab = UiKit.tab({ Name = "LoginTab", Text = "LOGIN", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(0.5, -4, 0.5, 0),
+    Size = UDim2.fromOffset(TAB_W, UiTheme.Height.Tab), ZIndex = 12, Parent = bar })
+local goalsTab = UiKit.tab({ Name = "GoalsTab", Text = "GOALS", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0.5, 4, 0.5, 0),
+    Size = UDim2.fromOffset(TAB_W, UiTheme.Height.Tab), ZIndex = 12, Parent = bar })
+local loginPage = Instance.new("Frame")
+loginPage.Name = "LoginPage"
+loginPage.BackgroundTransparency = 1
+loginPage.Size = UDim2.fromScale(1, 1)
+loginPage.Parent = window.Body
+local body = loginPage
+local goals = GoalsPage.new(window.Body)
+local function showPage(name)
+    loginPage.Visible = name == "Login"
+    goals.Frame.Visible = name == "Goals"
+    UiKit.selectTab(loginTab, name == "Login")
+    UiKit.selectTab(goalsTab, name == "Goals")
+    -- the goals list is longer than the login page: the window grows to the screen's room (a phone's is already as tall as it can be)
+    window.resize(if name == "Goals" then GOALS_HEIGHT else LOGIN_HEIGHT)
+    if name == "Goals" then
+        goals.render()
+    end
+end
+loginTab.Activated:Connect(function() showPage("Login") end)
+goalsTab.Activated:Connect(function() showPage("Goals") end)
+showPage("Login")
 local message = Toast.new("RewardMessage", C.Highlight, 5)
 
 -- the seven days
@@ -152,7 +187,7 @@ local function render()
     claim.AutoButtonColor = false
     claim:SetAttribute("Tone", if isReady then "Go" else "Quiet")
     claim.Text = if isReady then "CLAIM DAY " .. current else "COME BACK TOMORROW"
-    setBadge(if isReady then "!" else nil, "Highlight")
+    setBadge(if isReady or (player:GetAttribute("GoalsReady") or 0) > 0 then "!" else nil, "Highlight")
     if groupButton then
         local done = player:GetAttribute("GroupClaimed") == true
         groupButton.Active = not done
@@ -161,7 +196,7 @@ local function render()
     end
 end
 
-for _, name in { "DailyReady", "DailyDay", "GroupClaimed", "Pass_VIP" } do
+for _, name in { "DailyReady", "DailyDay", "GroupClaimed", "Pass_VIP", "GoalsReady" } do
     player:GetAttributeChangedSignal(name):Connect(render)
 end
 task.spawn(function()

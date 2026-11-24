@@ -30,6 +30,7 @@ local QiReward = require(Server:WaitForChild("Cultivation"):WaitForChild("QiRewa
 local Wallet = require(Server:WaitForChild("Shop"):WaitForChild("Wallet"))
 local WorldConfig = require(Server:WaitForChild("World"):WaitForChild("WorldConfig"))
 local SpinLedger = require(script.Parent:WaitForChild("SpinLedger"))
+local GoalBook = require(script.Parent:WaitForChild("GoalBook"))
 
 local config = GameConfig.SpinWheel
 local THROTTLE = 1
@@ -123,6 +124,7 @@ local function settle(player, late)
     publish(player)
     PlayerData.saveSoon(player)
     Analytics.event(player, "WheelSpin", index, kind)
+    GoalBook.count(player, "Spin", 1)
     RemoteEvents.SpinEvent:FireClient(player, "Won", { Segment = index, Kind = kind, Text = text, Big = big, Late = late == true,
         Jackpot = segment.Kind == "Jackpot" and kind ~= "Stones" })
     if segment.Kind == "Jackpot" and kind ~= "Stones" then
