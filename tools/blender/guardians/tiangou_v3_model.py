@@ -95,18 +95,19 @@ def body_lobes(P):
     chest (it starts inside it, widest at the shoulders) so there is no step where they meet."""
     cw, cd, wi, cr = P["cw"], P["cd"], P["withers"], P["croup"]
     L = [
-        ((0, 9.7, -6.6), (3.3 * cw, 3.9 * cd, 5.9), None),               # the deep chest
-        ((0, 10.2, -2.2), (3.1 * cw, 3.6 * cd, 4.4), None),              # the barrel
+        ((0, 9.6, -6.4), (3.1 * cw, 4.5 * cd, 5.9), None),               # the deep chest: an oval, deeper than wide
+        ((0, 10.2, -2.0), (2.95 * cw, 3.7 * cd, 4.4), None),              # the barrel
         ((0, 10.9, 1.8), (2.6, 2.7, 3.1), None),                         # the loin, tucked
         ((0, 10.9 + cr, 5.0), (2.8, 3.2, 3.1), None),                    # the haunch
         ((0, 12.3 + wi, -6.6), (2.4, 1.7, 3.2), None),                   # the withers
             ]
-    L += lobe_along((0, 13.2, -5.2), (0, 14.1, -8.0), 2.5, 2.2, 4, 1.0, 1.0, 1.2)           # the shoulders slope into the neck
-    L.append(((0, 12.6, -9.4), (2.9, 2.8, 2.8), None))                                         # fills the valley between the chest's front and the neck
-    L.append(((0, 10.8, -10.4), (2.6, 3.0, 2.4), None))                                        # and the chest's front below it
+    # the neck is thick at its base and tapers to the head; a trapezius slope runs from the withers up the nape; the chest's front is filled so nothing steps
+    L += lobe_along((0, 13.4, -5.2), (0, 15.3, -10.6), 2.4, 1.85, 6, 1.0, 1.0, 1.25)           # the trapezius slope along the top of the neck
+    L.append(((0, 12.2, -9.6), (2.7, 2.9, 2.6), None))                                         # fills the valley between the chest's front and the neck
+    L.append(((0, 10.6, -10.8), (2.3, 3.1, 2.3), None))                                        # the chest's front below it
     n = [V(p) for p in P["neck"]]
-    pts = [V((0, 11.2, -5.6))] + n
-    rad = [3.0, 2.9, 2.6, 2.35, 2.2] if len(n) == 4 else [3.4] * len(pts)
+    pts = [V((0, 10.8, -5.0)), V((0, 12.0, -6.4))] + n
+    rad = [3.5, 3.45, 3.2, 2.8, 2.45, 2.2]
     rad = (rad + [P["neck_r"][1]] * len(pts))[:len(pts)]
     for i in range(len(pts) - 1):
         L += lobe_along(pts[i], pts[i + 1], rad[i], rad[i + 1], 5, 1.0, 1.0, 1.25)
@@ -146,15 +147,18 @@ def skull_lobes(P):
     """A canine skull: a domed cranium with brow ridges, a definite stop where the forehead drops to a tapered, bridged muzzle, flews that hang over the lower jaw,
     full cheeks, tall pointed ears."""
     at, hs = head_frame(P)
-    L = [(tuple(at(0.16, 0.85)), (2.1 * hs, 1.8 * hs, 2.3 * hs), None),                  # the cranium
-         (tuple(at(0.38, 1.0)), (1.85 * hs, 1.45 * hs, 1.8 * hs), None)]                   # the forehead
-    L += lobe_along(at(0.56, 0.22), at(0.95, 0.04), 1.55 * hs, 0.7 * hs, 7, 0.82, 0.95)   # the muzzle, tapering
-    L += lobe_along(at(0.58, 0.72), at(0.9, 0.42), 0.62 * hs, 0.34 * hs, 5, 0.8, 0.7)      # the bridge
+    L = [(tuple(at(0.17, 0.85)), (2.2 * hs, 1.85 * hs, 2.4 * hs), None),                  # the cranium, wide
+         (tuple(at(0.42, 1.15)), (1.95 * hs, 1.6 * hs, 1.95 * hs), None)]                 # the forehead dome
+    # the muzzle as a rounded wedge: a narrow nasal bridge on top, a wider body below it that spreads into the flews and cheeks, tapering to the nose
+    L += lobe_along(at(0.60, 0.50), at(0.95, 0.26), 0.62 * hs, 0.38 * hs, 6, 0.8, 1.0)     # the bridge (narrow)
+    L += lobe_along(at(0.58, -0.12), at(0.94, -0.12), 1.3 * hs, 0.72 * hs, 6, 1.0, 0.62)   # the muzzle body (wide, low)
     shift = V(P["head_at"]) - V(BONES["Head"][1])
     for s in (-1, 1):
         L.append((tuple(at(0.36, 1.62, s * 0.92)), (0.85 * hs, 0.4 * hs, 0.85 * hs), None))   # the brow ridge
         L.append((tuple(at(0.30, -0.12, s * 1.45)), (0.62 * hs, 0.92 * hs, 1.35 * hs), None))  # the cheek
-        L += lobe_along(at(0.56, -0.36, s * 1.0), at(0.9, -0.5, s * 0.62), 0.55 * hs, 0.4 * hs, 6, 0.8, 1.0)   # the flew: the jowl line
+        L.append((tuple(at(0.36, 0.55, s * 1.8)), (0.55 * hs, 0.62 * hs, 1.1 * hs), None))     # the zygomatic arch: the skull is wider than the face
+        L.append((tuple(at(0.55, 0.35, s * 0.95)), (0.5 * hs, 0.45 * hs, 0.7 * hs), None))     # the nasal bone's shoulder where the bridge meets the stop
+        L += lobe_along(at(0.54, -0.3, s * 1.12), at(0.9, -0.5, s * 0.66), 0.58 * hs, 0.4 * hs, 6, 0.8, 1.0)   # the flew: the jowl line
         tag = "Left" if s < 0 else "Right"
         a, b = (V(x) + shift for x in BONES[tag + "EarA"][1:3])
         e = V(BONES[tag + "EarB"][2]) + shift
@@ -167,10 +171,9 @@ def skull_lobes(P):
 def jaw_lobes(P):
     """The lower jaw: narrower than the muzzle so the flews overhang it, a rounded chin, a tongue lying on the floor of the mouth."""
     at, hs = head_frame(P)
-    L = lobe_along(at(0.34, -0.78), at(0.9, -0.82), 0.95 * hs, 0.55 * hs, 7, 0.9, 0.8)
+    L = lobe_along(at(0.34, -0.78), at(0.9, -0.82), 0.95 * hs, 0.42 * hs, 7, 0.85, 0.8)
     L.append((tuple(at(0.28, -0.8)), (1.1 * hs, 0.9 * hs, 0.95 * hs), None))
-    L.append((tuple(at(0.9, -0.86)), (0.42 * hs, 0.36 * hs, 0.38 * hs), None))
-    L += lobe_along(at(0.42, -0.56), at(0.74, -0.6), 0.4 * hs, 0.28 * hs, 4, 1.0, 0.45)
+    L.append((tuple(at(0.88, -0.86)), (0.3 * hs, 0.3 * hs, 0.32 * hs), None))
     return L
 
 
@@ -181,23 +184,36 @@ def hi_blob(name, coll, mat, lobes, voxel, smooth=0.85, rough=0.015, iterations=
 
 # ---------------------------------------------------------------- small hard parts
 def teeth(P, hi_up, hi_low):
-    """A real row: six incisors across the front, a canine each side, three premolars and a carnassial behind it, up and down, set along the muzzle's lip line."""
+    """Canines and a carnassial show at the lip line; the incisors and premolars sit behind the flews (their tips stop above the lip's edge); every tooth a
+    little different in length and curved back a touch, none a regular rivet."""
     at, hs = head_frame(P)
+    R = random.Random(21)
+    curve = lambda f, h0, h1, x, c: (at(f, h0, x), at(f + c, h1, x))
     for s in (-1, 1):
-        # upper: embedded in the gum above the lip line, hanging below it
-        G.cone(hi_up, at(0.90, -0.28, s * 0.80), at(0.90, -1.38, s * 0.80), 0.25 * hs, 6)
-        for j, (f, x) in enumerate(((0.84, 0.96), (0.78, 1.02), (0.72, 1.07))):
-            G.cone(hi_up, at(f, -0.28, s * x), at(f, -0.86, s * x), 0.15 * hs, 5)
-        G.cone(hi_up, at(0.65, -0.28, s * 1.1), at(0.65, -0.98, s * 1.1), 0.21 * hs, 5)
-        # lower: rising from the jaw, tips between the upper ones
-        G.cone(hi_low, at(0.915, -1.05, s * 0.60), at(0.915, -0.42, s * 0.60), 0.22 * hs, 6)
+        # upper canine (long, curved back), premolars (hidden), carnassial (shows a little)
+        a, b = curve(0.90, -0.28, -1.42, s * 0.80, 0.025)
+        G.cone(hi_up, a, b, 0.25 * hs, 6)
+        for f, x in ((0.84, 0.96), (0.78, 1.02), (0.72, 1.07)):
+            k = R.uniform(0.85, 1.15)
+            a, b = curve(f, -0.28, -0.58 * k, s * x, 0.01)
+            G.cone(hi_up, a, b, 0.14 * hs, 5)
+        a, b = curve(0.65, -0.28, -1.0, s * 1.1, 0.03)
+        G.cone(hi_up, a, b, 0.21 * hs, 5)
+        # lower canine (shows beside the upper one), premolars hidden, carnassial
+        a, b = curve(0.915, -1.05, -0.40, s * 0.60, -0.02)
+        G.cone(hi_low, a, b, 0.22 * hs, 6)
         for f, x in ((0.83, 0.86), (0.77, 0.92), (0.71, 0.97)):
-            G.cone(hi_low, at(f, -1.05, s * x), at(f, -0.55, s * x), 0.14 * hs, 5)
-        G.cone(hi_low, at(0.64, -1.05, s * 0.98), at(0.64, -0.6, s * 0.98), 0.19 * hs, 5)
+            k = R.uniform(0.85, 1.15)
+            a, b = curve(f, -1.05, -0.72 * k, s * x, -0.01)
+            G.cone(hi_low, a, b, 0.13 * hs, 5)
+        a, b = curve(0.64, -1.05, -0.68, s * 0.98, -0.02)
+        G.cone(hi_low, a, b, 0.18 * hs, 5)
     for k, x in enumerate((-0.5, -0.3, -0.1, 0.1, 0.3, 0.5)):
         f = 0.965 - 0.05 * (x / 0.5) ** 2
-        G.cone(hi_up, at(f, -0.28, x), at(f, -0.80, x), 0.115 * hs, 5)
-        G.cone(hi_low, at(f - 0.01, -1.05, x * 0.9), at(f - 0.01, -0.5, x * 0.9), 0.1 * hs, 5)
+        ln = R.uniform(0.38, 0.52)
+        G.cone(hi_up, at(f, -0.28, x), at(f + 0.008, -0.28 - ln, x), R.uniform(0.09, 0.13) * hs, 5)
+        ln = R.uniform(0.38, 0.5)
+        G.cone(hi_low, at(f - 0.01, -1.05, x * 0.9), at(f - 0.018, -1.05 + ln, x * 0.9), R.uniform(0.08, 0.12) * hs, 5)
 
 
 def claws(hi):
@@ -211,12 +227,13 @@ def claws(hi):
 
 
 def nose_pad(hi, P):
-    """A defined black nose: a broad pad, two wings either side of a groove, a nostril in each (material 1 is the nostril's)."""
+    """A small matte rhinarium: a narrow pad, two nostril wings, a nostril in each (material 1) and a vertical philtrum groove running down to the lip."""
     at, hs = head_frame(P)
-    G.sphere(hi, at(0.99, 0.26), 0.5, nu=14, nv=9, radii=(0.62 * hs, 0.32 * hs, 0.34 * hs))
+    G.sphere(hi, at(0.99, 0.26), 0.5, nu=14, nv=9, radii=(0.5 * hs, 0.27 * hs, 0.3 * hs))
     for s in (-1, 1):
-        G.sphere(hi, at(1.015, 0.16, s * 0.28), 0.3, nu=10, nv=7, radii=(0.24 * hs, 0.28 * hs, 0.26 * hs))
-        G.sphere(hi, at(1.055, 0.14, s * 0.27), 0.2, nu=8, nv=6, radii=(0.12 * hs, 0.16 * hs, 0.09 * hs), mat=1)
+        G.sphere(hi, at(1.012, 0.2, s * 0.25), 0.3, nu=10, nv=7, radii=(0.2 * hs, 0.24 * hs, 0.23 * hs))
+        G.sphere(hi, at(1.045, 0.18, s * 0.24), 0.2, nu=8, nv=6, radii=(0.1 * hs, 0.14 * hs, 0.08 * hs), mat=1)
+    G.sphere(hi, at(1.0, -0.08), 0.2, nu=8, nv=6, radii=(0.035 * hs, 0.12 * hs, 0.3 * hs), mat=1)   # the philtrum
 
 
 def eyes(P, skull):
@@ -294,31 +311,41 @@ class Fire:
 def build_fire(P):
     f = Fire()
     k, pk = P["ruff"], P["plume"]
-    up = (0, 1, 0)
     n = [V(p) for p in P["neck"]]
-    # the mane down the neck's top, running back over the shoulders: layered, a long outer row and a short broad inner one
-    for i in range(10):
-        t = i / 9
-        seg = min(2, int(t * 3))
-        c = n[seg].lerp(n[seg + 1], t * 3 - seg) + V((0, 1.9, 0))
-        ln = (3.0 + 1.8 * math.sin(math.pi * t)) * k
-        f.cluster(c, V((0, 0.25, 1.0)), (0, 1, 0), ln * 1.0, 0.8, ["Neck3", "Neck2", "Neck1", "RuffTopA", "RuffTopB"], 3, 0.5, False, (0, 0.14, 0), 0.8)
-        f.cluster(c + V((0, -0.5, 0.4)), V((0, 0.1, 1.0)), (0, 1, 0), ln * 0.6, 0.75, ["Neck3", "Neck2", "Neck1", "RuffTopA", "RuffTopB"], 2, 0.55, False, (0, 0.08, 0), 0.7)
-    # the collar behind each cheek, falling over the shoulder (the right side first, the left its mirror)
-    for mirror in (False, True):
-        t = "Left" if mirror else "Right"
-        for i in range(6):
-            u = i / 5
-            c = V((1.5 + 0.4 * u, 15.2 - 2.2 * u, -11.4 + 1.8 * u))
-            f.cluster(c, V((0.2, -0.38 - 0.3 * u, 0.8)), (0, 1, 0), (2.5 + 1.2 * math.sin(math.pi * u)) * k, 0.65, ["Neck2", t + "Ruff1", t + "Ruff2", "Chest"], 3, 0.45, mirror, (0, -0.04, 0), 0.6)
-    # the chest tuft: soft, hanging
-    for i in range(5):
-        u = i / 4
-        f.cluster(V((0.0, 10.4 - 2.4 * u, -10.2 + 0.4 * u)), V((0, -0.9, 0.15 + 0.3 * u)), (1, 0, 0), (2.2 + 0.9 * u) * k, 0.7, ["Chest", "ChestTuftA", "ChestTuftB"], 3, 0.55, False, (0, -0.05, 0.05), 0.7)
-    # the plume of the tail: a bottle-brush, tongues all round the tail from its root to beyond its tip, longest at the end
+    axis_pts = [V((0, 10.8, -5.0)), V((0, 12.0, -6.4))] + n
+    rads = [3.4, 3.35, 3.1, 2.75, 2.4, 2.2]
+    ring_bones = ["Neck1", "Neck2", "Neck3", "RuffTopA", "RuffTopB", "LeftRuff1", "LeftRuff2", "RightRuff1", "RightRuff2", "ChestTuftA", "ChestTuftB", "Chest"]
+
+    def axis_at(t):
+        """Point, direction and radius on the neck's axis, t 0 at the chest's front to 1 under the head."""
+        x = t * (len(axis_pts) - 1)
+        i = min(len(axis_pts) - 2, int(x))
+        c = axis_pts[i].lerp(axis_pts[i + 1], x - i)
+        d = (axis_pts[i + 1] - axis_pts[i]).normalized()
+        return c, d, rads[i] + (rads[i + 1] - rads[i]) * (x - i)
+
+    # ONE flame ruff round the neck: rings of tongues from the chest's front to the head, each pointing back down the neck and a little outward; the ones underneath
+    # make the forechest tuft, the ones on top the mane, the ones either side the collar: the same tongues, so it reads as one mass of fire
+    stations, around = 8, 9
+    for si in range(stations):
+        t = si / (stations - 1)
+        c, d, r = axis_at(t)
+        e1 = V((1, 0, 0))
+        e2 = d.cross(e1).normalized()
+        for q in range(around):
+            a = 2 * math.pi * q / around + (math.pi / around if si % 2 else 0.0)
+            # a tongue and its mirror image share their numbers: the random generator is keyed by station and the angle's distance from straight up
+            R = random.Random(1000 * si + int(round(abs(math.sin(a / 2) * 100))))
+            out = e1 * math.cos(a) + e2 * math.sin(a)
+            tang = e1 * -math.sin(a) + e2 * math.cos(a)
+            base = c + out * (r * 0.9)
+            direction = (-d * 1.0 + out * 0.55 + V((0, -0.1, 0))).normalized()
+            length = (2.4 + 1.6 * math.sin(math.pi * min(1.0, t * 1.1))) * k * R.uniform(0.85, 1.15) * (1.2 if abs(math.cos(a / 2)) < 0.4 else 1.0)
+            f.tongue(base, direction, tang, length, R.uniform(0.95, 1.25), ring_bones, R.uniform(-1, 1) * (1 if math.sin(a) >= 0 else -1), (0, 0.06, 0))
+    # the plume of the tail: a bottle-brush of wide overlapping tongues all round the tail, longest at its end
     tl = [V(p) for p in P["tail"]]
-    for i in range(11):
-        t = i / 10
+    for i in range(14):
+        t = i / 13
         seg = min(len(tl) - 2, int(t * (len(tl) - 1)))
         a, b = tl[seg], tl[seg + 1]
         c = a.lerp(b, t * (len(tl) - 1) - seg)
@@ -327,16 +354,18 @@ def build_fire(P):
         for q in range(4):
             ang = 2 * math.pi * (q + 0.5 * (i % 2)) / 4
             side = V((math.cos(ang), math.sin(ang) * 0.8, 0))
-            f.tongue(c + side * 0.4, (along + side * 0.45 + V((0, 0.1, 0))).normalized(), side, (2.6 + 5.6 * t ** 1.3) * pk, 0.8 * (1 - 0.2 * t), names, f.rnd.uniform(-1, 1), (0, 0.1, 0), 0.5)
-    # feathers: the back of each foreleg and of each thigh and hock hang with fire
+            tang = along.cross(side).normalized()
+            R = random.Random(5000 + 10 * i + int(round(abs(math.sin(ang / 2) * 100))))
+            f.tongue(c + side * 0.4, (along + side * 0.4 + V((0, 0.08, 0))).normalized(), tang, (2.5 + 5.5 * t ** 1.3) * pk * R.uniform(0.9, 1.1), 1.05 * (1 - 0.2 * t), names, R.uniform(-1, 1), (0, 0.1, 0))
+    # feathers: the back of each foreleg and of each thigh and hock hang with fire (right side first, the left its mirror)
     for mirror in (False, True):
         t = "Left" if mirror else "Right"
         for i in range(5):
             u = i / 4
-            f.cluster(V((2.2, 6.8 - 3.5 * u, -7.0 - 0.15 * u)), V((0.05, -0.5, 0.85)), (0, 0, 1), 2.2 + 1.2 * math.sin(math.pi * u), 0.7, ["Front%sFeather" % t, "Front%sLower" % t], 3, 0.4, mirror, (0, -0.06, 0), 0.5)
+            f.cluster(V((2.2, 6.8 - 3.5 * u, -7.0 - 0.15 * u)), V((0.05, -0.5, 0.85)), (0, 0, 1), 2.2 + 1.2 * math.sin(math.pi * u), 0.85, ["Front%sFeather" % t, "Front%sLower" % t], 3, 0.35, mirror, (0, -0.06, 0), 0.5)
         for i in range(6):
             u = i / 5
-            f.cluster(V((2.2, 9.0 - 5.0 * u, 3.2 + 2.4 * u)), V((0.05, -0.6, 0.75)), (0, 0, 1), 2.4 + 1.4 * math.sin(math.pi * u), 0.72, ["Back%sFeather" % t, "Back%sThigh" % t, "Back%sShin" % t], 3, 0.4, mirror, (0, -0.06, 0), 0.5)
+            f.cluster(V((2.2, 9.0 - 5.0 * u, 3.2 + 2.4 * u)), V((0.05, -0.6, 0.75)), (0, 0, 1), 2.4 + 1.4 * math.sin(math.pi * u), 0.9, ["Back%sFeather" % t, "Back%sThigh" % t, "Back%sShin" % t], 3, 0.35, mirror, (0, -0.06, 0), 0.5)
     # a flicker inside each ear: the same two tongues in both
     for mirror in (False, True):
         t = "Left" if mirror else "Right"
@@ -344,13 +373,66 @@ def build_fire(P):
         sx = -1 if mirror else 1
         for q, (hh, ln) in enumerate(((0.35, 2.6), (0.9, 1.9))):
             base = a.lerp(b, hh) + V((sx * -0.1, 0, -0.5))
-            f.tongue(base, (e - a).normalized() + V((0, 0, -0.15)), (sx, 0, 0), ln * P["ears"], 0.55, [t + "EarA", t + "EarB"], 0.0, (0, 0.05, -0.05))
+            f.tongue(base, (e - a).normalized() + V((0, 0, -0.15)), (sx, 0, 0), ln * P["ears"], 0.6, [t + "EarA", t + "EarB"], 0.0, (0, 0.05, -0.05))
     # the stalk that holds the eclipse: a column of fire from the withers to the ring
     s1, s2 = V(BONES["Stalk1"][1]), V(BONES["Stalk2"][2])
     for i in range(5):
         t = i / 4
-        f.cluster(s1.lerp(s2, t), (s2 - s1).normalized() * 0.7 + V((0, 0.1, 0.1)), (1, 0, 0) if i % 2 else (0, 0, 1), 2.8 + 1.2 * t, 0.75, ["Stalk1", "Stalk2"], 4, 0.45, False, (0, 0.1, 0), 0.7)
+        f.cluster(s1.lerp(s2, t), (s2 - s1).normalized() * 0.7 + V((0, 0.1, 0.1)), (1, 0, 0) if i % 2 else (0, 0, 1), 2.8 + 1.2 * t, 0.9, ["Stalk1", "Stalk2"], 4, 0.45, False, (0, 0.1, 0), 0.7)
     return f
+
+
+# ---------------------------------------------------------------- constellations (high-detail only: baked into the colour map)
+FIGURES = [   # (z, y) of each star in a flank's side view, joined in order; the left flank is the mirror image
+    [(-3.6, 11.4), (-2.3, 12.5), (-0.8, 11.7), (0.4, 12.8), (1.8, 12.0), (3.2, 12.7), (4.2, 11.3)],            # a W along the back's flank
+    [(-4.2, 9.2), (-2.9, 10.0), (-1.6, 9.5), (-0.3, 10.3), (0.2, 8.8), (-1.2, 8.3), (-2.4, 8.6)],              # a ladle low on the ribs
+    [(-8.6, 11.4), (-7.4, 12.3), (-6.2, 11.7), (-6.0, 10.3), (-7.3, 10.0)],                                      # a small ring over the shoulder
+    [(3.4, 10.6), (4.6, 11.5), (5.9, 10.9), (6.3, 9.4), (5.1, 8.8), (3.8, 9.2), (3.0, 9.9)],                    # a ring on the haunch
+    [(1.0, 7.8), (2.4, 8.4), (3.8, 7.9), (4.9, 8.5)],                                                            # a short line on the thigh
+]
+
+
+def constellations(body):
+    """Dots of varied size and thin lines joining them, laid on the body's flanks (a ray from outside onto the surface), in one Hi."""
+    hi = Hm.Hi()
+    rnd = random.Random(77)
+    sizes = {}
+
+    def on_surface(sx, z, y):
+        return G.surface_along(body, (sx * 8.0, y, z), (sx, 0, 0), 6.0)
+
+    for sx in (1, -1):
+        for fig, pts in enumerate(FIGURES):
+            proj = []
+            for (z, y) in pts:
+                try:
+                    proj.append(on_surface(sx, z, y))
+                except AssertionError:
+                    proj.append(None)
+            for i, p in enumerate(proj):
+                if p is None:
+                    continue
+                key = (fig, i)
+                if key not in sizes:
+                    sizes[key] = rnd.uniform(0.17, 0.36)
+                r = sizes[key]
+                G.sphere(hi, V(p) + V((sx * 0.03, 0, 0)), r, nu=10, nv=6, radii=(0.05, r, r))
+            for i in range(len(pts) - 1):
+                if proj[i] is None or proj[i + 1] is None:
+                    continue
+                path = []
+                for j in range(7):
+                    u = j / 6
+                    z = pts[i][0] + (pts[i + 1][0] - pts[i][0]) * u
+                    y = pts[i][1] + (pts[i + 1][1] - pts[i][1]) * u
+                    try:
+                        path.append(V(on_surface(sx, z, y)) + V((sx * 0.02, 0, 0)))
+                    except AssertionError:
+                        path = []
+                        break
+                if len(path) == 7:
+                    Hm.htube(hi, [tuple(q) for q in path], lambda t_: 0.05, sides=4, per=1, uv_scale=1.0, tip=False, wobble=0.0)
+    return hi
 
 
 # ---------------------------------------------------------------- the eclipse

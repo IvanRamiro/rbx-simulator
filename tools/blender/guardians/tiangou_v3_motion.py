@@ -423,15 +423,15 @@ def states():
     out["Returning"] = key(0.0, body={"Neck1": (-3, 0, 0), "Neck2": (-3, 0, 0), "Head": (6, 0, 0)}, stream=dict(lean=(0.7, 1.2), flare=0.0, droop=0.0))
     # asleep: curled on the cold court, nose under the tail
     lie = dict(front=(-12.6, -12.0), back=(1.8, 1.0))
-    flat = key(0.0, shift=(-5.5, 1.2), body=join({"Hips": (-4, 0, 0), "SpineA": (2, 0, 0), "SpineB": (0, 0, 0), "Chest": (4, 0, 0)}), feet=feet(front=lie["front"], back=lie["back"], tauf=60, taub=55))
+    flat = key(0.0, shift=(-4.8, 1.2), body=join({"Hips": (-4, 0, 0), "SpineA": (2, 0, 0), "SpineB": (0, 0, 0), "Chest": (4, 0, 0)}), feet=feet(front=lie["front"], back=lie["back"], tauf=60, taub=55))
     # the legs of a curled body are solved with the curl taken out and then follow the curled spine (a foot planted in the world would twist them)
     legs_free = {l: {"free": _planted_euler(flat, l)} for l in LEGS}
-    out["Dormant"] = key(0.0, shift=(-5.5, 1.2), body=join(
+    out["Dormant"] = key(0.0, shift=(-4.8, 1.2), body=join(
         {"Hips": (-4, 14, 0), "SpineA": (2, 22, 0), "SpineB": (0, 26, 0), "Chest": (4, 26, 0), "Neck1": (14, 36, 0), "Neck2": (22, 38, 0), "Neck3": (6, 30, 0), "Head": (-24, 18, 0), "Jaw": (0, 0, 0)},
         tail_pose(26, 10, -6), ear_pose(back=50, splay=-10), ruff_pose(-6, -4)),
         feet=legs_free, stream=dict(lean=(0.3, 0.5), flare=0.0, droop=0.9))
     out["Resting"] = out["Dormant"]
-    out["Weakened"] = key(0.0, shift=(-4.9, 0.5), body=join(
+    out["Weakened"] = key(0.0, shift=(-4.6, 0.5), body=join(
         {"Hips": (6, 0, 0), "SpineA": (-2, 0, 0), "SpineB": (-4, 0, 0), "Chest": (-12, 0, 0), "Neck1": (18, 0, 0), "Neck2": (16, 0, 0), "Neck3": (-26, 0, 0), "Head": (-14, 0, 0), "Jaw": (-5, 0, 0)},
         tail_pose(22, 6, -4), ear_pose(back=40, splay=6), ruff_pose(-8, -6)),
         feet=feet(front=(-12.4, -12.2), back=(2.4, 2.4), tauf=48, taub=40), stream=dict(lean=(0.25, 0.4), flare=0.0, droop=1.0))
@@ -543,7 +543,7 @@ def moves():
     # ---- Awaken (2.8 s): from the curl: the head lifts, the forelegs push up, then the haunches; a shake from nose to tail that throws the ruff and plume, a
     # stretch (forelegs forward, haunches high), the ears coming up one after the other
     dorm = states()["Dormant"]
-    stir = hold(dorm, 0.55, "inout", body=join(neck(14, 20, 6, -14, 0, yaw=(30, 32, 26, 10)), spine(-2, 2, 0, 4, yaw=(10, 16, 18, 20))), shift=(-5.4, 1.1))
+    stir = hold(dorm, 0.55, "inout", body=join(neck(14, 20, 6, -14, 0, yaw=(30, 32, 26, 10)), spine(-2, 2, 0, 4, yaw=(10, 16, 18, 20))), shift=(-4.7, 1.1))
     head_up = hold(dorm, 1.05, "inout", body=join(spine(0, 0, 4, 10, yaw=(4, 8, 8, 8)), neck(6, 10, 2, -6, 0, yaw=(14, 14, 10, 4)), ear_pose(left=(30, 0), right=(55, 0)), tail_pose(26, 4, -6)),
                    shift=(-5.0, 0.8), feet=feet(front=(-12.0, -11.8), back=(1.8, 1.4), tauf=50, taub=45))
     sit_up = hold(dorm, 1.45, "inout", body=join(spine(10, 4, 2, 6, yaw=(0, 2, 2, 2)), neck(4, 6, 0, 0, 0), ear_pose(back=20), tail_pose(30, 0, -4)), shift=(-3.2, 0.6),

@@ -37,7 +37,7 @@ OUT = G.OUT_DIR
 REPO = W.REPO
 CACHE = os.path.join(REPO, "renders", "tiangou_v3", "lows.blend")
 
-CLAY = {"coat": (0.10, 0.13, 0.30), "fire": (0.85, 0.9, 1.0), "tooth": (0.8, 0.76, 0.62), "nose": (0.02, 0.02, 0.03), "nostril": (0.0, 0.0, 0.0), "eyes": (1.0, 0.7, 0.1), "pupils": (0.02, 0.0, 0.0),
+CLAY = {"coat": (0.10, 0.13, 0.30), "fire": (0.85, 0.9, 1.0), "tooth": (0.8, 0.76, 0.62), "star": (0.9, 0.95, 1.0), "nose": (0.02, 0.02, 0.03), "nostril": (0.0, 0.0, 0.0), "eyes": (1.0, 0.7, 0.1), "pupils": (0.02, 0.0, 0.0),
         "eclipse": (0.03, 0.03, 0.06), "corona": (0.8, 0.9, 1.0), "core": (1.0, 0.85, 0.5)}
 REAL = {}
 
@@ -200,7 +200,7 @@ def build_hi(coll, P=None, voxel=0.15):
     P = P or Md.default_params()
     parts = {}
     body = Md.hi_blob("TG3_Body", coll, _mat("coat"), Md.body_lobes(P), voxel)
-    G.soften(body, 16)
+    G.soften(body, 28)
     skull = Md.hi_blob("TG3_Skull", coll, _mat("coat"), Md.skull_lobes(P), voxel * 0.4, 0.9, 0.006)
     G.soften(skull, 4)
     jaw = Md.hi_blob("TG3_Jaw", coll, _mat("coat"), Md.jaw_lobes(P), voxel * 0.4, 0.9, 0.006)
@@ -212,7 +212,7 @@ def build_hi(coll, P=None, voxel=0.15):
     Md.claws(claw)
     nose = Hm.Hi()
     Md.nose_pad(nose, P)
-    parts["Pelt"] = {"body": body, "claws": _hi(claw, "TG3_Claws", coll, ["tooth"])}
+    parts["Pelt"] = {"body": body, "claws": _hi(claw, "TG3_Claws", coll, ["tooth"]), "stars": _hi(Md.constellations(body), "TG3_Stars", coll, ["star"])}
     parts["Skull"] = {"skull": skull, "jaw": jaw, "lids": _hi(lids, "TG3_Lids", coll, ["coat"]), "teeth_up": _hi(up, "TG3_TeethUp", coll, ["tooth"]),
                       "teeth_low": _hi(low, "TG3_TeethLow", coll, ["tooth"]), "nose": _hi(nose, "TG3_Nose", coll, ["nose", "nostril"])}
     fire = Md.build_fire(P)
@@ -596,6 +596,34 @@ def flat_restore():
     FLAT_UNDO.clear()
 
 
+def posed_heads(path, size=420):
+    """The deformed head and neck (the cached lows in clay, skinned by the real weights) at the Bite's contact, the Howl's peak and the Awaken's yawn, from the
+    side and from three-quarters: for judging the jaw's and the neck's skinning."""
+    import tiangou_v3_motion as M
+    load_cache()
+    scene, cam = T._review_scene(size)
+    mv = M.moves()
+    tmp = path + ".tile.png"
+    tiles = []
+    for name, t in (("Bite", 0.47), ("Bite", 0.50), ("EclipseHowl", 1.0), ("Awaken", 2.3)):
+        pose, shift, _ = M.sample(mv[name], t)
+        M.set_pose(pose, shift)
+        st = M.fk(pose, shift)
+        head = M.tip(st, "Head")
+        c = (st["Neck2"][1] + head) / 2
+        for yaw, pitch in ((-90, 4), (-40, 12)):
+            tiles.append(T._shot(scene, cam, yaw, pitch, 46, W.rb(c.x, c.y, c.z), size, tmp))
+    T._sheet(tiles, 4, path, size)
+    if os.path.exists(tmp):
+        os.remove(tmp)
+
+
+def head_turntable(path, size=420):
+    """Four angles of the head (front, three-quarter, side, back three-quarter) from the baked game meshes."""
+    shots = [(-4, 6, 15, (0, 16, -18.5)), (-45, 8, 16, (0, 16, -18)), (-90, 4, 16, (0, 16, -18)), (-140, 12, 18, (0, 16.5, -16))]
+    look(path, shots, size=size, samples=36, columns=4)
+
+
 # ---------------------------------------------------------------- maps, the FBX, the placements
 BAKES = {"Pelt": dict(size=2048, small=1024, ray=0.25, extrusion=0.10), "Skull": dict(size=2048, small=1024, ray=0.18, extrusion=0.06)}
 NEON = {"Eclipse": Mt.ECLIPSE_HEX, "Corona": Mt.CORONA_HEX, "CoronaCore": Mt.CORE_HEX, "Eyes": Mt.EYE_HEX, "Pupils": Mt.PUPIL_HEX}
@@ -831,9 +859,16 @@ def build_final(out_blend=None, placements=None, report=None):
     parts, lows = build_lows(real=True)
     bake_all(parts, lows)
     baked_looks(lows, os.path.join(REPO, "renders", "tiangou_v3"))
+    head_turntable(os.path.join(REPO, "renders", "tiangou_v3", "head_turntable.png"))
     glow_material_for_neon(lows)
     path = export_fbx(lows)
     closeups(os.path.join(REPO, "renders", "tiangou_v3", "closeups_flat.png"), flat=True)
+    flat_scene(420)
+    head_flat = os.path.join(REPO, "renders", "tiangou_v3", "head_turntable_flat.png")
+    scene, cam = bpy.context.scene, bpy.data.objects["TG3Cam"]
+    tiles = [T._shot(scene, cam, y, p, d, W.rb(*c), 420, head_flat + ".t.png") for y, p, d, c in [(-4, 6, 15, (0, 16, -18.5)), (-45, 8, 16, (0, 16, -18)), (-90, 4, 16, (0, 16, -18)), (-140, 12, 18, (0, 16.5, -16))]]
+    T._sheet(tiles, 4, head_flat, 420)
+    flat_restore()
     notes = {}
     if placements:
         notes["AddBones"] = write_placements(placements, lows)
@@ -1156,3 +1191,5 @@ if __name__ == "__main__":
         parts, lows = build_lows(real=True)
         show_hi(parts)
         closeups(os.path.join(out_dir, "closeups_hi.png"))
+    if stage == "posed":
+        posed_heads(os.path.join(out_dir, "posed_heads.png"))

@@ -70,7 +70,7 @@ def mat_coat(name="TG3Coat"):
     g.link(co, edge.inputs["Vector"])
     line = g.math("MULTIPLY", _smooth(g, g.math("SUBTRACT", 0.065, edge.outputs["Distance"]), 0.0, 0.05), _smooth(g, rnd, 0.76, 0.8))
     sky_mask = g.math("SUBTRACT", 1.0, g.math("MULTIPLY", silver, 0.8))                  # stars show on the dark coat, not on the silvered top
-    glint = g.math("MULTIPLY", g.math("MINIMUM", g.math("ADD", g.math("ADD", star, star2), g.math("MULTIPLY", line, 0.95)), 1.0), sky_mask)
+    glint = g.math("MULTIPLY", g.math("MINIMUM", g.math("MULTIPLY", star2, 0.8), 1.0), sky_mask)
     col = g.mix(glint, col, STAR)
     # dark pads under the paws (the low part of each limb, facing down)
     pad = g.math("MULTIPLY", _smooth(g, g.math("SUBTRACT", -0.35, nz), 0.0, 0.3), _smooth(g, g.math("SUBTRACT", 1.45, z), 0.0, 0.6))
@@ -78,7 +78,7 @@ def mat_coat(name="TG3Coat"):
     # the mouth: the roof (faces down, just under the muzzle's line) and the floor (faces up, on the jaw), forward of the cheek
     ahead = g.math("MULTIPLY", _smooth(g, y, 16.3, 16.8), g.math("MULTIPLY", _smooth(g, g.math("SUBTRACT", 1.4, g.math("ABSOLUTE", x)), 0.0, 0.25), _smooth(g, g.math("SUBTRACT", 21.9, y), 0.0, 0.2)))
     roof = g.math("MULTIPLY", g.math("MULTIPLY", _smooth(g, g.math("SUBTRACT", -0.78, nz), 0.0, 0.12), _smooth(g, z, 14.2, 14.45)), _smooth(g, g.math("SUBTRACT", 14.8, z), 0.0, 0.15))
-    floor = g.math("MULTIPLY", g.math("MULTIPLY", _smooth(g, g.math("SUBTRACT", nz, 0.78), 0.0, 0.12), _smooth(g, z, 13.9, 14.1)), _smooth(g, g.math("SUBTRACT", 15.8, z), 0.0, 0.2))
+    floor = g.math("MULTIPLY", g.math("MULTIPLY", _smooth(g, g.math("SUBTRACT", nz, 0.78), 0.0, 0.12), _smooth(g, z, 13.9, 14.1)), _smooth(g, g.math("SUBTRACT", 15.0, z), 0.0, 0.15))
     inside = g.math("MULTIPLY", g.math("MAXIMUM", roof, floor), ahead)
     mouth = g.mix(g.math("MULTIPLY", floor, 1.0), GUM, TONGUE)
     col = g.mix(inside, col, mouth)
@@ -127,6 +127,6 @@ def mat_tooth(name="TG3Tooth"):
 
 def all_materials():
     import egg_kit as K
-    return {"coat": mat_coat(), "fire": mat_fire(), "tooth": mat_tooth(), "nose": mat_plain("TG3Nose", (0.012, 0.014, 0.024), 0.22), "nostril": mat_plain("TG3Nostril", (0.0, 0.0, 0.0), 0.9),
+    return {"coat": mat_coat(), "fire": mat_fire(), "tooth": mat_tooth(), "star": mat_plain("TG3Star", (0.82, 0.92, 1.0), 0.45), "nose": mat_plain("TG3Nose", (0.016, 0.017, 0.026), 0.92), "nostril": mat_plain("TG3Nostril", (0.0, 0.0, 0.0), 0.9),
             "eyes": K.glow_material(EYE_HEX), "pupils": K.glow_material(PUPIL_HEX), "eclipse": K.glow_material(ECLIPSE_HEX), "corona": K.glow_material(CORONA_HEX),
             "core": K.glow_material(CORE_HEX)}
