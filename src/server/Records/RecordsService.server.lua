@@ -371,14 +371,17 @@ local function writeLadders(player, force)
     if not (known and known.canSave and RecordStores.available("data")) then
         return
     end
-    written[player] = written[player] or {}
+    -- (held in a local: each write below yields, and the player may leave meanwhile: setupPlayer's leave clears written[player], and the next
+    -- ladder's `written[player][id]` raised "attempt to index nil with 'Thieves'", seen in Play on 2026-11-24)
+    local mine = written[player] or {}
+    written[player] = mine
     for id, ladder in LADDER do
         local value = known.values[id]
-        local last = written[player][id]
+        local last = mine[id]
         if value > 0 and not (last and (last.value == value or (not force and os.clock() - last.at < RecordsConfig.WriteEvery))) then
             local ok = RecordStores.ladder(ladder.Store).set(player.UserId, value)
-            if ok and written[player] then
-                written[player][id] = { value = value, at = os.clock() }
+            if ok and written[player] == mine then
+                mine[id] = { value = value, at = os.clock() }
             end
         end
     end
