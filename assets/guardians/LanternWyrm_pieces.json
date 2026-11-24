@@ -1,0 +1,119 @@
+{
+ "Bones": 71,
+ "Bounds": {
+  "Max": [
+   6.4,
+   10.5,
+   48.26
+  ],
+  "Min": [
+   -6.4,
+   0.17,
+   -32.98
+  ]
+ },
+ "Joints": 70,
+ "MeshParts": 9,
+ "Pieces": {
+  "Body": {
+   "BonesUsed": 32,
+   "Glow": null,
+   "Size": [
+    5.67,
+    5.13,
+    68.1
+   ],
+   "Triangles": 10896,
+   "Vertices": 5472
+  },
+  "Eyes": {
+   "BonesUsed": 1,
+   "Glow": "#ffdf80",
+   "Size": [
+    3.78,
+    1.17,
+    1.56
+   ],
+   "Triangles": 400,
+   "Vertices": 276
+  },
+  "Frill": {
+   "BonesUsed": 26,
+   "Glow": null,
+   "Size": [
+    12.79,
+    7.9,
+    71.73
+   ],
+   "Triangles": 3326,
+   "Vertices": 2385
+  },
+  "Head": {
+   "BonesUsed": 19,
+   "Glow": null,
+   "Size": [
+    8.9,
+    8.16,
+    16.69
+   ],
+   "Triangles": 13484,
+   "Vertices": 6944
+  },
+  "Lantern": {
+   "BonesUsed": 1,
+   "Glow": "#ffb21a",
+   "Size": [
+    1.56,
+    1.93,
+    1.56
+   ],
+   "Triangles": 48,
+   "Vertices": 26
+  },
+  "RingsA": {
+   "BonesUsed": 11,
+   "Glow": "#3ad6ff",
+   "Size": [
+    4.89,
+    1.26,
+    19.53
+   ],
+   "Triangles": 480,
+   "Vertices": 480
+  },
+  "RingsB": {
+   "BonesUsed": 9,
+   "Glow": "#3ad6ff",
+   "Size": [
+    5.75,
+    0.78,
+    13.31
+   ],
+   "Triangles": 336,
+   "Vertices": 336
+  },
+  "RingsC": {
+   "BonesUsed": 8,
+   "Glow": "#3ad6ff",
+   "Size": [
+    5.73,
+    0.78,
+    11.21
+   ],
+   "Triangles": 288,
+   "Vertices": 288
+  },
+  "RingsD": {
+   "BonesUsed": 7,
+   "Glow": "#3ad6ff",
+   "Size": [
+    4.96,
+    0.88,
+    13.27
+   ],
+   "Triangles": 336,
+   "Vertices": 336
+  }
+ },
+ "Triangles": 29594
+}

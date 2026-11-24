@@ -266,56 +266,106 @@ def solve_core(sp):
 
 
 GROUND_EASE = 0.10
+HEAD_FLOOR = 1.7           # the head's axis never nearer the floor than this at its tip (its jaw hangs below the axis)
+FIN_REACH = 3.4            # the tail's fin trails this far past the last bone
+
+
+def _clamp_chain(names, P, floor, parent_T, rest, extra=None):
+    """Re-lays a chain whose joints P (len(names) + 1) may be under their floors: each bone is turned up just far enough to put its far joint on its floor
+    (the lengths kept); `extra` = (a distance past the last joint, its floor) holds the last bone up so what trails past it stays above the floor too."""
+    Q = [P[0]]
+    for j in range(len(names)):
+        l = (P[j + 1] - P[j]).length
+        dv = (P[j + 1] - P[j]).normalized()
+        want = floor[j + 1]
+        lift_to = (want - Q[-1].y) / l
+        if Q[-1].y + dv.y * l < want:
+            dy = max(-0.99, min(0.99, lift_to))
+            hxz = V((dv.x, 0, dv.z))
+            hxz = hxz.normalized() * math.sqrt(1 - dy * dy) if hxz.length > 1e-6 else V((0, 0, 1 if rest[2] > 0 else -1)) * math.sqrt(1 - dy * dy)
+            dv = V((hxz.x, dy, hxz.z))
+        if extra and j == len(names) - 1:
+            reach, efloor = extra
+            if Q[-1].y + dv.y * (l + reach) < efloor:
+                dy = max(-0.99, min(0.99, (efloor - Q[-1].y) / (l + reach)))
+                hxz = V((dv.x, 0, dv.z)).normalized() * math.sqrt(1 - dy * dy)
+                dv = V((hxz.x, dy, hxz.z))
+        Q.append(Q[-1] + dv * l)
+    new, _ = solve_chain(names, Q, parent_T, rest)
+    return new
 
 
 def ground_clamp(pose, shift, air=0.0):
-    """Keeps the trunk and tail from going under the floor where the lag has mixed two moments' turns: every joint is lifted to the body's own height
-    over the ground (its belly resting on it), the bones turned to meet them. Left alone when nothing is under it, or when it flies."""
+    """Keeps the wyrm from going under the floor where the lag has mixed two moments' turns or a key asks for too much: the hips are not let sink below
+    the belly's own height, every joint of the trunk, tail and neck is lifted to its body's height over the ground (the lengths kept), the tail's fin and the
+    head's tip are held up. Left alone when nothing is under it, or when it flies (air above a half). Returns (pose, shift)."""
     if air > 0.5:
-        return pose
+        return pose, shift
+    lift = max(shift[0], -0.25)
+    shift = (lift, shift[1])
     st = fk(pose, shift)
+    out = dict(pose)
+    # the trunk and tail
     lens = B.BODY_LEN + B.TAIL_LEN
     P = [st["Body1"][1]] + [tip(st, n) for n in B.SPINE_BACK]
-    need, d = False, 0.0
-    floor = [0.0]
-    for j, l in enumerate(lens):
+    floor, d = [0.0], 0.0
+    for l in lens:
         d += l
         floor.append(0.9 * B.radius_at(d) + GROUND_EASE)
-    for j in range(1, len(P)):
-        if P[j].y < floor[j] - 0.02:
-            need = True
-    if not need:
-        return pose
-    Q = [P[0]]
-    for j, l in enumerate(lens):
-        dv = (P[j + 1] - P[j]).normalized()
-        y_new = Q[-1].y + dv.y * l
-        if y_new < floor[j + 1]:
-            dy = max(-0.99, min(0.99, (floor[j + 1] - Q[-1].y) / l))
-            hxz = V((dv.x, 0, dv.z))
-            hxz = hxz.normalized() * math.sqrt(1 - dy * dy) if hxz.length > 1e-6 else V((0, 0, 1)) * math.sqrt(1 - dy * dy)
-            dv = V((hxz.x, dy, hxz.z))
-        Q.append(Q[-1] + dv * l)
-    new, _ = solve_chain(B.SPINE_BACK, Q, mat(pose["Hips"]), (0, 0, 1))
-    out = dict(pose)
-    out.update(new)
-    return out
+    reach = (FIN_REACH, 0.25)
+    last = (P[-1] - P[-2]).normalized()
+    if any(P[j].y < floor[j] - 0.02 for j in range(1, len(P))) or P[-1].y + last.y * FIN_REACH < 0.2:
+        out.update(_clamp_chain(B.SPINE_BACK, P, floor, mat(pose["Hips"]), (0, 0, 1), extra=reach))
+    # the neck
+    st = fk(out, shift)
+    N = [st["Neck1"][1]] + [tip(st, n) for n in B.NECK]
+    nfloor, u = [0.0], 0.0
+    for l in B.NECK_LEN:
+        u -= l
+        nfloor.append(0.9 * B.radius_at(u) + GROUND_EASE)
+    if any(N[j].y < nfloor[j] - 0.02 for j in range(1, len(N))):
+        out.update(_clamp_chain(B.NECK, N, nfloor, mat(pose["Hips"]), (0, 0, -1)))
+    # the head: its tip held off the floor by turning it up
+    st = fk(out, shift)
+    hd = tip(st, "Head") - st["Head"][1]
+    if st["Head"][1].y + hd.y < HEAD_FLOOR:
+        d_new = hd.normalized()
+        dy = max(-0.99, min(0.99, (HEAD_FLOOR - st["Head"][1].y) / hd.length))
+        hxz = V((d_new.x, 0, d_new.z))
+        hxz = hxz.normalized() * math.sqrt(1 - dy * dy) if hxz.length > 1e-6 else V((0, 0, -1)) * math.sqrt(1 - dy * dy)
+        d_new = V((hxz.x, dy, hxz.z))
+        fix = hd.normalized().rotation_difference(d_new).to_matrix()
+        T_parent = st["Neck%d" % B.NECK_N][0]
+        out["Head"] = euler(T_parent.inverted() @ fix @ st["Head"][0])
+    # the jaw: opened no further than its tip can open without going through the floor
+    if tip(fk(out, shift), "Jaw").y < 0.6 and out["Jaw"][0] < 0:
+        lo, hi = 0.0, 1.0
+        for _ in range(12):
+            mid = (lo + hi) / 2
+            trial = dict(out)
+            trial["Jaw"] = (out["Jaw"][0] * mid, 0, 0)
+            if tip(fk(trial, shift), "Jaw").y >= 0.6:
+                lo = mid
+            else:
+                hi = mid
+        out["Jaw"] = (out["Jaw"][0] * lo, 0, 0)
+    return out, shift
 
 
 def finish(pose, shift, sp):
-    """The ground clamp and the frill (laid on the pose as it ended up) added to a pose."""
-    pose = ground_clamp(pose, shift, sp.get("air", 0.0))
+    """The ground clamp and the frill (laid on the pose as it ended up) added to a pose. Returns (pose, shift)."""
+    pose, shift = ground_clamp(pose, shift, sp.get("air", 0.0))
     st = fk(pose, shift)
     out = dict(pose)
     out.update(frill_turns(sp, st))
-    return out
+    return out, shift
 
 
 def solve(spec):
     """Every bone's turn for one spec: (pose, shift)."""
     sp = dict(DEFAULT, **spec)
     pose, shift = solve_core(sp)
-    return finish(pose, shift, sp), shift
+    return finish(pose, shift, sp)
 
 
 def points_of(pose, shift):
@@ -451,7 +501,7 @@ def pose_at(keys, t, lag=None):
             sp2, _ = spec_at(keys, t - l)
             cache[key] = solve_core(dict(DEFAULT, **sp2))[0]
         out[bone] = cache[key][bone]
-    return finish(out, shift, sp), shift
+    return finish(out, shift, sp)
 
 
 def state_pose(name):
@@ -475,28 +525,30 @@ def moves():
           lag=dict(neck=0.012, head=0.02, trunk=0.01)),
         K(0.74, "in2", neck_pitch=[46, 82, 104, 80, 36], neck_yaw=[0, 20, 38, 32, 20], head=(-20, -28, 0), frill=(0.85, 0.85), kappa=tight, lift=0.1, jaw=10,
           lag=dict(neck=0.014, head=0.02, trunk=0.012)),
-        K(0.90, "snap", neck_pitch=[28, 24, 18, 12, 6], neck_yaw=[0, -6, -16, -22, -24], head=(-6, 8, 0), frill=(1.0, 1.0), kappa=coil_kappa(7.6, 2.5), jaw=28,
+        K(0.90, "in", neck_pitch=[22, 16, 10, 6, 2], neck_yaw=[0, -6, -16, -22, -24], head=(-4, 8, 0), frill=(1.0, 1.0), kappa=coil_kappa(7.6, 2.5), jaw=28, slide=-3.5,
           ripple=(3.0, 16.0, 0.0), lag=dict(neck=0.014, head=0.025, trunk=0.014)),
-        K(0.99, "snap", neck_pitch=[30, 26, 20, 14, 8], neck_yaw=[0, -18, -40, -56, -66], head=(-8, 18, 0), frill=(1.2, 1.15), kappa=coil_kappa(7.8, 2.6), jaw=22,
+        K(0.99, "out", neck_pitch=[26, 20, 14, 8, 4], neck_yaw=[0, -18, -40, -56, -66], head=(-8, 18, 0), frill=(1.2, 1.15), kappa=coil_kappa(7.8, 2.6), jaw=22, slide=-3.0,
           ripple=(5.0, 16.0, 1.4), lag=dict(neck=0.014, head=0.025, trunk=0.014)),
-        K(1.40, "out", neck_pitch=[40, 70, 92, 64, 24], neck_yaw=[0, -22, -34, -22, -6], head=(-14, 6, 0), frill=(0.7, 0.7), ripple=(4.0, 16.0, 4.0),
+        K(1.25, "out", neck_pitch=[40, 70, 92, 64, 24], neck_yaw=[0, -22, -34, -22, -6], head=(-14, 6, 0), frill=(0.7, 0.7), ripple=(4.0, 16.0, 4.0),
           lag=dict(neck=0.016, head=0.03, trunk=0.018)),
-        K(1.95, "inout", frill=(0.15, 0.15), ripple=(1.8, 16.0, 8.5), lag=dict(neck=0.014, trunk=0.02)),
-        K(2.4, "inout", ripple=(0.0, 16.0, 11.0)),
+        K(1.60, "inout", frill=(0.15, 0.15), ripple=(1.8, 16.0, 8.5), lag=dict(neck=0.014, trunk=0.02)),
+        K(2.0, "inout", ripple=(0.0, 16.0, 11.0)),
     ]
     # ---- LanternGaze (1.2 s): the head lowers and levels at the target, the neck draws straight, the lantern swings forward on its stalk and flares, the jaw
     # opens, the light gathers (the rings: the rig); it holds a beat; then the head thrusts forward and the light is released
     M["LanternGaze"] = [
         K(0.0),
-        K(0.50, "out", neck_pitch=[30, 52, 46, 30, 12], neck_yaw=[0, 0, 0, 0, 0], head=(-16, 0, 0), frill=(0.45, 0.45), lure=(-30, -24, -30), lift=0.1,
+        K(0.50, "out", neck_pitch=[30, 52, 46, 30, 12], neck_yaw=[0, 0, 0, 0, 0], head=(-16, 0, 0), frill=(0.45, 0.45), lure=(-14, -8, -6), lift=0.1,
           lag=dict(neck=0.016, head=0.03, lure=0.02)),
-        K(0.95, "inout", neck_pitch=[24, 28, 24, 14, 4], head=(-10, 0, 0), frill=(0.7, 0.7), lure=(-38, -30, -34), jaw=24, kappa=coil_kappa(7.4, 2.5),
+        # gathered: the head drawn back and raised, the neck bowed, the jaw opening, the light building in the lantern
+        K(0.95, "inout", neck_pitch=[34, 44, 40, 28, 12], head=(-12, 0, 0), frill=(0.7, 0.7), lure=(-20, -12, -8), jaw=22, kappa=coil_kappa(7.4, 2.5), slide=1.4,
           lag=dict(neck=0.01, head=0.02, lure=0.02)),
-        K(1.20, "snap", neck_pitch=[20, 16, 10, 5, 0], head=(-6, 0, 0), frill=(0.9, 0.9), lure=(-48, -34, -24), jaw=42, slide=-2.6, lift=-0.1, kappa=coil_kappa(7.0, 2.4),
+        # the release: the head thrusts forward and low, the neck straight, the whole body going with it
+        K(1.20, "in", neck_pitch=[16, 10, 4, 0, -4], head=(-4, 0, 0), frill=(1.0, 1.0), lure=(-28, -16, -10), jaw=44, slide=-4.6, lift=-0.1, kappa=coil_kappa(7.0, 2.4),
           lag=dict(neck=0.008, head=0.014, lure=0.015)),
-        K(1.50, "out", neck_pitch=[26, 28, 20, 10, 2], head=(-8, 0, 0), frill=(0.8, 0.8), lure=(-34, -24, -18), jaw=30, slide=-1.8, lag=dict(neck=0.012, head=0.02)),
-        K(2.00, "inout", frill=(0.2, 0.2), lure=(-8, -6, -6), lag=dict(neck=0.014)),
-        K(2.5, "inout"),
+        K(1.50, "out", neck_pitch=[26, 28, 20, 10, 2], head=(-8, 0, 0), frill=(0.8, 0.8), lure=(-20, -12, -8), jaw=30, slide=-2.4, lag=dict(neck=0.012, head=0.02)),
+        K(1.80, "inout", frill=(0.2, 0.2), lure=(-8, -6, -6), lag=dict(neck=0.014)),
+        K(2.1, "inout"),
     ]
     # ---- VoidSurge (1.4 s): it rears to its full height, the frill flaring to its widest, the coils beneath tightening and rising; then everything slams DOWN:
     # the head and neck onto the coils, the whole body hitting the ground in one wave that runs out from the middle to the tail tip, the frill snapping shut
@@ -506,39 +558,39 @@ def moves():
           lift_c=[0, 2.0, 3.0, 1.5], lift=0.5, lag=dict(neck=0.02, head=0.03, trunk=0.01)),
         K(1.05, "inout", neck_pitch=[86, 92, 93, 91, 87], head=(-22, 0, 0), jaw=16, frill=(1.35, 1.3), kappa=coil_kappa(5.6, 2.0), lift_c=[0, 4.0, 5.2, 2.8], lift=0.8,
           lure=(12, 8, 0), lag=dict(neck=0.01, head=0.02, trunk=0.01)),
-        K(1.40, "in", neck_pitch=[70, 112, 158, 188, 196], head=(-30, 0, 0), jaw=0, frill=(0.0, 0.0), kappa=coil_kappa(7.6, 2.6), lift_c=[0, 0, 0, 0], lift=-0.4,
+        K(1.40, "in", neck_pitch=[85, 93, 135, 153, 274], head=(29, 0, 0), jaw=0, frill=(0.0, 0.0), kappa=coil_kappa(7.6, 2.6), lift_c=[0, 0, 0, 0], lift=-0.4,
           ripple=(4.0, 14.0, 0.0), lure=(0, 0, 0), lag=dict(neck=0.012, head=0.01, trunk=0.02)),
-        K(1.58, "out", neck_pitch=[66, 106, 148, 174, 180], head=(-26, 0, 0), frill=(0.0, 0.0), kappa=coil_kappa(7.9, 2.7), lift=0.1, ripple=(3.2, 14.0, 2.5),
+        K(1.58, "out", neck_pitch=[84, 95, 138, 160, 250], head=(22, 0, 0), frill=(0.0, 0.0), kappa=coil_kappa(7.9, 2.7), lift=0.1, ripple=(3.2, 14.0, 2.5),
           lag=dict(neck=0.012, trunk=0.022)),
-        K(2.1, "inout", neck_pitch=[48, 88, 110, 86, 26], frill=(0.1, 0.1), ripple=(1.6, 14.0, 6.0), lag=dict(neck=0.014, trunk=0.02)),
-        K(2.5, "inout", ripple=(0.0, 14.0, 9.0)),
+        K(1.95, "inout", neck_pitch=[48, 88, 110, 86, 26], frill=(0.1, 0.1), ripple=(1.6, 14.0, 6.0), lag=dict(neck=0.014, trunk=0.02)),
+        K(2.3, "inout", ripple=(0.0, 14.0, 9.0)),
     ]
     # ---- SerpentLeap (0.8 s on the ground, then the air): a tight coil, the neck drawn back in a spring-loaded S, the head low and aiming; the spring (the body
     # uncoiling from the tail forward, the head launching first); a flight in which the body flies as a long undulating ribbon, the jaw open; to the strike
     M["SerpentLeap"] = [
         K(0.0),
-        K(0.35, "out", neck_pitch=[35, 85, 125, 110, 30], head=(-25, 0, 0), kappa=coil_kappa(5.6, 2.0), lift=-0.2, jaw=8, frill=(0.6, 0.6), lag=dict(neck=0.012, trunk=0.01)),
-        K(0.65, "inout", neck_pitch=[18, 66, 130, 126, 48], head=(-30, 0, 0), kappa=coil_kappa(5.0, 1.9), lift=-0.8, jaw=10, frill=(0.8, 0.8), lag=dict(neck=0.01, trunk=0.01)),
+        K(0.35, "out", neck_pitch=[35, 85, 125, 110, 30], head=(-25, 0, 0), kappa=coil_kappa(5.6, 2.0), lift=-0.1, jaw=8, frill=(0.6, 0.6), lag=dict(neck=0.012, trunk=0.01)),
+        K(0.65, "inout", neck_pitch=[18, 66, 130, 126, 48], head=(-30, 0, 0), kappa=coil_kappa(5.0, 1.9), lift=-0.2, jaw=10, frill=(0.8, 0.8), lag=dict(neck=0.01, trunk=0.01)),
         K(0.80, "in", neck_pitch=[40, 40, 36, 32, 26], head=(-4, 0, 0), kappa=coil_kappa(9.0, 4.0), lift=0.0, jaw=32, frill=(1.0, 1.0), air=0.4, lift_c=[0, -1, -2, -3],
           ripple=(2.0, 20.0, 0.0), lag=dict(neck=0.01, trunk=0.016)),
         K(1.10, "out", neck_pitch=[42, 36, 30, 26, 22], head=(-2, 0, 0), kappa=[-1, -1, -2, -2, -3, -3], air=1.0, lift_c=[0, -1.2, -3, -4.5], jaw=36, frill=(1.0, 1.0),
           ripple=(5.0, 20.0, 2.0), lag=dict(neck=0.01, trunk=0.02)),
         K(1.70, "inout", neck_pitch=[36, 30, 24, 16, 8], head=(-4, 0, 0), kappa=[-1, -1, -2, -2, -3, -3], air=1.0, lift_c=[0, -1.5, -3.5, -5], jaw=36, frill=(1.1, 1.1),
           ripple=(7.0, 20.0, 5.5), lag=dict(neck=0.01, trunk=0.024)),
-        K(2.10, "inout", neck_pitch=[16, 4, -8, -18, -26], head=(-6, 0, 0), kappa=[-1, -1, -2, -2, -3, -3], air=1.0, lift_c=[0, -1.5, -3.2, -4.6], jaw=40, frill=(1.1, 1.1),
+        K(2.10, "inout", neck_pitch=[18, 8, -2, -10, -16], head=(-6, 0, 0), kappa=[-1, -1, -2, -2, -3, -3], air=1.0, lift_c=[0, -1.5, -3.2, -4.6], jaw=40, frill=(1.1, 1.1),
           ripple=(6.0, 20.0, 9.0), lag=dict(neck=0.01, trunk=0.024)),
-        K(2.30, "out", neck_pitch=[6, -4, -16, -28, -38], head=(-4, 0, 0), kappa=[-2, -2, -3, -3, -4, -4], air=0.9, lift_c=[0, -1.5, -3, -4], jaw=42, frill=(1.15, 1.15),
+        K(2.30, "out", neck_pitch=[16, 8, -2, -12, -20], head=(-4, 0, 0), kappa=[-2, -2, -3, -3, -4, -4], air=0.45, lift_c=[0, -1.5, -3, -4], jaw=42, frill=(1.15, 1.15),
           ripple=(5.0, 20.0, 11.5), lag=dict(neck=0.01, trunk=0.024)),
     ]
     # ---- Land (0.9 s): the head strikes down first, then the body piles down behind it in loose coils, the frill flaring for balance, then the neck rising into its S
     M["Land"] = [
-        K(0.0, neck_pitch=[6, -4, -16, -28, -38], head=(-4, 0, 0), kappa=[-2, -2, -3, -3, -4, -4], air=0.9, lift_c=[0, -1.5, -3, -4], jaw=42, frill=(1.15, 1.15),
+        K(0.0, neck_pitch=[16, 8, -2, -12, -20], head=(-4, 0, 0), kappa=[-2, -2, -3, -3, -4, -4], air=0.45, lift_c=[0, -1.5, -3, -4], jaw=42, frill=(1.15, 1.15),
           ripple=(5.0, 20.0, 11.5)),
-        K(0.12, "snap", neck_pitch=[4, -6, -22, -34, -42], head=(-2, 0, 0), kappa=coil_kappa(10.0, 4.0), air=0.45, lift_c=[0, -0.5, -1.2, -1.8], jaw=30, frill=(1.2, 1.2), lift=-0.3,
+        K(0.10, "snap", neck_pitch=[8, -2, -14, -26, -34], head=(0, 0, 0), kappa=coil_kappa(10.0, 4.0), air=0.3, lift_c=[0, -0.5, -1.2, -1.8], jaw=30, frill=(1.2, 1.2), lift=-0.2,
           ripple=(4.0, 18.0, 13.0), lag=dict(neck=0.008, trunk=0.016)),
-        K(0.42, "out", neck_pitch=[22, 50, 56, 36, 8], head=(-12, 0, 0), kappa=coil_kappa(9.0, 3.4), air=0.0, lift_c=[0, 0, 0, 0], jaw=10, frill=(0.8, 0.8), lift=-0.2,
+        K(0.40, "out", neck_pitch=[22, 50, 56, 36, 8], head=(-12, 0, 0), kappa=coil_kappa(9.0, 3.4), air=0.0, lift_c=[0, 0, 0, 0], jaw=10, frill=(0.8, 0.8), lift=-0.2,
           ripple=(3.0, 18.0, 16.0), lag=dict(neck=0.012, trunk=0.02)),
-        K(0.90, "inout", ripple=(0.0, 18.0, 19.0), lag=dict(neck=0.012, trunk=0.02)),
+        K(0.48, "inout", ripple=(0.0, 18.0, 19.0), lag=dict(neck=0.012, trunk=0.02)),
     ]
     # ---- Awaken (3.0 s): from the sleeping ring: the lantern ignites (the rig), the head lifts off the coils and shakes, the frill opens and shudders, the body
     # uncoils one loop at a time, the neck rising into its S, the head settling into its alert sway
@@ -550,44 +602,50 @@ def moves():
         K(1.42, "inout", base=D, neck_pitch=[14, 10, 8, 26, 50], neck_yaw=[0, -55, -105, -150, -150], head=(-10, 68, -4), jaw=4, lag=dict(neck=0.02)),
         K(1.58, "inout", base=D, neck_pitch=[16, 12, 10, 28, 52], neck_yaw=[0, -55, -105, -150, -150], head=(-10, 30, 3), frill=(0.7, 0.7), lag=dict(neck=0.02)),
         K(1.75, "inout", base=D, neck_pitch=[18, 20, 16, 30, 54], neck_yaw=[0, -50, -95, -140, -140], head=(-10, 50, 0), frill=(1.0, 1.0), flutter=(0.18, 6.0), lag=dict(neck=0.02)),
-        K(2.25, "inout", neck_pitch=[40, 80, 100, 90, 30], neck_yaw=[0, 4, -2, -10, -20], head=(-6, 10, 0), kappa=coil_kappa(9.6, 3.4), frill=(1.0, 1.0), flutter=(0.14, 8.0),
+        K(2.2, "inout", neck_pitch=[40, 80, 100, 90, 30], neck_yaw=[0, 4, -2, -10, -20], head=(-6, 10, 0), kappa=coil_kappa(9.6, 3.4), frill=(1.0, 1.0), flutter=(0.14, 8.0),
           lag=dict(neck=0.05, trunk=0.03, head=0.06)),
-        K(2.65, "inout", neck_pitch=[48, 94, 116, 94, 22], neck_yaw=YAW_REST, head=(-24, 0, 0), kappa=coil_kappa(8.2, 2.7), frill=(0.4, 0.4), flutter=(0.05, 10.0),
+        K(2.55, "inout", neck_pitch=[48, 94, 116, 94, 22], neck_yaw=YAW_REST, head=(-24, 0, 0), kappa=coil_kappa(8.2, 2.7), frill=(0.4, 0.4), flutter=(0.05, 10.0),
           lag=dict(neck=0.03, trunk=0.02, head=0.04)),
-        K(3.0, "inout"),
+        K(2.9, "inout"),
     ]
     # ---- Enrage (1.4 s): the neck rears up fast, the frill thrown wide, the mouth open in a hiss, the lantern blazing, the whole body thrashing in violent waves;
     # then it settles into a coiled, swaying threat with the frill half open
     M["Enrage"] = [
         K(0.0),
-        K(0.20, "snap", neck_pitch=[78, 96, 100, 96, 72], head=(-46, 0, 0), jaw=36, frill=(1.35, 1.25), kappa=coil_kappa(6.4, 2.2), lift=0.5, ripple=(5.0, 14.0, 0.0),
+        K(0.20, "out", neck_pitch=[80, 98, 102, 96, 74], head=(-48, 0, 0), jaw=38, frill=(1.35, 1.25), kappa=coil_kappa(6.4, 2.2), lift=0.5, ripple=(6.0, 14.0, 0.0),
           lag=dict(neck=0.01, head=0.02, trunk=0.008)),
-        K(0.45, "inout", neck_pitch=[82, 94, 98, 94, 70], neck_yaw=[0, 6, 10, 4, 0], head=(-44, 14, 0), jaw=34, frill=(1.4, 1.3), ripple=(8.0, 14.0, 4.0), lift=0.5,
-          kappa=coil_kappa(6.2, 2.2), lag=dict(neck=0.012, trunk=0.014)),
-        K(0.70, "inout", neck_pitch=[84, 96, 100, 96, 68], neck_yaw=[0, -6, -10, -4, 0], head=(-42, -16, 0), jaw=30, frill=(1.4, 1.3), ripple=(8.5, 14.0, 8.0), lift=0.4,
-          kappa=coil_kappa(6.2, 2.2), lag=dict(neck=0.012, trunk=0.014)),
-        K(1.00, "inout", neck_pitch=[74, 94, 100, 94, 64], neck_yaw=[0, 4, 6, 0, 0], head=(-40, 8, 0), jaw=24, frill=(1.2, 1.1), ripple=(5.0, 14.0, 12.0), lift=0.3,
-          kappa=coil_kappa(6.4, 2.2), lag=dict(neck=0.012, trunk=0.014)),
-        K(1.40, "back", base=E, ripple=(0.0, 14.0, 15.0), lag=dict(neck=0.01, trunk=0.012)),
+        K(0.42, "inout", neck_pitch=[84, 92, 96, 92, 66], neck_yaw=[0, 16, 28, 16, 4], head=(-44, 22, 4), jaw=34, frill=(1.45, 1.3), ripple=(11.0, 14.0, 4.0), lift=0.7, lift_c=[0, 1.5, 2.0, 1.0],
+          kappa=coil_kappa(6.0, 2.1), lure=(10, 8, 6), lag=dict(neck=0.014, trunk=0.014)),
+        K(0.66, "inout", neck_pitch=[78, 100, 104, 98, 70], neck_yaw=[0, -16, -28, -16, -4], head=(-40, -22, -4), jaw=30, frill=(1.45, 1.3), ripple=(11.0, 14.0, 8.0), lift=0.2,
+          lift_c=[0, 0.4, 0.6, 0.3], kappa=coil_kappa(6.6, 2.3), lure=(-8, -6, -4), lag=dict(neck=0.014, trunk=0.014)),
+        K(0.88, "inout", neck_pitch=[84, 92, 98, 94, 66], neck_yaw=[0, 12, 22, 12, 2], head=(-42, 14, 3), jaw=26, frill=(1.3, 1.2), ripple=(8.0, 14.0, 12.0), lift=0.6, lift_c=[0, 1.2, 1.6, 0.8],
+          kappa=coil_kappa(6.1, 2.2), lag=dict(neck=0.014, trunk=0.014)),
+        K(1.12, "back", base=E, ripple=(0.0, 14.0, 15.0), lag=dict(neck=0.01, trunk=0.012)),
     ]
     # ---- Weaken (1.9 s): a stagger, the neck whipping back then collapsing, the lantern guttering, the frill folding, the head sinking to the coils, then a held,
     # laboured pose
     M["Weaken"] = [
         K(0.0),
-        K(0.16, "snap", neck_pitch=[62, 118, 150, 132, 84], head=(24, 0, 0), jaw=26, frill=(0.8, 0.8), kappa=coil_kappa(7.0, 2.4), lift=0.3, lag=dict(neck=0.01, head=0.02)),
+        K(0.16, "out", neck_pitch=[62, 118, 150, 132, 84], head=(24, 0, 0), jaw=26, frill=(0.8, 0.8), kappa=coil_kappa(7.0, 2.4), lift=0.3, lag=dict(neck=0.01, head=0.02)),
         K(0.55, "inout", neck_pitch=[40, 62, 40, 4, -24], neck_yaw=[0, 10, 24, 30, 30], head=(-6, 8, 8), jaw=4, frill=(0.3, 0.3), kappa=coil_kappa(8.4, 2.9), lift=-0.2,
           lag=dict(neck=0.02, head=0.03, trunk=0.014)),
         K(0.95, "in", base=W, lag=dict(neck=0.016, head=0.02, trunk=0.014)),
-        K(1.30, "back", base=W, lift=-0.5, lag=dict(neck=0.012, trunk=0.012)),
-        K(1.9, "inout", base=W),
+        K(1.30, "back", base=W, lift=-0.25, lag=dict(neck=0.012, trunk=0.012)),
+        K(1.45, "inout", base=W),
     ]
+    for name, keys in M.items():
+        want = MOVE_LENGTH[name]
+        if keys[-1]["t"] < want - 1e-6:
+            hold = dict(keys[-1])
+            hold["t"], hold["ease"] = want, "linear"
+            keys.append(hold)
     return M
 
 
-MOVE_LENGTH = {"CoilLash": 2.4, "LanternGaze": 2.5, "VoidSurge": 2.5, "SerpentLeap": 2.3, "Land": 0.9, "Awaken": 3.0, "Enrage": 1.4, "Weaken": 1.9}
-STRIP_TIMES = {"CoilLash": [0.0, 0.30, 0.62, 0.80, 0.90, 0.99, 1.40, 2.0], "LanternGaze": [0.0, 0.50, 0.95, 1.10, 1.20, 1.50, 2.0, 2.5],
-               "VoidSurge": [0.0, 0.55, 1.05, 1.30, 1.40, 1.50, 1.58, 2.4], "SerpentLeap": [0.0, 0.35, 0.65, 0.80, 1.10, 1.70, 2.10, 2.30],
-               "Land": [0.0, 0.06, 0.12, 0.25, 0.42, 0.6, 0.75, 0.9], "Awaken": [0.0, 0.45, 1.0, 1.42, 1.75, 2.25, 2.65, 3.0],
+MOVE_LENGTH = {"CoilLash": 2.45, "LanternGaze": 2.45, "VoidSurge": 2.6, "SerpentLeap": 2.3, "Land": 0.9, "Awaken": 3.0, "Enrage": 1.4, "Weaken": 1.9}
+STRIP_TIMES = {"CoilLash": [0.0, 0.30, 0.62, 0.78, 0.90, 0.99, 1.40, 2.0], "LanternGaze": [0.0, 0.50, 0.95, 1.10, 1.20, 1.50, 1.9, 2.4],
+               "VoidSurge": [0.0, 0.55, 1.05, 1.30, 1.40, 1.50, 1.58, 2.3], "SerpentLeap": [0.0, 0.35, 0.65, 0.80, 1.10, 1.70, 2.10, 2.30],
+               "Land": [0.0, 0.05, 0.10, 0.20, 0.30, 0.45, 0.65, 0.9], "Awaken": [0.0, 0.45, 1.0, 1.42, 1.75, 2.25, 2.65, 3.0],
                "Enrage": [0.0, 0.1, 0.2, 0.45, 0.7, 1.0, 1.2, 1.4], "Weaken": [0.0, 0.16, 0.35, 0.55, 0.75, 0.95, 1.3, 1.9]}
 
 
@@ -781,7 +839,7 @@ def reduce_track(rows, tol):
     return sorted(keep)
 
 
-CONTACT = {"CoilLash": 0.90, "LanternGaze": 1.20, "VoidSurge": 1.40, "SerpentLeap": 0.80, "Land": 0.12, "Weaken": 0.95, "Enrage": 0.98}
+CONTACT = {"CoilLash": 0.90, "LanternGaze": 1.20, "VoidSurge": 1.40, "SerpentLeap": 0.80, "Land": 0.10, "Weaken": 1.05}
 
 
 def anchors():
@@ -812,16 +870,31 @@ def anchors():
     out["LashNeck"] = pt("CoilLash", 0.90, "Neck4", end=False)
     out["GazeLamp"] = lamp("LanternGaze", 1.20)
     out["GazeMouth"] = pt("LanternGaze", 1.20, "Head")
-    out["SurgeHead"] = pt("VoidSurge", 1.40, "Head")
-    out["SurgeCoils"] = coil_centre("VoidSurge", 1.40)
+    best = min((pt("VoidSurge", 1.40 + 0.02 * i, "Head") + [1.40 + 0.02 * i] for i in range(16)), key=lambda q: q[1])
+    out["SurgeHead"] = best[:3]
+    out["SurgeCoils"] = coil_centre("VoidSurge", best[3])
     out["SurgeTop"] = pt("VoidSurge", 1.05, "Head")
-    out["LandHead"] = pt("Land", 0.12, "Head")
+    out["LandHead"] = pt("Land", 0.10, "Head")
     out["Crown"] = pt("Awaken", 2.25, "Head", end=False)
     out["EnrageMouth"] = pt("Enrage", 0.45, "Head")
     out["Coil"] = coil_centre("CoilLash", 0.0)
     out["LampRest"] = lamp("CoilLash", 0.0)
     out["TailTip"] = pt("CoilLash", 0.0, "Tail11")
     out["Hips"] = [0.0, 2.6, 0.0]
+    return out
+
+
+def neck_alpha():
+    """For each neck bone and the head: how far its PARENT's long axis is raised (degrees) in the awake pose. A turn about the vertical, laid on a bone, is
+    cos(alpha) of yaw and -sin(alpha) of roll (the bones are turned in their parent's frame), which the rig's look, gaze and sway layers use."""
+    pose, shift = state_pose("Guardian")
+    st = fk(pose, shift)
+    out = {}
+    prev = 0.0
+    for n in B.NECK + ["Head"]:
+        out[n] = round(prev, 1)
+        d = st[n][0] @ V((0, 0, -1))
+        prev = DEG(math.atan2(d.y, -d.z))
     return out
 
 
@@ -834,7 +907,8 @@ def write_clips(path, fps=30):
              "-- [pitch, yaw, roll]; the hips also carry [lift, slide] in studs. Poses are whole poses (every joint); Moves are tracks of [frame, values...]",
              "-- at Fps, only for the joints the move drives, each held to a tolerance of 0.25 degrees (0.04 studs). Chain holds the walk's constants.",
              "local Clips = {}", "Clips.Fps = %d" % fps, "Clips.Joints = " + _lua(JOINTS), "Clips.Anchors = " + _lua(anchors()),
-             "Clips.Chain = " + _lua(dict(CHAIN, lengths=B.BODY_LEN + B.TAIL_LEN, ground=[round(0.9 * B.radius_at(sum((B.BODY_LEN + B.TAIL_LEN)[:i])) + 0.10, 3) for i in range(len(B.BODY_LEN + B.TAIL_LEN) + 1)])),
+             "Clips.Chain = " + _lua(dict(CHAIN, lengths=B.BODY_LEN + B.TAIL_LEN, ground=[B.Y0] + [round(0.9 * B.radius_at(sum((B.BODY_LEN + B.TAIL_LEN)[:i])) + GROUND_EASE, 3) for i in range(1, len(B.BODY_LEN + B.TAIL_LEN) + 1)])),
+             "Clips.Alpha = " + _lua(neck_alpha()),
              "Clips.Poses = {"]
     for name, (pose, shift) in sts.items():
         v = full(pose, shift, guardian)

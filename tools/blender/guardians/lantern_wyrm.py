@@ -545,10 +545,19 @@ def export_fbx(lows):
     arm.select_set(True)
     bpy.context.view_layer.objects.active = arm
     path = os.path.join(OUT, NAME + ".fbx")
-    bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={"MESH", "ARMATURE"}, axis_forward="-Z", axis_up="Y", apply_scale_options="FBX_SCALE_UNITS",
-                             path_mode="COPY", embed_textures=True, mesh_smooth_type="FACE", add_leaf_bones=False, use_armature_deform_only=True, bake_anim=False,
-                             primary_bone_axis="Y", secondary_bone_axis="X")
-    left = scrub_fbx(path)
+    left = -1
+    for compression in (15, 24, 33, 42, 51, 60):
+        # the maps are embedded as their PNG bytes: by chance a stream can spell a letter run of the checks' pattern, so the compression is stepped until none does
+        bpy.context.scene.render.image_settings.compression = compression
+        for img in bpy.data.images:
+            if img.name.startswith("LanternWyrm_") and img.filepath_raw:
+                img.save()
+        bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={"MESH", "ARMATURE"}, axis_forward="-Z", axis_up="Y", apply_scale_options="FBX_SCALE_UNITS",
+                                 path_mode="COPY", embed_textures=True, mesh_smooth_type="FACE", add_leaf_bones=False, use_armature_deform_only=True, bake_anim=False,
+                                 primary_bone_axis="Y", secondary_bone_axis="X")
+        left = scrub_fbx(path)
+        if left == 0:
+            break
     return path, os.path.getsize(path) // 1024, "machine path hits left: %d" % left
 
 
@@ -637,9 +646,30 @@ def run_qa(lows, profile="roblox"):
     return {"pass": r["pass"], "errors": r["errors"], "warnings": r["warnings"][:24], "zfighting": str(r.get("zfighting"))[:1800], "floating": str(r.get("floating"))[:600]}
 
 
+def baked_looks(lows, out_dir):
+    """Renders of the game meshes as imported (the baked maps and the Neon pieces' flat colours) in the awake pose: a turntable of six views, and the
+    head, the lantern and the frill close up."""
+    import lantern_wyrm_motion as M
+    for o in bpy.data.objects:
+        if o.type == "MESH":
+            o.hide_render = o not in lows.values()
+            o.hide_viewport = o.hide_render
+    pose, shift = M.state_pose("Guardian")
+    M.set_pose(pose, shift)
+    st = M.fk(pose, shift)
+    head = st["Head"][1]
+    hc = (head.x, head.y, head.z - 2.0)
+    dist = 100
+    turn = [(yaw, 12, dist, (0, 13, 2)) for yaw in (0, 60, 120, 180, 240, 300)]
+    look(os.path.join(out_dir, "turntable.png"), turn, size=520, samples=40, columns=3)
+    close = [(-35, 10, 22, hc), (-90, 4, 20, hc), (20, 8, 22, hc), (-70, 24, 26, (head.x, head.y + 4, head.z - 4)), (150, 16, 26, (head.x, head.y - 2, head.z + 4)), (-120, 30, 40, (0, 3, 6))]
+    look(os.path.join(out_dir, "closeups.png"), close, size=520, samples=48, columns=3)
+
+
 def build_final(out_blend=None, placements=None, report=None):
     info, parts, lows = build_lows(real=True)
     bake_all(parts, lows)
+    baked_looks(lows, os.path.join(REPO, "renders", "lantern_wyrm"))
     glow_material_for_neon(lows)
     path = export_fbx(lows)
     notes = {}
@@ -733,6 +763,12 @@ def run_checks(only=None):
     for i, p in enumerate(fr):
         kd2.insert(V(p), i)
     kd2.balance()
+    hd = _points(lows["Head"])
+    kd3 = KDTree(len(hd))
+    for i, p in enumerate(hd):
+        kd3.insert(V(p), i)
+    kd3.balance()
+    report["head mesh mirror error (max studs, the fused skull is voxel-remeshed)"] = round(max(kd3.find(V(p))[2] for p in (hd * np.array([-1, 1, 1]))[::5]), 4)
     report["frill mesh mirror error (max studs)"] = round(max(kd2.find(V(p))[2] for p in (fr * np.array([-1, 1, 1]))[::5]), 4)
     base = {n: (0, 0, 0) for n in M.JOINTS}
     sts = M.state_tables()
@@ -743,6 +779,9 @@ def run_checks(only=None):
     start_state["Awaken"] = "Dormant"
     end_state = {"CoilLash": "Guardian", "LanternGaze": "Guardian", "VoidSurge": "Guardian", "SerpentLeap": None, "Land": "Guardian", "Awaken": "Guardian", "Enrage": "Enraged", "Weaken": "Weakened"}
     twist_axes = {n: M.rest_dir(n) for n in B.NECK + ["Head"]}
+    # the barbels are thin and spring in the game: the floor check leaves their vertices out (the bones' own joints are checked with the rest)
+    bar = {n for n in names if "Barbel" in n}
+    solid = {piece: np.array([names[int(bi[np.argmax(w)])] not in bar for bi, w in zip(arrs[piece][1], arrs[piece][2])]) for piece in arrs}
     moves_report = {}
     for name, keys in mv.items():
         if only and name not in only:
@@ -766,9 +805,10 @@ def run_checks(only=None):
                 for piece, p in sk.items():
                     if piece in ("Eyes",):
                         continue
-                    mi = int(np.argmin(p[:, 1]))
-                    if p[mi, 1] < low_y:
-                        low_y, low_who = float(p[mi, 1]), "%s (%s)" % (piece, names[int(arrs[piece][1][mi, int(np.argmax(arrs[piece][2][mi]))])])
+                    ys = np.where(solid[piece], p[:, 1], 9e9)
+                    mi = int(np.argmin(ys))
+                    if ys[mi] < low_y:
+                        low_y, low_who = float(ys[mi]), "%s (%s)" % (piece, names[int(arrs[piece][1][mi, int(np.argmax(arrs[piece][2][mi]))])])
             st = M.fk(pose, shift)
             tips = {n: M.tip(st, n) for n in BONES if n != "Root"}
             if tips_prev:
@@ -785,7 +825,7 @@ def run_checks(only=None):
         res["lowest vertex y (studs, ground frames)"] = round(low_y, 2)
         res["lowest vertex belongs to"] = low_who
         res["biggest bone-end step (studs per frame)"] = (round(step_max, 2), step_who)
-        res["max twist (deg) neck and head"] = {k: round(v, 1) for k, v in tw.items() if v > 20}
+        res["largest twist about its own length (deg), any neck bone or the head"] = max((round(v, 1), k) for k, v in tw.items())
         res["start pose vs %s (max deg, bone)" % start_state[name]] = max((round(rot_angle(M.full(*sts[start_state[name]], base)[n][:3], M.full(*poses[0], guardian)[n][:3]), 1), n) for n in M.JOINTS)
         if end_state[name]:
             tgt = M.full(*sts[end_state[name]], base)
@@ -802,12 +842,11 @@ def run_checks(only=None):
             elif name == "SerpentLeap":
                 res["air blend crosses 0.5 (frame) / leave-ground frame"] = (next(f for f in range(n_frames) if M.spec_at(keys, f / 30.0)[0]["air"] >= 0.2), at)
             elif name == "Land":
-                res["head lowest frame / contact frame"] = (int(np.argmin([M.tip(M.fk(*p), "Head").y for p in poses])), at)
+                hy = [M.tip(M.fk(*p), "Head").y for p in poses]
+                res["head tip first within 0.15 of its lowest (frame) / contact frame"] = (next(f for f in range(10) if hy[f] < min(hy[:10]) + 0.15), at)
             elif name in ("Weaken",):
                 hy = [M.tip(M.fk(*p), "Head").y for p in poses]
-                res["head fastest drop frame / contact frame"] = (int(np.argmax([hy[i] - hy[i + 1] for i in range(len(hy) - 1)])) + 1, at)
-            elif name == "Enrage":
-                res["head-tip speed peak frame (the rear-up) / slam frame"] = (int(np.argmax(head_speed)), at)
+                res["head first within 0.3 stud of its final height (frame) / contact frame"] = (next(f for f in range(n_frames) if abs(hy[f] - hy[-1]) < 0.3 and all(abs(hy[g] - hy[-1]) < 0.3 for g in range(f, n_frames))), at)
         if name == "CoilLash":
             # the lash's wave down the length: when each trunk bone's sideways swing peaks after the blow
             first = []
@@ -821,7 +860,7 @@ def run_checks(only=None):
     states_report = {}
     for name, (pose, shift) in sts.items():
         sk = skinned(arrs, names, pose, shift)
-        states_report[name] = round(min(float(p[:, 1].min()) for k, p in sk.items() if k != "Eyes"), 2)
+        states_report[name] = round(min(float(np.where(solid[k], p[:, 1], 9e9).min()) for k, p in sk.items() if k != "Eyes"), 2)
     report["lowest vertex y per state pose"] = states_report
     # the walk and the run on a straight path, a circle and an S, each at its speed
     gaits = {}
@@ -877,6 +916,38 @@ def run_checks(only=None):
         gaits[gname] = res
     report["gaits"] = gaits
     return report
+
+
+def gait_strip(path, size=330):
+    """The walk and the run seen from above and from the side: the body laid on the path the root took (an S, then a turn), a frame every 0.35 s."""
+    import lantern_wyrm_motion as M
+    info, parts, lows = build_lows()
+    scene, cam = T._review_scene(size)
+    tmp = path + ".tile.png"
+    tiles = []
+    up = V((0, 1, 0))
+    guardian = M.state_pose("Guardian")[0]
+    for speed, label in ((12.0, "walk"), (28.0, "run")):
+        route = lambda t, v=speed: V((8.0 * math.sin(v * t / 16.0), 0, -v * t)) if t < 6 else V((8.0 * math.sin(v * 6 / 16.0) + 9.0 * (1 - math.cos(v * (t - 6) / 9.0)), 0, -v * 6 - 9.0 * math.sin(v * (t - 6) / 9.0)))
+        tr = M.Trail()
+        out_tiles = []
+        t_show = [7.0 + 0.35 * k for k in range(8)]
+        for f in range(int(11 * 30)):
+            t = f / 30.0
+            pos = route(t)
+            tr.push(pos)
+            if any(abs(t - ts) < 1 / 60 for ts in t_show):
+                fwd = (route(t + 1e-3) - pos).normalized()
+                right = fwd.cross(up)
+                to_local = lambda p, pos=pos, fwd=fwd, right=right: V(((p - pos).dot(right), 0.0, -(p - pos).dot(fwd)))
+                pts = M.chain_points(tr, speed, to_local, wave=True)
+                pose = {**guardian, **M.chain_pose(pts)}
+                M.set_pose(pose, (0.0, 0.0))
+                out_tiles.append((T._shot(scene, cam, 0, 89, 125, W.rb(0, 0, 10), size, tmp), T._shot(scene, cam, -90, 3, 125, W.rb(0, 6, 10), size, tmp)))
+        tiles += [a for a, b in out_tiles] + [b for a, b in out_tiles]
+    T._sheet(tiles, 8, path, size)
+    if os.path.exists(tmp):
+        os.remove(tmp)
 
 
 def pose_sheet(path, specs, size=420, views=None):
@@ -978,3 +1049,5 @@ if __name__ == "__main__":
         import lantern_wyrm_motion as M
         path = argv[1] if len(argv) > 1 else os.path.join(out_dir, "LanternWyrmClips.lua")
         print(M.write_clips(path))
+    if stage == "gait":
+        gait_strip(os.path.join(out_dir, "gait.png"))

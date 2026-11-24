@@ -35,7 +35,7 @@ def section(u, phi, grooves=True):
     d = (abs(s) ** k + abs(c) ** k) ** (1.0 / k)
     x, y = rx * r * s / d, ry * r * c / d
     if grooves:
-        belly = max(0.0, math.cos(min(abs(phi), abs(TAU - phi)) / 1.1 * math.pi * 0.5)) if min(abs(phi), abs(TAU - phi)) < 1.1 else 0.0
+        belly = max(0.0, math.cos(min(abs(phi), abs(TAU - phi)) / 0.85 * math.pi * 0.5)) if min(abs(phi), abs(TAU - phi)) < 0.85 else 0.0
         g = (u / 0.9) % 1.0
         groove = max(0.0, 1 - 7 * min(g, 1 - g))
         f = 1 - 0.06 * groove * belly
@@ -89,7 +89,9 @@ def body_weights(z):
     chain = [(n, sum(B.bone_span(n)) / 2) for n in B.NECK[::-1]] + [("Head", sum(B.bone_span("Head")) / 2)]
     chain = [(n, c) for n, c in chain]
     # order along z, from the head's side to the tail's: Head, Neck8 .. Neck1, Body1 .. Tail11
-    chain = [("Head", sum(B.bone_span("Head")) / 2)] + [(n, sum(B.bone_span(n)) / 2) for n in B.NECK[::-1]] + [(n, sum(B.bone_span(n)) / 2) for n in B.SPINE_BACK]
+    # (the hips themselves carry the vertices at the junction of neck and trunk, so the importer keeps the bone every other bone hangs from)
+    chain = ([("Head", sum(B.bone_span("Head")) / 2)] + [(n, sum(B.bone_span(n)) / 2) for n in B.NECK[::-1]] + [("Hips", 0.0)]
+             + [(n, sum(B.bone_span(n)) / 2) for n in B.SPINE_BACK])
     if z <= chain[0][1]:
         return {chain[0][0]: 1.0}
     if z >= chain[-1][1]:
@@ -267,7 +269,7 @@ def body_attributes(obj, n, sides, du):
             phi = TAU * j / sides
             dist = min(phi, TAU - phi)
             along.append(max(-1.0, min(1.0, (u - 11.0) / 34.0)))
-            belly.append(max(0.0, min(1.0, 0.5 + (1.1 - dist))))
+            belly.append(max(0.0, min(1.0, 0.5 + (0.85 - dist))))
             dorsal.append(math.exp(-((phi - math.pi) / 0.35) ** 2))
     set_attr(obj, "Along", along)
     set_attr(obj, "BellyMask", belly)

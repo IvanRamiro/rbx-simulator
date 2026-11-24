@@ -70,13 +70,13 @@ SPINE = NECK + ["Head"]
 
 
 def radius_at(u):
-    """The body's radius at distance u along the bind axis (u < 0 toward the head, u > 0 toward the tail): a neck of 1.7 that thickens into a
+    """The body's radius at distance u along the bind axis (u < 0 toward the head, u > 0 toward the tail): a neck of 1.5 that thickens into a
     girth of 2.7 at the shoulders and the belly, holds it, and tapers over the last third (from u = 15) to a fine tail."""
     if u <= NECK_TOP:
-        return 1.7
+        return 1.5
     if u < 0:
         t = u / NECK_TOP                               # 0 at the hips, 1 at the head
-        return 2.55 - 0.85 * (t ** 1.1)
+        return 2.55 - 1.05 * (t ** 1.2)
     if u < 8:
         return 2.55 + 0.15 * math.sin(math.pi * 0.5 * u / 8)
     if u < 15:
@@ -123,10 +123,10 @@ for _sign, _tag in ((-1, "Left"), (1, "Right")):
         _l = math.sqrt(sum(c * c for c in _d))
         _add("%sFrill%d" % (_tag, _k + 1), _carrier(FRILL_Z[_k]), _root, tuple(_root[i] + _d[i] / _l * FRILL_LEN[_k] for i in range(3)))
     # the barbels: the long whisker from the muzzle's corner trailing back and out, the short beard from the chin
-    _add(_tag + "BarbelA1", "Head", (_sign * 0.55, Y0 + 0.05, HEAD_BASE - 7.0), (_sign * 1.7, Y0 + 0.28, HEAD_BASE - 6.3))
+    _add(_tag + "BarbelA1", "Head", (_sign * 0.55, Y0 - 0.25, HEAD_BASE - 7.0), (_sign * 1.7, Y0 - 0.3, HEAD_BASE - 6.3))
     for _k in range(1, 4):
         _p = BONES[_tag + "BarbelA%d" % _k][2]
-        _add(_tag + "BarbelA%d" % (_k + 1), _tag + "BarbelA%d" % _k, _p, (_p[0] + _sign * 0.9, _p[1] + 0.12, _p[2] + 2.5))
+        _add(_tag + "BarbelA%d" % (_k + 1), _tag + "BarbelA%d" % _k, _p, (_p[0] + _sign * 0.9, _p[1] - 0.22, _p[2] + 2.5))
     _add(_tag + "BarbelB1", "Head", (_sign * 0.55, Y0 - 0.9, HEAD_BASE - 7.4), (_sign * 0.75, Y0 - 1.4, HEAD_BASE - 6.0))
     for _k in range(1, 3):
         _p = BONES[_tag + "BarbelB%d" % _k][2]
