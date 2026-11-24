@@ -851,6 +851,15 @@ return {
         { Position = Vector3.new(38.000, 2.500, -24.000), Color = { 255, 196, 120 }, Range = 26, Brightness = 0.80, Note = "HearthYard (shelter)" },
         { Position = Vector3.new(-4.100, 3.450, -30.000), Color = { 255, 196, 120 }, Range = 26, Brightness = 0.80, Note = "LanternPost (prop)" },
     },
+    Effects = { -- at most twelve ParticleEmitters in the whole territory, each Rate at most 6, no scripts (WindriftBuilder.buildEffects): Kind = Flame | Embers | Smoke | Mist; Rate; Position;
+        -- Size (Mist: the box it drifts in, studs). Added 2026-11-24 (the design note listed the Hearth's fire and sparks, chimney smoke and the gorge's mist as not built)
+        { Kind = "Flame", Rate = 6, Position = Vector3.new(38.000, 0.700, -24.000), Note = "the Hearth's fire ring" },
+        { Kind = "Embers", Rate = 3, Position = Vector3.new(38.000, 1.800, -24.000), Note = "sparks over the Hearth" },
+        { Kind = "Smoke", Rate = 3, Position = Vector3.new(-5.600, 12.700, 23.800), Note = "the chimney (a 10-high stack at the Long Hold)" },
+        { Kind = "Mist", Rate = 4, Position = Vector3.new(7.000, -10.500, 44.000), Size = Vector3.new(14, 2, 20), Note = "the gorge floor under the Rain Hall" },
+        { Kind = "Mist", Rate = 4, Position = Vector3.new(9.500, -9.500, 66.000), Size = Vector3.new(12, 2, 10), Note = "the foot of the Great Falls" },
+        { Kind = "Mist", Rate = 3, Position = Vector3.new(9.250, -6.500, 14.000), Size = Vector3.new(16, 2, 10), Note = "the gorge under the Gorge Bridge" },
+    },
     Falls = { -- WorldBuilder.buildWaterfall(parent, lip, from, look, { Drop, Scale, Curtains, Splash })
         { Zone = "GreatFalls", Lip = Vector3.new(9.500, 67.200, 74.000), From = Vector3.new(9.500, 67.200, 84.000), Drop = 92, Scale = 1.9, Curtains = 3, Splash = false }, -- the Great Falls: off the mesa's rim into the gorge, the Rain Hall 12 studs in front of it
     },

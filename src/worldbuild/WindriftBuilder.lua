@@ -39,6 +39,8 @@ local ISLAND = "MurimCrossing"
 local KIT = "Windrift" -- its templates: ServerStorage.WorldAssets.MurimAssets.WindriftAssets (WorldBuilder.kitFolder)
 local ROUTE_DEPTH = 100 -- as CrossingBuilder: a route zone reaches this far under its ground, so a falling player never counts as having left the route
 local MAX_LIGHTS = 8
+local MAX_EMITTERS = 12
+local MAX_RATE = 6
 
 local function folder(parent, name)
     local f = Instance.new("Folder")
@@ -293,6 +295,95 @@ local function buildZones(root, frame)
     return #H.Zones.Routes + #H.Zones.Checks
 end
 
+-- The small effects set (as NightfallBuilder's): at most MAX_EMITTERS ParticleEmitters, each Rate at most MAX_RATE, on invisible parts, no scripts, textures the engine itself
+-- ships. Flame: the Hearth's fire; Embers: its sparks; Smoke: a slow grey rise from the chimney; Mist: a low pale drift in the gorge.
+local function buildEffects(parent, frame)
+    local old = parent:FindFirstChild("Effects")
+    if old then
+        old:Destroy()
+    end
+    local model = Instance.new("Model")
+    model.Name = "Effects"
+    model.Parent = parent
+    local count = 0
+    for index, e in H.Effects do
+        if count >= MAX_EMITTERS then
+            break
+        end
+        local part = WorldBuilder.marker("Effect" .. index, e.Size or Vector3.new(1, 1, 1), frame * CFrame.new(e.Position), model)
+        part.Material = Enum.Material.Plastic
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Name = e.Kind
+        emitter.Rate = math.min(e.Rate, MAX_RATE)
+        emitter.LightInfluence = 0
+        emitter.EmissionDirection = Enum.NormalId.Top
+        if e.Kind == "Flame" then
+            emitter.Texture = "rbxasset://textures/particles/fire_main.dds"
+            emitter.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 214, 140)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 130, 50)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 40, 20)) })
+            emitter.LightEmission = 1
+            emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2.6), NumberSequenceKeypoint.new(0.5, 1.9), NumberSequenceKeypoint.new(1, 0.3) })
+            emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(0.7, 0.45), NumberSequenceKeypoint.new(1, 1) })
+            emitter.Lifetime = NumberRange.new(1.0, 1.5)
+            emitter.Speed = NumberRange.new(1.5, 2.5)
+            emitter.SpreadAngle = Vector2.new(8, 8)
+            emitter.Rotation = NumberRange.new(-20, 20)
+        elseif e.Kind == "Embers" then
+            emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+            emitter.Color = ColorSequence.new(Color3.fromRGB(255, 200, 110), Color3.fromRGB(240, 100, 40))
+            emitter.LightEmission = 1
+            emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.25, 0.4), NumberSequenceKeypoint.new(1, 0) })
+            emitter.Transparency = NumberSequence.new(0.1, 1)
+            emitter.Lifetime = NumberRange.new(2.5, 4)
+            emitter.Speed = NumberRange.new(2, 4)
+            emitter.SpreadAngle = Vector2.new(30, 30)
+            emitter.Acceleration = Vector3.new(0.4, 1.2, 0)
+            emitter.Drag = 0.5
+            emitter.Rotation = NumberRange.new(0, 360)
+        elseif e.Kind == "Smoke" then
+            emitter.Texture = "rbxasset://textures/particles/smoke_main.dds"
+            emitter.Color = ColorSequence.new(Color3.fromRGB(190, 190, 186), Color3.fromRGB(120, 120, 120))
+            emitter.LightEmission = 0
+            emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 3.2) })
+            emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(0.3, 0.55), NumberSequenceKeypoint.new(1, 1) })
+            emitter.Lifetime = NumberRange.new(6, 9)
+            emitter.Speed = NumberRange.new(1.2, 2)
+            emitter.SpreadAngle = Vector2.new(12, 12)
+            emitter.Acceleration = Vector3.new(0.5, 0.2, 0.1)
+            emitter.Rotation = NumberRange.new(0, 360)
+            emitter.RotSpeed = NumberRange.new(-8, 8)
+        else -- Mist
+            emitter.Texture = "rbxasset://textures/particles/smoke_main.dds"
+            emitter.Color = ColorSequence.new(Color3.fromRGB(205, 222, 214), Color3.fromRGB(170, 190, 184))
+            emitter.LightEmission = 0.1
+            emitter.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 4), NumberSequenceKeypoint.new(1, 8) })
+            emitter.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.25, 0.82), NumberSequenceKeypoint.new(1, 1) })
+            emitter.Lifetime = NumberRange.new(9, 13)
+            emitter.Speed = NumberRange.new(0.3, 0.8)
+            emitter.SpreadAngle = Vector2.new(70, 70)
+            emitter.Acceleration = Vector3.new(0.3, 0.1, 0.2)
+            emitter.Shape = Enum.ParticleEmitterShape.Box
+            emitter.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+            emitter.Rotation = NumberRange.new(0, 360)
+        end
+        emitter.Parent = part
+        count += 1
+    end
+    return count
+end
+
+-- Adds (or replaces) only the effects, in a territory that is already built: no rebuild of anything else. Run from Studio (Edit mode).
+function WindriftBuilder.addEffects()
+    local root = WorldBuilder.islandFolder(ISLAND)
+    local pad = root:FindFirstChild(H.Pad .. "Pad")
+    local territory = pad and pad:FindFirstChild("Territory")
+    if not territory then
+        return { Skipped = "the territory is not built" }
+    end
+    local parent = territory:FindFirstChild("Props") or territory
+    return { Effects = buildEffects(parent, padFrame()) }
+end
+
 function WindriftBuilder.build()
     local missingBase = not WorldBuilder.hasTemplate(KIT, "Windrift_Buildings_Hq")
     if missingBase then
@@ -315,12 +406,13 @@ function WindriftBuilder.build()
     buildSpots(territory, frame)
     local lights = buildLights(territory, frame)
     local falls = buildFalls(territory, frame)
+    local effects = buildEffects(territory:FindFirstChild("Props") or territory, frame)
     local saber = buildSaber(territory, frame)
     local zones = buildZones(root, frame)
     if #missing > 0 then
         warn("WindriftBuilder: not in the kit yet (import and store these FBX files first), left out: " .. table.concat(missing, ", "))
     end
-    return { Placed = placed, Missing = missing, Colliders = boxes, Lights = lights, Falls = falls, Saber = saber, Zones = zones, FirstFoundationParts = removed }
+    return { Placed = placed, Missing = missing, Colliders = boxes, Lights = lights, Effects = effects, Falls = falls, Saber = saber, Zones = zones, FirstFoundationParts = removed }
 end
 
 function WindriftBuilder.check()
