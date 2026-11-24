@@ -10,6 +10,8 @@ local PetMaps = require("@shared/PetMaps")
 local WeaponMaps = require("@shared/WeaponMaps")
 local AuctionRules = require("@shared/AuctionRules")
 local FactionRules = require("@shared/FactionRules")
+local TitleRules = require("@shared/TitleRules")
+local TitleArt = require("@shared/TitleArt")
 
 local function count(map)
     local n = 0
@@ -203,6 +205,42 @@ t.test("a new player has not met the Guide: the quests and the tutorial wait for
     for key, default in GameConfig.Settings do
         t.ok(type(default) == "number" or type(default) == "boolean", "setting " .. key .. " has no usable default")
     end
+end)
+
+t.test("only the Developer title has a Style, and it is complete", function()
+    for _, entry in TitleRules.List do
+        if entry.Id == "Developer" then
+            local style = entry.Style
+            t.ok(style ~= nil, "the Developer lost its Style")
+            t.ok(type(style.Concept) == "string" and #style.Concept > 0, "the Developer's Concept")
+            t.eq(type(style.Depth.R), "number", "Style.Depth is not a colour")
+            t.eq(type(style.Rule.R), "number", "Style.Rule is not a colour")
+            -- the layer under the letters must be darker than the letters, or it would not help them read
+            t.ok(style.Depth.R + style.Depth.G + style.Depth.B < entry.Color.R + entry.Color.G + entry.Color.B, "Depth must be darker than the letters")
+        else
+            t.eq(entry.Style, nil, entry.Id .. " must keep its own look: only the Developer has a Style")
+        end
+    end
+end)
+
+
+t.test("the Developer banner's art is complete and within Roblox's image limit", function()
+    t.eq(TitleArt.PxPerUnit, 200)
+    local seen = {}
+    for _, name in { "CapL", "CapR", "Mid", "Crown" } do
+        local piece = TitleArt.Pieces[name]
+        t.ok(piece ~= nil, name .. " is missing")
+        t.ok(piece.Steel:match("^rbxassetid://%d+$") ~= nil, name .. " steel id")
+        t.ok(piece.Light == nil or piece.Light:match("^rbxassetid://%d+$") ~= nil, name .. " light id")
+        for _, id in { piece.Steel, piece.Light } do
+            t.falsy(seen[id], "two layers share the image " .. id)
+            seen[id] = true
+        end
+        t.ok(piece.Width > 0 and piece.Width <= 1024 and piece.Height > 0 and piece.Height <= 1024, name .. " is over 1024 px")
+    end
+    t.eq(TitleArt.Pieces.Mid.Light, nil, "the plain middle strip has no glow")
+    t.ok(TitleArt.Pieces.CapL.Light and TitleArt.Pieces.CapR.Light and TitleArt.Pieces.Crown.Light, "a cap or the crown lost its glow")
+    t.ok(TitleArt.StubUnits > 0 and TitleArt.StubUnits < 2, "StubUnits")
 end)
 
 t.finish("config")

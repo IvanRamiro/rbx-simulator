@@ -14,6 +14,7 @@ local TitleRules = require(ReplicatedStorage:WaitForChild("TitleRules"))
 local Hud = require(script.Parent:WaitForChild("Hud"))
 local Toast = require(script.Parent:WaitForChild("Toast"))
 local UiKit = require(script.Parent:WaitForChild("UiKit"))
+local TitleBanner = require(script.Parent:WaitForChild("TitleBanner"))
 local UiTheme = require(script.Parent:WaitForChild("UiTheme"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 local HatchCeremony = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("HatchCeremony"))
@@ -135,8 +136,41 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+-- ---------- the Developer title's banner (nameplates only) ----------
+-- Only the Developer title has a Style (TitleRules; the owner, 2026-11-24: "apply it only to developer title, keep the other sheen and typography as it
+-- is"). On the nameplate, a BillboardGui over the head, it is rendered art round the words (TitleBanner: a gold and steel plate, wings, a crowned crystal,
+-- the glow tinted to the Style's Rule colour) and a dark layer under the letters, a touch down and to the right, so they stand off the plate. The letters
+-- keep their own lettering and their sheen. Every other title is drawn as it always was.
+local BANNER_DISTANCE = 55 -- studs: the banner is drawn only this near (the words show farther): lighter for everyone
+
+-- draws the banner for the title's words at their present width
+local function layoutStyle(plate)
+    local style = plate.style
+    if not style then
+        return
+    end
+    local width = plate.gui.AbsoluteSize.X
+    local share = if width > 0 then math.clamp(plate.title.TextBounds.X / width, 0.12, 0.95) else 0.4
+    TitleBanner.apply(plate.banner, style, share, Quality.Low)
+end
+
+local function applyStyle(plate, entry)
+    local style = entry and entry.Style
+    plate.style = style
+    plate.depth.Visible = style ~= nil
+    if not style then
+        TitleBanner.clear(plate.banner)
+        return
+    end
+    plate.depth.Text = entry.Text
+    plate.depth.FontFace = fontOf(entry)
+    plate.depth.TextColor3 = style.Depth
+    plate.depth.Position = UDim2.fromScale(0.004, 0.03) -- (a small drop: the plate's panel is only a little taller than the letters)
+    layoutStyle(plate)
+end
+
 -- ---------- nameplates ----------
-local plates = {} -- [Player] = { gui, title, name }
+local plates = {} -- [Player] = { gui, title, name, depth, banner, style }
 
 local function renderPlate(owner)
     local plate = plates[owner]
@@ -149,6 +183,7 @@ local function renderPlate(owner)
         plate.title.Text = entry.Text
         styleTitle(plate.title, entry)
     end
+    applyStyle(plate, entry)
     plate.name.Text = owner.DisplayName
 end
 
@@ -176,9 +211,19 @@ local function buildPlate(owner, character)
     gui.MaxDistance = PLATE_DISTANCE
     gui.LightInfluence = 0
     gui.ResetOnSpawn = false
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- the banner (0) under the depth layer (1) under the letters (2)
+    -- the layer under a styled title's letters (hidden for the rest): the same words, a touch down and to the right
+    local depth = UiKit.label({
+        Name = "TitleDepth", Font = "Title", TextScaled = true, Position = UDim2.fromScale(0.006, 0.07), Size = UDim2.fromScale(1, 0.5),
+        TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 1, Visible = false, Parent = gui,
+    })
+    local depthEdge = Instance.new("UIStroke")
+    depthEdge.Color = EDGE
+    depthEdge.Thickness = 2
+    depthEdge.Parent = depth
     local title = UiKit.label({
         Name = "Title", Font = "Title", TextScaled = true, Size = UDim2.fromScale(1, 0.5), TextXAlignment = Enum.TextXAlignment.Center,
-        Parent = gui,
+        ZIndex = 2, Parent = gui,
     })
     title:SetAttribute("EdgeThickness", 2)
     local name = UiKit.label({
@@ -190,7 +235,11 @@ local function buildPlate(owner, character)
     nameEdge.Thickness = 1.2
     nameEdge.Parent = name
     gui.Parent = playerGui
-    plates[owner] = { gui = gui, title = title, name = name }
+    local plate = { gui = gui, title = title, name = name, depth = depth, banner = TitleBanner.new(gui) }
+    plates[owner] = plate
+    title:GetPropertyChangedSignal("TextBounds"):Connect(function()
+        layoutStyle(plate) -- (the words' width is known only once they are drawn)
+    end)
     renderPlate(owner)
 end
 
@@ -211,6 +260,22 @@ for _, owner in Players:GetPlayers() do
     watch(owner)
 end
 Players.PlayerRemoving:Connect(removePlate)
+
+-- the banner only near: past BANNER_DISTANCE the words show alone
+task.spawn(function()
+    while true do
+        task.wait(0.4)
+        local camera = workspace.CurrentCamera
+        if camera then
+            for _, plate in plates do
+                local head = plate.gui.Adornee
+                if head then
+                    plate.banner.root.Visible = (camera.CFrame.Position - head.Position).Magnitude <= BANNER_DISTANCE
+                end
+            end
+        end
+    end
+end)
 
 -- ---------- the Titles window ----------
 local toggleButton, setBadge = Hud.railButton("TitlesButton", UiTheme.Icons.Titles, "Titles", 5)
@@ -290,6 +355,38 @@ for _, group in TitleRules.Groups do
     end
 end
 
+-- In the window a styled title shows its depth layer too: the same words a pixel down and right, in the style's deep colour, under
+-- the letters (the rules and diamonds are the nameplate's: a row's words aren't centred). The sheen stays on the letters.
+local function syncDepth(label, entry)
+    local style = entry and entry.Style
+    local name = label.Name .. "Depth"
+    local depth = label.Parent and label.Parent:FindFirstChild(name)
+    if not style then
+        if depth then
+            depth:Destroy()
+            label.ZIndex = 1
+        end
+        return
+    end
+    if not depth then
+        depth = Instance.new("TextLabel")
+        depth.Name = name
+        depth.BackgroundTransparency = 1
+        depth.ZIndex = 1
+        depth.Parent = label.Parent
+    end
+    label.ZIndex = 2
+    depth.AnchorPoint = label.AnchorPoint
+    depth.Position = label.Position + UDim2.fromOffset(1, 1)
+    depth.Size = label.Size
+    depth.Text = label.Text
+    depth.FontFace = label.FontFace
+    depth.TextSize = label.TextSize
+    depth.TextXAlignment = label.TextXAlignment
+    depth.TextTruncate = label.TextTruncate
+    depth.TextColor3 = style.Depth
+end
+
 render = function()
     local earnedCount = 0
     for _, entry in TitleRules.List do
@@ -302,6 +399,7 @@ render = function()
         else
             plainTitle(row.title, C.Muted, entry)
         end
+        syncDepth(row.title, if has then entry else nil)
         row.card.BackgroundTransparency = if has then 0.15 else 0.5
         row.button.Text = if wearing then "WEARING" elseif has then "WEAR" else "LOCKED"
         row.button:SetAttribute("Tone", if wearing then "Active" elseif has then "Go" else "Quiet")
@@ -323,6 +421,7 @@ render = function()
         showing.FontFace = UiTheme.Fonts.Title
         showing.Text = "No title"
     end
+    syncDepth(showing, shown)
     UiKit.selectTab(autoButton, book.Worn == "Auto")
     UiKit.selectTab(hideButton, book.Worn == "None")
 end

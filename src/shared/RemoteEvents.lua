@@ -22,6 +22,7 @@ local EVENT_NAMES = {
     "FlightEvent",
     "CombatEvent",
     "WeaponDrawEvent",
+    "FormEvent", -- the player chooses a combat form (shared/FormRules; the server checks and sets the "Form<Family>" attribute)
     "GuardianEvent",
     "ShopEvent",
     "HatchEggEvent",

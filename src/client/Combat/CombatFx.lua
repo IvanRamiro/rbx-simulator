@@ -185,6 +185,19 @@ local fxFolder = Instance.new("Folder")
 fxFolder.Name = "CombatFx"
 fxFolder.Parent = Workspace
 
+-- COMBAT FORMS (shared/FormRules): a strike comes with its form's `info` ({ Form, Step, Finisher, Name, Reaction, Range, Arc, ... }). The clips are
+-- still the old keyed ones (the forms' own come with the animation phase), so a form's strikes borrow them by weapon: a sword's finisher plays the
+-- overhead and its other strikes the two cuts in turn; a spear's finisher plays the slash and the rest the thrust; bare hands alternate the fists and
+-- the finisher is the left. Timing, reach, damage and the chain itself are the form's.
+local function clipStep(weapon, info)
+    if weapon == "Sword" then
+        return if info.Finisher then 3 else (info.Step - 1) % 2 + 1
+    elseif weapon == "Spear" then
+        return if info.Finisher then 2 else 1
+    end
+    return if info.Finisher then 2 else (info.Step - 1) % 2 + 1
+end
+
 local COMBO_STEPS = { Sword = #SLASHES, Spear = 2 } -- how many strikes each weapon's combo has
 assert(COMBO_STEPS.Sword == ComboRules.Steps.Sword and COMBO_STEPS.Spear == ComboRules.Steps.Spear, "CombatFx's slashes and ComboRules' steps disagree")
 local strikes = {} -- [player] = { weapon, started, untilTime, step (its place in the weapon's combo), palette (what it draws with),
@@ -1234,22 +1247,28 @@ end
 
 -- ---------- entry points ----------
 -- step: which strike of the combo it is, when the server says; else counted here
-function CombatFx.play(player, weapon, step)
+function CombatFx.play(player, weapon, info)
     local root = rootOf(player)
     if not root then
         return
     end
     local now = os.clock()
-    local strike = { weapon = weapon, started = now }
+    local strike = { weapon = weapon, started = now, info = info }
     local steps = COMBO_STEPS[weapon]
-    if steps then
+    if info then -- the form's strike (FormRules.plan for our own, the server's form and step for everyone else's)
+        strike.step = clipStep(weapon, info)
+        combos[player] = { weapon = weapon, step = strike.step, at = now }
+        if weapon == "Palm" then
+            putAway(player) -- a palm strike is bare-handed
+        end
+    elseif steps then
         local last = combos[player]
         local continuing = last and last.weapon == weapon and now - last.at < ComboRules.window(weapon) / CombatFx.TimeScale
-        strike.step = step or if continuing then last.step % steps + 1 else 1
+        strike.step = if continuing then last.step % steps + 1 else 1
         combos[player] = { weapon = weapon, step = strike.step, at = now }
     else
         local last = combos[player]
-        strike.step = step or if last and last.weapon == weapon and now - last.at < ComboRules.PalmWindow / CombatFx.TimeScale then last.step % 2 + 1 else 1
+        strike.step = if last and last.weapon == weapon and now - last.at < ComboRules.PalmWindow / CombatFx.TimeScale then last.step % 2 + 1 else 1
         combos[player] = { weapon = weapon, step = strike.step, at = now }
         putAway(player) -- a palm strike is bare-handed
     end
@@ -1271,7 +1290,8 @@ function CombatFx.play(player, weapon, step)
     strike.palette = p
     if player == Players.LocalPlayer and player:GetAttribute("IsFlying") ~= true then
         -- the blow at its blow frame, from our own look at it, if the server's answer isn't here by then (see CombatFx.hit)
-        local spec = if weapon == "Palm" then GameConfig.Combat.Palm
+        local spec = if info then info -- (the form's own reach and arc)
+            elseif weapon == "Palm" then GameConfig.Combat.Palm
             elseif weapon == "Spear" and strike.step == 2 then GameConfig.WeaponKinds.Spear.Slash else GameConfig.WeaponKinds[weapon]
         local target, point = predictTarget(root, spec)
         lunge(player, root, strike, timing, target, point)
@@ -1422,14 +1442,6 @@ do
             tend()
         end
     end)
-end
-
--- The server's count of a spear's combo (it decides the slash's reach): the next strike follows on from it.
-function CombatFx.syncCombo(player, weapon, step)
-    local combo = combos[player]
-    if combo and combo.weapon == weapon then
-        combo.step = step
-    end
 end
 
 -- The pose a player is in, or nil; PoseController reads it. During a strike: "Palm", "Slash" or

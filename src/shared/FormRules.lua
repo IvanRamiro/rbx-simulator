@@ -1,0 +1,219 @@
+-- Combat forms (the owner, 2026-11-24: "add the combo system ... combat forms ... each with unique attacks, effects and combos", "start a new and
+-- fresh battle attacks"; then: "a combo and combat forms based on the WEAPONS, not for elements: all types of swords have the same combos and
+-- forms, and all types of spears have the same combos and forms").
+--
+-- A weapon's FAMILY is its kind: Sword, Spear, or Palm (bare hands: no weapon equipped). Every weapon of a family shares that family's forms and
+-- combos, whatever its tier, element or name: the realm weapons, the forged ones and the faction weapons alike. The weapon still sets the damage
+-- tier, the look and the aura; the form sets the chain of strikes: how many, how hard, how fast, how wide, which one finishes, how the target
+-- reacts. A player has a chosen form for each family (the server keeps it: the "CombatForm" attribute); if the chosen one doesn't belong to the
+-- weapon in hand, or isn't unlocked, the family's first form is used. A form unlocks at a realm (UnlockRealm: 1 = from the start). The server owns
+-- the choice, the chain and every number here; a client only shows.
+--
+-- THE BALANCE RULE (so guardian fights and the egg heist keep their pace): a step has Dmg and Cd, multiples of the weapon's own strike damage and
+-- cooldown. A form's damage per second over its whole chain is sum(Dmg) / sum(Cd) of the weapon's own, and must stay within DPS_BAND of 1:
+-- forms differ in HOW they deal damage (many light strikes, a few heavy ones, a huge finisher), never in how much. tests/specs/forms.spec.luau
+-- enforces it. The combo counter below is for show: it gives no damage, so a long chain can't be farmed for power.
+--
+--   FormRules.Families[family]            the family's form ids in order, the first the default (every weapon kind has one, and "Palm")
+--   FormRules.Forms[id]                   { Id, Family, Name, Identity, UnlockRealm, Chain = { { Name, Dmg, Cd, Range, Arc, Reaction } ... } }
+--   FormRules.familyOf(id)                the family a form belongs to, or nil
+--   FormRules.unlocked(id, realm)         whether a player in realm number `realm` (Shop.playerRealmIndex) can use it
+--   FormRules.resolve(family, chosen, realm)  the form to fight with: the chosen one if it is this family's and unlocked, else the family's first
+--   FormRules.stepOf(id, last, now, cd)   the strike's place in the chain: last = { Form, Step, At } or nil; cd = the weapon's cooldown
+--   FormRules.strike(id, step, base)      the numbers of one strike: base = { Damage, Range, Arc, Cooldown } of the weapon
+--   FormRules.plan(family, chosen, realm, base, last, now)   the strike a player makes now (server and client both use it)
+--   FormRules.dps(id)                     the form's damage per second as a multiple of the weapon's own
+--   FormRules.countHit(counter, now)      the combo counter after a landed hit: { Hits, At }
+--   FormRules.tierOf(hits)                the name of the counter's tier, or nil
+local FormRules = {}
+
+FormRules.GRACE = 0.6 -- seconds past a strike's own cooldown in which the next strike still continues the chain
+FormRules.SWITCH_GAP = 1.5 -- seconds between two changes of form
+FormRules.DPS_BAND = 0.02 -- how far a form's damage per second may stray from the weapon's own (a share)
+FormRules.MAX_ARC = 170 -- degrees: no strike reaches behind the striker
+
+-- Reaction: how the target answers a landed strike (GuardianReact): Light flinch, Heavy stagger, Launch a knock back (the finisher only).
+FormRules.Forms = {
+    -- ---------- swords ----------
+    Crescent = {
+        Family = "Sword", Name = "Crescent Form", UnlockRealm = 1,
+        Identity = "Balanced. Two clean cuts, then a hard overhead finisher.",
+        Chain = {
+            { Name = "Rising Cut", Dmg = 0.85, Cd = 0.9, Range = 1, Arc = 1, Reaction = "Light" },
+            { Name = "Falling Cut", Dmg = 0.85, Cd = 0.9, Range = 1, Arc = 1, Reaction = "Light" },
+            { Name = "Heaven Splitter", Dmg = 1.5, Cd = 1.4, Range = 1.05, Arc = 1.1, Reaction = "Launch" },
+        },
+    },
+    Gale = {
+        Family = "Sword", Name = "Gale Form", UnlockRealm = 3,
+        Identity = "Fast and flowing. Four quick cuts close in, then a spin that cuts all round.",
+        Chain = {
+            { Name = "Swift Cut", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.15, Reaction = "Light" },
+            { Name = "Cross Cut", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.15, Reaction = "Light" },
+            { Name = "Spin Cut", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.3, Reaction = "Light" },
+            { Name = "Rush Cut", Dmg = 0.55, Cd = 0.6, Range = 0.9, Arc = 1.15, Reaction = "Heavy" },
+            { Name = "Storm Ring", Dmg = 1.6, Cd = 1.4, Range = 0.95, Arc = 1.9, Reaction = "Launch" },
+        },
+    },
+    Mountain = {
+        Family = "Sword", Name = "Mountain Form", UnlockRealm = 6,
+        Identity = "Slow and heavy. Two crushing blows, then a huge finisher that is worth the wait.",
+        Chain = {
+            { Name = "Heavy Cut", Dmg = 0.9, Cd = 1.0, Range = 1, Arc = 0.9, Reaction = "Heavy" },
+            { Name = "Heavy Chop", Dmg = 0.9, Cd = 1.0, Range = 1, Arc = 0.9, Reaction = "Heavy" },
+            { Name = "Mountain Fall", Dmg = 2.8, Cd = 2.6, Range = 1.1, Arc = 1.2, Reaction = "Launch" },
+        },
+    },
+    -- ---------- spears ----------
+    Lancer = {
+        Family = "Spear", Name = "Lancer Form", UnlockRealm = 1,
+        Identity = "Balanced. Two long thrusts, then a wide sweep.",
+        Chain = {
+            { Name = "Straight Thrust", Dmg = 0.85, Cd = 0.9, Range = 1, Arc = 1, Reaction = "Light" },
+            { Name = "Twin Thrust", Dmg = 0.85, Cd = 0.9, Range = 1, Arc = 1, Reaction = "Light" },
+            { Name = "Wide Sweep", Dmg = 1.5, Cd = 1.4, Range = 0.72, Arc = 2.4, Reaction = "Launch" },
+        },
+    },
+    Swallow = {
+        Family = "Spear", Name = "Swallow Form", UnlockRealm = 3,
+        Identity = "Quick and darting. Four fast jabs, then a whirl all round.",
+        Chain = {
+            { Name = "Quick Jab", Dmg = 0.55, Cd = 0.6, Range = 0.8, Arc = 1.2, Reaction = "Light" },
+            { Name = "Double Jab", Dmg = 0.55, Cd = 0.6, Range = 0.8, Arc = 1.2, Reaction = "Light" },
+            { Name = "Low Jab", Dmg = 0.55, Cd = 0.6, Range = 0.8, Arc = 1.2, Reaction = "Light" },
+            { Name = "Rising Jab", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.2, Reaction = "Heavy" },
+            { Name = "Whirl Sweep", Dmg = 1.6, Cd = 1.4, Range = 0.7, Arc = 2.6, Reaction = "Launch" },
+        },
+    },
+    Tiger = {
+        Family = "Spear", Name = "Tiger Form", UnlockRealm = 6,
+        Identity = "Slow and fierce. Two hard thrusts, then a slam that drives the target back.",
+        Chain = {
+            { Name = "Fang Thrust", Dmg = 0.9, Cd = 1.0, Range = 0.9, Arc = 1, Reaction = "Heavy" },
+            { Name = "Claw Thrust", Dmg = 0.9, Cd = 1.0, Range = 0.9, Arc = 1, Reaction = "Heavy" },
+            { Name = "Tiger Slam", Dmg = 2.8, Cd = 2.6, Range = 0.8, Arc = 2, Reaction = "Launch" },
+        },
+    },
+    -- ---------- bare hands (no weapon equipped) ----------
+    Fist = {
+        Family = "Palm", Name = "Fist Form", UnlockRealm = 1,
+        Identity = "Plain and quick. Two punches, then a palm strike that sends the target back.",
+        Chain = {
+            { Name = "Straight Punch", Dmg = 0.85, Cd = 0.9, Range = 1, Arc = 1, Reaction = "Light" },
+            { Name = "Hook Punch", Dmg = 0.85, Cd = 0.9, Range = 1, Arc = 1, Reaction = "Light" },
+            { Name = "Palm Strike", Dmg = 1.5, Cd = 1.4, Range = 1.05, Arc = 1.1, Reaction = "Launch" },
+        },
+    },
+}
+FormRules.Families = {
+    Sword = { "Crescent", "Gale", "Mountain" },
+    Spear = { "Lancer", "Swallow", "Tiger" },
+    Palm = { "Fist" },
+}
+
+for family, ids in FormRules.Families do
+    for _, id in ids do
+        assert(FormRules.Forms[id] and FormRules.Forms[id].Family == family, "FormRules: " .. id .. " is not a " .. family .. " form")
+        FormRules.Forms[id].Id = id
+    end
+end
+
+function FormRules.familyOf(id)
+    local form = typeof(id) == "string" and FormRules.Forms[id]
+    return if form then form.Family else nil
+end
+
+function FormRules.unlocked(id, realm)
+    local form = typeof(id) == "string" and FormRules.Forms[id]
+    return form ~= false and form ~= nil and typeof(realm) == "number" and realm >= form.UnlockRealm
+end
+
+function FormRules.resolve(family, chosen, realm)
+    local ids = FormRules.Families[family]
+    if not ids then
+        return nil
+    end
+    if FormRules.familyOf(chosen) == family and FormRules.unlocked(chosen, realm) then
+        return chosen
+    end
+    return ids[1]
+end
+
+-- The strike's place in the chain, 1 to #Chain. A strike continues the chain when it comes before the last one's cooldown and the grace are up
+-- (and is the same form); otherwise it is the first strike again. The strike after the last is the first.
+function FormRules.stepOf(id, last, now, cooldown)
+    local form = FormRules.Forms[id]
+    if not form then
+        return 1
+    end
+    local chain = form.Chain
+    if last and last.Form == id and typeof(last.At) == "number" and typeof(last.Step) == "number" and chain[last.Step] then
+        local since = now - last.At
+        if since >= 0 and since < cooldown * chain[last.Step].Cd + FormRules.GRACE then
+            return last.Step % #chain + 1
+        end
+    end
+    return 1
+end
+
+-- One strike's numbers from the weapon's own: Damage and Cooldown scale by the step's Dmg and Cd, Range and Arc by its Range and Arc (the arc
+-- never past MAX_ARC, the range never under 3 studs). Name, Finisher (the last strike) and Reaction come along.
+function FormRules.strike(id, step, base)
+    local form = FormRules.Forms[id]
+    local entry = form and form.Chain[step]
+    if not entry then
+        return nil
+    end
+    return {
+        Form = id, Family = form.Family, Step = step, Name = entry.Name, Finisher = step == #form.Chain, Reaction = entry.Reaction,
+        Damage = base.Damage * entry.Dmg, Cooldown = base.Cooldown * entry.Cd,
+        Range = math.max(3, base.Range * entry.Range), Arc = math.min(FormRules.MAX_ARC, base.Arc * entry.Arc),
+    }
+end
+
+function FormRules.dps(id)
+    local damage, time = 0, 0
+    for _, entry in FormRules.Forms[id].Chain do
+        damage += entry.Dmg
+        time += entry.Cd
+    end
+    return damage / time
+end
+
+-- The strike a player makes now, from their weapon's family, the form they chose for it, their realm number, the weapon's own numbers
+-- (base = { Damage, Range, Arc, Cooldown }), their last strike ({ Form, Step, At } or nil) and the time. The server decides every strike with
+-- this, and the client calls it for the strike it shows at once, so the two can't disagree about the chain. nil for an unknown family.
+function FormRules.plan(family, chosen, realm, base, last, now)
+    local id = FormRules.resolve(family, chosen, realm)
+    if not id then
+        return nil
+    end
+    return FormRules.strike(id, FormRules.stepOf(id, last, now, base.Cooldown), base)
+end
+
+-- ---------- the combo counter ----------
+-- Consecutive landed hits, for show (no damage comes of it). A hit within WINDOW seconds of the last landed one adds to the count; a longer
+-- gap starts it again at one. A miss does not add (and the client lets the count lapse after WINDOW). Tiers are named in plain words.
+FormRules.Counter = {
+    WINDOW = 2.2,
+    Tiers = { { Hits = 5, Name = "Nice" }, { Hits = 10, Name = "Great" }, { Hits = 20, Name = "Amazing" }, { Hits = 40, Name = "Legendary" } },
+}
+
+function FormRules.countHit(counter, now)
+    if counter and typeof(counter.At) == "number" and now - counter.At >= 0 and now - counter.At <= FormRules.Counter.WINDOW then
+        return { Hits = counter.Hits + 1, At = now }
+    end
+    return { Hits = 1, At = now }
+end
+
+function FormRules.tierOf(hits)
+    local name = nil
+    for _, tier in FormRules.Counter.Tiers do
+        if hits >= tier.Hits then
+            name = tier.Name
+        end
+    end
+    return name
+end
+
+return FormRules

@@ -15,7 +15,9 @@ local UserInputService = game:GetService("UserInputService")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
+local FormRules = require(ReplicatedStorage:WaitForChild("FormRules"))
 local CombatFx = require(script.Parent:WaitForChild("CombatFx"))
+local ComboCounter = require(script.Parent:WaitForChild("ComboCounter"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
 local Toast = require(UI:WaitForChild("Toast"))
@@ -28,14 +30,19 @@ local readyAt = 0
 local airNoted = false -- the note about striking from sword flight shows once a session
 local message = Toast.new("CombatMessage", Color3.new(1, 1, 1), 4)
 
--- "Palm", "Sword" or "Spear", and its cooldown
-local function strikeKind()
+-- "Palm", "Sword" or "Spear", and the weapon's own numbers (FormRules.plan scales them by the form's step, as the server does: the damage isn't ours to
+-- know, so it is 1 here)
+local function strikeBase()
     local weapon = Shop.weapon(player:GetAttribute("WeaponId"))
     if not weapon then
-        return "Palm", GameConfig.Combat.Palm.Cooldown
+        local palm = GameConfig.Combat.Palm
+        return "Palm", { Damage = 1, Range = palm.Range, Arc = palm.Arc, Cooldown = palm.Cooldown }
     end
-    return weapon.Kind, GameConfig.WeaponKinds[weapon.Kind].Cooldown
+    local kind = GameConfig.WeaponKinds[weapon.Kind]
+    return weapon.Kind, { Damage = 1, Range = kind.Range, Arc = kind.Arc, Cooldown = kind.Cooldown }
 end
+local mine = nil -- { Form, Step, At }: our last strike in its form's chain, as the server counts it (the server's answer corrects it)
+local UNIT = { Damage = 1, Range = 10, Arc = 80, Cooldown = 1 } -- a strike's step and finisher don't depend on these
 
 -- Input feel: a press up to BUFFER seconds before the cooldown ends still counts, and fires the moment it ends; holding the button (mouse,
 -- gamepad R2, the touch button) strikes again at each cooldown. The cooldown itself stays the server's (CombatService): this only stops a
@@ -52,7 +59,7 @@ local function strike(repeating)
         return
     end
     local now = os.clock()
-    local kind, cooldown = strikeKind()
+    local kind, base = strikeBase()
     if now < readyAt then
         if not repeating and not waiting and readyAt - now <= BUFFER then
             waiting = true
@@ -63,12 +70,17 @@ local function strike(repeating)
         end
         return
     end
-    readyAt = now + cooldown
+    local info = FormRules.plan(kind, player:GetAttribute("Form" .. kind), Shop.playerRealmIndex(player), base, mine, now)
+    if not info then
+        return
+    end
+    readyAt = now + info.Cooldown
+    mine = { Form = info.Form, Step = info.Step, At = now }
     if player:GetAttribute("IsFlying") == true and not airNoted then
         airNoted = true
         message:show("You can't hit guardians from the air. Land first.", "Warning")
     end
-    CombatFx.play(player, kind)
+    CombatFx.play(player, kind, info)
     RemoteEvents.CombatEvent:FireServer()
 end
 
@@ -130,6 +142,69 @@ for _, name in { "WeaponId", "WeaponElement", "WeaponDrawn" } do
 end
 refreshSlot()
 
+-- ---------- combat forms (the owner, 2026-11-24): slot 2 of the inventory bar, key 2 ----------
+-- Every weapon of a family shares that family's forms (shared/FormRules); the slot shows the form in use and pressing it asks the server (FormEvent) for
+-- the next form this weapon's family has unlocked. Each family remembers its own (the server's "Form<Family>" attribute).
+local formSlot = Hud.Inventory.addSlot(2, { Name = "FormSlot" })
+local formNote = Toast.new("FormMessage", Color3.new(1, 1, 1), 3)
+
+local function familyNow()
+    local weapon = Shop.weapon(player:GetAttribute("WeaponId"))
+    return if weapon then weapon.Kind else "Palm"
+end
+
+-- the form in use for the weapon in hand, and the unlocked ones of its family in order
+local function formsNow()
+    local family = familyNow()
+    local realm = Shop.playerRealmIndex(player)
+    local current = FormRules.resolve(family, player:GetAttribute("Form" .. family), realm)
+    local open = {}
+    for _, id in FormRules.Families[family] do
+        if FormRules.unlocked(id, realm) then
+            table.insert(open, id)
+        end
+    end
+    return family, current, open
+end
+
+local function refreshForm()
+    local _, current = formsNow()
+    local form = FormRules.Forms[current]
+    formSlot.setEmpty(string.upper((string.gsub(form.Name, " Form$", ""))), "") -- (no caption: it ran into the weapon slot's)
+end
+for _, name in { "WeaponId", "FormSword", "FormSpear", "FormPalm" } do
+    player:GetAttributeChangedSignal(name):Connect(refreshForm)
+end
+refreshForm()
+task.spawn(function() -- a new realm can open a form: look now and then
+    while true do
+        task.wait(2)
+        refreshForm()
+    end
+end)
+
+local formAskedAt = 0
+local function nextForm()
+    if player:GetAttribute("IsCultivating") == true or player:GetAttribute("CarryingEgg") ~= nil then
+        return
+    end
+    if os.clock() - formAskedAt < FormRules.SWITCH_GAP then
+        return
+    end
+    local family, current, open = formsNow()
+    if #open < 2 then
+        local total = #FormRules.Families[family]
+        formNote:show(if total > 1 then "More forms open as you reach higher realms." else "This weapon has one form.", "Info")
+        return
+    end
+    formAskedAt = os.clock()
+    local at = table.find(open, current) or 1
+    local choice = open[at % #open + 1]
+    RemoteEvents.FormEvent:FireServer(choice)
+    formNote:show(FormRules.Forms[choice].Name .. ": " .. FormRules.Forms[choice].Identity, "Info")
+end
+formSlot.Button.Activated:Connect(nextForm)
+
 -- while a strike button is held, the next strike comes at each cooldown; letting go (or the window losing focus) stops it
 RunService.Heartbeat:Connect(function()
     if holding == "Mouse" and not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
@@ -159,6 +234,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         strike()
     elseif DRAW_KEYS[input.KeyCode] then
         toggleDrawn()
+    elseif input.KeyCode == Enum.KeyCode.Two then
+        nextForm()
     end
 end)
 UserInputService.InputEnded:Connect(function(input)
@@ -168,14 +245,19 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
-RemoteEvents.CombatEvent.OnClientEvent:Connect(function(source, kind, position, step, damage, critical, target)
+RemoteEvents.CombatEvent.OnClientEvent:Connect(function(source, kind, position, step, damage, critical, target, form, hits)
     if typeof(source) ~= "Instance" or not source:IsA("Player") then
         return
     end
+    -- the strike as the server counted it: its form and its step in that form's chain
+    local info = if typeof(form) == "string" and typeof(step) == "number" then FormRules.strike(form, step, UNIT) else nil
     if source ~= player then
-        CombatFx.play(source, kind, step)
-    elseif step then
-        CombatFx.syncCombo(player, kind, step) -- a press the server dropped can't leave the count wrong
+        CombatFx.play(source, kind, info)
+    else
+        if info and mine then
+            mine = { Form = info.Form, Step = info.Step, At = mine.At } -- a press the server dropped can't leave our count wrong
+        end
+        ComboCounter.set(hits, info ~= nil and info.Finisher)
     end
     if typeof(position) == "Vector3" then
         CombatFx.hit(source, position, {

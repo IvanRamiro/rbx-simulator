@@ -2,6 +2,10 @@
 -- realms, one for securing an egg from each guardian, the beast collector titles, Keeper of Secrets and Relic Seeker.
 -- A worn title shows over the player's head (TitleController) in its own colour, a sheen of light sweeping across it now and
 -- then; a Shimmer is the colour of a grander title's sheen (it sweeps more often).
+-- The Developer title alone has a Style (the owner, 2026-11-24: "apply it only to developer title, keep the other sheen and typography as it is"): the
+-- ornate banner round its words on the nameplate (client/UI/TitleBanner draws rendered art: a gold-and-steel plate with wings and a crowned crystal),
+-- with Concept (the idea, in words), Depth (the colour of a layer under the letters, so they read at a distance) and Rule (the colour the banner's glow
+-- is tinted). Every other title shows as it always did: its own lettering and colour, its sheen.
 -- The server (server/Titles) decides who has earned what; this is what each one is, and how it is earned.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -158,6 +162,10 @@ for order, entry in TitleRules.List do
     entry.Order = order
     entry.Font = FONTS[entry.Id] or { "Merriweather", 700 }
 end
+
+-- (the Forge: ember letters on deep crimson, a banner of gold and steel with a glow the colour of the Rule)
+TitleRules.ById.Developer.Style = { Concept = "The Forge: the maker's mark, ember letters on deep crimson in a gold and steel banner", Depth = rgb(96, 14, 26),
+    Rule = rgb(255, 206, 96) }
 
 -- What a worn title gives (the owner, 2026-11-18: "ADDITIONAL BONUS ON TITLES: ATTACK BOOST, QI BOOST, MUTATION BOOST, LUCK BOOST,
 -- SPIRIT STONE BOOST"): one bonus each, only while it is the one they show, so the choice matters. Kind: "Attack" (their strikes'

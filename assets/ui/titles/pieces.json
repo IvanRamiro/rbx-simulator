@@ -1,0 +1,35 @@
+{
+  "pxPerUnit": 200,
+  "plateHeightUnits": 0.7,
+  "capLengthUnits": 2.0,
+  "pieces": {
+    "capL": {
+      "width": 945,
+      "height": 568,
+      "left": -721.0,
+      "top": -284.0,
+      "light": true
+    },
+    "capR": {
+      "width": 944,
+      "height": 568,
+      "left": -224.0,
+      "top": -284.0,
+      "light": true
+    },
+    "mid": {
+      "width": 402,
+      "height": 170,
+      "left": -201.0,
+      "top": -85.0,
+      "light": false
+    },
+    "crown": {
+      "width": 767,
+      "height": 642,
+      "left": -378.0,
+      "top": -382.0,
+      "light": true
+    }
+  }
+}

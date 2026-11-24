@@ -4,13 +4,15 @@
 --
 -- A target is a Model tagged GameConfig.Combat.TargetTag with a PrimaryPart and a HitRadius
 -- attribute (studs round the PrimaryPart's centre). A strike lands on the nearest target within the
--- weapon's Arc of facing and Range, unless its "Invulnerable" attribute is set. A spear alternates a
--- thrust and a sweeping slash with its own reach (WeaponKinds.Spear.Slash); the server keeps the count,
--- so a client can't choose the wider reach. A landing strike
--- fires Combat.Hit; every strike is relayed to all clients (CombatEvent: striker, kind ("Palm",
--- "Sword" or "Spear"), hit position or nil, the strike's step in its weapon's combo (shared/ComboRules: the same
--- chain on every client), and for a strike that landed: its damage (a whole number), true if it was critical, and the
--- target it struck).
+-- strike's Arc of facing and Range, unless its "Invulnerable" attribute is set.
+--
+-- COMBAT FORMS (shared/FormRules; the owner, 2026-11-24): every weapon of a family (Sword, Spear, bare-hands Palm) shares that family's forms. The
+-- strike's damage, range, arc and cooldown are the weapon's own scaled by the step of the player's form (FormRules.plan, which the client runs too
+-- for the strike it shows at once); the server keeps the chain per player, so a client can't choose a step, a form it hasn't unlocked or a faster
+-- cooldown. FormEvent(formId) chooses a form: it is checked here and kept in the player's "Form<Family>" attribute. A landing strike fires
+-- Combat.Hit; every strike is relayed to all clients (CombatEvent: striker, kind ("Palm", "Sword" or "Spear"), hit position or nil, the strike's
+-- step in its form's chain, and for a strike that landed: its damage (a whole number), true if it was critical, and the target it struck; then
+-- the form's id and the combo counter: consecutive landed hits, for show).
 --
 -- A landing strike may be critical (GameConfig.Combat.Crit): rolled here, never by a client.
 --
@@ -27,13 +29,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
-local ComboRules = require(ReplicatedStorage:WaitForChild("ComboRules"))
+local FormRules = require(ReplicatedStorage:WaitForChild("FormRules"))
+local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Combat = require(script.Parent:WaitForChild("Combat"))
 local MovementGuard = require(script.Parent.Parent:WaitForChild("Security"):WaitForChild("MovementGuard"))
 
 local COOLDOWN_SLACK = 0.15 -- the share of a cooldown a request may come early: latency, not cheating
-local lastStrike = {} -- [player] = { Weapon, Step, At } (ComboRules): the chain's last strike
+local lastStrike = {} -- [player] = { Form, Step, At } (FormRules.plan): the chain's last strike
+local comboCount = {} -- [player] = { Hits, At } (FormRules.countHit): consecutive landed hits, for show
+local lastFormChange = {} -- [player] = when they last chose a form
 -- [player] = when their next strike is due. It moves on by a whole cooldown from when the last was
 -- due, not from when it arrived, so coming early can't add up: a client firing as early as the slack
 -- allows gets the same strikes a second as anyone else.
@@ -154,6 +159,25 @@ local function findTarget(rootPart, spec)
     return best, bestPoint
 end
 
+-- ---------- choosing a form ----------
+RemoteEvents.FormEvent.OnServerEvent:Connect(function(player, id)
+    local family = FormRules.familyOf(id) -- (nil for anything that isn't a form's id, a table or a number included)
+    if not family or not FormRules.unlocked(id, Shop.playerRealmIndex(player)) then
+        return
+    end
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 or player:GetAttribute("IsCultivating") == true or player:GetAttribute("CarryingEgg") ~= nil then
+        return
+    end
+    local now = os.clock()
+    if now - (lastFormChange[player] or 0) < FormRules.SWITCH_GAP then
+        return
+    end
+    lastFormChange[player] = now
+    player:SetAttribute("Form" .. family, id)
+end)
+
 RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
     local character = player.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -162,38 +186,49 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
         or player:GetAttribute("CarryingEgg") ~= nil then -- both hands are round the egg
         return
     end
-    local strike = Combat.strikeOf(player)
-    if strike.Kind ~= "Palm" then
+    local weapon = Combat.strikeOf(player) -- the weapon's own numbers
+    if weapon.Kind ~= "Palm" then
         setDrawn(player, true) -- striking with a weapon draws it
     end
     local now = os.clock()
     local due = nextStrike[player]
-    if due and now < due - strike.Cooldown * COOLDOWN_SLACK then
+    if due and now < due - weapon.Cooldown * COOLDOWN_SLACK then
+        return
+    end
+    -- the strike: its family's form the player chose (and has unlocked), the step of its chain, the numbers of that step (FormRules.plan)
+    local strike = FormRules.plan(weapon.Kind, player:GetAttribute("Form" .. weapon.Kind), Shop.playerRealmIndex(player),
+        { Damage = weapon.Damage, Range = weapon.Range, Arc = weapon.Arc, Cooldown = weapon.Cooldown }, lastStrike[player], now)
+    if not strike then
         return
     end
     nextStrike[player] = math.max(now, due or 0) + strike.Cooldown
-    -- the chain (ComboRules): which strike of its weapon's combo this is, the same for every client. A spear's second strike is its slash.
-    local step = ComboRules.step(strike.Kind, lastStrike[player], now)
-    lastStrike[player] = { Weapon = strike.Kind, Step = step, At = now }
-    local slashing = strike.Slash ~= nil and step == 2
+    lastStrike[player] = { Form = strike.Form, Step = strike.Step, At = now }
     -- from sword flight a strike swings but can't land: guardians can't reach a flyer, so a flyer
     -- can't reach them
     local target, point = nil, nil
     if player:GetAttribute("IsFlying") ~= true and not MovementGuard.isSuspect(player) then
-        target, point = findTarget(rootPart, if slashing then strike.Slash else strike)
+        target, point = findTarget(rootPart, strike)
     end
     local damage, critical = nil, nil
+    local counter = comboCount[player]
     if target then
         local crit = GameConfig.Combat.Crit
         critical = roll:NextNumber() < crit.Chance
         damage = strike.Damage * Combat.powerOf(player) * (if critical then crit.Multiplier else 1)
+        counter = FormRules.countHit(counter, now)
+        comboCount[player] = counter
         Combat.Hit:Fire(player, target, damage, point)
     end
-    RemoteEvents.CombatEvent:FireAllClients(player, strike.Kind, point, step, if damage then math.round(damage) else nil, critical or nil, target)
+    -- the counter as it stands: a miss leaves it, and it lapses after the window
+    local hits = if counter and now - counter.At <= FormRules.Counter.WINDOW then counter.Hits else 0
+    RemoteEvents.CombatEvent:FireAllClients(player, weapon.Kind, point, strike.Step, if damage then math.round(damage) else nil, critical or nil, target,
+        strike.Form, hits)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
     lastDraw[player], pendingDraw[player] = nil, nil
     lastStrike[player] = nil
     nextStrike[player] = nil
+    comboCount[player] = nil
+    lastFormChange[player] = nil
 end)
