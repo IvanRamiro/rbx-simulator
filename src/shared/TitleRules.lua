@@ -54,6 +54,16 @@ local GUARDIAN_TITLES = {
     { Guardian = "Pangu", Id = "PangusRival", Text = "Pangu's Rival", Color = rgb(255, 204, 112), Shimmer = rgb(255, 120, 80) },
 }
 
+-- The conquest titles (the owner, 2026-11-24, item 15; GameConfig.Bounty): for bringing a guardian down the last tier's number of times. No bonus: the thief titles above
+-- already carry the guardians' power. Each in its guardian's colour.
+local CONQUEST_TITLES = {
+    { Guardian = "StoneLion", Id = "LionBreaker", Text = "Lion Breaker", Color = rgb(238, 214, 164) },
+    { Guardian = "MantisSage", Id = "MantisBreaker", Text = "Mantis Breaker", Color = rgb(164, 236, 140) },
+    { Guardian = "EmberXuanwu", Id = "EmberBreaker", Text = "Ember Breaker", Color = rgb(255, 156, 96) },
+    { Guardian = "Tiangou", Id = "SkyhoundBreaker", Text = "Skyhound Breaker", Color = rgb(214, 224, 255), Shimmer = rgb(255, 255, 255) },
+    { Guardian = "Pangu", Id = "PanguBreaker", Text = "Pangu Breaker", Color = rgb(255, 214, 128), Shimmer = rgb(255, 130, 90) },
+}
+
 -- The beast collector titles: beasts in the player's Spirit Beast Codex (Count nil: every beast there is).
 local COLLECTOR_TITLES = {
     { Id = "BeastSeeker", Text = "Beast Seeker", Count = 10, Color = rgb(184, 232, 164) },
@@ -94,6 +104,14 @@ for _, entry in GUARDIAN_TITLES do
     TitleRules.GuardianTitleIds[entry.Guardian] = entry.Id
     add({ Id = entry.Id, Group = "Guardian", Text = entry.Text, Color = entry.Color, Shimmer = entry.Shimmer,
         How = "Carry an egg home from " .. (if guardian then guardian.DisplayName else entry.Guardian) .. "." })
+end
+
+TitleRules.ConquestTitleIds = {} -- [guardian id] = its conquest title's id
+for _, entry in CONQUEST_TITLES do
+    local guardian = GameConfig.Guardians[entry.Guardian]
+    TitleRules.ConquestTitleIds[entry.Guardian] = entry.Id
+    add({ Id = entry.Id, Group = "Guardian", Text = entry.Text, Color = entry.Color, Shimmer = entry.Shimmer,
+        How = "Bring " .. (if guardian then guardian.DisplayName else entry.Guardian) .. " down " .. GameConfig.Bounty.Tiers[#GameConfig.Bounty.Tiers].Conquests .. " times (the Bounty board)." })
 end
 
 -- every beast that can be hatched (the Codex's own list: a retired beast in no egg doesn't count)

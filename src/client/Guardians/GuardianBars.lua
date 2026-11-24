@@ -51,6 +51,7 @@ local BAR_H = TRACK_TOP + TRACK_H + V_PAD
 local SIGN_W, SIGN_H = 260, 82
 
 local WEAK_GOLD = Color3.fromRGB(255, 200, 70)
+local BOUNTY_W = 64 -- the row's room for BOUNTY at its end
 local STATE_LOOK = {
     Dormant = { Text = "ASLEEP", Color = C.Muted },
     Guardian = { Text = "AWAKE", Color = Color3.fromRGB(120, 214, 255) },
@@ -118,9 +119,16 @@ local function buildBar(anchor)
     UiKit.outline(name, 1.5)
     local state = UiKit.label({
         Name = "GuardianState", Font = "Heavy", TextSize = 15, Position = UDim2.fromOffset(TEXT_LEFT, STATE_TOP),
-        Size = UDim2.new(1, -(TEXT_LEFT + PAD), 0, STATE_H), TextTruncate = Enum.TextTruncate.AtEnd, Parent = panel,
+        Size = UDim2.new(1, -(TEXT_LEFT + PAD + BOUNTY_W), 0, STATE_H), TextTruncate = Enum.TextTruncate.AtEnd, Parent = panel,
     })
     UiKit.outline(state, 1)
+    -- the day's bounty (GameConfig.Bounty): the marked guardian says so, at the end of the state row
+    local bountyTag = UiKit.label({
+        Name = "BountyTag", Font = "Heavy", TextSize = 15, Text = "BOUNTY", TextColor3 = WEAK_GOLD, AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -PAD, 0, STATE_TOP), Size = UDim2.fromOffset(BOUNTY_W, STATE_H), TextXAlignment = Enum.TextXAlignment.Right,
+        Visible = false, Parent = panel,
+    })
+    UiKit.outline(bountyTag, 1)
 
     local track = Instance.new("Frame")
     track.Name = "Track"
@@ -162,7 +170,7 @@ local function buildBar(anchor)
     UiKit.outline(health, 1)
     local edge = panel:FindFirstChildOfClass("UIStroke")
     return {
-        gui = gui, panel = panel, scale = scale, name = name, state = state, fill = fill, trail = trail, gradient = gradient,
+        gui = gui, panel = panel, scale = scale, name = name, state = state, fill = fill, trail = trail, gradient = gradient, bountyTag = bountyTag,
         weakMark = weakMark, health = health, edge = edge, edgeColor = edge.Color, edgeThickness = edge.Thickness,
     }
 end
@@ -335,6 +343,7 @@ local function updateBar(entry, dt)
         bar.state.TextColor3 = look.Color
         bar.gradient.Color = if state == "Enraged" then FILL.Rage elseif state == "Weakened" then FILL.Weak else FILL.Calm
     end
+    bar.bountyTag.Visible = model:GetAttribute("Bounty") == true
     local health, maxHealth = model:GetAttribute("Health") or 0, model:GetAttribute("MaxHealth") or 1
     local share = math.clamp(health / maxHealth, 0, 1)
     if fresh then

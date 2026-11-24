@@ -127,6 +127,16 @@ Quests.Moment.Event:Connect(function(player, kind, guardianId)
     end
 end)
 
+-- a guardian's ladder finished (ConquestService): its conquest title
+Quests.Moment.Event:Connect(function(player, kind, guardianId)
+    if kind == "Master" and typeof(guardianId) == "string" then
+        local id = TitleRules.ConquestTitleIds[guardianId]
+        if id then
+            award(player, id)
+        end
+    end
+end)
+
 RemoteEvents.TitleEvent.OnServerEvent:Connect(function(player, action, choice)
     if os.clock() - (lastRequest[player] or 0) < THROTTLE then
         return

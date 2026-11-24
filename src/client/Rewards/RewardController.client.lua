@@ -2,7 +2,7 @@
 -- today's to claim, a code box, and the group reward when GameConfig.Rewards.Group has a GroupId. The
 -- server decides everything (server/Rewards/RewardService); the "DailyReady", "DailyDay" and
 -- "GroupClaimed" attributes carry the state here, and the button shows a dot while a claim waits.
--- Also announces offline Qi on joining. A second tab holds the daily and weekly goals (GoalsPage; the server: server/Rewards/GoalService).
+-- Also announces offline Qi on joining. More tabs: the daily and weekly goals (GoalsPage; the server: server/Rewards/GoalService) and the guardian board (BountyPage; server/Guardians/ConquestService).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -18,6 +18,7 @@ local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 local GoalsPage = require(script.Parent:WaitForChild("GoalsPage"))
+local BountyPage = require(script.Parent:WaitForChild("BountyPage"))
 
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
@@ -40,17 +41,13 @@ local window = Hud.window({
     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 })
 -- the tabs stand in the title band, where the window's name was (a phone's window is already as tall as the screen allows, so a row of tabs in the body would push
--- the code box off it): LOGIN shows what this file draws, GOALS the goals page
+-- the code box off it): LOGIN shows what this file draws, the others a page each (GOALS, BOUNTY: the guardian board). They share the band, so each is as wide as the
+-- band allows for them all (132 for two, under 100 for four).
 local bar = window.Frame:FindFirstChild("TitleBar")
 local nameLabel = bar and bar:FindFirstChild("Title")
 if nameLabel then
     nameLabel.Visible = false
 end
-local TAB_W = 132
-local loginTab = UiKit.tab({ Name = "LoginTab", Text = "LOGIN", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(0.5, -4, 0.5, 0),
-    Size = UDim2.fromOffset(TAB_W, UiTheme.Height.Tab), ZIndex = 12, Parent = bar })
-local goalsTab = UiKit.tab({ Name = "GoalsTab", Text = "GOALS", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0.5, 4, 0.5, 0),
-    Size = UDim2.fromOffset(TAB_W, UiTheme.Height.Tab), ZIndex = 12, Parent = bar })
 local loginPage = Instance.new("Frame")
 loginPage.Name = "LoginPage"
 loginPage.BackgroundTransparency = 1
@@ -58,19 +55,49 @@ loginPage.Size = UDim2.fromScale(1, 1)
 loginPage.Parent = window.Body
 local body = loginPage
 local goals = GoalsPage.new(window.Body)
-local function showPage(name)
-    loginPage.Visible = name == "Login"
-    goals.Frame.Visible = name == "Goals"
-    UiKit.selectTab(loginTab, name == "Login")
-    UiKit.selectTab(goalsTab, name == "Goals")
-    -- the goals list is longer than the login page: the window grows to the screen's room (a phone's is already as tall as it can be)
-    window.resize(if name == "Goals" then GOALS_HEIGHT else LOGIN_HEIGHT)
-    if name == "Goals" then
-        goals.render()
+local bounty = BountyPage.new(window.Body)
+local TAB_GAP = 0.012 -- (shares of the band: the window is scaled, so a pixel width would run into the close button)
+local TAB_SPAN = 0.8 -- the share of the band the tabs fill, from its left; the close button has the rest
+local pages = { -- in the order they stand in the band; Height: the window's height with that page open (a long list grows it to the screen's room)
+    { Name = "Login", Text = "LOGIN", Frame = loginPage, Height = LOGIN_HEIGHT },
+    { Name = "Goals", Text = "GOALS", Frame = goals.Frame, Height = GOALS_HEIGHT, render = goals.render },
+    { Name = "Bounty", Text = "BOUNTY", Frame = bounty.Frame, Height = GOALS_HEIGHT, render = bounty.render },
+}
+local function layoutTabs()
+    local shown = {}
+    for _, page in pages do
+        if page.Tab.Visible then
+            table.insert(shown, page)
+        end
+    end
+    local width = (TAB_SPAN - TAB_GAP * (#shown - 1)) / math.max(1, #shown)
+    for index, page in shown do
+        page.Tab.AnchorPoint = Vector2.new(0, 0.5)
+        page.Tab.Size = UDim2.new(width, 0, 0, UiTheme.Height.Tab)
+        page.Tab.Position = UDim2.new((1 - TAB_SPAN) / 2 - 0.02 + (index - 1) * (width + TAB_GAP), 0, 0.5, 0)
     end
 end
-loginTab.Activated:Connect(function() showPage("Login") end)
-goalsTab.Activated:Connect(function() showPage("Goals") end)
+local function showPage(name)
+    for _, page in pages do
+        page.Frame.Visible = page.Name == name
+        UiKit.selectTab(page.Tab, page.Name == name)
+        if page.Name == name then
+            -- the lists are longer than the login page: the window grows to the screen's room (a phone's is already as tall as it can be)
+            window.resize(page.Height)
+            if page.render then
+                page.render()
+            end
+        end
+    end
+end
+for _, page in pages do
+    page.Tab = UiKit.tab({ Name = page.Name .. "Tab", Text = page.Text, ZIndex = 12, Parent = bar })
+    page.Tab.Activated:Connect(function() showPage(page.Name) end)
+end
+layoutTabs()
+if bar then
+    bar:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutTabs)
+end
 showPage("Login")
 local message = Toast.new("RewardMessage", C.Highlight, 5)
 

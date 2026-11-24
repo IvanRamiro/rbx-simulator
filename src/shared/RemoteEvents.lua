@@ -30,6 +30,7 @@ local EVENT_NAMES = {
     "SettingsEvent",
     "RewardEvent",
     "GoalEvent",
+    "BountyEvent", -- the guardian board (server/Guardians/ConquestService): "Get"; the server answers "State" and tells a "Conquered"
     "TitleEvent",
     "TribulationEvent",
     "PerfEvent",

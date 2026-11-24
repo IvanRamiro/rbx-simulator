@@ -52,6 +52,7 @@ local QiReward = require(script.Parent.Parent:WaitForChild("Cultivation"):WaitFo
 local Quests = require(script.Parent.Parent:WaitForChild("Quests"):WaitForChild("Quests"))
 local Analytics = require(script.Parent.Parent:WaitForChild("Analytics"):WaitForChild("Analytics"))
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
+local BountyRules = require(ReplicatedStorage:WaitForChild("BountyRules"))
 
 local FLAT = Vector3.new(1, 0, 1)
 local DECIDE_EVERY = 0.1        -- seconds between decisions; movement runs every frame
@@ -244,6 +245,13 @@ function Guardian:weaken()
     self:broadcast("Weaken")
     if self.egg.state == "Guarded" then
         self:setEggState("Available")
+    end
+    -- a conquest for everyone who really took a share of it (GameConfig.Bounty; ConquestService counts it)
+    local need = BountyRules.threshold(self.config)
+    for player, dealt in self.damageBy do
+        if dealt >= need and player.Parent == Players then
+            Quests.Moment:Fire(player, "Conquer", self.id)
+        end
     end
 end
 

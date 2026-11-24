@@ -717,6 +717,27 @@ local GameConfig = {
         },
     },
 
+    -- The guardian bounty (the owner, 2026-11-24, improvement list item 15: "a reason to fight guardians repeatedly"; shared/BountyRules, server/Guardians/
+    -- ConquestBook and ConquestService). A CONQUEST is a fight that brings a guardian down to Weakened, counted for every player who dealt ConquestShare of what that
+    -- takes (a bigger share than an egg's TakeShare, so riding along does not count), at most once a Cooldown per player and guardian. Two things come of it:
+    --   the board: each guardian has its own ladder of Tiers (conquests needed, stones paid once, scaled by realm as the goals' are); the last tier of each pays a title
+    --   (TitleRules, no bonus: the factions' and guardians' titles already carry the power), so a player who has the egg they came for still has a reason to come back
+    --   the bounty: one guardian a day is MARKED (the same for everyone, BountyRules.marked), and the first conquest of it each day pays DailyStones at once, a
+    --   gold BOUNTY on its health bar (model attribute "Bounty") telling every player which. The marked one walks through Order, so a week visits them all.
+    -- Nothing here is power: stones are paid once per tier and once a day, and the ladders end.
+    Bounty = {
+        Order = { "StoneLion", "MantisSage", "EmberXuanwu", "Tiangou", "Pangu" }, -- the guardians, in the order the board lists them and the bounty visits them
+        ConquestShare = 0.25, -- of what weakening takes (MaxHealth x (1 - WeakenedAt)) a player must have dealt to be counted
+        Cooldown = 90,        -- seconds before the same player's next conquest of the same guardian counts
+        DailyStones = 5,      -- (realm 1) the marked guardian's first conquest of the day
+        Tiers = {             -- conquests of one guardian, the stones (realm 1) paid once on reaching it; the last one's reward is also the guardian's title
+            { Conquests = 1, Stones = 3 },
+            { Conquests = 5, Stones = 8 },
+            { Conquests = 15, Stones = 20 },
+            { Conquests = 40, Stones = 50 },
+        },
+    },
+
     Rewards = {
         -- Spirit Stones at realm 1 (RewardRules scales them by realm). Raised four times on November 11, 2026: a day used to
         -- pay 5 stones against the 40 one stolen egg pays (15 seconds of play), so logging in wasn't worth it. Now day 1 is

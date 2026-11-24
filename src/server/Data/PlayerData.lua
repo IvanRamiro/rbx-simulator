@@ -32,9 +32,10 @@ local QiBoost = require(script.Parent.Parent:WaitForChild("Shop"):WaitForChild("
 local AuctionLedger = require(script.Parent.Parent:WaitForChild("Auction"):WaitForChild("AuctionLedger"))
 local RecordBook = require(script.Parent.Parent:WaitForChild("Records"):WaitForChild("RecordBook"))
 local GoalBook = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("GoalBook"))
+local ConquestBook = require(script.Parent.Parent:WaitForChild("Guardians"):WaitForChild("ConquestBook"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 28
+local SCHEMA_VERSION = 29
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -231,6 +232,13 @@ MIGRATIONS[27] = function(progress)
     return progress
 end
 
+-- Version 29 added the guardian conquests (ConquestBook): an older save has none (sanitizeProgress starts them empty). A stray Conquests in an older save could only
+-- be garbage: dropped.
+MIGRATIONS[28] = function(progress)
+    progress.Conquests = nil
+    return progress
+end
+
 -- Playtesting in Studio: with ServerStorage's StudioTestSave attribute set, saves go to a separate store of that name, so
 -- each new name starts a new player and a real save can't be touched (set to true, a store called "StudioTestSave").
 -- Ignored outside Studio.
@@ -283,6 +291,7 @@ local function sanitizeProgress(raw)
         Records = RecordBook.sanitize(nil),
         Forms = {},
         Goals = GoalBook.sanitize(nil),
+        Conquests = ConquestBook.sanitize(nil),
     }
 
     if typeof(raw) ~= "table" then
@@ -391,6 +400,7 @@ local function sanitizeProgress(raw)
     progress.Records = RecordBook.sanitize(raw.Records)
     progress.Forms = FormRules.sanitizeChoices(raw.Forms)
     progress.Goals = GoalBook.sanitize(raw.Goals)
+    progress.Conquests = ConquestBook.sanitize(raw.Conquests)
 
     return progress
 end
@@ -449,6 +459,7 @@ local function captureProgress(player)
     local forms = FormRules.sanitizeChoices(chosen)
     -- (and the goals' progress: kept as loaded until GoalService has set them up)
     local goals = GoalBook.exportData(player) or (loaded and loaded.Goals) or GoalBook.sanitize(nil)
+    local conquests = ConquestBook.exportData(player) or (loaded and loaded.Conquests) or ConquestBook.sanitize(nil)
     if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings and rewards and codex) then
         -- nothing is saved until every part is set up: say once which part is missing, or a session could go unsaved unseen
         local profile = profiles[player]
@@ -497,6 +508,7 @@ local function captureProgress(player)
         Records = records,
         Forms = forms,
         Goals = goals,
+        Conquests = conquests,
     }
 end
 
@@ -879,6 +891,7 @@ function PlayerData.release(player)
     AuctionLedger.removePlayer(player)
     RecordBook.removePlayer(player)
     GoalBook.removePlayer(player)
+    ConquestBook.removePlayer(player)
 
     if not profile then
         return
