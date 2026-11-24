@@ -297,7 +297,7 @@ def world_map():
         mx, mz = b["start"][0] * 0.82 + b["end"][0] * 0.18, b["start"][2] * 0.82 + b["end"][2] * 0.18
         parts.append('<circle cx="%.1f" cy="%.1f" r="9" fill="#ffd76a" stroke="#0a0f1e" stroke-width="3"/>' % (mx, mz))
     # title, compass, scale, legend (the bottom right and left corners: nothing else is there)
-    parts.append(label(x0 + 60, z0 + 130, "STEAL A SPIRIT EGG - WORLD MAP", 52, "#ffffff", "800", "start"))
+    parts.append(label(x0 + 60, z0 + 130, "EGGBOUND - WORLD MAP", 52, "#ffffff", "800", "start"))
     parts.append(label(x0 + 60, z0 + 172, "top view from the project's terrain and layout data - north is up, east is right", 24, "#9fb0d6", "500", "start"))
     cxp, czp = -520, -820
     parts.append('<circle cx="%d" cy="%d" r="52" fill="none" stroke="#c9d6f2" stroke-width="3"/><path d="M %d %d L %d %d L %d %d Z" fill="#ffffff"/>'

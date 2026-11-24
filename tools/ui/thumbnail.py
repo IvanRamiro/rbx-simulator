@@ -1,11 +1,11 @@
-"""The game thumbnail (Steal a Spirit Egg): a real Play screenshot, a light grade, and the title in the game's own fonts.
+"""The game thumbnail (Eggbound: Cultivation Realms): the key art with the title in the game's own fonts on top.
 
     python3 tools/ui/thumbnail.py <fonts dir> <out.jpg>      (needs numpy and Pillow)
 
-The shot is assets/ui/thumbnail/egg_heist_shot.jpg: a real Play capture (test save) of the player carrying the Inferno Egg
-away from the enraged Ember Xuanwu at Ember Peak, nothing painted in. The fonts are the UI's (UiTheme): Merriweather and
-Montserrat from Google Fonts (OFL), saved in <fonts dir> as merri.ttf and mont.ttf (the variable fonts from
-github.com/google/fonts, ofl/merriweather and ofl/montserrat). Roblox wants 1920x1080.
+The art is assets/ui/thumbnail/art_thumbnail.png: a blocky Roblox avatar in white and gold robes carrying a glowing lava egg, chased by an obsidian-and-gold phoenix-roc
+(the owner, 2026-11-24: "use roblox character not a human figure"). It has no text in it, so the title is set here. It leaves the left third calm; a soft dark scrim behind the title
+keeps it readable. The icon is assets/ui/thumbnail/Eggbound_icon_1024.png (no text on an icon). The fonts are the UI's (UiTheme): Merriweather and Montserrat from Google Fonts (OFL),
+saved in <fonts dir> as merri.ttf and mont.ttf (the variable fonts from github.com/google/fonts, ofl/merriweather and ofl/montserrat). Roblox wants 1920x1080.
 """
 import os
 import sys
@@ -14,28 +14,24 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 D = sys.argv[1]
 OUT = sys.argv[2]
-SHOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "assets", "ui", "thumbnail", "egg_heist_shot.jpg")
+SHOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "assets", "ui", "thumbnail", "art_thumbnail.png")
 W, H = 1920, 1080
 
-# ---------- the shot: scaled to fill 1080 tall, cropped so the runner sits right of centre ----------
+# ---------- the shot: scaled to cover 1920x1080, cropped from the middle ----------
 shot = Image.open(SHOT).convert("RGB")
-s = H / shot.height
-shot = shot.resize((round(shot.width * s), H), Image.LANCZOS)
-left = 60
-img = shot.crop((left, 0, left + W, H))
+s = max(W / shot.width, H / shot.height)
+shot = shot.resize((round(shot.width * s), round(shot.height * s)), Image.LANCZOS)
+left = (shot.width - W) // 2
+top = (shot.height - H) // 2
+img = shot.crop((left, top, left + W, top + H))
 
-# ---------- a light grade: a little contrast, cool shadows, warm highlights, a soft vignette ----------
+# ---------- a soft dark scrim behind the title (left, top to middle), so the letters read over any art ----------
 a = np.asarray(img).astype(np.float32) / 255.0
-lum = a @ np.array([0.299, 0.587, 0.114], dtype=np.float32)
-a = np.clip((a - 0.5) * 1.07 + 0.5, 0, 1)                      # contrast
-shadow = np.clip(1 - lum * 1.8, 0, 1)[..., None]
-light = np.clip((lum - 0.55) * 2.2, 0, 1)[..., None]
-a = a + shadow * np.array([-0.012, 0.0, 0.025]) + light * np.array([0.03, 0.012, -0.02])
 yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-r = np.sqrt(((xx - W * 0.56) / (W * 0.62)) ** 2 + ((yy - H * 0.55) / (H * 0.68)) ** 2)
-a *= (1 - 0.32 * np.clip(r - 0.55, 0, 1) ** 1.6)[..., None]     # vignette
+scrim = np.clip(1 - np.sqrt(((xx - W * 0.12) / (W * 0.46)) ** 2 + ((yy - H * 0.33) / (H * 0.62)) ** 2), 0, 1) ** 1.3 * 0.5
+a *= (1 - scrim)[..., None]
 img = Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8))
-img = img.filter(ImageFilter.UnsharpMask(radius=1.6, percent=55, threshold=2))
+img = img.filter(ImageFilter.UnsharpMask(radius=1.6, percent=60, threshold=2))  # (the art is 1536 wide: this keeps the upscale crisp)
 
 # ---------- the title ----------
 def font(path, size, weight):
@@ -43,15 +39,15 @@ def font(path, size, weight):
     f.set_variation_by_name(weight)
     return f
 
-small = font(f"{D}/mont.ttf", 64, "ExtraBold")
-big = font(f"{D}/merri.ttf", 158, "Black")
+small = font(f"{D}/mont.ttf", 50, "ExtraBold")
+big = font(f"{D}/merri.ttf", 134, "Black")
 CREAM = (255, 238, 196)
 GOLD = (255, 196, 92)
 INK = (28, 16, 12)
 
 layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-x0, y0 = 92, 74
+x0, y0 = 92, 96
 
 
 def tracked(draw, xy, text, f, fill, track, stroke=0, stroke_fill=None):
@@ -62,12 +58,12 @@ def tracked(draw, xy, text, f, fill, track, stroke=0, stroke_fill=None):
     return x
 
 
+# the name (the owner's pick, 2026-11-24, because the earlier title was too close to a big game's): EGGBOUND large, CULTIVATION REALMS under it
 for target, offset, fill, stroke_fill in ((shadow, (6, 9), (0, 0, 0, 150), (0, 0, 0, 150)), (layer, (0, 0), None, INK)):
     d = ImageDraw.Draw(target)
     ox, oy = offset
-    tracked(d, (x0 + 6 + ox, y0 + oy), "STEAL A", small, fill or GOLD, 10, stroke=6, stroke_fill=stroke_fill)
-    d.text((x0 + ox, y0 + 70 + oy), "SPIRIT", font=big, fill=fill or CREAM, stroke_width=9, stroke_fill=stroke_fill)
-    d.text((x0 + ox, y0 + 70 + 168 + oy), "EGG", font=big, fill=fill or CREAM, stroke_width=9, stroke_fill=stroke_fill)
+    d.text((x0 + ox, y0 + oy), "EGGBOUND", font=big, fill=fill or CREAM, stroke_width=9, stroke_fill=stroke_fill)
+    tracked(d, (x0 + 8 + ox, y0 + 160 + oy), "CULTIVATION REALMS", small, fill or GOLD, 7, stroke=6, stroke_fill=stroke_fill)
 shadow = shadow.filter(ImageFilter.GaussianBlur(10))
 
 out = img.convert("RGBA")
