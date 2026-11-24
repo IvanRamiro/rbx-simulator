@@ -497,6 +497,8 @@ local function onHatchResult(result)
         showMessage("Stand by the altar and try again: your egg is safe.", "Warning")
     elseif result.Reason == "HatchBusy" then
         showMessage("An egg is still hatching. Try again in a moment: your egg is safe.", "Warning")
+    elseif result.Reason == "PurchaseSaving" then
+        showMessage("Your purchase is being saved. Try again in a moment: your egg is safe.", "Warning")
     elseif result.Reason == "NoEgg" then
         showMessage("You don't have that egg any more.", "Error")
     elseif result.Reason == "InventoryFull" then

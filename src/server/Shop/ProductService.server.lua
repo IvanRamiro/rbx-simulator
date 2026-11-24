@@ -125,7 +125,15 @@ local function processReceipt(info)
     end
     Receipts.add(player, purchaseId)
     inFlight[purchaseId] = true
-    local saved = PlayerData.saveConfirmed(player)
+    -- while the save is awaited (up to 20 s) the buyer can neither hatch nor spin what they bought: if the save failed the undo below could take back
+    -- nothing they had already used, and Roblox would offer the purchase again: a free copy (bug audit, 2026-11-24). PurchaseSaving counts the
+    -- purchases being saved; it is cleared whatever happens.
+    player:SetAttribute("PurchaseSaving", (player:GetAttribute("PurchaseSaving") or 0) + 1)
+    local savedOk, saved = pcall(PlayerData.saveConfirmed, player)
+    saved = savedOk and saved
+    if player.Parent == Players then
+        player:SetAttribute("PurchaseSaving", math.max((player:GetAttribute("PurchaseSaving") or 1) - 1, 0))
+    end
     inFlight[purchaseId] = nil
     if not saved then
         undo()

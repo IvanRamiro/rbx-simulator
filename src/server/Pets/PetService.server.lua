@@ -134,6 +134,10 @@ local function onHatchRequest(player, eggId)
         refuse("HatchBusy")
         return
     end
+    if (player:GetAttribute("PurchaseSaving") or 0) > 0 then
+        refuse("PurchaseSaving") -- (a purchase is being saved: ProductService; the egg they bought must not be used before the save holds it)
+        return
+    end
     if not PromptRules.isAliveAndNear(player, promptPart, PromptRules.maxDistance(prompt)) then
         refuse("NotAtAltar")
         return

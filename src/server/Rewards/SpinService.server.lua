@@ -141,6 +141,10 @@ function actions.Spin(player)
         refuse(player, "Your spin is still turning.")
         return
     end
+    if (player:GetAttribute("PurchaseSaving") or 0) > 0 then
+        refuse(player, "Your purchase is being saved. Try again in a moment: your spins are safe.") -- (ProductService: not used before the save holds it)
+        return
+    end
     if SpinRules.spinsLeft(data) <= 0 then
         refuse(player, "No spins left. New free spins in " .. untilReset()
             .. (if SpinRules.restricted(player) then "." else ", or buy more at the wheel."))

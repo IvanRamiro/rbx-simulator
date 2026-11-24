@@ -458,6 +458,17 @@ local function setupPlayer(player)
         sawRank(player, value, false)
     end)
     writeLadders(player, true)
+    -- the values written as they leave follow every change of their Qi: PlayerData.release clears their data before PlayerRemoving runs here, so the last
+    -- write fell back to what was seen up to 30 s earlier and the Qi they earned in their last seconds was missing (bug audit, 2026-11-24)
+    local qi = PlayerData.getStats(player)
+    if qi then
+        qi.Changed:Connect(function()
+            local now = valuesOf(player)
+            if now and lastKnown[player] then
+                lastKnown[player] = { values = now, canSave = PlayerData.canSave(player) }
+            end
+        end)
+    end
     publishAll()
 end
 
