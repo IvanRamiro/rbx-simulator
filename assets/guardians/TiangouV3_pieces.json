@@ -2,14 +2,14 @@
  "Bones": 69,
  "Bounds": {
   "Max": [
-   16.54,
-   43.11,
-   28.67
+   16.45,
+   42.98,
+   28.51
   ],
   "Min": [
-   -15.61,
-   -0.08,
-   -22.04
+   -15.53,
+   0.02,
+   -22.03
   ]
  },
  "Joints": 68,
@@ -19,9 +19,9 @@
    "BonesUsed": 17,
    "Glow": "#dcefff",
    "Size": [
-    32.15,
-    42.94,
-    3.15
+    31.99,
+    42.67,
+    3.64
    ],
    "Triangles": 2368,
    "Vertices": 1232
@@ -52,42 +52,42 @@
    "BonesUsed": 1,
    "Glow": "#ffb21e",
    "Size": [
-    4.17,
+    4.01,
     1.32,
-    1.03
+    1.02
    ],
    "Triangles": 576,
    "Vertices": 322
   },
   "Fire": {
-   "BonesUsed": 33,
+   "BonesUsed": 34,
    "Glow": null,
    "Size": [
-    7.15,
-    21.46,
-    46.71
+    8.59,
+    20.18,
+    45.76
    ],
-   "Triangles": 8947,
-   "Vertices": 4884
+   "Triangles": 10338,
+   "Vertices": 5875
   },
   "Pelt": {
    "BonesUsed": 31,
    "Glow": null,
    "Size": [
-    9.51,
-    18.63,
-    36.91
+    8.73,
+    18.61,
+    37.0
    ],
-   "Triangles": 17094,
-   "Vertices": 8615
+   "Triangles": 17092,
+   "Vertices": 8612
   },
   "Pupils": {
    "BonesUsed": 1,
    "Glow": "#0a0408",
    "Size": [
-    4.24,
+    4.09,
     0.85,
-    0.68
+    0.67
    ],
    "Triangles": 48,
    "Vertices": 50
@@ -96,13 +96,13 @@
    "BonesUsed": 7,
    "Glow": null,
    "Size": [
-    5.4,
-    7.96,
-    8.97
+    5.28,
+    8.01,
+    8.95
    ],
-   "Triangles": 9472,
-   "Vertices": 4899
+   "Triangles": 9963,
+   "Vertices": 5178
   }
  },
- "Triangles": 40849
+ "Triangles": 42729
 }
