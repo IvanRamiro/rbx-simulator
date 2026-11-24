@@ -13,7 +13,9 @@ What it checks, in order (it needs `luau`, `luau-compile`, `luau-analyze` and `r
   4. tests     tests/run.py: the shared rule modules (ranks, pets, spins, auction, weather, codex, factions, config integrity)
   5. sounds    every sound name the client plays (Sfx.play / after / loop with a literal name, a guardian's VOICES and ALERTS, a catalog entry's `With`
                layers) is an entry of the sound catalog: a leftover name after a rename plays nothing, silently
-  6. hygiene   no machine path (a macOS home folder) in src/, the design doc or the project file; no tracked FBX that embeds the home
+  6. requires  every static path the code walks (require, :WaitForChild chains, local aliases) exists in the tree Rojo builds from
+               default.project.json (tools/check_requires.py): a moved or renamed file that something still points at fails here, not in Studio
+  7. hygiene   no machine path (a macOS home folder) in src/, the design doc or the project file; no tracked FBX that embeds the home
                path of the Mac it runs on (worked out at run time: no user name is stored in this file)
 Exit code 0 = all passed. The FBX part only runs where the FBX files are checked out (CI checks out src/ and tests/ only).
 """
@@ -162,6 +164,14 @@ def check_sounds():
     record("sound names exist in the catalog", not missing, detail)
 
 
+def check_requires():
+    sys.path.insert(0, os.path.join(REPO, "tools"))
+    import check_requires as paths  # noqa: E402
+    problems, checked, requires_ok, skipped = paths.check()
+    detail = f"{checked} chains, {requires_ok} requires" if not problems else problems[0][:150]
+    record("require paths resolve", not problems, detail)
+
+
 def check_hygiene():
     hits = run(["git", "grep", "-I", "-n", "-E", r"/Users/[A-Za-z]+|C:\\Users", "--", "src", "Qi_Aura_Simulator_Design.md", "default.project.json"])
     lines = hits.stdout.strip().splitlines()
@@ -188,6 +198,7 @@ def main(argv):
         check_build()
     check_tests()
     check_sounds()
+    check_requires()
     check_hygiene()
     failed = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(failed)} of {len(results)} checks passed")
