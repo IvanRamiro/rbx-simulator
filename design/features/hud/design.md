@@ -1,6 +1,6 @@
 # HUD
 
-Status: draft (needs the owner's approval before building; mockups in `design/previews/hud-desktop-proposed.png` and `hud-phone-proposed.png`, today's HUD in `current-hud.jpg`).
+Status: draft (needs the owner's approval before building; mockups `design/previews/hud-walk.png`, `hud-carry.png`, `phone-closed.png`, `phone-menu.png`; today's HUD `current-hud.jpg`; re-render with `python3 design/mockups/render.py`).
 
 ## What was wrong (seen in Play, 2026-11-24, 1920 wide)
 
@@ -22,9 +22,20 @@ Status: draft (needs the owner's approval before building; mockups in `design/pr
 - **Waypoint pill** at the right edge, y about 520: gold-edged pill, name (Highlight), distance, an arrow.
 - **Weapon slot** unchanged: 88 x 88 at the bottom centre with its key cap and hint line.
 
+## Revision 2 (2026-11-24): what was added after the first mockups
+
+The mockups are now drawn over a real in-game capture with the game's own icons and fonts (HTML in `design/mockups/`), so spacing and contrast are judged in context. New in this round:
+- **Qi boost chip** on the Qi number (gold "x4.4"): the multiplier the Shop window already shows as "YOUR QI BOOST"; tapping it opens the Shop's Qi Boosts tab. Hidden at x1.
+- **Carrying state** (`hud-carry.png`, new): when `CarryingEgg` is set, the quest card is replaced by a red-rimmed card: the egg's icon in a light ring (the dark Forbidden Origin egg vanishes on a dark panel), its name, "HOME · Yggdrasil" with the distance and a green progress bar, and a red line "The <guardian> is chasing you" while the guardian is Enraged. The waypoint pill turns green and points home. The left rail fades to 55% so the chase is the focus. No HUD card for carrying exists today (checked `src/client`: only touch actions, the guide arrow and combat read `CarryingEgg`).
+- **Toast queue:** a "+2 more" chip when toasts are waiting.
+- **Quest progress:** a thin bar under the quest title when a step counts (for example Hatch 0/1).
+- **Feedback** has a chat icon; the Shop tile carries the one gold rim.
+
+Data needed: the egg's display name and the guardian state are already attributes on the model and the player (`CarryingEgg`, the guardian's `State`, `Called`); the home distance is the SafeZone point in `GameConfig.Guardians.<id>`. Nothing needs a new remote.
+
 ## Phone (685x338 reference)
 
-Profile chip (avatar 36, rank, a 90 x 6 bar) top left; currency pill centred (numbers only, 14 px); quest tracker as a two-line card top right with the three event buttons (44 px) under it; one MENU button (44 high) under the profile chip opens the menu as it does today; the weapon slot 56 px bottom centre. Keep the circles at the bottom left (about 130 px) and bottom right (about 120 px) empty: Roblox's thumbstick and jump.
+Profile chip (avatar 36, rank, a 90 x 6 bar) top left; currency pill centred (numbers only, 14 px); quest tracker as a two-line card top right with the three event buttons (44 px) under it; one MENU button (44 high) under the profile chip opens a left drawer (`phone-menu.png`: 2 columns of 62 px tiles, Shop lit, Feedback reached through Settings) over a dimmed world; the weapon slot 56 px bottom centre. Keep the circles at the bottom left (about 130 px) and bottom right (about 120 px) empty: Roblox's thumbstick and jump.
 
 ## States to build
 

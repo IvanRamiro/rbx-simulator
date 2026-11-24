@@ -1,0 +1,56 @@
+/* Eggbound UI mockups: the game's own look ("Cultivation Bold", src/client/UI/UiTheme.lua) in CSS.
+   Render with: python3 design/mockups/render.py   (needs Google Chrome) */
+@font-face { font-family: "Montserrat"; font-weight: 500; src: url(fonts/Montserrat-Medium.ttf); }
+@font-face { font-family: "Montserrat"; font-weight: 700; src: url(fonts/Montserrat-Bold.ttf); }
+@font-face { font-family: "Montserrat"; font-weight: 900; src: url(fonts/Montserrat-Black.ttf); }
+@font-face { font-family: "Merriweather"; font-weight: 400 900; src: url(fonts/Merriweather-Regular.ttf); }
+:root {
+  --panel: #181944; --raised: #222154; --well: #08091a; --edge: #e2b65c; --edgedim: #80663e;
+  --accent: #ecbe5a; --accentfill: #ffc84c; --highlight: #ffd868; --danger: #ff4c5c; --dangerdeep: #601220;
+  --text: #f6f5ff; --muted: #acaacc; --sky: #96e2ff; --buy: #2ebe58; --buybright: #a8ffb0; --outline: #0a081a;
+}
+* { box-sizing: border-box; }
+body { margin: 0; position: relative; overflow: hidden; font-family: Montserrat, sans-serif; font-weight: 500; color: var(--text);
+  width: 1920px; height: 978px; background: url(assets/scene.jpg) 0 0 / 1920px 978px; }
+.abs { position: absolute; }
+.panel { background: linear-gradient(180deg, rgba(30,31,86,.93), rgba(21,22,62,.93)); border: 2px solid var(--edge); border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,238,196,.14); }
+.dim { border-color: var(--edgedim); }
+.heavy { font-weight: 900; letter-spacing: .06em; text-transform: uppercase; text-shadow: 0 2px 0 var(--outline), 0 0 3px var(--outline); }
+.serif { font-family: Merriweather, serif; font-weight: 700; }
+.muted { color: var(--muted); } .gold { color: var(--highlight); } .sky { color: var(--sky); }
+.row { display: flex; align-items: center; } .col { display: flex; flex-direction: column; }
+.icon { width: 1em; height: 1em; display: block; background-size: contain; background-repeat: no-repeat; background-position: center; flex: none; }
+.tile { background: linear-gradient(180deg, #292865, #1c1b49); border: 2px solid var(--edge); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; position: absolute; box-shadow: 0 3px 8px rgba(0,0,0,.4); }
+.tile .label { font-weight: 900; font-size: 12px; letter-spacing: .1em; text-shadow: 0 2px 0 var(--outline); }
+.badge { position: absolute; min-width: 24px; height: 22px; padding: 0 7px; border-radius: 12px; background: var(--highlight); color: var(--outline); border: 2px solid var(--outline); font-weight: 900; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.badge.red { background: var(--danger); color: #fff; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 10px; background: var(--well); font-weight: 700; font-size: 11px; }
+.btn { border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; letter-spacing: .08em; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
+.btn.buy { background: linear-gradient(180deg, #3fd068, #25a24a); border: 2px solid var(--buybright); }
+.btn.gold { background: linear-gradient(180deg, #ffd868, #f0ae2c); border: 2px solid #fff0c4; color: var(--outline); text-shadow: none; }
+.btn.plain { background: linear-gradient(180deg, #292865, #1c1b49); border: 2px solid var(--edge); }
+.close { width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(180deg, #b52a3e, #7a1428); border: 2px solid var(--danger); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 22px; }
+.note { position: absolute; width: 30px; height: 30px; border-radius: 15px; background: var(--highlight); color: var(--outline); font-weight: 900; font-size: 15px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--outline); box-shadow: 0 2px 6px rgba(0,0,0,.6); z-index: 50; }
+.crop { background-image: url(assets/current-hud.jpg); }
+
+.i-Qi { background-image: url(assets/Qi.png); }
+.i-Stones { background-image: url(assets/Stones.png); }
+.i-Relics { background-image: url(assets/Relics.png); }
+.i-Pets { background-image: url(assets/Pets.png); }
+.i-Codex { background-image: url(assets/Codex.png); }
+.i-Robes { background-image: url(assets/Robes.png); }
+.i-Quest { background-image: url(assets/Quest.png); }
+.i-Titles { background-image: url(assets/Titles.png); }
+.i-Settings { background-image: url(assets/Settings.png); }
+.i-Hatch { background-image: url(assets/Hatch.png); }
+.i-Rewards { background-image: url(assets/Rewards.png); }
+.i-Danger { background-image: url(assets/Danger.png); }
+.i-Warning { background-image: url(assets/Warning.png); }
+.i-Lock { background-image: url(assets/Lock.png); }
+.i-Guardian { background-image: url(assets/Guardian.png); }
+.i-Notice { background-image: url(assets/Notice.png); }
+.i-ForbiddenOriginEgg { background-image: url(assets/ForbiddenOriginEgg.png); }
+.i-Shop { background-image: url(assets/Shop.png); }
+.i-Feedback { background-image: url(assets/Feedback.png); }
+.i-Spin { background-image: url(assets/Spin.png); }

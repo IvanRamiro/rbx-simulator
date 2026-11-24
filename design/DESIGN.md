@@ -2,7 +2,7 @@
 
 Status: describes the look the game already has (read from `src/client/UI/UiTheme.lua`, 2026-11-24). Nothing here is a new style: the owner dropped a full restyle ("Celestine") on 2026-11-16 and asked to keep this one. The proposals in `design/features/` refine layout and clarity inside it.
 
-Mockups were made in a private Figma draft (2026-11-24) and exported here as previews in `design/previews/`. The Figma file is not needed to build: every number is below.
+Mockups: a first round was made in a private Figma draft (2026-11-24; the owner deletes that file once the work is done), then redrawn as HTML over a real in-game capture with the game's own icons and fonts (`design/mockups/`, rendered to `design/previews/` by `python3 design/mockups/render.py`, which needs Google Chrome). Every number is in the briefs, so nothing depends on Figma. The fonts in `design/mockups/fonts` are the Montserrat and Merriweather files shipped with Roblox Studio (open-licence Google fonts).
 
 ## Colours (UiTheme.Colors)
 

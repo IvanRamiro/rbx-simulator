@@ -1,0 +1,32 @@
+<!doctype html><meta charset="utf-8"><title>Settings window v2</title>
+<link rel="stylesheet" href="ui.css">
+<style>
+  .veil { position: absolute; inset: 0; background: rgba(6,7,24,.5); }
+  .grp { font-weight: 900; font-size: 12px; letter-spacing: .18em; color: var(--highlight); margin: 14px 0 2px; text-shadow: 0 2px 0 var(--outline); }
+  .card { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: linear-gradient(180deg,#262565,#1d1c4d); border: 1px solid var(--edgedim); border-radius: 10px; }
+  .card b { font-weight: 900; font-size: 14px; letter-spacing: .05em; }
+  .track { width: 250px; height: 12px; border-radius: 6px; background: var(--well); overflow: hidden; }
+  .track i { display: block; height: 100%; background: linear-gradient(90deg,#ecbe5a,#ffd868); }
+  .step { width: 44px; height: 44px; border-radius: 10px; border: 2px solid var(--edge); background: linear-gradient(180deg,#292865,#1c1b49); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 22px; }
+  .sw { width: 64px; height: 34px; border-radius: 17px; position: relative; border: 2px solid; flex: none; }
+  .sw i { position: absolute; top: 3px; width: 24px; height: 24px; border-radius: 12px; background: var(--text); box-shadow: 0 2px 4px rgba(0,0,0,.5); }
+  .sw.on { background: linear-gradient(180deg,#3fd068,#25a24a); border-color: var(--buybright); } .sw.on i { left: 34px; }
+  .sw.off { background: var(--well); border-color: var(--edgedim); } .sw.off i { left: 3px; }
+  .st { font-weight: 900; font-size: 12px; letter-spacing: .1em; width: 30px; }
+</style>
+<body>
+<div class="veil"></div>
+<div class="panel abs col" style="left:640px;top:150px;width:640px;overflow:hidden">
+  <div class="row" style="height:56px;background:rgba(8,9,26,.6);justify-content:center;position:relative"><span class="serif" style="font-size:22px">SETTINGS</span><div class="close" style="position:absolute;right:6px;top:6px">✕</div></div>
+  <div class="col" style="padding:6px 24px 26px;gap:10px">
+    <div class="grp">SOUND</div>
+    <div class="card"><b style="width:80px">MUSIC</b><span style="flex:1"></span><div class="track"><i style="width:100%"></i></div><b class="gold" style="width:50px;text-align:right">100%</b><div class="step">−</div><div class="step">+</div></div>
+    <div class="card"><b style="width:80px">SOUND</b><span style="flex:1"></span><div class="track"><i style="width:60%"></i></div><b class="gold" style="width:50px;text-align:right">60%</b><div class="step">−</div><div class="step">+</div></div>
+    <div class="grp">DISPLAY</div>
+    <div class="card"><div class="col" style="gap:3px;flex:1"><b>REDUCED EFFECTS</b><span class="muted" style="font-size:12px;line-height:16px;width:340px">Hides other players' auras, and turns off screen flashes and camera shake.</span></div><div class="sw off"><i></i></div><span class="st muted">OFF</span></div>
+    <div class="card"><div class="col" style="gap:3px;flex:1"><b>SHOW QUEST TRACKER</b><span class="muted" style="font-size:12px;line-height:16px;width:340px">The goal card in the top right corner.</span></div><div class="sw on"><i></i></div><span class="st" style="color:var(--buybright)">ON</span></div>
+    <div class="grp">HELP</div>
+    <div class="card"><div class="col" style="gap:3px;flex:1"><b>FEEDBACK</b><span class="muted" style="font-size:12px">Found a bug or have an idea? Tell us.</span></div><div class="btn plain" style="height:44px;padding:0 28px;font-size:14px">OPEN</div></div>
+  </div>
+</div>
+</body>

@@ -1,6 +1,6 @@
 # Pets window
 
-Status: draft (needs the owner's approval; mockup `design/previews/pets-window-proposed.png`, today's window `current-pets.jpg`).
+Status: draft (needs the owner's approval; mockups `design/previews/pets-v2.png` and `phone-pets.png`; today's window `current-pets.jpg`; re-render with `python3 design/mockups/render.py`).
 
 ## What was wrong
 
@@ -14,9 +14,17 @@ With two pets the window shows two very wide cards and about 70% empty panel; a 
 - **Detail panel** 300 wide on the right: large picture, name (Merriweather 20), rarity chip, the bonus large (26 Black, Highlight), one line of help, then EQUIP (Buy green, 52 high), and GIFT and LOCK as labelled 44 px buttons side by side.
 - **Footer:** PEN 2 / 20 and EQUIP BEST (AccentFill, 48 high).
 
+## Revision 2 (2026-11-24)
+
+Drawn over the real world with the real pet pictures (crops of today's window). Changes from the first mockup:
+- An **equipped strip** under the toolbar: six slots (dashed when empty), "EQUIPPED 0 / 6" and the total QI BONUS, so the player sees the effect of equipping without leaving the window.
+- A **sort** control (Qi bonus first), a **NEW** tag on a pet not yet looked at, and **only owned pets** in the grid plus one dashed "Hatch an egg" tile (a call to action that leads to the hatchery), instead of 18 empty dashed boxes. Pen capacity is the bar in the footer ("PEN 2 / 20").
+- The detail panel says what equipping does ("takes your total Qi bonus from +0% to +120%").
+- EQUIP is Buy green; GIFT and LOCK are labelled with their icons, 46 px tall.
+
 ## Phone
 
-The grid goes to 3 columns of 96 px tiles and the detail panel becomes a sheet that slides up over the grid when a tile is tapped (EQUIP, GIFT, LOCK as 44 px buttons in a row). Toolbar: search collapses to an icon.
+A bottom sheet over a dimmed world (`phone-pets.png`): tiles of 62 x 70 on the left, the detail on the right with EQUIP at 46 px and GIFT / LOCK / EQUIP BEST as 44 px buttons in a row; the header holds the equipped count, the Qi bonus and a search icon. Toolbar: search collapses to an icon.
 
 ## States
 

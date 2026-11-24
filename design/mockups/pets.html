@@ -1,0 +1,65 @@
+<!doctype html><meta charset="utf-8"><title>Pets window v2</title>
+<link rel="stylesheet" href="ui.css">
+<style>
+  .veil { position: absolute; inset: 0; background: rgba(6,7,24,.5); }
+  .pt { position: absolute; width: 120px; height: 134px; border-radius: 10px; border: 2px solid; background: linear-gradient(180deg,#292865,#1c1b49); padding: 6px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .pt .art { width: 104px; height: 82px; border-radius: 8px; background-size: cover; background-position: center; position: relative; }
+  .pt.empty { border: 1px dashed var(--edgedim); background: rgba(8,9,26,.5); justify-content: center; }
+  .pt .nm { font-size: 11px; font-weight: 700; line-height: 13px; text-align: center; white-space: nowrap; }
+  .pt .pc { font-size: 13px; font-weight: 900; color: var(--highlight); text-shadow: 0 2px 0 var(--outline); }
+  .slot { width: 62px; height: 62px; border-radius: 10px; border: 1px dashed var(--edgedim); background: rgba(8,9,26,.55); display: flex; align-items: center; justify-content: center; color: var(--edgedim); font-weight: 900; font-size: 10px; letter-spacing: .1em; }
+  .tag { position: absolute; left: 4px; top: 4px; font-size: 9px; font-weight: 900; letter-spacing: .1em; padding: 1px 6px; border-radius: 6px; background: var(--buy); color: #fff; border: 1px solid var(--outline); }
+  .rar { font-size: 10px; font-weight: 900; letter-spacing: .1em; padding: 1px 8px; border-radius: 6px; border: 1px solid; }
+</style>
+<body>
+<div class="veil"></div>
+<div class="panel abs" style="left:410px;top:46px;width:1100px;height:880px;overflow:hidden">
+  <!-- title band -->
+  <div class="abs row" style="left:0;top:0;width:100%;height:56px;background:rgba(8,9,26,.6);justify-content:center"><span class="serif" style="font-size:22px">PETS</span></div>
+  <div class="close abs" style="right:6px;top:6px">✕</div>
+
+  <!-- toolbar -->
+  <div class="abs row" style="left:24px;top:72px;gap:8px">
+    <div class="btn gold" style="height:44px;padding:0 24px;font-size:13px">MY PETS</div>
+    <div class="btn plain" style="height:44px;padding:0 24px;font-size:13px">PEN</div>
+  </div>
+  <div class="abs row" style="left:290px;top:72px;width:250px;height:44px;padding:0 14px;gap:8px;background:var(--well);border:1px solid var(--edgedim);border-radius:10px"><span class="muted" style="font-size:16px">⌕</span><span class="muted" style="font-size:13px">Search pets</span></div>
+  <div class="abs row" style="left:556px;top:72px;height:44px;padding:0 16px;gap:8px;background:linear-gradient(180deg,#292865,#1c1b49);border:1px solid var(--edgedim);border-radius:10px"><span class="heavy" style="font-size:11px">Sort</span><span class="gold" style="font-weight:900;font-size:12px">QI BONUS ▾</span></div>
+
+  <!-- equipped strip -->
+  <div class="abs row" style="left:24px;top:130px;width:1052px;height:84px;padding:0 16px;gap:10px;background:rgba(34,33,84,.8);border:1px solid var(--edgedim);border-radius:12px">
+    <div class="col" style="width:122px;gap:2px"><span class="heavy" style="font-size:11px;letter-spacing:.14em">Equipped</span><b style="font-size:22px;font-weight:900">0 <span class="muted">/ 6</span></b></div>
+    <div class="slot">EMPTY</div><div class="slot">EMPTY</div><div class="slot">EMPTY</div><div class="slot">EMPTY</div><div class="slot">EMPTY</div><div class="slot">EMPTY</div>
+    <span style="flex:1"></span>
+    <div class="col" style="align-items:flex-end;gap:2px"><span class="heavy" style="font-size:11px;letter-spacing:.14em">Qi bonus</span><b class="sky" style="font-size:22px;font-weight:900">+0%</b></div>
+    <i class="icon i-Qi" style="font-size:34px"></i>
+  </div>
+
+  <!-- grid: 5 x 4 -->
+  <div class="pt" style="left:24px;top:230px;border-color:var(--accentfill);box-shadow:0 0 0 2px rgba(255,200,76,.35)"><div class="art" style="background-image:url(assets/PetMoonfox.png);background-color:#3a2a70"></div><span class="nm">Nine-Tail Moonfox</span><span class="pc">+120% Qi</span></div>
+  <div class="pt" style="left:156px;top:230px;border-color:#8a88b0"><div class="art" style="background-image:url(assets/PetWisp.png);background-color:#1c2a48"><span class="tag">NEW</span></div><span class="nm">Aqua Wisp</span><span class="pc">+10% Qi</span></div>
+  <div class="pt" style="left:288px;top:230px;border:2px dashed var(--accent);background:rgba(236,190,90,.08);justify-content:center;gap:6px"><i class="icon i-Hatch" style="font-size:52px"></i><span class="gold heavy" style="font-size:11px;letter-spacing:.12em;text-shadow:none">Hatch an egg</span></div>
+  <div class="abs muted" style="left:24px;top:386px;width:700px;font-size:12px;line-height:18px">18 more pen spaces are open. Eggs you hatch appear here.</div>
+
+  <!-- detail panel -->
+  <div class="abs col" style="left:752px;top:230px;width:324px;height:566px;padding:16px;gap:12px;align-items:center;background:linear-gradient(180deg,#252460,#1a1a4a);border:2px solid var(--edge);border-radius:12px">
+    <div style="width:290px;height:200px;border-radius:10px;background:radial-gradient(circle at 50% 40%,#5a3f9a,#241a52);position:relative;overflow:hidden"><div style="position:absolute;inset:0;background:url(assets/PetMoonfox.png) center/contain no-repeat"></div></div>
+    <span class="serif" style="font-size:21px">Nine-Tail Moonfox</span>
+    <span class="rar" style="color:#ff9aa6;border-color:var(--danger);background:var(--dangerdeep)">MYTHICAL</span>
+    <span style="font-size:30px;font-weight:900;color:var(--highlight);text-shadow:0 2px 0 var(--outline)">+120% Qi</span>
+    <span class="muted" style="font-size:12px;text-align:center;line-height:17px">Equipped, it takes your total Qi bonus from +0% to +120%.</span>
+    <span style="flex:1"></span>
+    <div class="btn buy" style="width:100%;height:54px;font-size:19px">EQUIP</div>
+    <div class="row" style="width:100%;gap:10px">
+      <div class="btn plain" style="flex:1;height:46px;font-size:13px;gap:8px"><span style="font-size:17px">🎁</span>GIFT</div>
+      <div class="btn plain" style="flex:1;height:46px;font-size:13px;gap:8px"><i class="icon i-Lock" style="font-size:20px"></i>LOCK</div>
+    </div>
+  </div>
+
+  <!-- footer -->
+  <div class="abs row" style="left:24px;top:812px;width:700px;height:48px;gap:16px">
+    <div class="col" style="gap:5px;width:200px"><span class="heavy muted" style="font-size:11px;letter-spacing:.14em;text-shadow:none">Pen  2 / 20</span><div class="bar" style="height:8px;border-radius:4px;background:var(--well);overflow:hidden"><i style="display:block;width:10%;height:100%;background:var(--accent)"></i></div></div>
+    <div class="btn gold" style="height:48px;padding:0 28px;font-size:14px">EQUIP BEST</div>
+  </div>
+</div>
+</body>
