@@ -182,6 +182,7 @@ local GameConfig = {
     GuardianTag = "Guardian",
     EggTheft = {
         RespawnTime = 180, -- seconds a stand stays empty after its egg is secured
+        RespawnMin = 60, -- the least it ever stays empty: a stand's egg refills sooner the more players it is the full-paying egg for (shared/StandRules)
         -- to take an egg a player must have dealt this share of what weakening its guardian takes, so
         -- nobody walks off with an egg someone else earned
         TakeShare = 0.1,

@@ -14,11 +14,13 @@
 -- can take only its first one. An emptied stand says when its egg is back (the stand's EggBackAt attribute, a server time), so a
 -- client can tell its player when the egg for their rank returns (GuardianController).
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
+local StandRules = require(ReplicatedStorage:WaitForChild("StandRules"))
 local EggModel = require(script.Parent:WaitForChild("EggModel"))
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
 
@@ -249,13 +251,28 @@ end
 -- showed it: on a quiet server eggs nobody there could take yet filled the stands, and the egg that pays a player's realm in full
 -- stopped coming. tools/balance/progression_sim.py measured it as the game's biggest wall.) `eggIds[1]` only stands in for a
 -- stand whose own egg isn't known.
-function EggStands.respawn(slot, eggIds)
+-- How many players this stand's egg is the full-paying egg for (they can take it, and it pays them their own realm in full: shared/StandRules). `players` is
+-- for tests; the server's own players otherwise. The thief who just secured it counts: they are one of them.
+function EggStands.contenders(slot, players)
+    local n = 0
+    for _, player in players or Players:GetPlayers() do
+        local rank = player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Rank")
+        if rank and StandRules.contends(slot.home or "", rank.Value) then
+            n += 1
+        end
+    end
+    return n
+end
+
+function EggStands.respawn(slot, eggIds, players)
     if slot.respawn then
         task.cancel(slot.respawn)
     end
-    slot.respawnAt = os.clock() + GameConfig.EggTheft.RespawnTime
-    slot.stand:SetAttribute("EggBackAt", workspace:GetServerTimeNow() + GameConfig.EggTheft.RespawnTime)
-    slot.respawn = task.delay(GameConfig.EggTheft.RespawnTime, function()
+    -- (2026-11-24) sooner the more players are after this egg: StandRules.respawnTime; one player alone keeps GameConfig.EggTheft.RespawnTime exactly
+    local seconds = StandRules.respawnTime(EggStands.contenders(slot, players))
+    slot.respawnAt = os.clock() + seconds
+    slot.stand:SetAttribute("EggBackAt", workspace:GetServerTimeNow() + seconds)
+    slot.respawn = task.delay(seconds, function()
         slot.respawn, slot.respawnAt = nil, nil
         if slot.eggId == nil and slot.stand.Parent then
             show(slot, if GameConfig.Eggs[slot.home or ""] then slot.home else eggIds[1])
