@@ -58,10 +58,10 @@ EggStands.setTakeHandler(function(player, slot)
     end
 end)
 
-Combat.Hit.Event:Connect(function(player, target, damage)
+Combat.Hit.Event:Connect(function(player, target, damage, point, reaction)
     for _, guardian in guardians do
         if guardian.model == target then
-            guardian:onHit(player, damage)
+            guardian:onHit(player, damage, reaction, point)
         end
     end
 end)

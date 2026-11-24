@@ -717,6 +717,18 @@ local GameConfig = {
         },
     },
 
+    -- How a guardian answers being fought (the owner, 2026-11-24: "enemies and bosses react intelligently to attacks, including stagger, blocking, dodging, knockback"; shared/ReactRules,
+    -- server/Guardians/Guardian). Only while it is awake and not yet weakened:
+    --   STAGGER AND KNOCKBACK: a finisher's blow (the strike's reaction Launch) shoves the guardian back Shove studs and out again over ShoveTime, and delays its next attack by Stagger
+    --   seconds (a heavier blow than a Light one, a smaller delay for a Heavy one), at most once every StaggerCooldown, and not while it guards.
+    --   GUARD AND DODGE: a guardian that has taken HitsToReact strikes within HitWindow seconds has had enough: it guards (a Raise-second telegraph, "GUARDING" on its bar, then
+    --   Guard seconds in which a strike deals only Pass of its damage and sparks) or, in turn, sidesteps (DodgeStep studs, DodgeTime seconds in which nothing lands). One or the other
+    --   at most once every Cooldown, so a combo is answered, never locked out. Players who see it coming can pause and strike again.
+    GuardianReact = {
+        Stagger = 0.5, HeavyStagger = 0.2, StaggerCooldown = 3, Shove = 2.5, ShoveTime = 0.4,
+        HitWindow = 2.5, HitsToReact = 6, Cooldown = 12, Raise = 0.45, Guard = 1.0, Pass = 0.25, DodgeTime = 0.4, DodgeStep = 5,
+    },
+
     -- The guardian bounty (the owner, 2026-11-24, improvement list item 15: "a reason to fight guardians repeatedly"; shared/BountyRules, server/Guardians/
     -- ConquestBook and ConquestService). A CONQUEST is a fight that brings a guardian down to Weakened, counted for every player who dealt ConquestShare of what that
     -- takes (a bigger share than an egg's TakeShare, so riding along does not count), at most once a Cooldown per player and guardian. Two things come of it:

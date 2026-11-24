@@ -53,6 +53,7 @@ local Quests = require(script.Parent.Parent:WaitForChild("Quests"):WaitForChild(
 local Analytics = require(script.Parent.Parent:WaitForChild("Analytics"):WaitForChild("Analytics"))
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
 local BountyRules = require(ReplicatedStorage:WaitForChild("BountyRules"))
+local ReactRules = require(ReplicatedStorage:WaitForChild("ReactRules"))
 
 local FLAT = Vector3.new(1, 0, 1)
 local DECIDE_EVERY = 0.1        -- seconds between decisions; movement runs every frame
@@ -201,6 +202,7 @@ function Guardian.new(id, config, source, folder)
     self.lastEngaged = 0
     self.knocked = {}
     self.damageBy = {}     -- [player] = the health they've really taken off it since it last healed
+    self.react = { hits = {}, readyAt = 0, staggerAt = 0, raiseUntil = 0, guardUntil = 0, dodgeUntil = 0, shove = nil, guardNext = true } -- how it answers being fought (ReactRules)
     self.retakeAfter = {}  -- [player] = when they may take another egg, after theirs went back
     self.egg = { state = "None" }
     self:setState("Dormant")
@@ -264,20 +266,82 @@ function Guardian:sleep()
     end
 end
 
--- A strike from a player (CombatService, through Combat.Hit).
-function Guardian:onHit(player, damage)
+-- How it answers a blow (GameConfig.GuardianReact, ReactRules): a finisher staggers and shoves it, a combo it has had enough of makes it guard or sidestep in turn.
+function Guardian:reactTo(player, reaction, point, now)
+    local react, config = self.react, GameConfig.GuardianReact
+    local guarding = now < react.guardUntil
+    react.hits = ReactRules.record(react.hits, now)
+    local delay, shove = ReactRules.stagger(reaction, guarding, now, react.staggerAt)
+    local from = rootOf(player)
+    local away = from and flat(self:origin().Position - from.Position)
+    if delay > 0 then
+        self.busyUntil = math.max(self.busyUntil, now + delay)
+    end
+    if shove then
+        react.staggerAt = now + config.StaggerCooldown
+        if away and away.Magnitude > 0.1 then
+            react.shove = { Direction = away.Unit, Distance = config.Shove, Start = now, Time = config.ShoveTime }
+        end
+        self:broadcast("Stagger", point)
+        return
+    end
+    if ReactRules.due(react.hits, now, react.readyAt, guarding) then
+        react.readyAt = now + config.Cooldown
+        react.hits = {}
+        react.guardNext = not react.guardNext
+        if not react.guardNext then -- (in turn: a guard, then a sidestep, then a guard)
+            react.raiseUntil = now + config.Raise
+            react.guardUntil = react.raiseUntil + config.Guard
+            self.model:SetAttribute("Guard", true) -- (braced: the bar says GUARDING)
+            task.delay(config.Raise, function()
+                if self.model.Parent and os.clock() < react.guardUntil then
+                    self.model:SetAttribute("Blocking", true) -- (the guard is up: CombatService lets only GuardianReact.Pass of a strike through)
+                end
+            end)
+            task.delay(config.Raise + config.Guard, function()
+                if self.model.Parent and os.clock() >= react.guardUntil - 0.05 then
+                    self.model:SetAttribute("Guard", nil)
+                    self.model:SetAttribute("Blocking", nil)
+                end
+            end)
+            self:broadcast("Guard")
+        else
+            react.dodgeUntil = now + config.DodgeTime
+            self.model:SetAttribute("Dodging", true) -- (nothing lands: CombatService turns a strike into a miss)
+            task.delay(config.DodgeTime, function()
+                if self.model.Parent then
+                    self.model:SetAttribute("Dodging", nil)
+                end
+            end)
+            local side = if away and away.Magnitude > 0.1 then Vector3.new(-away.Z, 0, away.X).Unit * (if math.random() < 0.5 then 1 else -1) else Vector3.new(1, 0, 0)
+            react.shove = { Direction = side, Distance = config.DodgeStep, Start = now, Time = config.DodgeTime }
+            self:broadcast("Dodge")
+        end
+    end
+end
+
+-- A strike from a player (CombatService, through Combat.Hit): its damage, where it landed and its reaction grade (Light, Heavy or Launch).
+function Guardian:onHit(player, damage, reaction, point)
     if self.model:GetAttribute("Invulnerable") then
         return
     end
-    self.lastEngaged = os.clock()
+    local now = os.clock()
+    self.lastEngaged = now
     if self.state == "Dormant" then
         self:awaken()
     end
-    local before = self.health
+    local react = self.react
+    local fighting = self.state == "Guardian" -- (only while awake and not yet weakened)
+    if fighting and ReactRules.blocking(now, react.raiseUntil, react.guardUntil) then
+        self:broadcast("Blocked", point)
+    end
+    local before = self.health -- (the damage arrives already reduced by a guard: CombatService, which relays the number the player sees)
     self:setHealth(self.health - damage)
     self.damageBy[player] = (self.damageBy[player] or 0) + (before - self.health)
     if self.state == "Guardian" and self.health < self.config.MaxHealth * self.config.WeakenedAt then
         self:weaken()
+    elseif fighting then
+        self:reactTo(player, reaction, point, now)
     end
 end
 
@@ -852,8 +916,13 @@ function Guardian:origin()
 end
 
 function Guardian:holdAtLair()
-    self.align.MaxVelocity = self.config.WalkSpeed
-    self.align.Position = self.lair.Position
+    local amount = ReactRules.shoveAmount(self.react.shove, os.clock())
+    local offset = if amount then self.react.shove.Direction * amount else nil
+    if not offset then
+        self.react.shove = nil
+    end
+    self.align.MaxVelocity = if offset then 40 else self.config.WalkSpeed -- (a shove or a sidestep is quick)
+    self.align.Position = self.lair.Position + (offset or Vector3.zero)
     self.turn.CFrame = self.facing
 end
 

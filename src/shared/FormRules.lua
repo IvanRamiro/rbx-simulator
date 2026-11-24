@@ -27,8 +27,8 @@
 --                                         checked where it is used: a form not yet unlocked is simply not fought with)
 --   FormRules.stepOf(id, last, now, cd)   the strike's place in the chain: last = { Form, Step, At } or nil; cd = the weapon's cooldown
 --   FormRules.strike(id, step, base)      the numbers of one strike: base = { Damage, Range, Arc, Cooldown } of the weapon
---   FormRules.plan(family, chosen, realm, base, last, now, heavy)   the strike a player makes now (server and client both use it); heavy true: the finisher at once (FormRules.heavy)
---   FormRules.heavy(id, base)             the heavy strike of a form: its finisher with the cooldown that keeps its damage per second no higher than the chain's
+--   FormRules.flow(family, realm, last, now, cooldown)   the form of the next strike: the combo runs on from one unlocked form's finisher into the next (FormRules.Cycle)
+--   FormRules.plan(family, chosen, realm, base, last, now)   the strike a player makes now (server and client both use it); chosen is nil: the flow decides the form
 --   FormRules.dps(id)                     the form's damage per second as a multiple of the weapon's own
 --   FormRules.countHit(counter, now)      the combo counter after a landed hit: { Hits, At }
 --   FormRules.tierOf(hits)                the name of the counter's tier, or nil
@@ -233,34 +233,56 @@ function FormRules.dps(id)
     return damage / time
 end
 
--- THE HEAVY STRIKE (the owner, 2026-11-24: "chain light attacks, heavy attacks ... and special follow-ups"): a player who holds the heavy input and lets go (HEAVY_HOLD seconds,
--- the client's) strikes their form's FINISHER at once, from anywhere in the chain, and the chain begins again after it. It has the finisher's damage, reach, arc and
--- reaction. Its cooldown is the finisher's own, or longer: the damage it deals divided by the form's own damage per second, so a player who throws nothing but heavy
--- strikes deals exactly what the form's chain deals and no more (a spec checks it for every form). The server prices it and does not time the hold.
-FormRules.HEAVY_HOLD = 0.3 -- seconds of holding the heavy input before letting go strikes heavy (the client; a shorter hold is a light strike)
+-- THE FLOW: with no form button the forms are one combo (the owner, 2026-11-24: "five connected attack animations that transition naturally into one another"; "no other button
+-- to press"). A family's unlocked forms run in the order of FormRules.Cycle: a combo begins with the first, and when its finisher has landed the same press-by-press chain goes on
+-- into the next form without a pause (the chain window is the finisher's own cooldown and the grace), and after the last begins again with the first. A sword's player of
+-- realm 3 strikes five quick cuts and a spin finisher (Gale), then three balanced ones (Crescent), and so on; at realm 6 a third, heavy form (Mountain) joins. The window lapsing
+-- (a pause) begins the cycle again at its first form.
+FormRules.Cycle = {
+    Sword = { "Gale", "Crescent", "Mountain" },
+    Spear = { "Swallow", "Lancer", "Tiger" },
+    Palm = { "Flurry", "Fist", "Stone" },
+}
 
-function FormRules.heavy(id, base)
-    local form = FormRules.Forms[id]
-    if not form then
-        return nil
+-- the form of the next strike in the flow, from the last strike ({ Form, Step, At } or nil), the time and the weapon's cooldown; nil for an unknown family
+function FormRules.flow(family, realm, last, now, cooldown)
+    local order = FormRules.Cycle[family]
+    local list = {}
+    for _, id in order or {} do
+        if FormRules.unlocked(id, realm) then
+            table.insert(list, id)
+        end
     end
-    local last = #form.Chain
-    local strike = FormRules.strike(id, last, base)
-    strike.Heavy = true
-    strike.Cooldown = math.max(strike.Cooldown, base.Cooldown * form.Chain[last].Dmg / FormRules.dps(id))
-    return strike
+    if #list == 0 then
+        local ids = FormRules.Families[family]
+        return ids and ids[1] or nil -- (a realm below every form's: the family's first)
+    end
+    local form = last and typeof(last.Form) == "string" and FormRules.Forms[last.Form]
+    local at = form and table.find(list, last.Form)
+    if at and typeof(last.Step) == "number" and form.Chain[last.Step] and typeof(last.At) == "number" then
+        local since = now - last.At
+        if since >= 0 and since < cooldown * form.Chain[last.Step].Cd + FormRules.GRACE then
+            if last.Step < #form.Chain then
+                return last.Form -- (the chain goes on)
+            end
+            return list[at % #list + 1] -- (the finisher is done: on into the next form)
+        end
+    end
+    return list[1]
 end
 
 -- The strike a player makes now, from their weapon's family, the form they chose for it, their realm number, the weapon's own numbers
 -- (base = { Damage, Range, Arc, Cooldown }), their last strike ({ Form, Step, At } or nil) and the time. The server decides every strike with
 -- this, and the client calls it for the strike it shows at once, so the two can't disagree about the chain. nil for an unknown family.
-function FormRules.plan(family, chosen, realm, base, last, now, heavy)
-    local id = FormRules.resolve(family, chosen, realm)
+function FormRules.plan(family, chosen, realm, base, last, now)
+    local id
+    if FormRules.familyOf(chosen) == family and FormRules.unlocked(chosen, realm) then
+        id = chosen
+    else
+        id = FormRules.flow(family, realm, last, now, base.Cooldown)
+    end
     if not id then
         return nil
-    end
-    if heavy == true then
-        return FormRules.heavy(id, base)
     end
     return FormRules.strike(id, FormRules.stepOf(id, last, now, base.Cooldown), base)
 end

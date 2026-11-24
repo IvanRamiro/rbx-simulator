@@ -177,7 +177,7 @@ t.test("plan: the strike a player makes now, chain and all", function()
     t.eq(gale.Form, "Gale")
     t.eq(gale.Step, 1)
     -- a spear form on a sword is ignored; an unknown family has no strike
-    t.eq(FormRules.plan("Sword", "Tiger", 12, base, nil, 0).Form, "Mountain")
+    t.eq(FormRules.plan("Sword", "Tiger", 12, base, nil, 0).Form, "Gale", "a spear form on a sword is no choice: the flow begins with the quick form")
     t.eq(FormRules.plan("Hammer", "Gale", 12, base, nil, 0), nil)
     -- a different realm of the same weapon gives the same chain: forms follow the weapon's family, not its tier
     local a = FormRules.plan("Spear", "Swallow", 6, { Damage = 16, Range = 18, Arc = 35, Cooldown = 0.85 }, nil, 0)
@@ -261,58 +261,46 @@ t.test("bare hands has three forms: Fist for everyone, Flurry from realm 3, Ston
     t.eq(#FormRules.Families.Palm, 3)
 end)
 
-t.test("a heavy strike is the finisher at once, priced so that heavy alone never out-deals the chain", function()
+t.test("the combo flows from one form into the next: each unlocked form's chain, then the next form, then the first again", function()
     local weapon = { Damage = 100, Range = 10, Arc = 90, Cooldown = 0.6 }
-    for id, form in FormRules.Forms do
-        local heavy = FormRules.heavy(id, weapon)
-        local finisher = FormRules.strike(id, #form.Chain, weapon)
-        t.ok(heavy.Heavy == true and heavy.Finisher == true, id .. ": a heavy strike is its finisher")
-        t.eq(heavy.Step, #form.Chain)
-        t.eq(heavy.Damage, finisher.Damage, id .. ": the finisher's damage")
-        t.eq(heavy.Range, finisher.Range)
-        t.eq(heavy.Arc, finisher.Arc)
-        t.eq(heavy.Reaction, finisher.Reaction)
-        t.ok(heavy.Cooldown >= finisher.Cooldown - 1e-9, id .. ": never quicker than the finisher")
-        -- the damage per second of throwing nothing but heavy strikes, against the chain's own
-        local heavyDps = heavy.Damage / heavy.Cooldown
-        local chainDps = FormRules.dps(id) * weapon.Damage / weapon.Cooldown
-        t.ok(heavyDps <= chainDps * (1 + 1e-9), id .. ": heavy alone " .. heavyDps .. " against the chain's " .. chainDps)
+    local last, at, order = nil, 0, {}
+    local function press()
+        local strike = FormRules.plan("Sword", nil, 6, weapon, last, at)
+        last = { Form = strike.Form, Step = strike.Step, At = at }
+        at += 0.4 -- (a press well inside the chain window)
+        table.insert(order, strike.Form .. strike.Step)
+        return strike
     end
+    for _ = 1, 5 + 3 + 3 + 1 do
+        press()
+    end
+    t.eq(table.concat(order, " "), "Gale1 Gale2 Gale3 Gale4 Gale5 Crescent1 Crescent2 Crescent3 Mountain1 Mountain2 Mountain3 Gale1")
+    t.ok(FormRules.plan("Sword", nil, 6, weapon, { Form = "Mountain", Step = 3, At = 0 }, 0.4).Form == "Gale", "the last form's finisher goes round to the first")
 end)
 
-t.test("plan with heavy gives the heavy strike from anywhere in the chain, and the chain starts again after it", function()
+t.test("the flow follows the realm: only the forms it has unlocked, and a pause begins the combo again", function()
     local weapon = { Damage = 100, Range = 10, Arc = 90, Cooldown = 0.6 }
-    local light = FormRules.plan("Sword", "Gale", 3, weapon, nil, 10, false)
-    t.eq(light.Step, 1)
-    t.falsy(light.Heavy)
-    local heavy = FormRules.plan("Sword", "Gale", 3, weapon, { Form = "Gale", Step = 1, At = 10 }, 10.4, true)
-    t.eq(heavy.Step, #FormRules.Forms.Gale.Chain)
-    t.ok(heavy.Heavy)
-    local after = FormRules.plan("Sword", "Gale", 3, weapon, { Form = heavy.Form, Step = heavy.Step, At = 10.4 }, 11.2, false)
-    t.eq(after.Step, 1, "the chain begins again after a heavy strike")
-    t.eq(FormRules.plan("Sword", "Gale", 3, weapon, nil, 10, "yes").Heavy, nil, "only true asks for a heavy strike")
-    t.eq(FormRules.plan("Sword", "Gale", 2, weapon, nil, 10, true).Form, "Crescent", "a locked form is not used, heavy or not")
-    t.ok(FormRules.HEAVY_HOLD > 0 and FormRules.HEAVY_HOLD < 1)
-end)
-
-t.test("with no form button the form is automatic: the highest the realm has unlocked, for every family", function()
-    for family, ids in FormRules.Families do
-        t.eq(FormRules.resolve(family, nil, nil), ids[1], family .. ": the first for anyone")
-        for realm = 1, 12 do
-            local expected = ids[1]
-            for _, id in ids do
-                if FormRules.Forms[id].UnlockRealm <= realm then
-                    expected = id
-                end
-            end
-            t.eq(FormRules.resolve(family, nil, realm), expected, family .. " at realm " .. realm)
+    t.eq(FormRules.plan("Sword", nil, 1, weapon, nil, 0).Form, "Crescent", "realm 1 has the balanced form only")
+    t.eq(FormRules.plan("Sword", nil, 1, weapon, { Form = "Crescent", Step = 3, At = 0 }, 0.5).Form, "Crescent", "and after its finisher, the same form again")
+    t.eq(FormRules.plan("Sword", nil, 3, weapon, nil, 0).Form, "Gale", "realm 3 begins with the quick form")
+    t.eq(FormRules.plan("Sword", nil, 3, weapon, { Form = "Gale", Step = 5, At = 0 }, 1.0).Form, "Crescent", "then the balanced one")
+    t.eq(FormRules.plan("Sword", nil, 3, weapon, { Form = "Crescent", Step = 3, At = 0 }, 1.0).Form, "Gale", "and round again")
+    -- a pause (past the finisher's cooldown and the grace) begins again at the first
+    local pause = FormRules.plan("Sword", nil, 6, weapon, { Form = "Gale", Step = 5, At = 0 }, 10)
+    t.eq(pause.Form, "Gale")
+    t.eq(pause.Step, 1)
+    local mid = FormRules.plan("Sword", nil, 6, weapon, { Form = "Crescent", Step = 2, At = 0 }, 20)
+    t.eq(mid.Form, "Gale", "a pause in the middle of a form begins the whole combo again")
+    t.eq(mid.Step, 1)
+    for family in FormRules.Families do
+        t.ok(FormRules.Cycle[family] ~= nil, family .. " has a cycle")
+        for _, id in FormRules.Cycle[family] do
+            t.eq(FormRules.familyOf(id), family, id .. " belongs to " .. family)
         end
+        t.eq(#FormRules.Cycle[family], #FormRules.Families[family], family .. ": every form is in the cycle")
     end
-    t.eq(FormRules.resolve("Sword", nil, 1), "Crescent")
-    t.eq(FormRules.resolve("Sword", nil, 3), "Gale")
-    t.eq(FormRules.resolve("Sword", nil, 6), "Mountain")
-    t.eq(FormRules.resolve("Palm", nil, 3), "Flurry")
-    t.eq(FormRules.resolve("Palm", nil, 6), "Stone")
+    t.eq(FormRules.plan("Sword", "Mountain", 6, weapon, nil, 0).Form, "Mountain", "an explicit choice still wins")
+    t.eq(FormRules.plan("Hammer", nil, 6, weapon, nil, 0), nil, "an unknown family")
 end)
 
 t.finish("forms")

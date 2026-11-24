@@ -241,6 +241,7 @@ local QINGGONG_POSES = {
 }
 local QINGGONG_BLEND_SPEED = 16 -- the leap poses snap in: a stride lasts only a fifth of a second
 local SLASH_BLEND_SPEED = 60    -- a strike follows its keys closely: its swing lasts a tenth of a second
+local SLASH_RELEASE_SPEED = 9  -- a strike's last pose relaxes into the ready stance, or the walk, slowly: a snap back would be a jerk in the weapon's path
 local STANCE_MAX_SPEED = 3      -- studs a second: above this, a spear's stance gives way to arms only
 local JOINT_CHECK = 0.5         -- seconds between checks that a rig's joints are still its own
 local LOW_POSE_DISTANCE = 80    -- on a phone, other players farther than this from the camera aren't posed
@@ -363,6 +364,7 @@ local function updatePoses(deltaTime)
     local normalStep = 1 - math.exp(-BLEND_SPEED * deltaTime)
     local quickStep = 1 - math.exp(-QINGGONG_BLEND_SPEED * deltaTime)
     local slashStep = 1 - math.exp(-SLASH_BLEND_SPEED * deltaTime)
+    local releaseStep = 1 - math.exp(-SLASH_RELEASE_SPEED * deltaTime)
     -- characters that left the world (an old character isn't always destroyed on respawn)
     for character in rigs do
         if not character.Parent then
@@ -428,7 +430,7 @@ local function updatePoses(deltaTime)
                 rig.weights[pose] = if wanted ~= pose and progress <= 0 then nil else progress * progress * (3 - 2 * progress)
                 continue
             end
-            local step = if slashing or pose == rig.slash or pose == rig.slashRide then slashStep
+            local step = if slashing then slashStep elseif pose == rig.slash or pose == rig.slashRide then releaseStep
                 elseif QUICK_POSES[pose] or (wanted and QUICK_POSES[wanted]) then quickStep else normalStep
             weight += ((if pose == wanted then 1 else 0) - weight) * step
             rig.weights[pose] = if pose ~= wanted and weight < 0.01 then nil else weight

@@ -13,7 +13,7 @@
 -- (FormRules.resolve), so there is nothing to choose and nothing to save. A landing strike fires
 -- Combat.Hit; every strike is relayed to all clients (CombatEvent: striker, kind ("Palm", "Sword" or "Spear"), hit position or nil, the strike's
 -- step in its form's chain, and for a strike that landed: its damage (a whole number), true if it was critical, and the target it struck; then
--- the form's id, the combo counter (consecutive landed hits, for show) and true for a heavy strike (FormRules.heavy: a charged finisher, asked for with CombatEvent:FireServer(true))).
+-- the form's id and the combo counter: consecutive landed hits, for show).
 --
 -- A landing strike may be critical (GameConfig.Combat.Crit): rolled here, never by a client.
 --
@@ -160,8 +160,7 @@ local function findTarget(rootPart, spec)
     return best, bestPoint
 end
 
-RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player, heavyRequest)
-    local heavy = heavyRequest == true -- (a charged strike: the form's finisher at once; anything but true is a light strike)
+RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
     local character = player.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -180,7 +179,7 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player, heavyRequest)
     end
     -- the strike: its family's form the player chose (and has unlocked), the step of its chain, the numbers of that step (FormRules.plan)
     local strike = FormRules.plan(weapon.Kind, nil, Shop.playerRealmIndex(player),
-        { Damage = weapon.Damage, Range = weapon.Range, Arc = weapon.Arc, Cooldown = weapon.Cooldown }, lastStrike[player], now, heavy)
+        { Damage = weapon.Damage, Range = weapon.Range, Arc = weapon.Arc, Cooldown = weapon.Cooldown }, lastStrike[player], now)
     if not strike then
         return
     end
@@ -198,9 +197,19 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player, heavyRequest)
         local crit = GameConfig.Combat.Crit
         critical = roll:NextNumber() < crit.Chance
         damage = strike.Damage * Combat.powerOf(player) * (if critical then crit.Multiplier else 1)
-        counter = FormRules.countHit(counter, now)
-        comboCount[player] = counter
-        Combat.Hit:Fire(player, target, damage, point)
+        -- how the guardian answers (GameConfig.GuardianReact, Guardian:reactTo): a guard lets a share through, a sidestep lets nothing land
+        local dodged = target:GetAttribute("Dodging") == true
+        if target:GetAttribute("Blocking") == true then
+            damage *= GameConfig.GuardianReact.Pass
+        end
+        if dodged then
+            RemoteEvents.GuardianEvent:FireAllClients(target, "Dodged", point) -- (a miss: nothing counts, nothing lands)
+            target, point, damage, critical = nil, nil, nil, nil
+        else
+            counter = FormRules.countHit(counter, now)
+            comboCount[player] = counter
+            Combat.Hit:Fire(player, target, damage, point, strike.Reaction)
+        end
     end
     -- the counter as it stands: a miss leaves it, and it lapses after the window
     local hits = if counter and now - counter.At <= FormRules.Counter.WINDOW then counter.Hits else 0
@@ -208,7 +217,7 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player, heavyRequest)
         GoalBook.count(player, "Combo", hits) -- (a daily or weekly goal: the best combo; the goal's own mode keeps the best)
     end
     RemoteEvents.CombatEvent:FireAllClients(player, weapon.Kind, point, strike.Step, if damage then math.round(damage) else nil, critical or nil, target,
-        strike.Form, hits, strike.Heavy)
+        strike.Form, hits)
 end)
 
 Players.PlayerRemoving:Connect(function(player)

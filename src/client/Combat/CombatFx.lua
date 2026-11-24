@@ -86,7 +86,14 @@ local FormClips = require(ReplicatedStorage:WaitForChild("FormClips"))
 -- keyed for it (2026-11-18: the spear's thrust, the sword's finisher and the punches were keyed again in Blender, tools/blender/animation, with a
 -- longer wind-up and the blow at the frame the weapon connects), so by default these are the clip's own numbers. RETIME can still stretch or
 -- squeeze a part of a clip for the eye (played faster or slower through that part, the blow frame moving with it): never the cooldown, the server's.
-local RETIME = {} -- [clip name] = { Wind, Swing, Tail } in seconds
+-- A thrust's travel was 0.077 to 0.09 s: the tip crossed its six studs inside one or two frames at 60 fps and read as a teleport (measured in Play, 2026-11-24, the tip's speed up to
+-- 300 studs a second). The spear's thrusts get a longer swing, taken from the tail (the clip's length is unchanged), so the point is seen to travel its line.
+local RETIME = {
+    SwallowQuick = { Wind = 0.07, Swing = 0.125, Tail = 0.222 },
+    SwallowLow = { Wind = 0.07, Swing = 0.125, Tail = 0.222 },
+    SwallowRising = { Wind = 0.075, Swing = 0.13, Tail = 0.225 },
+    SpearThrust = { Wind = 0.17, Swing = 0.115, Tail = 0.565 },
+} -- [clip name] = { Wind, Swing, Tail } in seconds
 local function timingOf(name, clip)
     local timing = { Clip = clip }
     if clip.SwingStart then
@@ -270,21 +277,14 @@ local SPEED_MIN, SPEED_MAX = 0.75, 1.8
 -- BLEND_MEMORY seconds starts from the pose the last one left the body in and eases into its own over BLEND seconds, instead of cutting from the end of one keyed
 -- clip to the start of the next (PoseController asks CombatFx.blendFrom each frame).
 local BLEND = 0.11
-local HEAVY_WIND = 0.0001 -- seconds: a heavy strike's wind-up is over before it begins (not 0: the clip's time divides by it)
 local BLEND_MEMORY = 1.2
+local COMBO_HOLD = 0.5 -- seconds a strike's last pose is held for the next press to begin from (about the chain's grace); then it relaxes
 local function retimed(timing, weapon, info)
     local base = if weapon == "Palm" then GameConfig.Combat.Palm.Cooldown else GameConfig.WeaponKinds[weapon].Cooldown
     local step = FormRules.Forms[info.Form].Chain[info.Step]
     local speed = math.clamp(timing.Length / (base * step.Cd * 0.92), SPEED_MIN, SPEED_MAX)
     local copy = table.clone(timing)
     copy.Wind, copy.Swing, copy.Tail, copy.Hit, copy.Length = timing.Wind / speed, timing.Swing / speed, timing.Tail / speed, timing.Hit / speed, timing.Length / speed
-    if info.Heavy and copy.ClipWind then
-        -- a heavy strike was wound up while the player held the button (CombatFx.charge held the clip at the end of its wind-up): it begins at the swing
-        local wound = copy.Wind
-        copy.Wind = HEAVY_WIND
-        copy.Hit = copy.Hit - wound + HEAVY_WIND
-        copy.Length = copy.Length - wound + HEAVY_WIND
-    end
     return copy
 end
 
@@ -751,7 +751,7 @@ local function holdSpec(kind, source, glow)
 end
 
 -- THE COMBO BUILDS (the owner, 2026-11-24: "the fourth attack becomes faster and more powerful, with stronger weapon trails ... the fifth creates a powerful impact"): the deeper a
--- strike is in its form's chain (info.Escalation, 0 at the first strike to 1 at the finisher, which a heavy strike always is) the longer and brighter its weapon trails
+-- strike is in its form's chain (info.Escalation, 0 at the first strike to 1 at the finisher) the longer and brighter its weapon trails
 -- draw, the wider its light spreads and the higher its swing sounds.
 local function build(strike)
     return if strike and strike.info and strike.info.Escalation then strike.info.Escalation else 0
@@ -1208,9 +1208,6 @@ local function landHit(player, position, info, strike)
     local spec = BLOWS[nameOf(strike)]
     
     local weight = if reaction == "Launch" then 1.25 elseif reaction == "Light" then 0.8 else 1 -- (a form's blows are held and shaken to its look and to its reaction)
-    if strike and strike.info and strike.info.Heavy then
-        weight *= 1.2 -- (a charged blow lands harder than the same finisher at the end of a chain)
-    end
     local stop = spec.Stop * formLook.Stop * weight
     local shake, shakeTime, kick = spec.Shake[1] * size * formLook.Shake * weight, spec.Shake[2], spec.Kick * size
     if critical then
@@ -1537,54 +1534,6 @@ function CombatFx.play(player, weapon, info)
     end
 end
 
--- CHARGING A HEAVY STRIKE (FormRules.heavy): while the player holds the heavy input the body draws into the wind-up of the form's finisher, the real keyed clip run up to
--- the end of its wind-up as `progress` goes from 0 to 1, and held there once it is full (a ring and a whoosh say so). `info` is the strike it will be (FormRules.plan with
--- heavy). The strike that follows (CombatFx.play) eases from this pose and begins at the swing, so a heavy blow is one movement from the hold to the hit. Called every
--- frame while charging; CombatFx.chargeEnd when the player lets go without striking.
-function CombatFx.charge(player, weapon, info, progress)
-    local root = rootOf(player)
-    if not (root and info) then
-        return
-    end
-    local now = os.clock()
-    local current = strikes[player]
-    if current and not current.charging and now < current.untilTime then
-        return -- (the strike in the body finishes its movement first: a charge never cuts a swing short)
-    end
-    if not (current and current.charging) then
-        local plain = table.clone(info)
-        plain.Heavy = nil -- (the whole clip's timing: the wind-up is what is being drawn)
-        local before = current
-        current = prepare(weapon, plain, now)
-        current.charging = true
-        if before and now - before.started < BLEND_MEMORY then
-            before.previous = nil
-            current.previous = before
-        end
-        strikes[player] = current
-    end
-    local timing = current.timing
-    local eased = progress * progress * (3 - 2 * progress)
-    current.holdAt = if timing.ClipWind then timing.Wind * eased else timing.Length * 0.3 * eased
-    current.holdUntil = now + 0.15
-    current.untilTime = now + 0.15
-    if progress >= 1 and not current.full then
-        current.full = true
-        local p = formPalette(QinggongFx.palette(player), info, nil)
-        if Players.LocalPlayer:GetAttribute("SettingReducedEffects") ~= true then
-            groundRing(root, p.Main, (lookOf(info).Ring or 10) * 0.8, 0.45)
-        end
-        Sfx.play("FormAir", root)
-    end
-end
-
-function CombatFx.chargeEnd(player)
-    local current = strikes[player]
-    if current and current.charging then
-        strikes[player] = nil
-    end
-end
-
 -- ---------- drawn and sheathed (the owner, 2026-11-11: "add equip and unequip for weapons", a draw / sheathe toggle) ----------
 -- A player's "WeaponDrawn" attribute (set by the server, CombatService) keeps their own weapon in the hand, in its ready
 -- stance, until they sheathe it. Sheathed, it rests across the back. Both show on every player within MAX_DISTANCE.
@@ -1717,7 +1666,9 @@ end
 -- "SwordReady"; a spear stays low a moment ("SpearLow"), then rises to its guard ("SpearReady").
 function CombatFx.pose(player)
     local strike = strikes[player]
-    if strike and os.clock() < strike.untilTime then
+    -- (the strike's last pose is held through the combo window: the next press begins from it and eases on, so the weapon never swings back to the ready stance between
+    -- two strikes and out again, a zigzag in the tip's path; PoseController lets the pose go slowly once the window has passed)
+    if strike and os.clock() < strike.untilTime + COMBO_HOLD then
         if strike.weapon == "Sword" then
             return "Slash"
         elseif strike.weapon == "Spear" then
@@ -1729,7 +1680,7 @@ function CombatFx.pose(player)
         return strike.weapon
     end
     local entry = held[player]
-    if entry and entry.kind == "Spear" and strike and os.clock() - strike.untilTime < SPEAR_LOW_TIME then
+    if entry and entry.kind == "Spear" and strike and os.clock() - (strike.untilTime + COMBO_HOLD) < SPEAR_LOW_TIME then
         return "SpearLow"
     end
     return entry and entry.kind .. "Ready"
@@ -1738,7 +1689,7 @@ end
 -- The name of the clip a player's strike plays (WeaponClips), or nil when it is not striking or plays the family's borrowed one (PoseController picks that by step).
 function CombatFx.clipName(player)
     local strike = strikes[player]
-    return strike and os.clock() < strike.untilTime and strike.clipName or nil
+    return strike and os.clock() < strike.untilTime + COMBO_HOLD and strike.clipName or nil -- (through the held last pose too)
 end
 
 -- The strike the player's current one is easing in from, for the pose's crossfade: its pose name (as CombatFx.pose gives it), its combo step, the keyed clip it played (nil
@@ -1759,7 +1710,7 @@ function CombatFx.blendFrom(player)
         elseif before.weapon == "Spear" then (if before.step == 2 then "SpearSlash" else "SpearThrust")
         else before.weapon
     local weight = 1 - t * t * (3 - 2 * t)
-    return poseName, before.step, before.clipName, clipTime(before.timing, if before.charging then before.holdAt else (os.clock() - before.started) * CombatFx.TimeScale), weight
+    return poseName, before.step, before.clipName, clipTime(before.timing, (os.clock() - before.started) * CombatFx.TimeScale), weight
 end
 
 -- Which strike of the combo a player is in, and how far through it in real-time seconds (held still through a hit-stop).

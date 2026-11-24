@@ -704,6 +704,45 @@ end
 
 local EGG_ACTIONS = { Steal = true, Drop = true, Recover = true, Secure = true, Return = true }
 
+-- HOW A GUARDIAN ANSWERS BEING FOUGHT (GameConfig.GuardianReact, server/Guardians/Guardian): the server says what it did and where; this draws and sounds it, in its own colours.
+-- Stagger: a finisher drove it back (a ring on the ground and a shake). Guard: it braces (a ring; its bar says GUARDING). Blocked: a strike glanced off the guard (a spark and a
+-- clang). Dodge: it sidestepped (dust at its feet and a whoosh). Dodged: a strike met only air (a whoosh).
+local REACTIONS = { Stagger = true, Guard = true, Blocked = true, Dodge = true, Dodged = true }
+local function reactionFx(model, action, point, style)
+    local root = model.PrimaryPart
+    if not root then
+        return
+    end
+    local feet = root.Position - Vector3.new(0, root.Size.Y / 2, 0)
+    local at = if typeof(point) == "Vector3" then point else root.Position
+    if action == "Stagger" then
+        Sfx.play("HeavyThump", root)
+        GuardianFx.shake(root.Position, 0.9, 0.25)
+        if style then
+            GuardianFx.shockRing(feet, style, 9, 0.4)
+        end
+    elseif action == "Guard" then
+        Sfx.play("FormWeight", root)
+        if style then
+            GuardianFx.shockRing(feet, style, 7, 0.5)
+            GuardianFx.flash(CFrame.new(root.Position), style, 12)
+        end
+    elseif action == "Blocked" then
+        Sfx.play("CritHit", at, 1.5)
+        if style then
+            GuardianFx.flash(CFrame.new(at), style, 4)
+            GuardianFx.streaks(CFrame.new(at), style, 6, 40, 70)
+        end
+    elseif action == "Dodge" then
+        Sfx.play("SpearSwing", root, 1.3)
+        if style then
+            GuardianFx.puff(CFrame.new(feet), style, 10, 24, 80, 3, 0.8)
+        end
+    else
+        Sfx.play("FormAir", at, 1.1)
+    end
+end
+
 RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
     if action == "Knock" then
         Sfx.play("Knockback")
@@ -735,6 +774,10 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
     local rig = rigs[model]
     local config = GameConfig.Guardians[model:GetAttribute("GuardianId")]
     local style = rig and rig.Style
+    if REACTIONS[action] then
+        reactionFx(model, action, (...), style)
+        return
+    end
     if not EGG_ACTIONS[action] then
         local anim = anims[model]
         if anim then

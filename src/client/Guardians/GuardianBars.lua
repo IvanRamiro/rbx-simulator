@@ -51,6 +51,7 @@ local BAR_H = TRACK_TOP + TRACK_H + V_PAD
 local SIGN_W, SIGN_H = 260, 82
 
 local WEAK_GOLD = Color3.fromRGB(255, 200, 70)
+local GUARD_BLUE = Color3.fromRGB(150, 200, 255)
 local BOUNTY_W = 64 -- the row's room for BOUNTY at its end
 local STATE_LOOK = {
     Dormant = { Text = "ASLEEP", Color = C.Muted },
@@ -344,6 +345,16 @@ local function updateBar(entry, dt)
         bar.gradient.Color = if state == "Enraged" then FILL.Rage elseif state == "Weakened" then FILL.Weak else FILL.Calm
     end
     bar.bountyTag.Visible = model:GetAttribute("Bounty") == true
+    -- it has braced for a combo (GameConfig.GuardianReact): the bar says so until the guard is down
+    local guarding = model:GetAttribute("Guard") == true
+    if guarding then
+        bar.state.Text = "GUARDING"
+        bar.state.TextColor3 = GUARD_BLUE
+        entry.guarding = true
+    elseif entry.guarding then
+        entry.guarding = nil
+        entry.state = nil -- (the word of its state comes back at once)
+    end
     local health, maxHealth = model:GetAttribute("Health") or 0, model:GetAttribute("MaxHealth") or 1
     local share = math.clamp(health / maxHealth, 0, 1)
     if fresh then
