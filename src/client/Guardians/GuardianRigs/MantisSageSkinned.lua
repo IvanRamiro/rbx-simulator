@@ -295,6 +295,13 @@ function Rig.actions(anim, pose, now)
                 add(pose, "RobeLeft1", 0, 0, 7 * k)
                 add(pose, "RobeRight1", 0, 0, -7 * k)
                 add(pose, "RobeMid1", 8 * k)
+                -- and the abdomen is the counterweight (2026-11-24: seen from the side, only the blades and the thorax answered a cut): it sinks as the blades
+                -- rise, then kicks up as they come down and swings on past the stop. Only the abdomen's bones move, so the feet the clip solved stay planted
+                local load = if t < w then smooth(math.clamp(t / w, 0, 1)) else 0
+                add(pose, "Abd1", 5 * load - 11 * k)
+                add(pose, "Abd2", 4 * load - 9 * k)
+                add(pose, "Abd3", 3 * load - 7 * k)
+                add(pose, "Abd4", 2 * load - 5 * k)
             end
         end
     end
