@@ -64,16 +64,16 @@ local VOICES = {
         Bite = { Start = "TiangouReady", Hit = "TiangouBite" }, EclipseHowl = { Hit = "TiangouHowl", Lead = -0.8 },
         MoonLeap = { Hit = "GuardianLeap" }, Land = { Start = "TiangouLand" },
     },
-    Pangu = {
-        Awaken = { Start = "PanguAwaken" }, Weaken = { Start = "PanguWeaken" },
-        AxeCleave = { Start = "PanguReady", Hit = "PanguCleave", Lead = -0.7 }, SkySplitter = { Start = "PanguReady", Hit = "PanguSplit", Lead = -0.2 },
-        ChaosNova = { Hit = "PanguNova", Lead = -0.45 }, TitanLeap = { Hit = "GuardianLeap" },
-        Land = { Start = "PanguLand" },
+    Pangu = { -- (the Abyssal Lantern Wyrm: the id stayed)
+        Awaken = { Start = "WyrmAwaken" }, Weaken = { Start = "WyrmWeaken" },
+        CoilLash = { Start = "WyrmReady", Hit = "WyrmLash", Lead = -0.2 }, LanternGaze = { Start = "WyrmGather", Hit = "WyrmGaze", Lead = -0.1 },
+        VoidSurge = { Hit = "WyrmSurge", Lead = -0.3 }, SerpentLeap = { Hit = "GuardianLeap" },
+        Land = { Start = "WyrmLand" },
     },
 }
 local EGG_SOUNDS = { Steal = "EggSteal", Drop = "EggDrop", Recover = "EggRecover", Secure = "EggSecureWorld", Return = "EggReturn" }
 -- each guardian's cry a beat after its egg is taken, from the guardian (SoundCatalog)
-local ALERTS = { StoneLion = "LionGrowl", MantisSage = "BladeRing", EmberXuanwu = "RocCry", Tiangou = "TiangouAlert", Pangu = "PanguAlert" }
+local ALERTS = { StoneLion = "LionGrowl", MantisSage = "BladeRing", EmberXuanwu = "RocCry", Tiangou = "TiangouAlert", Pangu = "WyrmHiss" }
 local ALERT_DELAY = 0.25
 local securedAt = -math.huge -- when this player last secured an egg: their own stinger plays, not the world's
 

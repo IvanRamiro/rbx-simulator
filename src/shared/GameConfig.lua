@@ -371,39 +371,42 @@ local GameConfig = {
                 MoonLeap = { Kind = "Pounce", MinRange = 18, MaxRange = 85, WindUp = 0.55, Air = 1.2, Height = 12, Cooldown = 4.2, Radius = 13, Knockback = 60 },
             },
         },
-        Pangu = {
-            DisplayName = "Pangu the World-Splitter",
-            Called = "Pangu",
+        Pangu = { -- (the Abyssal Lantern Wyrm, 2026-11-24: the id stayed, as the Cinder Roc's did; saves, records, titles and the quest key off it)
+            DisplayName = "Abyssal Lantern Wyrm",
+            Called = "the Lantern Wyrm",
             Island = "OriginAbyss",
-            Lair = Vector3.new(0, 0.8, 0),         -- the middle of the Void Court, its egg plinths behind him under the Thorn Crown
+            Lair = Vector3.new(0, 0.8, 0),         -- the middle of the Void Court, its egg plinths behind it under the Thorn Crown (about 31 studs behind the lair)
             Facing = Vector3.new(-85.8, 0.8, 122.8), -- toward the Gate of Descent, where challengers arrive
             Eggs = { "ForbiddenOriginEgg", "VoidRiftEgg", "PrimordialAbyssEgg" },
             SafeZone = { Island = "Yggdrasil", Name = "Yggdrasil" },   -- home across the bridge: secured on setting foot on the hub
             Element = "Void",
-            MaxHealth = 24000,     -- a Divine Initiate's Divine sword (~180 a strike) weakens him alone in ~120 strikes
+            MaxHealth = 24000,     -- a Divine Initiate's Divine sword (~180 a strike) weakens it alone in ~120 strikes
             WeakenedAt = 0.1,
-            HitRadius = 8,         -- a titan on two legs: narrow at the ground
+            HitRadius = 12,        -- a long coiled body: wide at the ground, the head and neck high above it
             EngageRadius = 26,
             LeashRadius = 62,
             CalmAfter = 12,
             RespawnTime = 30,
             DropTime = 30,
+            AwakenTime = 3.0,      -- its Awaken clip is 3.0 s: the lantern ignites, it uncoils, and the first blow waits until it is alert (default 1.6)
             WalkSpeed = 12,
-            ChaseSpeed = 28,       -- just below a Divine Initiate's run (32): his leaps and his fissure decide it
-            ChaseStop = 12,
+            ChaseSpeed = 28,       -- just below a Divine Initiate's run (32): its leap and its lantern decide it
+            ChaseStop = 16,
             TurnSpeed = 110,
             TurnsToFace = true,
             Egg = { CarriedHeight = 2.6 },
-            WeakenedHint = "falls to one knee! Take an egg from the stands behind him and carry it home to Yggdrasil!",
+            WeakenedHint = "sinks onto its coils! Take an egg from the stands behind it and carry it home to Yggdrasil!",
             Stagger = 1.2,
             WeakenedSlowdown = 1.6,
             Attacks = {
-                AxeCleave = { Kind = "Sweep", Range = 30, Arc = 75, WindUp = 0.9, Cooldown = 2.6, Knockback = 60 },
-                -- both hands on the axe, overhead, down: a fissure races straight ahead (jump it, or step aside)
-                SkySplitter = { Kind = "Wave", Arc = 15, Radius = 70, WaveSpeed = 55, WindUp = 1.2, Cooldown = 6, Knockback = 55 },
-                -- the cosmic egg raised high, the chaos in him bursts out all round (jump it)
-                ChaosNova = { Kind = "Wave", Radius = 44, WaveSpeed = 32, WindUp = 1.4, Cooldown = 9, Knockback = 50 },
-                TitanLeap = { Kind = "Pounce", MinRange = 20, MaxRange = 75, WindUp = 0.8, Air = 1.5, Height = 14, Cooldown = 5, Radius = 16, Knockback = 65 },
+                -- the raised neck draws back in an S, then lashes across the front arc like a whip, the lash running down the body
+                CoilLash = { Kind = "Sweep", Range = 34, Arc = 110, WindUp = 0.9, Cooldown = 2.8, Knockback = 60 },
+                -- the lantern flares and a narrow fissure of light races straight ahead (jump it, or step aside)
+                LanternGaze = { Kind = "Wave", Arc = 15, Radius = 75, WaveSpeed = 55, WindUp = 1.2, Cooldown = 6, Knockback = 55 },
+                -- it rears to its full height and slams down: a ring of void rolls out all round (jump it)
+                VoidSurge = { Kind = "Wave", Radius = 46, WaveSpeed = 32, WindUp = 1.4, Cooldown = 9, Knockback = 50 },
+                -- it springs from a tight coil and flies as a long ribbon, landing head first
+                SerpentLeap = { Kind = "Pounce", MinRange = 20, MaxRange = 75, WindUp = 0.8, Air = 1.5, Height = 14, Cooldown = 5, Radius = 16, Knockback = 65 },
             },
         },
     },
@@ -694,9 +697,9 @@ local GameConfig = {
         { Id = "AbyssBridge", Kind = "Visit", Goal = "OriginAbyss", Reward = 2000, Title = "Origin Abyss",
             Way = { "the Abyss bridge", 140, -201 },
             Text = "Cross the cracked bridge into Origin Abyss." },
-        { Id = "Pangu", Kind = "Secure", Goal = "Pangu", Reward = 8000, Title = "Pangu the World-Splitter",
-            Way = { "Pangu", 596, -856 },
-            Text = "Steal an egg from Pangu and carry it all the way home." },
+        { Id = "Pangu", Kind = "Secure", Goal = "Pangu", Reward = 8000, Title = "Bane of the Lantern Wyrm",
+            Way = { "the Lantern Wyrm", 596, -856 },
+            Text = "Steal an egg from the Lantern Wyrm and carry it all the way home." },
         { Id = "Summit", Kind = "Rank", Goal = "EternalOrigin", Reward = 50000, Title = "Eternal Origin",
             Text = "Reach the highest rank in the game." },
     },

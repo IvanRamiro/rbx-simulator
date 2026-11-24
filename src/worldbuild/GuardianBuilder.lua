@@ -29,14 +29,33 @@ function GuardianBuilder.storeSkinned(model, guardianId)
             table.insert(parts, d)
         end
     end
+    -- Bones the importer dropped, put back (Placements.AddBones: Parent, CFrame; Adopt = { [child bone] = its CFrame under the new bone } for the bones that hung on it,
+    -- which the importer parents to the piece instead, in the piece's own frame). A bone is added once its parent is there, whatever order the table is read in.
+    local pending = {}
     for name, info in placements.AddBones or {} do
         if not bones[name] then
-            local bone = Instance.new("Bone")
-            bone.Name = name
-            bone.CFrame = info.CFrame
-            bone.Parent = bones[info.Parent]
-            bones[name] = bone
+            pending[name] = info
         end
+    end
+    while next(pending) do
+        local progressed = false
+        for name, info in pending do
+            if bones[info.Parent] then
+                local bone = Instance.new("Bone")
+                bone.Name = name
+                bone.CFrame = info.CFrame
+                bone.Parent = bones[info.Parent]
+                bones[name] = bone
+                for childName, childCFrame in info.Adopt or {} do
+                    local child = assert(bones[childName], "AddBones: " .. name .. " adopts a bone the import does not have: " .. childName)
+                    child.Parent = bone
+                    child.CFrame = childCFrame
+                end
+                pending[name] = nil
+                progressed = true
+            end
+        end
+        assert(progressed, "AddBones: a dropped bone's parent is not in the import")
     end
     -- the importer may turn or move it: found from three bones whose authored positions are known
     local function at(name)

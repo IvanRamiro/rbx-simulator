@@ -85,21 +85,23 @@ local catalog = {
     TiangouLand = guardian({ Id = "9113470020", Volume = 0.8, Pitch = 0.8, Start = 0.6, Length = 0.5 }),
     TiangouWeaken = guardian({ Id = "9113954502", Volume = 6, Pitch = 0.85 }),                         -- lonely howls, echoing
 
-    -- ---------- Pangu the World-Splitter ----------
-    PanguAwaken = guardian({ Id = "9114630281", Volume = 2.1, Pitch = 0.75, With = "QuakeRumble" }),     -- a giant's groan over the earth
-    PanguCleave = guardian({ Id = "9126234246", Volume = 1.7, Pitch = 0.85 }),
-    PanguSplit = guardian({ Id = "9116282875", Volume = 1, Start = 1.3, Length = 2.8 }),              -- lightning tears the sky
-    PanguNova = guardian({ Id = "9120703628", Volume = 0.9, Pitch = 0.85, Start = 1.6, Length = 1.8, With = "NovaBoom" }),
+    -- ---------- the Abyssal Lantern Wyrm (Origin Abyss, 2026-11-24: Pangu's place; its id stays Pangu) ----------
+    -- Pro Sound Effects' snake hisses pitched down and held long, over the game's own rumbles and slams. First settings: levelled by measured loudness in Play, not judged by ear.
+    WyrmHiss = guardian({ Id = "9119302978", Volume = 1.6, Pitch = 0.7, Length = 2.4, Fade = 0.6 }),                              -- its alert, and the breath of every move
+    WyrmAwaken = guardian({ Id = "9119303232", Volume = 1.5, Pitch = 0.6, With = { "QuakeRumble", { "WyrmHiss", 1 } } }),         -- the court shakes, then the long hiss
+    WyrmReady = guardian({ Id = "9120049821", Volume = 1.8, Pitch = 0.75, Length = 0.8, Fade = 0.2 }),                            -- the neck draws back in its S
+    WyrmLash = guardian({ Id = "9126013811", Volume = 3.4, Pitch = 0.42, With = "LionSlam" }),                                     -- the lash cutting the air, and the ground taking the tail
+    WyrmGather = guardian({ Id = "9114432334", Volume = 1.4, Pitch = 0.9, Length = 1.1, Fade = 0.3 }),                            -- the charge climbing the ring-marks
+    WyrmGaze = guardian({ Id = "9116282875", Volume = 1, Start = 1.3, Length = 2.8, With = "WyrmHiss" }),                          -- the light released
+    WyrmSurge = guardian({ Id = "9120703628", Volume = 0.9, Pitch = 0.8, Start = 1.6, Length = 1.8, With = "NovaBoom" }),          -- the slam, and the ring of void
     NovaBoom = guardian({ Id = "9114362615", Volume = 2.5, Pitch = 0.7 }),
-    PanguReady = guardian({ Id = "9114630281", Volume = 0.67, Pitch = 0.95, Length = 0.6, Fade = 0.2 }),         -- a titan's groan as the weapon lifts
-    PanguLand = guardian({ Id = "9113220677", Volume = 2, Pitch = 0.8, Length = 2.5, With = "LionSlam" }),
-    PanguWeaken = guardian({ Id = "9114628113", Volume = 1.7, Pitch = 0.8 }),
+    WyrmLand = guardian({ Id = "9113220677", Volume = 2, Pitch = 0.75, Length = 2.5, With = "LionSlam" }),
+    WyrmWeaken = guardian({ Id = "9119302978", Volume = 1.6, Pitch = 0.5, Length = 3, Fade = 0.8 }),                              -- a long, worn-out exhale
 
     -- ---------- every guardian ----------
     GuardianLeap = guardian({ Id = "9113080339", Volume = 3, Pitch = 0.8, Start = 0.3 }),
     -- a guardian notices its egg is gone (played a beat after the theft, at the guardian; GuardianController ALERTS)
     TiangouAlert = guardian({ Id = "9120790529", Volume = 1.1, Pitch = 0.9, Length = 1.6, Fade = 0.4 }),
-    PanguAlert = guardian({ Id = "9114630281", Volume = 1.6, Pitch = 0.8, Length = 1.8, Fade = 0.5 }),
 
     -- ---------- the egg's theft ----------
     -- Levels below are each file's peak PlaybackLoudness at volume 1 (measured muted in Play, 2026-11-15) times its Volume,

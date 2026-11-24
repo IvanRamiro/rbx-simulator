@@ -51,7 +51,7 @@ local GUARDIAN_TITLES = {
     { Guardian = "MantisSage", Id = "BambooShadow", Text = "Bamboo Shadow", Color = rgb(146, 224, 124) },
     { Guardian = "EmberXuanwu", Id = "Ashwalker", Text = "Ashwalker", Color = rgb(255, 136, 76) },
     { Guardian = "Tiangou", Id = "MoonSaver", Text = "Moon-Saver", Color = rgb(206, 218, 255), Shimmer = rgb(255, 255, 255) },
-    { Guardian = "Pangu", Id = "PangusRival", Text = "Pangu's Rival", Color = rgb(255, 204, 112), Shimmer = rgb(255, 120, 80) },
+    { Guardian = "Pangu", Id = "PangusRival", Text = "Wyrm's Rival", Color = rgb(255, 204, 112), Shimmer = rgb(255, 120, 80) },
 }
 
 -- The conquest titles (the owner, 2026-11-24, item 15; GameConfig.Bounty): for bringing a guardian down the last tier's number of times. No bonus: the thief titles above
@@ -61,7 +61,7 @@ local CONQUEST_TITLES = {
     { Guardian = "MantisSage", Id = "MantisBreaker", Text = "Mantis Breaker", Color = rgb(164, 236, 140) },
     { Guardian = "EmberXuanwu", Id = "EmberBreaker", Text = "Ember Breaker", Color = rgb(255, 156, 96) },
     { Guardian = "Tiangou", Id = "SkyhoundBreaker", Text = "Skyhound Breaker", Color = rgb(214, 224, 255), Shimmer = rgb(255, 255, 255) },
-    { Guardian = "Pangu", Id = "PanguBreaker", Text = "Pangu Breaker", Color = rgb(255, 214, 128), Shimmer = rgb(255, 130, 90) },
+    { Guardian = "Pangu", Id = "PanguBreaker", Text = "Wyrm Breaker", Color = rgb(255, 214, 128), Shimmer = rgb(255, 130, 90) },
 }
 
 -- The beast collector titles: beasts in the player's Spirit Beast Codex (Count nil: every beast there is).

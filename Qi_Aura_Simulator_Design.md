@@ -1181,7 +1181,7 @@ Tuning lives in each rig: `Rig.Springs`, `Rig.Lean`, `Rig.Legs`, the gait number
 | Jade Grove | The Bamboo Mantis Sage | Escape routes through trees and elevated terrain |
 | Ember Peak | The Cinder Roc | Escape routes around lava and volcanic hazards; jump its ring of embers |
 | Moonlit Isle | Tiangou the Moon-Eater | More demanding aerial movement: long, low bounds that close the distance fast |
-| Origin Abyss | Pangu the World-Splitter | The most demanding encounter: a fissure to dodge, a nova to jump, a titan's leap |
+| Origin Abyss | Abyssal Lantern Wyrm (was Pangu the World-Splitter) | The most demanding encounter: a coil-lash to step out of, a narrow fissure of light to jump, a ring of void, and a serpent's leap at the thief |
 
 
 ### The Awakened Stone Lion (Beginner Isle)
@@ -1272,6 +1272,18 @@ Its lair is the middle of the Lunar Court, facing the Crescent Arch; a thief car
 | Enraged | The hunting crouch, lips drawn back, tail up, eyes red, chasing at 27 studs/s (it stops 17 short, `ChaseStop`). **Moon leap:** long, low bounds (18 to 85 studs, 12 high; the owner found 26 too high, November 5, 2026), stretched flat in the air. |
 
 Measured in Play (November 2, 2026): wake (it howls at once), bite, howl, weaken, steal (a Heavenly Throne Egg), the howl's ring knocking a grounded thief who drops the egg, recover, moon leaps aimed ahead of the runner and landing at the sanctuary's edge, and a secured egg (+4,000 stones). Most of its maps rendered grey after the first upload; they are re-uploads.
+
+### The Abyssal Lantern Wyrm (Origin Abyss; replaced Pangu the World-Splitter on November 24, 2026)
+
+The owner asked for a completely new boss in Pangu's place to fix his animation and rig. The id stays `Pangu` (saves, records, the quest and the Pangu titles key off it, as the Cinder Roc kept its id); everything the player sees is new. A long, deep-sea serpent of dark void-scaled blue with cyan ring-marks and a lantern on a lure above its brow (amber; the eyes are pale gold). Skinned on a spine of bones in Blender (`tools/blender/guardians/lantern_wyrm*.py`, `assets/guardians/LanternWyrm.fbx`), its rig and clips in `src/client/Guardians/GuardianRigs/LanternWyrmSkinned.lua` and `LanternWyrmClips.lua`, its placements in `src/worldbuild/Placements/PanguSkinned.lua`. Design notes: vault "Lantern Wyrm Brief 2026-11-24" and "Lantern Wyrm Design 2026-11-24".
+
+Stats (`GameConfig.Guardians.Pangu`): 24,000 health, weakened below 10%, hit radius 12, engage 26, awaken 3.0 s, walk 12, chase 28 (a Divine Initiate runs 32). Attacks: **Coil Lash** (a 110 degree sweep, range 34, 0.9 s wind-up), **Lantern Gaze** (a narrow fissure of light racing ahead, 55 studs/s: jump or step aside), **Void Surge** (it rears and slams; a ring of void rolls out, radius 46, jump it), **Serpent Leap** (used only against a thief: a 14 stud arc as a long ribbon, landing head first with a shockwave). Quest "Bane of the Lantern Wyrm"; titles "Wyrm's Rival" and "Wyrm Breaker" (ids PangusRival, PanguBreaker). Sounds are the `Wyrm*` entries in `SoundCatalog` (Pro Sound Effects snake hisses pitched down, over the game's rumbles).
+
+**Importer facts (found in Play, 2026-11-24):** the importer drops the Head bone (it is used only by single-bone pieces) and parents its children to the Head MeshPart; `AddBones` now restores it in dependency order, with `Adopt` to move the children back under it (`GuardianBuilder.storeSkinned`); the bone distances were verified identical afterwards.
+
+**Tested in Play (2026-11-24):** it wakes (3 s Awaken), cycles Coil Lash, Lantern Gaze and Void Surge with telegraphs and effects, weakens (it sinks onto its coils), takes the egg theft to Enraged (rears, then leaps at the thief as a ribbon, lands and slithers after them throwing its attacks as it goes), console clean (only the test's own teleports tripped MovementGuard). Rendered from the front, side and above. **Not tested:** the hit flinch, the Weaken-to-recover return, its sounds' loudness (first settings only, not yet levelled by measurement), the back view, the rest of the chase over a whole bridge run, two players against it.
+
+*Pangu's original section follows, kept as history (he and his files are gone: `pangu_v2.py`, `PanguClips.lua`, `PanguSkinned.lua` and the `PanguV2` art, all recoverable from git).*
 
 ### Pangu the World-Splitter (Origin Abyss)
 
