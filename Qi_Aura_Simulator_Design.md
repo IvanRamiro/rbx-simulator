@@ -346,7 +346,7 @@ A book of every beast (the Codex button on the HUD's rail; `client/Pets/CodexCon
 
 - Animated pets are exported as separate jointed parts (`tools/blender/export_pet.py --rig`).
 - The recreated pets are one smooth skin on a skeleton instead, starting with the Wind Sprite (`tools/blender/pets/wind_sprite.py`). `PetRig.buildSkinned` builds them and poses their Bones through the same `rig.motors` the jointed pets use. Each mesh keeps a Motor6D from the part that holds the bones, or it stays in its bind pose.
-- Each one is animated in code by `src/client/Pets/PetRig.lua`, with an idle pose, a moving pose, a flying pose and a special.
+- Each one is animated in code by `src/client/Pets/PetRig/` (a folder module since 2026-11-24, split from one 17,700-line file with its code unchanged: `init.lua` holds the builder, the profiles and `update`; `Animators/` and `Pets/` hold one file per pet; `Blasts.lua` the special effects; a new pet is a new file in `Pets/`, not another block in one file), with an idle pose, a moving pose, a flying pose and a special.
 
 ### The Exclusive Egg's beasts move (November 22, 2026)
 

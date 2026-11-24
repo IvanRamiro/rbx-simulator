@@ -88,6 +88,8 @@ def build_tree():
 
 def file_node(root, path):
     rel = os.path.relpath(path, REPO)
+    if os.path.basename(path).startswith("init."):
+        path = os.path.dirname(path)  # a folder's init.lua IS the folder's module: Rojo names the ModuleScript after the folder
 
     def find(node):
         if node.path and os.path.abspath(node.path) == os.path.abspath(path):
