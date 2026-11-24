@@ -9,6 +9,10 @@
 -- weapon in hand, or isn't unlocked, the family's first form is used. A form unlocks at a realm (UnlockRealm: 1 = from the start). The server owns
 -- the choice, the chain and every number here; a client only shows.
 --
+-- THE COMBO ACCELERATES (the owner, 2026-11-24: "the fourth attack becomes faster and more powerful"): in the quick forms (Gale, Swallow, Flurry) the four lights come
+-- quicker and harder one after another (Cd 0.66, 0.62, 0.58, 0.54 and Dmg 0.50, 0.52, 0.58, 0.60: the same sums as four steps of 0.6 and 0.55, so the form's damage per second
+-- is exactly what it was), and each clip is played at its own step's pace.
+--
 -- THE BALANCE RULE (so guardian fights and the egg heist keep their pace): a step has Dmg and Cd, multiples of the weapon's own strike damage and
 -- cooldown. A form's damage per second over its whole chain is sum(Dmg) / sum(Cd) of the weapon's own, and must stay within DPS_BAND of 1:
 -- forms differ in HOW they deal damage (many light strikes, a few heavy ones, a huge finisher), never in how much. tests/specs/forms.spec.luau
@@ -18,12 +22,13 @@
 --   FormRules.Forms[id]                   { Id, Family, Name, Identity, UnlockRealm, Chain = { { Name, Dmg, Cd, Range, Arc, Reaction } ... } }
 --   FormRules.familyOf(id)                the family a form belongs to, or nil
 --   FormRules.unlocked(id, realm)         whether a player in realm number `realm` (Shop.playerRealmIndex) can use it
---   FormRules.resolve(family, chosen, realm)  the form to fight with: the chosen one if it is this family's and unlocked, else the family's first
+--   FormRules.resolve(family, chosen, realm)  the form to fight with: the chosen one if it is this family's and unlocked (nothing chooses one now), else the highest the realm has unlocked
 --   FormRules.sanitizeChoices(raw)        a saved table of chosen forms ({ Sword = id, Spear = id }) reduced to the valid ones: a form of that very family (unlocking is
 --                                         checked where it is used: a form not yet unlocked is simply not fought with)
 --   FormRules.stepOf(id, last, now, cd)   the strike's place in the chain: last = { Form, Step, At } or nil; cd = the weapon's cooldown
 --   FormRules.strike(id, step, base)      the numbers of one strike: base = { Damage, Range, Arc, Cooldown } of the weapon
---   FormRules.plan(family, chosen, realm, base, last, now)   the strike a player makes now (server and client both use it)
+--   FormRules.plan(family, chosen, realm, base, last, now, heavy)   the strike a player makes now (server and client both use it); heavy true: the finisher at once (FormRules.heavy)
+--   FormRules.heavy(id, base)             the heavy strike of a form: its finisher with the cooldown that keeps its damage per second no higher than the chain's
 --   FormRules.dps(id)                     the form's damage per second as a multiple of the weapon's own
 --   FormRules.countHit(counter, now)      the combo counter after a landed hit: { Hits, At }
 --   FormRules.tierOf(hits)                the name of the counter's tier, or nil
@@ -50,10 +55,10 @@ FormRules.Forms = {
         Family = "Sword", Name = "Gale Form", UnlockRealm = 3,
         Identity = "Fast and flowing. Four quick cuts close in, then a spin that cuts all round.",
         Chain = {
-            { Name = "Swift Cut", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.15, Reaction = "Light" },
-            { Name = "Cross Cut", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.15, Reaction = "Light" },
-            { Name = "Spin Cut", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.3, Reaction = "Light" },
-            { Name = "Rush Cut", Dmg = 0.55, Cd = 0.6, Range = 0.9, Arc = 1.15, Reaction = "Heavy" },
+            { Name = "Swift Cut", Dmg = 0.50, Cd = 0.66, Range = 0.85, Arc = 1.15, Reaction = "Light" },
+            { Name = "Cross Cut", Dmg = 0.52, Cd = 0.62, Range = 0.85, Arc = 1.15, Reaction = "Light" },
+            { Name = "Spin Cut", Dmg = 0.58, Cd = 0.58, Range = 0.85, Arc = 1.3, Reaction = "Light" },
+            { Name = "Rush Cut", Dmg = 0.60, Cd = 0.54, Range = 0.9, Arc = 1.15, Reaction = "Heavy" },
             { Name = "Storm Ring", Dmg = 1.6, Cd = 1.4, Range = 0.95, Arc = 1.9, Reaction = "Launch" },
         },
     },
@@ -80,10 +85,10 @@ FormRules.Forms = {
         Family = "Spear", Name = "Swallow Form", UnlockRealm = 3,
         Identity = "Quick and darting. Four fast jabs, then a whirl all round.",
         Chain = {
-            { Name = "Quick Jab", Dmg = 0.55, Cd = 0.6, Range = 0.8, Arc = 1.2, Reaction = "Light" },
-            { Name = "Double Jab", Dmg = 0.55, Cd = 0.6, Range = 0.8, Arc = 1.2, Reaction = "Light" },
-            { Name = "Low Jab", Dmg = 0.55, Cd = 0.6, Range = 0.8, Arc = 1.2, Reaction = "Light" },
-            { Name = "Rising Jab", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.2, Reaction = "Heavy" },
+            { Name = "Quick Jab", Dmg = 0.50, Cd = 0.66, Range = 0.8, Arc = 1.2, Reaction = "Light" },
+            { Name = "Double Jab", Dmg = 0.52, Cd = 0.62, Range = 0.8, Arc = 1.2, Reaction = "Light" },
+            { Name = "Low Jab", Dmg = 0.58, Cd = 0.58, Range = 0.8, Arc = 1.2, Reaction = "Light" },
+            { Name = "Rising Jab", Dmg = 0.60, Cd = 0.54, Range = 0.85, Arc = 1.2, Reaction = "Heavy" },
             { Name = "Whirl Sweep", Dmg = 1.6, Cd = 1.4, Range = 0.7, Arc = 2.6, Reaction = "Launch" },
         },
     },
@@ -112,10 +117,10 @@ FormRules.Forms = {
         Family = "Palm", Name = "Flurry Form", UnlockRealm = 3,
         Identity = "Fast and relentless. Four quick punches from every angle, then a double palm that blasts the target back.",
         Chain = {
-            { Name = "Jab", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.15, Reaction = "Light" },
-            { Name = "Cross", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.15, Reaction = "Light" },
-            { Name = "Body Hook", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.3, Reaction = "Light" },
-            { Name = "Uppercut", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.15, Reaction = "Heavy" },
+            { Name = "Jab", Dmg = 0.50, Cd = 0.66, Range = 0.85, Arc = 1.15, Reaction = "Light" },
+            { Name = "Cross", Dmg = 0.52, Cd = 0.62, Range = 0.85, Arc = 1.15, Reaction = "Light" },
+            { Name = "Body Hook", Dmg = 0.58, Cd = 0.58, Range = 0.85, Arc = 1.3, Reaction = "Light" },
+            { Name = "Uppercut", Dmg = 0.60, Cd = 0.54, Range = 0.85, Arc = 1.15, Reaction = "Heavy" },
             { Name = "Double Palm", Dmg = 1.6, Cd = 1.4, Range = 0.95, Arc = 1.5, Reaction = "Launch" },
         },
     },
@@ -175,7 +180,15 @@ function FormRules.resolve(family, chosen, realm)
     if FormRules.familyOf(chosen) == family and FormRules.unlocked(chosen, realm) then
         return chosen
     end
-    return ids[1]
+    -- no (valid) choice: the highest form of the family that the realm has unlocked, the first for anyone below them all. There is no form button
+    -- (the owner, 2026-11-24): a player fights with the best form they have, and a new form arrives with the realm that opens it.
+    local best = ids[1]
+    for _, id in ids do
+        if FormRules.unlocked(id, realm) then
+            best = id
+        end
+    end
+    return best
 end
 
 -- The strike's place in the chain, 1 to #Chain. A strike continues the chain when it comes before the last one's cooldown and the grace are up
@@ -196,7 +209,7 @@ function FormRules.stepOf(id, last, now, cooldown)
 end
 
 -- One strike's numbers from the weapon's own: Damage and Cooldown scale by the step's Dmg and Cd, Range and Arc by its Range and Arc (the arc
--- never past MAX_ARC, the range never under 3 studs). Name, Finisher (the last strike) and Reaction come along.
+-- never past MAX_ARC, the range never under 3 studs). Name, Finisher (the last strike), Reaction and Escalation (0 to 1 along the chain) come along.
 function FormRules.strike(id, step, base)
     local form = FormRules.Forms[id]
     local entry = form and form.Chain[step]
@@ -205,6 +218,7 @@ function FormRules.strike(id, step, base)
     end
     return {
         Form = id, Family = form.Family, Step = step, Name = entry.Name, Finisher = step == #form.Chain, Reaction = entry.Reaction,
+        Escalation = if #form.Chain > 1 then (step - 1) / (#form.Chain - 1) else 0, -- how deep in the chain: 0 at the first strike, 1 at the finisher (the effects build with it)
         Damage = base.Damage * entry.Dmg, Cooldown = base.Cooldown * entry.Cd,
         Range = math.max(3, base.Range * entry.Range), Arc = math.min(FormRules.MAX_ARC, base.Arc * entry.Arc),
     }
@@ -219,13 +233,34 @@ function FormRules.dps(id)
     return damage / time
 end
 
+-- THE HEAVY STRIKE (the owner, 2026-11-24: "chain light attacks, heavy attacks ... and special follow-ups"): a player who holds the heavy input and lets go (HEAVY_HOLD seconds,
+-- the client's) strikes their form's FINISHER at once, from anywhere in the chain, and the chain begins again after it. It has the finisher's damage, reach, arc and
+-- reaction. Its cooldown is the finisher's own, or longer: the damage it deals divided by the form's own damage per second, so a player who throws nothing but heavy
+-- strikes deals exactly what the form's chain deals and no more (a spec checks it for every form). The server prices it and does not time the hold.
+FormRules.HEAVY_HOLD = 0.3 -- seconds of holding the heavy input before letting go strikes heavy (the client; a shorter hold is a light strike)
+
+function FormRules.heavy(id, base)
+    local form = FormRules.Forms[id]
+    if not form then
+        return nil
+    end
+    local last = #form.Chain
+    local strike = FormRules.strike(id, last, base)
+    strike.Heavy = true
+    strike.Cooldown = math.max(strike.Cooldown, base.Cooldown * form.Chain[last].Dmg / FormRules.dps(id))
+    return strike
+end
+
 -- The strike a player makes now, from their weapon's family, the form they chose for it, their realm number, the weapon's own numbers
 -- (base = { Damage, Range, Arc, Cooldown }), their last strike ({ Form, Step, At } or nil) and the time. The server decides every strike with
 -- this, and the client calls it for the strike it shows at once, so the two can't disagree about the chain. nil for an unknown family.
-function FormRules.plan(family, chosen, realm, base, last, now)
+function FormRules.plan(family, chosen, realm, base, last, now, heavy)
     local id = FormRules.resolve(family, chosen, realm)
     if not id then
         return nil
+    end
+    if heavy == true then
+        return FormRules.heavy(id, base)
     end
     return FormRules.strike(id, FormRules.stepOf(id, last, now, base.Cooldown), base)
 end

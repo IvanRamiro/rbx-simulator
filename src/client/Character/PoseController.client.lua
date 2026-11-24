@@ -304,7 +304,23 @@ local function choosePose(player, character, rig)
         rig.slash = rig.slash or {}
         local name = CombatFx.clipName(player) -- (a form's own keyed strike, if it has one for this step)
             or if strikeName == "Slash" then SWORD_CLIPS[step] elseif strikeName == "Palm" then PUNCH_CLIPS[step] else strikeName
-        clipPose(rig.slash, name, elapsed, standingStill(player, character))
+        local whole = standingStill(player, character)
+        clipPose(rig.slash, name, elapsed, whole)
+        -- the strike before this one is still in the body for a moment: ease from its pose into this one's, so a combo is one movement and not clips cut together
+        local fromPose, fromStep, fromClip, fromElapsed, fromWeight = CombatFx.blendFrom(player)
+        if fromPose and (fromPose == "Slash" or fromPose == "SpearSlash" or fromPose == "SpearThrust" or fromPose == "Palm") then
+            local fromName = fromClip or if fromPose == "Slash" then SWORD_CLIPS[fromStep] elseif fromPose == "Palm" then PUNCH_CLIPS[fromStep] else fromPose
+            if fromName and WeaponClips.Clips[fromName] then
+                rig.slashFrom = rig.slashFrom or {}
+                clipPose(rig.slashFrom, fromName, fromElapsed, whole)
+                for joint, cframe in rig.slash do
+                    local old = rig.slashFrom[joint]
+                    if old then
+                        rig.slash[joint] = cframe:Lerp(old, fromWeight)
+                    end
+                end
+            end
+        end
         strike = rig.slash
     end
     if player:GetAttribute("IsFlying") == true then

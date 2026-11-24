@@ -9,10 +9,11 @@
 -- COMBAT FORMS (shared/FormRules; the owner, 2026-11-24): every weapon of a family (Sword, Spear, bare-hands Palm) shares that family's forms. The
 -- strike's damage, range, arc and cooldown are the weapon's own scaled by the step of the player's form (FormRules.plan, which the client runs too
 -- for the strike it shows at once); the server keeps the chain per player, so a client can't choose a step, a form it hasn't unlocked or a faster
--- cooldown. FormEvent(formId) chooses a form: it is checked here and kept in the player's "Form<Family>" attribute. A landing strike fires
+-- cooldown. The form is automatic (the owner, 2026-11-24: "remove the form button"): the highest form of the weapon's family the player's realm has unlocked
+-- (FormRules.resolve), so there is nothing to choose and nothing to save. A landing strike fires
 -- Combat.Hit; every strike is relayed to all clients (CombatEvent: striker, kind ("Palm", "Sword" or "Spear"), hit position or nil, the strike's
 -- step in its form's chain, and for a strike that landed: its damage (a whole number), true if it was critical, and the target it struck; then
--- the form's id and the combo counter: consecutive landed hits, for show).
+-- the form's id, the combo counter (consecutive landed hits, for show) and true for a heavy strike (FormRules.heavy: a charged finisher, asked for with CombatEvent:FireServer(true))).
 --
 -- A landing strike may be critical (GameConfig.Combat.Crit): rolled here, never by a client.
 --
@@ -34,13 +35,11 @@ local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Combat = require(script.Parent:WaitForChild("Combat"))
 local MovementGuard = require(script.Parent.Parent:WaitForChild("Security"):WaitForChild("MovementGuard"))
-local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
 local GoalBook = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("GoalBook"))
 
-local COOLDOWN_SLACK = 0.15 -- the share of a cooldown a request may come early: latency, not cheating
+local COOLDOWN_SLACK = 0.2 -- the share of a cooldown a request may come early: latency and the client's cancel window (CombatController), not cheating: the schedule below moves on by whole cooldowns, so it never adds up
 local lastStrike = {} -- [player] = { Form, Step, At } (FormRules.plan): the chain's last strike
 local comboCount = {} -- [player] = { Hits, At } (FormRules.countHit): consecutive landed hits, for show
-local lastFormChange = {} -- [player] = when they last chose a form
 -- [player] = when their next strike is due. It moves on by a whole cooldown from when the last was
 -- due, not from when it arrived, so coming early can't add up: a client firing as early as the slack
 -- allows gets the same strikes a second as anyone else.
@@ -161,47 +160,8 @@ local function findTarget(rootPart, spec)
     return best, bestPoint
 end
 
--- ---------- choosing a form ----------
-RemoteEvents.FormEvent.OnServerEvent:Connect(function(player, id)
-    local family = FormRules.familyOf(id) -- (nil for anything that isn't a form's id, a table or a number included)
-    if not family or not FormRules.unlocked(id, Shop.playerRealmIndex(player)) then
-        return
-    end
-    local character = player.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    if not humanoid or humanoid.Health <= 0 or player:GetAttribute("IsCultivating") == true or player:GetAttribute("CarryingEgg") ~= nil then
-        return
-    end
-    local now = os.clock()
-    if now - (lastFormChange[player] or 0) < FormRules.SWITCH_GAP then
-        return
-    end
-    lastFormChange[player] = now
-    player:SetAttribute("Form" .. family, id)
-    PlayerData.saveSoon(player) -- (the choice is saved with the player: PlayerData "Forms", read from these attributes)
-end)
-
--- The saved choice is put back as soon as the player's data is in (the attribute stays unset until then: the family's first form is fought with). A choice
--- made meanwhile is theirs and is kept. It is the saved id of a form of that very family (FormRules.sanitizeChoices); unlocking is checked where it is used.
-local function restoreForms(player)
-    local progress = PlayerData.waitForData(player)
-    if not progress or player.Parent ~= Players then
-        return
-    end
-    for family, id in FormRules.sanitizeChoices(progress.Forms) do
-        if player:GetAttribute("Form" .. family) == nil then
-            player:SetAttribute("Form" .. family, id)
-        end
-    end
-end
-Players.PlayerAdded:Connect(function(player)
-    task.spawn(restoreForms, player)
-end)
-for _, player in Players:GetPlayers() do
-    task.spawn(restoreForms, player)
-end
-
-RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
+RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player, heavyRequest)
+    local heavy = heavyRequest == true -- (a charged strike: the form's finisher at once; anything but true is a light strike)
     local character = player.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
@@ -219,8 +179,8 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
         return
     end
     -- the strike: its family's form the player chose (and has unlocked), the step of its chain, the numbers of that step (FormRules.plan)
-    local strike = FormRules.plan(weapon.Kind, player:GetAttribute("Form" .. weapon.Kind), Shop.playerRealmIndex(player),
-        { Damage = weapon.Damage, Range = weapon.Range, Arc = weapon.Arc, Cooldown = weapon.Cooldown }, lastStrike[player], now)
+    local strike = FormRules.plan(weapon.Kind, nil, Shop.playerRealmIndex(player),
+        { Damage = weapon.Damage, Range = weapon.Range, Arc = weapon.Arc, Cooldown = weapon.Cooldown }, lastStrike[player], now, heavy)
     if not strike then
         return
     end
@@ -248,7 +208,7 @@ RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
         GoalBook.count(player, "Combo", hits) -- (a daily or weekly goal: the best combo; the goal's own mode keeps the best)
     end
     RemoteEvents.CombatEvent:FireAllClients(player, weapon.Kind, point, strike.Step, if damage then math.round(damage) else nil, critical or nil, target,
-        strike.Form, hits)
+        strike.Form, hits, strike.Heavy)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
@@ -256,5 +216,4 @@ Players.PlayerRemoving:Connect(function(player)
     lastStrike[player] = nil
     nextStrike[player] = nil
     comboCount[player] = nil
-    lastFormChange[player] = nil
 end)

@@ -44,15 +44,22 @@ end
 local mine = nil -- { Form, Step, At }: our last strike in its form's chain, as the server counts it (the server's answer corrects it)
 local UNIT = { Damage = 1, Range = 10, Arc = 80, Cooldown = 1 } -- a strike's step and finisher don't depend on these
 
--- Input feel: a press up to BUFFER seconds before the cooldown ends still counts, and fires the moment it ends; holding the button (mouse,
--- gamepad R2, the touch button) strikes again at each cooldown. The cooldown itself stays the server's (CombatService): this only stops a
--- press that came a hair early from being thrown away. A press longer before it is dropped, as before.
-local BUFFER = 0.12
-local waiting = false -- a buffered press is waiting for the cooldown
+-- Input feel (the owner, 2026-11-24: "attacks should respond immediately ... sensible animation cancel windows ... preserve combo continuity"): a press that comes while the
+-- last strike is still recovering is kept for up to BUFFER seconds and fires at the cancel point, LEAD of the last strike's cooldown before it ends (the keyed clips end a
+-- little before their cooldown, so the next one begins out of the recovery, not after a pause). The cooldown stays the server's (CombatService): readyAt moves on by whole
+-- cooldowns from when the last was due, exactly as the server's schedule does, so striking at the cancel point never adds up to more strikes a second (the server accepts a
+-- strike up to its COOLDOWN_SLACK early, 0.2, and LEAD is half of that). Holding the button (mouse, gamepad R2, the touch button) strikes again at each cancel point.
+local BUFFER = 0.3
+local LEAD = 0.1
+local lastCooldown = 0.5 -- the cooldown of the strike that set readyAt
+local waiting = false -- a buffered press is waiting for the cancel point
+local queuedHeavy = false
 local holding = nil   -- what is held: "Mouse", "Gamepad" or "Touch"
 local touchHeld = nil  -- the InputObject of the finger holding the Strike button (its UserInputState tells when it lifts)
+local touchStart = nil -- where that finger began, to tell a swipe up (a heavy strike) from a hold
+local beginCharge, endCharge -- (the heavy strike's, below)
 
-local function strike(repeating)
+local function strike(repeating, heavy)
     local character = player.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     if not humanoid or humanoid.Health <= 0 or player:GetAttribute("IsCultivating") == true
@@ -61,28 +68,31 @@ local function strike(repeating)
     end
     local now = os.clock()
     local kind, base = strikeBase()
-    if now < readyAt then
-        if not repeating and not waiting and readyAt - now <= BUFFER then
+    local cancelAt = readyAt - lastCooldown * LEAD
+    if now < cancelAt then
+        if not repeating and not waiting and cancelAt - now <= BUFFER then
             waiting = true
-            task.delay(readyAt - now + 0.002, function()
+            queuedHeavy = heavy == true
+            task.delay(cancelAt - now + 0.002, function()
                 waiting = false
-                strike(true)
+                strike(true, queuedHeavy)
             end)
         end
         return
     end
-    local info = FormRules.plan(kind, player:GetAttribute("Form" .. kind), Shop.playerRealmIndex(player), base, mine, now)
+    local info = FormRules.plan(kind, nil, Shop.playerRealmIndex(player), base, mine, now, heavy == true)
     if not info then
         return
     end
-    readyAt = now + info.Cooldown
+    readyAt = math.max(now, readyAt) + info.Cooldown
+    lastCooldown = info.Cooldown
     mine = { Form = info.Form, Step = info.Step, At = now }
     if player:GetAttribute("IsFlying") == true and not airNoted then
         airNoted = true
         message:show("You can't hit guardians from the air. Land first.", "Warning")
     end
     CombatFx.play(player, kind, info)
-    RemoteEvents.CombatEvent:FireServer()
+    RemoteEvents.CombatEvent:FireServer(if heavy == true then true else nil)
 end
 
 -- ---------- drawing and sheathing ----------
@@ -143,87 +153,47 @@ for _, name in { "WeaponId", "WeaponElement", "WeaponDrawn" } do
 end
 refreshSlot()
 
--- ---------- combat forms (the owner, 2026-11-24): slot 2 of the inventory bar, key 2 ----------
--- Every weapon of a family shares that family's forms (shared/FormRules); the slot shows the form in use and pressing it asks the server (FormEvent) for
--- the next form this weapon's family has unlocked. Each family remembers its own (the server's "Form<Family>" attribute).
-local formSlot = Hud.Inventory.addSlot(2, { Name = "FormSlot" })
-local formNote = Toast.new("FormMessage", Color3.new(1, 1, 1), 3)
+-- ---------- combat forms (shared/FormRules) ----------
+-- There is no form button (the owner, 2026-11-24: "remove the form button, we don't need that"): a player fights with the highest form of their weapon's family that their
+-- realm has unlocked (FormRules.resolve with no choice), the server and the client alike, so a new form simply arrives with the realm that opens it.
 
-local function familyNow()
-    local weapon = Shop.weapon(player:GetAttribute("WeaponId"))
-    return if weapon then weapon.Kind else "Palm"
+-- ---------- the heavy strike: hold, and let go (FormRules.heavy) ----------
+-- Holding R (gamepad: D-pad right) or swiping up from the touch Strike button draws the body into the wind-up of the form's finisher (CombatFx.charge); letting go after
+-- FormRules.HEAVY_HOLD strikes that finisher at once from anywhere in the chain, and the chain begins again after it. Letting go sooner is an ordinary light strike.
+-- (Not the right mouse button: it turns the camera.) The server prices a heavy strike so that nothing but heavy strikes deals no more than the chain does.
+local HEAVY_KEY = Enum.KeyCode.R
+local HEAVY_PAD = Enum.KeyCode.DPadRight
+local SWIPE = 40 -- pixels up from where a finger began on the Strike button
+local charge = nil -- { Source = "Key" | "Gamepad" | "Touch", Since }
+
+local function heavyPlan()
+    local kind, base = strikeBase()
+    return kind, FormRules.plan(kind, nil, Shop.playerRealmIndex(player), base, mine, os.clock(), true)
 end
 
--- the form in use for the weapon in hand, and the unlocked ones of its family in order
-local function formsNow()
-    local family = familyNow()
-    local realm = Shop.playerRealmIndex(player)
-    local current = FormRules.resolve(family, player:GetAttribute("Form" .. family), realm)
-    local open = {}
-    for _, id in FormRules.Families[family] do
-        if FormRules.unlocked(id, realm) then
-            table.insert(open, id)
+beginCharge = function(source)
+    local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if charge or not humanoid or humanoid.Health <= 0 or player:GetAttribute("IsCultivating") == true or player:GetAttribute("CarryingEgg") ~= nil then
+        return
+    end
+    charge = { Source = source, Since = os.clock() }
+    if player:GetAttribute("WeaponId") ~= nil and player:GetAttribute("WeaponDrawn") ~= true then
+        RemoteEvents.WeaponDrawEvent:FireServer(true) -- (a weapon is in the hand to wind up with)
+    end
+end
+
+endCharge = function(fire)
+    local held = charge and os.clock() - charge.Since or 0
+    charge = nil
+    if fire and held >= FormRules.HEAVY_HOLD then
+        strike(false, true)
+    else
+        CombatFx.chargeEnd(player)
+        if fire then
+            strike(false, false) -- (a short press of the heavy input is a light strike)
         end
     end
-    return family, current, open
 end
-
-local function refreshForm()
-    local family, current = formsNow()
-    -- "FORM 1/3" on two lines: a form's name ("CRESCENT") does not fit the tile at its text size and wrapped mid-word (seen in the Device Simulator on a
-    -- Galaxy A06); the name comes in the notice when a form is chosen
-    local at = table.find(FormRules.Families[family], current) or 1
-    formSlot.setEmpty("FORM\n" .. at .. "/" .. #FormRules.Families[family], "") -- (no caption: it ran into the weapon slot's)
-end
-for _, name in { "WeaponId", "FormSword", "FormSpear", "FormPalm" } do
-    player:GetAttributeChangedSignal(name):Connect(refreshForm)
-end
-refreshForm()
-task.spawn(function() -- a new realm can open a form: look now and then
-    while true do
-        task.wait(2)
-        refreshForm()
-    end
-end)
-
-local formAskedAt = 0
-local function nextForm()
-    if player:GetAttribute("IsCultivating") == true or player:GetAttribute("CarryingEgg") ~= nil then
-        return
-    end
-    if os.clock() - formAskedAt < FormRules.SWITCH_GAP then
-        return
-    end
-    local family, current, open = formsNow()
-    if #open < 2 then
-        local total = #FormRules.Families[family]
-        formNote:show(if total > 1 then "More forms open as you reach higher realms." else "This weapon has one form.", "Info")
-        return
-    end
-    formAskedAt = os.clock()
-    local at = table.find(open, current) or 1
-    local choice = open[at % #open + 1]
-    RemoteEvents.FormEvent:FireServer(choice)
-    formNote:show(FormRules.Forms[choice].Name .. ": " .. FormRules.Forms[choice].Identity, "Info")
-end
-formSlot.Button.Activated:Connect(nextForm)
-
--- a change of form is seen on every player in range: the server's "Form<Family>" attribute changing plays the burst (CombatFx.formChange)
-local function watchForms(who)
-    for _, family in { "Sword", "Spear", "Palm" } do
-        local attribute = "Form" .. family
-        who:GetAttributeChangedSignal(attribute):Connect(function()
-            local id = who:GetAttribute(attribute)
-            if id then
-                CombatFx.formChange(who, id)
-            end
-        end)
-    end
-end
-for _, who in Players:GetPlayers() do
-    watchForms(who)
-end
-Players.PlayerAdded:Connect(watchForms)
 
 -- while a strike button is held, the next strike comes at each cooldown; letting go (or the window losing focus) stops it
 RunService.Heartbeat:Connect(function()
@@ -237,12 +207,36 @@ RunService.Heartbeat:Connect(function()
         -- GetTouches: this line called it from 2026-11-18, and on every frame of a held Strike tap on a phone it raised an error and the hold never repeated)
         holding = nil
     end
+    -- a swipe up from the Strike button is a heavy strike's charge, not another light one
+    if holding == "Touch" and touchHeld and touchStart and touchStart.Y - touchHeld.Position.Y >= SWIPE then
+        holding = nil
+        beginCharge("Touch")
+    end
     if holding then
         strike(true)
+    end
+    if charge then
+        local source = charge.Source
+        if source == "Touch" and (not touchHeld or touchHeld.UserInputState == Enum.UserInputState.End
+            or touchHeld.UserInputState == Enum.UserInputState.Cancel) then
+            endCharge(true)
+        elseif source == "Key" and not UserInputService:IsKeyDown(HEAVY_KEY) then
+            endCharge(true)
+        elseif source == "Gamepad" and not UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, HEAVY_PAD) then
+            endCharge(true)
+        elseif charge then
+            local kind, info = heavyPlan()
+            if info then
+                CombatFx.charge(player, kind, info, math.min(1, (os.clock() - charge.Since) / FormRules.HEAVY_HOLD))
+            end
+        end
     end
 end)
 UserInputService.WindowFocusReleased:Connect(function()
     holding = nil
+    if charge then
+        endCharge(false)
+    end
 end)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -257,14 +251,19 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         strike()
     elseif DRAW_KEYS[input.KeyCode] then
         toggleDrawn()
-    elseif input.KeyCode == Enum.KeyCode.Two then
-        nextForm()
+    elseif input.KeyCode == HEAVY_KEY then
+        beginCharge("Key")
+    elseif input.KeyCode == HEAVY_PAD then
+        beginCharge("Gamepad")
     end
 end)
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 and holding == "Mouse"
         or input.KeyCode == Enum.KeyCode.ButtonR2 and holding == "Gamepad" then
         holding = nil
+    end
+    if charge and (input.KeyCode == HEAVY_KEY and charge.Source == "Key" or input.KeyCode == HEAVY_PAD and charge.Source == "Gamepad") then
+        endCharge(true)
     end
 end)
 
@@ -300,6 +299,7 @@ if strikeButton then
         if input.UserInputType == Enum.UserInputType.Touch then
             holding = "Touch"
             touchHeld = input
+            touchStart = input.Position
             strike()
         end
     end)

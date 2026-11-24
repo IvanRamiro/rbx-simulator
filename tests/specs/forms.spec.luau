@@ -111,13 +111,13 @@ t.test("unlocking by realm, and which form a player fights with", function()
     t.falsy(FormRules.unlocked(42, 12))
     t.eq(FormRules.familyOf("Tiger"), "Spear")
     t.eq(FormRules.familyOf("Nope"), nil)
-    -- the chosen form is used when it is this weapon's and unlocked; otherwise the family's first
+    -- the chosen form is used when it is this weapon's and unlocked; otherwise the highest the realm has unlocked (there is no form button: nothing chooses)
     t.eq(FormRules.resolve("Sword", "Gale", 3), "Gale")
     t.eq(FormRules.resolve("Sword", "Gale", 2), "Crescent", "still locked")
-    t.eq(FormRules.resolve("Sword", "Tiger", 12), "Crescent", "a spear form on a sword")
+    t.eq(FormRules.resolve("Sword", "Tiger", 12), "Mountain", "a spear form on a sword")
     t.eq(FormRules.resolve("Spear", "Tiger", 12), "Tiger")
-    t.eq(FormRules.resolve("Spear", nil, 12), "Lancer")
-    t.eq(FormRules.resolve("Palm", "Gale", 12), "Fist")
+    t.eq(FormRules.resolve("Spear", nil, 12), "Tiger")
+    t.eq(FormRules.resolve("Palm", "Gale", 12), "Stone")
     t.eq(FormRules.resolve("Hammer", "Gale", 12), nil, "an unknown family")
 end)
 
@@ -177,7 +177,7 @@ t.test("plan: the strike a player makes now, chain and all", function()
     t.eq(gale.Form, "Gale")
     t.eq(gale.Step, 1)
     -- a spear form on a sword is ignored; an unknown family has no strike
-    t.eq(FormRules.plan("Sword", "Tiger", 12, base, nil, 0).Form, "Crescent")
+    t.eq(FormRules.plan("Sword", "Tiger", 12, base, nil, 0).Form, "Mountain")
     t.eq(FormRules.plan("Hammer", "Gale", 12, base, nil, 0), nil)
     -- a different realm of the same weapon gives the same chain: forms follow the weapon's family, not its tier
     local a = FormRules.plan("Spear", "Swallow", 6, { Damage = 16, Range = 18, Arc = 35, Cooldown = 0.85 }, nil, 0)
@@ -253,12 +253,66 @@ t.test("bare hands has three forms: Fist for everyone, Flurry from realm 3, Ston
     t.falsy(FormRules.unlocked("Stone", 5))
     t.ok(FormRules.unlocked("Stone", 6))
     t.eq(FormRules.resolve("Palm", "Stone", 6), "Stone")
-    t.eq(FormRules.resolve("Palm", "Stone", 5), "Fist", "still locked")
+    t.eq(FormRules.resolve("Palm", "Stone", 5), "Flurry", "still locked: the highest the realm has")
     t.eq(FormRules.resolve("Palm", "Flurry", 2), "Fist", "still locked")
-    t.eq(FormRules.resolve("Sword", "Flurry", 12), "Crescent", "a palm form on a sword")
+    t.eq(FormRules.resolve("Sword", "Flurry", 12), "Mountain", "a palm form on a sword")
     t.eq(FormRules.familyOf("Flurry"), "Palm")
     t.eq(FormRules.familyOf("Stone"), "Palm")
     t.eq(#FormRules.Families.Palm, 3)
+end)
+
+t.test("a heavy strike is the finisher at once, priced so that heavy alone never out-deals the chain", function()
+    local weapon = { Damage = 100, Range = 10, Arc = 90, Cooldown = 0.6 }
+    for id, form in FormRules.Forms do
+        local heavy = FormRules.heavy(id, weapon)
+        local finisher = FormRules.strike(id, #form.Chain, weapon)
+        t.ok(heavy.Heavy == true and heavy.Finisher == true, id .. ": a heavy strike is its finisher")
+        t.eq(heavy.Step, #form.Chain)
+        t.eq(heavy.Damage, finisher.Damage, id .. ": the finisher's damage")
+        t.eq(heavy.Range, finisher.Range)
+        t.eq(heavy.Arc, finisher.Arc)
+        t.eq(heavy.Reaction, finisher.Reaction)
+        t.ok(heavy.Cooldown >= finisher.Cooldown - 1e-9, id .. ": never quicker than the finisher")
+        -- the damage per second of throwing nothing but heavy strikes, against the chain's own
+        local heavyDps = heavy.Damage / heavy.Cooldown
+        local chainDps = FormRules.dps(id) * weapon.Damage / weapon.Cooldown
+        t.ok(heavyDps <= chainDps * (1 + 1e-9), id .. ": heavy alone " .. heavyDps .. " against the chain's " .. chainDps)
+    end
+end)
+
+t.test("plan with heavy gives the heavy strike from anywhere in the chain, and the chain starts again after it", function()
+    local weapon = { Damage = 100, Range = 10, Arc = 90, Cooldown = 0.6 }
+    local light = FormRules.plan("Sword", "Gale", 3, weapon, nil, 10, false)
+    t.eq(light.Step, 1)
+    t.falsy(light.Heavy)
+    local heavy = FormRules.plan("Sword", "Gale", 3, weapon, { Form = "Gale", Step = 1, At = 10 }, 10.4, true)
+    t.eq(heavy.Step, #FormRules.Forms.Gale.Chain)
+    t.ok(heavy.Heavy)
+    local after = FormRules.plan("Sword", "Gale", 3, weapon, { Form = heavy.Form, Step = heavy.Step, At = 10.4 }, 11.2, false)
+    t.eq(after.Step, 1, "the chain begins again after a heavy strike")
+    t.eq(FormRules.plan("Sword", "Gale", 3, weapon, nil, 10, "yes").Heavy, nil, "only true asks for a heavy strike")
+    t.eq(FormRules.plan("Sword", "Gale", 2, weapon, nil, 10, true).Form, "Crescent", "a locked form is not used, heavy or not")
+    t.ok(FormRules.HEAVY_HOLD > 0 and FormRules.HEAVY_HOLD < 1)
+end)
+
+t.test("with no form button the form is automatic: the highest the realm has unlocked, for every family", function()
+    for family, ids in FormRules.Families do
+        t.eq(FormRules.resolve(family, nil, nil), ids[1], family .. ": the first for anyone")
+        for realm = 1, 12 do
+            local expected = ids[1]
+            for _, id in ids do
+                if FormRules.Forms[id].UnlockRealm <= realm then
+                    expected = id
+                end
+            end
+            t.eq(FormRules.resolve(family, nil, realm), expected, family .. " at realm " .. realm)
+        end
+    end
+    t.eq(FormRules.resolve("Sword", nil, 1), "Crescent")
+    t.eq(FormRules.resolve("Sword", nil, 3), "Gale")
+    t.eq(FormRules.resolve("Sword", nil, 6), "Mountain")
+    t.eq(FormRules.resolve("Palm", nil, 3), "Flurry")
+    t.eq(FormRules.resolve("Palm", nil, 6), "Stone")
 end)
 
 t.finish("forms")
