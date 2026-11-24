@@ -607,7 +607,7 @@ local function watchEgg(egg)
         local prompt = egg.PrimaryPart and egg.PrimaryPart:FindFirstChildOfClass("ProximityPrompt")
         -- a helper (one who fought for the egg: HelperIds) may carry it on once RelayAt has passed; anyone else may not (the server checks too)
         local helper = false
-        for id in string.gmatch(tostring(egg:GetAttribute("HelperIds") or ""), "%d+") do
+        for id in string.gmatch(tostring(egg:GetAttribute("HelperIds") or ""), "%-?%d+") do
             if tonumber(id) == player.UserId then
                 helper = true
             end
@@ -869,7 +869,7 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
         if egg and egg:GetAttribute("OwnerUserId") == player.UserId then
             message:show("You dropped the egg! Pick it up within " .. config.DropTime .. "s.", "Warning")
         elseif egg then
-            for id in string.gmatch(tostring(egg:GetAttribute("HelperIds") or ""), "%d+") do
+            for id in string.gmatch(tostring(egg:GetAttribute("HelperIds") or ""), "%-?%d+") do
                 if tonumber(id) == player.UserId then
                     message:show("Your team's egg was dropped! Pick it up (F) and carry it home.", "Info")
                 end

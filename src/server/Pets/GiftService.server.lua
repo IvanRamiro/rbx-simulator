@@ -95,6 +95,11 @@ local function senderIssue(sender, instanceId)
         end
     end
     local issue = AuctionChecks.item({ kind = "Pet", pet = pet, petCount = #pets, paidOk = paidOk[sender], isCreatorPet = pet ~= nil and PetInventory.isCreatorPet(sender, pet.PetId) })
+    if issue then
+        -- (the Auction House's words, for a gift: "sell" becomes "give away")
+        issue = (string.gsub(issue, "can't sell", "can't give away"))
+        issue = (string.gsub(issue, "can't be sold", "can't be given away"))
+    end
     return issue, pet
 end
 
