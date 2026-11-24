@@ -93,6 +93,22 @@ local RETIME = {
     SwallowLow = { Wind = 0.07, Swing = 0.125, Tail = 0.222 },
     SwallowRising = { Wind = 0.075, Swing = 0.13, Tail = 0.225 },
     SpearThrust = { Wind = 0.17, Swing = 0.115, Tail = 0.565 },
+    -- THE CUTS, TOO (found by looking at the rendered trails, 2026-11-24): a cut swung a 90 to 180 degree arc in 0.085 to 0.14 s, five to eight frames, the tip moving five to nine
+    -- studs a frame at its fastest (up to 538 studs a second measured). A Roblox Trail joins one position a frame with straight lines, so each frame's slice of the blade was a long flat
+    -- quad and the swing drew as a few hard-edged slabs, never as an arc, whatever was done to the trail. Every cut now swings over at least 0.2 s (twelve frames), the time taken
+    -- from the tail (the clip's length, so the cadence, is unchanged).
+    SwordA = { Wind = 0.14, Swing = 0.2, Tail = 0.227 },
+    SwordB = { Wind = 0.13, Swing = 0.2, Tail = 0.237 },
+    SwordC = { Wind = 0.235, Swing = 0.2, Tail = 0.182 },
+    GaleSwift = { Wind = 0.07, Swing = 0.2, Tail = 0.063 },
+    GaleCross = { Wind = 0.06, Swing = 0.2, Tail = 0.073 },
+    GaleRush = { Wind = 0.085, Swing = 0.2, Tail = 0.048 },
+    MountainCut = { Wind = 0.2, Swing = 0.22, Tail = 0.13 },
+    MountainChop = { Wind = 0.22, Swing = 0.22, Tail = 0.11 },
+    MountainFall = { Wind = 0.7, Swing = 0.2, Tail = 0.4 },
+    SpearSlash = { Wind = 0.175, Swing = 0.2, Tail = 0.475 },
+    GaleSpin = { Wind = 0.07, Swing = 0.3, Tail = 0.047 }, -- (a full turn: its tip moved up to 652 studs a second, eleven studs a frame, in 0.22 s)
+    GaleStorm = { Wind = 0.15, Swing = 0.5, Tail = 0.2 }, -- (a leap and a spin: up to 408 studs a second in 0.33 s)
 } -- [clip name] = { Wind, Swing, Tail } in seconds
 local function timingOf(name, clip)
     local timing = { Clip = clip }
@@ -178,7 +194,15 @@ local HOLD_TIME = 5      -- seconds a weapon stays in the hand after the last st
 local SPEAR_LOW_TIME = 1.4 -- seconds a spear stays in its low stance after a thrust
 -- a weapon's turn in the fist, from the hand's grip attachment (whose -Z runs down the forearm): a
 -- sword's blade rises out of the fist; a spear's shaft runs along the forearm
+-- THE GRIP (the owner's reference, 2026-11-24: the sword hangs from a relaxed arm with its blade in line with the arm, pointing forward and down). The strike clips are keyed with the
+-- blade 80 degrees off the forearm (GRIP_TURN: tools/blender/animation), so a strike holds the weapon that way; at rest the grip turns the blade to GRIP_REST, nearly along the forearm,
+-- and back as a strike begins (GRIP_BLEND_IN, quick) and ends (GRIP_BLEND_OUT), the way a wrist rolls the blade into a cut. The hand stays straight: it is the weapon that turns in it.
 local GRIP_TURN = { Sword = CFrame.Angles(math.rad(80), 0, 0), Spear = CFrame.identity }
+-- The blade is 1.07 wide and 0.44 thick (ReplicatedStorage.Weapons.<id>.Glow) and in the strike grip its broad face lies along the swing; with the arm hanging that is flat: the broad face
+-- UP, the sword lying like a plank (measured in Play: the blade's thickness axis 0.93 vertical; the owner: "your sword direction is facing flat, not vertical"). At rest the grip also
+-- rolls the blade a quarter turn about its own length, so its broad face stands vertical and its edge looks down, as a sword hangs from a hand.
+local GRIP_REST = { Sword = CFrame.Angles(math.rad(16), 0, 0) * CFrame.Angles(0, 0, math.rad(90)), Spear = CFrame.identity }
+local GRIP_BLEND_IN, GRIP_BLEND_OUT = 0.07, 0.4 -- seconds to turn into the strike grip and back
 local PUNCHES = { WeaponClips.Clips.PunchRight, WeaponClips.Clips.PunchLeft } -- bare hands: right, then left
 local PUNCH_TIMINGS = { timingOf("PunchRight", PUNCHES[1]), timingOf("PunchLeft", PUNCHES[2]) }
 local SWING = { Palm = "PalmStrike" } -- a strike's sound at once (SoundCatalog; a weapon's plays with its blow)
@@ -478,7 +502,7 @@ local function weaponTrail(part, offset, a, b, p, glow, lifetime, faceCamera, tr
     trail.LightInfluence = 0
     trail.Texture = TEXTURES.Glow
     trail.TextureMode = Enum.TextureMode.Stretch
-    trail.Color = colorSequence({ { 0, p.Core }, { 1, glow } })
+    trail.Color = colorSequence({ { 0, p.Main:Lerp(p.Core, 0.3) }, { 1, glow } }) -- (the weapon's own colour, not white: a white sheet hid the blade)
     trail.Transparency = numberSequence({ { 0, transparency }, { 1, 1 } })
     trail.Parent = part
     return trail
@@ -619,6 +643,21 @@ local function watchHeld()
             local sheathedNow = entry.drawn and not drawn -- put back while it was drawn: at once, not when the strike's hold runs out
             entry.drawn = drawn
             local stale = (now > entry.untilTime and not drawn) or sheathedNow or player:GetAttribute("IsFlying") == true
+            -- the grip: the strike grip while a strike's pose is on the body (the pose, not the sword, says when: PoseController holds a strike's last pose for the next press), the rest grip otherwise
+            local pose = CombatFx.pose(player)
+            local gripping = pose == "Slash" or pose == "SpearSlash" or pose == "SpearThrust"
+            local step = (now - entry.gripAt) / (if gripping then GRIP_BLEND_IN else GRIP_BLEND_OUT)
+            entry.gripAt = now
+            local target = if gripping then 1 else 0
+            if entry.grip ~= target then
+                entry.grip = if gripping then math.min(1, entry.grip + step) else math.max(0, entry.grip - step)
+                local eased = entry.grip * entry.grip * (3 - 2 * entry.grip)
+                local turn = GRIP_REST[entry.kind]:Lerp(GRIP_TURN[entry.kind], eased)
+                local origin = entry.gripPoint.CFrame * turn
+                for _, w in entry.welds do
+                    w.weld.C0 = origin * w.offset
+                end
+            end
             local humanoid = entry.hand.Parent and entry.hand.Parent:FindFirstChildOfClass("Humanoid")
             if not entry.hand:IsDescendantOf(Workspace) or not humanoid or humanoid.Health <= 0
                 or player:GetAttribute("IsCultivating") == true or player:GetAttribute("WeaponId") ~= entry.weaponId
@@ -652,7 +691,8 @@ local function hold(player, kind, source, flying, tint, spec, p, element)
     local model, parts = weaponModel(source, tint, flying)
     -- a weapon's origin is its grip (its Hilt attribute is where the blade starts): in the fist,
     -- turned for its kind (GRIP_TURN)
-    local origin = gripPoint.CFrame * GRIP_TURN[kind]
+    local origin = gripPoint.CFrame * GRIP_REST[kind] -- (at rest; watchHeld turns it into the strike grip and back)
+    local welds = {}
     for part, offset in parts do
         part.Anchored = false
         part.Massless = true
@@ -661,6 +701,7 @@ local function hold(player, kind, source, flying, tint, spec, p, element)
         weld.Part0, weld.Part1 = hand, part
         weld.C0 = origin * offset
         weld.Parent = part
+        table.insert(welds, { weld = weld, offset = offset })
     end
     local body = model:FindFirstChild("Body")
     local trail = weaponTrail(body, parts[body], spec.from, spec.to, p, spec.glow or p.Main, spec.life, spec.faceCamera, spec.transparency)
@@ -668,7 +709,7 @@ local function hold(player, kind, source, flying, tint, spec, p, element)
     local edge = edgeTrail(body, parts[body], spec.from:Lerp(spec.to, 1 - EDGE_SHARE), spec.to, p, spec.glow or p.Main)
     edge.Enabled = false
     entry = { kind = kind, model = model, trail = trail, edge = edge, hand = hand, source = source, weaponId = player:GetAttribute("WeaponId"),
-        untilTime = os.clock() + HOLD_TIME }
+        untilTime = os.clock() + HOLD_TIME, trails = { trail }, edges = { edge }, welds = welds, gripPoint = gripPoint, grip = 0, gripAt = os.clock() }
     if not flying then -- (the flying sword has no profile: it keeps its own glow)
         entry.aura = WeaponAura.attach(body, parts[body], source.Name, { mine = player == Players.LocalPlayer, mode = "drawn", element = element })
         if entry.aura then -- (at once, so a strike that draws the weapon flares it too; tend refines this by distance)
@@ -681,12 +722,22 @@ local function hold(player, kind, source, flying, tint, spec, p, element)
 end
 
 -- the blow lands after the wind-up: the trail draws through it (to swingEnds, which a hit-stop puts back), and `effect` plays
+-- every trail a held weapon draws with (the sheet and the edge): on or off together
+local function setTrails(entry, on)
+    for _, trail in entry.trails do
+        trail.Enabled = on
+    end
+    for _, edge in entry.edges do
+        edge.Enabled = on
+    end
+end
+
 local function afterWindUp(player, entry, windUp, duration, root, effect)
     task.delay(windUp, function()
         if entry and held[player] == entry then
             local swing = {}
             entry.swing, entry.swingEnds = swing, os.clock() + duration
-            entry.trail.Enabled, entry.edge.Enabled = true, true
+            setTrails(entry, true)
             if entry.aura then
                 entry.aura:strike(duration + 0.2)
             end
@@ -695,7 +746,7 @@ local function afterWindUp(player, entry, windUp, duration, root, effect)
                     task.wait()
                 end
                 if entry.swing == swing and entry.trail.Parent then -- (a newer swing keeps drawing)
-                    entry.trail.Enabled, entry.edge.Enabled = false, false
+                    setTrails(entry, false)
                 end
             end)
         end
@@ -717,8 +768,12 @@ local function slashCrescent(slash, p, root, echo)
     local plate = host(frame, size, 0.5 / scale)
     local swing = slash.Timing.Swing / scale
     for _, face in { Enum.NormalId.Top, Enum.NormalId.Bottom } do
-        local gui, label = flat(face, TEXTURES.Slash, if echo then p.Core else p.Main:Lerp(p.Core, 0.25), if echo then 0.55 else 0.05)
-        gui.Brightness = 2.6
+        -- how much of the plate's light shows depends on the strike's strength (STRENGTH): a light cut's is a faint tinted sheet under the weapon's own trail, a finisher's is bright. It
+        -- was one opaque, near-white plate for every strike (Play, 2026-11-24: a wide hard-edged white band that hid the weapon and did not follow it).
+        local strength = slash.Strength or 0.6
+        local alpha = (0.14 + 0.5 * strength * strength) * (if echo then 0.6 else 1)
+        local gui, label = flat(face, TEXTURES.Slash, if echo then p.Core:Lerp(p.Main, 0.35) else p.Main:Lerp(p.Core, 0.12), 1 - alpha)
+        gui.Brightness = 0.9 + 0.7 * strength
         label.Rotation = if face == Enum.NormalId.Bottom then 180 else 0
         -- the tip travels along the plate's +Z (`along`): across the image from its left on the top face, and (the label
         -- turned half round) from its right on the bottom (seen in Play in slow motion from over the plate: the other way
@@ -743,35 +798,56 @@ end
 -- spear's trail colour; a sword's takes the palette's)
 local function holdSpec(kind, source, glow)
     if kind == "Spear" then
-        return { from = source:GetAttribute("Hilt") + Vector3.new(0, 0, 3.5), to = source:GetAttribute("Tip"),
+        local tip = source:GetAttribute("Tip") -- (the trail draws over the head and a little of the shaft, not six studs of it: a sheet the length of the spear hid the weapon)
+        return { from = tip + Vector3.new(0, 0, 2.6), to = tip,
             glow = glow, life = 0.2, faceCamera = true, transparency = 0.3 }
     end
     return { from = source:GetAttribute("Hilt") or Vector3.new(0, 0, 1.2), to = source:GetAttribute("Tip") or Vector3.new(0, 0, -4.3),
         life = 0.22, faceCamera = false, transparency = 0.2 }
 end
 
--- THE COMBO BUILDS (the owner, 2026-11-24: "the fourth attack becomes faster and more powerful, with stronger weapon trails ... the fifth creates a powerful impact"): the deeper a
--- strike is in its form's chain (info.Escalation, 0 at the first strike to 1 at the finisher) the longer and brighter its weapon trails
--- draw, the wider its light spreads and the higher its swing sounds.
+-- THE COMBO BUILDS, AND EVERY STRIKE HAS ITS OWN STRENGTH (the owner, 2026-11-24: "the fourth attack becomes faster and more powerful, with stronger weapon trails ... the fifth creates a
+-- powerful impact"; "light attacks should have controlled, elegant trails, strong attacks more pronounced, finishers a distinctive signature, trails should taper"): a strike's
+-- STRENGTH is its reaction grade (Light, Heavy, Launch: the finisher) and a little of its depth in its form's chain (info.Escalation, 0 at the first strike to 1 at the finisher). It sets how
+-- wide its trails draw (never wider than the weapon's own span, and the sheet narrows to a point as it fades), how long and how bright, and how far its flat slash light spreads.
+-- A light cut is a thin, short line; a finisher is wider, longer, brighter and shows a second, wider sheet behind the bright edge.
+local STRENGTH = { Light = 0.5, Heavy = 0.75, Launch = 1.0 }
 local function build(strike)
     return if strike and strike.info and strike.info.Escalation then strike.info.Escalation else 0
 end
-local function stronger(entry, escalation, finisher)
-    if not entry or escalation <= 0 then
+local function strengthOf(strike)
+    local info = strike and strike.info
+    return math.min(1.1, (STRENGTH[info and info.Reaction or "Light"] or 0.5) + 0.12 * build(strike))
+end
+local function stronger(entry, strike, finisher)
+    if not entry then
         return
     end
-    entry.trail.Lifetime *= 1 + 0.7 * escalation
-    entry.edge.Lifetime *= 1 + 0.5 * escalation
-    entry.trail.Brightness = 1 + 1.2 * escalation + (if finisher then 0.4 else 0)
-    entry.edge.Brightness = 1 + 1.2 * escalation
-end
-local function grown(slash, escalation)
-    if escalation <= 0 then
-        return slash
+    local strength = strengthOf(strike)
+    local life, edgeLife = (if finisher then 0.34 else 0.14) + 0.12 * strength, (if finisher then 0.3 else 0.16) + 0.1 * strength
+    -- the sheet narrows to nothing along its age and is mostly clear, so the weapon shows through it (Play, 2026-11-24: a full-width white band hid the blade in a spin); the bright
+    -- edge keeps a finer line of its own and carries the cut. Both widen, lengthen and brighten with the strike's strength.
+    local sheetWidth = numberSequence({ { 0, 0.55 * strength }, { 0.35, 0.4 * strength }, { 1, 0 } })
+    local edgeWidth = numberSequence({ { 0, math.min(1, 0.35 + strength * 0.5) }, { 1, 0 } })
+    local sheetFade = numberSequence({ { 0, 0.7 - 0.25 * strength }, { 0.5, 0.88 }, { 1, 1 } }) -- (fades out; no sudden end)
+    for _, trail in entry.trails do
+        trail.Lifetime = life
+        trail.WidthScale = sheetWidth
+        trail.Transparency = sheetFade
+        trail.Brightness = 0.5 + 0.7 * strength
     end
+    for _, edge in entry.edges do
+        edge.Lifetime = edgeLife
+        edge.WidthScale = edgeWidth
+        edge.Brightness = 1.4 + 1.2 * strength
+    end
+end
+local function grown(slash, strike)
+    local e = build(strike)
     local copy = table.clone(slash)
-    copy.Grow = (slash.Grow or 1.25) * (1 + 0.25 * escalation)
-    copy.Pitch = if slash.Pitch then slash.Pitch * (1 + 0.1 * escalation) else nil
+    copy.Strength = strengthOf(strike)
+    copy.Grow = (slash.Grow or 1.25) * (0.85 + 0.2 * copy.Strength) -- (a light cut's light is smaller than before, a finisher's about as it was)
+    copy.Pitch = if slash.Pitch then slash.Pitch * (1 + 0.1 * e) else nil
     return copy
 end
 
@@ -788,13 +864,12 @@ local function sword(player, p, root, step, strike)
         holdSpec("Sword", source), p, element)
     local timing, scale = strike.timing or slash.Timing, CombatFx.TimeScale
     if entry then -- the finisher's light hangs in the air longer
-        entry.trail.Lifetime, entry.edge.Lifetime = if slash.Finisher then 0.32 else 0.22, if slash.Finisher then 0.36 else 0.26
-        stronger(entry, build(strike), slash.Finisher)
+        stronger(entry, strike, slash.Finisher)
         if entry.aura then -- the blade starts to gather light as the wind-up starts (the flare comes with the swing)
             entry.aura:charge(timing.Wind / scale)
         end
     end
-    local lit = grown(slash, build(strike))
+    local lit = grown(slash, strike)
     afterWindUp(player, entry, timing.Wind / scale, timing.Swing / scale, root, function()
         Sfx.play("SwordSwing", root, lit.Pitch)
         formVoice(strike.info, root)
@@ -832,12 +907,12 @@ local function spear(player, p, root, step, strike)
     if entry and entry.aura then
         entry.aura:charge(timing.Wind / scale)
     end
-    stronger(entry, build(strike), strike.info and strike.info.Finisher)
+    stronger(entry, strike, strike.info and strike.info.Finisher)
     if step == 2 then
         afterWindUp(player, entry, timing.Wind / scale, timing.Swing / scale, root, function()
             Sfx.play("SpearSwing", root)
             formVoice(strike.info, root)
-            local cut = grown(strike.slash or SPEAR_SLASH, build(strike))
+            local cut = grown(strike.slash or SPEAR_SLASH, strike)
             slashCrescent(cut, p, root)
             if elementName then
                 elementBurst(elementName, root.CFrame * CFrame.new(cut.Centre + cut.Bulge.Unit * cut.Radius))
@@ -1436,8 +1511,8 @@ local function groundRing(root, color, size, life)
     local plate = host(CFrame.new(feet), Vector3.new(1, 0.05, 1), life + 0.1)
     local labels = {}
     for _, face in { Enum.NormalId.Top, Enum.NormalId.Bottom } do
-        local gui, label = flat(face, TEXTURES.Shockwave, color, 0.1)
-        gui.Brightness = 2.6
+        local gui, label = flat(face, TEXTURES.Shockwave, color, 0.35) -- (a ring that is seen as a ring and as the form's colour, not a white band over the body: Play, 2026-11-24)
+        gui.Brightness = 1.6
         gui.Parent = plate
         table.insert(labels, label)
     end

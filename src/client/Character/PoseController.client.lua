@@ -70,12 +70,14 @@ local STRIKES = {
     -- the ready stances, while a weapon is out after a strike. Sword: the right arm forward, the blade
     -- up before the body, the left drawn back. Spear: side-on, the shaft level at the hip, both hands on it.
     SwordReady = {
-        RightShoulder = pointLimb(Vector3.new(0.3, -0.75, -0.59)),
-        RightElbow = deg(55, 0, 0),
-        RightWrist = deg(-10, 0, 0),
-        LeftShoulder = pointLimb(Vector3.new(-0.32, -0.85, 0.42)),
-        LeftElbow = deg(30, 0, 0),
-        Waist = deg(0, 12, 0),
+        -- the owner's reference (2026-11-24): the arm hangs relaxed at the side, a little forward, the forearm bent slightly, the hand straight on the forearm; the blade (CombatFx turns
+        -- the grip to GRIP_REST) runs in line with the arm, pointing forward and down
+        RightShoulder = pointLimb(Vector3.new(0.2, -0.9, -0.38)),
+        RightElbow = deg(32, 0, 0),
+        RightWrist = deg(0, 0, 0),
+        LeftShoulder = pointLimb(Vector3.new(-0.22, -0.95, 0.2)),
+        LeftElbow = deg(12, 0, 0),
+        Waist = deg(0, 8, 0),
     },
     SpearReady = {
         RightShoulder = pointLimb(Vector3.new(-0.29, -0.73, -0.62)),
@@ -241,6 +243,8 @@ local QINGGONG_POSES = {
 }
 local QINGGONG_BLEND_SPEED = 16 -- the leap poses snap in: a stride lasts only a fifth of a second
 local SLASH_BLEND_SPEED = 60    -- a strike follows its keys closely: its swing lasts a tenth of a second
+local SMOOTH_LEAD = 0.025     -- seconds the clip is read ahead, to make up for the low-pass's lag
+local SMOOTH_RATE = 40         -- per second: the strike pose's low-pass (a time constant of 25 ms, a frame and a half at 60 fps)
 local SLASH_RELEASE_SPEED = 9  -- a strike's last pose relaxes into the ready stance, or the walk, slowly: a snap back would be a jerk in the weapon's path
 local STANCE_MAX_SPEED = 3      -- studs a second: above this, a spear's stance gives way to arms only
 local JOINT_CHECK = 0.5         -- seconds between checks that a rig's joints are still its own
@@ -306,7 +310,7 @@ local function choosePose(player, character, rig)
         local name = CombatFx.clipName(player) -- (a form's own keyed strike, if it has one for this step)
             or if strikeName == "Slash" then SWORD_CLIPS[step] elseif strikeName == "Palm" then PUNCH_CLIPS[step] else strikeName
         local whole = standingStill(player, character)
-        clipPose(rig.slash, name, elapsed, whole)
+        clipPose(rig.slash, name, elapsed + SMOOTH_LEAD, whole)
         -- the strike before this one is still in the body for a moment: ease from its pose into this one's, so a combo is one movement and not clips cut together
         local fromPose, fromStep, fromClip, fromElapsed, fromWeight = CombatFx.blendFrom(player)
         if fromPose and (fromPose == "Slash" or fromPose == "SpearSlash" or fromPose == "SpearThrust" or fromPose == "Palm") then
@@ -321,6 +325,24 @@ local function choosePose(player, character, rig)
                     end
                 end
             end
+        end
+        -- a short low-pass over the strike's pose (SMOOTH_RATE): a key that jumps in one frame (measured in Play at a steady 60 fps: a spear point crossing 1.2 to 2.1 studs
+        -- in one frame, then standing still) arrives over two or three frames as a quick eased move, never a snap; the clip is read a frame and a half ahead to make up for it
+        local now = os.clock()
+        local smooth = rig.slashSmooth
+        if not smooth or now - (rig.slashSmoothAt or 0) > 0.15 then
+            smooth = {}
+            rig.slashSmooth = smooth
+        end
+        local k = 1 - math.exp(-SMOOTH_RATE * math.min(now - (rig.slashSmoothAt or now), 0.05))
+        rig.slashSmoothAt = now
+        for joint, cframe in rig.slash do
+            local before = smooth[joint]
+            if before and k > 0 then
+                cframe = before:Lerp(cframe, math.max(k, 0.0001))
+                rig.slash[joint] = cframe
+            end
+            smooth[joint] = cframe
         end
         strike = rig.slash
     end

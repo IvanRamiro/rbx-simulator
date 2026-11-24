@@ -27,6 +27,7 @@ local Profiles = require(script.Parent:WaitForChild("WeaponAuraProfiles"))
 local Styles = require(script.Parent:WaitForChild("WeaponAuraStyles"))
 local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
 
+local WAKE_IN_COMBAT = false -- see WeaponAura:setDetail
 local WeaponAura = {}
 
 local TEX = Styles.Textures
@@ -630,7 +631,10 @@ function Aura:refresh()
         end
     end
     if self.wake then
-        self.wake.Enabled = detail >= 2 and drawn
+        -- The aura's own wake is off while a weapon is drawn in combat (the owner, 2026-11-24: smooth curved trails, no oversized or doubled effects): CombatFx draws the swing's trails
+        -- (a sheet and a bright edge, with ghost samples between frames so a fast cut is a curve), and this third per-frame trail over them made the heavy white angular band seen in
+        -- Play. Left built, so a profile can bring it back (WAKE_IN_COMBAT).
+        self.wake.Enabled = WAKE_IN_COMBAT and detail >= 2 and drawn
     end
     if self.light then
         self.light.Enabled = detail >= 2 and drawn

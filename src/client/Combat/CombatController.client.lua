@@ -160,6 +160,7 @@ refreshSlot()
 -- camera's and strikes nothing.
 local TAP_TIME, TAP_MOVE, HOLD_AFTER = 0.35, 14, 0.25
 local finger = nil -- { Input, Start, At }: a finger down on the world, not yet known to be a tap, a hold or a drag
+local holdOrigin = nil -- where a hold on the world began (nil for a hold on the Strike button)
 
 -- while a strike input is held, the next strike comes at each cancel point; letting go (or the window losing focus) stops it
 RunService.Heartbeat:Connect(function()
@@ -171,7 +172,7 @@ RunService.Heartbeat:Connect(function()
         or touchHeld.UserInputState == Enum.UserInputState.Cancel) then
         -- (the finger that began the hold has lifted, wherever: its button's own InputEnded only fires when it lifts over the button. UserInputService has no
         -- GetTouches: this line called it from 2026-11-18, and on every frame of a held Strike tap on a phone it raised an error and the hold never repeated)
-        holding = nil
+        holding, holdOrigin = nil, nil
     end
     if finger then
         local input = finger.Input
@@ -186,9 +187,15 @@ RunService.Heartbeat:Connect(function()
             finger = nil
         elseif os.clock() - finger.At >= HOLD_AFTER then
             holding, touchHeld = "Touch", input -- held still: it keeps striking
+            holdOrigin = finger.Start
             finger = nil
             strike()
         end
+    end
+    -- a finger that began a hold on the world and then moves is the camera's (measured in the touch emulator, 2026-11-24: a drag that began 0.33 s after the touch kept striking): the
+    -- striking stops. (A finger on the Strike button may slide, so its origin is not kept.)
+    if holding == "Touch" and holdOrigin and touchHeld and (touchHeld.Position - holdOrigin).Magnitude > TAP_MOVE * 1.5 then
+        holding, holdOrigin = nil, nil
     end
     if holding then
         strike(true)
@@ -253,6 +260,7 @@ if strikeButton then
         if input.UserInputType == Enum.UserInputType.Touch then
             holding = "Touch"
             touchHeld = input
+            holdOrigin = nil
             strike()
         end
     end)
