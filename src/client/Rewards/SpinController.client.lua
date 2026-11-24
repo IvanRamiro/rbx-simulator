@@ -666,6 +666,16 @@ local function winSound(won)
     end
 end
 
+-- On a phone the window is wide and covers the wheel the player is spinning (the wheel is in the world, the window over it): it steps away while their spin
+-- turns, and comes back when the prize is told (or after a while, if the answer is lost), so the player sees the wheel stop and can spin again at once.
+local closedForSpin = 0
+local function reopenAfterSpin(this)
+    if closedForSpin == this and not window.isOpen() and distanceToWheel() <= NEAR then
+        closedForSpin = 0
+        openWindow()
+    end
+end
+
 RemoteEvents.SpinEvent.OnClientEvent:Connect(function(kind, data)
     if kind == "Open" then
         if marker then
@@ -681,6 +691,12 @@ RemoteEvents.SpinEvent.OnClientEvent:Connect(function(kind, data)
         waiting = false
         myTurnUntil = os.clock() + config.Seconds + SETTLE
         renderWindow()
+        if Hud.isCompact() and window.isOpen() then
+            local this = os.clock()
+            closedForSpin = this
+            window.close()
+            task.delay(config.Seconds + SETTLE + 4, reopenAfterSpin, this) -- (the fallback: the prize's own word reopens it sooner)
+        end
     elseif kind == "Turn" and typeof(data) == "table" then
         runTurn(data)
         renderWindow()
@@ -696,6 +712,9 @@ RemoteEvents.SpinEvent.OnClientEvent:Connect(function(kind, data)
             else "You won " .. data.Text .. (if string.find(data.Text, "[!.]$") then "" else "!")
         message:show(text, "Reward")
         renderWindow()
+        if closedForSpin ~= 0 then
+            task.delay(1.8, reopenAfterSpin, closedForSpin) -- (long enough to see the wheel rest and read the notice)
+        end
     elseif kind == "Bought" and typeof(data) == "table" and typeof(data.Spins) == "number" then
         Sfx.play("PremiumPurchase")
         message:show("+" .. data.Spins .. (if data.Spins == 1 then " spin!" else " spins!") .. " They're yours until you use them. Thank you for supporting the game!", "Reward")

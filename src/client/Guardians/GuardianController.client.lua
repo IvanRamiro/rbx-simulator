@@ -273,6 +273,19 @@ local function placeTakeMarks(camera, now)
                     end
                 end
             end
+            -- nor under the HUD's own columns and bar (the left column, the quest panel, the inventory bar): the marks are drawn beneath them, so a
+            -- word there is half hidden and reads as a glitch (a phone's left column is wide). It goes, and the panel's arrow still points the way
+            if visible then
+                for _, piece in { Hud.Status, Hud.Quest, Hud.Dock } do
+                    if piece.Visible and piece.AbsoluteSize.X > 1 and piece.AbsoluteSize.Y > 1 then
+                        local left, top = piece.AbsolutePosition.X, piece.AbsolutePosition.Y
+                        if box[1] < left + piece.AbsoluteSize.X and box[2] > left and box[3] < top + piece.AbsoluteSize.Y and box[4] > top then
+                            visible = false
+                            break
+                        end
+                    end
+                end
+            end
             if visible then
                 table.insert(placed, box)
             end
