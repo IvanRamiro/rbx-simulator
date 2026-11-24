@@ -37,7 +37,7 @@ OUT = G.OUT_DIR
 REPO = W.REPO
 CACHE = os.path.join(REPO, "renders", "tiangou_v3", "lows.blend")
 
-CLAY = {"coat": (0.10, 0.13, 0.30), "fire": (0.85, 0.9, 1.0), "tooth": (0.8, 0.76, 0.62), "nose": (0.02, 0.02, 0.03), "eyes": (1.0, 0.7, 0.1), "pupils": (0.02, 0.0, 0.0),
+CLAY = {"coat": (0.10, 0.13, 0.30), "fire": (0.85, 0.9, 1.0), "tooth": (0.8, 0.76, 0.62), "nose": (0.02, 0.02, 0.03), "nostril": (0.0, 0.0, 0.0), "eyes": (1.0, 0.7, 0.1), "pupils": (0.02, 0.0, 0.0),
         "eclipse": (0.03, 0.03, 0.06), "corona": (0.8, 0.9, 1.0), "core": (1.0, 0.85, 0.5)}
 REAL = {}
 
@@ -200,8 +200,11 @@ def build_hi(coll, P=None, voxel=0.15):
     P = P or Md.default_params()
     parts = {}
     body = Md.hi_blob("TG3_Body", coll, _mat("coat"), Md.body_lobes(P), voxel)
-    skull = Md.hi_blob("TG3_Skull", coll, _mat("coat"), Md.skull_lobes(P), voxel * 0.5, 0.5, 0.012)
-    jaw = Md.hi_blob("TG3_Jaw", coll, _mat("coat"), Md.jaw_lobes(P), voxel * 0.5, 0.5, 0.012)
+    G.soften(body, 16)
+    skull = Md.hi_blob("TG3_Skull", coll, _mat("coat"), Md.skull_lobes(P), voxel * 0.4, 0.9, 0.006)
+    G.soften(skull, 4)
+    jaw = Md.hi_blob("TG3_Jaw", coll, _mat("coat"), Md.jaw_lobes(P), voxel * 0.4, 0.9, 0.006)
+    G.soften(jaw, 3)
     iris, pupil, lids = Md.eyes(P, skull)
     up, low = Hm.Hi(), Hm.Hi()
     Md.teeth(P, up, low)
@@ -211,7 +214,7 @@ def build_hi(coll, P=None, voxel=0.15):
     Md.nose_pad(nose, P)
     parts["Pelt"] = {"body": body, "claws": _hi(claw, "TG3_Claws", coll, ["tooth"])}
     parts["Skull"] = {"skull": skull, "jaw": jaw, "lids": _hi(lids, "TG3_Lids", coll, ["coat"]), "teeth_up": _hi(up, "TG3_TeethUp", coll, ["tooth"]),
-                      "teeth_low": _hi(low, "TG3_TeethLow", coll, ["tooth"]), "nose": _hi(nose, "TG3_Nose", coll, ["nose"])}
+                      "teeth_low": _hi(low, "TG3_TeethLow", coll, ["tooth"]), "nose": _hi(nose, "TG3_Nose", coll, ["nose", "nostril"])}
     fire = Md.build_fire(P)
     parts["Fire"] = {"fire": _hi(fire.hi, "TG3_Fire", coll, ["fire"])}
     parts["Fire"]["fire"]["spans"] = repr(fire.spans)
@@ -260,6 +263,26 @@ def _clean(obj, fix_winding=False):
     bmesh.ops.dissolve_degenerate(bm, edges=bm.edges, dist=1e-4)
     if fix_winding:
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    # loose vertices and tiny islands (a voxel remesh leaves a few at thin tips) are removed
+    bm.verts.ensure_lookup_table()
+    seen, drop = set(), []
+    for v in bm.verts:
+        if v.index in seen:
+            continue
+        comp, stack = [], [v]
+        seen.add(v.index)
+        while stack:
+            a = stack.pop()
+            comp.append(a)
+            for e in a.link_edges:
+                b = e.other_vert(a)
+                if b.index not in seen:
+                    seen.add(b.index)
+                    stack.append(b)
+        if len(comp) < 12 and len(bm.verts) > 200:
+            drop += comp
+    if drop:
+        bmesh.ops.delete(bm, geom=drop, context="VERTS")
     bm.to_mesh(obj.data)
     bm.free()
     obj.data.update()
@@ -325,7 +348,7 @@ def make_lows(parts, coll):
         for key, target in plan:
             c = _copy(parts[piece][key], "low_%s_%s" % (piece.lower(), key), coll)
             _reduce(c, target)
-            _clean(c, fix_winding=key in ("lids", "nose"))
+            _clean(c, fix_winding=key in ("lids", "nose", "teeth_up", "teeth_low"))
             if key == "body":
                 bind_smooth(c, BODY_BONES, 0.5, 3, 0.5)
             elif key == "skull":
@@ -482,6 +505,97 @@ def show_hi(parts, on=True):
             o.hide_render = not on
 
 
+def closeups(path, hi=True, flat=False, size=520):
+    """Head from the front, the side and three-quarters, the chest and neck join, the ruff and the plume (the high-detail model with the real shaders, or with
+    flat=True the baked game meshes in Roblox-like flat lighting)."""
+    shots = [(-8, 4, 17, (0, 16, -18.5)), (-90, 3, 17, (0, 16, -18)), (-40, 8, 18, (0, 16, -17.5)), (-62, 8, 24, (0, 11.5, -8.5)), (-50, 14, 26, (0, 15, -10)), (150, 12, 42, (0, 10, 12))]
+    if flat:
+        flat_scene(size)
+        scene, cam = bpy.context.scene, bpy.data.objects["TG3Cam"]
+        tmp = path + ".tile.png"
+        tiles = [T._shot(scene, cam, y, p, d, W.rb(*c), size, tmp) for y, p, d, c in shots]
+        T._sheet(tiles, 3, path, size)
+        flat_restore()
+        if os.path.exists(tmp):
+            os.remove(tmp)
+    else:
+        look(path, shots, size=size, samples=40, columns=3)
+
+
+def flat_scene(size):
+    """Roblox-like flat lighting: every baked piece shows its colour map unlit (an emission of it), every Neon piece its own colour; no shadows, no specular."""
+    scene = bpy.context.scene
+    scene.render.engine = "CYCLES"
+    setup_gpu()
+    scene.cycles.samples = 16
+    scene.cycles.use_denoising = True
+    scene.view_settings.view_transform = "Standard"
+    scene.view_settings.look = "None"
+    scene.render.resolution_x = scene.render.resolution_y = size
+    world = bpy.data.worlds.get("TG3Flat") or bpy.data.worlds.new("TG3Flat")
+    world.use_nodes = True
+    bg = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
+    bg.inputs[0].default_value = (0.2, 0.3, 0.5, 1)
+    bg.inputs[1].default_value = 1.0
+    scene.world = world
+    cam = bpy.data.objects.get("TG3Cam")
+    if not cam:
+        data = bpy.data.cameras.new("TG3Cam")
+        data.lens = 60
+        cam = bpy.data.objects.new("TG3Cam", data)
+        scene.collection.objects.link(cam)
+    scene.camera = cam
+    for o in bpy.data.objects:
+        if o.type == "MESH" and o.name in GAME_NAMES:
+            o.hide_render = False
+            if o.name in NEON:
+                # a Neon piece of its own colour (the pieces share one glow material in the FBX)
+                hx = NEON[o.name]
+                tmp = bpy.data.materials.new("FlatNeon_" + o.name)
+                tmp.use_nodes = True
+                tn = tmp.node_tree
+                for nd in list(tn.nodes):
+                    tn.nodes.remove(nd)
+                out = tn.nodes.new("ShaderNodeOutputMaterial")
+                em = tn.nodes.new("ShaderNodeEmission")
+                em.inputs["Color"].default_value = (*[(int(hx[i:i + 2], 16) / 255) ** 2.2 for i in (0, 2, 4)], 1)
+                tn.links.new(em.outputs[0], out.inputs["Surface"])
+                FLAT_UNDO.append(("swap", o, list(o.data.materials)))
+                o.data.materials.clear()
+                o.data.materials.append(tmp)
+                continue
+            mats = []
+            for m in o.data.materials:
+                t = m.node_tree
+                out = next(n for n in t.nodes if n.type == "OUTPUT_MATERIAL")
+                img = t.nodes.get("color")
+                em = t.nodes.new("ShaderNodeEmission")
+                if img is not None:
+                    t.links.new(img.outputs["Color"], em.inputs["Color"])
+                old = out.inputs["Surface"].links[0].from_socket if out.inputs["Surface"].links else None
+                t.links.new(em.outputs[0], out.inputs["Surface"])
+                mats.append((t, out, old, em))
+            FLAT_UNDO.append(mats)
+
+
+FLAT_UNDO = []
+
+
+def flat_restore():
+    for mats in FLAT_UNDO:
+        if isinstance(mats, tuple):
+            _, o, old = mats
+            o.data.materials.clear()
+            for m in old:
+                o.data.materials.append(m)
+            continue
+        for t, out, old, em in mats:
+            t.nodes.remove(em)
+            if old is not None:
+                t.links.new(old, out.inputs["Surface"])
+    FLAT_UNDO.clear()
+
+
 # ---------------------------------------------------------------- maps, the FBX, the placements
 BAKES = {"Pelt": dict(size=2048, small=1024, ray=0.25, extrusion=0.10), "Skull": dict(size=2048, small=1024, ray=0.18, extrusion=0.06)}
 NEON = {"Eclipse": Mt.ECLIPSE_HEX, "Corona": Mt.CORONA_HEX, "CoronaCore": Mt.CORE_HEX, "Eyes": Mt.EYE_HEX, "Pupils": Mt.PUPIL_HEX}
@@ -507,15 +621,17 @@ def fire_maps(lows):
     import numpy as np
     import egg_bake as Bk
     size = 256
-    v = (np.arange(size) / (size - 1)) / 0.84
+    v = (np.arange(size)[:, None] / (size - 1)) / 0.84
     u = np.arange(size)[None, :] / (size - 1)
-    t = np.clip(v, 0, 1)
-    stops = [(0.0, Mt.FIRE_ROOT), (0.22, Mt.FIRE_MID), (0.7, (0.40, 0.58, 1.0)), (1.0, Mt.FIRE_TIP)]
-    col = np.zeros((size, size, 3))
+    t = np.clip(v, 0, 1) * np.ones((1, size))
+    stops = [(0.0, Mt.FIRE_ROOT), (0.25, (1.0, 0.96, 0.9)), (0.65, (0.82, 0.9, 1.0)), (1.0, Mt.FIRE_MID)]
+    base = np.zeros((size, size, 3))
     for c in range(3):
-        col[:, :, c] = np.interp(t, [a for a, _ in stops], [b[c] for _, b in stops])[:, None] * np.ones((1, size))
-    flick = 0.9 + 0.1 * np.sin(u * 6.28318 * 3.0 + v[:, None] * 9.0)
-    col = np.clip(col * flick[..., None], 0, 1) ** (1 / 2.2)
+        base[:, :, c] = np.interp(t[:, 0], [a for a, _ in stops], [b[c] for _, b in stops])[:, None] * np.ones((1, size))
+    core = np.sin(u * 6.28318) ** 2 * np.ones((size, 1))
+    edge = np.array(Mt.FIRE_TIP)[None, None, :]
+    w = ((1.0 - core) * 0.85)[..., None]
+    col = np.clip(base * (1 - w) + edge * w, 0, 1) ** (1 / 2.2)
     images = {"color": col, "normal": np.dstack([np.full((size, size), 0.5), np.full((size, size), 0.5), np.ones((size, size))]), "roughness": np.full((size, size, 3), 0.9),
               "metalness": np.zeros((size, size, 3))}
     made = {}
@@ -717,6 +833,7 @@ def build_final(out_blend=None, placements=None, report=None):
     baked_looks(lows, os.path.join(REPO, "renders", "tiangou_v3"))
     glow_material_for_neon(lows)
     path = export_fbx(lows)
+    closeups(os.path.join(REPO, "renders", "tiangou_v3", "closeups_flat.png"), flat=True)
     notes = {}
     if placements:
         notes["AddBones"] = write_placements(placements, lows)
@@ -1035,3 +1152,7 @@ if __name__ == "__main__":
         print("FINAL " + json.dumps(build_final(blend, pl, rp), default=str))
     if stage == "scrub":
         print("scrubbed, hits left:", scrub_fbx(os.path.join(OUT, NAME + ".fbx")))
+    if stage == "closeups":
+        parts, lows = build_lows(real=True)
+        show_hi(parts)
+        closeups(os.path.join(out_dir, "closeups_hi.png"))
