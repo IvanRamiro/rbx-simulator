@@ -23,7 +23,7 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local C = UiTheme.Colors
 
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 local PLATE_DISTANCE = if Quality.Low then 55 else 90 -- studs past which a nameplate isn't drawn (nearer on a phone)
 local ROW = 68 -- room for a two-line How at the readable text floor (UI audit 2026-11-11: six were cut off)
 

@@ -9,7 +9,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local WeatherRules = require(ReplicatedStorage:WaitForChild("WeatherRules"))
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 
 local player = Players.LocalPlayer
 

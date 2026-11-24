@@ -14,7 +14,7 @@ PetRig.Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sf
 PetRig.PetSounds = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("PetSounds"))
 PetRig.LIGHT_REACH = 26 -- studs: the farthest a pet's light reaches, whatever its size (PetRig.update holds big pets' lights to it)
 PetRig.VOICE_EVERY = { 9, 18 } -- seconds between a pet's calls while it idles in the world (PetSounds)
-PetRig.Quality = require(script.Parent.Parent:WaitForChild("Quality")) -- the phone tier: other players' pets drop their lights
+PetRig.Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality")) -- the phone tier: other players' pets drop their lights
 
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 

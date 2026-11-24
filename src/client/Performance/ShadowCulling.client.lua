@@ -12,7 +12,7 @@
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent:WaitForChild("Quality"))
 
 local SHADOW_DISTANCE = if Quality.Low then 120 else 200 -- studs from the camera
 local BIG = 60          -- a part with a side this long keeps its shadow at any distance

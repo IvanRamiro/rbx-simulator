@@ -25,7 +25,7 @@ local RunService = game:GetService("RunService")
 
 local Profiles = require(script.Parent:WaitForChild("WeaponAuraProfiles"))
 local Styles = require(script.Parent:WaitForChild("WeaponAuraStyles"))
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 
 local WAKE_IN_COMBAT = false -- see WeaponAura:setDetail
 local WeaponAura = {}

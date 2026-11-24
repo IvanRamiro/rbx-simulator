@@ -20,7 +20,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
 
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 
 local PetHeft = {}

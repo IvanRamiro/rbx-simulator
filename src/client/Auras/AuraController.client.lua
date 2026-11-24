@@ -13,7 +13,7 @@ local RealmAura = require(script.Parent:WaitForChild("RealmAura"))
 local BreakthroughFx = require(script.Parent:WaitForChild("BreakthroughFx"))
 local BreakthroughShow = require(script.Parent:WaitForChild("BreakthroughShow"))
 local BreakthroughStyles = require(script.Parent:WaitForChild("BreakthroughStyles"))
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 
 -- another player's breakthrough plays only within this many studs of the camera (release audit, 2026-11-12: every rank-up anywhere
 -- on the map played)

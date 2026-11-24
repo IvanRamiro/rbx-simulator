@@ -21,7 +21,7 @@ local Workspace = game:GetService("Workspace")
 
 local WeatherConfig = require(ReplicatedStorage:WaitForChild("WeatherConfig"))
 local WeatherRules = require(ReplicatedStorage:WaitForChild("WeatherRules"))
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 
 local player = Players.LocalPlayer
 local STATES = WeatherConfig.States

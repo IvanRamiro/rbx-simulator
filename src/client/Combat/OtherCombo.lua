@@ -10,7 +10,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local FormRules = require(ReplicatedStorage:WaitForChild("FormRules"))
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local UiKit = require(UI:WaitForChild("UiKit"))
 

@@ -25,7 +25,7 @@ local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
 local Auras = script.Parent.Parent:WaitForChild("Auras")
 local Styles = require(Auras:WaitForChild("BreakthroughStyles"))
 local AuraKit = require(Auras:WaitForChild("AuraKit"))
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 
 local RunFx = {}
 

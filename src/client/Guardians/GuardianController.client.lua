@@ -33,7 +33,7 @@ local WorldMarkers = require(script.Parent.Parent:WaitForChild("UI"):WaitForChil
 
 local player = Players.LocalPlayer
 
-local LOW = require(script.Parent.Parent:WaitForChild("Quality")).Low
+local LOW = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality")).Low
 local ANIMATE_DISTANCE = if LOW then 150 else 400
 local NEAR_DISTANCE = 130 -- studs: its wake and weak messages, and the weakened outline, are for players this near
 

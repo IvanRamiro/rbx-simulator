@@ -23,7 +23,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 local UiKit = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("UiKit"))
 
 local MutationLook = {}

@@ -4,7 +4,7 @@
 -- every arrival is thinned once.
 local Workspace = game:GetService("Workspace")
 
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent:WaitForChild("Quality"))
 
 if not Quality.Low then
     return

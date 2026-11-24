@@ -36,7 +36,7 @@ GuardianAnim.__index = GuardianAnim
 
 local Players = game:GetService("Players")
 
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 
 -- A joint not in rig.Springs: quick and a little springy (limbs), no drag.
 local DEFAULT_SPRING = { Freq = 9, Damping = 0.75, Drag = 0 }

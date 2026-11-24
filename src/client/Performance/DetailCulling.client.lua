@@ -18,7 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent:WaitForChild("Quality"))
 
 local K = if Quality.Low then 55 else 90
 local MIN_CULL = 150      -- never taken out nearer than this, whatever its size

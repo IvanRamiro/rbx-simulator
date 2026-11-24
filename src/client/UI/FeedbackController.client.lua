@@ -18,7 +18,7 @@ local HudMetrics = require(script.Parent:WaitForChild("HudMetrics"))
 local Toast = require(script.Parent:WaitForChild("Toast"))
 local UiKit = require(script.Parent:WaitForChild("UiKit"))
 local UiTheme = require(script.Parent:WaitForChild("UiTheme"))
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 
 local C = UiTheme.Colors
 local RULES = GameConfig.Feedback

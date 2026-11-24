@@ -13,7 +13,7 @@ local Workspace = game:GetService("Workspace")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent:WaitForChild("Quality"))
 
 local player = Players.LocalPlayer
 local FIRST_REPORT, REPORT_EVERY = 60, 120 -- seconds (the first after the loading has settled)

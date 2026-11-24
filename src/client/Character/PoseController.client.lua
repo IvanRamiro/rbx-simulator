@@ -9,7 +9,7 @@ local QinggongFx = require(script.Parent.Parent:WaitForChild("Qinggong"):WaitFor
 local CombatFx = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("CombatFx"))
 local MeditationPoses = require(script.Parent:WaitForChild("MeditationPoses"))
 local WeaponClips = require(script.Parent:WaitForChild("WeaponClips"))
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 
 local BLEND_SPEED = 6
 local FLYING_MOVE_SPEED = 4

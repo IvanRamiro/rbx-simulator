@@ -35,7 +35,7 @@ local ORBIT_HEIGHT = 1.6
 local ORBIT_SPEED = 0.6
 local updateWarned = {} -- [petId] = true once its update has failed and been reported
 local NOVA_INTERVAL = 25
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 local CULL_DISTANCE = if Quality.Low then 80 else 250 -- studs from the camera: other players' pets farther away are hidden and not animated
 local RANK_CHECK_INTERVAL = 0.5
 -- Another player's pets farther from the camera pose less often: every 2nd frame past LOD_HALF, every 3rd past LOD_THIRD

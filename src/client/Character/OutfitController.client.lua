@@ -19,7 +19,7 @@ local UiTheme = require(script.Parent.Parent:WaitForChild("UI"):WaitForChild("Ui
 local player = Players.LocalPlayer
 
 local OUTFIT_TAG = "WornOutfit"
-local SWAY_DISTANCE = if require(script.Parent.Parent:WaitForChild("Quality")).Low then 40 else 120
+local SWAY_DISTANCE = if require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality")).Low then 40 else 120
 local COLLECT_RETRY = 1 -- seconds between looks for a robe's pieces that haven't all arrived
 local UP = Vector3.new(0, 1, 0)
 

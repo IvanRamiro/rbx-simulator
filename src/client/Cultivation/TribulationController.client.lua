@@ -23,7 +23,7 @@ local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
 
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 local SIGHT = if Quality.Low then 160 else 320 -- studs from the camera past which another's tribulation isn't drawn (nearer on a phone)
 local CLOUD = "rbxassetid://16867371255" -- a billowy cloud that swells and thins (Smoke and Cloud Texture Library, 4x4)
 local STORM_DARK, STORM_LIT = Color3.fromRGB(34, 30, 52), Color3.fromRGB(86, 74, 120)

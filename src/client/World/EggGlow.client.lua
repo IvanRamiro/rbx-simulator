@@ -13,7 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
-local LOW = require(script.Parent.Parent:WaitForChild("Quality")).Low
+local LOW = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality")).Low
 
 local TAG = GameConfig.EggGlowTag
 local HIGHLIGHT_RANGE = if LOW then 90 else 140

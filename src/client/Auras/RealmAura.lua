@@ -23,7 +23,7 @@
 -- the camera (Roblox draws at most 31 Highlights per client).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Quality = require(script.Parent.Parent:WaitForChild("Quality"))
+local Quality = require(script.Parent.Parent:WaitForChild("Performance"):WaitForChild("Quality"))
 local BodyLightning = require(script.Parent:WaitForChild("BodyLightning")) -- Realm 7's unique feature, built in code (2026-11-23)
 
 local RealmAura = {}
