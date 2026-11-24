@@ -31,7 +31,7 @@ local C = UiTheme.Colors
 local WALK_AWAY = 30
 
 -- ---------- the Spirit Stones counter ----------
-local stoneChip, setStones = Hud.chip("StoneCounter", UiTheme.Icons.Stones, 1, { Format = NumberFormat.compact, Color = Color3.fromRGB(120, 240, 255) })
+local stoneChip, setStones = Hud.chip("StoneCounter", UiTheme.Icons.Stones, 1, { Caption = "Stones", Format = NumberFormat.compact, Color = Color3.fromRGB(120, 240, 255) })
 
 local function updateCounter()
     local stones = player:GetAttribute("SpiritStones")

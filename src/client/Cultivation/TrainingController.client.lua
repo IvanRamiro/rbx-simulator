@@ -108,7 +108,7 @@ player:GetAttributeChangedSignal("SettingStatusMinimized"):Connect(fitStatus)
 fitStatus()
 
 -- the Qi, first of the currencies
-local qiChip, setQi = Hud.chip("QiCounter", UiTheme.Icons.Qi, 0, { Format = NumberFormat.compact, Color = C.Sky })
+local qiChip, setQi = Hud.chip("QiCounter", UiTheme.Icons.Qi, 0, { Format = NumberFormat.compact, Color = C.Sky, Caption = "Qi" })
 -- beside it while cultivating, how fast Qi is coming in (measured here, over the last few seconds of cultivating: the top games
 -- show income per second beside the money, the owner's reference 2026-11-13)
 local qiRate = UiKit.label({
@@ -131,7 +131,25 @@ boostPill.FontFace = UiTheme.Fonts.Heavy
 UiKit.corner(boostPill, 11)
 UiKit.padding(boostPill, 8, 0)
 UiKit.stroke(boostPill, C.Outline, 0.2, 1.5)
+-- and the standing multiplier (the Qi pass, VIP and the title's bonus: what the Shop calls YOUR QI BOOST, without the timed boost,
+-- which has its pill above): a small gold "x4.4" on the Qi, hidden at x1 (UI brief 2026-11-24, design/features/hud).
+local standingPill = UiKit.label({
+    Name = "Standing", Font = "Heavy", TextSize = 12, TextColor3 = C.Outline, Text = "",
+    BackgroundTransparency = 0, BackgroundColor3 = C.AccentFill, AutomaticSize = Enum.AutomaticSize.X,
+    Size = UDim2.fromOffset(0, 20), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 5, Visible = false,
+    Parent = qiChip:FindFirstChild("Row"),
+})
+standingPill.FontFace = UiTheme.Fonts.Heavy
+UiKit.corner(standingPill, 10)
+UiKit.padding(standingPill, 7, 0)
+UiKit.stroke(standingPill, C.Outline, 0.2, 1.5)
+local function showStanding()
+    local multiplier = PassRules.qiMultiplier(player, true)
+    standingPill.Visible = multiplier > 1.001
+    standingPill.Text = "x" .. string.format("%.3g", multiplier)
+end
 local function showBoost()
+    showStanding()
     local left = math.floor(PassRules.boostSecondsLeft(player))
     boostPill.Visible = left > 0
     if left > 0 then

@@ -1,6 +1,6 @@
 # Pets window
 
-Status: draft (needs the owner's approval; mockups `design/previews/pets-v2.png` and `phone-pets.png`; today's window `current-pets.jpg`; re-render with `python3 design/mockups/render.py`).
+Status: approved (owner: "Yes", 2026-11-24, after the round-2 mockups) (needs the owner's approval; mockups `design/previews/pets-v2.png` and `phone-pets.png`; today's window `current-pets.jpg`; re-render with `python3 design/mockups/render.py`).
 
 ## What was wrong
 

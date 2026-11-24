@@ -27,7 +27,7 @@ local DAYS = #GameConfig.Rewards.Daily
 local GROUP = GameConfig.Rewards.Group
 local hasGroup = GROUP.GroupId > 0
 
-local toggleButton, setBadge = Hud.topButton("RewardsButton", UiTheme.Icons.Rewards, 1)
+local toggleButton, setBadge = Hud.topButton("RewardsButton", UiTheme.Icons.Rewards, 1, "Rewards")
 -- the body, top down: the seven days, CLAIM, the code row, the group's row (UiTheme's measures)
 local DAY_HEIGHT = 96
 local GAP = UiTheme.Space.M

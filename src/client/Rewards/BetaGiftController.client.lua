@@ -42,7 +42,7 @@ local TALL_CARD = 250 -- a card at least this tall stands its beast over its wor
 local message = Toast.new("BetaGiftMessage", C.Highlight, 6)
 
 -- ---------- the round button ----------
-local button, setBadge = Hud.topButton("BetaGiftButton", GameConfig.ExclusiveEgg.Icon, -1)
+local button, setBadge = Hud.topButton("BetaGiftButton", GameConfig.ExclusiveEgg.Icon, -1, "Egg")
 button.Visible = false
 setBadge("!", "Highlight")
 -- a gold ring breathing round it while the gift waits (as the Spin's does while spins wait)

@@ -1,6 +1,6 @@
 # Settings window
 
-Status: draft (needs the owner's approval; mockup `design/previews/settings-v2.png`; today's window `current-settings.jpg`; re-render with `python3 design/mockups/render.py`).
+Status: approved (owner: "Yes", 2026-11-24, after the round-2 mockups) (needs the owner's approval; mockup `design/previews/settings-v2.png`; today's window `current-settings.jpg`; re-render with `python3 design/mockups/render.py`).
 
 ## What was wrong
 

@@ -597,6 +597,10 @@ local watchBadge -- (and every tile's badge, for its dot)
 local strip = UiKit.panel({ -- (bold, the owner 2026-11-13: bigger icons and numbers, outlined, as the top games show their money)
     Name = "Counters", AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 42), Brackets = false, Parent = Hud.Currency,
 })
+-- a word under each number on a big screen (UI brief 2026-11-24, design/features/hud): "0 / 11" alone doesn't say what it counts.
+-- The strip grows by CAPTION_ROOM for it; a phone keeps the icon and number alone (its scale would draw the word under 8 px).
+local CAPTION_ROOM = 10
+local captions = {} -- every chip's caption
 strip:FindFirstChildOfClass("UIStroke").Thickness = 2
 local stripRow = Instance.new("Frame")
 stripRow.Name = "Row"
@@ -625,6 +629,15 @@ function Hud.chip(name, image, order, opts)
     row.Size = UDim2.fromScale(0, 1)
     row.Parent = chip
     UiKit.list(row, { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 5), VerticalAlignment = Enum.VerticalAlignment.Center })
+    if opts.Caption then
+        local caption = UiKit.label({
+            Name = "Caption", Font = "Heavy", Text = string.upper(opts.Caption), TextSize = 9, TextColor3 = UiTheme.Colors.Muted,
+            TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -1),
+            AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 11), Parent = chip,
+        })
+        caption.FontFace = UiTheme.Fonts.Heavy
+        captions[caption] = row
+    end
     local icon = Instance.new("Frame") -- the picture alone, no box: it stays as small as the strip
     icon.Name = "Icon"
     icon.BackgroundTransparency = 1
@@ -641,9 +654,29 @@ function Hud.chip(name, image, order, opts)
         Size = UDim2.fromOffset(0, 26), LayoutOrder = 2, Parent = row,
     })
     UiKit.outline(value, 2)
+    if opts.Caption then
+        task.defer(Hud.refreshCaptions)
+    end
     return chip, UiFx.counter(value, opts.Format, {
         Color = opts.Color, FloatIn = chip, Icon = icon:FindFirstChild("Image"), FloatFormat = opts.FloatFormat,
     })
+end
+
+local function layoutCaptions(isCompact)
+    strip.Size = UDim2.fromOffset(0, if isCompact then 42 else 42 + CAPTION_ROOM)
+    for caption, row in captions do
+        caption.Visible = not isCompact
+        row.Size = if isCompact then UDim2.fromScale(0, 1) else UDim2.new(0, 0, 1, -CAPTION_ROOM)
+    end
+end
+task.defer(function() -- (after the controllers have made their chips this frame)
+    layoutCaptions(Hud.isCompact())
+end)
+Hud.CompactChanged:Connect(function(isCompact)
+    layoutCaptions(isCompact)
+end)
+function Hud.refreshCaptions() -- a chip made late (a controller that loads after the first frame)
+    layoutCaptions(Hud.isCompact())
 end
 
 -- one place for every badge (the rail's tiles, the round buttons): over the top right corner, the same overhang everywhere
@@ -705,8 +738,23 @@ function Hud.railButton(name, image, word, order, opts)
 end
 
 -- A small round button in the top row, with the same badge.
-function Hud.topButton(name, image, order)
+-- `word` (optional): its name in small capitals under it on a big screen (UI brief 2026-11-24: three unlabeled round buttons).
+-- The word hangs outside the button's own box, so the row's layout is unchanged; a phone's scale would draw it too small, so it hides there.
+function Hud.topButton(name, image, order, word)
     local button = UiKit.button({ Name = name, Text = "", Size = UDim2.fromOffset(42, 42), LayoutOrder = order, Tone = "Quiet", Parent = Hud.TopRight })
+    if word then
+        local caption = UiKit.label({
+            Name = "Word", Font = "Heavy", Text = string.upper(word), TextSize = 10, TextColor3 = UiTheme.Colors.Text,
+            TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 3),
+            Size = UDim2.new(1, 24, 0, 12), ZIndex = 4, Parent = button,
+        })
+        caption.FontFace = UiTheme.Fonts.Heavy
+        UiKit.outline(caption, 1.5)
+        caption.Visible = not Hud.isCompact()
+        Hud.CompactChanged:Connect(function(isCompact)
+            caption.Visible = not isCompact
+        end)
+    end
     -- bigger on a phone, where 42 at the phone's scale is too small for a thumb: 56 there is 45 pixels (TOP_BUTTON)
     local function sizeFor(isCompact)
         local side = TOP_BUTTON[isCompact == true]

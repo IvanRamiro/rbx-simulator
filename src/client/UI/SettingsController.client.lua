@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Hud = require(script.Parent:WaitForChild("Hud"))
+local UiFx = require(script.Parent:WaitForChild("UiFx"))
 local UiKit = require(script.Parent:WaitForChild("UiKit"))
 local UiTheme = require(script.Parent:WaitForChild("UiTheme"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
@@ -19,7 +20,7 @@ local STEP = 0.1
 local toggleButton = Hud.railButton("SettingsButton", UiTheme.Icons.Settings, "Settings", 6)
 local isDeveloper = table.find(GameConfig.Titles.DeveloperUserIds, player.UserId) ~= nil
 local window = Hud.window({
-    Name = "SettingsWindow", Title = "SETTINGS", Size = Vector2.new(420, if isDeveloper then 544 else 460), AnchorPoint = Vector2.new(0.5, 0.5),
+    Name = "SettingsWindow", Title = "SETTINGS", Size = Vector2.new(420, if isDeveloper then 664 else 580), AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.fromScale(0.5, 0.5),
 })
 -- the rows, one card each, in a list that scrolls on a short screen
@@ -43,6 +44,18 @@ local function rowName(card, text)
     return UiKit.boldLabel({ Name = "Label", TextSize = 14, Text = text, Position = UDim2.fromOffset(PAD, PAD),
         Size = UDim2.new(1, -PAD * 2, 0, 18), Parent = card })
 end
+
+-- a group's heading over its rows (UI brief 2026-11-24): small gold capitals, as a window's section names are elsewhere
+local function groupHeading(text, order)
+    local heading = UiKit.boldLabel({
+        Name = text .. "Heading", TextSize = 12, Text = text, TextColor3 = C.Highlight, Size = UDim2.new(1, 0, 0, 20), LayoutOrder = order, Parent = body,
+    })
+    UiKit.padding(heading, PAD, 0)
+    return heading
+end
+groupHeading("SOUND", 1)
+groupHeading("DISPLAY", 4)
+groupHeading("HELP", 8)
 
 -- a volume row: its name and percent, a bar, and - and + buttons a thumb's size
 local volumeRows = {}
@@ -108,31 +121,73 @@ local function volumeRow(key, word, order)
     end)
     volumeRows[key] = render
 end
-volumeRow("Music", "MUSIC", 1)
-volumeRow("Sound", "SOUND", 2)
+volumeRow("Music", "MUSIC", 2)
+volumeRow("Sound", "SOUND", 3)
 for key, render in volumeRows do
     render(read(key))
 end
 
--- an on/off row: its name, what it does, and its switch at the right
+-- an on/off row: its name, what it does, and its switch at the right (UI brief 2026-11-24, design/features/settings-window: a
+-- real switch, a pill with a knob that slides, green when on, ON / OFF beside it, instead of a wide button saying ON or OFF).
+-- asButton: a plain button at the right instead (FEEDBACK's OPEN).
 local SWITCH = 92
-local function switchRow(name, word, help, order)
+local PILL = Vector2.new(56, 30)
+local KNOB = 22
+local function switchRow(name, word, help, order, asButton)
     local card = rowCard(name .. "Row", PAD + 18 + 4 + 30 + PAD, order)
     local label = rowName(card, word)
     label.Size = UDim2.new(1, -(PAD * 2 + SWITCH + UiTheme.Space.S), 0, 18)
     UiKit.label({ Name = name .. "Help", Font = "Strong", TextSize = 11, TextColor3 = C.Muted, TextWrapped = true,
         TextYAlignment = Enum.TextYAlignment.Top, Text = help, Position = UDim2.fromOffset(PAD, PAD + 22),
         Size = UDim2.new(1, -(PAD * 2 + SWITCH + UiTheme.Space.S), 0, 30), Parent = card })
-    return UiKit.button({ Name = name, TextSize = 14, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -PAD, 0.5, 0),
-        Size = UDim2.fromOffset(SWITCH, BUTTON), Parent = card })
+    if asButton then
+        return UiKit.button({ Name = name, TextSize = 14, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -PAD, 0.5, 0),
+            Size = UDim2.fromOffset(SWITCH, BUTTON), Parent = card })
+    end
+    -- the pill is the button (a thumb's height comes from the card's own row; the pill's hit box is the whole 92 wide row end)
+    local pill = UiKit.button({ Name = name, Text = "", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -(PAD + 34), 0.5, 0),
+        Size = UDim2.fromOffset(PILL.X, PILL.Y), Tone = "Quiet", Parent = card })
+    pill:FindFirstChildOfClass("UICorner").CornerRadius = UDim.new(1, 0)
+    pill:SetAttribute("NoSheen", true)
+    local knob = Instance.new("Frame")
+    knob.Name = "Knob"
+    knob.BackgroundColor3 = C.Text
+    knob.BorderSizePixel = 0
+    knob.AnchorPoint = Vector2.new(0, 0.5)
+    knob.Position = UDim2.new(0, 4, 0.5, 0)
+    knob.Size = UDim2.fromOffset(KNOB, KNOB)
+    knob.ZIndex = 5
+    knob.Parent = pill
+    UiKit.corner(knob, KNOB / 2)
+    UiKit.stroke(knob, C.Outline, 0.3, 1.5)
+    UiKit.boldLabel({
+        Name = "State", TextSize = 11, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -PAD, 0.5, 0), Size = UDim2.fromOffset(30, 14),
+        TextXAlignment = Enum.TextXAlignment.Right, Parent = card,
+    })
+    return pill
+end
+
+-- shows a switch made by switchRow as on or off: the knob slides, the pill goes green, the word beside it follows
+local function renderSwitch(pill, on)
+    local card = pill.Parent
+    local word = card:FindFirstChild("State")
+    if word then
+        word.Text = if on then "ON" else "OFF"
+        word.TextColor3 = if on then C.BuyBright else C.Muted
+    end
+    pill:SetAttribute("Tone", if on then "Buy" else "Quiet")
+    local knob = pill:FindFirstChild("Knob")
+    if knob then
+        local target = UDim2.new(1, -(KNOB + 4), 0.5, 0)
+        local rest = UDim2.new(0, 4, 0.5, 0)
+        UiFx.tween(knob, 0.16, { Position = if on then target else rest }, Enum.EasingStyle.Quad)
+    end
 end
 
 -- reduced effects, on or off
-local reduced = switchRow("Reduced", "REDUCED EFFECTS", "Hides other players' auras, and turns off screen flashes and camera shake.", 3)
+local reduced = switchRow("Reduced", "REDUCED EFFECTS", "Hides other players' auras, and turns off screen flashes and camera shake.", 5)
 local function renderReduced()
-    local on = read("ReducedEffects")
-    reduced.Text = if on then "ON" else "OFF"
-    reduced:SetAttribute("Tone", if on then "Active" else "Quiet") -- on reads as running, not as something to press
+    renderSwitch(reduced, read("ReducedEffects") == true)
 end
 reduced.Activated:Connect(function()
     local on = not read("ReducedEffects")
@@ -142,14 +197,26 @@ end)
 player:GetAttributeChangedSignal("SettingReducedEffects"):Connect(renderReduced)
 renderReduced()
 
+-- the quest panel, on or off: the same choice as the Quests button on the rail (QuestController keeps the panel's state and saves
+-- it the same way; this row only sets the setting, so it is never out of step with that button)
+local showQuest = switchRow("ShowQuest", "SHOW QUEST TRACKER", "The goal card in the top right corner.", 6)
+local function renderShowQuest()
+    renderSwitch(showQuest, read("ShowQuest") == true)
+end
+showQuest.Activated:Connect(function()
+    local on = not (read("ShowQuest") == true)
+    player:SetAttribute("SettingShowQuest", on)
+    RemoteEvents.SettingsEvent:FireServer("ShowQuest", on)
+end)
+player:GetAttributeChangedSignal("SettingShowQuest"):Connect(renderShowQuest)
+renderShowQuest()
+
 -- for developers: the performance readout (client/Performance/PerfProbe), to read a device's frame rate and memory live;
 -- not saved
 if isDeveloper then
-    local perf = switchRow("PerfReadout", "PERFORMANCE READOUT", "Frame rate and memory at the top left. Developers only; not saved.", 4)
+    local perf = switchRow("PerfReadout", "PERFORMANCE READOUT", "Frame rate and memory at the top left. Developers only; not saved.", 7)
     local function renderPerf()
-        local on = player:GetAttribute("PerfReadout") == true
-        perf.Text = if on then "ON" else "OFF"
-        perf:SetAttribute("Tone", if on then "Active" else "Quiet") -- on reads as running, not as something to press
+        renderSwitch(perf, player:GetAttribute("PerfReadout") == true)
     end
     perf.Activated:Connect(function()
         player:SetAttribute("PerfReadout", player:GetAttribute("PerfReadout") ~= true)
@@ -160,7 +227,7 @@ end
 
 -- feedback: opens the Feedback window (FeedbackController), which takes this one's place; the way in on every screen (on the
 -- narrowest phones the Feedback tile has no room in the menu's row)
-local feedback = switchRow("Feedback", "FEEDBACK", "Found a bug or have an idea? Tell us.", 5)
+local feedback = switchRow("Feedback", "FEEDBACK", "Found a bug or have an idea? Tell us.", 9, true)
 feedback.Text = "OPEN"
 feedback.Activated:Connect(function()
     local controller = script.Parent:FindFirstChild("FeedbackController")

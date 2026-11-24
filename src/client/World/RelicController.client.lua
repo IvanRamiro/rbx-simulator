@@ -28,6 +28,7 @@ for _, relic in GameConfig.Relics do
 end
 
 local _, setFound = Hud.chip("RelicCounter", UiTheme.Icons.Relics, 2, {
+    Caption = "Relics",
     Format = function(found)
         return found .. " / " .. #GameConfig.Relics
     end,

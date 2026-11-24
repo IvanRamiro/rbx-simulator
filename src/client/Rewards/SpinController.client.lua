@@ -225,7 +225,7 @@ local function runTurn(turn)
 end
 
 -- ---------- the HUD button ----------
-local button, setBadge = Hud.topButton("SpinButton", "", 0)
+local button, setBadge = Hud.topButton("SpinButton", "", 0, "Spin")
 do
     local icon = button:FindFirstChild("Icon")
     if icon then

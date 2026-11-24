@@ -1,6 +1,6 @@
 # HUD
 
-Status: draft (needs the owner's approval before building; mockups `design/previews/hud-walk.png`, `hud-carry.png`, `phone-closed.png`, `phone-menu.png`; today's HUD `current-hud.jpg`; re-render with `python3 design/mockups/render.py`).
+Status: approved (owner: "Yes", 2026-11-24, after the round-2 mockups) (needs the owner's approval before building; mockups `design/previews/hud-walk.png`, `hud-carry.png`, `phone-closed.png`, `phone-menu.png`; today's HUD `current-hud.jpg`; re-render with `python3 design/mockups/render.py`).
 
 ## What was wrong (seen in Play, 2026-11-24, 1920 wide)
 
