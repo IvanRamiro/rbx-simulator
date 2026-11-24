@@ -1,7 +1,7 @@
 """Dawnspire's top-down plan and cross-sections, drawn from the real terrain data (murim_layout's grid, the one that is written to
 src/worldbuild/Terrain/MurimCrossing.lua) and, once dawnspire.py exists, its buildings, stairs, bridges, paths, spots and plants.
 Picture: the hall's pad frame, +z (up the mountain) at the top, +x (outward, the player's left) at the left. An SVG over a raster of the terrain,
-turned into PNGs by headless Chrome (as tools/world_map.py does).
+turned into PNGs by headless Chrome (as tools/blender/world/world_map.py does).
 
     python3 tools/blender/world/dawnspire_plan.py            # renders/dawnspire/plan_topdown.png, section_*.png
 """

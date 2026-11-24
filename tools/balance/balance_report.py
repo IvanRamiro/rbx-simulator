@@ -1,6 +1,6 @@
 """Prints how long cultivation progression takes with the numbers in GameConfig.lua.
 
-    python3 tools/balance_report.py
+    python3 tools/balance/balance_report.py
 
 Reads the ranks, pet bonuses, the Training Ground bonus, relic rewards, egg chances and Qinggong levels
 straight from src/shared/GameConfig.lua, so it always matches the game.
@@ -15,7 +15,7 @@ realm's QiMultiplier multiplies every reward.
 import os
 import re
 
-CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "shared", "GameConfig.lua")
+CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src", "shared", "GameConfig.lua")
 
 # Pets a typical player has equipped in each realm (see the docstring)
 TYPICAL_PETS = {

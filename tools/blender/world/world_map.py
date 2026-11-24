@@ -1,6 +1,6 @@
 """Draws a top view of the whole world (north up, east right) from the project's own data:
 
-    python3 tools/world_map.py [out.png]       (default: renders/world_map/world_map.png, local only)
+    python3 tools/blender/world/world_map.py [out.png]       (default: renders/world_map/world_map.png, local only)
 
 Every island's footprint is read from its terrain grid (src/worldbuild/Terrain/<Island>.lua: height and material of each 4-stud cell),
 coloured with the game's terrain colours (WorldBuilder.MaterialColors) and hill-shaded; the bridges come from tools/blender/world/layout.py;
@@ -18,7 +18,7 @@ import sys
 import tempfile
 import zlib
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools", "blender", "world"))
 import layout as L  # noqa: E402
 

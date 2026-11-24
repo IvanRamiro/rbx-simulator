@@ -1,5 +1,5 @@
 """jade_lib_plan: draws Jade Grove's plan and cross-sections from the project's own data (2026-11-22). Plain Python; the picture is an SVG over a raster
-of the terrain, turned into a PNG by headless Chrome (the way tools/world_map.py does it: no other dependency).
+of the terrain, turned into a PNG by headless Chrome (the way tools/blender/world/world_map.py does it: no other dependency).
 
     python3 jade_lib_plan.py plan [out.png]        the whole island from above, north up, east right (island-local studs), old rim dashed
     python3 jade_lib_plan.py section <name> [out]  a cross-section along a named line (see SECTIONS)

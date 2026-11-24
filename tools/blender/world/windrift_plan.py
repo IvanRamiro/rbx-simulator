@@ -1,7 +1,7 @@
 """Windrift Hold's top-down plan and cross-sections, drawn from the real terrain data (murim_layout's grid, the one that is written to
 src/worldbuild/Terrain/MurimCrossing.lua) and, once windrift.py exists, its buildings, stairs, bridges, paths, spots and plants.
 Picture: the pad's frame (the island's, shifted: x = island-local x, z = island-local z - 250), +z (toward the cliff and the falls) at the top, +x (the player's left)
-at the left. An SVG over a raster of the terrain, turned into PNGs by headless Chrome (as tools/world_map.py does).
+at the left. An SVG over a raster of the terrain, turned into PNGs by headless Chrome (as tools/blender/world/world_map.py does).
 
     python3 tools/blender/world/windrift_plan.py            # renders/windrift/plan_topdown.png
     python3 tools/blender/world/windrift_plan.py --sections # renders/windrift/section_*.png

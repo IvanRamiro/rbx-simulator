@@ -524,17 +524,6 @@ function GuardianAnim:blink(now, asleep, gap, length)
     return 1
 end
 
--- Opens an eye part (or nil) to `amount` of its height `base`. A size change keeps the part's
--- centre, so its weld to the head is untouched; it eases quickly enough for a full blink.
-function GuardianAnim.openEye(part, base, amount)
-    if part then
-        local size = Vector3.new(base.X, math.max(base.Y * amount, 0.02), base.Z)
-        if (part.Size - size).Magnitude > 0.005 then
-            part.Size = part.Size:Lerp(size, 0.6)
-        end
-    end
-end
-
 -- The yaw (degrees) that turns the head toward the target player, or 0.
 function GuardianAnim:lookYaw(limit)
     local id = self.model:GetAttribute("TargetId")

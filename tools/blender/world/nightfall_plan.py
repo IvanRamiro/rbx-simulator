@@ -1,7 +1,7 @@
 """Nightfall Citadel's top-down plan and cross-sections, drawn from the real terrain data (murim_layout's grid, the one that is written to
 src/worldbuild/Terrain/MurimCrossing.lua) and, once nightfall.py exists, its buildings, stairs, bridges, paths, spots and plants.
 Picture: the Demonic pad's frame (the island's turned by the pad's FrontYaw, origin at the pad's centre), +z (up the mountain, away from the plaza) at the top, +x
-(across the stairway toward the island's middle) at the left. An SVG over a raster of the terrain, turned into PNGs by headless Chrome (as tools/world_map.py does).
+(across the stairway toward the island's middle) at the left. An SVG over a raster of the terrain, turned into PNGs by headless Chrome (as tools/blender/world/world_map.py does).
 
     python3 tools/blender/world/nightfall_plan.py            # renders/nightfall/plan_topdown.png
     python3 tools/blender/world/nightfall_plan.py --sections # renders/nightfall/section_*.png
