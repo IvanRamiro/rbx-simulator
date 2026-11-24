@@ -54,6 +54,7 @@ local Analytics = require(script.Parent.Parent:WaitForChild("Analytics"):WaitFor
 local WorldConfig = require(script.Parent.Parent:WaitForChild("World"):WaitForChild("WorldConfig"))
 local BountyRules = require(ReplicatedStorage:WaitForChild("BountyRules"))
 local ReactRules = require(ReplicatedStorage:WaitForChild("ReactRules"))
+local CoopRules = require(ReplicatedStorage:WaitForChild("CoopRules"))
 
 local FLAT = Vector3.new(1, 0, 1)
 local DECIDE_EVERY = 0.1        -- seconds between decisions; movement runs every frame
@@ -430,7 +431,15 @@ function Guardian:carry(player)
     Analytics.event(player, "EggTaken", 1, self.id, egg.eggId)
 end
 
--- The dropped egg's prompt: only its thief can pick it up again.
+-- Who fought for this egg: the players (not the thief) who dealt the take-an-egg share and are still on this server (CoopRules.helpers)
+function Guardian:helpers(thief)
+    local need = self.config.MaxHealth * (1 - self.config.WeakenedAt) * GameConfig.EggTheft.TakeShare
+    return CoopRules.helpers(self.damageBy, need, thief, function(player)
+        return player.Parent == Players
+    end)
+end
+
+-- The dropped egg's prompt: its thief picks it up again at once; a helper (someone who fought for it) after RelayAfter seconds, and carries it on (CoopRules.canRelay).
 function Guardian:onEggPrompt(player)
     local egg = self.egg
     local root = rootOf(player)
@@ -440,9 +449,21 @@ function Guardian:onEggPrompt(player)
     if (root.Position - egg.model:GetPivot().Position).Magnitude > EGG_PROMPT_DISTANCE + 4 then
         return
     end
-    if egg.state == "Dropped" and egg.owner == player then
+    local dropper = egg.owner
+    local helper = false
+    for _, other in self:helpers(dropper) do
+        if other == player then
+            helper = true
+        end
+    end
+    local canCarry = egg.eggId ~= nil and EggStands.canCarry(Ranks.getPlayerRankName(player), egg.eggId)
+    if CoopRules.canRelay({ state = egg.state, isDropper = dropper == player, isHelper = helper, now = os.clock(), relayAt = egg.relayAt, carrying = false,
+        canCarryEgg = canCarry }) and not MovementGuard.isSuspect(player) then
         self:carry(player)
         self:broadcast("Recover")
+        if dropper ~= player and dropper and dropper.Parent == Players then
+            RemoteEvents.GuardianEvent:FireClient(dropper, self.model, "Relayed", player.DisplayName)
+        end
     end
 end
 
@@ -544,6 +565,14 @@ function Guardian:dropEgg(near)
     egg.model:SetAttribute("OwnerUserId", egg.owner.UserId)
     egg.dropUntil = os.clock() + self.config.DropTime
     egg.model:SetAttribute("DropUntil", workspace:GetServerTimeNow() + self.config.DropTime)
+    -- the helpers who may carry it on, and from when (the dropper has the first RelayAfter seconds to themselves)
+    egg.relayAt = os.clock() + GameConfig.EggTheft.Coop.RelayAfter
+    local ids = {}
+    for _, helper in self:helpers(egg.owner) do
+        table.insert(ids, helper.UserId)
+    end
+    egg.model:SetAttribute("HelperIds", table.concat(ids, ","))
+    egg.model:SetAttribute("RelayAt", workspace:GetServerTimeNow() + GameConfig.EggTheft.Coop.RelayAfter)
     local owner = egg.owner
     Analytics.event(owner, "EggDropped", 1, self.id, egg.eggId)
     self:clearThief()
@@ -591,6 +620,20 @@ function Guardian:secure()
     RemoteEvents.GuardianEvent:FireClient(player, self.model, "Secured", egg.eggId, stones, element, qiGained)
     Quests.Moment:Fire(player, "Secure", self.id)
     Analytics.event(player, "EggSecured", qiGained, self.id, egg.eggId)
+    -- the ones who fought for it share its stones (CoopRules; the thief keeps the egg, the Qi and the relic)
+    local helpers = self:helpers(player)
+    local share = CoopRules.share(stones)
+    if share > 0 then
+        for _, helper in helpers do
+            Wallet.add(helper, share, "CoopShare", egg.eggId)
+            PlayerData.saveSoon(helper)
+            Analytics.event(helper, "CoopShare", share, self.id, egg.eggId)
+            RemoteEvents.GuardianEvent:FireClient(helper, self.model, "Shared", share, player.DisplayName, egg.eggId)
+        end
+    end
+    if #helpers > 0 then
+        RemoteEvents.GuardianEvent:FireClient(player, self.model, "SharedWith", #helpers, share)
+    end
     self:clearThief()
     if egg.slot then
         EggStands.respawn(egg.slot, self.config.Eggs)

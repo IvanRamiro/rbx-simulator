@@ -149,6 +149,14 @@ local GameConfig = {
     -- shared/AuctionRules). Pets and weapons are listed for a starting bid and a duration; bids are Spirit Stones, taken at once and
     -- given back when someone bids higher; the top bid wins at the end. Values are multiples of the item's sell value (what Buy & Sell
     -- pays: Shop.petValue, Shop.weaponRefund).
+    -- Gifting a pet to someone in the same server (the owner's improvement list, item 19, 2026-11-24: "simple player-to-player gifting"): the receiver has to accept, and the
+    -- Auction House's own rules apply (the same rank and account age, no Robux beasts where trading them is not allowed, no pet that is locked, equipped, in a pen, the last
+    -- one or a creator pet). shared/GiftRules, server/Pets/GiftService.
+    Gifts = {
+        OfferSeconds = 45,      -- how long a gift waits to be answered
+        MaxPerVisit = 5,        -- gifts a player may send before they leave this server (a cap on handing a whole collection to one account)
+        AskEvery = 1,           -- seconds between a player's requests
+    },
     AuctionHouse = {
         MinRank = "CoreInitiate",   -- the rank that may use it (about an hour of play): no fresh alt account can use it at once
         MinAccountAgeDays = 3,      -- and a Roblox account at least this old
@@ -188,6 +196,15 @@ local GameConfig = {
         TakeShare = 0.1,
         RetakeCooldown = 30, -- seconds before a player whose egg went back can take another: no holding a guardian hostage
         SecureQiMinutes = 5, -- securing an egg pays this many minutes of cultivating (server/Cultivation/QiReward)
+        -- Fighting and stealing together (the owner's improvement list, item 18, 2026-11-24: "co-op guardian fights; the egg heist is solo"; shared/CoopRules): a guardian was always
+        -- fightable by many (every player's share is counted), but only the thief was paid. Now the players who dealt the take-an-egg share (TakeShare) and are still here
+        -- when the egg is secured each get a share of its stones (the thief keeps the egg, the Qi and the relic), and, if the thief is knocked and drops it, may pick it up
+        -- and carry it on (the thief first: they have RelayAfter seconds to themselves).
+        Coop = {
+            StonesShare = 0.4,  -- of the egg's stones, to each helper
+            MaxHelpers = 3,     -- helpers paid for one egg (the biggest shares of the fight first)
+            RelayAfter = 4,     -- seconds after a drop before a helper may pick the egg up
+        },
     },
     -- Yggdrasil's Hatching Altar (WorldBuilder.buildAltar, PetService): where every egg carried home is
     -- hatched. Centre is island-local (on the ground), Yaw turns its front (local +Z) toward the

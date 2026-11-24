@@ -605,8 +605,23 @@ local function watchEgg(egg)
         local isDropped = egg:GetAttribute("State") == "Dropped"
         local mine = egg:GetAttribute("OwnerUserId") == player.UserId
         local prompt = egg.PrimaryPart and egg.PrimaryPart:FindFirstChildOfClass("ProximityPrompt")
+        -- a helper (one who fought for the egg: HelperIds) may carry it on once RelayAt has passed; anyone else may not (the server checks too)
+        local helper = false
+        for id in string.gmatch(tostring(egg:GetAttribute("HelperIds") or ""), "%d+") do
+            if tonumber(id) == player.UserId then
+                helper = true
+            end
+        end
+        local waitLeft = (tonumber(egg:GetAttribute("RelayAt")) or 0) - Workspace:GetServerTimeNow()
         if prompt and isDropped and not mine then
-            prompt.Enabled = false -- only its thief may recover it (the server checks too)
+            prompt.Enabled = helper and waitLeft <= 0
+            if helper and waitLeft > 0 then
+                task.delay(waitLeft + 0.1, function()
+                    if egg.Parent then
+                        refresh()
+                    end
+                end)
+            end
         end
         local entry = dropped[egg]
         if isDropped and not entry then
@@ -749,6 +764,20 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
         knock(...)
         return
     end
+    if action == "Shared" then
+        local stones, thiefName, eggId = ...
+        Sfx.play("RewardClaim")
+        local egg = GameConfig.Eggs[eggId]
+        message:show(tostring(thiefName) .. " got " .. (egg and egg.DisplayName or "the egg") .. " home, and you fought for it: +" .. tostring(stones) .. " Spirit Stones.", "Reward")
+        return
+    elseif action == "SharedWith" then
+        local helpers, share = ...
+        message:show("Your team shared it: " .. tostring(helpers) .. (if helpers == 1 then " helper got " else " helpers got ") .. tostring(share) .. " Spirit Stones each.", "Info")
+        return
+    elseif action == "Relayed" then
+        message:show(tostring((...)) .. " picked up your egg and is carrying it on!", "Info")
+        return
+    end
     if action == "Secured" then
         local eggId, stones, element, qi = ...
         -- the reward stinger, flat, with the gold flash and this toast (the "Secure" every client gets follows: skipped here)
@@ -839,6 +868,12 @@ RemoteEvents.GuardianEvent.OnClientEvent:Connect(function(model, action, ...)
         local egg = eggsFolder:FindFirstChild(model.Name .. "_Egg")
         if egg and egg:GetAttribute("OwnerUserId") == player.UserId then
             message:show("You dropped the egg! Pick it up within " .. config.DropTime .. "s.", "Warning")
+        elseif egg then
+            for id in string.gmatch(tostring(egg:GetAttribute("HelperIds") or ""), "%d+") do
+                if tonumber(id) == player.UserId then
+                    message:show("Your team's egg was dropped! Pick it up (F) and carry it home.", "Info")
+                end
+            end
         end
     elseif action == "Secure" then
         GuardianFx.secure((...))

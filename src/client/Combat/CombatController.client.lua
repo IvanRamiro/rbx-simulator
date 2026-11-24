@@ -18,6 +18,7 @@ local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local FormRules = require(ReplicatedStorage:WaitForChild("FormRules"))
 local CombatFx = require(script.Parent:WaitForChild("CombatFx"))
 local ComboCounter = require(script.Parent:WaitForChild("ComboCounter"))
+local OtherCombo = require(script.Parent:WaitForChild("OtherCombo"))
 local UI = script.Parent.Parent:WaitForChild("UI")
 local Hud = require(UI:WaitForChild("Hud"))
 local Toast = require(UI:WaitForChild("Toast"))
@@ -236,6 +237,7 @@ RemoteEvents.CombatEvent.OnClientEvent:Connect(function(source, kind, position, 
     local info = if typeof(form) == "string" and typeof(step) == "number" then FormRules.strike(form, step, UNIT) else nil
     if source ~= player then
         CombatFx.play(source, kind, info)
+        OtherCombo.set(source, hits, info ~= nil and info.Finisher) -- (their count over their head, from 3 hits)
     else
         if info and mine then
             mine = { Form = info.Form, Step = info.Step, At = mine.At } -- a press the server dropped can't leave our count wrong

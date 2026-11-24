@@ -13,6 +13,7 @@ local UI = script.Parent.Parent:WaitForChild("UI")
 local Toast = require(UI:WaitForChild("Toast"))
 local Hud = require(UI:WaitForChild("Hud"))
 local ConfirmDialog = require(UI:WaitForChild("ConfirmDialog"))
+local GiftUi = require(script.Parent:WaitForChild("GiftUi"))
 local UiFx = require(UI:WaitForChild("UiFx"))
 local UiKit = require(UI:WaitForChild("UiKit"))
 local UiTheme = require(UI:WaitForChild("UiTheme"))
@@ -169,7 +170,7 @@ local function createPetCard(pet, layoutOrder, equippedCount)
     UiKit.list(info, { Padding = UDim.new(0, 4) })
     UiKit.boldLabel({
         Name = "PetName", TextSize = 15, Text = PetRules.displayName(pet.PetId, mutation), TextWrapped = true, AutomaticSize = Enum.AutomaticSize.Y,
-        Size = UDim2.new(1, 0, 0, 0), LayoutOrder = 1, Parent = info,
+        Size = UDim2.new(1, -38, 0, 0), LayoutOrder = 1, Parent = info, -- (room at the right of the name for the gift button)
     })
     -- the lock: gold while it's on, faint while it's off
     local lock = UiKit.button({
@@ -186,6 +187,21 @@ local function createPetCard(pet, layoutOrder, equippedCount)
     padlock.Parent = lock
     lock.Activated:Connect(function()
         RemoteEvents.TogglePetLockEvent:FireServer(pet.InstanceId)
+    end)
+    -- the gift button, top right: opens the list of players here to give this pet to (the server decides if it can be given: GiftService)
+    local gift = UiKit.button({
+        Name = "Gift", Text = "", Tone = "Quiet", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -PAD, 0, PAD - 2), Size = UDim2.fromOffset(34, 34), Parent = card,
+    })
+    local giftIcon = Instance.new("ImageLabel")
+    giftIcon.Name = "GiftIcon"
+    giftIcon.BackgroundTransparency = 1
+    giftIcon.Image = UiTheme.Icons.Store -- (a gift box tied in gold)
+    giftIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+    giftIcon.Position = UDim2.fromScale(0.5, 0.5)
+    giftIcon.Size = UDim2.fromOffset(24, 24)
+    giftIcon.Parent = gift
+    gift.Activated:Connect(function()
+        GiftUi.open(pet)
     end)
     local tags = Instance.new("Frame")
     tags.Name = "Tags"

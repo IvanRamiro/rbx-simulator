@@ -1,6 +1,8 @@
 -- The last question before something that can't be undone: a dimmed screen, a panel, and a button that only
 -- wakes after a few seconds, so nothing is lost to a quick tap or a double click.
---   ConfirmDialog.show({ Title, Text, Picture, ConfirmText, Seconds, OnConfirm, CancelText, ConfirmTone })
+--   ConfirmDialog.show({ Title, Text, Picture, ConfirmText, Seconds, OnConfirm, CancelText, ConfirmTone, OnCancel, AutoClose })
+-- OnCancel runs when the player turns it down (the cancel button or the close mark, not when another dialog takes its place); AutoClose closes it after that many seconds if still
+-- showing (a gift offer that runs out). ConfirmDialog.close() puts it away.
 -- CancelText (default "KEEP IT") and ConfirmTone (a UiKit button tone, default "Danger") suit a choice that isn't a loss (a gift).
 -- Picture (optional) is a GuiObject of up to 72 px, such as a portrait. Only one shows at a time.
 local GuiService = game:GetService("GuiService")
@@ -85,19 +87,26 @@ local confirmButton = UiKit.button({
 })
 
 local showing = 0 -- which dialog is the latest
-local readyAt, onConfirm, confirmText = 0, nil, ""
+local readyAt, onConfirm, onCancel, confirmText = 0, nil, nil, ""
 
 local function hide()
     showing += 1
     gui.Enabled = false
-    onConfirm = nil
+    onConfirm, onCancel = nil, nil
     for _, child in pictureSlot:GetChildren() do
         child:Destroy()
     end
 end
 
-cancelButton.Activated:Connect(hide)
-closeButton.Activated:Connect(hide)
+local function turnDown()
+    local run = onCancel
+    hide()
+    if run then
+        run()
+    end
+end
+cancelButton.Activated:Connect(turnDown)
+closeButton.Activated:Connect(turnDown)
 confirmButton.Activated:Connect(function()
     if os.clock() < readyAt or not onConfirm then
         return
@@ -108,6 +117,10 @@ confirmButton.Activated:Connect(function()
 end)
 
 local ConfirmDialog = {}
+
+function ConfirmDialog.close()
+    hide()
+end
 
 function ConfirmDialog.show(props)
     hide()
@@ -121,6 +134,7 @@ function ConfirmDialog.show(props)
     cancelButton.Text = props.CancelText or "KEEP IT"
     confirmButton:SetAttribute("Tone", props.ConfirmTone or "Danger")
     onConfirm = props.OnConfirm
+    onCancel = props.OnCancel
     readyAt = os.clock() + seconds
     if props.Picture then
         props.Picture.Position = UDim2.fromOffset(0, 0)
@@ -133,6 +147,13 @@ function ConfirmDialog.show(props)
     end
     gui.Enabled = true
     Sfx.play("Open")
+    if props.AutoClose then
+        task.delay(props.AutoClose, function()
+            if showing == this then
+                hide()
+            end
+        end)
+    end
     task.spawn(function()
         for left = math.ceil(seconds), 1, -1 do
             if showing ~= this then
