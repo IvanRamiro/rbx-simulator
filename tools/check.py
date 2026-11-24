@@ -144,6 +144,14 @@ def check_sounds():
                 for name in re.findall(r"= \"([A-Za-z0-9_]+)\"", alerts.group(1) if alerts else ""):
                     if not exists(name):
                         missing.setdefault(name, "GuardianController ALERTS")
+    # 3. the territories' sounds (shared/TerritoryRules.SOUND names a bed, a music and an accent each)
+    territory_path = os.path.join(REPO, "src", "shared", "TerritoryRules.lua")
+    if os.path.exists(territory_path):
+        block = open(territory_path, encoding="utf-8").read()
+        block = block[block.find("TerritoryRules.SOUND"):]
+        for name in re.findall(r"(?:Ambience|Music|Name) = \"([A-Za-z0-9_]+)\"", block):
+            if not exists(name):
+                missing.setdefault(name, "TerritoryRules.SOUND")
     detail = "" if not missing else ", ".join(f"{n} ({w})" for n, w in sorted(missing.items())[:6])
     record("sound names exist in the catalog", not missing, detail)
 

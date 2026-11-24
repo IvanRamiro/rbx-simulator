@@ -9,13 +9,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local WeatherConfig = require(ReplicatedStorage:WaitForChild("WeatherConfig"))
 local WeatherRules = require(ReplicatedStorage:WaitForChild("WeatherRules"))
+local TerritoryRules = require(ReplicatedStorage:WaitForChild("TerritoryRules"))
 local Sfx = require(script.Parent:WaitForChild("Sfx"))
 
 local player = Players.LocalPlayer
 
 local AMBIENCE = { Yggdrasil = "AmbYggdrasil", BeginnerIsle = "AmbYggdrasil", JadeGrove = "AmbJade", EmberPeak = "AmbEmber", MoonlitIsle = "AmbMoon", OriginAbyss = "AmbAbyss",
     BlossomSanctuary = "AmbSanctuary", -- (the sanctuary's pond and koi splashes: SanctuaryLife)
-    MurimCrossing = "AmbSanctuary" } -- (wind over the open island; each headquarters may bring its own bed later)
+    MurimCrossing = "AmbSanctuary" } -- (wind over the plaza and the open island; each territory has its own: shared/TerritoryRules.SOUND)
 local BIRDS = { AmbYggdrasil = true } -- a daytime bed: night insects after dark, nothing under the rain
 local NIGHT_BED = "AmbMoon"
 local MUSIC = { Yggdrasil = "MusicHub", BeginnerIsle = "MusicHub", JadeGrove = "MusicJade", EmberPeak = "MusicEmber", MoonlitIsle = "MusicMoon", OriginAbyss = "MusicAbyss",
@@ -67,12 +68,74 @@ end
 
 local battleAt = -math.huge
 
+-- Murim Crossing's three territories each have their own bed and music (TerritoryRules.SOUND); the plaza and the open island keep the island's.
+-- The territory is found from where the player stands against each Territory folder's Centre and Radius (the builders write both), and kept a little
+-- past its edge so walking along a border doesn't flicker; the 2.5 s crossfade does the rest.
+local PADS = { Orthodox = "OrthodoxPad", Unorthodox = "UnorthodoxPad", Demonic = "DemonicPad" }
+local territoryNow = nil     -- the name of the territory the player is in, or nil
+local ACCENT_REACH = 90     -- studs: a territory's accent comes from a building this close
+local nextAccent = 0         -- when the territory's little sound plays next (os.clock)
+
+local function territoryFolders()
+    local islands = workspace:FindFirstChild("FloatingIslands")
+    local crossing = islands and islands:FindFirstChild("MurimCrossing")
+    local found = {}
+    if crossing then
+        for name, padName in PADS do
+            local pad = crossing:FindFirstChild(padName)
+            local folder = pad and pad:FindFirstChild("Territory")
+            local centre, radius = folder and folder:GetAttribute("Centre"), folder and folder:GetAttribute("Radius")
+            if typeof(centre) == "Vector3" and typeof(radius) == "number" then
+                found[name] = { X = centre.X, Z = centre.Z, Radius = radius, Folder = folder }
+            end
+        end
+    end
+    return found
+end
+
+local function findTerritory()
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not root or player:GetAttribute("Island") ~= "MurimCrossing" then
+        territoryNow = nil
+        return nil
+    end
+    local found = territoryFolders()
+    territoryNow = TerritoryRules.which(root.Position.X, root.Position.Z, found, territoryNow)
+    return territoryNow, found
+end
+
+-- the territory's accent (Orthodox: now and then a wind chime from the nearest building), after a random wait between its Min and Max
+local function accent(name, found)
+    local spec = TerritoryRules.SOUND[name].Accent
+    if not spec or os.clock() < nextAccent then
+        return
+    end
+    nextAccent = os.clock() + spec.Min + math.random() * (spec.Max - spec.Min)
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    local buildings = found[name] and found[name].Folder:FindFirstChild("Buildings")
+    if not root or not buildings then
+        return
+    end
+    local near = {}
+    for _, model in buildings:GetChildren() do
+        local part = if model:IsA("BasePart") then model else model:FindFirstChildWhichIsA("BasePart", true)
+        if part and (part.Position - root.Position).Magnitude < ACCENT_REACH then
+            table.insert(near, part)
+        end
+    end
+    if #near > 0 then
+        Sfx.play(spec.Name, near[math.random(#near)]) -- (a different place each time, not always the same wall)
+    end
+end
+
 local function update()
     local island = player:GetAttribute("Island")
     -- the weather: rain once a change to it is half done (WeatherRules' blend), the hub's birds by day only
     local clock, _, from, to, k = WeatherRules.current()
     local raining = (if k >= 0.5 then to else from) == "Rain"
-    local bed = AMBIENCE[island]
+    local territory, found = findTerritory()
+    local own = territory and TerritoryRules.SOUND[territory]
+    local bed = if own then own.Ambience else AMBIENCE[island]
     if bed and BIRDS[bed] then
         bed = if raining then nil elseif WeatherRules.nightAt(clock) > 0.6 then NIGHT_BED else bed
     end
@@ -82,8 +145,12 @@ local function update()
     if carrying or nearAwakeGuardian() then
         battleAt = os.clock()
     end
-    set("music", if os.clock() - battleAt < CALM_AFTER then "MusicBattle" else MUSIC[island])
+    local fighting = os.clock() - battleAt < CALM_AFTER
+    set("music", if fighting then "MusicBattle" elseif own then own.Music else MUSIC[island])
     set("chase", if carrying then "ChaseLoop" else nil)
+    if territory and found and not fighting then
+        accent(territory, found)
+    end
 end
 
 player:GetAttributeChangedSignal("Island"):Connect(update)

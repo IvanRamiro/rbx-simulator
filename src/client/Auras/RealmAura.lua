@@ -40,6 +40,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local AuraConfig = require(ReplicatedStorage:WaitForChild("AuraConfig"))
+local BreathRules = require(ReplicatedStorage:WaitForChild("BreathRules")) -- the aura breathes with the body (2026-11-24)
 
 local TEX = {
     Glow = "rbxassetid://135169457468310",
@@ -1034,6 +1035,53 @@ local function setCulled(record, culled)
     end
 end
 
+-- The breath (BreathRules): once per frame an aura's surge is worked out, then the emitters follow it: Brightness always, Rate too for the ones nothing else
+-- drives (Realm 4's ripple, mist and vortex set their own; the body lightning keeps its crackle). Other people's auras apply it every third frame, and a
+-- phone only moves the outline and light (applied by the "outline" spinner from record.surge, record.wave, record.flicker).
+local function breatheItems(record)
+    local owned = {}
+    for _, s in spinners do
+        if s.record == record then
+            for _, key in { "ripple", "mist", "vortex" } do
+                if typeof(s[key]) == "Instance" then
+                    owned[s[key]] = true
+                end
+            end
+        end
+    end
+    local list = {}
+    for _, item in record.items do
+        if item:IsA("ParticleEmitter") and item.Parent and string.sub(item.Name, 1, 9) ~= "Lightning" then
+            table.insert(list, { e = item, bright = item.Brightness, rate = if owned[item] or item.Rate <= 0 then nil else item.Rate })
+        end
+    end
+    record.breathItems, record.breathCount = list, #record.items
+end
+
+local function breathe(record, dt)
+    record.surge, record.wave, record.flicker = BreathRules.step(record.breath, dt, os.clock(), record.tier)
+    if LOW then
+        return
+    end
+    record.breathFrame += 1
+    if not record.isLocal and record.breathFrame % 3 ~= 0 then
+        return
+    end
+    if record.breathCount ~= #record.items then
+        breatheItems(record)
+    end
+    local brightK = BreathRules.brightness(record.tier, record.surge, record.flicker)
+    local rateK = BreathRules.rate(record.tier, record.surge)
+    for _, item in record.breathItems do
+        if item.e.Parent then
+            item.e.Brightness = item.bright * brightK
+            if item.rate then
+                item.e.Rate = math.min(item.rate * rateK, MAX_RATE * 1.3)
+            end
+        end
+    end
+end
+
 local function step(dt)
     local camera = workspace.CurrentCamera
     local eye = camera and camera.CFrame.Position
@@ -1049,6 +1097,9 @@ local function step(dt)
             if far ~= record.culled then
                 setCulled(record, far)
             end
+        end
+        if not record.culled then
+            breathe(record, dt)
         end
     end
     for _, s in spinners do
@@ -1171,12 +1222,20 @@ local function step(dt)
                 local tangent = Vector3.new(-math.sin(ang), 0, math.cos(ang))
                 at.CFrame = tiltCF * CFrame.fromMatrix(pos, tangent, Vector3.yAxis)
             end
-        elseif s.kind == "outline" then     -- Realm 1's outline, breathing (4 s in, 4 s out)
-            s.clock += dt
-            local out = 0.5 + 0.5 * math.cos(s.clock * math.pi / 4)
-            s.highlight.OutlineTransparency = s.line + 0.18 * out
-            s.highlight.FillTransparency = s.fill + 0.04 * out
-            s.light.Brightness = s.glow * (1 - 0.35 * out)
+        elseif s.kind == "outline" then     -- the outline and light, breathing with the body: swelling as the breath goes out (BreathRules)
+            local record = s.record
+            if record and record.surge then
+                local level = math.clamp(0.45 + 0.15 * record.wave + 0.55 * record.surge + 1.5 * record.flicker, 0, 1)
+                s.highlight.OutlineTransparency = s.line + 0.22 * (1 - level)
+                s.highlight.FillTransparency = s.fill + 0.05 * (1 - level)
+                s.light.Brightness = s.glow * (0.6 + 0.5 * level)
+                local h = BreathRules.hue(record.tier, os.clock()) -- the prismatic realm's colours drift along its palette
+                if h then
+                    local palette = AuraConfig.Tiers[record.tier].Palette
+                    local colour = if h < 0.5 then palette.Hot:Lerp(palette.Main, h * 2) else palette.Main:Lerp(palette.Deep, (h - 0.5) * 2)
+                    s.highlight.FillColor, s.highlight.OutlineColor, s.light.Color = colour, colour, colour
+                end
+            end
         elseif s.kind == "vortex" then      -- Realm 1's jade vortex, turning and surging on the breath out
             local rising = math.cos(math.tau * os.clock() / BREATH_LOOP - BREATH_LAG)
             if s.wasRising and rising <= 0 then
@@ -1230,6 +1289,7 @@ function RealmAura.build(root, realm, sub, options)
         before[child] = true
     end
     local record = { root = root, items = {}, saved = {}, cleanups = {}, lifted = {}, culled = false, cullClock = 0,
+        tier = math.clamp(realm or 1, 1, 12), breath = BreathRules.new(math.random(1000)), breathFrame = 0,
         isLocal = options.isLocal == true, cullDistance = options.cullDistance or CULL_DISTANCE_LIVE }
     local first = #spinners + 1
     building = record

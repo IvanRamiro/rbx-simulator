@@ -390,6 +390,12 @@ local catalog = {
     KoiSplash = { Id = "9119293555", Volume = 0.45, Pitch = { 0.95, 1.15 }, Near = 12, Reach = 70, Max = 2 },
     -- the shrine's wind chimes: a few seconds of Pro Sound Effects' "Wind Chimes 3" (41 s, glass and ceramic) now and then (SanctuaryLife)
     ShrineChime = { Id = "9120750073", Volume = 0.25, Start = 4, Length = 4.5, Fade = 1.2, Near = 18, Reach = 110, Max = 1, Gap = 10 },
+    -- Murim Crossing's territories (shared/TerritoryRules.SOUND, AudioController; the owner, 2026-11-24): Dawnspire's waterfalls into its ravine, Windrift's
+    -- gorge wind; Nightfall's bed is Ember Peak's rumble (AmbEmber) and the music is borrowed levelled tracks (Jade's flute, Moonlit's twilight, Ember's drums)
+    -- (measured 2026-11-24 in Play at Volume 1, average PlaybackLoudness over 12 s: the falls 122 (a 61 s loop of five tried; the others 18, 20, 83, 143), the wind 40 with
+    -- gusts to 112; set beside the beds already there: sanctuary 9.7, grove 12.6, ember 12.6: falls 122 x 0.085 = 10.4, wind 40 x 0.26 = 10.3)
+    AmbDawnspire = { Id = "9120551672", Volume = 0.085, Group = "Ambience" },   -- a waterfall's steady roar
+    AmbWindrift = { Id = "9125742262", Volume = 0.26, Group = "Ambience" },     -- airy wind in gusts
     -- the weather (WeatherConfig, AudioController): Pro Sound Effects' "Rain On Water 1", a 61 s outdoor loop
     AmbRain = { Id = "9112854469", Volume = 0.4, Group = "Ambience", FadeIn = 6, FadeOut = 6 }, -- 39 x 0.4: a little over the birds (9 x 1.6)
 
