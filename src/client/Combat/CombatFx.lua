@@ -130,6 +130,37 @@ local SLASHES = {
 }
 -- the spear's slash, on the same terms: one wide flat arc round the striker, right to left
 local SPEAR_SLASH = fromClip("SpearSlash", { Grow = 1.25, Travel = 2.5 })
+
+-- THE FORMS' OWN STRIKES (tools/blender/animation/form_moves.py): a form's chain step plays its own keyed clip when WeaponClips has one; a step with no clip of its
+-- own borrows the family's (clipStep, below), so a form can get its clips a few at a time. Crescent, Lancer and Fist are the original clips. `own` is
+-- { name, slash (the light's arc, when the clip has one: a cut), timing }.
+local FORM_CLIPS = {
+    Gale = { "GaleSwift", "GaleCross", "GaleSpin", "GaleRush", "GaleStorm" },
+    Mountain = { "MountainCut", "MountainChop", "MountainFall" },
+}
+-- the light of a form's cuts: how it swells and carries on, and the pitch of the swing's sound (a finisher is bigger)
+local FORM_SLASH = {
+    Gale = { Grow = 1.25, Travel = 2.5, Pitch = 1.18 },
+    Mountain = { Grow = 1.45, Travel = 3.2, Pitch = 0.85 },
+}
+local FORM_FINISHER = { Grow = 1.5, Travel = 4.5, Pitch = 0.82, Finisher = true }
+local ownCache = {} -- [clip name] = own
+local function ownOf(weapon, info)
+    local names = FORM_CLIPS[info.Form]
+    local name = names and names[info.Step]
+    local clip = name and WeaponClips.Clips[name]
+    if not clip then
+        return nil
+    end
+    local own = ownCache[name]
+    if not own then
+        local base = FORM_SLASH[info.Form] or SLASHES[1]
+        local slash = if clip.Crescent then fromClip(name, table.clone(if info.Finisher then FORM_FINISHER else base)) else nil
+        own = { name = name, slash = slash, timing = if slash then slash.Timing else timingOf(name, clip) }
+        ownCache[name] = own
+    end
+    return own
+end
 local SPEAR_THRUST = WeaponClips.Clips.SpearThrust
 local THRUST_TIMING = timingOf("SpearThrust", SPEAR_THRUST)
 -- the QiSlash texture's circle, as shares of the plate's half-width (tools/blender/vfx/combat_textures.py)
@@ -696,7 +727,7 @@ local function sword(player, p, root, step, strike)
         return
     end
     local elementName, element = elementOf(player, source, flying)
-    local slash = SLASHES[step]
+    local slash = strike.slash or SLASHES[step]
     p = formPalette(strikePalette(p, element, not flying and tierOf(player) or nil), strike.info, element)
     strike.palette = p
     local entry = hold(player, "Sword", source, flying, if flying then swordGlow(player) else element and element.Color,
@@ -781,7 +812,7 @@ end
 -- The kind of blow a strike is: "Cut" (a sword, a spear's slash), "Pierce" (a spear's thrust) or "Blunt" (bare hands).
 local function blowOf(strike)
     if strike and strike.weapon == "Sword" then
-        return "Cut", SLASHES[strike.step]
+        return "Cut", strike.slash or SLASHES[strike.step]
     elseif strike and strike.weapon == "Spear" then
         if strike.step == 2 then
             return "Cut", SPEAR_SLASH
@@ -1318,10 +1349,15 @@ function CombatFx.play(player, weapon, info)
     end
     local now = os.clock()
     local strike = { weapon = weapon, started = now, info = info, step = clipStep(weapon, info) }
+    local own = ownOf(weapon, info)
+    if own then
+        strike.clipName, strike.slash = own.name, own.slash
+    end
     if weapon == "Palm" then
         putAway(player) -- a palm strike is bare-handed
     end
-    local timing = retimed(if weapon == "Sword" then SLASHES[strike.step].Timing
+    local timing = retimed(if own then own.timing
+        elseif weapon == "Sword" then SLASHES[strike.step].Timing
         elseif weapon == "Spear" then (if strike.step == 2 then SPEAR_SLASH.Timing else THRUST_TIMING)
         else PUNCH_TIMINGS[strike.step], weapon, info)
     strike.timing = timing
@@ -1542,6 +1578,12 @@ function CombatFx.pose(player)
         return "SpearLow"
     end
     return entry and entry.kind .. "Ready"
+end
+
+-- The name of the clip a player's strike plays (WeaponClips), or nil when it is not striking or plays the family's borrowed one (PoseController picks that by step).
+function CombatFx.clipName(player)
+    local strike = strikes[player]
+    return strike and os.clock() < strike.untilTime and strike.clipName or nil
 end
 
 -- Which strike of the combo a player is in, and how far through it in real-time seconds (held still through a hit-stop).

@@ -302,7 +302,8 @@ local function choosePose(player, character, rig)
     elseif strikeName == "Slash" or strikeName == "SpearSlash" or strikeName == "SpearThrust" or strikeName == "Palm" then
         local step, elapsed = CombatFx.slash(player)
         rig.slash = rig.slash or {}
-        local name = if strikeName == "Slash" then SWORD_CLIPS[step] elseif strikeName == "Palm" then PUNCH_CLIPS[step] else strikeName
+        local name = CombatFx.clipName(player) -- (a form's own keyed strike, if it has one for this step)
+            or if strikeName == "Slash" then SWORD_CLIPS[step] elseif strikeName == "Palm" then PUNCH_CLIPS[step] else strikeName
         clipPose(rig.slash, name, elapsed, standingStill(player, character))
         strike = rig.slash
     end
