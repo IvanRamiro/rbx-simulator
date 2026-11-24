@@ -42,6 +42,18 @@ holder.Parent = gui
 local scale = Instance.new("UIScale")
 scale.Parent = holder
 
+-- a small screen (a phone is about 340 px high): the counter moves up and shrinks, clear of the Dash and Meditate buttons at the right edge under it (seen
+-- in the Device Simulator on a Galaxy A06: at the usual place its tier word fell on the Meditate button)
+local base = 1
+local function fit()
+    local small = (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 1000) < 500
+    base = if small then 0.8 else 1
+    holder.Position = UDim2.new(1, if small then -16 else -28, if small then 0.30 else 0.42, 0)
+    scale.Scale = base
+end
+fit()
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fit)
+
 local count = UiKit.label({
     Name = "Count", Font = "Title", TextSize = 56, TextColor3 = C.Text, TextXAlignment = Enum.TextXAlignment.Right,
     AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(190, 58), Parent = holder,
@@ -86,8 +98,8 @@ function ComboCounter.set(hits, finisher)
     count.TextColor3 = color
     tierLabel.TextColor3 = color
     if grew and player:GetAttribute("SettingReducedEffects") ~= true then
-        scale.Scale = if finisher then 1.5 else 1.25
-        TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+        scale.Scale = base * (if finisher then 1.5 else 1.25)
+        TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = base }):Play()
     end
 end
 

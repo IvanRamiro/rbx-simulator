@@ -168,9 +168,11 @@ local function formsNow()
 end
 
 local function refreshForm()
-    local _, current = formsNow()
-    local form = FormRules.Forms[current]
-    formSlot.setEmpty(string.upper((string.gsub(form.Name, " Form$", ""))), "") -- (no caption: it ran into the weapon slot's)
+    local family, current = formsNow()
+    -- "FORM 1/3" on two lines: a form's name ("CRESCENT") does not fit the tile at its text size and wrapped mid-word (seen in the Device Simulator on a
+    -- Galaxy A06); the name comes in the notice when a form is chosen
+    local at = table.find(FormRules.Families[family], current) or 1
+    formSlot.setEmpty("FORM\n" .. at .. "/" .. #FormRules.Families[family], "") -- (no caption: it ran into the weapon slot's)
 end
 for _, name in { "WeaponId", "FormSword", "FormSpear", "FormPalm" } do
     player:GetAttributeChangedSignal(name):Connect(refreshForm)
