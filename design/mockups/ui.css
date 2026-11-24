@@ -32,7 +32,6 @@ body { margin: 0; position: relative; overflow: hidden; font-family: Montserrat,
 .btn.plain { background: linear-gradient(180deg, #292865, #1c1b49); border: 2px solid var(--edge); }
 .close { width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(180deg, #b52a3e, #7a1428); border: 2px solid var(--danger); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 22px; }
 .note { position: absolute; width: 30px; height: 30px; border-radius: 15px; background: var(--highlight); color: var(--outline); font-weight: 900; font-size: 15px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--outline); box-shadow: 0 2px 6px rgba(0,0,0,.6); z-index: 50; }
-.crop { background-image: url(assets/current-hud.jpg); }
 
 .i-Qi { background-image: url(assets/Qi.png); }
 .i-Stones { background-image: url(assets/Stones.png); }
