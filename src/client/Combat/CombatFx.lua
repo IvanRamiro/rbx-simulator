@@ -228,17 +228,32 @@ fxFolder.Parent = Workspace
 --     in the air (Stop), shaken (Shake) and pitched (Pitch), and for a finisher a ring on the ground (Ring, studs);
 --   * what the target does (Light, Heavy, Launch) picks the guardian's reaction grade and the blow's weight (landHit).
 local FORM_LOOKS = {
-    Crescent = { Stop = 1, Shake = 1, Pitch = 1 },
-    Gale = { Tint = Color3.fromRGB(150, 235, 255), Stop = 0.7, Shake = 0.7, Pitch = 1.12, Ring = 10 },
-    Mountain = { Tint = Color3.fromRGB(255, 170, 70), Stop = 1.5, Shake = 1.4, Pitch = 0.88, Ring = 14 },
-    Lancer = { Stop = 1, Shake = 1, Pitch = 1 },
-    Swallow = { Tint = Color3.fromRGB(130, 255, 200), Stop = 0.7, Shake = 0.7, Pitch = 1.15, Ring = 9 },
-    Tiger = { Tint = Color3.fromRGB(255, 110, 60), Stop = 1.4, Shake = 1.3, Pitch = 0.9, Ring = 13 },
-    Fist = { Stop = 1, Shake = 1, Pitch = 1, Ring = 8 },
+    Crescent = { Stop = 1, Shake = 1, Pitch = 1, Change = 1.2 },
+    Gale = { Tint = Color3.fromRGB(150, 235, 255), Stop = 0.7, Shake = 0.7, Pitch = 1.12, Ring = 10, Air = true, Change = 1.5 },
+    Mountain = { Tint = Color3.fromRGB(255, 170, 70), Stop = 1.5, Shake = 1.4, Pitch = 0.88, Ring = 14, Weight = true, Change = 0.8 },
+    Lancer = { Stop = 1, Shake = 1, Pitch = 1, Change = 1.2 },
+    Swallow = { Tint = Color3.fromRGB(130, 255, 200), Stop = 0.7, Shake = 0.7, Pitch = 1.15, Ring = 9, Air = true, Change = 1.6 },
+    Tiger = { Tint = Color3.fromRGB(255, 110, 60), Stop = 1.4, Shake = 1.3, Pitch = 0.9, Ring = 13, Weight = true, Change = 0.85 },
+    Fist = { Stop = 1, Shake = 1, Pitch = 1, Ring = 8, Change = 1.2 },
+    Flurry = { Tint = Color3.fromRGB(255, 226, 120), Stop = 0.7, Shake = 0.7, Pitch = 1.12, Ring = 9, Air = true, Change = 1.5 },
+    Stone = { Tint = Color3.fromRGB(205, 160, 105), Stop = 1.5, Shake = 1.5, Pitch = 0.85, Ring = 15, Weight = true, Change = 0.8 },
 }
+-- Air: the form's strikes carry a thin whistle of air; Weight: a low body under each swing; both say more on a finisher. Change: the pitch of the chime when the
+-- form is chosen (quick forms high, heavy ones low, so a form is known by its sound too)
 local DEFAULT_LOOK = FORM_LOOKS.Crescent
 local function lookOf(info)
     return (info and FORM_LOOKS[info.Form]) or DEFAULT_LOOK
+end
+
+-- The sound a form adds to its strikes (SoundCatalog FormAir, FormWeight, FormFinishAir, FormFinishWeight), played with the strike's own swing: at the moment the
+-- blade, shaft or fist comes through.
+local function formVoice(info, root)
+    local look = lookOf(info)
+    if look.Air then
+        Sfx.play(if info.Finisher then "FormFinishAir" else "FormAir", root)
+    elseif look.Weight then
+        Sfx.play(if info.Finisher then "FormFinishWeight" else "FormWeight", root)
+    end
 end
 
 local function clipStep(weapon, info)
@@ -743,6 +758,7 @@ local function sword(player, p, root, step, strike)
     end
     afterWindUp(player, entry, timing.Wind / scale, timing.Swing / scale, root, function()
         Sfx.play("SwordSwing", root, slash.Pitch)
+        formVoice(strike.info, root)
         slashCrescent(slash, p, root)
         if slash.Finisher then
             footDust(player, root)
@@ -780,6 +796,7 @@ local function spear(player, p, root, step, strike)
     if step == 2 then
         afterWindUp(player, entry, timing.Wind / scale, timing.Swing / scale, root, function()
             Sfx.play("SpearSwing", root)
+            formVoice(strike.info, root)
             local cut = strike.slash or SPEAR_SLASH
             slashCrescent(cut, p, root)
             if elementName then
@@ -790,6 +807,7 @@ local function spear(player, p, root, step, strike)
     end
     afterWindUp(player, entry, timing.Wind / scale, timing.Swing / scale, root, function()
         Sfx.play("SpearThrust", root)
+        formVoice(strike.info, root)
         footDust(player, root)
         -- a lance of streaks running on from the spear's tip at full reach
         local tip = root.CFrame * CFrame.new(0, -0.3, -7.9)
@@ -1376,6 +1394,7 @@ function CombatFx.play(player, weapon, info)
     end
     if SWING[weapon] then
         Sfx.play(SWING[weapon], root)
+        formVoice(info, root)
     end
     local p = formPalette(QinggongFx.palette(player), info, nil)
     strike.palette = p
@@ -1433,7 +1452,7 @@ function CombatFx.formChange(player, id)
         Size = numberSequence({ { 0, 2.5 }, { 1, 10 } }), Transparency = numberSequence({ { 0, 0.25 }, { 1, 1 } }),
         Color = colorSequence({ { 0, Color3.new(1, 1, 1) }, { 1, tint } }), Brightness = 2.2,
     }):Emit(1)
-    Sfx.play("Notify", root.Position, 1.2)
+    Sfx.play("Notify", root.Position, (look and look.Change) or 1.2)
 end
 
 -- ---------- drawn and sheathed (the owner, 2026-11-11: "add equip and unequip for weapons", a draw / sheathe toggle) ----------

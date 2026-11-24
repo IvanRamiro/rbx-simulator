@@ -106,11 +106,33 @@ FormRules.Forms = {
             { Name = "Palm Strike", Dmg = 1.5, Cd = 1.4, Range = 1.05, Arc = 1.1, Reaction = "Launch" },
         },
     },
+    -- (2026-11-24: bare hands get two more forms, as swords and spears have, so fighting without a weapon is not the poorer choice; the same damage per second as
+    -- every other form, the same unlocks as Gale and Mountain)
+    Flurry = {
+        Family = "Palm", Name = "Flurry Form", UnlockRealm = 3,
+        Identity = "Fast and relentless. Four quick punches from every angle, then a double palm that blasts the target back.",
+        Chain = {
+            { Name = "Jab", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.15, Reaction = "Light" },
+            { Name = "Cross", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.15, Reaction = "Light" },
+            { Name = "Body Hook", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.3, Reaction = "Light" },
+            { Name = "Uppercut", Dmg = 0.55, Cd = 0.6, Range = 0.85, Arc = 1.15, Reaction = "Heavy" },
+            { Name = "Double Palm", Dmg = 1.6, Cd = 1.4, Range = 0.95, Arc = 1.5, Reaction = "Launch" },
+        },
+    },
+    Stone = {
+        Family = "Palm", Name = "Stone Form", UnlockRealm = 6,
+        Identity = "Slow and crushing. Two hammer fists, then a two-handed crush worth the wait.",
+        Chain = {
+            { Name = "Hammer Fist", Dmg = 0.9, Cd = 1.0, Range = 1, Arc = 0.9, Reaction = "Heavy" },
+            { Name = "Backhand Hammer", Dmg = 0.9, Cd = 1.0, Range = 1, Arc = 0.9, Reaction = "Heavy" },
+            { Name = "Mountain Crush", Dmg = 2.8, Cd = 2.6, Range = 1.0, Arc = 1.3, Reaction = "Launch" },
+        },
+    },
 }
 FormRules.Families = {
     Sword = { "Crescent", "Gale", "Mountain" },
     Spear = { "Lancer", "Swallow", "Tiger" },
-    Palm = { "Fist" },
+    Palm = { "Fist", "Flurry", "Stone" },
 }
 
 for family, ids in FormRules.Families do

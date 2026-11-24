@@ -13,6 +13,8 @@ local FormClips = {
         Swallow = { "SwallowQuick", "SwallowDouble", "SwallowLow", "SwallowRising", "SwallowWhirl" },
         Tiger = { "TigerFang", "TigerClaw", "TigerSlam" },
         Fist = { "PunchRight", "FistHook", "FistPalm" },
+        Flurry = { "FlurryJab", "FlurryCross", "FlurryHook", "FlurryUpper", "FlurryBarrage" },
+        Stone = { "StoneHammerR", "StoneHammerL", "StoneCrush" },
     },
     Borrowed = {
         Crescent = { "SwordA", "SwordB", "SwordC" },

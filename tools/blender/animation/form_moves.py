@@ -375,11 +375,118 @@ def fist_palm():
     return clip, 0.75, None, {"Hit": 0.33}
 
 
+# ---------- bare hands: Flurry (fast) and Stone (heavy) ----------
+def flurry_jab():
+    """A quick straight from the lead hand, barely any wind-up."""
+    clip, lead, pose, guard = M.punch_rig(1)
+    clip.pose(0.0, guard)
+    clip.pose(0.035, pose((0, -0.42, 0.04), -4, -8, -6, (0.58, 0.4, -0.55), (0.5, 0.45, -0.75)), lead)
+    clip.pose(0.07, pose((0, -0.46, -0.3), 10, 18, -8, (0.22, 0.47, -2.35), (0.55, 0.4, -0.45)), lead)
+    clip.pose(0.1, pose((0, -0.46, -0.32), 10, 19, -8, (0.2, 0.47, -2.4), (0.55, 0.4, -0.45)))
+    clip.pose(0.19, pose((0, -0.4, -0.1), 3, 6, -6, (0.45, 0.43, -1.2), (0.5, 0.44, -0.7)))
+    clip.pose(0.3, guard)
+    return clip, 0.3, None, {"Hit": 0.07}
+
+
+def flurry_cross():
+    """The rear hand, the hips turning hard behind it."""
+    clip, lead, pose, guard = M.punch_rig(-1)
+    clip.pose(0.0, guard)
+    clip.pose(0.04, pose((0, -0.44, 0.08), -9, -16, -6, (0.7, 0.34, -0.4), (0.46, 0.46, -0.82)), lead)
+    clip.pose(0.08, pose((0, -0.5, -0.36), 18, 34, -10, (0.16, 0.48, -2.55), (0.62, 0.32, -0.3), step=True), lead)
+    clip.pose(0.11, pose((0, -0.5, -0.38), 20, 36, -10, (0.14, 0.48, -2.6), (0.62, 0.32, -0.3), step=True))
+    clip.pose(0.21, pose((0, -0.44, -0.15), 6, 12, -7, (0.42, 0.45, -1.4), (0.55, 0.38, -0.55), step=True))
+    clip.pose(0.32, guard)
+    return clip, 0.32, None, {"Hit": 0.085}
+
+
+def flurry_hook():
+    """A short hook to the body: the fist swung in low and tight."""
+    clip, lead, pose, guard = M.punch_rig(1)
+    clip.pose(0.0, guard)
+    clip.pose(0.04, pose((0, -0.5, 0.05), -8, -18, 2, (1.1, 0.05, -0.55), (0.46, 0.46, -0.82)), lead)
+    clip.pose(0.085, pose((0, -0.56, -0.2), 16, 32, 4, (0.45, 0.02, -1.55), (0.58, 0.36, -0.5), step=True), lead)
+    clip.pose(0.12, pose((0, -0.56, -0.24), 20, 38, 4, (-0.02, 0.05, -1.5), (0.6, 0.34, -0.45), step=True))
+    clip.pose(0.22, pose((0, -0.48, -0.1), 8, 14, -4, (0.4, 0.3, -1.1), (0.55, 0.4, -0.6), step=True))
+    clip.pose(0.34, guard)
+    return clip, 0.34, None, {"Hit": 0.09}
+
+
+def flurry_upper():
+    """An uppercut: the fist dips low, then drives up under the guard."""
+    clip, lead, pose, guard = M.punch_rig(-1)
+    clip.pose(0.0, guard)
+    clip.pose(0.045, pose((0, -0.62, 0.08), -6, -12, 6, (0.5, -0.25, -0.65), (0.46, 0.46, -0.82)), lead)
+    clip.pose(0.09, pose((0, -0.4, -0.3), 14, 26, -4, (0.34, 0.98, -1.75), (0.6, 0.36, -0.4), step=True), lead)
+    clip.pose(0.125, pose((0, -0.36, -0.32), 14, 28, -2, (0.32, 1.05, -1.8), (0.6, 0.36, -0.4), step=True))
+    clip.pose(0.23, pose((0, -0.44, -0.12), 6, 12, -6, (0.42, 0.6, -1.1), (0.55, 0.4, -0.6), step=True))
+    clip.pose(0.34, guard)
+    return clip, 0.34, None, {"Hit": 0.095}
+
+
+def flurry_barrage():
+    """The finisher: both hands drawn to the hips, then driven out together, palms open, with a stamping step."""
+    clip, lead, pose, guard = M.punch_rig(1)
+    clip.pose(0.0, guard)
+    clip.pose(0.1, pose((0, -0.56, 0.18), -10, -20, 2, (0.7, 0.1, -0.1), (0.7, 0.1, -0.1)), lead)
+    clip.pose(0.2, pose((0, -0.62, 0.26), -14, -26, 4, (0.72, 0.08, 0.05), (0.72, 0.08, 0.05)), lead)
+    clip.pose(0.27, pose((0, -0.58, -0.5), 8, 16, -8, (0.3, 0.45, -2.0), (0.4, 0.45, -1.8), step=True), lead)
+    clip.pose(0.3, pose((0, -0.62, -0.65), 10, 20, -12, (0.18, 0.5, -2.55), (0.34, 0.5, -2.2), step=True), lead)
+    clip.pose(0.45, pose((0, -0.62, -0.65), 10, 20, -12, (0.18, 0.5, -2.55), (0.34, 0.5, -2.2), step=True))
+    clip.pose(0.58, pose((0, -0.52, -0.4), 6, 12, -8, (0.32, 0.45, -1.8), (0.36, 0.45, -1.75), step=True))
+    clip.pose(0.75, guard)
+    return clip, 0.75, None, {"Hit": 0.3}
+
+
+def stone_hammer_r():
+    """A hammer fist: the right fist lifted high behind the head, then brought down through the target."""
+    clip, lead, pose, guard = M.punch_rig(1)
+    lead = {"pelvis": 0.03, "chest": 0.015}
+    clip.pose(0.0, guard)
+    clip.pose(0.14, pose((0, -0.45, 0.14), -10, -20, 8, (0.62, 1.15, -0.1), (0.48, 0.45, -0.85)), lead)
+    clip.pose(0.26, pose((0, -0.42, 0.2), -14, -26, 12, (0.6, 1.3, 0.05), (0.46, 0.46, -0.9)), lead)
+    clip.pose(0.325, pose((0, -0.62, -0.5), 18, 32, -18, (0.22, 0.2, -2.1), (0.6, 0.34, -0.3), step=True), lead)
+    clip.pose(0.5, pose((0, -0.64, -0.55), 20, 36, -20, (0.2, 0.15, -2.2), (0.62, 0.32, -0.25), step=True))
+    clip.pose(0.68, guard)
+    return clip, 0.68, None, {"Hit": 0.325}
+
+
+def stone_hammer_l():
+    """The same weight from the other hand."""
+    clip, lead, pose, guard = M.punch_rig(-1)
+    lead = {"pelvis": 0.03, "chest": 0.015}
+    clip.pose(0.0, guard)
+    clip.pose(0.14, pose((0, -0.45, 0.14), -10, -20, 8, (0.62, 1.15, -0.1), (0.48, 0.45, -0.85)), lead)
+    clip.pose(0.26, pose((0, -0.42, 0.2), -14, -26, 12, (0.6, 1.3, 0.05), (0.46, 0.46, -0.9)), lead)
+    clip.pose(0.325, pose((0, -0.62, -0.5), 18, 32, -18, (0.22, 0.2, -2.1), (0.6, 0.34, -0.3), step=True), lead)
+    clip.pose(0.5, pose((0, -0.64, -0.55), 20, 36, -20, (0.2, 0.15, -2.2), (0.62, 0.32, -0.25), step=True))
+    clip.pose(0.68, guard)
+    return clip, 0.68, None, {"Hit": 0.325}
+
+
+def stone_crush():
+    """The finisher: down into a crouch, both fists raised high overhead, and everything brought down in front on one line."""
+    clip, lead, pose, guard = M.punch_rig(1)
+    lead = {"pelvis": 0.04, "chest": 0.02}
+    clip.pose(0.0, guard)
+    clip.pose(0.22, pose((0, -0.78, 0.2), -6, -12, 6, (0.7, 0.2, -0.3), (0.7, 0.2, -0.3)), lead)
+    clip.pose(0.45, pose((0, -0.8, 0.22), -6, -12, 8, (0.7, 0.25, -0.25), (0.7, 0.25, -0.25)), lead)
+    clip.pose(0.66, pose((0, -0.1, 0.1), -2, -4, 14, (0.45, 1.35, -0.1), (0.45, 1.35, -0.1)), lead)
+    clip.pose(0.78, pose((0, 0.02, 0.05), 0, 0, 16, (0.42, 1.5, -0.05), (0.42, 1.5, -0.05)), lead)
+    clip.pose(0.86, pose((0, -0.62, -0.7), 8, 14, -22, (0.2, 0.2, -2.0), (0.24, 0.2, -1.95), step=True), lead)
+    clip.pose(0.9, pose((0, -0.9, -0.85), 10, 18, -26, (0.16, -0.05, -2.2), (0.2, -0.05, -2.15), step=True), lead)
+    clip.pose(1.15, pose((0, -0.9, -0.85), 10, 18, -26, (0.16, -0.05, -2.2), (0.2, -0.05, -2.15), step=True))
+    clip.pose(1.4, guard)
+    return clip, 1.4, None, {"Hit": 0.88}
+
+
 NEW = {"GaleSwift": gale_swift, "GaleCross": gale_cross, "GaleSpin": gale_spin, "GaleRush": gale_rush, "GaleStorm": gale_storm,
        "MountainCut": mountain_cut, "MountainChop": mountain_chop, "MountainFall": mountain_fall,
        "SwallowQuick": swallow_quick, "SwallowDouble": swallow_double, "SwallowLow": swallow_low, "SwallowRising": swallow_rising, "SwallowWhirl": swallow_whirl,
        "TigerFang": tiger_fang, "TigerClaw": tiger_claw, "TigerSlam": tiger_slam,
-       "FistHook": fist_hook, "FistPalm": fist_palm}
+       "FistHook": fist_hook, "FistPalm": fist_palm,
+       "FlurryJab": flurry_jab, "FlurryCross": flurry_cross, "FlurryHook": flurry_hook, "FlurryUpper": flurry_upper, "FlurryBarrage": flurry_barrage,
+       "StoneHammerR": stone_hammer_r, "StoneHammerL": stone_hammer_l, "StoneCrush": stone_crush}
 M.CLIPS.update(NEW)
-M.UNARMED = M.UNARMED + ("FistHook", "FistPalm")
+M.UNARMED = M.UNARMED + ("FistHook", "FistPalm", "FlurryJab", "FlurryCross", "FlurryHook", "FlurryUpper", "FlurryBarrage", "StoneHammerR", "StoneHammerL", "StoneCrush")
 M.SPEAR_NAMES.update(n for n in NEW if n.startswith(("Swallow", "Tiger")))

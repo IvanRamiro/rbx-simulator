@@ -168,6 +168,14 @@ local catalog = {
     -- pitch 0.63 x 0.45 = 131 and 119, a layer under the blade's 183, the spear's 141 and the fist's 213)
     HeavyThump = { Id = { "9113565281", "9113576289" }, Volume = 0.45, Pitch = { 0.58, 0.68 }, Length = 0.4, Fade = 0.12, Near = 15, Reach = 150, Max = 2 },
     CritHit = { Id = "9113133466", Volume = 1.3, Pitch = { 1.0, 1.1 }, Near = 15, Reach = 150, Max = 2 },
+    -- the combat forms' voices (2026-11-24, shared/FormRules; CombatFx.formVoice): layers from files already in the game, played WITH a strike's own swing so
+    -- every form sounds like itself. FormAir: the quick forms (Gale, Swallow, Flurry), a thin high whistle of air; FormWeight: the heavy ones (Mountain, Tiger,
+    -- Stone), a low body under the swing; the finishers: FormFinishAir a rush of wind that opens out, FormFinishWeight the ground taking the blow. Levelled by measured
+    -- loudness in Play (peak x volume; the swings are 168 to 208): FormAir about 100, FormWeight about 105, the finishers about 130 and 200. NOT judged by ear.
+    FormAir = { Id = { "9125495638", "9125495498" }, Volume = 1.9, Pitch = { 1.55, 1.75 }, Length = 0.3, Fade = 0.1, Reach = 90, Max = 2 },
+    FormWeight = { Id = { "9113565281", "9113576289" }, Volume = 0.35, Pitch = { 0.5, 0.6 }, Length = 0.5, Fade = 0.18, Reach = 90, Max = 2 },
+    FormFinishAir = { Id = "9116416120", Volume = 0.52, Start = 1.5, Length = 1.1, Fade = 0.4, Pitch = { 1.05, 1.15 }, Reach = 100, Max = 2 },
+    FormFinishWeight = { Id = { "9113565281", "9113576289" }, Volume = 0.65, Pitch = { 0.42, 0.5 }, Length = 0.8, Fade = 0.3, Reach = 100, Max = 2 },
     Knockback = { Id = "9113502359", Volume = 1, Pitch = { 0.92, 1.05 }, Gap = 0.15, Key = true },     -- the player is struck (Body Hits 4: 201)
     Dash = { Id = "9119467121", Volume = 1.8, Pitch = { 1, 1.1 }, Start = 0.3, Reach = 90, Max = 3 },
     Leap = { Id = "9125496163", Volume = 1.8, Pitch = { 1, 1.15 }, Reach = 90, Max = 3 },
