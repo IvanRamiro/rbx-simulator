@@ -25,6 +25,7 @@ end
 
 local PAID = "Beasts that came from Robux (the Exclusive Egg or a bought spin) can't be traded where you live."
 AuctionChecks.PaidText = PAID
+AuctionChecks.BoundText = "A beta gift beast is yours for good. It can't be given away, sold or auctioned."
 
 function AuctionChecks.item(f)
     if f.kind == "Pet" then
@@ -46,6 +47,9 @@ function AuctionChecks.item(f)
         end
         if f.isCreatorPet then
             return "This pet always comes back to you, so it can't be sold."
+        end
+        if AuctionRules.isBoundGift(pet) then
+            return AuctionChecks.BoundText
         end
         if AuctionRules.isPaid("Pet", pet) and not f.paidOk then
             return PAID

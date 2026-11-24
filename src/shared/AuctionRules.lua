@@ -3,6 +3,7 @@
 --
 --   AuctionRules.Config                     GameConfig.AuctionHouse
 --   AuctionRules.isPaidPet(petId)           whether this kind of pet comes from a Robux egg (an Exclusive egg's pool): always paid
+--   AuctionRules.isBoundGift(item)          whether this pet is a free copy of a paid kind of beast (the beta gift): never gifted, sold to the shop or auctioned
 --   AuctionRules.isPaid(kind, item)         whether this item is a paid item: a pet marked Paid (hatched from a paid egg: EggInventory)
 --                                           or of an Exclusive egg's kind (the rule for saves from before the mark); never a weapon
 --   AuctionRules.value(kind, item)          its sell value (what Buy & Sell pays for it)
@@ -47,6 +48,13 @@ end
 
 function AuctionRules.isPaidPet(petId)
     return paidPets[petId] == true
+end
+
+-- A free copy of a paid kind of beast: the beta gift's Exclusive beast (BetaGiftService grants it without the Paid mark), or a copy from before the mark existed.
+-- It is the player's for good: it can't be gifted, sold to the shop or auctioned (a free Divine would otherwise pay tens of thousands of stones, or be funnelled
+-- from one alt account to another; the reviewers' finding of 2026-11-24).
+function AuctionRules.isBoundGift(item)
+    return typeof(item) == "table" and item.Paid ~= true and AuctionRules.isPaidPet(item.PetId)
 end
 
 function AuctionRules.isPaid(kind, item)

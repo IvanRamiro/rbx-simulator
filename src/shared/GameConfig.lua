@@ -155,6 +155,9 @@ local GameConfig = {
     Gifts = {
         OfferSeconds = 45,      -- how long a gift waits to be answered
         MaxPerVisit = 5,        -- gifts a player may send before they leave this server (a cap on handing a whole collection to one account)
+        MaxPerDay = 10,         -- and in a day, in every server together (MemoryStore; a sender who hops servers is counted too)
+        MaxOffersPerVisit = 15, -- offers a player may make in one visit, answered or not (an offer pops a question up on someone's screen)
+        DeclineBlock = 600,     -- seconds a player who was turned down can't offer to the same player again
         AskEvery = 1,           -- seconds between a player's requests
     },
     AuctionHouse = {
@@ -204,6 +207,7 @@ local GameConfig = {
             StonesShare = 0.4,  -- of the egg's stones, to each helper
             MaxHelpers = 3,     -- helpers paid for one egg (the biggest shares of the fight first)
             RelayAfter = 4,     -- seconds after a drop before a helper may pick the egg up
+            PayoutEvery = 120,  -- seconds before the same helper is paid a share again (and a helper's pay needs a conquest's share of the fight, on the island: Guardian:helpers)
         },
     },
     -- Yggdrasil's Hatching Altar (WorldBuilder.buildAltar, PetService): where every egg carried home is
@@ -954,7 +958,7 @@ local GameConfig = {
     DevTestStones = 2000, -- with GrantDevTestPets, in Studio, a new save also starts with these Spirit Stones (to test buying)
 
     -- Each Pool's HatchChance values are percents and must add up to 100: PetInventory refuses to start otherwise, and the altar
-    -- shows these numbers to the player exactly. tools/balance_report.py prints each egg's average Qi and any pet out of rarity order.
+    -- shows these numbers to the player exactly. tools/balance/balance_report.py prints each egg's average Qi and any pet out of rarity order.
     Eggs = {
         BeginnerQiEgg = {
             DisplayName = "Beginner Qi Egg",

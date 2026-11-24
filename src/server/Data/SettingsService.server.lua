@@ -6,7 +6,7 @@ local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local PlayerData = require(script.Parent:WaitForChild("PlayerData"))
 local Settings = require(script.Parent:WaitForChild("Settings"))
 
-local THROTTLE = 0.05
+local THROTTLE = 0.25 -- (a setting is a player attribute, which every client receives: 20 a second was a way to flood them)
 
 local lastChange = {}
 

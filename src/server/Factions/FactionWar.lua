@@ -168,6 +168,14 @@ function FactionWar.start()
         return
     end
     started = true
+    -- what this server's players earned in the last FlushEvery seconds goes into the record when the server closes (it was lost, while each member's own WeekRenown was saved)
+    game:BindToClose(function()
+        local week = GoalRules.weekKey()
+        pcall(flush, week)
+        if pending[week - 1] and next(pending[week - 1]) ~= nil then
+            pcall(flush, week - 1)
+        end
+    end)
     task.spawn(function()
         local count = 0
         while true do

@@ -115,8 +115,13 @@ local function earn(player, source)
         return
     end
     local week = GoalRules.weekKey()
-    local first = StandingRules.earn(data, week, amount)
-    FactionWar.add(week, faction, amount, first)
+    StandingRules.roll(data, week)
+    local before = data.WeekRenown
+    StandingRules.earn(data, week, amount)
+    -- a member counts toward the rivalry's head count once they have really played the week (MinRenown), not at their first point: a throwaway account that
+    -- claims one cache would otherwise add a member to its faction and pull the other faction's per-member score down
+    local counted = before < CONFIG.War.MinRenown and data.WeekRenown >= CONFIG.War.MinRenown
+    FactionWar.add(week, faction, amount, counted)
     local stones, titled = settle(player, data)
     PlayerData.saveSoon(player)
     Analytics.event(player, "Renown", amount, source)
@@ -124,14 +129,26 @@ local function earn(player, source)
     schedule(player)
 end
 
-Quests.Moment.Event:Connect(function(player, kind)
+local conquestDay = {} -- [player] = { [guardianId] = the day it last paid renown }: a guardian pays renown once a day, however often it is weakened again (it heals and can be weakened every half minute)
+
+Quests.Moment.Event:Connect(function(player, kind, id)
     if typeof(player) ~= "Instance" or not player:IsA("Player") then
         return
     end
     if kind == "GoalClaimed" then
         earn(player, "Goal")
     elseif kind == "Conquer" then
-        earn(player, "Conquest")
+        local day = GoalRules.dayKey()
+        local seen = conquestDay[player]
+        if not seen then
+            seen = {}
+            conquestDay[player] = seen
+        end
+        local key = if typeof(id) == "string" then id else "?"
+        if seen[key] ~= day then
+            seen[key] = day
+            earn(player, "Conquest")
+        end
     elseif kind == "Secure" then
         earn(player, "Secure")
     end
@@ -166,18 +183,23 @@ local function claimVictory(player)
         return
     end
     busy[player] = true
-    local realm = Shop.playerRealmIndex(player)
-    local amount = StandingRules.warStones(realm)
-    if Wallet.add(player, amount, "FactionVictory", week - 1) then
-        data.WarClaimed = week - 1
-        local room = math.floor((GameConfig.TimedBoost.MaxMinutes * 60 - QiBoost.secondsLeft(player)) / 60)
-        local minutes = math.max(0, math.min(CONFIG.War.BoostMinutes, room))
-        if minutes > 0 then
-            QiBoost.add(player, minutes)
+    local ok, err = pcall(function() -- (a throw must not leave `busy` set: the player would be locked out of the cache and the prize for the session)
+        local realm = Shop.playerRealmIndex(player)
+        local amount = StandingRules.warStones(realm)
+        if Wallet.add(player, amount, "FactionVictory", week - 1) then
+            data.WarClaimed = week - 1
+            local room = math.floor((GameConfig.TimedBoost.MaxMinutes * 60 - QiBoost.secondsLeft(player)) / 60)
+            local minutes = math.max(0, math.min(CONFIG.War.BoostMinutes, room))
+            if minutes > 0 then
+                QiBoost.add(player, minutes)
+            end
+            PlayerData.saveSoon(player)
+            Analytics.event(player, "FactionVictory", 1, faction)
+            RemoteEvents.StandingEvent:FireClient(player, "Paid", "Victory", amount, minutes)
         end
-        PlayerData.saveSoon(player)
-        Analytics.event(player, "FactionVictory", 1, faction)
-        RemoteEvents.StandingEvent:FireClient(player, "Paid", "Victory", amount, minutes)
+    end)
+    if not ok then
+        warn("StandingService: the victory claim failed: " .. tostring(err))
     end
     busy[player] = nil
     push(player)

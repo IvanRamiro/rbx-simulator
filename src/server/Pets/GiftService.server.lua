@@ -9,6 +9,7 @@
 -- The move is one step in memory (PetInventory.takeRecord, then restore; if the receiver can't take it the sender gets it straight back), then both are saved at once, the sender first.
 -- LIMIT: a crash in the moment between the two saves could lose the pet (never copy it: the sender's save is written without it before the receiver's holds it).
 local Players = game:GetService("Players")
+local MemoryStoreService = game:GetService("MemoryStoreService")
 local PolicyService = game:GetService("PolicyService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -26,10 +27,48 @@ local Event = RemoteEvents.GiftEvent
 local CONFIG = GameConfig.Gifts
 
 local sent = {}       -- [player] = gifts sent this visit
+local offered = {}    -- [player] = offers made this visit
+local declined = {}   -- [receiver] = { [senderUserId] = os.clock() it was turned down }
+local today = {}      -- [player] = gifts sent in the last day, as last read from the MemoryStore
 local offers = {}     -- [receiver] = { From = player, InstanceId, At }
 local outgoing = {}   -- [sender] = receiver while their offer is unanswered
 local paidOk = {}     -- [player] = whether this player's region allows trading Robux beasts (PolicyService)
 local lastRequest = {}
+
+-- the gifts a player has sent in the last day, in every server together (a MemoryStore hash map, a day each); the local count is the fallback when the store can't be reached
+local DAY = 86400
+local dayMap = nil
+do
+    local ok, map = pcall(function()
+        return MemoryStoreService:GetHashMap("GiftsSentToday")
+    end)
+    dayMap = if ok then map else nil
+end
+local function readToday(player)
+    if dayMap then
+        local ok, value = pcall(function()
+            return dayMap:GetAsync("U" .. player.UserId)
+        end)
+        if ok and typeof(value) == "number" then
+            today[player] = value
+            return value
+        end
+    end
+    return today[player] or 0
+end
+local function addToday(player)
+    today[player] = (today[player] or 0) + 1
+    if dayMap then
+        pcall(function()
+            local value = dayMap:UpdateAsync("U" .. player.UserId, function(old)
+                return (if typeof(old) == "number" then old else 0) + 1
+            end, DAY)
+            if typeof(value) == "number" then
+                today[player] = value
+            end
+        end)
+    end
+end
 
 local function checkPolicy(player)
     for try = 1, 3 do
@@ -140,15 +179,24 @@ local function offer(sender, receiverId, instanceId)
         Event:FireClient(sender, "Refused", petWhy)
         return
     end
+    local turnedDown = receiver ~= nil and declined[receiver] ~= nil and declined[receiver][sender.UserId]
     local issue = GiftRules.offerIssue({
         senderId = sender.UserId, receiverId = receiverId, receiverHere = receiver ~= nil and receiver.Parent == Players, sent = sent[sender] or 0,
+        sentToday = readToday(sender), offered = offered[sender] or 0,
         senderWaiting = outgoing[sender] ~= nil, receiverWaiting = receiver ~= nil and offers[receiver] ~= nil,
+        blocked = turnedDown ~= nil and turnedDown ~= false and os.clock() - turnedDown < CONFIG.DeclineBlock,
         receiverIssue = if receiver then receiverIssue(receiver, pet) else nil,
     })
     if issue then
         Event:FireClient(sender, "Refused", issue)
         return
     end
+    -- (readToday may have waited on the store: the situation can have changed meanwhile)
+    if sender.Parent ~= Players or receiver.Parent ~= Players or offers[receiver] ~= nil or outgoing[sender] ~= nil then
+        Event:FireClient(sender, "Refused", "Try again in a moment.")
+        return
+    end
+    offered[sender] = (offered[sender] or 0) + 1
     local made = { From = sender, InstanceId = instanceId, At = os.clock() }
     offers[receiver] = made
     outgoing[sender] = receiver
@@ -198,9 +246,17 @@ local function accept(receiver)
     PetInventory.publish(receiver)
     Event:FireClient(sender, "Accepted", receiver.DisplayName)
     Event:FireClient(receiver, "Received", GiftRules.describe(record), sender.DisplayName)
-    -- both saved now, the sender first (their save no longer holds the pet before the receiver's does)
+    task.spawn(addToday, sender)
+    -- both saved now, the sender first and the receiver only once the sender's save is confirmed (retried a few times): the pet is never in the receiver's stored
+    -- save while the sender's still holds it. If the sender has left, their leaving save has run; the receiver's own autosave may still land first (a crash in
+    -- that moment could duplicate it): the residual risk of having no journal, as the Auction has.
     task.spawn(function()
-        PlayerData.saveConfirmed(sender)
+        for _ = 1, 5 do
+            if PlayerData.saveConfirmed(sender) or sender.Parent ~= Players then
+                break
+            end
+            task.wait(3)
+        end
         PlayerData.saveConfirmed(receiver)
     end)
 end
@@ -220,6 +276,10 @@ Event.OnServerEvent:Connect(function(player, kind, a, b)
         accept(player)
     elseif kind == "Decline" then
         local made = clear(player)
+        if made then
+            declined[player] = declined[player] or {}
+            declined[player][made.From.UserId] = os.clock() -- (that sender can't offer again for a while)
+        end
         if made and made.From.Parent == Players then
             Event:FireClient(made.From, "Declined")
         end
@@ -239,5 +299,5 @@ Players.PlayerRemoving:Connect(function(player)
             Event:FireClient(receiver, "Cancelled", player.DisplayName .. " left.")
         end
     end
-    sent[player], paidOk[player], lastRequest[player], outgoing[player] = nil, nil, nil, nil
+    sent[player], offered[player], declined[player], today[player], paidOk[player], lastRequest[player], outgoing[player] = nil, nil, nil, nil, nil, nil, nil
 end)

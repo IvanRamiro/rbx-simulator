@@ -24,6 +24,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextService = game:GetService("TextService")
 
+local AuctionRules = require(ReplicatedStorage:WaitForChild("AuctionRules"))
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
@@ -207,6 +208,9 @@ function actions.SellPet(player, instanceId, extra)
     end
     if PetInventory.isCreatorPet(player, pet.PetId) then
         return false, "This creator's pet can't be sold."
+    end
+    if AuctionRules.isBoundGift(pet) then
+        return false, "A beta gift beast is yours for good. It can't be sold."
     end
     local definition = GameConfig.Pets[pet.PetId]
     if (definition.Rarity == "Secret" or definition.Rarity == "Divine") and not (typeof(extra) == "table" and extra.ConfirmSecret == true) then

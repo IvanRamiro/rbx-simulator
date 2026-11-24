@@ -2,8 +2,9 @@
 -- what makes a pet giftable at all is the Auction House's own rule (server/Auction/AuctionChecks.item), so the two can never drift apart.
 --
 --   GiftRules.offerIssue(f)     why this offer can't be made, in plain words, or nil
---       f = { senderId, receiverId, receiverHere (bool), sent (gifts sent this visit), senderWaiting (bool: an offer of theirs is unanswered),
---             receiverWaiting (bool: they already have a gift to answer), receiverIssue (a plain-words reason the receiver can't take a pet, or nil) }
+--       f = { senderId, receiverId, receiverHere (bool), sent (gifts sent this visit), sentToday (gifts sent in the last day, every server), offered (offers made this visit),
+--             senderWaiting (bool: an offer of theirs is unanswered), receiverWaiting (bool: they already have a gift to answer),
+--             blocked (bool: this receiver turned this sender down a moment ago), receiverIssue (a reason the receiver can't take a pet, or nil) }
 --   GiftRules.expired(offer, now)   whether an offer ({ At }) has waited too long
 --   GiftRules.describe(pet)     what to call the gift, "a Large Dawn Phoenix (Level 3)"
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,6 +27,15 @@ function GiftRules.offerIssue(f)
     if (f.sent or 0) >= CONFIG.MaxPerVisit then
         return "You've sent " .. CONFIG.MaxPerVisit .. " gifts this visit. Come back in another server."
     end
+    if (f.sentToday or 0) >= CONFIG.MaxPerDay then
+        return "You've given " .. CONFIG.MaxPerDay .. " pets away today. Try again tomorrow."
+    end
+    if (f.offered or 0) >= CONFIG.MaxOffersPerVisit then
+        return "You've made enough offers for now. Try again in another server."
+    end
+    if f.blocked then
+        return "That player said no thanks a moment ago. Try again later."
+    end
     if f.senderWaiting then
         return "Wait for your last gift to be answered."
     end
@@ -33,7 +43,7 @@ function GiftRules.offerIssue(f)
         return "That player already has a gift to answer. Try again in a moment."
     end
     if f.receiverIssue then
-        return f.receiverIssue
+        return "That player can't take this pet right now." -- (never why: the reason would tell the sender about someone else's rank, region and pets)
     end
     return nil
 end

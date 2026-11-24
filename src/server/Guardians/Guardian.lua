@@ -203,6 +203,7 @@ function Guardian.new(id, config, source, folder)
     self.lastEngaged = 0
     self.knocked = {}
     self.damageBy = {}     -- [player] = the health they've really taken off it since it last healed
+    self.helperPaidAt = {} -- [player] = os.clock() they were last paid a helper's share (Coop.PayoutEvery)
     self.react = { hits = {}, readyAt = 0, staggerAt = 0, raiseUntil = 0, guardUntil = 0, dodgeUntil = 0, shove = nil, guardNext = true } -- how it answers being fought (ReactRules)
     self.retakeAfter = {}  -- [player] = when they may take another egg, after theirs went back
     self.egg = { state = "None" }
@@ -338,7 +339,11 @@ function Guardian:onHit(player, damage, reaction, point)
     end
     local before = self.health -- (the damage arrives already reduced by a guard: CombatService, which relays the number the player sees)
     self:setHealth(self.health - damage)
-    self.damageBy[player] = (self.damageBy[player] or 0) + (before - self.health)
+    if fighting then
+        -- only what is dealt while it is fighting counts toward a share (the weakening blow too): blows on a Weakened guardian (it takes damage down to 1 health) were
+        -- a way to earn the egg-take share, and a helper's pay, without having fought
+        self.damageBy[player] = (self.damageBy[player] or 0) + (before - self.health)
+    end
     if self.state == "Guardian" and self.health < self.config.MaxHealth * self.config.WeakenedAt then
         self:weaken()
     elseif fighting then
@@ -432,10 +437,25 @@ function Guardian:carry(player)
 end
 
 -- Who fought for this egg: the players (not the thief) who dealt the take-an-egg share and are still on this server (CoopRules.helpers)
-function Guardian:helpers(thief)
-    local need = self.config.MaxHealth * (1 - self.config.WeakenedAt) * GameConfig.EggTheft.TakeShare
+-- forPayout: the ones who are PAID for the egg (secure): a real share of the fight (a conquest's, BountyRules.threshold) and still here, on the guardian's island or
+-- the safe one, and not paid again within PayoutEvery seconds; a cheap share and an absent alt would otherwise earn a fourth of the egg each
+function Guardian:helpers(thief, forPayout)
+    local need = if forPayout then BountyRules.threshold(self.config) else self.config.MaxHealth * (1 - self.config.WeakenedAt) * GameConfig.EggTheft.TakeShare
+    local paidAt = self.helperPaidAt
     return CoopRules.helpers(self.damageBy, need, thief, function(player)
-        return player.Parent == Players
+        if player.Parent ~= Players then
+            return false
+        end
+        if forPayout then
+            local island = player:GetAttribute("Island")
+            if island ~= self.config.Island and island ~= self.config.SafeZone.Island then
+                return false
+            end
+            if os.clock() - (paidAt[player] or -math.huge) < GameConfig.EggTheft.Coop.PayoutEvery then
+                return false
+            end
+        end
+        return true
     end)
 end
 
@@ -621,18 +641,25 @@ function Guardian:secure()
     Quests.Moment:Fire(player, "Secure", self.id)
     Analytics.event(player, "EggSecured", qiGained, self.id, egg.eggId)
     -- the ones who fought for it share its stones (CoopRules; the thief keeps the egg, the Qi and the relic)
-    local helpers = self:helpers(player)
-    local share = CoopRules.share(stones)
-    if share > 0 then
-        for _, helper in helpers do
-            Wallet.add(helper, share, "CoopShare", egg.eggId)
-            PlayerData.saveSoon(helper)
-            Analytics.event(helper, "CoopShare", share, self.id, egg.eggId)
-            RemoteEvents.GuardianEvent:FireClient(helper, self.model, "Shared", share, player.DisplayName, egg.eggId)
+    -- (in a pcall: a throw here, with the state still "Carried", would make GuardianService return the egg to its stand while the thief already holds it)
+    local okShare, errShare = pcall(function()
+        local helpers = self:helpers(player, true)
+        local share = CoopRules.share(stones)
+        if share > 0 then
+            for _, helper in helpers do
+                self.helperPaidAt[helper] = os.clock()
+                Wallet.add(helper, share, "CoopShare", egg.eggId)
+                PlayerData.saveSoon(helper)
+                Analytics.event(helper, "CoopShare", share, self.id, egg.eggId)
+                RemoteEvents.GuardianEvent:FireClient(helper, self.model, "Shared", share, player.DisplayName, egg.eggId)
+            end
         end
-    end
-    if #helpers > 0 then
-        RemoteEvents.GuardianEvent:FireClient(player, self.model, "SharedWith", #helpers, share)
+        if #helpers > 0 then
+            RemoteEvents.GuardianEvent:FireClient(player, self.model, "SharedWith", #helpers, share)
+        end
+    end)
+    if not okShare then
+        warn("Guardian " .. tostring(self.id) .. ": the helpers' share failed: " .. tostring(errShare))
     end
     self:clearThief()
     if egg.slot then
@@ -748,6 +775,7 @@ function Guardian:onPlayerRemoving(player)
     end
     self.knocked[player] = nil
     self.damageBy[player] = nil
+    self.helperPaidAt[player] = nil
     self.retakeAfter[player] = nil
 end
 

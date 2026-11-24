@@ -13,6 +13,7 @@ local Workspace = game:GetService("Workspace")
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Analytics = require(script.Parent.Parent:WaitForChild("Analytics"):WaitForChild("Analytics"))
+local MovementGuard = require(script.Parent.Parent:WaitForChild("Security"):WaitForChild("MovementGuard"))
 
 local CONFIG = GameConfig.Tribulation
 local HITBOX = 1.2 -- studs added to a bolt's reach for the cultivator's own width
@@ -98,7 +99,9 @@ local function run(player, character, token, realm, onPass)
         local hit = false
         if root then
             local offset = root.Position - position
-            hit = Vector3.new(offset.X, 0, offset.Z).Magnitude <= CONFIG.Radius + HITBOX and offset.Y > -4 -- the bolt is a column: any height
+            -- the bolt is a column, any height (under the ground too: standing 5 studs below the ring was a way to never be hit); a player whose movement the
+            -- server doesn't believe (a teleport out of the rings) is hit as if they stood in them
+            hit = (Vector3.new(offset.X, 0, offset.Z).Magnitude <= CONFIG.Radius + HITBOX and math.abs(offset.Y) < 200) or MovementGuard.isSuspect(player)
         end
         if hit and os.clock() - lastHit > HIT_GAP then
             lastHit = os.clock()
