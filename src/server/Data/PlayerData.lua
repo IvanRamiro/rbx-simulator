@@ -33,9 +33,10 @@ local AuctionLedger = require(script.Parent.Parent:WaitForChild("Auction"):WaitF
 local RecordBook = require(script.Parent.Parent:WaitForChild("Records"):WaitForChild("RecordBook"))
 local GoalBook = require(script.Parent.Parent:WaitForChild("Rewards"):WaitForChild("GoalBook"))
 local ConquestBook = require(script.Parent.Parent:WaitForChild("Guardians"):WaitForChild("ConquestBook"))
+local StandingBook = require(script.Parent.Parent:WaitForChild("Factions"):WaitForChild("StandingBook"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 29
+local SCHEMA_VERSION = 30
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -239,6 +240,12 @@ MIGRATIONS[28] = function(progress)
     return progress
 end
 
+-- Version 30 added the faction standing (StandingBook): an older save has none (sanitizeProgress starts it empty); a stray Standing could only be garbage: dropped.
+MIGRATIONS[29] = function(progress)
+    progress.Standing = nil
+    return progress
+end
+
 -- Playtesting in Studio: with ServerStorage's StudioTestSave attribute set, saves go to a separate store of that name, so
 -- each new name starts a new player and a real save can't be touched (set to true, a store called "StudioTestSave").
 -- Ignored outside Studio.
@@ -292,6 +299,7 @@ local function sanitizeProgress(raw)
         Forms = {},
         Goals = GoalBook.sanitize(nil),
         Conquests = ConquestBook.sanitize(nil),
+        Standing = StandingBook.sanitize(nil),
     }
 
     if typeof(raw) ~= "table" then
@@ -401,6 +409,7 @@ local function sanitizeProgress(raw)
     progress.Forms = FormRules.sanitizeChoices(raw.Forms)
     progress.Goals = GoalBook.sanitize(raw.Goals)
     progress.Conquests = ConquestBook.sanitize(raw.Conquests)
+    progress.Standing = StandingBook.sanitize(raw.Standing)
 
     return progress
 end
@@ -460,6 +469,7 @@ local function captureProgress(player)
     -- (and the goals' progress: kept as loaded until GoalService has set them up)
     local goals = GoalBook.exportData(player) or (loaded and loaded.Goals) or GoalBook.sanitize(nil)
     local conquests = ConquestBook.exportData(player) or (loaded and loaded.Conquests) or ConquestBook.sanitize(nil)
+    local standing = StandingBook.exportData(player) or (loaded and loaded.Standing) or StandingBook.sanitize(nil)
     if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings and rewards and codex) then
         -- nothing is saved until every part is set up: say once which part is missing, or a session could go unsaved unseen
         local profile = profiles[player]
@@ -509,6 +519,7 @@ local function captureProgress(player)
         Forms = forms,
         Goals = goals,
         Conquests = conquests,
+        Standing = standing,
     }
 end
 
@@ -892,6 +903,7 @@ function PlayerData.release(player)
     RecordBook.removePlayer(player)
     GoalBook.removePlayer(player)
     ConquestBook.removePlayer(player)
+    StandingBook.removePlayer(player)
 
     if not profile then
         return

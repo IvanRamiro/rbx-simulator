@@ -30,6 +30,7 @@ local EVENT_NAMES = {
     "RewardEvent",
     "GoalEvent",
     "BountyEvent", -- the guardian board (server/Guardians/ConquestService): "Get"; the server answers "State" and tells a "Conquered"
+    "StandingEvent", -- the faction page (server/Factions/StandingService): "Get", "Cache", "Victory"; the server answers "State" and tells a "Paid"
     "TitleEvent",
     "TribulationEvent",
     "PerfEvent",

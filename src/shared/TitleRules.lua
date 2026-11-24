@@ -138,6 +138,23 @@ for _, factionId in GameConfig.Faction.Order do
         How = "Join the " .. info.DisplayName .. " at " .. info.Hq .. ". Only its members wear it." })
 end
 
+-- The faction rank titles (GameConfig.Renown; the owner, 2026-11-24, item 16): reaching the second rank and up in a faction gives that rank's title, in the faction's colour, brighter
+-- as the ranks climb. No bonus (the factions are equal). Only its members wear them.
+TitleRules.FactionRankTitleIds = {} -- [faction id][rank] = the title's id
+for _, factionId in GameConfig.Faction.Order do
+    local info = GameConfig.Faction.Factions[factionId]
+    local ids = {}
+    TitleRules.FactionRankTitleIds[factionId] = ids
+    for rank = 2, #GameConfig.Renown.Thresholds do
+        local name = GameConfig.Renown.RankNames[factionId][rank]
+        local id = factionId .. "Rank" .. rank
+        ids[rank] = id
+        add({ Id = id, Group = "Faction", Text = info.Short .. " " .. name, Color = info.Color:Lerp(Color3.new(1, 1, 1), 0.08 * (rank - 2)),
+            Shimmer = if rank >= 4 then info.Color:Lerp(Color3.new(1, 1, 1), 0.7) else nil, Faction = factionId,
+            How = "Reach the rank of " .. name .. " in the " .. info.DisplayName .. " (earn renown from goals, conquests and eggs)." })
+    end
+end
+
 -- Each title's lettering (Roblox's own font families: { family, weight, "Italic" }), chosen for what it means: Developer
 -- engineered and sharp, Content Creator a bold thumbnail face, Beta Tester futuristic; the realms climbing from brush
 -- calligraphy through stone, forged metal and refined book type to Roman inscription, ornate blackletter and the far-future

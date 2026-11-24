@@ -136,6 +136,7 @@ local function claim(player, scope, goalId)
         Analytics.event(player, "GoalBonus", 1, scope)
     end
     RemoteEvents.GoalEvent:FireClient(player, "Claimed", scope, goalId, stones, bonusStones, bonusMinutes)
+    Quests.Moment:Fire(player, "GoalClaimed", goalId) -- (faction renown: StandingService)
     push(player)
 end
 

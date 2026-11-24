@@ -19,6 +19,7 @@ local UiTheme = require(UI:WaitForChild("UiTheme"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
 local GoalsPage = require(script.Parent:WaitForChild("GoalsPage"))
 local BountyPage = require(script.Parent:WaitForChild("BountyPage"))
+local FactionPage = require(script.Parent:WaitForChild("FactionPage"))
 
 local player = Players.LocalPlayer
 local C = UiTheme.Colors
@@ -56,12 +57,14 @@ loginPage.Parent = window.Body
 local body = loginPage
 local goals = GoalsPage.new(window.Body)
 local bounty = BountyPage.new(window.Body)
+local factionPage = FactionPage.new(window.Body)
 local TAB_GAP = 0.012 -- (shares of the band: the window is scaled, so a pixel width would run into the close button)
 local TAB_SPAN = 0.8 -- the share of the band the tabs fill, from its left; the close button has the rest
 local pages = { -- in the order they stand in the band; Height: the window's height with that page open (a long list grows it to the screen's room)
     { Name = "Login", Text = "LOGIN", Frame = loginPage, Height = LOGIN_HEIGHT },
     { Name = "Goals", Text = "GOALS", Frame = goals.Frame, Height = GOALS_HEIGHT, render = goals.render },
     { Name = "Bounty", Text = "BOUNTY", Frame = bounty.Frame, Height = GOALS_HEIGHT, render = bounty.render },
+    { Name = "Faction", Text = "FACTION", Frame = factionPage.Frame, Height = GOALS_HEIGHT, render = factionPage.render, Member = true }, -- (only for a member of a faction)
 }
 local function layoutTabs()
     local shown = {}
@@ -94,7 +97,21 @@ for _, page in pages do
     page.Tab = UiKit.tab({ Name = page.Name .. "Tab", Text = page.Text, ZIndex = 12, Parent = bar })
     page.Tab.Activated:Connect(function() showPage(page.Name) end)
 end
-layoutTabs()
+-- the FACTION tab is for members: it appears when the player has a faction (their pledge is read a moment after they join, and made at a representative)
+local function showMemberTab()
+    for _, page in pages do
+        if page.Member then
+            local member = typeof(player:GetAttribute("Faction")) == "string"
+            page.Tab.Visible = member
+            if not member and page.Frame.Visible then
+                showPage("Login")
+            end
+        end
+    end
+    layoutTabs()
+end
+player:GetAttributeChangedSignal("Faction"):Connect(showMemberTab)
+showMemberTab()
 if bar then
     bar:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutTabs)
 end

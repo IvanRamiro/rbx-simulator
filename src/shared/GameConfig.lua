@@ -738,6 +738,35 @@ local GameConfig = {
         },
     },
 
+    -- Faction standing and the weekly rivalry (the owner, 2026-11-24, improvement list item 16: "faction content after the weapon: faction ranks, team events or rivalry";
+    -- shared/StandingRules, server/Factions/StandingService and FactionWar, client/Rewards/FactionPage). A member earns RENOWN for their faction from what they already do
+    -- (a goal claimed, a guardian conquered, an egg carried home, the daily cache); renown climbs five ranks, each with its own name in the faction's voice, stones paid once on
+    -- reaching it (realm-scaled like the goals') and, from the second rank, a title. Every member also has a DAILY CACHE, the faction's stipend, which grows with rank.
+    -- THE WEEKLY RIVALRY: the three factions' renown earned in a UTC week (Monday start) is added up across every server (FactionWar, one DataStore key a week). A faction's
+    -- score is its renown divided by its members who earned any, never by fewer than MinMembers, so a crowded faction does not win for being crowded. When the week ends
+    -- the faction with the highest score (a tie has none) has won, and each of its members who earned MinRenown of it can take the Victory share the week after.
+    -- Nothing here is power (the factions are equal): stones, a title and a boost of Qi time, once.
+    Renown = {
+        Sources = { Goal = 4, Conquest = 3, Secure = 5, Cache = 2 }, -- renown for a goal claimed, a guardian conquest, an egg carried home, the daily cache
+        Thresholds = { 0, 60, 200, 500, 1200 }, -- renown for rank 1 to 5
+        RankStones = { 0, 6, 15, 40, 100 },     -- (realm 1) stones paid once on reaching rank 1 to 5
+        RankNames = {
+            Orthodox = { "Disciple", "Warden", "Senior Warden", "Elder", "Sword Saint" },
+            Unorthodox = { "Wanderer", "Roamer", "Trailblazer", "Veteran", "Legend" },
+            Demonic = { "Blade", "Fang", "Captain", "Warlord", "Dread Blade" },
+        },
+        CacheStones = 4,  -- (realm 1) the daily cache at rank 1
+        CacheStep = 0.25, -- each rank above the first adds this share of it
+        War = {
+            Store = "FactionWar", KeyPrefix = "W", -- the week's key: "W<week number>"
+            MinRenown = 20,     -- a member's renown in a week to share in its victory
+            MinMembers = 3,     -- a faction's score never divides by fewer members than this
+            Stones = 25,        -- (realm 1) the victory share
+            BoostMinutes = 15,  -- of the timed 2x Qi
+            FlushEvery = 90,    -- seconds between a server's writes to the week's record (and its reads of every server's total)
+        },
+    },
+
     Rewards = {
         -- Spirit Stones at realm 1 (RewardRules scales them by realm). Raised four times on November 11, 2026: a day used to
         -- pay 5 stones against the 40 one stolen egg pays (15 seconds of play), so logging in wasn't worth it. Now day 1 is

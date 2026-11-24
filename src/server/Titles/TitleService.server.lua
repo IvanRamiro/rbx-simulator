@@ -137,6 +137,17 @@ Quests.Moment.Event:Connect(function(player, kind, guardianId)
     end
 end)
 
+-- a faction rank reached (StandingService): its title, for a member of that faction
+Quests.Moment.Event:Connect(function(player, kind, rank)
+    if kind == "FactionRank" and typeof(rank) == "number" then
+        local ids = TitleRules.FactionRankTitleIds[player:GetAttribute("Faction") or ""]
+        local id = ids and ids[rank]
+        if id then
+            award(player, id)
+        end
+    end
+end)
+
 RemoteEvents.TitleEvent.OnServerEvent:Connect(function(player, action, choice)
     if os.clock() - (lastRequest[player] or 0) < THROTTLE then
         return
