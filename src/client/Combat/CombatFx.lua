@@ -137,11 +137,15 @@ local SPEAR_SLASH = fromClip("SpearSlash", { Grow = 1.25, Travel = 2.5 })
 local FORM_CLIPS = {
     Gale = { "GaleSwift", "GaleCross", "GaleSpin", "GaleRush", "GaleStorm" },
     Mountain = { "MountainCut", "MountainChop", "MountainFall" },
+    Swallow = { "SwallowQuick", "SwallowDouble", "SwallowLow", "SwallowRising", "SwallowWhirl" },
+    Tiger = { "TigerFang", "TigerClaw", "TigerSlam" },
 }
 -- the light of a form's cuts: how it swells and carries on, and the pitch of the swing's sound (a finisher is bigger)
 local FORM_SLASH = {
     Gale = { Grow = 1.25, Travel = 2.5, Pitch = 1.18 },
     Mountain = { Grow = 1.45, Travel = 3.2, Pitch = 0.85 },
+    Swallow = { Grow = 1.25, Travel = 2.5 },
+    Tiger = { Grow = 1.25, Travel = 2.5 },
 }
 local FORM_FINISHER = { Grow = 1.5, Travel = 4.5, Pitch = 0.82, Finisher = true }
 local ownCache = {} -- [clip name] = own
@@ -155,7 +159,9 @@ local function ownOf(weapon, info)
     local own = ownCache[name]
     if not own then
         local base = FORM_SLASH[info.Form] or SLASHES[1]
-        local slash = if clip.Crescent then fromClip(name, table.clone(if info.Finisher then FORM_FINISHER else base)) else nil
+        -- (a spear draws a cut's light only on its finisher: its other strikes are thrusts, drawn as the lance of streaks)
+        local cut = clip.Crescent ~= nil and (weapon == "Sword" or info.Finisher == true)
+        local slash = if cut then fromClip(name, table.clone(if info.Finisher then FORM_FINISHER else base)) else nil
         own = { name = name, slash = slash, timing = if slash then slash.Timing else timingOf(name, clip) }
         ownCache[name] = own
     end
@@ -778,9 +784,10 @@ local function spear(player, p, root, step, strike)
     if step == 2 then
         afterWindUp(player, entry, timing.Wind / scale, timing.Swing / scale, root, function()
             Sfx.play("SpearSwing", root)
-            slashCrescent(SPEAR_SLASH, p, root)
+            local cut = strike.slash or SPEAR_SLASH
+            slashCrescent(cut, p, root)
             if elementName then
-                elementBurst(elementName, root.CFrame * CFrame.new(SPEAR_SLASH.Centre + SPEAR_SLASH.Bulge.Unit * SPEAR_SLASH.Radius))
+                elementBurst(elementName, root.CFrame * CFrame.new(cut.Centre + cut.Bulge.Unit * cut.Radius))
             end
         end)
         return
@@ -815,7 +822,7 @@ local function blowOf(strike)
         return "Cut", strike.slash or SLASHES[strike.step]
     elseif strike and strike.weapon == "Spear" then
         if strike.step == 2 then
-            return "Cut", SPEAR_SLASH
+            return "Cut", strike.slash or SPEAR_SLASH
         end
         return "Pierce", nil
     end
@@ -1352,6 +1359,9 @@ function CombatFx.play(player, weapon, info)
     local own = ownOf(weapon, info)
     if own then
         strike.clipName, strike.slash = own.name, own.slash
+        if weapon == "Spear" then
+            strike.step = if own.slash then 2 else 1 -- (a spear's step 2 is its cut: the light, the blow's kind and its pose follow it)
+        end
     end
     if weapon == "Palm" then
         putAway(player) -- a palm strike is bare-handed

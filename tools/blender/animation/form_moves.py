@@ -208,6 +208,145 @@ def mountain_fall():
     return clip, 1.3, None, {"Hit": 0.795, "Swing": (0.7, 0.88)}
 
 
+# ---------- the spear's forms ----------
+SPEAR_KNEE_F = (0.12, 0.2, -0.5)
+SPEAR_LEAD = {"pelvis": 0.015, "chest": 0.008, "feet": 0.025}
+
+
+def spear_jab(length, t_coil, t_drive, t_reach, hold_to, depth=0.7, lunge=0.8, aim_y=0.0, drop=0.0, lift=0.0, yaw_reach=-50, double=None, hit_at=None):
+    """A darting thrust: the thrust's own shape (coil, drive, reach, hold) shorter and lighter. depth: how far it coils (1 = the thrust's), lunge: how far
+    the body follows it, aim_y: the shaft's pitch at the reach, drop: the body lower, lift: the body and tip higher. double: a second thrust time, a hand
+    farther than the first."""
+    guard = S.capture(S.SPEAR_READY, "Spear")
+    low = S.capture(S.SPEAR_LOW, "Spear")
+    clip = Clip("Spear")
+    lead = SPEAR_LEAD
+    clip.pose(0.0, guard)
+    coil = edit(guard,
+        pelvis_pos=V((0.05, -0.62 - 0.16 * depth - drop, 0.15 + 0.35 * depth)), pelvis_rot=R.ry(-62 - 16 * depth), chest_rot=R.ry(-62 - 28 * depth), head_rot=R.ry(14 * depth) @ R.rx(-3),
+        wp=guard["wp"] + V((0.08 * depth, -0.14 * depth + lift * 0.3, 1.12 * depth)), wr=R.aim(d(0.0, 0.06, -1)),
+        Right_foot=foot(0.5, 0.9 + 0.6 * depth, -62 - 10 * depth), Left_foot=foot(-0.12, -0.9 - 0.38 * depth, -26 - 4 * depth))
+    clip.pose(t_coil, coil, lead)
+    reach = edit(coil,
+        pelvis_pos=V((-0.05, -0.56 - drop, -0.1 - 1.4 * lunge)), pelvis_rot=R.ry(yaw_reach + 2), chest_rot=R.ry(yaw_reach - 14) @ R.rx(-4), head_rot=R.rx(-5),
+        wp=V((0.05, -0.3 + lift, -1.3 - 0.45 * lunge)), wr=R.aim(d(-0.012, aim_y, -1)),
+        Left_foot=foot(-0.16, -1.4 - 1.45 * lunge, -18, lift=0.05 + 0.1 * lunge), Right_foot=foot(0.42, 0.9 - 0.7 * lunge, -68),
+        Right_knee=V(SPEAR_KNEE_F), Left_knee=V((0.05, 0.3, -0.5)))
+    mid = edit(coil, pelvis_pos=coil["pelvis_pos"].lerp(reach["pelvis_pos"], 0.55), wp=coil["wp"].lerp(reach["wp"], 0.6), wr=R.aim(d(-0.01, aim_y * 0.5, -1)),
+        Left_foot=foot(-0.14, -1.0 - 0.9 * lunge, -22, lift=0.25 * lunge, pitch=8), Right_foot=foot(0.45, 0.8, -62))
+    clip.pose(t_drive, mid, lead)
+    if double:
+        # out, drawn half back, out again a hand farther
+        half = edit(reach, wp=reach["wp"].lerp(coil["wp"], 0.45), pelvis_pos=reach["pelvis_pos"].lerp(coil["pelvis_pos"], 0.35))
+        clip.pose(t_reach, reach, lead)
+        clip.pose(double[0], half, lead)
+        far = edit(reach, wp=reach["wp"] + V((0, 0, -0.22)), pelvis_pos=reach["pelvis_pos"] + V((0, -0.03, -0.18)))
+        clip.pose(double[1], far, lead)
+        reach = far
+    else:
+        clip.pose(t_reach, reach, lead)
+    hold = edit(reach, pelvis_pos=reach["pelvis_pos"] + V((0, -0.04, -0.04)), wp=reach["wp"] + V((0, -0.02, -0.05)))
+    clip.pose(hold_to - 0.05, hold)
+    clip.pose(hold_to, hold)
+    back = edit(guard, pelvis_pos=guard["pelvis_pos"].lerp(hold["pelvis_pos"], 0.35), wp=guard["wp"].lerp(hold["wp"], 0.3), Left_foot=foot(-0.2, -1.5, -22, lift=0.1),
+        Right_knee=V(SPEAR_KNEE_F), Left_knee=V((0.05, 0.3, -0.5)))
+    clip.pose((hold_to + length) / 2, back)
+    clip.pose(length, edit(guard))
+    hit = hit_at or (double[1] if double else t_reach)
+    return clip, length, guard["left_rel"], {"Hit": hit + 0.012, "Swing": (t_coil, hold_to - 0.05)}
+
+
+def swallow_quick():
+    return spear_jab(0.42, 0.06, 0.095, 0.125, 0.2, depth=0.6, lunge=0.7)
+
+
+def swallow_double():
+    return spear_jab(0.52, 0.05, 0.08, 0.105, 0.3, depth=0.6, lunge=0.65, double=(0.17, 0.215))
+
+
+def swallow_low():
+    return spear_jab(0.42, 0.06, 0.095, 0.125, 0.2, depth=0.7, lunge=0.8, aim_y=-0.32, drop=0.28, lift=-0.5)
+
+
+def swallow_rising():
+    return spear_jab(0.44, 0.065, 0.1, 0.135, 0.22, depth=0.75, lunge=0.8, aim_y=0.42, drop=-0.1, lift=0.55)
+
+
+def tiger_fang():
+    """A heavy, full-bodied thrust: a deep coil, a long step."""
+    return spear_jab(0.82, 0.12, 0.18, 0.225, 0.42, depth=1.0, lunge=1.15, yaw_reach=-46)
+
+
+def tiger_claw():
+    """The same weight, raked across: the shaft driven in from the left, low to high."""
+    clip, length, left_rel, extra = spear_jab(0.82, 0.12, 0.18, 0.225, 0.42, depth=1.0, lunge=1.1, aim_y=0.18, yaw_reach=-40, lift=0.2)
+    return clip, length, left_rel, extra
+
+
+def whirl_pose(guard, delta, drop=-0.7, push=0.0, tilt=0.0, lift=0.0):
+    """The shaft held level and carried `delta` degrees round to the left from straight ahead; the body turns with it, the feet pivoting."""
+    yaw = -62 + delta
+    knees = dict(Right_knee=V((0.2, 0.3, 0.15)), Left_knee=V((0.1, 0.3, -0.3)))
+    return edit(guard, **knees, **{
+        "pelvis_pos": V((0.0, drop, push)), "pelvis_rot": R.ry(yaw), "chest_rot": R.ry(yaw - 8), "head_rot": R.ry(delta * 0.75) @ R.rx(-3),
+        "wp": M.spun(guard["wp"], delta) + V((0, 0.1 + lift, push)), "wr": R.ry(delta) @ R.rx(tilt) @ guard["wr"],
+        "Right_foot": foot(0.49, 1.33, -70 + delta * 0.6), "Left_foot": foot(-0.09, -1.34, -30 + delta * 0.6)})
+
+
+def swallow_whirl():
+    """The finisher: the spear whirled once all the way round at the hip, then a pause to settle."""
+    guard = S.capture(S.SPEAR_READY, "Spear")
+    clip = Clip("Spear")
+    lead = {"pelvis": 0.014, "chest": 0.006}
+    clip.pose(0.0, guard)
+    clip.pose(0.1, whirl_pose(guard, -105, drop=-0.82, tilt=-4), lead)
+    clip.pose(0.2, whirl_pose(guard, -30, drop=-0.78), lead)
+    clip.pose(0.29, whirl_pose(guard, 60, drop=-0.74, push=-0.2), lead)
+    clip.pose(0.38, whirl_pose(guard, 150, drop=-0.74, push=-0.15), lead)
+    clip.pose(0.47, whirl_pose(guard, 240, drop=-0.76, push=-0.1), lead)
+    clip.pose(0.56, whirl_pose(guard, 320, drop=-0.78), lead)
+    clip.pose(0.66, whirl_pose(guard, 372, drop=-0.82, tilt=3), lead)
+    clip.pose(0.8, whirl_pose(guard, 380, drop=-0.78))
+    clip.pose(1.0, edit(guard))
+    return clip, 1.0, guard["left_rel"], {"Hit": 0.3, "Swing": (0.17, 0.62)}
+
+
+def tiger_slam():
+    """The finisher: the spear lifted high on a leap and slammed down in front, the whole body behind it."""
+    guard = S.capture(S.SPEAR_READY, "Spear")
+    clip = Clip("Spear")
+    lead = {"pelvis": 0.03, "chest": 0.015, "feet": 0.03}
+    knees = dict(Right_knee=V((0.2, 0.3, 0.15)), Left_knee=V((0.1, 0.3, -0.3)))
+    clip.pose(0.0, guard)
+    # sunk back onto the rear leg, the shaft drawn behind
+    clip.pose(0.22, edit(guard, **knees, pelvis_pos=V((0.0, -0.95, 0.3)), pelvis_rot=R.ry(-78), chest_rot=R.ry(-86), head_rot=R.ry(14),
+        wp=guard["wp"] + V((0.15, 0.0, 0.4)), wr=R.aim(d(0.0, 0.12, -1)),
+        Right_foot=foot(0.55, 1.5, -78), Left_foot=foot(-0.1, -1.0, -30)), lead)
+    clip.pose(0.4, edit(guard, **knees, pelvis_pos=V((0.0, -1.0, 0.32)), pelvis_rot=R.ry(-80), chest_rot=R.ry(-88), head_rot=R.ry(14),
+        wp=guard["wp"] + V((0.15, 0.05, 0.45)), wr=R.aim(d(0.0, 0.14, -1)),
+        Right_foot=foot(0.55, 1.5, -80), Left_foot=foot(-0.1, -1.0, -30)), lead)
+    # the leap: the spear raised straight above
+    clip.pose(0.58, edit(guard, **knees, pelvis_pos=V((0.0, 0.2, 0.15)), pelvis_rot=R.ry(-64), chest_rot=R.ry(-72), head_rot=R.ry(4),
+        wp=V((0.4, 1.0, -0.35)), wr=R.aim(d(0.04, 0.7, -0.7)),
+        Right_foot=foot(0.5, 1.0, -66, 0.5), Left_foot=foot(-0.1, -1.2, -30, 0.45)), lead)
+    # down: the shaft driven forward and low, the front foot landing
+    clip.pose(0.68, edit(guard, **knees, pelvis_pos=V((0.0, -0.6, -0.8)), pelvis_rot=R.ry(-52), chest_rot=R.ry(-60) @ R.rx(-8), head_rot=R.rx(-6),
+        wp=V((0.3, 0.3, -1.6)), wr=R.aim(d(0.02, -0.45, -0.9)),
+        Right_foot=foot(0.45, 0.8, -62, 0.1), Left_foot=foot(-0.15, -2.2, -22, 0.2)), lead)
+    slam = edit(guard, **knees, pelvis_pos=V((0.0, -0.95, -1.15)), pelvis_rot=R.ry(-48), chest_rot=R.ry(-54) @ R.rx(-14), head_rot=R.rx(-8),
+        wp=V((0.2, -0.45, -1.8)), wr=R.aim(d(0.01, -0.55, -0.83)),
+        Right_foot=foot(0.45, 0.6, -64), Left_foot=foot(-0.15, -2.6, -20))
+    clip.pose(0.74, slam, lead)
+    clip.pose(1.0, edit(slam, pelvis_pos=slam["pelvis_pos"] + V((0, -0.04, -0.04))))
+    clip.pose(1.3, edit(slam, pelvis_pos=slam["pelvis_pos"] + V((0, -0.03, -0.03))))
+    clip.pose(1.6, edit(guard, pelvis_pos=slam["pelvis_pos"].lerp(guard["pelvis_pos"], 0.5), wp=slam["wp"].lerp(guard["wp"], 0.5)))
+    clip.pose(1.85, edit(guard))
+    return clip, 1.85, guard["left_rel"], {"Hit": 0.74, "Swing": (0.6, 0.86)}
+
+
 NEW = {"GaleSwift": gale_swift, "GaleCross": gale_cross, "GaleSpin": gale_spin, "GaleRush": gale_rush, "GaleStorm": gale_storm,
-       "MountainCut": mountain_cut, "MountainChop": mountain_chop, "MountainFall": mountain_fall}
+       "MountainCut": mountain_cut, "MountainChop": mountain_chop, "MountainFall": mountain_fall,
+       "SwallowQuick": swallow_quick, "SwallowDouble": swallow_double, "SwallowLow": swallow_low, "SwallowRising": swallow_rising, "SwallowWhirl": swallow_whirl,
+       "TigerFang": tiger_fang, "TigerClaw": tiger_claw, "TigerSlam": tiger_slam}
 M.CLIPS.update(NEW)
+M.SPEAR_NAMES.update(n for n in NEW if n.startswith(("Swallow", "Tiger")))

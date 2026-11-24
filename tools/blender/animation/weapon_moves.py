@@ -341,6 +341,7 @@ CLIPS = {"PunchRight": punch_right, "PunchLeft": punch_left, "SpearThrust": spea
 
 
 UNARMED = ("PunchRight", "PunchLeft")
+SPEAR_NAMES = set()      # the forms' spear clips (form_moves.py) add theirs: a clip is a spear's when its name starts "Spear" or is listed here
 
 
 def fit_crescent(frames, swing):
@@ -372,7 +373,7 @@ def fit_crescent(frames, swing):
 def run(name, review=True, out=None, cam_from=(9, 3.5, -11), cam_to=(0, -0.6, -2.2), times=None):
     R.clear()
     spec = CLIPS[name]
-    kind = "Spear" if name.startswith("Spear") else "Sword"
+    kind = "Spear" if name.startswith("Spear") or name in SPEAR_NAMES else "Sword"
     R.EXACT_ARMS = name in UNARMED
     clip, length, left_rel, extra = spec()
     tip = SPEAR_TIP if kind == "Spear" else SWORD_TIP
