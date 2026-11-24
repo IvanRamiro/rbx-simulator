@@ -1,0 +1,108 @@
+{
+ "Bones": 69,
+ "Bounds": {
+  "Max": [
+   16.54,
+   43.11,
+   28.67
+  ],
+  "Min": [
+   -15.61,
+   -0.08,
+   -22.04
+  ]
+ },
+ "Joints": 68,
+ "MeshParts": 8,
+ "Pieces": {
+  "Corona": {
+   "BonesUsed": 17,
+   "Glow": "#dcefff",
+   "Size": [
+    32.15,
+    42.94,
+    3.15
+   ],
+   "Triangles": 2368,
+   "Vertices": 1232
+  },
+  "CoronaCore": {
+   "BonesUsed": 1,
+   "Glow": "#ffe9a8",
+   "Size": [
+    16.2,
+    16.2,
+    0.45
+   ],
+   "Triangles": 1024,
+   "Vertices": 632
+  },
+  "Eclipse": {
+   "BonesUsed": 1,
+   "Glow": "#05070c",
+   "Size": [
+    12.4,
+    12.4,
+    1.2
+   ],
+   "Triangles": 1320,
+   "Vertices": 662
+  },
+  "Eyes": {
+   "BonesUsed": 1,
+   "Glow": "#ffb21e",
+   "Size": [
+    4.17,
+    1.32,
+    1.03
+   ],
+   "Triangles": 576,
+   "Vertices": 322
+  },
+  "Fire": {
+   "BonesUsed": 33,
+   "Glow": null,
+   "Size": [
+    7.15,
+    21.46,
+    46.71
+   ],
+   "Triangles": 8947,
+   "Vertices": 4884
+  },
+  "Pelt": {
+   "BonesUsed": 31,
+   "Glow": null,
+   "Size": [
+    9.51,
+    18.63,
+    36.91
+   ],
+   "Triangles": 17094,
+   "Vertices": 8615
+  },
+  "Pupils": {
+   "BonesUsed": 1,
+   "Glow": "#0a0408",
+   "Size": [
+    4.24,
+    0.85,
+    0.68
+   ],
+   "Triangles": 48,
+   "Vertices": 50
+  },
+  "Skull": {
+   "BonesUsed": 7,
+   "Glow": null,
+   "Size": [
+    5.4,
+    7.96,
+    8.97
+   ],
+   "Triangles": 9472,
+   "Vertices": 4899
+  }
+ },
+ "Triangles": 40849
+}
