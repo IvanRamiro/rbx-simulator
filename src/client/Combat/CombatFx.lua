@@ -43,7 +43,7 @@ local Workspace = game:GetService("Workspace")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local Ranks = require(ReplicatedStorage:WaitForChild("Ranks"))
-local ComboRules = require(ReplicatedStorage:WaitForChild("ComboRules"))
+local FormRules = require(ReplicatedStorage:WaitForChild("FormRules"))
 local AuraKit = require(script.Parent.Parent:WaitForChild("Auras"):WaitForChild("AuraKit"))
 local QinggongFx = require(script.Parent.Parent:WaitForChild("Qinggong"):WaitForChild("QinggongFx"))
 local Sfx = require(script.Parent.Parent:WaitForChild("Audio"):WaitForChild("Sfx"))
@@ -185,10 +185,29 @@ local fxFolder = Instance.new("Folder")
 fxFolder.Name = "CombatFx"
 fxFolder.Parent = Workspace
 
--- COMBAT FORMS (shared/FormRules): a strike comes with its form's `info` ({ Form, Step, Finisher, Name, Reaction, Range, Arc, ... }). The clips are
--- still the old keyed ones (the forms' own come with the animation phase), so a form's strikes borrow them by weapon: a sword's finisher plays the
--- overhead and its other strikes the two cuts in turn; a spear's finisher plays the slash and the rest the thrust; bare hands alternate the fists and
--- the finisher is the left. Timing, reach, damage and the chain itself are the form's.
+-- COMBAT FORMS (shared/FormRules): a strike comes with its form's `info` ({ Form, Step, Finisher, Name, Reaction, Range, Arc, ... }). The chain, the
+-- reach, the damage and the cooldown are the form's (the server decides them); what a strike LOOKS and FEELS like is this file's:
+--   * the clips are the keyed ones, borrowed by weapon (clipStep): a sword's finisher plays the overhead and its other strikes the two cuts in turn; a
+--     spear's finisher plays the slash and the rest the thrust; bare hands alternate the fists and the finisher is the left;
+--   * each strike is retimed to its own cooldown (retimed): a quick form's strikes play fast, a heavy form's finisher slowly, so the blow still lands
+--     when the clip says (a clip's timing is never the server's: the cooldown is);
+--   * each form has its own look (FORM_LOOKS): a tint for the light a strike draws (not over a forged weapon's element), how hard its blows are held
+--     in the air (Stop), shaken (Shake) and pitched (Pitch), and for a finisher a ring on the ground (Ring, studs);
+--   * what the target does (Light, Heavy, Launch) picks the guardian's reaction grade and the blow's weight (landHit).
+local FORM_LOOKS = {
+    Crescent = { Stop = 1, Shake = 1, Pitch = 1 },
+    Gale = { Tint = Color3.fromRGB(150, 235, 255), Stop = 0.7, Shake = 0.7, Pitch = 1.12, Ring = 10 },
+    Mountain = { Tint = Color3.fromRGB(255, 170, 70), Stop = 1.5, Shake = 1.4, Pitch = 0.88, Ring = 14 },
+    Lancer = { Stop = 1, Shake = 1, Pitch = 1 },
+    Swallow = { Tint = Color3.fromRGB(130, 255, 200), Stop = 0.7, Shake = 0.7, Pitch = 1.15, Ring = 9 },
+    Tiger = { Tint = Color3.fromRGB(255, 110, 60), Stop = 1.4, Shake = 1.3, Pitch = 0.9, Ring = 13 },
+    Fist = { Stop = 1, Shake = 1, Pitch = 1, Ring = 8 },
+}
+local DEFAULT_LOOK = FORM_LOOKS.Crescent
+local function lookOf(info)
+    return (info and FORM_LOOKS[info.Form]) or DEFAULT_LOOK
+end
+
 local function clipStep(weapon, info)
     if weapon == "Sword" then
         return if info.Finisher then 3 else (info.Step - 1) % 2 + 1
@@ -198,11 +217,33 @@ local function clipStep(weapon, info)
     return if info.Finisher then 2 else (info.Step - 1) % 2 + 1
 end
 
-local COMBO_STEPS = { Sword = #SLASHES, Spear = 2 } -- how many strikes each weapon's combo has
-assert(COMBO_STEPS.Sword == ComboRules.Steps.Sword and COMBO_STEPS.Spear == ComboRules.Steps.Spear, "CombatFx's slashes and ComboRules' steps disagree")
-local strikes = {} -- [player] = { weapon, started, untilTime, step (its place in the weapon's combo), palette (what it draws with),
-                   -- holdAt, holdUntil (a hit-stop: its clip holds at holdAt seconds until then) }
-local combos = {}  -- [player] = { weapon, step, at }: their last strike in a combo
+-- the clip's timing played in the time this strike's cooldown allows: faster for a short step, slower for a long one, never past SPEED_MIN to SPEED_MAX
+local SPEED_MIN, SPEED_MAX = 0.75, 1.8
+local function retimed(timing, weapon, info)
+    local base = if weapon == "Palm" then GameConfig.Combat.Palm.Cooldown else GameConfig.WeaponKinds[weapon].Cooldown
+    local step = FormRules.Forms[info.Form].Chain[info.Step]
+    local speed = math.clamp(timing.Length / (base * step.Cd * 0.92), SPEED_MIN, SPEED_MAX)
+    local copy = table.clone(timing)
+    copy.Wind, copy.Swing, copy.Tail, copy.Hit, copy.Length = timing.Wind / speed, timing.Swing / speed, timing.Tail / speed, timing.Hit / speed, timing.Length / speed
+    return copy
+end
+
+-- the palette a strike draws with, leaned toward its form's tint (not over a forged weapon's own element)
+local function formPalette(p, info, element)
+    local look = lookOf(info)
+    if element or not look.Tint then
+        return p
+    end
+    local q = table.clone(p)
+    q.Core, q.Main = p.Core:Lerp(look.Tint, 0.45), p.Main:Lerp(look.Tint, 0.7)
+    if p.Deep then
+        q.Deep = p.Deep:Lerp(look.Tint, 0.4)
+    end
+    return q
+end
+
+local strikes = {} -- [player] = { weapon, info, started, untilTime, step (the clip it plays), palette (what it draws with),
+               -- holdAt, holdUntil (a hit-stop: its clip holds at holdAt seconds until then) }
 
 local function rootOf(player)
     local character = player.Character
@@ -656,11 +697,11 @@ local function sword(player, p, root, step, strike)
     end
     local elementName, element = elementOf(player, source, flying)
     local slash = SLASHES[step]
-    p = strikePalette(p, element, not flying and tierOf(player) or nil)
+    p = formPalette(strikePalette(p, element, not flying and tierOf(player) or nil), strike.info, element)
     strike.palette = p
     local entry = hold(player, "Sword", source, flying, if flying then swordGlow(player) else element and element.Color,
         holdSpec("Sword", source), p, element)
-    local timing, scale = slash.Timing, CombatFx.TimeScale
+    local timing, scale = strike.timing or slash.Timing, CombatFx.TimeScale
     if entry then -- the finisher's light hangs in the air longer
         entry.trail.Lifetime, entry.edge.Lifetime = if slash.Finisher then 0.32 else 0.22, if slash.Finisher then 0.36 else 0.26
         if entry.aura then -- the blade starts to gather light as the wind-up starts (the flare comes with the swing)
@@ -693,13 +734,13 @@ local function spear(player, p, root, step, strike)
         return
     end
     local elementName, element = elementOf(player, source, false)
-    p = strikePalette(p, element, tierOf(player))
+    p = formPalette(strikePalette(p, element, tierOf(player)), strike.info, element)
     strike.palette = p
     local glow = if element then element.Color else swordGlow(player) -- (the trail's: the same whoever draws the spear first)
     local lance = if element then element.Color else p.Main
     local entry = hold(player, "Spear", source, false, element and element.Color, holdSpec("Spear", source, glow), p, element)
     local scale = CombatFx.TimeScale
-    local timing = if step == 2 then SPEAR_SLASH.Timing else THRUST_TIMING
+    local timing = strike.timing or (if step == 2 then SPEAR_SLASH.Timing else THRUST_TIMING)
     if entry and entry.aura then
         entry.aura:charge(timing.Wind / scale)
     end
@@ -928,7 +969,7 @@ end
 -- whether the strike is the last blow of a weapon's chain (a nil strike, the blunt burst with no strike behind it, is not; nor is a fist's
 -- second punch: bare hands have no heavy blow to end on)
 local function finisherOf(strike)
-    return strike ~= nil and strike.weapon ~= "Palm" and ComboRules.isFinisher(strike.weapon, strike.step)
+    return strike ~= nil and strike.info ~= nil and strike.info.Finisher == true
 end
 
 -- how far a blow narrows the player's own view as it lands (GuardianFx.punch), in degrees: nothing for a chain's early blows
@@ -945,10 +986,14 @@ end
 local function landHit(player, position, info, strike)
     local blow, slash = blowOf(strike)
     local critical = info.critical == true
-    local heavy = critical or blow == "Pierce" or (slash ~= nil and slash.Finisher == true)
-    local grade = if critical then "Critical" elseif heavy then "Heavy" else "Normal"
+    -- what the form says the target does (Light, Heavy, Launch) is the weight of the blow: the guardian's reaction grade, the thump, the hold in the air;
+    -- without a form's word (a blow shown before the server's answer, with none) the kind of blow decides as it always did
+    local formLook = lookOf(strike and strike.info)
+    local reaction = strike and strike.info and strike.info.Reaction
+    local heavy = if reaction then critical or reaction ~= "Light" else critical or blow == "Pierce" or (slash ~= nil and slash.Finisher == true)
+    local grade = if critical or reaction == "Launch" then "Critical" elseif heavy then "Heavy" else "Normal"
     local ladder = strike and HIT_LADDER[strike.weapon]
-    Sfx.play(HIT_SOUND[blow], position, ladder and ladder[strike.step])
+    Sfx.play(HIT_SOUND[blow], position, (ladder and ladder[strike.step] or 1) * formLook.Pitch)
     if heavy then
         Sfx.play("HeavyThump", position) -- (the weight under it)
     end
@@ -1069,8 +1114,9 @@ local function landHit(player, position, info, strike)
         GuardianReact.hit(info.target, direction, grade) -- the guardian flinches
     end
     local spec = BLOWS[nameOf(strike)]
-    local stop = spec.Stop
-    local shake, shakeTime, kick = spec.Shake[1] * size, spec.Shake[2], spec.Kick * size
+    local weight = if reaction == "Launch" then 1.25 elseif reaction == "Light" then 0.8 else 1 -- (a form's blows are held and shaken to its look and to its reaction)
+    local stop = spec.Stop * formLook.Stop * weight
+    local shake, shakeTime, kick = spec.Shake[1] * size * formLook.Shake * weight, spec.Shake[2], spec.Kick * size
     if critical then
         stop = math.min(stop * CRIT_STOP, CRIT_STOP_MAX)
         shake, shakeTime = math.min(shake * CRIT_SHAKE, CRIT_SHAKE_MAX[1]), math.min(shakeTime * CRIT_SHAKE, CRIT_SHAKE_MAX[2])
@@ -1245,36 +1291,39 @@ local function lunge(player, root, strike, timing, target, point)
     end)
 end
 
+-- a ring of light spreading over the ground from a character's feet (a form's finisher, a change of form): a thin plate on the ground wearing the
+-- shockwave texture, growing to `size` studs across while it fades
+local function groundRing(root, color, size, life)
+    local feet = root.Position - Vector3.new(0, 2.9, 0)
+    local plate = host(CFrame.new(feet), Vector3.new(1, 0.05, 1), life + 0.1)
+    local labels = {}
+    for _, face in { Enum.NormalId.Top, Enum.NormalId.Bottom } do
+        local gui, label = flat(face, TEXTURES.Shockwave, color, 0.1)
+        gui.Brightness = 2.6
+        gui.Parent = plate
+        table.insert(labels, label)
+    end
+    TweenService:Create(plate, TweenInfo.new(life, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(size, 0.05, size) }):Play()
+    for _, label in labels do
+        TweenService:Create(label, TweenInfo.new(life * 0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, false, life * 0.3), { ImageTransparency = 1 }):Play()
+    end
+end
+
 -- ---------- entry points ----------
--- step: which strike of the combo it is, when the server says; else counted here
+-- info: the form's strike (FormRules.plan for our own, the server's form and step for everyone else's). Nothing plays without one: the chain is the form's.
 function CombatFx.play(player, weapon, info)
     local root = rootOf(player)
-    if not root then
+    if not (root and info) then
         return
     end
     local now = os.clock()
-    local strike = { weapon = weapon, started = now, info = info }
-    local steps = COMBO_STEPS[weapon]
-    if info then -- the form's strike (FormRules.plan for our own, the server's form and step for everyone else's)
-        strike.step = clipStep(weapon, info)
-        combos[player] = { weapon = weapon, step = strike.step, at = now }
-        if weapon == "Palm" then
-            putAway(player) -- a palm strike is bare-handed
-        end
-    elseif steps then
-        local last = combos[player]
-        local continuing = last and last.weapon == weapon and now - last.at < ComboRules.window(weapon) / CombatFx.TimeScale
-        strike.step = if continuing then last.step % steps + 1 else 1
-        combos[player] = { weapon = weapon, step = strike.step, at = now }
-    else
-        local last = combos[player]
-        strike.step = if last and last.weapon == weapon and now - last.at < ComboRules.PalmWindow / CombatFx.TimeScale then last.step % 2 + 1 else 1
-        combos[player] = { weapon = weapon, step = strike.step, at = now }
+    local strike = { weapon = weapon, started = now, info = info, step = clipStep(weapon, info) }
+    if weapon == "Palm" then
         putAway(player) -- a palm strike is bare-handed
     end
-    local timing = if weapon == "Sword" then SLASHES[strike.step].Timing
+    local timing = retimed(if weapon == "Sword" then SLASHES[strike.step].Timing
         elseif weapon == "Spear" then (if strike.step == 2 then SPEAR_SLASH.Timing else THRUST_TIMING)
-        else PUNCH_TIMINGS[strike.step]
+        else PUNCH_TIMINGS[strike.step], weapon, info)
     strike.timing = timing
     strike.hitAt = timing.Hit
     strike.untilTime = now + timing.Length / CombatFx.TimeScale
@@ -1286,14 +1335,19 @@ function CombatFx.play(player, weapon, info)
     if SWING[weapon] then
         Sfx.play(SWING[weapon], root)
     end
-    local p = QinggongFx.palette(player)
+    local p = formPalette(QinggongFx.palette(player), info, nil)
     strike.palette = p
+    local ringSize = lookOf(info).Ring
+    if info.Finisher and ringSize and Players.LocalPlayer:GetAttribute("SettingReducedEffects") ~= true then
+        task.delay(timing.Hit / CombatFx.TimeScale, function() -- the finisher's blow lands a ring on the ground
+            if root.Parent then
+                groundRing(root, p.Main, ringSize, 0.55)
+            end
+        end)
+    end
     if player == Players.LocalPlayer and player:GetAttribute("IsFlying") ~= true then
         -- the blow at its blow frame, from our own look at it, if the server's answer isn't here by then (see CombatFx.hit)
-        local spec = if info then info -- (the form's own reach and arc)
-            elseif weapon == "Palm" then GameConfig.Combat.Palm
-            elseif weapon == "Spear" and strike.step == 2 then GameConfig.WeaponKinds.Spear.Slash else GameConfig.WeaponKinds[weapon]
-        local target, point = predictTarget(root, spec)
+        local target, point = predictTarget(root, info) -- (the form's own reach and arc)
         lunge(player, root, strike, timing, target, point)
         if target then
             task.delay(timing.Hit / CombatFx.TimeScale, function()
@@ -1315,6 +1369,29 @@ function CombatFx.play(player, weapon, info)
             end
         end)
     end
+end
+
+-- A player changes form (their "Form<Family>" attribute changed, the server having allowed it): a ring over the ground and a flash of light in the
+-- form's colour, seen by everyone near. Off with Reduced Effects (the notice still says it).
+function CombatFx.formChange(player, id)
+    local root = rootOf(player)
+    if not root or Players.LocalPlayer:GetAttribute("SettingReducedEffects") == true then
+        return
+    end
+    local camera = Workspace.CurrentCamera
+    if player ~= Players.LocalPlayer and (not camera or (camera.CFrame.Position - root.Position).Magnitude > MAX_DISTANCE) then
+        return
+    end
+    local look = FORM_LOOKS[id]
+    local tint = (look and look.Tint) or QinggongFx.palette(player).Main
+    groundRing(root, tint, 11, 0.7)
+    local flash = host(root.CFrame, Vector3.new(0.4, 0.4, 0.4), 1)
+    emitter(flash, {
+        Texture = TEXTURES.Glow, Speed = NumberRange.new(0), Lifetime = NumberRange.new(0.55),
+        Size = numberSequence({ { 0, 2.5 }, { 1, 10 } }), Transparency = numberSequence({ { 0, 0.25 }, { 1, 1 } }),
+        Color = colorSequence({ { 0, Color3.new(1, 1, 1) }, { 1, tint } }), Brightness = 2.2,
+    }):Emit(1)
+    Sfx.play("Notify", root.Position, 1.2)
 end
 
 -- ---------- drawn and sheathed (the owner, 2026-11-11: "add equip and unequip for weapons", a draw / sheathe toggle) ----------
@@ -1481,7 +1558,6 @@ end
 
 Players.PlayerRemoving:Connect(function(player)
     strikes[player] = nil
-    combos[player] = nil
     putAway(player)
     unsheathe(player)
 end)

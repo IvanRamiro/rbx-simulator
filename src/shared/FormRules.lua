@@ -195,7 +195,7 @@ end
 -- Consecutive landed hits, for show (no damage comes of it). A hit within WINDOW seconds of the last landed one adds to the count; a longer
 -- gap starts it again at one. A miss does not add (and the client lets the count lapse after WINDOW). Tiers are named in plain words.
 FormRules.Counter = {
-    WINDOW = 2.2,
+    WINDOW = 3.0, -- (longer than the slowest finisher's recovery, 2.2 s for the Tiger and Mountain forms: with 2.2 the count restarted after every heavy finisher)
     Tiers = { { Hits = 5, Name = "Nice" }, { Hits = 10, Name = "Great" }, { Hits = 20, Name = "Amazing" }, { Hits = 40, Name = "Legendary" } },
 }
 

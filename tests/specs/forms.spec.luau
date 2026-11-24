@@ -198,6 +198,18 @@ t.test("the combo counter adds inside the window and starts again outside it", f
     t.eq(FormRules.countHit({ Hits = 5, At = "x" }, 10).Hits, 1)
 end)
 
+t.test("the counter survives the slowest finisher's recovery, so a heavy form keeps its combo", function()
+    local slowest = 0
+    for family, ids in FormRules.Families do
+        local base = family == "Sword" and 0.55 or family == "Spear" and 0.85 or 0.45
+        for _, id in ids do
+            local chain = FormRules.Forms[id].Chain
+            slowest = math.max(slowest, base * chain[#chain].Cd)
+        end
+    end
+    t.ok(FormRules.Counter.WINDOW > slowest + 0.4, "a window of " .. FormRules.Counter.WINDOW .. " s is not clear of a finisher recovery of " .. slowest .. " s")
+end)
+
 t.test("combo tiers", function()
     t.eq(FormRules.tierOf(1), nil)
     t.eq(FormRules.tierOf(4), nil)

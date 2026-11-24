@@ -207,6 +207,23 @@ local function nextForm()
 end
 formSlot.Button.Activated:Connect(nextForm)
 
+-- a change of form is seen on every player in range: the server's "Form<Family>" attribute changing plays the burst (CombatFx.formChange)
+local function watchForms(who)
+    for _, family in { "Sword", "Spear", "Palm" } do
+        local attribute = "Form" .. family
+        who:GetAttributeChangedSignal(attribute):Connect(function()
+            local id = who:GetAttribute(attribute)
+            if id then
+                CombatFx.formChange(who, id)
+            end
+        end)
+    end
+end
+for _, who in Players:GetPlayers() do
+    watchForms(who)
+end
+Players.PlayerAdded:Connect(watchForms)
+
 -- while a strike button is held, the next strike comes at each cooldown; letting go (or the window losing focus) stops it
 RunService.Heartbeat:Connect(function()
     if holding == "Mouse" and not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then

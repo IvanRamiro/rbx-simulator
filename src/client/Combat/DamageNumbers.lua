@@ -7,7 +7,7 @@
 --       amount    the damage, a whole number (NumberFormat.compact shortens the big ones)
 --       critical  true for a critical strike
 --       tint      the striker's colour (their realm's, or their forged element's): the number's outline
---       finisher  true for the last blow of a combo (ComboRules): a bigger, warmer number than a plain one, under a critical's
+--       finisher  true for the last blow of a form's chain (FormRules): a bigger, warmer number than a plain one, under a critical's
 --
 -- Labels in one ScreenGui, placed each frame from the world position (not BillboardGuis: their size and
 -- motion on screen are set here in pixels, the same at any distance). Nothing runs while none is shown.
