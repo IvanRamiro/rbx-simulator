@@ -2,6 +2,10 @@
 
 Status: approved (owner: "Yes", 2026-11-24, after the round-2 mockups) (needs the owner's approval; mockup `design/previews/settings-v2.png`; today's window `current-settings.jpg`; re-render with `python3 design/mockups/render.py`).
 
+## Build status (2026-11-24, tested in Play)
+
+**Built:** real switches (a 56 x 30 pill, a knob that slides, green when on, ON / OFF beside it; `renderSwitch`), SOUND / DISPLAY / HELP headings, and the SHOW QUEST TRACKER row (sets `SettingShowQuest` and tells the server the same way the Quests button does). Seen in Play: the Reduced Effects switch turned on (attribute true, label ON, green, knob at the right). The window is 420 x 580 (664 for developers) and scrolls.
+
 ## What was wrong
 
 Switches (`switchRow` in `SettingsController`) are wide buttons that say OFF/ON, so the state reads as a label, not a control. The list is flat with no groups. (The Performance readout row is already built only for developers, `isDeveloper`; the audit screenshot showed it because the test account has the Developer title. Nothing to change there.)

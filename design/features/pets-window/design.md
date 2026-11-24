@@ -2,6 +2,11 @@
 
 Status: approved (owner: "Yes", 2026-11-24, after the round-2 mockups) (needs the owner's approval; mockups `design/previews/pets-v2.png` and `phone-pets.png`; today's window `current-pets.jpg`; re-render with `python3 design/mockups/render.py`).
 
+## Build status (2026-11-24, tested in Play)
+
+**Built:** a second toolbar row with a **search box** (filters by name with its mutation, redraws 0.2 s after the last key, "No pets match." when empty) and **EQUIP BEST** (`PetRules.bestPicks` with a 12-test spec proving ranking, slot limit, stable ties and unknown pets, two mutations checked; `PetInventory.equipBest` uses the existing `equip` and `unequip` so the pen and slot rules hold; remote `EquipBestPetsEvent` takes no argument and is throttled like the other pet requests; the button says "Your best pets are already equipped." without asking the server when nothing would change). Seen in Play against the real server: 0 to 2 of 6 equipped, bonus +0% to +130%, search 2 / 1 / 0 / 2 cards, the unequip-then-best round trip. The window grew from 500 to 556 high.
+**Not built, and why:** the grid with a detail panel, the equipped strip, sort, the hatch tile and the phone sheet. The mockup assumed simple cards; the real card also holds a live 3D portrait, level, size tiers, mutations, fusing, an aura button, a lock and gifting. A redraw needs its own design round that keeps all of those, then a careful build.
+
 ## What was wrong
 
 With two pets the window shows two very wide cards and about 70% empty panel; a player with 40 pets would scroll a long list of wide cards. There is no search, no "equip best" and no pen capacity count in the window code (checked 2026-11-24: no such code in `src/client/Pets`), so a player cannot find a pet quickly or equip the best set in one tap (the gift icon and the lock sit as small unlabeled squares beside Equip).

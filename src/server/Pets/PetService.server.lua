@@ -207,6 +207,17 @@ RemoteEvents.HatchEggEvent.OnServerEvent:Connect(onHatchRequest)
 
 handleRequest(RemoteEvents.EquipPetEvent, PetInventory.equip)
 handleRequest(RemoteEvents.UnequipPetEvent, PetInventory.unequip)
+-- EQUIP BEST takes no argument (a client can't name pets: the server picks them), and is throttled like every request that rebuilds pets
+RemoteEvents.EquipBestPetsEvent.OnServerEvent:Connect(function(player)
+    local now = os.clock()
+    if now - (lastRequest[player] or 0) < REQUEST_COOLDOWN then
+        return
+    end
+    lastRequest[player] = now
+    if PetInventory.equipBest(player) then
+        PetInventory.publish(player)
+    end
+end)
 
 -- ---------- duplicates and the Codex ----------
 -- Each changes what's saved, so an accepted one saves soon. Every reply is sent after the new inventory, so the window has redrawn by then.

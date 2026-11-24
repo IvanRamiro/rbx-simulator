@@ -34,7 +34,7 @@ local onWindowClosed -- set below, with the pets it redraws
 local window = Hud.window({
     Name = "PetsWindow", Title = "PETS", OnClose = function()
         onWindowClosed()
-    end, Size = Vector2.new(600, 500), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+    end, Size = Vector2.new(600, 556), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 })
 local body = window.Body
 
@@ -53,7 +53,19 @@ pensButton.Activated:Connect(function()
 end)
 bonusLabel.TextColor3 = C.Highlight
 local _, _ = equippedPill, bonusPill
-local LIST_TOP = SUMMARY + UiTheme.Space.M
+-- a second row (UI brief 2026-11-24, design/features/pets-window): a search box over the names, and EQUIP BEST, which asks the
+-- server to fill the slots with the pets that give the most Qi
+local TOOLS_TOP = SUMMARY + UiTheme.Space.S
+local BEST_WIDTH = 150
+local searchBox = UiKit.textbox({
+    Name = "Search", PlaceholderText = "Search pets", Text = "", TextSize = 14, Position = UDim2.fromOffset(0, TOOLS_TOP),
+    Size = UDim2.new(1, -(BEST_WIDTH + UiTheme.Space.S), 0, UiTheme.Height.Field), Parent = body,
+})
+local bestButton = UiKit.button({
+    Name = "EquipBest", Text = "EQUIP BEST", TextSize = 14, Tone = "Accent", AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.new(1, 0, 0, TOOLS_TOP), Size = UDim2.fromOffset(BEST_WIDTH, UiTheme.Height.Field), Parent = body,
+})
+local LIST_TOP = TOOLS_TOP + UiTheme.Height.Field + UiTheme.Space.M
 local petList = UiKit.scroll({ Name = "PetList", Position = UDim2.fromOffset(0, LIST_TOP), Size = UDim2.new(1, 0, 1, -LIST_TOP), Parent = body })
 -- two cards to a row (square-cornered tiles of the bold look, the owner's "Cultivation Bold")
 petList:FindFirstChildOfClass("UIListLayout"):Destroy()
@@ -384,15 +396,28 @@ function drawList(snapshot, equippedCount)
         end
     end
 
+    -- the search: pets whose name (with its mutation) holds what was typed, in any case
+    local query = string.lower(string.match(searchBox.Text, "^%s*(.-)%s*$") or "")
+    local shown = {}
+    for _, pet in snapshot.Pets do
+        if query == "" or string.find(string.lower(PetRules.displayName(pet.PetId, PetRules.mutation(pet))), query, 1, true) then
+            table.insert(shown, pet)
+        end
+    end
     -- an empty list's message spans the window; cards sit two to a row
-    petGrid.CellSize = if #snapshot.Pets == 0 then UDim2.new(1, 0, 0, 200) else UDim2.new(0.5, -UiTheme.Space.S / 2, 0, CARD_HEIGHT)
+    petGrid.CellSize = if #snapshot.Pets == 0 or #shown == 0 then UDim2.new(1, 0, 0, 200) else UDim2.new(0.5, -UiTheme.Space.S / 2, 0, CARD_HEIGHT)
     if #snapshot.Pets == 0 then
         UiKit.empty(petList, "No pets yet.\nTake an egg from a guardian, carry it home, and hatch it at the Hatching Sanctum.")
         clearPool()
         return
     end
+    if #shown == 0 then
+        UiKit.empty(petList, "No pets match.\nTry another name, or clear the search.")
+        clearPool()
+        return
+    end
     -- new first, then equipped, then the rarest, then by name
-    local pets = table.clone(snapshot.Pets)
+    local pets = table.clone(shown)
     table.sort(pets, function(a, b)
         local da, db = GameConfig.Pets[a.PetId], GameConfig.Pets[b.PetId]
         if (fresh[a.InstanceId] == true) ~= (fresh[b.InstanceId] == true) then
@@ -432,6 +457,43 @@ window.Frame:GetPropertyChangedSignal("Visible"):Connect(function()
 end)
 
 RemoteEvents.PetInventoryUpdatedEvent.OnClientEvent:Connect(renderInventory)
+
+-- typing redraws the list a moment after the last key (every redraw moves the portraits to new cards)
+local searchSerial = 0
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    searchSerial += 1
+    local mine = searchSerial
+    task.delay(0.2, function()
+        if mine == searchSerial and lastSnapshot and window.isOpen() then
+            drawList(lastSnapshot)
+        end
+    end)
+end)
+
+-- EQUIP BEST: if the slots already hold the best pets, say so here; otherwise ask the server (it picks the pets itself)
+bestButton.Activated:Connect(function()
+    if not lastSnapshot then
+        return
+    end
+    local slots = PassRules.maxEquipped(Players.LocalPlayer)
+    local best = {}
+    for _, id in PetRules.bestPicks(lastSnapshot.Pets, slots) do
+        best[id] = true
+    end
+    local same = true
+    for _, pet in lastSnapshot.Pets do
+        if (pet.Equipped == true) ~= (best[pet.InstanceId] == true) then
+            same = false
+        end
+    end
+    if same then
+        Sfx.play("Click")
+        hatchMessage:show(if #lastSnapshot.Pets == 0 then "You have no pets yet." else "Your best pets are already equipped.", "Info")
+        return
+    end
+    Sfx.play("Click")
+    RemoteEvents.EquipBestPetsEvent:FireServer()
+end)
 for _, pass in PassRules.List do
     if pass.ExtraSlots then -- bought in the Store: the limit and every Equip button change at once
         Players.LocalPlayer:GetAttributeChangedSignal("Pass_" .. pass.Id):Connect(function()

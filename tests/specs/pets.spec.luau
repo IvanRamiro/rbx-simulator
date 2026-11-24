@@ -130,4 +130,36 @@ t.test("level and worth", function()
     t.near(PetRules.worth({ Level = 3, Worth = 0 / 0 }), 3, 1e-9, "NaN worth is recomputed")
 end)
 
+t.test("bestPicks: the most Qi first, no more than the slots, equal pets in a stable order, an unknown pet never", function()
+    local strongest, weakest
+    for petId, def in GameConfig.Pets do
+        if def.QiBonus > 0 then
+            if not strongest or def.QiBonus > GameConfig.Pets[strongest].QiBonus then
+                strongest = petId
+            end
+            if not weakest or def.QiBonus < GameConfig.Pets[weakest].QiBonus then
+                weakest = petId
+            end
+        end
+    end
+    t.ok(GameConfig.Pets[strongest].QiBonus > GameConfig.Pets[weakest].QiBonus, "the config has a strongest and a weaker pet")
+    local owned = {
+        { InstanceId = "w1", PetId = weakest },
+        { InstanceId = "s1", PetId = strongest },
+        { InstanceId = "s3", PetId = strongest, Level = 3 },
+        { InstanceId = "s2", PetId = strongest },
+        { InstanceId = "x1", PetId = "NoSuchPet" },
+    }
+    local picks = PetRules.bestPicks(owned, 3)
+    t.eq(picks[1], "s3", "a levelled copy gives more, so it goes first")
+    t.eq(picks[2], "s1", "equal copies keep a stable order by id")
+    t.eq(picks[3], "s2")
+    t.eq(#PetRules.bestPicks(owned, 2), 2, "no more than the slots")
+    local all = PetRules.bestPicks(owned, 10)
+    t.eq(#all, 4, "every pet that gives Qi, and not the unknown one")
+    t.eq(all[4], "w1", "the weakest last")
+    t.eq(#PetRules.bestPicks(owned, 0), 0, "no slots, no picks")
+    t.eq(#PetRules.bestPicks({}, 5), 0, "no pets, no picks")
+end)
+
 t.finish("pets")

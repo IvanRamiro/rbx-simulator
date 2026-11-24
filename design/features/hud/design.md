@@ -2,6 +2,17 @@
 
 Status: approved (owner: "Yes", 2026-11-24, after the round-2 mockups) (needs the owner's approval before building; mockups `design/previews/hud-walk.png`, `hud-carry.png`, `phone-closed.png`, `phone-menu.png`; today's HUD `current-hud.jpg`; re-render with `python3 design/mockups/render.py`).
 
+## Build status (2026-11-24, tested in Play on a desktop-size screen)
+
+**Built:** a word under each counter (QI, STONES, RELICS; desktop only, the strip is 52 high instead of 42); the standing Qi multiplier chip ("x4.4", `PassRules.qiMultiplier(player, true)`, hidden at x1; not tappable); a word under each round button (EGG, SPIN, REWARDS; hangs outside the button, hidden on a phone); the CARRYING card (`src/client/Guardians/CarryCard.client.lua`, in the right column over the quest tracker: egg name and picture, HOME and the distance, a progress bar, and the chase line while the guardian is Enraged). The card was tested by really taking an egg (the attribute and the model's `Egg`, `TargetId`, `SafeZone` and `State` it reads were seen) and drawn from attributes set on the client, because the enraged guardian knocks the test player and drops the egg within a second.
+**Not built, and why:**
+- **Menu rail in three tiers.** The rail is a uniform `UIGridLayout`, and `railSize()`, the slide-away animation, the phone's row and `FeedbackController` all depend on uniform tiles. It needs its own pass (a wrapping list layout and a new `railSize`).
+- **Toast "+N more" count.** Toast's queue logic is spread across `Toast.lua`; its own change.
+- **Waypoint as a pill, rail fading while carrying, the phone drawer.** Not started; the phone layout (a row of icons under the profile) was left alone.
+- **Quest progress bar:** already exists (the tracker draws a bar for a quest with a count), so nothing to add.
+
+**Corrections to the audit above:** the card at the top centre is the new-player "Guide call" (`GuideController`, in the Banner), not the quest tracker; the real tracker is the right-hand `Hud.Quest` region and stays hidden until the guide has been met. The reward toast hangs under the Banner, so it only overlaps the nameplate while the Banner holds something. A Qi-per-second readout and a timed-boost pill already existed beside the Qi number.
+
 ## What was wrong (seen in Play, 2026-11-24, 1920 wide)
 
 1. The reward toast appears at the screen's centre at about y 250 to 330, on top of the quest card and the player's title nameplate ("Developer" was cut off behind it).

@@ -217,6 +217,32 @@ function PetInventory.unequip(player, instanceId)
     return true
 end
 
+-- EQUIP BEST: the pets that give the most Qi (PetRules.bestPicks) in the player's slots. It uses equip and unequip, so every rule
+-- those keep (a penned pet leaves its pen, the slot limit) holds here too. True if anything changed.
+function PetInventory.equipBest(player)
+    local data = playerData[player]
+    if not data then
+        return false
+    end
+    local picks = PetRules.bestPicks(data.ownedPets, PassRules.maxEquipped(player))
+    local wanted = {}
+    for _, id in picks do
+        wanted[id] = true
+    end
+    local changed = false
+    for _, id in table.clone(data.equipped) do
+        if not wanted[id] and PetInventory.unequip(player, id) then
+            changed = true
+        end
+    end
+    for _, id in picks do
+        if PetInventory.equip(player, id) then
+            changed = true
+        end
+    end
+    return changed
+end
+
 -- Puts one of the player's pets in their pen (add = true) or takes it out (add = false). Returns true, or false and why: "NotYours",
 -- "Equipped", "Full", "Already", "NotIn".
 function PetInventory.setInPen(player, instanceId, add)

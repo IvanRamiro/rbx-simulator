@@ -237,6 +237,29 @@ function PetRules.qiBonus(petId, level, size, mutation)
         * PetRules.mutationInfo(mutation).Qi)
 end
 
+-- The `slots` pets that give the most Qi (the Pets window's EQUIP BEST): the owned records (each with PetId, Level, Size and Mutation
+-- and an InstanceId), best first. Equal bonuses keep a stable order by InstanceId, so the same collection always gives the same
+-- answer. Returns the InstanceIds. A pet the config doesn't know gives 0 and is chosen last.
+function PetRules.bestPicks(pets, slots)
+    local ranked = {}
+    for _, pet in pets do
+        table.insert(ranked, { id = pet.InstanceId, qi = PetRules.qiBonus(pet.PetId, pet.Level, pet.Size, pet.Mutation) })
+    end
+    table.sort(ranked, function(a, b)
+        if a.qi ~= b.qi then
+            return a.qi > b.qi
+        end
+        return tostring(a.id) < tostring(b.id)
+    end)
+    local picks = {}
+    for index = 1, math.min(math.max(math.floor(slots), 0), #ranked) do
+        if ranked[index].qi > 0 then
+            table.insert(picks, ranked[index].id)
+        end
+    end
+    return picks
+end
+
 -- The cheapest copy that can go into `target`: the lowest level first, so a levelled copy is never spent while a plain one will do;
 -- of those, the smallest, so a big copy is spent last (the fused pet keeps the larger size of the two: PetInventory.fuse); then the
 -- plainer, so a mutated copy is spent last too (the fused pet keeps the better mutation of the two).
