@@ -44,11 +44,23 @@ scale.Parent = holder
 
 -- a small screen (a phone is about 340 px high): the counter moves up and shrinks, clear of the Dash and Meditate buttons at the right edge under it (seen
 -- in the Device Simulator on a Galaxy A06: at the usual place its tier word fell on the Meditate button)
+-- Seen again with the full phone HUD (2026-11-24, the tutorial run on the A06 profile): the right edge there is full (the quest panel with its air-leaps bar, then Dash,
+-- Meditate and Strike), so at 30 % of the height the count sat on the air-leaps bar. On a small screen the counter now stands just left of the Strike button, level
+-- with it: the thing the player is tapping is where they look for the count.
 local base = 1
 local function fit()
     local small = (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 1000) < 500
     base = if small then 0.8 else 1
-    holder.Position = UDim2.new(1, if small then -16 else -28, if small then 0.30 else 0.42, 0)
+    local touch = player.PlayerGui:FindFirstChild("TouchActions")
+    local strike = if small and touch then touch:FindFirstChild("Strike", true) else nil
+    if strike and strike.AbsoluteSize.X > 1 then
+        -- (AbsolutePosition is in one space for every ScreenGui: the inset-adjusted one, as the HUD's own marks rely on)
+        holder.AnchorPoint = Vector2.new(1, 0.5)
+        holder.Position = UDim2.fromOffset(strike.AbsolutePosition.X - 10, strike.AbsolutePosition.Y + strike.AbsoluteSize.Y / 2)
+    else
+        holder.AnchorPoint = Vector2.new(1, 0.5)
+        holder.Position = UDim2.new(1, if small then -16 else -28, if small then 0.30 else 0.42, 0)
+    end
     scale.Scale = base
 end
 fit()
@@ -90,6 +102,7 @@ function ComboCounter.set(hits, finisher)
     shown = hits
     lastHit = now
     setAlpha(0)
+    fit() -- (the Strike button may have moved with the HUD's scale since the last hit)
     holder.Visible = true
     local tier = FormRules.tierOf(hits)
     count.Text = tostring(hits)

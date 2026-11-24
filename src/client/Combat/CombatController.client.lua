@@ -50,6 +50,7 @@ local UNIT = { Damage = 1, Range = 10, Arc = 80, Cooldown = 1 } -- a strike's st
 local BUFFER = 0.12
 local waiting = false -- a buffered press is waiting for the cooldown
 local holding = nil   -- what is held: "Mouse", "Gamepad" or "Touch"
+local touchHeld = nil  -- the InputObject of the finger holding the Strike button (its UserInputState tells when it lifts)
 
 local function strike(repeating)
     local character = player.Character
@@ -230,7 +231,10 @@ RunService.Heartbeat:Connect(function()
         holding = nil
     elseif holding == "Gamepad" and not UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonR2) then
         holding = nil
-    elseif holding == "Touch" and #UserInputService:GetTouches() == 0 then
+    elseif holding == "Touch" and (not touchHeld or touchHeld.UserInputState == Enum.UserInputState.End
+        or touchHeld.UserInputState == Enum.UserInputState.Cancel) then
+        -- (the finger that began the hold has lifted, wherever: its button's own InputEnded only fires when it lifts over the button. UserInputService has no
+        -- GetTouches: this line called it from 2026-11-18, and on every frame of a held Strike tap on a phone it raised an error and the hold never repeated)
         holding = nil
     end
     if holding then
@@ -295,6 +299,7 @@ if strikeButton then
     strikeButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch then
             holding = "Touch"
+            touchHeld = input
             strike()
         end
     end)
