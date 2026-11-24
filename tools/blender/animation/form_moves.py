@@ -344,9 +344,42 @@ def tiger_slam():
     return clip, 1.85, guard["left_rel"], {"Hit": 0.74, "Swing": (0.6, 0.86)}
 
 
+# ---------- bare hands: Fist form ----------
+def fist_hook():
+    """A left hook: the fist swung in a wide flat arc from outside the shoulder across the body, the hips and chest turning through it."""
+    clip, lead, pose, guard = M.punch_rig(-1)
+    clip.pose(0.0, guard)
+    clip.pose(0.05, pose((0, -0.42, 0.06), -10, -20, -5, (1.15, 0.45, -0.55), (0.46, 0.46, -0.82)), lead)
+    clip.pose(0.1, pose((0, -0.46, 0.12), -18, -34, -5, (1.35, 0.5, -0.4), (0.45, 0.46, -0.88)), lead)
+    clip.pose(0.13, pose((0, -0.5, -0.2), 12, 26, -7, (1.0, 0.5, -1.25), (0.55, 0.36, -0.6), step=True), lead)
+    clip.pose(0.16, pose((0, -0.52, -0.32), 22, 44, -9, (0.4, 0.5, -1.65), (0.62, 0.3, -0.4), step=True), lead)
+    clip.pose(0.2, pose((0, -0.52, -0.34), 26, 50, -9, (-0.05, 0.5, -1.55), (0.64, 0.3, -0.35), step=True), lead)
+    clip.pose(0.27, pose((0, -0.5, -0.3), 24, 46, -9, (-0.05, 0.5, -1.5), (0.64, 0.3, -0.35), step=True))
+    clip.pose(0.34, pose((0, -0.44, -0.15), 10, 18, -7, (0.4, 0.45, -1.2), (0.56, 0.36, -0.5), step=True))
+    clip.pose(0.44, guard)
+    return clip, 0.44, None, {"Hit": 0.16}
+
+
+def fist_palm():
+    """The finisher: a deep load, a long stamping step and an open palm driven straight out with the whole body behind it, the other hand following."""
+    clip, lead, pose, guard = M.punch_rig(1)
+    clip.pose(0.0, guard)
+    clip.pose(0.09, pose((0, -0.48, 0.2), -16, -30, -4, (0.8, 0.3, -0.2), (0.5, 0.4, -0.85)), lead)
+    clip.pose(0.2, pose((0, -0.52, 0.3), -24, -42, -4, (0.9, 0.25, 0.0), (0.45, 0.45, -0.9)), lead)
+    clip.pose(0.27, pose((0, -0.5, 0.1), -6, -10, -6, (0.6, 0.35, -1.0), (0.5, 0.4, -0.8)), lead)
+    clip.pose(0.315, pose((0, -0.56, -0.55), 20, 36, -10, (0.2, 0.55, -2.4), (0.5, 0.4, -0.4), step=True), lead)
+    clip.pose(0.345, pose((0, -0.6, -0.7), 26, 46, -12, (0.1, 0.58, -2.75), (0.55, 0.35, -0.3), step=True), lead)
+    clip.pose(0.5, pose((0, -0.6, -0.7), 26, 46, -12, (0.1, 0.58, -2.75), (0.55, 0.35, -0.3), step=True))
+    clip.pose(0.6, pose((0, -0.58, -0.6), 22, 40, -11, (0.14, 0.55, -2.6), (0.55, 0.35, -0.3), step=True))
+    clip.pose(0.75, guard)
+    return clip, 0.75, None, {"Hit": 0.33}
+
+
 NEW = {"GaleSwift": gale_swift, "GaleCross": gale_cross, "GaleSpin": gale_spin, "GaleRush": gale_rush, "GaleStorm": gale_storm,
        "MountainCut": mountain_cut, "MountainChop": mountain_chop, "MountainFall": mountain_fall,
        "SwallowQuick": swallow_quick, "SwallowDouble": swallow_double, "SwallowLow": swallow_low, "SwallowRising": swallow_rising, "SwallowWhirl": swallow_whirl,
-       "TigerFang": tiger_fang, "TigerClaw": tiger_claw, "TigerSlam": tiger_slam}
+       "TigerFang": tiger_fang, "TigerClaw": tiger_claw, "TigerSlam": tiger_slam,
+       "FistHook": fist_hook, "FistPalm": fist_palm}
 M.CLIPS.update(NEW)
+M.UNARMED = M.UNARMED + ("FistHook", "FistPalm")
 M.SPEAR_NAMES.update(n for n in NEW if n.startswith(("Swallow", "Tiger")))

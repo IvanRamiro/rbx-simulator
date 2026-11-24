@@ -19,6 +19,8 @@
 --   FormRules.familyOf(id)                the family a form belongs to, or nil
 --   FormRules.unlocked(id, realm)         whether a player in realm number `realm` (Shop.playerRealmIndex) can use it
 --   FormRules.resolve(family, chosen, realm)  the form to fight with: the chosen one if it is this family's and unlocked, else the family's first
+--   FormRules.sanitizeChoices(raw)        a saved table of chosen forms ({ Sword = id, Spear = id }) reduced to the valid ones: a form of that very family (unlocking is
+--                                         checked where it is used: a form not yet unlocked is simply not fought with)
 --   FormRules.stepOf(id, last, now, cd)   the strike's place in the chain: last = { Form, Step, At } or nil; cd = the weapon's cooldown
 --   FormRules.strike(id, step, base)      the numbers of one strike: base = { Damage, Range, Arc, Cooldown } of the weapon
 --   FormRules.plan(family, chosen, realm, base, last, now)   the strike a player makes now (server and client both use it)
@@ -121,6 +123,21 @@ end
 function FormRules.familyOf(id)
     local form = typeof(id) == "string" and FormRules.Forms[id]
     return if form then form.Family else nil
+end
+
+-- The player's chosen forms as saved with them (PlayerData "Forms"): { [family] = form id }, only a form that belongs to the family it is saved under.
+-- Anything else (a table, a number, a form of another family, an id this version doesn't know, a family that doesn't exist) is dropped.
+function FormRules.sanitizeChoices(raw)
+    local choices = {}
+    if typeof(raw) == "table" then
+        for family, ids in FormRules.Families do
+            local id = raw[family]
+            if typeof(id) == "string" and table.find(ids, id) then
+                choices[family] = id
+            end
+        end
+    end
+    return choices
 end
 
 function FormRules.unlocked(id, realm)

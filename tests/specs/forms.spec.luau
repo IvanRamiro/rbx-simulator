@@ -219,4 +219,31 @@ t.test("combo tiers", function()
     t.eq(FormRules.tierOf(999), "Legendary")
 end)
 
+t.test("saved form choices are cleaned: only a form of its own family survives", function()
+    local clean = FormRules.sanitizeChoices({ Sword = "Gale", Spear = "Tiger", Palm = "Fist" })
+    t.eq(clean.Sword, "Gale")
+    t.eq(clean.Spear, "Tiger")
+    t.eq(clean.Palm, "Fist")
+    local mixed = FormRules.sanitizeChoices({ Sword = "Tiger", Spear = "Gale", Palm = 5, Bow = "Gale" })
+    t.eq(mixed.Sword, nil, "a spear form under Sword")
+    t.eq(mixed.Spear, nil, "a sword form under Spear")
+    t.eq(mixed.Palm, nil, "a number under Palm")
+    t.eq(mixed.Bow, nil, "a family that does not exist")
+    t.eq(next(FormRules.sanitizeChoices(nil)), nil, "nil")
+    t.eq(next(FormRules.sanitizeChoices("Gale")), nil, "a string")
+    t.eq(next(FormRules.sanitizeChoices({ Sword = { "Gale" }, Spear = true })), nil, "a table and a boolean")
+    t.eq(FormRules.sanitizeChoices({ Sword = "Gale" }).Sword, "Gale", "a form not yet unlocked is kept (unlocking is checked where it is used)")
+end)
+
+t.test("the choice survives a round trip through the attributes the server keeps it in", function()
+    local saved = { Sword = "Mountain", Spear = "Swallow" }
+    local attrs = {}
+    for family, id in FormRules.sanitizeChoices(saved) do
+        attrs["Form" .. family] = id -- (CombatService restores them on join)
+    end
+    t.eq(FormRules.resolve("Sword", attrs.FormSword, 6), "Mountain")
+    t.eq(FormRules.resolve("Spear", attrs.FormSpear, 3), "Swallow")
+    t.eq(FormRules.resolve("Sword", attrs.FormSword, 2), "Crescent", "a form the realm has not unlocked falls back to the first")
+end)
+
 t.finish("forms")

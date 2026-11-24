@@ -18,6 +18,7 @@ local WeaponInventory = require(script.Parent.Parent:WaitForChild("Shop"):WaitFo
 local PetInventory = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("PetInventory"))
 local Codex = require(script.Parent.Parent:WaitForChild("Pets"):WaitForChild("Codex"))
 local PetRules = require(ReplicatedStorage:WaitForChild("PetRules"))
+local FormRules = require(ReplicatedStorage:WaitForChild("FormRules"))
 local PenLayout = require(ReplicatedStorage:WaitForChild("PenLayout"))
 local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local Quests = require(script.Parent.Parent:WaitForChild("Quests"):WaitForChild("Quests"))
@@ -32,7 +33,7 @@ local AuctionLedger = require(script.Parent.Parent:WaitForChild("Auction"):WaitF
 local RecordBook = require(script.Parent.Parent:WaitForChild("Records"):WaitForChild("RecordBook"))
 
 local DATASTORE_NAME = "PlayerProgress"
-local SCHEMA_VERSION = 26
+local SCHEMA_VERSION = 27
 
 -- a record another server still holds is taken over on the last attempt, about 25 s on: long
 -- enough for that server's final save (with its retries) to land first
@@ -215,6 +216,13 @@ MIGRATIONS[25] = function(progress)
     return progress
 end
 
+-- Version 27 added the chosen combat forms (FormRules.sanitizeChoices, kept as the player's FormSword and FormSpear attributes by CombatService): an older save
+-- has none chosen, so each family fights with its first form until they choose. A stray Forms in an older save could only be garbage: dropped.
+MIGRATIONS[26] = function(progress)
+    progress.Forms = nil
+    return progress
+end
+
 -- Playtesting in Studio: with ServerStorage's StudioTestSave attribute set, saves go to a separate store of that name, so
 -- each new name starts a new player and a real save can't be touched (set to true, a store called "StudioTestSave").
 -- Ignored outside Studio.
@@ -265,6 +273,7 @@ local function sanitizeProgress(raw)
         Boost = QiBoost.sanitize(nil),
         Auction = AuctionLedger.sanitize(nil),
         Records = RecordBook.sanitize(nil),
+        Forms = {},
     }
 
     if typeof(raw) ~= "table" then
@@ -371,6 +380,7 @@ local function sanitizeProgress(raw)
     progress.Boost = QiBoost.sanitize(raw.Boost)
     progress.Auction = AuctionLedger.sanitize(raw.Auction)
     progress.Records = RecordBook.sanitize(raw.Records)
+    progress.Forms = FormRules.sanitizeChoices(raw.Forms)
 
     return progress
 end
@@ -420,6 +430,13 @@ local function captureProgress(player)
     local auction = AuctionLedger.exportData(player) or (loaded and loaded.Auction) or AuctionLedger.sanitize(nil)
     -- (and the Hall of Records' counts: kept as loaded until RecordsService sets them up)
     local records = RecordBook.exportData(player) or (loaded and loaded.Records) or RecordBook.sanitize(nil)
+    -- (and the chosen combat forms, from the player's attributes; a family not chosen this session keeps what was loaded, so a save before CombatService has put
+    -- them back can't write them away)
+    local chosen = {}
+    for family in FormRules.Families do
+        chosen[family] = player:GetAttribute("Form" .. family) or (loaded and loaded.Forms and loaded.Forms[family])
+    end
+    local forms = FormRules.sanitizeChoices(chosen)
     if not (qi and rankValue and pets and relics and eggs and stones and weapons and elements and quest and settings and rewards and codex) then
         -- nothing is saved until every part is set up: say once which part is missing, or a session could go unsaved unseen
         local profile = profiles[player]
@@ -466,6 +483,7 @@ local function captureProgress(player)
         Boost = boost,
         Auction = auction,
         Records = records,
+        Forms = forms,
     }
 end
 

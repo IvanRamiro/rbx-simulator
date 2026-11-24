@@ -34,6 +34,7 @@ local Shop = require(ReplicatedStorage:WaitForChild("Shop"))
 local RemoteEvents = require(ReplicatedStorage:WaitForChild("RemoteEvents"))
 local Combat = require(script.Parent:WaitForChild("Combat"))
 local MovementGuard = require(script.Parent.Parent:WaitForChild("Security"):WaitForChild("MovementGuard"))
+local PlayerData = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("PlayerData"))
 
 local COOLDOWN_SLACK = 0.15 -- the share of a cooldown a request may come early: latency, not cheating
 local lastStrike = {} -- [player] = { Form, Step, At } (FormRules.plan): the chain's last strike
@@ -176,7 +177,28 @@ RemoteEvents.FormEvent.OnServerEvent:Connect(function(player, id)
     end
     lastFormChange[player] = now
     player:SetAttribute("Form" .. family, id)
+    PlayerData.saveSoon(player) -- (the choice is saved with the player: PlayerData "Forms", read from these attributes)
 end)
+
+-- The saved choice is put back as soon as the player's data is in (the attribute stays unset until then: the family's first form is fought with). A choice
+-- made meanwhile is theirs and is kept. It is the saved id of a form of that very family (FormRules.sanitizeChoices); unlocking is checked where it is used.
+local function restoreForms(player)
+    local progress = PlayerData.waitForData(player)
+    if not progress or player.Parent ~= Players then
+        return
+    end
+    for family, id in FormRules.sanitizeChoices(progress.Forms) do
+        if player:GetAttribute("Form" .. family) == nil then
+            player:SetAttribute("Form" .. family, id)
+        end
+    end
+end
+Players.PlayerAdded:Connect(function(player)
+    task.spawn(restoreForms, player)
+end)
+for _, player in Players:GetPlayers() do
+    task.spawn(restoreForms, player)
+end
 
 RemoteEvents.CombatEvent.OnServerEvent:Connect(function(player)
     local character = player.Character

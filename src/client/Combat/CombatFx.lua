@@ -80,6 +80,7 @@ local MAX_DISTANCE = 250
 -- Centre and Radius, the way its plane faces (Face) and the way the arc bulges (Bulge). Then how much
 -- it swells and how far it carries ahead; the finisher is the biggest, and shakes the striker's camera.
 local WeaponClips = require(script.Parent.Parent:WaitForChild("Character"):WaitForChild("WeaponClips"))
+local FormClips = require(ReplicatedStorage:WaitForChild("FormClips"))
 -- each strike's timing and the arc its weapon truly draws come from its clip (tools/blender/animation)
 -- The real-time shape of each blow, in seconds: to the swing's start (the wind-up), the swing, and what is left of the clip. The clips are
 -- keyed for it (2026-11-18: the spear's thrust, the sword's finisher and the punches were keyed again in Blender, tools/blender/animation, with a
@@ -134,12 +135,7 @@ local SPEAR_SLASH = fromClip("SpearSlash", { Grow = 1.25, Travel = 2.5 })
 -- THE FORMS' OWN STRIKES (tools/blender/animation/form_moves.py): a form's chain step plays its own keyed clip when WeaponClips has one; a step with no clip of its
 -- own borrows the family's (clipStep, below), so a form can get its clips a few at a time. Crescent, Lancer and Fist are the original clips. `own` is
 -- { name, slash (the light's arc, when the clip has one: a cut), timing }.
-local FORM_CLIPS = {
-    Gale = { "GaleSwift", "GaleCross", "GaleSpin", "GaleRush", "GaleStorm" },
-    Mountain = { "MountainCut", "MountainChop", "MountainFall" },
-    Swallow = { "SwallowQuick", "SwallowDouble", "SwallowLow", "SwallowRising", "SwallowWhirl" },
-    Tiger = { "TigerFang", "TigerClaw", "TigerSlam" },
-}
+local FORM_CLIPS = FormClips.Own
 -- the light of a form's cuts: how it swells and carries on, and the pitch of the swing's sound (a finisher is bigger)
 local FORM_SLASH = {
     Gale = { Grow = 1.25, Travel = 2.5, Pitch = 1.18 },

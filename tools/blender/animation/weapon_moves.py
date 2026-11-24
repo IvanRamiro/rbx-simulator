@@ -279,9 +279,9 @@ def shoulder_of(side, pelvis_pos, pelvis_rot, chest_rot):
     return upper + chest_rot @ V(R.JOINTS[side + "Shoulder"][2])
 
 
-def punch(side):
-    """A straight punch, for a player with no weapon: one hand, then the other on the next strike. The hips turn first,
-    the shoulder follows, and the fist arrives last, then snaps back to the guard. side: 1 the right hand, -1 the left."""
+def punch_rig(side):
+    """The pieces every bare-handed strike is keyed from: (clip, lead, pose, guard). pose(pelvis_pos, pelvis_yaw, chest_yaw, pitch, hit_hand, other_hand,
+    step=False) is one key (hands in the right hand's coordinates: the left is mirrored); guard is the ready pose. side: 1 the right hand, -1 the left."""
     clip = Clip("Sword")
     lead = {"pelvis": 0.014, "chest": 0.007}
     # feet: the opposite foot ahead of the punching hand
@@ -316,6 +316,13 @@ def punch(side):
         }
 
     guard = pose((0, -0.38, 0), 0, 0, -6, (0.5, 0.42, -0.78), (0.5, 0.45, -0.72))
+    return clip, lead, pose, guard
+
+
+def punch(side):
+    """A straight punch, for a player with no weapon: one hand, then the other on the next strike. The hips turn first,
+    the shoulder follows, and the fist arrives last, then snaps back to the guard. side: 1 the right hand, -1 the left."""
+    clip, lead, pose, guard = punch_rig(side)
     clip.pose(0.0, guard)
     # the load: the hips and shoulder wind back, the fist drawn in beside the ribs, the weight sinking onto the back foot
     clip.pose(0.045, pose((0, -0.42, 0.08), -10, -18, -6, (0.7, 0.3, -0.35), (0.46, 0.46, -0.82)), lead)
