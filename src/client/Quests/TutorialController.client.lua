@@ -57,7 +57,7 @@ end
 
 -- ---------- the card ----------
 local WIDTH, PAD = 360, UiTheme.Pad.Card
-local MIN_WIDTH = 200 -- a tablet leaves about 215 between the side columns
+local MIN_WIDTH = 150 -- a tablet leaves about 215 between the side columns; a phone on its side about 180 (the old floor of 200 laid the card over the profile there by about 20 pixels: seen on the Galaxy A06 profile, 2026-11-24)
 local function width()
     return math.max(MIN_WIDTH, Hud.centreRoom(WIDTH))
 end
@@ -80,6 +80,15 @@ local function fitHeight() -- as tall as what it holds (the quest panel's way: i
     card.Size = UDim2.fromOffset(width(), math.ceil(inner.AbsoluteSize.Y * ratio))
 end
 inner:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitHeight)
+-- the room between the side columns changes after this card is made (the columns take their size and slide in as the game starts, a window opens, the screen turns):
+-- the width is measured again then, or the card kept the 360 it was given before the columns existed and lay over the profile on a phone (seen on the Galaxy A06 profile,
+-- 2026-11-24: 288 pixels wide in a 260 pixel gap)
+for _, piece in { Hud.Status, Hud.Quest } do
+    piece:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitHeight)
+end
+if workspace.CurrentCamera then
+    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitHeight)
+end
 
 -- the header: HOW TO PLAY, the step, SKIP
 local header = Instance.new("Frame")

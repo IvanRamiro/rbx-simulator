@@ -241,6 +241,29 @@ local function layoutTop()
     local frame = openWindowFrame
     if frame and frame.Visible and notice.AbsoluteSize.Y > 1 and foot + notice.AbsoluteSize.Y > frame.AbsolutePosition.Y then
         local bottom = frame.AbsolutePosition.Y + frame.AbsoluteSize.Y - 12 * scale -- over the window's lowest part
+        -- ... or over its title band, whichever hides fewer of the window's buttons (2026-11-24: on a phone a window fills the screen and its main button, the beta gift's
+        -- GREAT!, sits at its foot: the notice lay over it for the few seconds it shows). Ties keep the foot.
+        local across = notice.AbsoluteSize
+        local left = gui.AbsoluteSize.X / 2 - across.X / 2
+        local titleTop = frame.AbsolutePosition.Y + 4 * scale
+        local function covered(top)
+            local n = 0
+            for _, d in frame:GetDescendants() do
+                if d:IsA("GuiButton") and d.Visible and d.Active and d.AbsoluteSize.X > 1 then
+                    local at, size = d.AbsolutePosition, d.AbsoluteSize
+                    if at.X < left + across.X and at.X + size.X > left and at.Y < top + across.Y and at.Y + size.Y > top
+                        and at.Y + size.Y > frame.AbsolutePosition.Y and at.Y < frame.AbsolutePosition.Y + frame.AbsoluteSize.Y then
+                        n += 1
+                    end
+                end
+            end
+            return n
+        end
+        if covered(titleTop) < covered(bottom - across.Y) then
+            notice.AnchorPoint = Vector2.new(0.5, 0)
+            notice.Position = UDim2.new(0.5, 0, 0, titleTop)
+            return
+        end
         notice.AnchorPoint = Vector2.new(0.5, 1)
         notice.Position = UDim2.new(0.5, 0, 0, bottom)
         return

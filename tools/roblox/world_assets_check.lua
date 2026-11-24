@@ -15,7 +15,7 @@ local ISLAND_KITS = { -- the kits an island may place from
     MoonlitIsle = { "MoonlitIsleAssets" },
     OriginAbyss = { "OriginAbyssAssets" },
     BlossomSanctuary = { "BlossomSanctuaryAssets" },
-    MurimCrossing = { "DawnspireAssets", "WindriftAssets", "NightfallAssets" },
+    MurimCrossing = { "DawnspireAssets", "WindriftAssets", "NightfallAssets", "TrialAssets" }, -- (TrialAssets: the trial props, the gate, the token and the dummy, belong to Murim Crossing alone)
 }
 local CATEGORY = { -- by template name (a lowercase substring), for the per-map counts
     Trees = { "tree", "pine", "bamboo", "thorn", "willow", "grove" },
