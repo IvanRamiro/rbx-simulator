@@ -1,10 +1,11 @@
--- The hub's people (WorldBuilder.buildHubNpcs, buildMerchantTemplate; tagged "HubNpc") breathe: each plays Roblox's standard
--- R15 idle, looped, at a slightly different speed so no two sway in step. Their roots are anchored, so they stay at their posts.
+-- The hub's people (WorldBuilder.buildHubNpcs, buildMerchantTemplate; tagged "HubNpc"; the territories' people too) breathe: each plays Roblox's standard
+-- R15 idle (a seated one the stock sit), looped, at a slightly different speed so no two sway in step. Their roots are anchored, so they stay at their posts.
 -- The Wandering Merchant is cloned in each time he arrives (MerchantService); his clone is picked up as it enters the Workspace.
 local CollectionService = game:GetService("CollectionService")
 
 local TAG = "HubNpc"
 local IDLE = "rbxassetid://507766666" -- Roblox's default R15 idle
+local SIT = "rbxassetid://2506281703" -- Roblox's default R15 sit: the territories' seated people (Pose "Sit", TerritoryNpcBuilder) play it instead of the idle
 
 local animated = setmetatable({}, { __mode = "k" })
 
@@ -23,7 +24,7 @@ local function animate(model)
         animator.Parent = humanoid
     end
     local animation = Instance.new("Animation")
-    animation.AnimationId = IDLE
+    animation.AnimationId = if model:GetAttribute("Pose") == "Sit" then SIT else IDLE
     local ok, track = pcall(function()
         return animator:LoadAnimation(animation)
     end)

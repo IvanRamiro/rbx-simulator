@@ -35,12 +35,14 @@ def stage(root):
             source = f.read()
         with open(os.path.join(shared, name), "w", encoding="utf-8") as f:
             f.write(HEADER + source)  # same line as the module's first line: line numbers are unchanged
-    # the keyed combat clips (data only, no Roblox globals): lives in the client folder, staged beside the shared modules so a spec can check them
-    clips = os.path.join(REPO, "src", "client", "Character", "WeaponClips.lua")
-    with open(clips, encoding="utf-8") as f:
-        source = f.read()
-    with open(os.path.join(shared, "WeaponClips.lua"), "w", encoding="utf-8") as f:
-        f.write(HEADER + source)
+    # data-only modules (no Roblox globals beyond Color3, Vector3 and the like) that live outside src/shared, staged beside the shared modules so a spec can check them:
+    # the keyed combat clips (client) and the territory NPCs' data (world build)
+    for folder in (("client", "Character", "WeaponClips.lua"), ("worldbuild", "Placements", "TerritoryNpcs.lua")):
+        path = os.path.join(REPO, "src", *folder)
+        with open(path, encoding="utf-8") as f:
+            source = f.read()
+        with open(os.path.join(shared, folder[-1]), "w", encoding="utf-8") as f:
+            f.write(HEADER + source)
     shutil.copytree(os.path.join(HERE, "env"), os.path.join(root, "env"))
     shutil.copytree(os.path.join(HERE, "specs"), os.path.join(root, "specs"))
     with open(os.path.join(root, ".luaurc"), "w") as f:
